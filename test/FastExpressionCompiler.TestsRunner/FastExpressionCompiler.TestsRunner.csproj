@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFrameworks Condition="'$(DevMode)' == 'true'">net8.0</TargetFrameworks>
-        <TargetFrameworks Condition="'$(DevMode)' != 'true'">net7.0</TargetFrameworks>
+        <TargetFramework>net9.0</TargetFramework>
+        <TargetFramework Condition=" '$(LegacyModeForCI)' == 'true' ">net7.0</TargetFramework>
         <OutputType>Exe</OutputType>
         <IsTestProject>false</IsTestProject>
     </PropertyGroup>

@@ -4,7 +4,7 @@
         <id>FastExpressionCompiler.Internal.src</id>
         <version>4.2.2</version>
         <authors>Maksim Volkau</authors>
-        <copyright>Copyright © 2016-2023 Maksim Volkau</copyright>
+        <copyright>Copyright © 2016-2024 Maksim Volkau</copyright>
         <projectUrl>https://github.com/dadhi/FastExpressionCompiler</projectUrl>
         <license type="expression">MIT</license>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
@@ -97,7 +97,7 @@ https://github.com/dadhi/FastExpressionCompiler/compare/v4.2.0...v4.2.1
             <files include="cs/**/*.*" buildAction="Compile" />
         </contentFiles>
         <dependencies>
-            <group targetFramework="net8.0"/>
+            <group targetFramework="net9.0"/>
             <group targetFramework="net472">
                 <dependency id="System.ValueTuple" version="4.5.0" />
             </group>

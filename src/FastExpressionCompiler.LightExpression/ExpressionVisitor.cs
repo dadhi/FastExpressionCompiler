@@ -2,7 +2,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016-2023 Maksim Volkau
+Copyright (c) 2016-2024 Maksim Volkau
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -29,6 +29,7 @@ THE SOFTWARE.
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using FastExpressionCompiler.LightExpression.ImTools;
 
@@ -38,6 +39,7 @@ using FastExpressionCompiler.LightExpression.ImTools;
 namespace FastExpressionCompiler.LightExpression
 {
     /// <summary>The order of the visiting is important</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
     public abstract class ExpressionVisitor
     {
         public virtual Expression Visit(Expression node) => node?.Accept(this);
@@ -216,7 +218,7 @@ namespace FastExpressionCompiler.LightExpression
             }
             return newNodes;
         }
-        
+
         public T VisitAndConvert<T>(T node) where T : Expression
         {
             if (node == null)
@@ -227,9 +229,10 @@ namespace FastExpressionCompiler.LightExpression
             throw new InvalidOperationException($"Converting visited node is not compatible from {x?.GetType()} to {typeof(T)}");
         }
 
+        [RequiresUnreferencedCode(Trimming.Message)]
         protected internal virtual Expression VisitBinary(BinaryExpression node)
         {
-            var left = Visit(node.Left); 
+            var left = Visit(node.Left);
             var conversion = VisitAndConvert(node.Conversion);
             var right = Visit(node.Right);
             if (node.Left == left && node.Conversion == conversion && node.Right == right)
@@ -306,7 +309,7 @@ namespace FastExpressionCompiler.LightExpression
 #endif
             if (body == node.Body && parameters == null)
                 return node;
-            return Expression.Lambda(node.Type, body, parameters, node.ReturnType); 
+            return Expression.Lambda(node.Type, body, parameters, node.ReturnType);
         }
 
         protected internal virtual Expression VisitLambda<T>(Expression<T> node) where T : System.Delegate
@@ -420,13 +423,13 @@ namespace FastExpressionCompiler.LightExpression
         protected internal virtual Expression VisitTry(TryExpression node)
         {
             var body = Visit(node.Body);
-            
+
             var handlers = node.Handlers?.Count > 0
                 ? VisitAndConvert(node.Handlers, VisitCatchBlock)
                 : node.Handlers;
-            
-            var @finally = node.Finally != null 
-                ? Visit(node.Finally) 
+
+            var @finally = node.Finally != null
+                ? Visit(node.Finally)
                 : node.Finally;
 
             if (body == node.Body && ReferenceEquals(handlers, node.Handlers) && @finally == node.Finally)
@@ -488,7 +491,7 @@ namespace FastExpressionCompiler.LightExpression
                 return node;
             return new MemberAssignment(node.Member, expression);
         }
-        
+
         protected internal virtual MemberMemberBinding VisitMemberMemberBinding(MemberMemberBinding node)
         {
             var bindings = VisitAndConvert(node.Bindings, b => VisitMemberBinding(b));
@@ -508,13 +511,13 @@ namespace FastExpressionCompiler.LightExpression
         protected internal virtual Expression VisitListInit(ListInitExpression node)
         {
             var newExpression = VisitAndConvert(node.NewExpression);
-            var initializers  = VisitAndConvert(node.Initializers, VisitElementInit);
+            var initializers = VisitAndConvert(node.Initializers, VisitElementInit);
             if (newExpression == node.NewExpression && ReferenceEquals(initializers, node.Initializers))
                 return node;
             return new ListInitExpression(newExpression, initializers.AsReadOnlyList());
         }
 
-        protected internal virtual ElementInit VisitElementInit(ElementInit node) 
+        protected internal virtual ElementInit VisitElementInit(ElementInit node)
         {
 #if SUPPORTS_ARGUMENT_PROVIDER
             var arguments = VisitArguments((IArgumentProvider)node);

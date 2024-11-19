@@ -15,7 +15,7 @@ echo:## Starting: TESTS...
 echo:### NET8.0:
 echo: 
 
-dotnet run --no-build -f net8.0 -c Debug --project test/FastExpressionCompiler.TestsRunner
+dotnet run --no-build -c Debug --project test/FastExpressionCompiler.TestsRunner
 if %ERRORLEVEL% neq 0 goto :error
 
 echo:

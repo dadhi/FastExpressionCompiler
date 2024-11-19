@@ -4,7 +4,7 @@
         <id>FastExpressionCompiler.src</id>
         <version>4.2.2</version>
         <authors>Maksim Volkau</authors>
-        <copyright>Copyright © 2016-2023 Maksim Volkau</copyright>
+        <copyright>Copyright © 2016-2024 Maksim Volkau</copyright>
         <projectUrl>https://github.com/dadhi/FastExpressionCompiler</projectUrl>
         <license type="expression">MIT</license>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>

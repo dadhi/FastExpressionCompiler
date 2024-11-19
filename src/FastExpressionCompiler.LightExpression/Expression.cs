@@ -2,7 +2,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016-2023 Maksim Volkau
+Copyright (c) 2016-2024 Maksim Volkau
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -30,6 +30,7 @@ THE SOFTWARE.
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -49,11 +50,11 @@ using static CodePrinter;
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 /// <summary>The base class and the Factory methods provider for the Expression.</summary>
-[System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
 public abstract class Expression
 {
     /// <summary>Expression node type.</summary>
     public abstract ExpressionType NodeType { get; }
+
     /// <summary>All expressions should have a Type.</summary>
     public abstract Type Type { get; }
 
@@ -63,22 +64,29 @@ public abstract class Expression
     /// <summary>Allows to overwrite the FEC stages to customize and optimize 
     /// the expression constant(label, blocks, tries) collection and il emitting phase</summary>
     public virtual bool IsIntrinsic => false;
+
     /// <summary>Collects the information about closure constants, nested lambdas, non-passed parameters, goto labels and variables in blocks.
     /// Returns `0` if everything is fine and positive error code for error.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
     public virtual Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
         NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) => 0;
 
     /// <summary>The second FEC state to emit the actual IL op-codes based on the information collected by the first traversal
     /// and available in the `closure` structure. Find the expression examples below by searching `IsIntrinsic => true`.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
+
     public virtual bool TryEmit(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
         ILGenerator il, ParentFlags parent, int byRefIndex = -1) => false;
 
     public virtual bool IsCustomToCSharpString => false;
+
+    [RequiresUnreferencedCode(Trimming.Message)]
     public virtual StringBuilder CustomToCSharpString(StringBuilder sb, EnclosedIn enclosedIn, ref SmallList4<NamedWithIndex> named,
         int lineIndent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4,
         ObjectToCode notRecognizedToCode = null) => sb;
 
 #if SUPPORTS_VISITOR
+    [RequiresUnreferencedCode(Trimming.Message)]
     protected internal abstract Expression Accept(ExpressionVisitor visitor);
 #endif
     protected internal virtual Expression VisitChildren(ExpressionVisitor visitor) => this;
@@ -109,6 +117,8 @@ public abstract class Expression
     internal abstract SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> convertedExpressions);
 
     /// <summary>Converts to Expression and outputs its as string</summary>
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for debugging purposes only.")]
     public override string ToString() => this.ToCSharpString(
         new StringBuilder(256), stripNamespace: true,
         notRecognizedToCode: static (x, stripNs, printType) => "default(" + x.GetType().ToCode(stripNs, printType) + ")/*" + x.ToString() + "*/")
@@ -210,6 +220,7 @@ public abstract class Expression
     [MethodImpl((MethodImplOptions)256)]
     public static int TryGetIntConstantValue(Expression e) => ((IntConstantExpression)e).IntValue;
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static NewExpression New(Type type)
     {
         if (type.IsValueType)
@@ -328,21 +339,27 @@ public abstract class Expression
     public static MethodCallExpression Call(Expression instance, MethodInfo method, IEnumerable<Expression> arguments) =>
         Call(instance, method, arguments.AsReadOnlyList());
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static MethodCallExpression Call(Type type, string methodName, Type[] typeArguments, IReadOnlyList<Expression> arguments) =>
         Call(type.FindMethodOrThrow(methodName, typeArguments, arguments, TypeTools.StaticMethods), arguments);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static MethodCallExpression Call(Type type, string methodName, Type[] typeArguments, params Expression[] arguments) =>
         Call(type, methodName, typeArguments, (IReadOnlyList<Expression>)arguments);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static MethodCallExpression Call(Type type, string methodName, Type[] typeArguments, IEnumerable<Expression> arguments) =>
         Call(type, methodName, typeArguments, arguments.AsReadOnlyList());
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static MethodCallExpression Call(Expression instance, string methodName, Type[] typeArguments, IReadOnlyList<Expression> arguments) =>
         Call(instance, instance.Type.FindMethodOrThrow(methodName, typeArguments, arguments, TypeTools.InstanceMethods), arguments);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static MethodCallExpression Call(Expression instance, string methodName, Type[] typeArguments, params Expression[] arguments) =>
         Call(instance, methodName, typeArguments, (IReadOnlyList<Expression>)arguments);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static MethodCallExpression Call(Expression instance, string methodName, Type[] typeArguments, IEnumerable<Expression> arguments) =>
         Call(instance, methodName, typeArguments, arguments.AsReadOnlyList());
 
@@ -442,6 +459,7 @@ public abstract class Expression
             ? new PropertyExpression(property)
             : new InstancePropertyExpression(instance, property);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static MemberExpression Property(Expression expression, string propertyName) =>
         Property(expression, expression.Type.FindProperty(propertyName)
             ?? throw new ArgumentException($"Declared property with the name '{propertyName}' is not found in '{expression.Type}'", nameof(propertyName)));
@@ -455,6 +473,7 @@ public abstract class Expression
     public static IndexExpression Property(Expression instance, PropertyInfo indexer, IEnumerable<Expression> arguments) =>
         new HasIndexerManyArgumentsIndexExpression(instance, indexer, arguments.AsReadOnlyList());
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static IndexExpression Property(Expression instance, string propertyName, params Expression[] arguments)
     {
         Debug.Assert(instance != null); // because otherwise there is no way to get type to find the indexer by name
@@ -475,6 +494,7 @@ public abstract class Expression
             nameof(propertyName));
     }
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static MemberExpression PropertyOrField(Expression expression, string memberName) =>
         expression.Type.FindProperty(memberName) != null
             ? Property(expression, expression.Type.FindProperty(memberName)
@@ -516,6 +536,7 @@ public abstract class Expression
             ? new FieldExpression(field)
             : new InstanceFieldExpression(instance, field);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static MemberExpression Field(Expression instance, string fieldName) =>
         Field(instance, instance.Type.FindField(fieldName));
 
@@ -692,9 +713,11 @@ public abstract class Expression
         };
     }
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static LambdaExpression Lambda(Expression body) =>
         new TypedLambdaExpression(Tools.GetFuncOrActionType(body.Type), body);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static LambdaExpression Lambda(Type delegateType, Expression body)
     {
         if (delegateType == null || delegateType == typeof(Delegate))
@@ -714,23 +737,29 @@ public abstract class Expression
             : new TypedReturnLambdaExpression(delegateType, body, returnType);
     }
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static LambdaExpression Lambda(Expression body, IReadOnlyList<ParameterExpression> parameters) =>
         parameters != null && parameters.Count > 0
             ? new ManyParametersLambdaExpression(Tools.GetFuncOrActionType(Tools.GetParamTypes(parameters), body.Type), body, parameters)
             : new TypedLambdaExpression(Tools.GetFuncOrActionType(body.Type), body);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static LambdaExpression Lambda(Expression body, params ParameterExpression[] parameters) =>
         Lambda(body, (IReadOnlyList<ParameterExpression>)parameters);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static LambdaExpression Lambda(Expression body, IEnumerable<ParameterExpression> parameters) =>
         Lambda(body, parameters.AsReadOnlyList<ParameterExpression>());
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static LambdaExpression Lambda(Expression body, ParameterExpression parameter) =>
         new OneParameterLambdaExpression(Tools.GetFuncOrActionType(parameter.Type, body.Type), body, parameter);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static LambdaExpression Lambda(Expression body, ParameterExpression p0, ParameterExpression p1) =>
         new TwoParametersLambdaExpression(Tools.GetFuncOrActionType(p0.Type, p1.Type, body.Type), body, p0, p1);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static LambdaExpression Lambda(Expression body,
         ParameterExpression p0, ParameterExpression p1, ParameterExpression p2) =>
         new ThreeParametersLambdaExpression(Tools.GetFuncOrActionType(p0.Type, p1.Type, p2.Type, body.Type), body, p0, p1, p2);
@@ -747,6 +776,7 @@ public abstract class Expression
         ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3, ParameterExpression p4, ParameterExpression p5) =>
         new SixParametersLambdaExpression(Tools.GetFuncOrActionType(p0.Type, p1.Type, p2.Type, p3.Type, p4.Type, p5.Type, body.Type), body, p0, p1, p2, p3, p4, p5);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static LambdaExpression Lambda(Expression body, IReadOnlyList<ParameterExpression> parameters, Type returnType)
     {
         if (returnType == body.Type)
@@ -757,39 +787,50 @@ public abstract class Expression
             : new TypedReturnLambdaExpression(delegateType, body, returnType);
     }
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static LambdaExpression Lambda(Expression body, IEnumerable<ParameterExpression> parameters, Type returnType) =>
         Lambda(body, parameters.AsReadOnlyList(), returnType);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static LambdaExpression Lambda(Type delegateType, Expression body, IReadOnlyList<ParameterExpression> parameters) =>
         delegateType == null || delegateType == typeof(Delegate)
             ? Lambda(body, parameters)
             : Lambda(delegateType, body, parameters, GetDelegateReturnType(delegateType));
 
+
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static LambdaExpression Lambda(Type delegateType, Expression body, params ParameterExpression[] parameters) =>
         Lambda(delegateType, body, (IReadOnlyList<ParameterExpression>)parameters);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static LambdaExpression Lambda(Type delegateType, Expression body, ParameterExpression p0) =>
         Lambda(delegateType, body, p0, GetDelegateReturnType(delegateType));
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static LambdaExpression Lambda(Type delegateType, Expression body, ParameterExpression p0, ParameterExpression p1) =>
         Lambda(delegateType, body, p0, p1, GetDelegateReturnType(delegateType));
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static LambdaExpression Lambda(Type delegateType, Expression body,
         ParameterExpression p0, ParameterExpression p1, ParameterExpression p2) =>
         Lambda(delegateType, body, p0, p1, p2, GetDelegateReturnType(delegateType));
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static LambdaExpression Lambda(Type delegateType, Expression body,
         ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3) =>
         Lambda(delegateType, body, p0, p1, p2, p3, GetDelegateReturnType(delegateType));
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static LambdaExpression Lambda(Type delegateType, Expression body,
         ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3, ParameterExpression p4) =>
         Lambda(delegateType, body, p0, p1, p2, p3, p4, GetDelegateReturnType(delegateType));
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static LambdaExpression Lambda(Type delegateType, Expression body,
         ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3, ParameterExpression p4, ParameterExpression p5) =>
         Lambda(delegateType, body, p0, p1, p2, p3, p4, p5, GetDelegateReturnType(delegateType));
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static LambdaExpression Lambda(Type delegateType, Expression body, IReadOnlyList<ParameterExpression> parameters, Type returnType)
     {
         if (delegateType == null || delegateType == typeof(Delegate))
@@ -803,6 +844,7 @@ public abstract class Expression
             : new TypedReturnLambdaExpression(delegateType, body, returnType);
     }
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static LambdaExpression Lambda(Type delegateType, Expression body, IEnumerable<ParameterExpression> parameters, Type returnType) =>
         Lambda(delegateType, body, parameters.AsReadOnlyList(), returnType);
 
@@ -840,6 +882,7 @@ public abstract class Expression
             ? new SixParametersLambdaExpression(delegateType, body, p0, p1, p2, p3, p4, p5)
             : new TypedReturnSixParametersLambdaExpression(delegateType, body, p0, p1, p2, p3, p4, p5, returnType);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static Expression<TDelegate> Lambda<TDelegate>(Expression body) where TDelegate : System.Delegate =>
         Lambda<TDelegate>(body, GetDelegateReturnType(typeof(TDelegate)));
 
@@ -854,6 +897,7 @@ public abstract class Expression
             ? new OneParameterExpression<TDelegate>(body, p0)
             : new TypedReturnOneParameterExpression<TDelegate>(body, p0, returnType);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0) where TDelegate : System.Delegate =>
         Lambda<TDelegate>(body, p0, GetDelegateReturnType(typeof(TDelegate)));
 
@@ -865,6 +909,7 @@ public abstract class Expression
         return new TypedReturnTwoParametersExpression<TDelegate>(body, p0, p1, returnType);
     }
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1)
         where TDelegate : System.Delegate =>
         Lambda<TDelegate>(body, p0, p1, GetDelegateReturnType(typeof(TDelegate)));
@@ -878,6 +923,7 @@ public abstract class Expression
         return new TypedReturnThreeParametersExpression<TDelegate>(body, p0, p1, p2, returnType);
     }
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1, ParameterExpression p2)
         where TDelegate : System.Delegate =>
         Lambda<TDelegate>(body, p0, p1, p2, GetDelegateReturnType(typeof(TDelegate)));
@@ -891,6 +937,7 @@ public abstract class Expression
         return new TypedReturnFourParametersExpression<TDelegate>(body, p0, p1, p2, p3, returnType);
     }
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1, ParameterExpression p2,
         ParameterExpression p3)
         where TDelegate : System.Delegate =>
@@ -905,6 +952,7 @@ public abstract class Expression
         return new TypedReturnFiveParametersExpression<TDelegate>(body, p0, p1, p2, p3, p4, returnType);
     }
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1, ParameterExpression p2,
         ParameterExpression p3, ParameterExpression p4)
         where TDelegate : System.Delegate =>
@@ -919,6 +967,7 @@ public abstract class Expression
         return new TypedReturnSixParametersExpression<TDelegate>(body, p0, p1, p2, p3, p4, p5, returnType);
     }
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static Expression<TDelegate> Lambda<TDelegate>(Expression body, ParameterExpression p0, ParameterExpression p1, ParameterExpression p2,
         ParameterExpression p3, ParameterExpression p4, ParameterExpression p5)
         where TDelegate : System.Delegate =>
@@ -939,18 +988,22 @@ public abstract class Expression
     public static Expression<TDelegate> Lambda<TDelegate>(Expression body, IEnumerable<ParameterExpression> parameters, Type returnType)
         where TDelegate : System.Delegate => Lambda<TDelegate>(body, parameters.AsReadOnlyList(), returnType);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static Expression<TDelegate> Lambda<TDelegate>(Expression body, params ParameterExpression[] parameters)
         where TDelegate : System.Delegate =>
         Lambda<TDelegate>(body, parameters, GetDelegateReturnType(typeof(TDelegate)));
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static Expression<TDelegate> Lambda<TDelegate>(Expression body, IEnumerable<ParameterExpression> parameters) where TDelegate : System.Delegate =>
         Lambda<TDelegate>(body, parameters.AsReadOnlyList(), GetDelegateReturnType(typeof(TDelegate)));
 
     /// <summary><paramref name="name"/> is ignored for now, the method is just for compatibility with SysExpression</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static Expression<TDelegate> Lambda<TDelegate>(Expression body, string name, params ParameterExpression[] parameters) where TDelegate : System.Delegate =>
         Lambda<TDelegate>(body, parameters, GetDelegateReturnType(typeof(TDelegate)));
 
     // todo: @perf for now it's the fastest method until UnsafeAccessAttribute supports generics
+    [RequiresUnreferencedCode(Trimming.Message)]
     [MethodImpl((MethodImplOptions)256)]
     private static Type GetDelegateReturnType(Type delegateType) => delegateType.FindDelegateInvokeMethod().ReturnType;
 
@@ -961,14 +1014,17 @@ public abstract class Expression
     public static BinaryExpression ArrayIndex(Expression array, Expression index) =>
         new ArrayIndexExpression(array, index);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression ArrayIndex(Expression array, Expression index, MethodInfo method) =>
         method == null
             ? new ArrayIndexExpression(array, index)
             : GetMethodBasedBinaryOperator(ExpressionType.ArrayIndex, array, index, method, liftToNull: true);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static MethodCallExpression ArrayIndex(Expression array, IEnumerable<Expression> indexes) =>
         Call(array, array.Type.GetMethod("Get", BindingFlags.Public | BindingFlags.Instance), indexes.AsReadOnlyList());
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static MethodCallExpression ArrayIndex(Expression array, params Expression[] indexes) =>
         Call(array, array.Type.GetMethod("Get", BindingFlags.Public | BindingFlags.Instance), indexes);
 
@@ -1026,7 +1082,7 @@ public abstract class Expression
     /// <summary>Does not present in System Expression. Enables member assignment on existing instance expression.</summary>
     public static MemberInitExpression MemberInit(Expression expression, IReadOnlyList<MemberBinding> bindings) =>
         bindings == null || bindings.Count == 0
-            ? new MemberInitExpression(expression) // todo: @improve @perf Why to create the expression with Zero bindings anyway and not jsut return the original expression?
+            ? new MemberInitExpression(expression) // todo: @improve @perf Why to create the expression with Zero bindings anyway and not just return the original expression?
             : new ManyBindingsMemberInitExpression(expression, bindings);
 
     // @LightExpression only
@@ -1179,6 +1235,7 @@ public abstract class Expression
     public static InvocationExpression Invoke(LambdaExpression expression, Expression a0) =>
         new OneArgumentInvocationExpression(expression, a0);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static InvocationExpression Invoke(Expression expression, Expression a0) =>
         expression is LambdaExpression
             ? new OneArgumentInvocationExpression(expression, a0)
@@ -1192,6 +1249,7 @@ public abstract class Expression
     public static InvocationExpression Invoke(LambdaExpression expression, Expression a0, Expression a1) =>
         new TwoArgumentsInvocationExpression(expression, a0, a1);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1) =>
         expression is LambdaExpression
             ? new TwoArgumentsInvocationExpression(expression, a0, a1)
@@ -1205,6 +1263,7 @@ public abstract class Expression
     public static InvocationExpression Invoke(LambdaExpression expression, Expression a0, Expression a1, Expression a2) =>
         new ThreeArgumentsInvocationExpression(expression, a0, a1, a2);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1, Expression a2) =>
         expression is LambdaExpression
             ? new ThreeArgumentsInvocationExpression(expression, a0, a1, a2)
@@ -1218,6 +1277,7 @@ public abstract class Expression
     public static InvocationExpression Invoke(LambdaExpression expression, Expression a0, Expression a1, Expression a2, Expression a3) =>
         new FourArgumentsInvocationExpression(expression, a0, a1, a2, a3);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1, Expression a2, Expression a3) =>
         expression is LambdaExpression
             ? new FourArgumentsInvocationExpression(expression, a0, a1, a2, a3)
@@ -1231,6 +1291,7 @@ public abstract class Expression
     public static InvocationExpression Invoke(LambdaExpression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4) =>
         new FiveArgumentsInvocationExpression(expression, a0, a1, a2, a3, a4);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4) =>
         expression is LambdaExpression
             ? new FiveArgumentsInvocationExpression(expression, a0, a1, a2, a3, a4)
@@ -1244,6 +1305,7 @@ public abstract class Expression
     public static InvocationExpression Invoke(LambdaExpression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4, Expression a5) =>
         new SixArgumentsInvocationExpression(expression, a0, a1, a2, a3, a4, a5);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4, Expression a5) =>
         expression is LambdaExpression
             ? new SixArgumentsInvocationExpression(expression, a0, a1, a2, a3, a4, a5)
@@ -1254,16 +1316,19 @@ public abstract class Expression
             ? new SixArgumentsInvocationExpression(expression, a0, a1, a2, a3, a4, a5)
             : new TypedSixArgumentsInvocationExpression(expression, returnType, a0, a1, a2, a3, a4, a5);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static InvocationExpression Invoke(Expression expression, IReadOnlyList<Expression> args) =>
         expression is LambdaExpression
             ? new ManyArgumentsInvocationExpression(expression, args)
             : new TypedManyArgumentsInvocationExpression(expression, args, expression.Type.FindDelegateInvokeMethod().ReturnType);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static InvocationExpression Invoke(Expression expression, params Expression[] args) =>
         Invoke(expression, (IReadOnlyList<Expression>)args);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static InvocationExpression Invoke(Expression expression, IEnumerable<Expression> args) =>
-        Invoke(expression, args.AsReadOnlyList());
+    Invoke(expression, args.AsReadOnlyList());
 
     public static InvocationExpression Invoke(Type returnType, Expression expression, IReadOnlyList<Expression> args) =>
         expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
@@ -1304,6 +1369,7 @@ public abstract class Expression
     public static DefaultExpression Default(Type type) =>
         type == typeof(void) ? VoidDefault : new DefaultExpression(type);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression GetArithmeticBinary(ExpressionType nodeType, Expression left, Expression right, MethodInfo method = null)
     {
         if (method == null)
@@ -1315,22 +1381,27 @@ public abstract class Expression
         return GetMethodBasedBinaryOperator(nodeType, left, right, method, liftToNull: true);
     }
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression GetLeftTypedBinary(ExpressionType nodeType, Expression left, Expression right, MethodInfo method = null) =>
         method == null
              ? new LeftTypedBinaryExpression(nodeType, left, right)
              : GetMethodBasedBinaryOperator(nodeType, left, right, method, liftToNull: true);
 
     /// <summary>Creates a BinaryExpression that represents an arithmetic addition operation that does not have overflow checking.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression Add(Expression left, Expression right) =>
         GetArithmeticBinary(ExpressionType.Add, left, right, null);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression Add(Expression left, Expression right, MethodInfo method) =>
         GetArithmeticBinary(ExpressionType.Add, left, right, method);
 
     /// <summary>Creates a BinaryExpression that represents an arithmetic addition operation that has overflow checking.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression AddChecked(Expression left, Expression right) =>
         GetArithmeticBinary(ExpressionType.AddChecked, left, right);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression AddChecked(Expression left, Expression right, MethodInfo method) =>
         GetArithmeticBinary(ExpressionType.AddChecked, left, right, method);
 
@@ -1338,18 +1409,22 @@ public abstract class Expression
     public static BinaryExpression ExclusiveOr(Expression left, Expression right) =>
         new LeftTypedBinaryExpression(ExpressionType.ExclusiveOr, left, right);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression ExclusiveOr(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.ExclusiveOr, left, right, method);
 
     /// <summary>Creates a BinaryExpression that represents a bitwise left-shift operation.</summary>
     public static BinaryExpression LeftShift(Expression left, Expression right) =>
         new LeftTypedBinaryExpression(ExpressionType.LeftShift, left, right);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression LeftShift(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.LeftShift, left, right, method);
 
     /// <summary>Creates a BinaryExpression that represents an arithmetic remainder operation.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression Modulo(Expression left, Expression right) =>
         GetArithmeticBinary(ExpressionType.Modulo, left, right);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression Modulo(Expression left, Expression right, MethodInfo method) =>
         GetArithmeticBinary(ExpressionType.Modulo, left, right, method);
 
@@ -1357,40 +1432,51 @@ public abstract class Expression
     public static BinaryExpression RightShift(Expression left, Expression right) =>
         new LeftTypedBinaryExpression(ExpressionType.RightShift, left, right);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression RightShift(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.RightShift, left, right, method);
 
     /// <summary>Creates a BinaryExpression that represents an arithmetic subtraction operation that does not have overflow checking.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression Subtract(Expression left, Expression right) =>
         GetArithmeticBinary(ExpressionType.Subtract, left, right);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression Subtract(Expression left, Expression right, MethodInfo method) =>
         GetArithmeticBinary(ExpressionType.Subtract, left, right, method);
 
     /// <summary>Creates a BinaryExpression that represents an arithmetic subtraction operation that has overflow checking.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression SubtractChecked(Expression left, Expression right) =>
         GetArithmeticBinary(ExpressionType.SubtractChecked, left, right);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression SubtractChecked(Expression left, Expression right, MethodInfo method) =>
         GetArithmeticBinary(ExpressionType.SubtractChecked, left, right, method);
 
     /// <summary>Creates a BinaryExpression that represents an arithmetic multiplication operation that does not have overflow checking.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression Multiply(Expression left, Expression right) =>
         GetArithmeticBinary(ExpressionType.Multiply, left, right);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression Multiply(Expression left, Expression right, MethodInfo method) =>
         GetArithmeticBinary(ExpressionType.Multiply, left, right, method);
 
     /// <summary>Creates a BinaryExpression that represents an arithmetic multiplication operation that has overflow checking.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression MultiplyChecked(Expression left, Expression right) =>
         GetArithmeticBinary(ExpressionType.MultiplyChecked, left, right);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression MultiplyChecked(Expression left, Expression right, MethodInfo method) =>
         GetArithmeticBinary(ExpressionType.MultiplyChecked, left, right, method);
 
     /// <summary>Creates a BinaryExpression that represents an arithmetic division operation.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression Divide(Expression left, Expression right) =>
         GetArithmeticBinary(ExpressionType.Divide, left, right);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression Divide(Expression left, Expression right, MethodInfo method) =>
         GetArithmeticBinary(ExpressionType.Divide, left, right, method);
 
@@ -1398,18 +1484,21 @@ public abstract class Expression
     public static BinaryExpression Power(Expression left, Expression right) =>
         new LeftTypedBinaryExpression(ExpressionType.Power, left, right);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression Power(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.Power, left, right, method);
 
     /// <summary>Creates a BinaryExpression that represents a bitwise AND operation.</summary>
     public static BinaryExpression And(Expression left, Expression right) =>
         new LogicalBinaryExpression(ExpressionType.And, left, right);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression And(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.And, left, right, method);
 
     /// <summary>Creates a BinaryExpression that represents a conditional AND operation that evaluates the second operand only if the first operand evaluates to true.</summary>
     public static BinaryExpression AndAlso(Expression left, Expression right) =>
         new LogicalBinaryExpression(ExpressionType.AndAlso, left, right);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression AndAlso(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.AndAlso, left, right, method);
 
     // note: @note it should be a `LeftTypedBinaryExpression` and not `LogicalBinaryExpression` so that it works both for logical and bitwise context
@@ -1417,8 +1506,10 @@ public abstract class Expression
     public static BinaryExpression Or(Expression left, Expression right) =>
         new LeftTypedBinaryExpression(ExpressionType.Or, left, right);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression Or(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.Or, left, right, method);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression GetLogicalBinary(ExpressionType nodeType, Expression left, Expression right, bool liftToNull, MethodInfo method) =>
         !liftToNull && method == null
             ? new LogicalBinaryExpression(nodeType, left, right)
@@ -1428,12 +1519,14 @@ public abstract class Expression
     public static BinaryExpression OrElse(Expression left, Expression right) =>
         new LogicalBinaryExpression(ExpressionType.OrElse, left, right);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression OrElse(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.OrElse, left, right, method);
 
     /// <summary>Creates a BinaryExpression that represents an equality comparison.</summary>
     public static BinaryExpression Equal(Expression left, Expression right) =>
         new LogicalBinaryExpression(ExpressionType.Equal, left, right);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression Equal(Expression left, Expression right, bool liftToNull, MethodInfo method) =>
         GetLogicalBinary(ExpressionType.Equal, left, right, liftToNull, method);
 
@@ -1441,6 +1534,7 @@ public abstract class Expression
     public static BinaryExpression NotEqual(Expression left, Expression right) =>
         new LogicalBinaryExpression(ExpressionType.NotEqual, left, right);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression NotEqual(Expression left, Expression right, bool liftToNull, MethodInfo method) =>
         GetLogicalBinary(ExpressionType.NotEqual, left, right, liftToNull, method);
 
@@ -1448,6 +1542,7 @@ public abstract class Expression
     public static BinaryExpression GreaterThan(Expression left, Expression right) =>
         new LogicalBinaryExpression(ExpressionType.GreaterThan, left, right);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression GreaterThan(Expression left, Expression right, bool liftToNull, MethodInfo method) =>
         GetLogicalBinary(ExpressionType.GreaterThan, left, right, liftToNull, method);
 
@@ -1455,6 +1550,7 @@ public abstract class Expression
     public static BinaryExpression GreaterThanOrEqual(Expression left, Expression right) =>
         new LogicalBinaryExpression(ExpressionType.GreaterThanOrEqual, left, right);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression GreaterThanOrEqual(Expression left, Expression right, bool liftToNull, MethodInfo method) =>
         GetLogicalBinary(ExpressionType.GreaterThanOrEqual, left, right, liftToNull, method);
 
@@ -1462,6 +1558,7 @@ public abstract class Expression
     public static BinaryExpression LessThan(Expression left, Expression right) =>
         new LogicalBinaryExpression(ExpressionType.LessThan, left, right);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression LessThan(Expression left, Expression right, bool liftToNull, MethodInfo method) =>
         GetLogicalBinary(ExpressionType.LessThan, left, right, liftToNull, method);
 
@@ -1469,6 +1566,7 @@ public abstract class Expression
     public static BinaryExpression LessThanOrEqual(Expression left, Expression right) =>
         new LogicalBinaryExpression(ExpressionType.LessThanOrEqual, left, right);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression LessThanOrEqual(Expression left, Expression right, bool liftToNull, MethodInfo method) =>
         GetLogicalBinary(ExpressionType.LessThanOrEqual, left, right, liftToNull, method);
 
@@ -1647,6 +1745,7 @@ public abstract class Expression
     }
 
     /// <summary>Creates a <see cref="BinaryExpression" />, given the left and right operands, by calling an appropriate factory method.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression MakeBinary(ExpressionType binaryType, Expression left, Expression right, LambdaExpression conversion = null)
     {
         switch (binaryType)
@@ -1699,6 +1798,7 @@ public abstract class Expression
         }
     }
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression MakeBinary(ExpressionType binaryType, Expression left, Expression right, bool liftToNull, MethodInfo method,
         LambdaExpression conversion = null)
     {
@@ -1759,10 +1859,12 @@ public abstract class Expression
         }
     }
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     private static BinaryExpression GetUserDefinedBinaryOperatorOrThrow(ExpressionType binaryType, string name, Expression left, Expression right, bool liftToNull) =>
          GetUserDefinedBinaryOperator(binaryType, name, left, right, liftToNull) ??
             throw new InvalidOperationException(string.Format(@"The binary operator {0} is not defined for the types '{1}' and '{2}'.", binaryType, left.Type, right.Type));
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     private static BinaryExpression GetUserDefinedBinaryOperator(ExpressionType binaryType, string name, Expression left, Expression right, bool liftToNull)
     {
         var leftType = left.Type;
@@ -1785,6 +1887,7 @@ public abstract class Expression
         return null;
     }
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     private static MethodInfo GetUserDefinedBinaryOperator(ExpressionType binaryType, Type leftType, Type rightType, string name)
     {
         var types = new Type[] { leftType, rightType };
@@ -1806,6 +1909,7 @@ public abstract class Expression
         return method;
     }
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     private static BinaryExpression GetMethodBasedBinaryOperator(ExpressionType binaryType, Expression left, Expression right, MethodInfo method, bool liftToNull)
     {
         var lType = left.Type;
@@ -1968,15 +2072,18 @@ public abstract class Expression
         new LogicalBinaryExpression(ExpressionType.NotEqual, left, right);
 
     /// <summary>Creates a BinaryExpression that represents a coalescing operation.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression Coalesce(Expression left, Expression right) =>
         new CoalesceBinaryExpression(left, right, GetCoalesceType(left.Type, right.Type));
 
     /// <summary>Creates a BinaryExpression that represents a coalescing operation, given a conversion function.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression Coalesce(Expression left, Expression right, LambdaExpression conversion) =>
         conversion == null
             ? Coalesce(left, right)
             : new CoalesceConversionBinaryExpression(left, right, conversion);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     private static Type GetCoalesceType(Type left, Type right)
     {
         var underlyingLeft = left.IsNullable() ? left.GetNonNullable() : null;
@@ -1996,18 +2103,21 @@ public abstract class Expression
 
 public static class FromSysExpressionConverter
 {
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static Expression ToLightExpression(this SysExpr sysExpr)
     {
         SmallList<LightAndSysExpr> exprsConverted = default;
         return sysExpr.ToLightExpression(ref exprsConverted);
     }
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static LambdaExpression ToLightExpression(this System.Linq.Expressions.LambdaExpression sysLambdaExpr)
     {
         SmallList<LightAndSysExpr> exprsConverted = default;
         return (LambdaExpression)sysLambdaExpr.ToLightExpression(ref exprsConverted);
     }
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static Expression<TDelegate> ToLightExpression<TDelegate>(this System.Linq.Expressions.Expression<TDelegate> sysExpr)
         where TDelegate : System.Delegate
     {
@@ -2015,6 +2125,7 @@ public static class FromSysExpressionConverter
         return sysExpr.ToLightExpression(ref exprsConverted);
     }
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     internal static Expression<TDelegate> ToLightExpression<TDelegate>(
         this System.Linq.Expressions.Expression<TDelegate> sysExpr, ref SmallList<LightAndSysExpr> exprsConverted)
         where TDelegate : System.Delegate
@@ -2036,6 +2147,7 @@ public static class FromSysExpressionConverter
         return lightExpr;
     }
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     internal static Expression<TDelegate> ConvertLambdaToLightExpression<TDelegate>(
         System.Linq.Expressions.Expression<TDelegate> le, ref SmallList<LightAndSysExpr> exprsConverted)
         where TDelegate : System.Delegate
@@ -2089,6 +2201,7 @@ public static class FromSysExpressionConverter
         }
     }
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     internal static Expression ToLightExpression(this SysExpr sysExpr, ref SmallList<LightAndSysExpr> exprsConverted)
     {
         if (sysExpr == null)
@@ -2127,6 +2240,7 @@ public static class FromSysExpressionConverter
         return lightTarget;
     }
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     internal static SwitchCase ToLightSwitchCase(this System.Linq.Expressions.SwitchCase source, ref SmallList<LightAndSysExpr> exprsConverted)
     {
         Debug.Assert(source != null);
@@ -2138,6 +2252,7 @@ public static class FromSysExpressionConverter
         return new SwitchCase(body, testValues);
     }
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     internal static ElementInit ToLightExpression(
         this System.Linq.Expressions.ElementInit elemInit, ref SmallList<LightAndSysExpr> exprsConverted)
     {
@@ -2171,6 +2286,7 @@ public static class FromSysExpressionConverter
         return lightElemInit;
     }
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     internal static MemberBinding ToLightExpression(
         this System.Linq.Expressions.MemberBinding sysBinding, ref SmallList<LightAndSysExpr> exprsConverted)
     {
@@ -2213,6 +2329,7 @@ public static class FromSysExpressionConverter
         return lightBinding;
     }
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     internal static Expression ConvertToLightExpression(SysExpr sysExpr, ref SmallList<LightAndSysExpr> exprsConverted)
     {
         var nodeType = sysExpr.NodeType;
@@ -2710,20 +2827,26 @@ internal struct LightAndSysExpr
 
 internal static class TypeTools
 {
+    [RequiresUnreferencedCode(Trimming.Message)]
     internal static Type GetNonRef(this Type type) => type.IsByRef ? type.GetElementType() : type;
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     internal static bool IsAssignableFrom(this ParameterInfo p, Type argType)
     {
         var pt = p.ParameterType.GetNonRef();
         return pt == argType || pt.IsAssignableFrom(argType);
     }
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static Type GetNonNullable(this Type type) => type.GetGenericArguments()[0];
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static Type GetNonNullableOrSelf(this Type type) => type.IsNullable() ? type.GetGenericArguments()[0] : type;
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static Type GetNullable(this Type type) => typeof(Nullable<>).MakeGenericType(type);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static bool IsArithmetic(this Type type)
     {
         type = type.GetNonNullableOrSelf();
@@ -2743,6 +2866,7 @@ internal static class TypeTools
         return false;
     }
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static bool IsNumeric(this Type type)
     {
         type = type.GetNonNullableOrSelf();
@@ -2770,9 +2894,11 @@ internal static class TypeTools
         (target == typeof(object) || target == typeof(ValueType)) ||
          source.IsEnum && target == typeof(Enum);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     private static bool IsImplicitlyNullableConvertibleTo(Type source, Type target) =>
         target.IsNullable() && IsImplicitlyConvertibleTo(source.GetNonNullableOrSelf(), target.GetNonNullable());
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static bool IsImplicitlyConvertibleTo(this Type source, Type target) =>
         source == target
         || IsImplicitlyNumericConvertibleTo(source, target)
@@ -2780,6 +2906,7 @@ internal static class TypeTools
         || IsImplicitlyBoxingConvertibleTo(source, target)
         || IsImplicitlyNullableConvertibleTo(source, target);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     internal static PropertyInfo FindProperty(this Type type, string propertyName)
     {
         var properties = type.GetTypeInfo().DeclaredProperties.AsArray();
@@ -2790,6 +2917,7 @@ internal static class TypeTools
         return type.GetTypeInfo().BaseType?.FindProperty(propertyName);
     }
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     internal static FieldInfo FindField(this Type type, string fieldName)
     {
         var fields = type.GetTypeInfo().DeclaredFields.AsArray();
@@ -2823,6 +2951,7 @@ internal static class TypeTools
         return m;
     }
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     internal static MethodInfo FindMethodOrThrow(this Type type,
         string methodName, Type[] typeArgs, IReadOnlyList<Expression> argExprs, BindingFlags flags)
     {
@@ -3084,6 +3213,7 @@ public abstract class UnaryExpression : Expression
     public virtual MethodInfo Method => null;
     public UnaryExpression(Expression operand) => Operand = operand;
 #if SUPPORTS_VISITOR
+    [RequiresUnreferencedCode(Trimming.Message)]
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitUnary(this);
 #endif
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted)
@@ -3187,10 +3317,12 @@ public class ConvertDelegateIntrinsicExpression : UnaryExpression
 
     public override bool IsIntrinsic => true;
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
         NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) =>
         ExpressionCompiler.TryCollectInfo(ref closure, Operand, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public override bool TryEmit(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
         ILGenerator il, ParentFlags parent, int byRefIndex = -1)
     {
@@ -3202,6 +3334,8 @@ public class ConvertDelegateIntrinsicExpression : UnaryExpression
     }
 
     public override bool IsCustomToCSharpString => true;
+
+    [RequiresUnreferencedCode(Trimming.Message)]
     public override StringBuilder CustomToCSharpString(StringBuilder sb,
         EnclosedIn enclosedIn, ref SmallList4<NamedWithIndex> named,
         int lineIndent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4,
@@ -3228,10 +3362,12 @@ public class ConvertIntrinsicExpression<T> : UnaryExpression where T : class
 
     public override bool IsIntrinsic => true;
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
         NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) =>
         ExpressionCompiler.TryCollectInfo(ref closure, Operand, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public override bool TryEmit(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
         ILGenerator il, ParentFlags parent, int byRefIndex = -1)
     {
@@ -3265,13 +3401,21 @@ public abstract class BinaryExpression : Expression
 
     public virtual LambdaExpression Conversion => null;
 
-    public bool IsLifted =>
-        NodeType != ExpressionType.Coalesce && NodeType != ExpressionType.Assign &&
-        Left.Type.IsNullable() &&
-        (Method == null || !Method.GetParameters()[0].ParameterType.GetNonRef().IsEquivalentTo(Left.Type));
+    public bool IsLifted
+    {
+        [RequiresUnreferencedCode(Trimming.Message)]
+        get =>
+            NodeType != ExpressionType.Coalesce && NodeType != ExpressionType.Assign &&
+            Left.Type.IsNullable() &&
+            (Method == null || !Method.GetParameters()[0].ParameterType.GetNonRef().IsEquivalentTo(Left.Type));
+    }
 
     /// <summary>Gets a value that indicates whether the expression tree node represents a lifted call to an operator whose return type is lifted to a nullable type.</summary>
-    public bool IsLiftedToNull => IsLifted && Type.IsNullable();
+    public bool IsLiftedToNull
+    {
+        [RequiresUnreferencedCode(Trimming.Message)]
+        get => IsLifted && Type.IsNullable();
+    }
 
     public readonly Expression Left, Right;
     protected BinaryExpression(Expression left, Expression right)
@@ -3280,6 +3424,7 @@ public abstract class BinaryExpression : Expression
         Right = right;
     }
 #if SUPPORTS_VISITOR
+    [RequiresUnreferencedCode(Trimming.Message)]
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitBinary(this);
 #endif
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
@@ -3466,6 +3611,7 @@ public sealed class ListInitExpression : Expression
         Initializers = initializers;
     }
 #if SUPPORTS_VISITOR
+    [RequiresUnreferencedCode(Trimming.Message)]
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitListInit(this);
 #endif
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
@@ -3499,6 +3645,7 @@ public sealed class TypeBinaryExpression : Expression
         TypeOperand = typeOperand;
     }
 #if SUPPORTS_VISITOR
+    [RequiresUnreferencedCode(Trimming.Message)]
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitTypeBinary(this);
 #endif
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
@@ -3524,6 +3671,7 @@ public class MemberInitExpression : Expression, IArgumentProvider<MemberBinding>
     public virtual MemberBinding GetArgument(int i) => throw new NotImplementedException();
     internal MemberInitExpression(Expression expression) => Expression = expression;
 #if SUPPORTS_VISITOR
+    [RequiresUnreferencedCode(Trimming.Message)]
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitMemberInit(this);
 #endif
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
@@ -3632,6 +3780,7 @@ public class ParameterExpression : Expression
     public string Name { get; }
     internal ParameterExpression(string name) => Name = name;
 #if SUPPORTS_VISITOR
+    [RequiresUnreferencedCode(Trimming.Message)]
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitParameter(this);
 #endif
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
@@ -3676,11 +3825,14 @@ public abstract class ConstantExpression : Expression
     public sealed override ExpressionType NodeType => ExpressionType.Constant;
     public abstract object Value { get; }
 #if SUPPORTS_VISITOR
+    [RequiresUnreferencedCode(Trimming.Message)]
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitConstant(this);
 #endif
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> _) => SysExpr.Constant(Value, Type);
 
     /// <summary>I want to see the actual Value not the default one</summary>
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for debugging purposes only.")]
     public override string ToString() => $"Constant({Value}, typeof({Type.ToCode()}))";
 }
 
@@ -3737,17 +3889,20 @@ public class NewExpression : Expression, IArgumentProvider
 
     internal NewExpression(ConstructorInfo constructor) => Constructor = constructor;
 #if SUPPORTS_VISITOR
+    [RequiresUnreferencedCode(Trimming.Message)]
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitNew(this);
 #endif
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
         SysExpr.New(Constructor, ToExpressions(Arguments, ref exprsConverted));
 }
 
+[RequiresUnreferencedCode(Trimming.Message)]
 public sealed class NewValueTypeExpression : NewExpression
 {
     public override Type Type { get; }
-    internal NewValueTypeExpression(Type type) : base(null) => Type = type;
-
+    internal NewValueTypeExpression(
+        [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor)]
+        Type type) : base(null) => Type = type;
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) => SysExpr.New(Type);
 }
 
@@ -3755,8 +3910,12 @@ public sealed class NoArgsNewClassIntrinsicExpression : NewExpression
 {
     internal NoArgsNewClassIntrinsicExpression(ConstructorInfo constructor) : base(constructor) { }
     public override bool IsIntrinsic => true;
+
+    [RequiresUnreferencedCode(Trimming.Message)]
     public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
         NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) => 0;
+
+    [RequiresUnreferencedCode(Trimming.Message)]
     public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
         ILGenerator il, ParentFlags parent, int byRefIndex = -1)
     {
@@ -3779,9 +3938,13 @@ public sealed class NoByRefOneArgNewIntrinsicExpression : OneArgumentNewExpressi
 {
     internal NoByRefOneArgNewIntrinsicExpression(ConstructorInfo constructor, object arg) : base(constructor, arg) { }
     public override bool IsIntrinsic => true;
+
+    [RequiresUnreferencedCode(Trimming.Message)]
     public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
         NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) =>
         ExpressionCompiler.TryCollectInfo(ref closure, Argument, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
+
+    [RequiresUnreferencedCode(Trimming.Message)]
     public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
         ILGenerator il, ParentFlags parent, int byRefIndex = -1)
     {
@@ -3809,6 +3972,8 @@ public sealed class NoByRefTwoArgumentsNewIntrinsicExpression : TwoArgumentsNewE
 {
     internal NoByRefTwoArgumentsNewIntrinsicExpression(ConstructorInfo constructor, object a0, object a1) : base(constructor, a0, a1) { }
     public override bool IsIntrinsic => true;
+
+    [RequiresUnreferencedCode(Trimming.Message)]
     public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
         NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
     {
@@ -3816,6 +3981,8 @@ public sealed class NoByRefTwoArgumentsNewIntrinsicExpression : TwoArgumentsNewE
         if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument0, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
         return ExpressionCompiler.TryCollectInfo(ref closure, Argument1, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
     }
+
+    [RequiresUnreferencedCode(Trimming.Message)]
     public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
         ILGenerator il, ParentFlags parent, int byRefIndex = -1)
     {
@@ -3849,6 +4016,8 @@ public sealed class NoByRefThreeArgumentsNewIntrinsicExpression : ThreeArguments
     internal NoByRefThreeArgumentsNewIntrinsicExpression(ConstructorInfo constructor, object a0, object a1, object a2)
         : base(constructor, a0, a1, a2) { }
     public override bool IsIntrinsic => true;
+
+    [RequiresUnreferencedCode(Trimming.Message)]
     public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
         NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
     {
@@ -3857,6 +4026,8 @@ public sealed class NoByRefThreeArgumentsNewIntrinsicExpression : ThreeArguments
         if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument1, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
         return ExpressionCompiler.TryCollectInfo(ref closure, Argument2, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
     }
+
+    [RequiresUnreferencedCode(Trimming.Message)]
     public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
         ILGenerator il, ParentFlags parent, int byRefIndex = -1)
     {
@@ -3892,6 +4063,8 @@ public sealed class NoByRefFourArgumentsNewIntrinsicExpression : FourArgumentsNe
     internal NoByRefFourArgumentsNewIntrinsicExpression(ConstructorInfo constructor, object a0, object a1, object a2, object a3)
         : base(constructor, a0, a1, a2, a3) { }
     public override bool IsIntrinsic => true;
+
+    [RequiresUnreferencedCode(Trimming.Message)]
     public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
         NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
     {
@@ -3901,6 +4074,8 @@ public sealed class NoByRefFourArgumentsNewIntrinsicExpression : FourArgumentsNe
         if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument2, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
         return ExpressionCompiler.TryCollectInfo(ref closure, Argument3, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
     }
+
+    [RequiresUnreferencedCode(Trimming.Message)]
     public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
         ILGenerator il, ParentFlags parent, int byRefIndex = -1)
     {
@@ -3939,6 +4114,8 @@ public sealed class NoByRefFiveArgumentsNewIntrinsicExpression : FiveArgumentsNe
     internal NoByRefFiveArgumentsNewIntrinsicExpression(ConstructorInfo constructor, object a0, object a1, object a2, object a3, object a4)
         : base(constructor, a0, a1, a2, a3, a4) { }
     public override bool IsIntrinsic => true;
+
+    [RequiresUnreferencedCode(Trimming.Message)]
     public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
         NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
     {
@@ -3949,6 +4126,8 @@ public sealed class NoByRefFiveArgumentsNewIntrinsicExpression : FiveArgumentsNe
         if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument3, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
         return ExpressionCompiler.TryCollectInfo(ref closure, Argument4, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
     }
+
+    [RequiresUnreferencedCode(Trimming.Message)]
     public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
         ILGenerator il, ParentFlags parent, int byRefIndex = -1)
     {
@@ -3990,6 +4169,8 @@ public sealed class NoByRefSixArgumentsNewIntrinsicExpression : SixArgumentsNewE
     internal NoByRefSixArgumentsNewIntrinsicExpression(ConstructorInfo constructor, object a0, object a1, object a2, object a3, object a4, object a5)
         : base(constructor, a0, a1, a2, a3, a4, a5) { }
     public override bool IsIntrinsic => true;
+
+    [RequiresUnreferencedCode(Trimming.Message)]
     public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
         NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
     {
@@ -4001,6 +4182,8 @@ public sealed class NoByRefSixArgumentsNewIntrinsicExpression : SixArgumentsNewE
         if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument4, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
         return ExpressionCompiler.TryCollectInfo(ref closure, Argument5, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
     }
+
+    [RequiresUnreferencedCode(Trimming.Message)]
     public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
         ILGenerator il, ParentFlags parent, int byRefIndex = -1)
     {
@@ -4044,6 +4227,8 @@ public sealed class NoByRefSevenArgumentsNewIntrinsicExpression : SevenArguments
     internal NoByRefSevenArgumentsNewIntrinsicExpression(ConstructorInfo constructor, object a0, object a1, object a2, object a3, object a4, object a5, object a6)
         : base(constructor, a0, a1, a2, a3, a4, a5, a6) { }
     public override bool IsIntrinsic => true;
+
+    [RequiresUnreferencedCode(Trimming.Message)]
     public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
         NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
     {
@@ -4056,6 +4241,8 @@ public sealed class NoByRefSevenArgumentsNewIntrinsicExpression : SevenArguments
         if ((r = ExpressionCompiler.TryCollectInfo(ref closure, Argument5, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != 0) return r;
         return ExpressionCompiler.TryCollectInfo(ref closure, Argument6, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
     }
+
+    [RequiresUnreferencedCode(Trimming.Message)]
     public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
         ILGenerator il, ParentFlags parent, int byRefIndex = -1)
     {
@@ -4086,6 +4273,8 @@ public sealed class NoByRefManyArgsNewIntrinsicExpression : ManyArgumentsNewExpr
 {
     internal NoByRefManyArgsNewIntrinsicExpression(ConstructorInfo constructor, IReadOnlyList<Expression> arguments) : base(constructor, arguments) { }
     public override bool IsIntrinsic => true;
+
+    [RequiresUnreferencedCode(Trimming.Message)]
     public override Result TryCollectInfo(CompilerFlags flags, ref ClosureInfo closure, IParameterProvider paramExprs,
         NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
     {
@@ -4096,6 +4285,8 @@ public sealed class NoByRefManyArgsNewIntrinsicExpression : ManyArgumentsNewExpr
                 return r;
         return 0;
     }
+
+    [RequiresUnreferencedCode(Trimming.Message)]
     public override bool TryEmit(CompilerFlags setup, ref ClosureInfo closure, IParameterProvider paramExprs,
         ILGenerator il, ParentFlags parent, int byRefIndex = -1)
     {
@@ -4117,6 +4308,7 @@ public abstract class NewArrayExpression : Expression, IArgumentProvider
     public virtual Expression GetArgument(int i) => Expressions[i];
     internal NewArrayExpression(Type arrayType) => Type = arrayType;
 #if SUPPORTS_VISITOR
+    [RequiresUnreferencedCode(Trimming.Message)]
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitNewArray(this);
 #endif
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted)
@@ -4256,6 +4448,7 @@ public class MethodCallExpression : Expression, IArgumentProvider
     public virtual int ArgumentCount => 0;
     public virtual Expression GetArgument(int i) => throw new NotImplementedException();
 #if SUPPORTS_VISITOR
+    [RequiresUnreferencedCode(Trimming.Message)]
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitMethodCall(this);
 #endif
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted)
@@ -4472,6 +4665,7 @@ public abstract class MemberExpression : Expression
     public virtual Expression Expression => null;
     protected MemberExpression(MemberInfo member) => Member = member;
 #if SUPPORTS_VISITOR
+    [RequiresUnreferencedCode(Trimming.Message)]
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitMember(this);
 #endif
 }
@@ -4576,6 +4770,7 @@ public class InvocationExpression : Expression, IArgumentProvider
     public virtual int ArgumentCount => 0;
     public virtual Expression GetArgument(int index) => throw new NotImplementedException();
 #if SUPPORTS_VISITOR
+    [RequiresUnreferencedCode(Trimming.Message)]
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitInvocation(this);
 #endif
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted)
@@ -4736,6 +4931,7 @@ public sealed class DefaultExpression : Expression
     public override Type Type { get; }
     internal DefaultExpression(Type type) => Type = type;
 #if SUPPORTS_VISITOR
+    [RequiresUnreferencedCode(Trimming.Message)]
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitDefault(this);
 #endif
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
@@ -4756,6 +4952,7 @@ public class ConditionalExpression : Expression
         IfTrue = ifTrue;
     }
 #if SUPPORTS_VISITOR
+    [RequiresUnreferencedCode(Trimming.Message)]
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitConditional(this);
 #endif
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
@@ -4799,6 +4996,7 @@ public abstract class IndexExpression : Expression, IArgumentProvider
 
     internal IndexExpression(Expression @object) => Object = @object;
 #if SUPPORTS_VISITOR
+    [RequiresUnreferencedCode(Trimming.Message)]
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitIndex(this);
 #endif
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
@@ -4857,6 +5055,7 @@ public class BlockExpression : Expression, IArgumentProvider
     internal BlockExpression(IReadOnlyList<Expression> expressions) =>
         Expressions.Populate(expressions);
 #if SUPPORTS_VISITOR
+    [RequiresUnreferencedCode(Trimming.Message)]
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitBlock(this);
 #endif
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
@@ -4923,6 +5122,7 @@ public sealed class LoopExpression : Expression
         ContinueLabel = continueLabel;
     }
 #if SUPPORTS_VISITOR
+    [RequiresUnreferencedCode(Trimming.Message)]
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitLoop(this);
 #endif
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
@@ -4949,6 +5149,7 @@ public class TryExpression : Expression
         _handlers = handlers;
     }
 #if SUPPORTS_VISITOR
+    [RequiresUnreferencedCode(Trimming.Message)]
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitTry(this);
 #endif
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
@@ -5010,6 +5211,7 @@ public class LabelExpression : Expression
     public virtual Expression DefaultValue => null;
     internal LabelExpression(LabelTarget target) => Target = target;
 #if SUPPORTS_VISITOR
+    [RequiresUnreferencedCode(Trimming.Message)]
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitLabel(this);
 #endif
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
@@ -5047,6 +5249,8 @@ public class LabelTarget
         return sysItem;
     }
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for debugging purposes only.")]
     public override string ToString()
     {
         SmallList4<NamedWithIndex> named = default;
@@ -5081,6 +5285,7 @@ public class GotoExpression : Expression
     public readonly LabelTarget Target;
     internal GotoExpression(LabelTarget target) => Target = target;
 #if SUPPORTS_VISITOR
+    [RequiresUnreferencedCode(Trimming.Message)]
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitGoto(this);
 #endif
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
@@ -5217,6 +5422,7 @@ public class SwitchExpression : Expression // todo: @perf implement IArgumentPro
         _cases = cases;
     }
 #if SUPPORTS_VISITOR
+    [RequiresUnreferencedCode(Trimming.Message)]
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitSwitch(this);
 #endif
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
@@ -5258,6 +5464,7 @@ public abstract class LambdaExpression : Expression, IParameterProvider
         throw new NotImplementedException("Requested the parameter from the no-parameter lambda");
     protected LambdaExpression(Expression body) => Body = body;
 #if SUPPORTS_VISITOR
+    [RequiresUnreferencedCode(Trimming.Message)]
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitLambda(this);
 #endif
     public System.Linq.Expressions.LambdaExpression ToLambdaExpression() =>
@@ -5431,6 +5638,7 @@ public class Expression<TDelegate> : LambdaExpression where TDelegate : System.D
     public sealed override Type Type => typeof(TDelegate);
     internal Expression(Expression body) : base(body) { }
 #if SUPPORTS_VISITOR
+    [RequiresUnreferencedCode(Trimming.Message)]
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitLambda(this);
 #endif
     public new System.Linq.Expressions.Expression<TDelegate> ToLambdaExpression()
@@ -5596,6 +5804,7 @@ public sealed class DynamicExpression : Expression
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
         SysExpr.MakeDynamic(DelegateType, Binder, ToExpressions(Arguments, ref exprsConverted));
 #if SUPPORTS_VISITOR
+    [RequiresUnreferencedCode(Trimming.Message)]
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitDynamic(this);
 #endif
 }
@@ -5608,6 +5817,7 @@ public sealed class RuntimeVariablesExpression : Expression
     public readonly IReadOnlyList<ParameterExpression> Variables;
     internal RuntimeVariablesExpression(IReadOnlyList<ParameterExpression> variables) => Variables = variables;
 #if SUPPORTS_VISITOR
+    [RequiresUnreferencedCode(Trimming.Message)]
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitRuntimeVariables(this);
 #endif
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> convertedExpressions) =>
@@ -5652,6 +5862,7 @@ public class DebugInfoExpression : Expression
         EndColumn = endColumn;
     }
 #if SUPPORTS_VISITOR
+    [RequiresUnreferencedCode(Trimming.Message)]
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitDebugInfo(this);
 #endif
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> convertedExpressions) =>

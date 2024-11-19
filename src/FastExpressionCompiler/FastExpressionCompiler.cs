@@ -2,7 +2,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016-2023 Maksim Volkau
+Copyright (c) 2016-2024 Maksim Volkau
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -741,6 +741,7 @@ namespace FastExpressionCompiler
                 return true; // here for fluency, don't delete
             }
 
+            [RequiresUnreferencedCode(Trimming.Message)]
             public void AddLabel(LabelTarget labelTarget, short inlinedLambdaInvokeIndex = -1)
             {
                 // skip null labelTargets, e.g. it may be the case for LoopExpression.Continue
@@ -6267,9 +6268,9 @@ namespace FastExpressionCompiler
         internal static MethodInfo DelegateTargetGetterMethod =
             typeof(Delegate).GetProperty(nameof(Delegate.Target)).GetMethod;
 
-        [RequiresUnreferencedCode(Trimming.Message)]
         [MethodImpl((MethodImplOptions)256)]
-        internal static MethodInfo FindDelegateInvokeMethod(this Type type) =>
+        internal static MethodInfo FindDelegateInvokeMethod(
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] this Type type) =>
             type.GetMethod("Invoke");
 
         [RequiresUnreferencedCode(Trimming.Message)]
@@ -6422,6 +6423,7 @@ namespace FastExpressionCompiler
         public static Type GetFuncOrActionType(Type p0, Type p1, Type p2, Type p3, Type p4, Type p5, Type returnType) =>
             returnType == typeof(void) ? typeof(Action<,,,,,>).MakeGenericType(p0, p1, p2, p3, p4, p5) : typeof(Func<,,,,,,>).MakeGenericType(p0, p1, p2, p3, p4, p5, returnType);
 
+        [RequiresUnreferencedCode(Trimming.Message)]
         public static Type GetFuncOrActionType(Type[] paramTypes, Type returnType)
         {
             if (returnType == typeof(void))
@@ -8972,6 +8974,7 @@ namespace FastExpressionCompiler
         /// Prints a valid C# for known <paramref name="x"/>,
         /// otherwise uses passed <paramref name="notRecognizedToCode"/> or falls back to `ToString()`.
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
         public static string ToCode(this object x, ObjectToCode notRecognizedToCode,
             bool stripNamespace = false, Func<Type, string, string> printType = null)
         {
@@ -9148,13 +9151,54 @@ namespace FastExpressionCompiler
 #if !NET5_0_OR_GREATER
 namespace System.Diagnostics.CodeAnalysis
 {
+    [AttributeUsage(AttributeTargets.All, Inherited = false, AllowMultiple = true)]
+    internal sealed class UnconditionalSuppressMessageAttribute : Attribute
+    {
+        public string Category { get; }
+        public string CheckId { get; }
+        public string Justification { get; set; }
+        public UnconditionalSuppressMessageAttribute(string category, string checkId)
+        {
+            Category = category;
+            CheckId = checkId;
+        }
+    }
+
+    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Constructor | AttributeTargets.Class, Inherited = false)]
     internal sealed class RequiresUnreferencedCodeAttribute : Attribute
     {
         public string Message { get; }
-        public RequiresUnreferencedCodeAttribute(string message)
-        {
-            Message = message;
-        }
+        public RequiresUnreferencedCodeAttribute(string message) => Message = message;
+    }
+
+    [AttributeUsage(
+        AttributeTargets.Field | AttributeTargets.ReturnValue | AttributeTargets.GenericParameter |
+        AttributeTargets.Parameter | AttributeTargets.Property | AttributeTargets.Method |
+        AttributeTargets.Class | AttributeTargets.Interface | AttributeTargets.Struct,
+        Inherited = false)]
+    internal sealed class DynamicallyAccessedMembersAttribute : Attribute
+    {
+        public DynamicallyAccessedMembersAttribute(DynamicallyAccessedMemberTypes memberTypes) { }
+    }
+
+    [Flags]
+    internal enum DynamicallyAccessedMemberTypes
+    {
+        None = 0,
+        PublicParameterlessConstructor = 0x0001,
+        PublicConstructors = 0x0002 | PublicParameterlessConstructor,
+        NonPublicConstructors = 0x0004,
+        PublicMethods = 0x0008,
+        NonPublicMethods = 0x0010,
+        PublicFields = 0x0020,
+        NonPublicFields = 0x0040,
+        PublicNestedTypes = 0x0080,
+        NonPublicNestedTypes = 0x0100,
+        PublicProperties = 0x0200,
+        NonPublicProperties = 0x0400,
+
+        Interfaces = 0x2000,
+        All = ~None
     }
 }
 #endif
