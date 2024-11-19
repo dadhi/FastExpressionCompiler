@@ -1,94 +1,93 @@
 ﻿using BenchmarkDotNet.Running;
 using FastExpressionCompiler.LightExpression;
 
-namespace FastExpressionCompiler.Benchmarks
+namespace FastExpressionCompiler.Benchmarks;
+
+public class Program
 {
-    public class Program
+    public static void Main()
     {
-        public static void Main()
-        {
-            // BenchmarkRunner.Run<AccessByRef_vs_ByIGetRefStructImpl>();
+        // todo: README.md Benchmarks
+        // --------------------------------------------
+        BenchmarkRunner.Run<HoistedLambdaBenchmark.Compilation>();
+        BenchmarkRunner.Run<HoistedLambdaBenchmark.Invocation>();
 
-            // BenchmarkRunner.Run<ApexSerialization_SerializeDictionary.Compile>();
+        // BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Compilation>();
+        // BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Invocation>();
 
-            // BenchmarkRunner.Run<EmitHacks.MethodStaticNoArgsEmit>();
+        // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Compilation>();
+        // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Invocation>();
+        // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Create>(); // not included in README.md, may be it needs to
+        // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Create_and_Compile>(); // not included in README.md, may be it needs to
 
-            // BenchmarkRunner.Run<ExprLinqAnyOfNotNullDecimal.Compile>();
-            // BenchmarkRunner.Run<ExprLinqAnyOfNotNullDecimal.Invoke>();
+        // BenchmarkRunner.Run<LightExprVsExpr_Create_ComplexExpr>();
+        // BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_ComplexExpr>();
 
-            // BenchmarkRunner.Run<RepoDb_ListInit.Compile>();
+        //--------------------------------------------
 
-            // BenchmarkRunner.Run<ReflectionInvoke_vs_CallWithObjectArgsAndNestedLambda>();
 
-            //BenchmarkRunner.Run<GenericConverter.Compilation>();
-            //BenchmarkRunner.Run<GenericConverter.Invocation>();
+        // BenchmarkRunner.Run<AccessByRef_vs_ByIGetRefStructImpl>();
 
-            //BenchmarkRunner.Run<ClosureConstantsBenchmark.Compilation>();
-            //BenchmarkRunner.Run<ClosureConstantsBenchmark.Invocation>();
+        // BenchmarkRunner.Run<ApexSerialization_SerializeDictionary.Compile>();
 
-            // BenchmarkRunner.Run<ArrayCopy_vs_ArrayResize_vs_ForLoop>();
+        // BenchmarkRunner.Run<EmitHacks.MethodStaticNoArgsEmit>();
 
-            //var a = new NestedLambdasVsVars();
-            //a.Init();
-            //a.LightExpression_with_sub_expressions_CompiledFast();
-            //a.Expression_with_sub_expressions_CompiledFast();
-            //a.Expression_with_sub_expressions_Compiled();
+        // BenchmarkRunner.Run<ExprLinqAnyOfNotNullDecimal.Compile>();
+        // BenchmarkRunner.Run<ExprLinqAnyOfNotNullDecimal.Invoke>();
 
-            // BenchmarkRunner.Run<NestedLambdasVsVars>();
+        // BenchmarkRunner.Run<RepoDb_ListInit.Compile>();
 
-            // BenchmarkRunner.Run<AutoMapper_Map_Dictionary_of_Obj_with_One_prop.Compile_only>();
-            BenchmarkRunner.Run<AutoMapper_Map_Dictionary_of_Obj_with_One_prop.Invoke_compiled_delegate>();
+        // BenchmarkRunner.Run<ReflectionInvoke_vs_CallWithObjectArgsAndNestedLambda>();
 
-            // BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Compile_only>();
-            // BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Create_and_Compile>();
-            // BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Invoke_compiled_delegate>();
+        //BenchmarkRunner.Run<GenericConverter.Compilation>();
+        //BenchmarkRunner.Run<GenericConverter.Invocation>();
 
-            //BenchmarkRunner.Run<NestedLambdaOverhead>();
+        //BenchmarkRunner.Run<ClosureConstantsBenchmark.Compilation>();
+        //BenchmarkRunner.Run<ClosureConstantsBenchmark.Invocation>();
 
-            //BenchmarkRunner.Run<FEC_vs_ManualEmit_vs_Activator>();
+        // BenchmarkRunner.Run<ArrayCopy_vs_ArrayResize_vs_ForLoop>();
 
-            // BenchmarkRunner.Run<MultipleNestedLambdaExprVsExprSharing>();
+        //var a = new NestedLambdasVsVars();
+        //a.Init();
+        //a.LightExpression_with_sub_expressions_CompiledFast();
+        //a.Expression_with_sub_expressions_CompiledFast();
+        //a.Expression_with_sub_expressions_Compiled();
 
-            //BenchmarkRunner.Run<ObjectExecutor_SyncMethod_Compile>();
-            //BenchmarkRunner.Run<ObjectExecutor_SyncMethod_Execute>();
+        // BenchmarkRunner.Run<NestedLambdasVsVars>();
 
-            //BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_CreateExecutor>();
-            //BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_ExecuteAsync>();
-            //BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_Execute>();
-            //BenchmarkRunner.Run<StaticTypeOfSwitch>();
+        // BenchmarkRunner.Run<AutoMapper_Map_Dictionary_of_Obj_with_One_prop.Compile_only>();
+        // BenchmarkRunner.Run<AutoMapper_Map_Dictionary_of_Obj_with_One_prop.Invoke_compiled_delegate>();
 
-            //BenchmarkRunner.Run<ExprInfoVsExpr_TryCatchExpr.Compilation>();
-            //BenchmarkRunner.Run<ExprInfoVsExpr_TryCatchExpr.Invocation>();
+        // BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Compile_only>();
+        // BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Create_and_Compile>();
+        // BenchmarkRunner.Run<AutoMapper_UseCase_Simplified_OneProperty.Invoke_compiled_delegate>();
 
-            //BenchmarkRunner.Run<SimpleExpr_ParamPlusParam>();
+        //BenchmarkRunner.Run<NestedLambdaOverhead>();
 
-            // BenchmarkRunner.Run<Deserialize_Simple>();
+        //BenchmarkRunner.Run<FEC_vs_ManualEmit_vs_Activator>();
 
-            // BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_NestedLambdaExpr>();
-            // BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_SimpleExpr>();
+        // BenchmarkRunner.Run<MultipleNestedLambdaExprVsExprSharing>();
 
-            // BenchmarkRunner.Run<HoistedLambdaBenchmark_LogicalOps.Invoke>();
-            // BenchmarkRunner.Run<HoistedLambdaBenchmark_LogicalOps.Compile>();
-            // BenchmarkRunner.Run<HoistedLambdaBenchmark.Invoke>();
+        //BenchmarkRunner.Run<ObjectExecutor_SyncMethod_Compile>();
+        //BenchmarkRunner.Run<ObjectExecutor_SyncMethod_Execute>();
 
-            // todo: README.md Benchmarks
-            // --------------------------------------------
+        //BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_CreateExecutor>();
+        //BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_ExecuteAsync>();
+        //BenchmarkRunner.Run<ObjectExecutor_AsyncMethod_Execute>();
+        //BenchmarkRunner.Run<StaticTypeOfSwitch>();
 
-            // BenchmarkRunner.Run<HoistedLambdaBenchmark.Compilation>();
-            // BenchmarkRunner.Run<HoistedLambdaBenchmark.Invocation>();
+        //BenchmarkRunner.Run<ExprInfoVsExpr_TryCatchExpr.Compilation>();
+        //BenchmarkRunner.Run<ExprInfoVsExpr_TryCatchExpr.Invocation>();
 
-            // BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Compilation>();
-            // BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Invocation>();
+        //BenchmarkRunner.Run<SimpleExpr_ParamPlusParam>();
 
-            // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Compilation>();
-            // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Invocation>();
-            // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Create>(); // not included in README.md, may be it needs to
-            // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Create_and_Compile>(); // not included in README.md, may be it needs to
+        // BenchmarkRunner.Run<Deserialize_Simple>();
 
-            // BenchmarkRunner.Run<LightExprVsExpr_Create_ComplexExpr>();
-            // BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_ComplexExpr>();
+        // BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_NestedLambdaExpr>();
+        // BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_SimpleExpr>();
 
-            //--------------------------------------------
-        }
+        // BenchmarkRunner.Run<HoistedLambdaBenchmark_LogicalOps.Invoke>();
+        // BenchmarkRunner.Run<HoistedLambdaBenchmark_LogicalOps.Compile>();
+        // BenchmarkRunner.Run<HoistedLambdaBenchmark.Invoke>();
     }
 }

@@ -1,20 +1,21 @@
 using System;
 using System.Linq.Expressions;
 using BenchmarkDotNet.Attributes;
+using FastExpressionCompiler.LightExpression;
 
 namespace FastExpressionCompiler.Benchmarks
 {
     public class HoistedLambdaBenchmark
     {
-        private static Expression<Func<X>> GetHoistedExpr()
+        private static System.Linq.Expressions.Expression<Func<X>> GetHoistedExpr()
         {
             var a = new A();
             var b = new B();
-            Expression<Func<X>> e = () => new X(a, b);
+            System.Linq.Expressions.Expression<Func<X>> e = () => new X(a, b);
             return e;
         }
 
-        private static readonly Expression<Func<X>> _hoistedExpr = GetHoistedExpr();
+        private static readonly System.Linq.Expressions.Expression<Func<X>> _hoistedExpr = GetHoistedExpr();
 
         [MemoryDiagnoser]
         public class Compilation
@@ -108,6 +109,20 @@ namespace FastExpressionCompiler.Benchmarks
             | Compile     | 121.969 us | 2.4180 us | 5.6040 us | 120.830 us | 35.77 |    2.46 | 0.7324 |      - |   4.49 KB |        2.92 |
             | CompileFast |   3.406 us | 0.0677 us | 0.1820 us |   3.349 us |  1.00 |    0.00 | 0.2441 | 0.2365 |   1.54 KB |        1.00 |
 
+            ## v5.0.0 release + net9.0
+
+            BenchmarkDotNet v0.14.0, Windows 11 (10.0.22631.4391/23H2/2023Update/SunValley3)
+            Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
+            .NET SDK 9.0.100
+            [Host]     : .NET 9.0.0 (9.0.24.52809), X64 RyuJIT AVX2
+            DefaultJob : .NET 9.0.0 (9.0.24.52809), X64 RyuJIT AVX2
+
+
+            | Method      | Mean       | Error     | StdDev    | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
+            |------------ |-----------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
+            | Compile     | 151.570 us | 3.0196 us | 6.7538 us | 44.27 |    2.13 | 0.7324 |      - |   4.49 KB |        2.92 |
+            | CompileFast |   3.425 us | 0.0676 us | 0.0664 us |  1.00 |    0.03 | 0.2441 | 0.2365 |   1.54 KB |        1.00 |
+
             */
 
             [Benchmark]
@@ -115,6 +130,9 @@ namespace FastExpressionCompiler.Benchmarks
 
             [Benchmark(Baseline = true)]
             public object CompileFast() => _hoistedExpr.CompileFast();
+
+            [Benchmark]
+            public object ConvertToLight_CompileFast() => _hoistedExpr.ToLightExpression().CompileFast();
         }
 
         [MemoryDiagnoser]
@@ -205,15 +223,15 @@ namespace FastExpressionCompiler.Benchmarks
             private readonly B _bb = new B();
 
             [Benchmark]
-            public object DirectConstructorCall() => 
+            public object DirectConstructorCall() =>
                 new X(_aa, _bb);
 
             [Benchmark]
-            public object CompiledLambda() => 
+            public object CompiledLambda() =>
                 _lambdaCompiled();
 
             [Benchmark(Baseline = true)]
-            public object FastCompiledLambda() => 
+            public object FastCompiledLambda() =>
                 _lambdaCompiledFast();
         }
 

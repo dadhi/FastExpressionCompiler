@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFrameworks>net472;net8.0;net9.0</TargetFrameworks>
+        <TargetFrameworks Condition=" '$(LegacyModeForCI)' == 'true' ">net472;net8.0</TargetFrameworks>
     </PropertyGroup>
 
     <ItemGroup>
@@ -9,7 +10,7 @@
 
     <ItemGroup>
         <PackageReference Include="System.Reflection.Emit" Version="4.7.0"/>
-        <PackageReference Include="System.Linq.Dynamic.Core" Version="1.3.13"/>
+        <PackageReference Include="System.Linq.Dynamic.Core" Version="1.4.9"/>
     </ItemGroup>
 
     <ItemGroup Condition=" '$(TargetFramework)' != 'net472' ">
