@@ -2,8 +2,10 @@
 setlocal EnableDelayedExpansion
 
 set LEGACYCI=""
-if [%1]==[--legacyci] set LEGACYCI="-p:LEGACYCI=true"
-echo:First parameter set to: %LEGACYCI%
+set TF=""
+if [%1]==[--legacyci] set LEGACYCI=-p:LEGACYCI=true
+if [%1]==[--legacyci] (set TF=-f net8.0) else (set TF=-f net9.0)
+echo:First parameter set to: '%LEGACYCI%' amd TF is '%TF%' 
 
 echo: 
 echo:## Starting: RESTORE and BUILD...
@@ -18,9 +20,9 @@ echo:## Finished: RESTORE and BUILD
 
 echo: 
 echo:## Starting: TESTS...
-echo: 
+echo:
 
-dotnet run %LEGACYCI% --no-build -c Release --project test/FastExpressionCompiler.TestsRunner
+dotnet run %LEGACYCI% --no-build -c Release %TF% --project test/FastExpressionCompiler.TestsRunner
 if %ERRORLEVEL% neq 0 goto :error
 
 dotnet run --no-build -c Release --project test/FastExpressionCompiler.TestsRunner.Net472
