@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFrameworks Condition=" '$(LEGACYCI)' != 'true' ">net472;net8.0;net9.0</TargetFrameworks>
-        <TargetFrameworks Condition=" '$(LEGACYCI)' == 'true' ">net472;net8.0</TargetFrameworks>
+        <TargetFrameworks>net472;net8.0;$(LatestNet)</TargetFrameworks>
         <DefineConstants>LIGHT_EXPRESSION</DefineConstants>
     </PropertyGroup>
 
@@ -21,7 +20,7 @@
         <ProjectReference Include="..\FastExpressionCompiler.ILDecoder\FastExpressionCompiler.ILDecoder.csproj" />
     </ItemGroup>
 
-    <ItemGroup Condition="'$(TargetFramework)' == 'net8.0' ">
+    <ItemGroup Condition="'$(TargetFramework)' == '$(LatestNet)' ">
         <PackageReference Include="Mapster" Version="7.4.1-pre01" />
     </ItemGroup>
 

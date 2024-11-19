@@ -10,7 +10,7 @@ skip_commits:
   message: /noci .*/
 
 build_script:
-  - dotnet run -p:LEGACYLEGACYCI=true -f:net7.0 -c:Release --project test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
+  - dotnet run -p:LatestNet=net7.0 -c:Release --project test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
 
 for:
   - matrix:
@@ -18,7 +18,7 @@ for:
         - image: Visual Studio 2022
 
     build_script:
-      - build.bat --legacyci
+      - build.bat net8.0
 
     artifacts:
       - path: .\.dist\*.nupkg
