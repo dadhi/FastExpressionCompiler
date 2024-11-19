@@ -117,12 +117,11 @@ namespace FastExpressionCompiler.Benchmarks
             [Host]     : .NET 9.0.0 (9.0.24.52809), X64 RyuJIT AVX2
             DefaultJob : .NET 9.0.0 (9.0.24.52809), X64 RyuJIT AVX2
 
-
-            | Method      | Mean       | Error     | StdDev    | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
-            |------------ |-----------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
-            | Compile     | 151.570 us | 3.0196 us | 6.7538 us | 44.27 |    2.13 | 0.7324 |      - |   4.49 KB |        2.92 |
-            | CompileFast |   3.425 us | 0.0676 us | 0.0664 us |  1.00 |    0.03 | 0.2441 | 0.2365 |   1.54 KB |        1.00 |
-
+            | Method                     | Mean       | Error     | StdDev    | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
+            |--------------------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
+            | Compile                    | 145.015 us | 2.0703 us | 1.7288 us | 42.06 |    1.91 | 0.7324 |      - |   4.49 KB |        2.92 |
+            | CompileFast                |   3.454 us | 0.0688 us | 0.1495 us |  1.00 |    0.06 | 0.2441 | 0.2365 |   1.54 KB |        1.00 |
+            | ConvertToLight_CompileFast |   3.947 us | 0.0789 us | 0.1520 us |  1.14 |    0.07 | 0.3052 | 0.2899 |   1.96 KB |        1.27 |
             */
 
             [Benchmark]

@@ -6,7 +6,7 @@ namespace FastExpressionCompiler.Benchmarks
 {
     public class HoistedLambdaWithNestedLambdaBenchmark
     {
-        public static X CreateX(Func<A, B, X> factory, Lazy<A> a, B b) => 
+        public static X CreateX(Func<A, B, X> factory, Lazy<A> a, B b) =>
             factory(a.Value, b);
 
         private static Expression<Func<X>> GetHoistedExpr()
@@ -104,11 +104,24 @@ namespace FastExpressionCompiler.Benchmarks
             [Host]     : .NET 8.0.0 (8.0.23.47906), X64 RyuJIT AVX2
             DefaultJob : .NET 8.0.0 (8.0.23.47906), X64 RyuJIT AVX2
 
-
             | Method      | Mean      | Error    | StdDev    | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
             |------------ |----------:|---------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
             | Compile     | 442.02 us | 8.768 us | 21.998 us | 40.00 |    2.34 | 1.9531 | 0.9766 |  12.04 KB |        2.61 |
             | CompileFast |  11.06 us | 0.221 us |  0.441 us |  1.00 |    0.00 | 0.7324 | 0.7019 |   4.62 KB |        1.00 |
+
+
+            ## v5.0.0 + net 9.0
+
+            BenchmarkDotNet v0.14.0, Windows 11 (10.0.22631.4391/23H2/2023Update/SunValley3)
+            Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
+            .NET SDK 9.0.100
+            [Host]     : .NET 9.0.0 (9.0.24.52809), X64 RyuJIT AVX2
+            DefaultJob : .NET 9.0.0 (9.0.24.52809), X64 RyuJIT AVX2
+
+            | Method      | Mean      | Error    | StdDev    | Median    | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
+            |------------ |----------:|---------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
+            | Compile     | 421.09 us | 8.382 us | 18.221 us | 413.02 us | 36.29 |    2.09 | 1.9531 | 0.9766 |  12.04 KB |        2.61 |
+            | CompileFast |  11.62 us | 0.230 us |  0.464 us |  11.42 us |  1.00 |    0.06 | 0.7324 | 0.7019 |   4.62 KB |        1.00 |
 
             */
             [Benchmark]
@@ -197,6 +210,21 @@ namespace FastExpressionCompiler.Benchmarks
             | Invoke_Compiled     | 1,096.15 ns | 21.507 ns | 41.437 ns | 27.15 |    2.75 | 0.0420 |     264 B |        2.54 |
             | Invoke_CompiledFast |    37.65 ns |  1.466 ns |  4.299 ns |  1.00 |    0.00 | 0.0166 |     104 B |        1.00 |
 
+
+            ## v5.0.0 + net 9.0
+
+            BenchmarkDotNet v0.14.0, Windows 11 (10.0.22631.4391/23H2/2023Update/SunValley3)
+            Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
+            .NET SDK 9.0.100
+            [Host]     : .NET 9.0.0 (9.0.24.52809), X64 RyuJIT AVX2
+            DefaultJob : .NET 9.0.0 (9.0.24.52809), X64 RyuJIT AVX2
+
+            | Method              | Mean        | Error     | StdDev    | Median      | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
+            |-------------------- |------------:|----------:|----------:|------------:|------:|--------:|-------:|----------:|------------:|
+            | DirectMethodCall    |    43.45 ns |  0.922 ns |  1.905 ns |    44.13 ns |  1.09 |    0.08 | 0.0268 |     168 B |        1.62 |
+            | Invoke_Compiled     | 1,181.25 ns | 23.664 ns | 56.240 ns | 1,161.87 ns | 29.66 |    2.24 | 0.0420 |     264 B |        2.54 |
+            | Invoke_CompiledFast |    39.96 ns |  0.856 ns |  2.442 ns |    38.96 ns |  1.00 |    0.08 | 0.0166 |     104 B |        1.00 |
+
             */
             private static readonly Func<X> _lambdaCompiled = _hoistedExpr.Compile();
             private static readonly Func<X> _lambdaCompiledFast = _hoistedExpr.CompileFast();
@@ -205,15 +233,15 @@ namespace FastExpressionCompiler.Benchmarks
             private readonly B _bb = new B();
 
             [Benchmark]
-            public X DirectMethodCall() => 
+            public X DirectMethodCall() =>
                 CreateX((a, b) => new X(a, b), new Lazy<A>(() => _aa), _bb);
 
             [Benchmark]
-            public X Invoke_Compiled() => 
+            public X Invoke_Compiled() =>
                 _lambdaCompiled();
 
             [Benchmark(Baseline = true)]
-            public X Invoke_CompiledFast() => 
+            public X Invoke_CompiledFast() =>
                 _lambdaCompiledFast();
         }
 

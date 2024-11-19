@@ -76,15 +76,15 @@ Expression<Func<X>> e = () => new X(a, b);
 
 Compiling expression:
 
-| Method      | Mean       | Error     | StdDev    | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
-|------------ |-----------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
+| Method      |       Mean |     Error |    StdDev | Ratio | RatioSD |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
+| ----------- | ---------: | --------: | --------: | ----: | ------: | -----: | -----: | --------: | ----------: |
 | Compile     | 151.570 us | 3.0196 us | 6.7538 us | 44.27 |    2.13 | 0.7324 |      - |   4.49 KB |        2.92 |
 | CompileFast |   3.425 us | 0.0676 us | 0.0664 us |  1.00 |    0.03 | 0.2441 | 0.2365 |   1.54 KB |        1.00 |
 
 Invoking the compiled delegate (comparing to the direct constructor call):
 
-| Method                | Mean     | Error     | StdDev    | Median   | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
-|---------------------- |---------:|----------:|----------:|---------:|------:|--------:|-------:|----------:|------------:|
+| Method                |     Mean |     Error |    StdDev |   Median | Ratio | RatioSD |   Gen0 | Allocated | Alloc Ratio |
+| --------------------- | -------: | --------: | --------: | -------: | ----: | ------: | -----: | --------: | ----------: |
 | DirectConstructorCall | 6.920 ns | 0.2007 ns | 0.3462 ns | 7.051 ns |  0.86 |    0.06 | 0.0051 |      32 B |        1.00 |
 | CompiledLambda        | 8.095 ns | 0.2195 ns | 0.5216 ns | 7.845 ns |  1.01 |    0.08 | 0.0051 |      32 B |        1.00 |
 | FastCompiledLambda    | 8.066 ns | 0.2206 ns | 0.3234 ns | 8.156 ns |  1.00 |    0.06 | 0.0051 |      32 B |        1.00 |
@@ -100,19 +100,19 @@ Expression<Func<X>> getXExpr = () => CreateX((aa, bb) => new X(aa, bb), new Lazy
 
 Compiling expression:
 
-| Method      |      Mean |    Error |    StdDev | Ratio | RatioSD |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
-| ----------- | --------: | -------: | --------: | ----: | ------: | -----: | -----: | --------: | ----------: |
-| Compile     | 442.02 us | 8.768 us | 21.998 us | 40.00 |    2.34 | 1.9531 | 0.9766 |  12.04 KB |        2.61 |
-| CompileFast |  11.06 us | 0.221 us |  0.441 us |  1.00 |    0.00 | 0.7324 | 0.7019 |   4.62 KB |        1.00 |
+| Method      |      Mean |    Error |    StdDev |    Median | Ratio | RatioSD |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
+| ----------- | --------: | -------: | --------: | --------: | ----: | ------: | -----: | -----: | --------: | ----------: |
+| Compile     | 421.09 us | 8.382 us | 18.221 us | 413.02 us | 36.29 |    2.09 | 1.9531 | 0.9766 |  12.04 KB |        2.61 |
+| CompileFast |  11.62 us | 0.230 us |  0.464 us |  11.42 us |  1.00 |    0.06 | 0.7324 | 0.7019 |   4.62 KB |        1.00 |
 
 
 Invoking compiled delegate comparing to direct method call:
 
-| Method              |        Mean |     Error |    StdDev | Ratio | RatioSD |   Gen0 | Allocated | Alloc Ratio |
-| ------------------- | ----------: | --------: | --------: | ----: | ------: | -----: | --------: | ----------: |
-| DirectMethodCall    |    35.51 ns |  0.783 ns |  1.308 ns |  0.86 |    0.08 | 0.0267 |     168 B |        1.62 |
-| Invoke_Compiled     | 1,096.15 ns | 21.507 ns | 41.437 ns | 27.15 |    2.75 | 0.0420 |     264 B |        2.54 |
-| Invoke_CompiledFast |    37.65 ns |  1.466 ns |  4.299 ns |  1.00 |    0.00 | 0.0166 |     104 B |        1.00 |
+| Method              |        Mean |     Error |    StdDev |      Median | Ratio | RatioSD |   Gen0 | Allocated | Alloc Ratio |
+| ------------------- | ----------: | --------: | --------: | ----------: | ----: | ------: | -----: | --------: | ----------: |
+| DirectMethodCall    |    43.45 ns |  0.922 ns |  1.905 ns |    44.13 ns |  1.09 |    0.08 | 0.0268 |     168 B |        1.62 |
+| Invoke_Compiled     | 1,181.25 ns | 23.664 ns | 56.240 ns | 1,161.87 ns | 29.66 |    2.24 | 0.0420 |     264 B |        2.54 |
+| Invoke_CompiledFast |    39.96 ns |  0.856 ns |  2.442 ns |    38.96 ns |  1.00 |    0.08 | 0.0166 |     104 B |        1.00 |
 
 
 ### Manually composed expression with parameters and closure

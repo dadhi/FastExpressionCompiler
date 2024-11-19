@@ -9,11 +9,11 @@ public class Program
     {
         // todo: README.md Benchmarks
         // --------------------------------------------
-        BenchmarkRunner.Run<HoistedLambdaBenchmark.Compilation>();
-        BenchmarkRunner.Run<HoistedLambdaBenchmark.Invocation>();
+        // BenchmarkRunner.Run<HoistedLambdaBenchmark.Compilation>();
+        // BenchmarkRunner.Run<HoistedLambdaBenchmark.Invocation>();
 
-        // BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Compilation>();
-        // BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Invocation>();
+        BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Compilation>();
+        BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Invocation>();
 
         // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Compilation>();
         // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Invocation>();
