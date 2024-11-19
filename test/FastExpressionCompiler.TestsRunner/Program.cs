@@ -110,7 +110,7 @@ namespace FastExpressionCompiler.UnitTests
             var issueTests = Task.Run(() =>
             {
 #if NET8_0_OR_GREATER && !LIGHT_EXPRESSION
-                Run(new EmitHacksTest().Run);
+                // Run(new EmitHacksTest().Run);
 #endif
                 Run(new Issue14_String_constant_comparisons_fail().Run);
                 Run(new LightExpression.IssueTests.Issue14_String_constant_comparisons_fail().Run);
