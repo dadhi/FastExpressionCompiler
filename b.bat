@@ -1,23 +1,13 @@
 @echo off
 
-echo:
-echo:## Starting: RESTORE and BUILD...
-echo: 
-
-dotnet build -c:Release -v:m -p:GeneratePackageOnBuild=false
-if %ERRORLEVEL% neq 0 goto :error
-
-echo:
-echo:## Finished: RESTORE and BUILD
-
 echo: 
 echo:## Starting: TESTS...
 echo:
 
-dotnet run --no-build -c Release --project test/FastExpressionCompiler.TestsRunner
+dotnet run -v:m -f:net9.0 -c:Release -p:GeneratePackageOnBuild=false --project test/FastExpressionCompiler.TestsRunner
 if %ERRORLEVEL% neq 0 goto :error
 
-dotnet run --no-build -c Release --project test/FastExpressionCompiler.TestsRunner.Net472
+dotnet run -v:m  -c:Release -p:GeneratePackageOnBuild=false --project test/FastExpressionCompiler.TestsRunner.Net472
 if %ERRORLEVEL% neq 0 goto :error
 
 echo:

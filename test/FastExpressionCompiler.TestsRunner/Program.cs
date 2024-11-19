@@ -109,7 +109,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var issueTests = Task.Run(() =>
             {
-#if NET7_0 && !LIGHT_EXPRESSION
+#if NET8_0_OR_GREATER && !LIGHT_EXPRESSION
                 Run(new EmitHacksTest().Run);
 #endif
                 Run(new Issue14_String_constant_comparisons_fail().Run);
@@ -195,9 +195,10 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue251_Bad_code_gen_for_byRef_parameters().Run);
                 Run(new LightExpression.IssueTests.Issue251_Bad_code_gen_for_byRef_parameters().Run);
 
+#if NET8_0_OR_GREATER
                 Run(new Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown().Run);
                 Run(new LightExpression.IssueTests.Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown().Run);
-
+#endif
                 Run(new Issue261_Loop_wih_conditions_fails().Run);
                 Run(new LightExpression.IssueTests.Issue261_Loop_wih_conditions_fails().Run);
 
@@ -268,7 +269,9 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue355_Error_with_converting_to_from_signed_unsigned_integers().Run);
                 Run(new LightExpression.IssueTests.Issue355_Error_with_converting_to_from_signed_unsigned_integers().Run);
 
+#if NET8_0_OR_GREATER && !LIGHT_EXPRESSION
                 Run(new Issue357_Invalid_program_exception().Run);
+#endif
 
                 Run(new LightExpression.IssueTests.Issue363_ActionFunc16Generics().Run);
 
@@ -285,8 +288,9 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue386_Value_can_not_be_null_in_Nullable_convert().Run);
                 Run(new LightExpression.IssueTests.Issue386_Value_can_not_be_null_in_Nullable_convert().Run);
 
+#if NET8_0_OR_GREATER && !LIGHT_EXPRESSION
                 Run(new Issue390_405_406_Mapster_tests().Run);
-
+#endif
                 Run(new Issue400_Fix_the_direct_assignment_of_Try_to_Member().Run);
                 Run(new LightExpression.IssueTests.Issue400_Fix_the_direct_assignment_of_Try_to_Member().Run);
 

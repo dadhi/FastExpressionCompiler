@@ -1,4 +1,5 @@
-#if !LIGHT_EXPRESSION && !NETFRAMEWORK // NET Core only because the lambda expression may not apply the implicit conversion to Nullable
+#if NET8_0_OR_GREATER && !LIGHT_EXPRESSION
+// NET Core only because the lambda expression may not apply the implicit conversion to Nullable
 using System;
 using System.Linq;
 using System.Linq.Expressions;
@@ -15,7 +16,7 @@ namespace FastExpressionCompiler.IssueTests
             return 1;
         }
 
-        static Expression<Func<ActionItem, bool>> Predicate(Id<AccountManager>? value) => 
+        static Expression<Func<ActionItem, bool>> Predicate(Id<AccountManager>? value) =>
             x => x.AccountManagerId == value;
 
         [Test]

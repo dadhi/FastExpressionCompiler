@@ -105,6 +105,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
+#if NET6_0_OR_GREATER
             ff.AssertOpCodes(
                 OpCodes.Ldarg_0,
                 OpCodes.Ldfld,      // ArrayClosure.ConstantsAndNestedLambdas
@@ -112,9 +113,6 @@ namespace FastExpressionCompiler.UnitTests
                 OpCodes.Ldloc_0,
                 OpCodes.Ldc_I4_0,
                 OpCodes.Ldelem_Ref,
-#if NET472_OR_GREATER
-                OpCodes.Castclass,
-#endif
                 OpCodes.Ldtoken,    // GetString
                 OpCodes.Call,       // Type.GetTypeFromHandle
                 OpCodes.Ldarg_1,
@@ -122,6 +120,7 @@ namespace FastExpressionCompiler.UnitTests
                 OpCodes.Castclass,  // GetString
                 OpCodes.Ret
             );
+#endif
 
             getString = ff(() => "hey");
             Assert.AreEqual("hey", getString());

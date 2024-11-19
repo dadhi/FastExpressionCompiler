@@ -1,4 +1,4 @@
-﻿#if NET7_0 && !LIGHT_EXPRESSION
+﻿#if NET8_0_OR_GREATER && !LIGHT_EXPRESSION
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -57,10 +57,10 @@ namespace FastExpressionCompiler.IssueTests
 
         private delegate ref TField GetFieldRefDelegate<TFieldHolder, TField>(TFieldHolder holder);
 
-        private static GetFieldRefDelegate<TFieldHolder, TField> CreateFieldAccessor<TFieldHolder, TField>(FieldInfo field) 
+        private static GetFieldRefDelegate<TFieldHolder, TField> CreateFieldAccessor<TFieldHolder, TField>(FieldInfo field)
         {
-            var dynMethod = new DynamicMethod(string.Empty, 
-                typeof(TField).MakeByRefType(), new[] { typeof(ExpressionCompiler.ArrayClosure), typeof(TFieldHolder) }, 
+            var dynMethod = new DynamicMethod(string.Empty,
+                typeof(TField).MakeByRefType(), new[] { typeof(ExpressionCompiler.ArrayClosure), typeof(TFieldHolder) },
                 typeof(TFieldHolder), skipVisibility: true);
 
             var il = dynMethod.GetILGenerator();
@@ -84,7 +84,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var dynMethod = new DynamicMethod(string.Empty,
                 typeof(int), new[] { typeof(ExpressionCompiler.ArrayClosure), typeof(int) },
-                typeof(ExpressionCompiler), 
+                typeof(ExpressionCompiler),
                 skipVisibility: true);
 
             // Ensuring the size of stream upfront, otherwise we would need this code

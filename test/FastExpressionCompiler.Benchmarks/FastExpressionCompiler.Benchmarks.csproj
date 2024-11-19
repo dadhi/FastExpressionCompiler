@@ -11,6 +11,7 @@
         <TieredCompilation>false</TieredCompilation>
 
         <DebugType>pdbonly</DebugType>
+        <NoWarn>$(NoWarn);NETSDK1005</NoWarn>
 
         <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
     </PropertyGroup>

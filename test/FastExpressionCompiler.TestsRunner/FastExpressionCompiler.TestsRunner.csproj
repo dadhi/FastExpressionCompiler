@@ -2,8 +2,10 @@
     <PropertyGroup>
         <TargetFrameworks Condition=" '$(LEGACYCI)' != 'true' ">net9.0</TargetFrameworks>
         <TargetFrameworks Condition=" '$(LEGACYCI)' == 'true' ">net8.0</TargetFrameworks>
+        <TargetFrameworks Condition=" '$(LEGACYLEGACYCI)' == 'true' ">net7.0</TargetFrameworks>
         <OutputType>Exe</OutputType>
         <IsTestProject>false</IsTestProject>
+        <NoWarn>$(NoWarn);NETSDK1005;NETSDK1138;NU1702</NoWarn>
     </PropertyGroup>
     <ItemGroup>
         <ProjectReference Include="..\FastExpressionCompiler.UnitTests\FastExpressionCompiler.UnitTests.csproj" />
