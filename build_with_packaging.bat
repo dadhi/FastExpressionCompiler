@@ -1,11 +1,16 @@
 @echo off
+setlocal EnableDelayedExpansion
 
-echo:
+set LEGACYCI=""
+if [%1]==[--legacyci] set LEGACYCI="-p:LEGACYCI=true"
+echo:First parameter set to: %LEGACYCI%
+
+echo: 
 echo:## Starting: RESTORE and BUILD...
 echo: 
 
-dotnet clean -v:m
-dotnet build -c:Release -v:m
+dotnet clean %LEGACYCI% -v:m
+dotnet build %LEGACYCI% -c:Release -v:m
 if %ERRORLEVEL% neq 0 goto :error
 
 echo:
@@ -15,7 +20,7 @@ echo:
 echo:## Starting: TESTS...
 echo: 
 
-dotnet run --no-build -c Release --project test/FastExpressionCompiler.TestsRunner
+dotnet run %LEGACYCI% --no-build -c Release --project test/FastExpressionCompiler.TestsRunner
 if %ERRORLEVEL% neq 0 goto :error
 
 dotnet run --no-build -c Release --project test/FastExpressionCompiler.TestsRunner.Net472

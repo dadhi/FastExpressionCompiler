@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFrameworks Condition=" '$(LegacyModeForCI)' != 'true' ">net472;netstandard2.0;netstandard2.1;net6.0;net8.0;net9.0</TargetFrameworks>
-        <TargetFrameworks Condition=" '$(LegacyModeForCI)' == 'true' ">net472;netstandard2.0;netstandard2.1;net6.0;net8.0</TargetFrameworks>
+        <TargetFrameworks Condition=" '$(LEGACYCI)' != 'true' ">net472;netstandard2.0;netstandard2.1;net6.0;net8.0;net9.0</TargetFrameworks>
+        <TargetFrameworks Condition=" '$(LEGACYCI)' == 'true' ">net472;netstandard2.0;netstandard2.1;net6.0;net8.0</TargetFrameworks>
 
         <VersionPrefix>4.2.2</VersionPrefix>
         <VersionSuffix></VersionSuffix>

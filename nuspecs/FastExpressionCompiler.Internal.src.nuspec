@@ -97,7 +97,7 @@ https://github.com/dadhi/FastExpressionCompiler/compare/v4.2.0...v4.2.1
             <files include="cs/**/*.*" buildAction="Compile" />
         </contentFiles>
         <dependencies>
-            <group targetFramework="net9.0"/>
+            <group targetFramework="net8.0"/>
             <group targetFramework="net472">
                 <dependency id="System.ValueTuple" version="4.5.0" />
             </group>
