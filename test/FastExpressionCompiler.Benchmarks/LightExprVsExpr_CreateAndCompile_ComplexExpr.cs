@@ -122,6 +122,23 @@ namespace FastExpressionCompiler.Benchmarks
         | Create_SystemExpression_and_CompileFast              |   5.923 us | 0.0996 us | 0.1771 us |  1.34 |    0.05 | 0.5188 | 0.5035 |   3.27 KB |        1.35 |
         | Create_LightExpression_and_CompileFast               |   4.399 us | 0.0484 us | 0.0453 us |  1.00 |    0.00 | 0.3815 | 0.3662 |   2.42 KB |        1.00 |
         | CreateLightExpression_and_CompileFast_with_intrinsic |   4.384 us | 0.0835 us | 0.0697 us |  1.00 |    0.02 | 0.3815 | 0.3662 |   2.35 KB |        0.97 |
+
+
+        ## v5.0.0 + net9.0
+
+        BenchmarkDotNet v0.14.0, Windows 11 (10.0.22631.4391/23H2/2023Update/SunValley3)
+        Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
+        .NET SDK 9.0.100
+        [Host]     : .NET 9.0.0 (9.0.24.52809), X64 RyuJIT AVX2
+        DefaultJob : .NET 9.0.0 (9.0.24.52809), X64 RyuJIT AVX2
+
+
+        | Method                                               | Mean       | Error     | StdDev     | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
+        |----------------------------------------------------- |-----------:|----------:|-----------:|------:|--------:|-------:|-------:|----------:|------------:|
+        | Create_SystemExpression_and_Compile                  | 212.157 us | 4.2180 us | 11.4036 us | 44.77 |    3.31 | 0.9766 | 0.4883 |   7.15 KB |        2.95 |
+        | Create_SystemExpression_and_CompileFast              |   6.656 us | 0.1322 us |  0.3065 us |  1.40 |    0.10 | 0.5188 | 0.4883 |   3.27 KB |        1.35 |
+        | Create_LightExpression_and_CompileFast               |   4.751 us | 0.0947 us |  0.2411 us |  1.00 |    0.07 | 0.3815 | 0.3662 |   2.42 KB |        1.00 |
+        | CreateLightExpression_and_CompileFast_with_intrinsic |   4.604 us | 0.0918 us |  0.1915 us |  0.97 |    0.06 | 0.3815 | 0.3662 |   2.35 KB |        0.97 |
         */
 
         [Benchmark]
@@ -213,6 +230,22 @@ namespace FastExpressionCompiler.Benchmarks
         | Create_SystemExpression                | 1,039.5 ns | 20.75 ns | 45.98 ns |  8.29 |    0.50 | 0.2060 |    1304 B |        2.63 |
         | Create_LightExpression                 |   125.7 ns |  2.46 ns |  5.99 ns |  1.00 |    0.00 | 0.0789 |     496 B |        1.00 |
         | Create_LightExpression_with_intrinsics |   130.0 ns |  2.47 ns |  6.25 ns |  1.04 |    0.07 | 0.0777 |     488 B |        0.98 |
+
+
+        ## v5.0.0 + net9.0
+
+        BenchmarkDotNet v0.14.0, Windows 11 (10.0.22631.4391/23H2/2023Update/SunValley3)
+        Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
+        .NET SDK 9.0.100
+        [Host]     : .NET 9.0.0 (9.0.24.52809), X64 RyuJIT AVX2
+        DefaultJob : .NET 9.0.0 (9.0.24.52809), X64 RyuJIT AVX2
+
+        | Method                                 | Mean       | Error    | StdDev   | Median     | Ratio | RatioSD | Gen0   | Allocated | Alloc Ratio |
+        |--------------------------------------- |-----------:|---------:|---------:|-----------:|------:|--------:|-------:|----------:|------------:|
+        | Create_SystemExpression                | 1,110.9 ns | 22.19 ns | 62.23 ns | 1,086.1 ns |  7.25 |    0.56 | 0.2060 |    1304 B |        2.63 |
+        | Create_LightExpression                 |   153.7 ns |  3.14 ns |  8.61 ns |   150.5 ns |  1.00 |    0.08 | 0.0789 |     496 B |        1.00 |
+        | Create_LightExpression_with_intrinsics |   161.0 ns |  2.80 ns |  2.19 ns |   161.0 ns |  1.05 |    0.06 | 0.0777 |     488 B |        0.98 |
+
         */
 
         [Benchmark]
