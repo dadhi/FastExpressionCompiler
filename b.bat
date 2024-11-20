@@ -4,10 +4,10 @@ echo:
 echo:## Starting: TESTS...
 echo:
 
-dotnet run -v:m -c:Release -p:GeneratePackageOnBuild=false --project test/FastExpressionCompiler.TestsRunner
+dotnet run -v:m -p:GeneratePackageOnBuild=false -c:Release --project test/FastExpressionCompiler.TestsRunner
 if %ERRORLEVEL% neq 0 goto :error
 
-dotnet run -v:m -c:Release -p:GeneratePackageOnBuild=false --project test/FastExpressionCompiler.TestsRunner.Net472
+dotnet run -v:m -p:GeneratePackageOnBuild=false -c:Release --project test/FastExpressionCompiler.TestsRunner.Net472
 if %ERRORLEVEL% neq 0 goto :error
 
 echo:

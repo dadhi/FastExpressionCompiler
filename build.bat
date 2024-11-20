@@ -1,4 +1,4 @@
-@echo off
+@REM @echo off
 setlocal EnableDelayedExpansion
 
 set LatestNet=
@@ -9,7 +9,7 @@ echo:
 echo:## Starting: RESTORE and BUILD...
 echo: 
 
-dotnet clean %LatestNet% -v:m
+@REM dotnet clean %LatestNet% -v:m
 dotnet build %LatestNet% -c:Release -v:m
 if %ERRORLEVEL% neq 0 goto :error
 
@@ -20,10 +20,10 @@ echo:
 echo:## Starting: TESTS...
 echo:
 
-dotnet run %LatestNet% -c:Release --project test/FastExpressionCompiler.TestsRunner
+dotnet run %LatestNet% -p:GeneratePackageOnBuild=false -c:Release --project test/FastExpressionCompiler.TestsRunner
 if %ERRORLEVEL% neq 0 goto :error
 
-dotnet run -c:Release --project test/FastExpressionCompiler.TestsRunner.Net472
+dotnet run -p:GeneratePackageOnBuild=false -c:Release --project test/FastExpressionCompiler.TestsRunner.Net472
 if %ERRORLEVEL% neq 0 goto :error
 echo:
 echo:## Finished: TESTS
