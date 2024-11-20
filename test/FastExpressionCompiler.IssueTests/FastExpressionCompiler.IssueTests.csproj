@@ -1,6 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFrameworks>net472;net8.0;$(LatestNet)</TargetFrameworks>
+        <TargetFrameworks Condition=" '$(LatestSupportedNet)' == 'net7.0' ">net472;net7.0</TargetFrameworks>
+        <TargetFrameworks Condition=" '$(LatestSupportedNet)' == 'net8.0' ">net472;net8.0</TargetFrameworks>
+        <TargetFrameworks Condition=" '$(LatestSupportedNet)' == 'net9.0' ">net472;net9.0</TargetFrameworks>
     </PropertyGroup>
 
     <ItemGroup>

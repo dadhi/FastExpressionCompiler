@@ -1,7 +1,7 @@
 @echo off
 setlocal EnableDelayedExpansion
 
-echo: # BUILDING AND RUNNNG THE TESTS IN RELEASE MODE
+echo: # BUILDING AND RUNNNG THE TESTS IN DEBUG MODE
 echo:
 echo:
 
@@ -17,8 +17,7 @@ echo:
 echo:## Starting: RESTORE and BUILD...
 echo: 
 
-dotnet clean %LatestSupportedNetProp%
-dotnet build %LatestSupportedNetProp% -c:Release
+dotnet build %LatestSupportedNetProp% -c:Debug
 if %ERRORLEVEL% neq 0 goto :error
 
 echo:
@@ -28,10 +27,10 @@ echo:
 echo:## Starting: TESTS...
 echo:
 
-dotnet run --no-build %LatestSupportedNetProp% %FrameworkParam% -c:Release --project test/FastExpressionCompiler.TestsRunner
+dotnet run --no-build %LatestSupportedNetProp% %FrameworkParam% -c:Debug --project test/FastExpressionCompiler.TestsRunner
 if %ERRORLEVEL% neq 0 goto :error
 
-dotnet run --no-build -c:Release --project test/FastExpressionCompiler.TestsRunner.Net472
+dotnet run --no-build -c:Debug --project test/FastExpressionCompiler.TestsRunner.Net472
 if %ERRORLEVEL% neq 0 goto :error
 echo:
 echo:## Finished: TESTS

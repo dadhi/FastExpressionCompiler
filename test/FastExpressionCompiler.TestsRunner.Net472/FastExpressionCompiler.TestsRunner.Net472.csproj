@@ -1,8 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFrameworks>net472</TargetFrameworks>
+        <TargetFramework>net472</TargetFramework>
+
         <OutputType>Exe</OutputType>
         <IsTestProject>false</IsTestProject>
+        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+
         <NoWarn>$(NoWarn);NETSDK1005;NETSDK1138;NU1702</NoWarn>
     </PropertyGroup>
     <ItemGroup>

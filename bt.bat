@@ -1,9 +1,9 @@
 @echo off
 
 echo: 
-echo:## Running TESTS on the Latest .NET version...
+echo:## Running TESTS on the Latest Supported .NET...
 echo:
-dotnet run -v:m -p:GeneratePackageOnBuild=false -c:Release --project test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
+dotnet run -c:Release -f:net9.0 --project test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
 if %ERRORLEVEL% neq 0 goto :error
 
 echo:

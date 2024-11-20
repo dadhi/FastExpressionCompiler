@@ -4,6 +4,7 @@ using NUnit.Framework;
 
 // ReSharper disable CompareOfFloatsByEqualityOperator
 
+// todo: @wip convert to LightExpression with #271
 namespace FastExpressionCompiler.UnitTests
 {
     [TestFixture]

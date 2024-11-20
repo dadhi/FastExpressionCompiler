@@ -2,13 +2,17 @@
     <PropertyGroup>
         <Authors>Maksim Volkau</Authors>
         <Copyright>Copyright © 2016-2024 Maksim Volkau</Copyright>
+
         <NeutralLanguage>en-US</NeutralLanguage>
         <LangVersion>latest</LangVersion>
+        <LatestSupportedNet>net9.0</LatestSupportedNet>
+
         <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
         <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+
         <NoWarn>IDE0251;IDE0079;IDE0047;NETSDK1212</NoWarn>
-        <LatestNet>net9.0</LatestNet>
     </PropertyGroup>
+
     <ItemGroup>
         <None Remove="**\*.orig" />
         <None Remove="**\*.ncrunchproject" />

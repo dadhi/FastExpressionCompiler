@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>$(LatestNet)</TargetFramework>
-        <OutputType>Exe</OutputType>
+        <TargetFrameworks>$(LatestSupportedNet)</TargetFrameworks>
 
+        <OutputType>Exe</OutputType>
         <IsTestProject>false</IsTestProject>
 
         <!--skip tiering jitting for the fare benchmarks -->
