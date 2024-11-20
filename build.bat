@@ -20,10 +20,10 @@ echo:
 echo:## Starting: TESTS...
 echo:
 
-dotnet run %LatestNet% --no-build -c:Release --project test/FastExpressionCompiler.TestsRunner
+dotnet run %LatestNet% -c:Release --project test/FastExpressionCompiler.TestsRunner
 if %ERRORLEVEL% neq 0 goto :error
 
-dotnet run --no-build -c:Release --project test/FastExpressionCompiler.TestsRunner.Net472
+dotnet run -c:Release --project test/FastExpressionCompiler.TestsRunner.Net472
 if %ERRORLEVEL% neq 0 goto :error
 echo:
 echo:## Finished: TESTS
