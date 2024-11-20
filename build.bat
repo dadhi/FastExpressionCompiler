@@ -27,7 +27,7 @@ echo:
 dotnet run -v:m %LatestNet% -p:GeneratePackageOnBuild=false -f:%Target% -c:Release --project test/FastExpressionCompiler.TestsRunner
 if %ERRORLEVEL% neq 0 goto :error
 
-dotnet run -v:m -p:GeneratePackageOnBuild=false -c:Release --project test/FastExpressionCompiler.TestsRunner.Net472
+dotnet run -v:m -p:GeneratePackageOnBuild=false -c:Release -f:net472 --project test/FastExpressionCompiler.TestsRunner.Net472
 if %ERRORLEVEL% neq 0 goto :error
 echo:
 echo:## Finished: TESTS

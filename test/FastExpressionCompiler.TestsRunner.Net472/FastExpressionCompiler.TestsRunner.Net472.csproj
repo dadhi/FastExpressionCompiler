@@ -1,8 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework>net472</TargetFramework>
+        <TargetFrameworks>net472</TargetFrameworks>
         <OutputType>Exe</OutputType>
         <IsTestProject>false</IsTestProject>
+        <NoWarn>$(NoWarn);NETSDK1005;NETSDK1138;NU1702</NoWarn>
     </PropertyGroup>
     <ItemGroup>
         <ProjectReference Include="..\FastExpressionCompiler.UnitTests\FastExpressionCompiler.UnitTests.csproj" />
