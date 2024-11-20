@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFramework>$(LatestNet)</TargetFramework>
+        <TargetFrameworks>$(LatestNet)</TargetFrameworks>
         <OutputType>Exe</OutputType>
         <IsTestProject>false</IsTestProject>
         <NoWarn>$(NoWarn);NETSDK1005;NETSDK1138;NU1702</NoWarn>

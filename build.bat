@@ -1,9 +1,13 @@
 @REM @echo off
 setlocal EnableDelayedExpansion
 
+set Target=net9.0
 set LatestNet=
-if [%1] NEQ [] set LatestNet=-p:LatestNet=%1
-echo:Set %LatestNet%
+if [%1] NEQ [] (
+    set Target=%1
+    set LatestNet=-p:LatestNet=%1
+)
+echo:Set Target to '%Target%' and LatestNet to '%LatestNet%'
 
 echo:
 echo:## Starting: RESTORE and BUILD...
@@ -20,10 +24,10 @@ echo:
 echo:## Starting: TESTS...
 echo:
 
-dotnet run %LatestNet% -p:GeneratePackageOnBuild=false -c:Release --project test/FastExpressionCompiler.TestsRunner
+dotnet run -v:m %LatestNet% -p:GeneratePackageOnBuild=false -f:%Target% -c:Release --project test/FastExpressionCompiler.TestsRunner
 if %ERRORLEVEL% neq 0 goto :error
 
-dotnet run -p:GeneratePackageOnBuild=false -c:Release --project test/FastExpressionCompiler.TestsRunner.Net472
+dotnet run -v:m -p:GeneratePackageOnBuild=false -c:Release --project test/FastExpressionCompiler.TestsRunner.Net472
 if %ERRORLEVEL% neq 0 goto :error
 echo:
 echo:## Finished: TESTS
