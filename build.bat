@@ -17,8 +17,8 @@ echo:
 echo:## Starting: RESTORE and BUILD...
 echo: 
 
-dotnet clean %LatestSupportedNetProp%
-dotnet build %LatestSupportedNetProp% -c:Release
+dotnet clean -v:m %LatestSupportedNetProp%
+dotnet build -v:m %LatestSupportedNetProp% -c:Release
 if %ERRORLEVEL% neq 0 goto :error
 
 echo:

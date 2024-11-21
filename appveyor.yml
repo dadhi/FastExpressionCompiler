@@ -10,7 +10,7 @@ skip_commits:
   message: /noci .*/
 
 build_script:
-  - dotnet run -p:LatestSupportedNet=net7.0 -f:net7.0 -c:Release --project test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
+  - dotnet run -v:m -p:LatestSupportedNet=net7.0 -f:net7.0 -c:Release --project test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
 
 for:
   - matrix:
