@@ -4,7 +4,7 @@ set PACKAGES=..\.dist
 set SOURCE=https://api.nuget.org/v3/index.json
 set /p APIKEY=<"..\..\ApiKey.txt"
 
-set PKGVER=4.2.2
+set PKGVER=5.0.0
 
 dotnet nuget push "%PACKAGES%\FastExpressionCompiler.%PKGVER%.nupkg" -k %APIKEY% -s %SOURCE% --skip-duplicate
 dotnet nuget push "%PACKAGES%\FastExpressionCompiler.src.%PKGVER%.nupkg" -k %APIKEY% -s %SOURCE% --skip-duplicate

@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata minClientVersion="3.3.0">
         <id>FastExpressionCompiler.src</id>
-        <version>4.2.2</version>
+        <version>5.0.0</version>
         <authors>Maksim Volkau</authors>
         <copyright>Copyright © 2016-2024 Maksim Volkau</copyright>
         <projectUrl>https://github.com/dadhi/FastExpressionCompiler</projectUrl>
@@ -12,86 +12,20 @@
         <tags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</tags>
         <icon>logo.png</icon>
         <releaseNotes><![CDATA[
-## v4.2.2 Bug-fix release
+## v5.0.0 Major feature release
 
-- fix: #418 Wrong output when comparing NaN value  
-- fix: #419 System.InvalidProgramException : The JIT compiler encountered invalid IL code or an internal limitation
-- fix: #420 Nullable<DateTime> comparison differs from Expression.Compile
-- fix: #421 Date difference is giving wrong negative value
-- fix: #422 [bug] InvalidProgramException when having TryCatch + Default in Catch
-- fix: #423 Converting a uint to a float gives the wrong result
+- feat: #271 Add conversion from the System Expression to the Light Expression to allow hoisted system expression embedding in the larger light expression
+- feat: #432 Add explicit target for .NET 9
+- feat: #434 ToCSharpString should generate stable names for the unnamed variables, parameters and labels
 
+- fix: #262 Optimize OpCode.Ceq plus Branch into a single compare-and-branch
+- fix: #424 TryCatch expression as argument in Call expression produces invalid program
+- fix: #426 Directly passing a method result to another method by ref, fails with InvalidProgramException
+- fix: #427 CSharp output with more consistency, robustness and more understandable code
+- fix: #428 Expression.Switch without a default case incorrectly calls first case for unmatched values
+- fix: #430 TryCatch - Bad label content in ILGenerator
 
-## v4.2.1 Feature and bug-fix release
-
-- fix: ImTools should disable the nullable context
-- fix: nullable property
-- fix: Incorrect il for struct indexer
-- fix: Fix or support return ref value
-- fix: Incorrect il when passing by ref value
-
-## Contributors
-
-* @sebastienros made contribution in https://github.com/dadhi/FastExpressionCompiler/pull/412
-
-## Full Changelog
-
-https://github.com/dadhi/FastExpressionCompiler/compare/v4.2.0...v4.2.1
-
-
-## v4.2.0 Feature and bug-fix release
-
-- feat: #133 Optimize Switch Expression
-- feat: #393 Support ToCSharpString of the block in the ternary expression
-- feat: #396 Optimize conditional expressions with the DefaultExpression left or right operand the same way as ConstantExpression
-
-- fix: #390 System.AccessViolationException when mapping using Mapster
-- fix: #391 ToCSharpString outputs ? for Nullable which does not produce the compile-able code
-- fix: #392 ToExpressionString wrongly declares Label instead of LabelTarget array
-- fix: #394 Calling a user defined == operator runs into a CLR invalid program exception
-- fix: #397 Fix and optimize the Switch support
-- fix: #399 Coalesce nullable with 0 is not working
-- fix: #400 Fix the direct assignment of Try to Member expression because indirect assignment through tmp var works
-- fix: #401 Invoke inlining is not working with collections in AutoMapper tests
-- fix: #404 An expression with a single parameter concatenated to a string causes 'Exception has been thrown by the target of an invocation' during delegate invocation
-- fix: #405 NullReferenceException with V4.X when using long?[]
-- fix: #406 NullReferenceException with V4.X
-- fix: #407 NullReferenceException when setting the Enum field
-- fix: #408 Dictionary mapping failing when the InvocationExpression inlining is involved
-
-
-## v4.1.0 Small feature and bug release
-
-- added: #379 Add direct net8.0 target as soon as Appveyor CI will support it
-- fixed: #380 Comparisons with nullable types
-- fixed: #381 NullReferenceException with V4.X when trying to map
-- fixed: #386 Value can not be null(parametr 'meth')
-
-
-## v4.0.1 Bug-fix release
-
-- fixed: #374 CompileFast doesn't work with HasFlag
-
-## v4.0.0 Major release
-
-- fixed: #352 xxxAssign doesn't work with MemberAccess
-- fixed: #353 NullReferenceException when calling CompileFast() results
-- fixed: #357 Invalid program exception
-- fixed: #366 FastExpressionCompiler[v3.3.4] gives incorrect results in some linq operations
-- fixed: #368 Fix duplicate nested lambda compilation
-- fixed: #374 CompileFast doesn't work with HasFlag
-
-- added: #264 Optimize the array index emit to emit specific Ldelem_ code instead of generic Ldelem
-- added: #273 Implement IArgumentProvider for the BlockExpression to minimize the consumed memory
-- added: #346 Is it possible to implement ref local variables?
-- added: #359 Improve the performance of variable lookup
-- added: #367 Better diagnostics and debugging with error codes from Collect and Compile rounds
-- added: #369 Decrease memory occupied by the LightExpression Block by storing Expression in SmallList (partly on stack)
-- added: #370 Optimize any nested lambda compilation (LINQ) by compiling right after collect one-by-one
-- added: #372 Support LightExpression.Expression.TryConvertDelegateIntrinsic for converting one type of delegate to another
-- added: #373 Support custom C# printing for the LightExpression.Expression
-
-        ]]></releaseNotes>
+        ]]>        </releaseNotes>
         <contentFiles>
             <files include="cs/**/*.*" buildAction="Compile" />
         </contentFiles>
@@ -116,13 +50,13 @@ https://github.com/dadhi/FastExpressionCompiler/compare/v4.2.0...v4.2.1
         <file src="_._" target="lib\netstandard2.0\" />
 
         <file src="..\src\FastExpressionCompiler\FastExpressionCompiler.cs" target="contentFiles\cs\net472\FastExpressionCompiler" />
-        <file src="..\src\FastExpressionCompiler\ImTools.cs"                target="contentFiles\cs\net472\FastExpressionCompiler" />
+        <file src="..\src\FastExpressionCompiler\ImTools.cs" target="contentFiles\cs\net472\FastExpressionCompiler" />
 
         <file src="..\src\FastExpressionCompiler\FastExpressionCompiler.cs" target="contentFiles\cs\netstandard2.0\FastExpressionCompiler" />
-        <file src="..\src\FastExpressionCompiler\ImTools.cs"                target="contentFiles\cs\netstandard2.0\FastExpressionCompiler" />
+        <file src="..\src\FastExpressionCompiler\ImTools.cs" target="contentFiles\cs\netstandard2.0\FastExpressionCompiler" />
 
         <file src="..\src\FastExpressionCompiler\FastExpressionCompiler.cs" target="contentFiles\cs\net8.0\FastExpressionCompiler" />
-        <file src="..\src\FastExpressionCompiler\ImTools.cs"                target="contentFiles\cs\net8.0\FastExpressionCompiler" />
+        <file src="..\src\FastExpressionCompiler\ImTools.cs" target="contentFiles\cs\net8.0\FastExpressionCompiler" />
 
     </files>
 </package>

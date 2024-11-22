@@ -14,7 +14,20 @@
         <Description>FastExpressionCompiler for LightExpression is 10-40x times faster than Expression.Compile()</Description>
         <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
         <PackageReleaseNotes><![CDATA[
-        ## v5.0.0 Major feature release
+
+## v5.0.0 Major feature release
+
+- feat: #271 Add conversion from the System Expression to the Light Expression to allow hoisted system expression embedding in the larger light expression
+- feat: #432 Add explicit target for .NET 9
+- feat: #434 ToCSharpString should generate stable names for the unnamed variables, parameters and labels
+
+- fix: #262 Optimize OpCode.Ceq plus Branch into a single compare-and-branch
+- fix: #424 TryCatch expression as argument in Call expression produces invalid program
+- fix: #426 Directly passing a method result to another method by ref, fails with InvalidProgramException
+- fix: #427 CSharp output with more consistency, robustness and more understandable code
+- fix: #428 Expression.Switch without a default case incorrectly calls first case for unmatched values
+- fix: #430 TryCatch - Bad label content in ILGenerator
+
         ]]>
         </PackageReleaseNotes>
 
