@@ -47,6 +47,7 @@ using static ExpressionCompiler;
 using static ToCSharpPrinter;
 using static CodePrinter;
 
+#nullable disable
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 /// <summary>The base class and the Factory methods provider for the Expression.</summary>
@@ -113,7 +114,7 @@ public abstract class Expression
         return sysExpr;
     }
 
-    // todo: @perf can use the FHashMap instead of the SmallList here?
+    // todo: @perf can use the SmallMap instead of the SmallList here?
     internal abstract SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> convertedExpressions);
 
     /// <summary>Converts to Expression and outputs its as string</summary>
@@ -1328,7 +1329,7 @@ public abstract class Expression
 
     [RequiresUnreferencedCode(Trimming.Message)]
     public static InvocationExpression Invoke(Expression expression, IEnumerable<Expression> args) =>
-    Invoke(expression, args.AsReadOnlyList());
+        Invoke(expression, args.AsReadOnlyList());
 
     public static InvocationExpression Invoke(Type returnType, Expression expression, IReadOnlyList<Expression> args) =>
         expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
@@ -5886,3 +5887,5 @@ public interface IParameterProvider
     int ParameterCount { get; }
     ParameterExpression GetParameter(int index);
 }
+
+#nullable restore
