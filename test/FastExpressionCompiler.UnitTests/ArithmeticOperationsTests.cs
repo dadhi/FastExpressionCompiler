@@ -16,6 +16,8 @@ namespace FastExpressionCompiler.UnitTests
     {
         public int Run()
         {
+            Can_modulus_custom_in_Action();
+
             Can_modulus_custom();
             Can_sum_bytes_converted_to_ints();
             Can_sum_signed_bytes_converted_to_ints();
@@ -24,7 +26,6 @@ namespace FastExpressionCompiler.UnitTests
             Can_substract_all_primitive_numeric_types_that_define_binary_operator_substract();
             Can_substract_with_unchecked_overflow();
             Can_not_substract_with_checked_overflow();
-            // Can_modulus_custom_in_Action();
             Can_modulus();
             Can_bit_or_1();
             Can_bit_and_1();
@@ -196,6 +197,7 @@ namespace FastExpressionCompiler.UnitTests
             var a = Parameter(typeof(BigInteger), "a");
             var b = Parameter(typeof(BigInteger), "b");
             var expr = Lambda<Action<BigInteger, BigInteger>>(Modulo(a, b), a, b);
+            expr.PrintCSharp();
 
             var fs = expr.CompileSys();
             fs.PrintIL();
