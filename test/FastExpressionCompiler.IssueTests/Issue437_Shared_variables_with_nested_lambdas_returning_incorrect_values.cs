@@ -15,12 +15,40 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
 {
     public int Run()
     {
-        // Nested_lambda_with_shared_variable(); // todo: @fixme
+        // Simplified_test_no_inlining();
+        // Nested_lambda_with_shared_variable_Workaround_with_struct();
+        Nested_lambda_with_shared_variable();
         Nested_lambda_with_shared_variable_Workaround();
-        return 1;
+        return 4;
     }
 
-    public static void DoSome() { }
+    [Test]
+    public void Simplified_test_no_inlining()
+    {
+        var myVar = Variable(typeof(int), "myVar");
+        var expr = Lambda<Func<int>>(
+            Block(
+                new[] { myVar },
+                Assign(myVar, Constant(5)),
+                Invoke(Lambda<Action>(Assign(myVar, Constant(3)))),
+                myVar
+            )
+        );
+
+        expr.PrintCSharp();
+
+        var fs = expr.CompileSys();
+        fs.PrintIL();
+
+        var sr = fs();
+        Assert.AreEqual(3, sr);
+
+        var ff = expr.CompileFast(false, CompilerFlags.NoInvocationLambdaInlining);
+        ff.PrintIL();
+
+        var fr = ff();
+        Assert.AreEqual(3, fr);
+    }
 
     [Test]
     public void Nested_lambda_with_shared_variable()
@@ -34,9 +62,7 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
             Block(
                 new[] { myVar },
                 Assign(myVar, Constant(5)),
-                Invoke(aa,
-                    Lambda<Action>(Assign(myVar, Constant(3)))
-                ),
+                Invoke(aa, Lambda<Action>(Assign(myVar, Constant(3)))),
                 myVar
             )
         );
@@ -49,9 +75,7 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
 
         var ff = expr.CompileFast(false, CompilerFlags.ThrowOnNotSupportedExpression);
         var fr = ff();
-        Assert.AreEqual(5, sr);
-
-        Assert.AreEqual(sr, fr);
+        Assert.AreEqual(5, fr);
     }
 
     public class Box<T>
@@ -72,9 +96,7 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
             Block(
                 new[] { myVar },
                 Assign(myVar, MemberInit(New(typeof(Box<int>)), Bind(valueField, Constant(5)))),
-                Invoke(aa,
-                    Lambda<Action>(Assign(Field(myVar, valueField), Constant(3)))
-                ),
+                Invoke(aa, Lambda<Action>(Assign(Field(myVar, valueField), Constant(3)))),
                 myVar
             )
         );
@@ -87,8 +109,40 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
 
         var ff = expr.CompileFast(false, CompilerFlags.ThrowOnNotSupportedExpression);
         var fr = ff();
+        Assert.AreEqual(3, fr.Value);
+    }
+
+    public class Val<T>
+    {
+        public T Value;
+    }
+
+    [Test]
+    public void Nested_lambda_with_shared_variable_Workaround_with_struct()
+    {
+        System.Linq.Expressions.Expression<Action<Action>> invokeParamLambda = lambda => lambda();
+        var aa = invokeParamLambda.FromSysExpression();
+        aa.PrintCSharp();
+
+        var valueField = typeof(Val<int>).GetField("Value");
+        var myVar = Variable(typeof(Val<int>), "myVar");
+        var expr = Lambda<Func<Val<int>>>(
+            Block(
+                new[] { myVar },
+                Assign(myVar, MemberInit(New(typeof(Val<int>)), Bind(valueField, Constant(5)))),
+                Invoke(aa, Lambda<Action>(Assign(Field(myVar, valueField), Constant(3)))),
+                myVar
+            )
+        );
+
+        expr.PrintCSharp();
+
+        var fs = expr.CompileSys();
+        var sr = fs();
         Assert.AreEqual(3, sr.Value);
 
-        Assert.AreEqual(sr.Value, fr.Value);
+        var ff = expr.CompileFast(false, CompilerFlags.ThrowOnNotSupportedExpression);
+        var fr = ff();
+        Assert.AreEqual(3, fr.Value);
     }
 }
