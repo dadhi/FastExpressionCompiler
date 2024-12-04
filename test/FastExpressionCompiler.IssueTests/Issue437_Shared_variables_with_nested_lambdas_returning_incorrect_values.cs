@@ -32,7 +32,7 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
         var myVar = Variable(typeof(int), "myVar");
         var expr = Lambda<Func<int>>(
             Block(
-                [myVar],
+                new[] { myVar },
                 Assign(myVar, Constant(5)),
                 Invoke(aa,
                     Lambda<Action>(Assign(myVar, Constant(3)))
@@ -70,7 +70,7 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
         var myVar = Variable(typeof(Box<int>), "myVar");
         var expr = Lambda<Func<Box<int>>>(
             Block(
-                [myVar],
+                new[] { myVar },
                 Assign(myVar, MemberInit(New(typeof(Box<int>)), Bind(valueField, Constant(5)))),
                 Invoke(aa,
                     Lambda<Action>(Assign(Field(myVar, valueField), Constant(3)))
