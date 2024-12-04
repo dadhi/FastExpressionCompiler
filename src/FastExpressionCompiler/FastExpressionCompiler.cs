@@ -1903,6 +1903,7 @@ namespace FastExpressionCompiler
         [MethodImpl((MethodImplOptions)256)]
         public static bool IgnoresResult(this ParentFlags parent) => (parent & ParentFlags.IgnoreResult) != 0;
 
+        [MethodImpl((MethodImplOptions)256)]
         internal static bool EmitPopIfIgnoreResult(this ILGenerator il, ParentFlags parent)
         {
             if ((parent & ParentFlags.IgnoreResult) != 0)
@@ -5541,6 +5542,8 @@ namespace FastExpressionCompiler
                         il.DmarkLabel(valueLabel);
                     }
                 }
+
+                il.EmitPopIfIgnoreResult(parent);
                 return true;
             }
 
