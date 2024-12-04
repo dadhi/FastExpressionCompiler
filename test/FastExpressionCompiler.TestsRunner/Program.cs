@@ -9,6 +9,8 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
+            new LightExpression.IssueTests.Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_values().Run();
+            // new LightExpression.UnitTests.ArithmeticOperationsTests().Run();
             // new LightExpression.IssueTests.Issue428_Expression_Switch_without_a_default_case_incorrectly_calls_first_case_for_unmatched_values().Run();
             // new LightExpression.IssueTests.Issue261_Loop_wih_conditions_fails().Run();
             // new LightExpression.UnitTests.AssignTests().Run();

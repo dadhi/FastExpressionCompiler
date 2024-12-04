@@ -1,5 +1,5 @@
 ﻿#if DEBUG
-// #define PRINTIL
+#define PRINTIL
 #define PRINTCS
 #endif
 using System;
