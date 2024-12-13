@@ -15,7 +15,7 @@ public class Issue439_Support_unused_Field_access_in_Block : ITest
 {
     public int Run()
     {
-        // Original_case();
+        Original_case();
         return 1;
     }
 

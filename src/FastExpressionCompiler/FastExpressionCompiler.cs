@@ -4765,6 +4765,12 @@ namespace FastExpressionCompiler
                         if (!TryEmit(objExpr, paramExprs, il, ref closure, setup, p))
                             return false;
 
+                        if (parent.IgnoresResult())
+                        {
+                            il.Demit(OpCodes.Pop); // pop the obj value - it is emitted only for the side effects
+                            return true;
+                        }
+
                         // #248 indicates that expression is argument passed by ref to Call
                         var isByAddress = byRefIndex != -1;
 
@@ -4801,6 +4807,8 @@ namespace FastExpressionCompiler
                     }
                     else if (field.IsLiteral)
                     {
+                        if (parent.IgnoresResult())
+                            return true; // do nothing
                         var fieldValue = field.GetValue(null);
                         if (fieldValue != null)
                             return TryEmitConstant(false, null, field.FieldType, fieldValue, il, ref closure);
@@ -4808,6 +4816,8 @@ namespace FastExpressionCompiler
                     }
                     else
                     {
+                        if (parent.IgnoresResult())
+                            return true; // do nothing
                         il.Demit(OpCodes.Ldsfld, field);
                     }
                     return true;

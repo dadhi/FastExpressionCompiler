@@ -9,8 +9,6 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            // new LightExpression.IssueTests.Issue439_Support_unused_Field_access_in_Block().Run();
-
             // new LightExpression.IssueTests.Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_values().Run();            
             // new LightExpression.UnitTests.ArithmeticOperationsTests().Run();
 
@@ -20,13 +18,13 @@ namespace FastExpressionCompiler.UnitTests
         public static void RunAllTests()
         {
             var failed = false;
-            var totalTestPassed = 0;
+            var totalTestsPassed = 0;
             void Run(Func<int> run, string name = null)
             {
                 try
                 {
                     var testsPassed = run();
-                    totalTestPassed += testsPassed;
+                    totalTestsPassed += testsPassed;
 #if DEBUG
                     // we don't need to list the tests one-by-one on CI, and it makes avoiding it saves 30% of time
                     var testsName = name ?? run.Method.DeclaringType.FullName;
@@ -329,6 +327,9 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue430_TryCatch_Bad_label_content_in_ILGenerator().Run);
                 Run(new LightExpression.IssueTests.Issue430_TryCatch_Bad_label_content_in_ILGenerator().Run);
 
+                Run(new Issue439_Support_unused_Field_access_in_Block().Run);
+                Run(new LightExpression.IssueTests.Issue439_Support_unused_Field_access_in_Block().Run);
+
                 Run(new Issue440_Errors_with_simplified_Switch_cases().Run);
                 Run(new LightExpression.IssueTests.Issue440_Errors_with_simplified_Switch_cases().Run);
 
@@ -350,7 +351,7 @@ namespace FastExpressionCompiler.UnitTests
                 return;
             }
 
-            Console.WriteLine($"ALL {totalTestPassed,-4} tests are passing in {sw.ElapsedMilliseconds} ms.");
+            Console.WriteLine($"ALL {totalTestsPassed,-4} tests are passing in {sw.ElapsedMilliseconds} ms.");
         }
     }
 }
