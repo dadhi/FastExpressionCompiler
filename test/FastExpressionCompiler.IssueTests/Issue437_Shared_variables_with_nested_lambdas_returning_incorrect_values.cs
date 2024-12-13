@@ -43,8 +43,11 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
         var sr = fs();
         Assert.AreEqual(3, sr);
 
-        var ff = expr.CompileFast(false, CompilerFlags.NoInvocationLambdaInlining);
+        var ff = expr.CompileFast(false, CompilerFlags.NoInvocationLambdaInlining | CompilerFlags.EnableDelegateDebugInfo);
         ff.PrintIL();
+
+        if (ff.TryGetDebugClosureNestedLambdaOrConstant(out var item) && item is Delegate nested)
+            nested.PrintIL("nested");
 
         var fr = ff();
         Assert.AreEqual(3, fr);
