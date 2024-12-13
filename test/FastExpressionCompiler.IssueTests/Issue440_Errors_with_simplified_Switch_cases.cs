@@ -15,9 +15,14 @@ public class Issue440_Errors_with_simplified_Switch_cases : ITest
 {
     public int Run()
     {
-        Switch_with_no_cases();
         Switch_with_single_case_without_default();
-        return 2;
+#if !NETFRAMEWORK
+        // Switch without cases is not supported in .NET 472
+        Switch_with_no_cases();
+        Switch_with_no_cases_but_default();
+        return 3;
+#endif
+        return 1;
     }
 
     [Test]
@@ -56,7 +61,7 @@ public class Issue440_Errors_with_simplified_Switch_cases : ITest
             Switch(
                 Constant(1),
                 Tools.Empty<SwitchCase>()
-            ), // todo: @wip test with no cases but default body
+            ),
             Constant(2)
         );
 
@@ -74,5 +79,32 @@ public class Issue440_Errors_with_simplified_Switch_cases : ITest
 
         var fr = ff();
         Assert.AreEqual(2, fr);
+    }
+
+    [Test]
+    public void Switch_with_no_cases_but_default()
+    {
+        var block = Block(
+            Switch(
+                Constant(1),
+                Constant(42), // default case
+                Tools.Empty<SwitchCase>()
+            )
+        );
+
+        var expr = Lambda<Func<int>>(block);
+        expr.PrintCSharp(); // todo: @fixme for the empty switch
+
+        var fs = expr.CompileSys();
+        fs.PrintIL();
+
+        var sr = fs();
+        Assert.AreEqual(42, sr);
+
+        var ff = expr.CompileFast(false);
+        ff.PrintIL();
+
+        var fr = ff();
+        Assert.AreEqual(42, fr);
     }
 }

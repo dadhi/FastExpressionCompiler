@@ -9,7 +9,6 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            // new LightExpression.IssueTests.Issue440_Errors_with_simplified_Switch_cases().Run();
             // new LightExpression.IssueTests.Issue439_Support_unused_Field_access_in_Block().Run();
 
             // new LightExpression.IssueTests.Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_values().Run();            
@@ -329,6 +328,9 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue430_TryCatch_Bad_label_content_in_ILGenerator().Run);
                 Run(new LightExpression.IssueTests.Issue430_TryCatch_Bad_label_content_in_ILGenerator().Run);
+
+                Run(new Issue440_Errors_with_simplified_Switch_cases().Run);
+                Run(new LightExpression.IssueTests.Issue440_Errors_with_simplified_Switch_cases().Run);
 
                 Run(new Issue441_Fails_to_pass_Constant_as_call_parameter_by_reference().Run);
                 Run(new LightExpression.IssueTests.Issue441_Fails_to_pass_Constant_as_call_parameter_by_reference().Run);
