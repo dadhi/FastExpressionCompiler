@@ -9,6 +9,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
+            new LightExpression.IssueTests.Issue440_Errors_with_simplified_Switch_cases().Run();
             new LightExpression.IssueTests.Issue439_Support_unused_Field_access_in_Block().Run();
 
             // new LightExpression.IssueTests.Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_values().Run();

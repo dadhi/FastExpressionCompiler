@@ -4987,7 +4987,7 @@ namespace FastExpressionCompiler
                 var customEqualMethod = expr.Comparison;
                 var cases = expr.Cases;
                 var caseCount = cases.Count;
-                if (caseCount == 1)
+                if (caseCount == 1 && expr.DefaultBody != null)
                 {
                     // optimization for the single case
                     // todo: @perf make a similar one for the two cases, probably use the two IfThenElses emit
