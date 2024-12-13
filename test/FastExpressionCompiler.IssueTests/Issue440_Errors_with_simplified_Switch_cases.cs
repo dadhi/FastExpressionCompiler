@@ -17,7 +17,7 @@ public class Issue440_Errors_with_simplified_Switch_cases : ITest
     {
         Switch_with_no_cases();
         Switch_with_single_case_without_default();
-        return 1;
+        return 2;
     }
 
     [Test]

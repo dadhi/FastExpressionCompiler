@@ -3243,37 +3243,51 @@ namespace FastExpressionCompiler
 
             public static bool TryEmitConstant(Expression expr, ILGenerator il, ref ClosureInfo closure, int byRefIndex = -1)
             {
+                var ok = false;
 #if LIGHT_EXPRESSION
                 // todo: @perf @simplify convert to intrinsic?
                 if (expr == NullConstant)
                 {
                     il.Demit(OpCodes.Ldnull);
-                    return true;
+                    ok = true;
                 }
-                if (expr == FalseConstant)
+                else if (expr == FalseConstant)
                 {
                     il.Demit(OpCodes.Ldc_I4_0);
-                    return true;
+                    ok = true;
                 }
-                if (expr == TrueConstant)
+                else if (expr == TrueConstant)
                 {
                     il.Demit(OpCodes.Ldc_I4_1);
-                    return true;
+                    ok = true;
                 }
-                if (expr is IntConstantExpression n)
+                else if (expr is IntConstantExpression n)
                 {
                     EmitLoadConstantInt(il, n.IntValue);
-                    return true;
+                    ok = true;
                 }
 #endif
-                var constExpr = (ConstantExpression)expr;
-                var constValue = constExpr.Value;
-                if (constValue != null)
-                    return TryEmitConstant(closure.ContainsConstantsOrNestedLambdas(), expr.Type, constValue.GetType(), constValue, il, ref closure, byRefIndex);
-                if (expr.Type.IsValueType)
-                    return EmitLoadLocalVariable(il, InitValueTypeVariable(il, expr.Type)); // yep, this is a proper way to emit the Nullable null
-                il.Demit(OpCodes.Ldnull);
-                return true;
+                if (!ok)
+                {
+                    var constExpr = (ConstantExpression)expr;
+                    var constValue = constExpr.Value;
+                    if (constValue != null)
+                        ok = TryEmitConstant(closure.ContainsConstantsOrNestedLambdas(), expr.Type, constValue.GetType(), constValue, il, ref closure, byRefIndex);
+                    else if (expr.Type.IsValueType) // null for a value type
+                    {
+                        EmitLoadLocalVariable(il, InitValueTypeVariable(il, expr.Type)); // yep, this is a proper way to emit the Nullable null
+                        ok = true;
+                    }
+                    else
+                    {
+                        il.Demit(OpCodes.Ldnull);
+                        ok = true;
+                    }
+                }
+
+                if (ok && byRefIndex != -1)
+                    EmitStoreAndLoadLocalVariableAddress(il, expr.Type);
+                return ok;
             }
 
             [MethodImpl((MethodImplOptions)256)]
