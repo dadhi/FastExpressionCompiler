@@ -14,12 +14,13 @@ public class Issue442_TryCatch_and_the_Goto_outside_problems : ITest
 {
     public int Run()
     {
-        Original_case();
-        return 1;
+        Original_case_2();
+        Original_case_1();
+        return 2;
     }
 
     [Test]
-    public void Original_case()
+    public void Original_case_1()
     {
         var label = Label("label");
         var variable = Variable(typeof(int), "variable");
@@ -57,5 +58,43 @@ public class Issue442_TryCatch_and_the_Goto_outside_problems : ITest
 
         var fr = ff();
         Assert.AreEqual(5, fr);
+    }
+
+    [Test]
+    public void Original_case_2()
+    {
+        // FEC throws `System.ArgumentException: Bad label content in ILGenerator.`
+        var label = Label("label");
+        var variable = Parameter(typeof(int));
+        var exceptionParam = Parameter(typeof(Exception), "ex");
+
+        var block = Block(
+            new[] { variable },
+            TryCatch(
+                Block(
+                    Goto(label),
+                    Throw(Constant(new Exception("Exception"))),
+                    Label(label),
+                    Assign(variable, Constant(2))
+                ),
+                Catch(exceptionParam, Assign(variable, Constant(50)))
+            ),
+            variable
+        );
+
+        var expr = Lambda<Func<int>>(block);
+        expr.PrintCSharp();
+
+        var fs = expr.CompileSys();
+        fs.PrintIL();
+
+        var sr = fs();
+        Assert.AreEqual(2, sr);
+
+        var ff = expr.CompileFast(false);
+        ff.PrintIL();
+
+        var fr = ff();
+        Assert.AreEqual(2, fr);
     }
 }

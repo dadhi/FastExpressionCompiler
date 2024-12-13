@@ -312,6 +312,9 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue441_Fails_to_pass_Constant_as_call_parameter_by_reference().Run);
                 Run(new LightExpression.IssueTests.Issue441_Fails_to_pass_Constant_as_call_parameter_by_reference().Run);
 
+                Run(new Issue442_TryCatch_and_the_Goto_outside_problems().Run);
+                Run(new LightExpression.IssueTests.Issue442_TryCatch_and_the_Goto_outside_problems().Run);
+
                 Console.WriteLine($"{Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
 

@@ -2111,12 +2111,22 @@ namespace FastExpressionCompiler
 
                                 expr = statementExprs[statementCount - 1]; // The last (result) statement in block will provide the result
 
-                                // Try to trim the statements up to the Throw (if any)
+                                // Try to trim the statements from the end of the Block up to the Throw (if any),
+                                // or to the prior Label as in the #442 case 2
                                 if (statementCount > 1)
                                 {
                                     var throwIndex = statementCount - 1;
-                                    while (throwIndex != -1 && statementExprs[throwIndex].NodeType != ExpressionType.Throw)
-                                        --throwIndex;
+                                    for (; throwIndex != -1; --throwIndex)
+                                    {
+                                        var se = statementExprs[throwIndex];
+                                        if (se.NodeType == ExpressionType.Label)
+                                        {
+                                            throwIndex = -1; // stop the search
+                                            break;
+                                        }
+                                        if (se.NodeType == ExpressionType.Throw)
+                                            break;
+                                    }
 
                                     // If we have a Throw and it is not the last one
                                     if (throwIndex != -1 && throwIndex != statementCount - 1)
