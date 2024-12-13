@@ -14,7 +14,7 @@ public class Issue442_TryCatch_and_the_Goto_outside_problems : ITest
 {
     public int Run()
     {
-        // Original_case();
+        Original_case();
         return 1;
     }
 

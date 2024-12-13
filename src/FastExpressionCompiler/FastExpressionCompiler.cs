@@ -2470,7 +2470,9 @@ namespace FastExpressionCompiler
                     case GotoExpressionKind.Goto:
                         if (gotoValue != null)
                             goto case GotoExpressionKind.Return;
-                        il.Demit(OpCodes.Br, labelInfo.GetOrDefineLabel(il));
+
+                        var gotoOpCode = (parent & ParentFlags.TryCatch) != 0 ? OpCodes.Leave : OpCodes.Br;
+                        il.Demit(gotoOpCode, labelInfo.GetOrDefineLabel(il));
                         return true;
 
                     case GotoExpressionKind.Return:
