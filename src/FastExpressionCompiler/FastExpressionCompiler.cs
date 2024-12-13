@@ -1493,16 +1493,20 @@ namespace FastExpressionCompiler
                     case ExpressionType.Switch:
                         var switchExpr = ((SwitchExpression)expr);
                         if ((r = TryCollectInfo(ref closure, switchExpr.SwitchValue, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK ||
-                            switchExpr.DefaultBody != null &&
+                            switchExpr.DefaultBody != null && // todo: @check is the order of collection affects the result?
                             (r = TryCollectInfo(ref closure, switchExpr.DefaultBody, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
                             return r;
 
                         var switchCases = switchExpr.Cases;
-                        for (var i = 0; i < switchCases.Count - 1; i++)
-                            if ((r = TryCollectInfo(ref closure, switchCases[i].Body, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
-                                return r;
-                        expr = switchCases[switchCases.Count - 1].Body;
-                        continue;
+                        if (switchCases.Count != 0)
+                        {
+                            for (var i = 0; i < switchCases.Count - 1; i++)
+                                if ((r = TryCollectInfo(ref closure, switchCases[i].Body, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+                                    return r;
+                            expr = switchCases[switchCases.Count - 1].Body;
+                            continue;
+                        }
+                        return r;
 
                     case ExpressionType.Extension:
                         expr = expr.Reduce();
@@ -5040,6 +5044,13 @@ namespace FastExpressionCompiler
                 // Emit the switch value once and store it in the local variable for comparison in cases below
                 if (!TryEmit(switchValueExpr, paramExprs, il, ref closure, setup, operandParent, param0ByRefIndex))
                     return false;
+
+                if (caseCount == 0) // see #440
+                {
+                    il.Demit(OpCodes.Pop); // remove the switch value result
+                    return expr.DefaultBody == null ||
+                        TryEmit(expr.DefaultBody, paramExprs, il, ref closure, setup, parent);
+                }
 
                 var switchValueVar = EmitStoreLocalVariable(il, switchValueType);
 
