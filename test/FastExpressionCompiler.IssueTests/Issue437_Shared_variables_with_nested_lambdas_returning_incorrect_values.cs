@@ -19,7 +19,7 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
         // Nested_lambda_with_shared_variable_Workaround_with_struct();
         Nested_lambda_with_shared_variable();
         Nested_lambda_with_shared_variable_Workaround();
-        return 4;
+        return 2;
     }
 
     [Test]

@@ -2724,6 +2724,47 @@ namespace FastExpressionCompiler
                 var varIndex = closure.GetDefinedLocalVarOrDefault(paramExpr);
                 if (varIndex != -1)
                 {
+                    // todo: @wip #437 check if the variable is passed to the nested closure, 
+                    // and being assigned or passed by ref inside, 
+                    // so instead of loading it need to load it from the nested closure
+                    var nestedLambdasCount = closure.NestedLambdas.Count;
+                    if (nestedLambdasCount != 0)
+                    {
+                        // todo: @wip if we have the nested lambdas, then it means we have the nested lambda objects stored and can be accessed from the loaded arg:
+                        // `ldarg.0`
+                        // `ldfld Object[] ArrayClosure.ConstantsAndNestedLambdas  -- EmitLoadConstantsAndNestedLambdasIntoVars:3472`
+                        // so we need to find the index of the specific nested lambda and load it, then its Target closure field, 
+                        // then get access to its NonPassedParams array field `public readonly object[] NonPassedParams;`
+                        var nestedLambdas = closure.NestedLambdas.Items;
+                        for (var nestedLambdaIndex = 0; nestedLambdaIndex < nestedLambdasCount; ++nestedLambdaIndex)
+                        {
+                            var lambdaInfo = nestedLambdas[nestedLambdaIndex];
+                            var nonPassedParamCount = lambdaInfo.NonPassedParameters.Count;
+                            if (nonPassedParamCount != 0)
+                            {
+                                var varIndexInNonPassedParams = lambdaInfo.NonPassedParameters.TryGetIndex(paramExpr, default(RefEq<ParameterExpression>));
+                                if (varIndexInNonPassedParams != -1)
+                                {
+                                    // load the nested lambda item from the closure
+                                    var closureArrayItemIndex = closure.Constants.Count + nestedLambdaIndex;
+                                    // EmitLoadClosureArrayItem(il, closureArrayItemIndex);
+
+                                    // todo: @wip it is impossible to load the NonPassedParams, because they are not stored in the closure, 
+                                    // nor in the NestedLambdaWithConstantsAndNestedLambdas
+                                    // Instead they are created and then passed to the ArrayClosureWithNonPassedParams constructor, then the result lambda is curried
+                                    // todo: @wip @add save the NonPassedParams to be able to access them here 
+
+                                    // load the param
+                                    // il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
+                                    // EmitLoadConstantInt(il, varIndexInNonPassedParams);
+                                    // il.Demit(OpCodes.Ldelem_Ref);
+                                    // if (paramType.IsValueType)
+                                    //     il.Demit(OpCodes.Unbox_Any, paramType);
+                                }
+                            }
+                        }
+                    }
+
                     var valueTypeMemberButNotIndexAccess = isValueType &
                         // means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
                         (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0 &
@@ -4867,6 +4908,7 @@ namespace FastExpressionCompiler
                 // - create `NonPassedParameters` array for the non-passed parameters and variables
                 EmitLoadConstantInt(il, nestedLambdaInfo.NonPassedParameters.Count); // load the length of array
                 il.Demit(OpCodes.Newarr, typeof(object));
+                // todo: @wip store the NonPassedParameter array into the closure for the #437
 
                 // we need to store the array in local variable, because we may assign to closed variable after the closure is passed to the lambda
                 var nonPassedParamsVarIndex = il.GetNextLocalVarIndex(typeof(object[]));
