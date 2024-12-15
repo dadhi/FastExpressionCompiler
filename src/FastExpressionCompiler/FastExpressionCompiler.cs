@@ -2759,8 +2759,7 @@ namespace FastExpressionCompiler
                                         // otherwise the nested lambda is not yet emitted, and it is not expected for the variable to be set inside it
                                         il.Demit(OpCodes.Ldfld, NestedLambdaWithConstantsAndNestedLambdas.NonPassedParamsField);
                                         var noNestedLambdaYetLabel = il.DefineLabel();
-                                        il.Demit(OpCodes.Ldnull);
-                                        il.Demit(OpCodes.Beq, noNestedLambdaYetLabel);
+                                        il.Demit(OpCodes.Brfalse, noNestedLambdaYetLabel);
 
                                         // load the variable
                                         EmitLoadConstantInt(il, varIndexInNonPassedParams);
