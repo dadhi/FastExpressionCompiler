@@ -1925,6 +1925,14 @@ namespace FastExpressionCompiler
             return true;
         }
 
+        [MethodImpl((MethodImplOptions)256)]
+        internal static bool TryEmitUnboxOf(this ILGenerator il, Type sourceType)
+        {
+            if (sourceType.IsValueType)
+                il.Demit(OpCodes.Unbox_Any, sourceType);
+            return true;
+        }
+
         /// <summary>Supports emitting of selected expressions, e.g. lambdaExpr are not supported yet.
         /// When emitter find not supported expression it will return false from <see cref="TryEmit"/>, so I could fallback
         /// to normal and slow Expression.Compile.</summary>
@@ -2762,8 +2770,7 @@ namespace FastExpressionCompiler
                                         // load the variable
                                         EmitLoadConstantInt(il, varIndexInNonPassedParams);
                                         il.Demit(OpCodes.Ldelem_Ref);
-                                        if (isValueType)
-                                            il.Demit(OpCodes.Unbox_Any, paramType);
+                                        il.TryEmitUnboxOf(paramType);
                                         il.Demit(OpCodes.Br_S, doneLabel);
                                         il.DmarkLabel(noNestedLambdaYetLabel);
                                     }
@@ -4919,7 +4926,7 @@ namespace FastExpressionCompiler
                 EmitLoadConstantInt(il, nestedLambdaInfo.NonPassedParameters.Count); // load the length of array
                 il.Demit(OpCodes.Newarr, typeof(object));
 
-                // Store the NonPassedParameter array into the closure for the #437
+                // Store the NonPassedParameter array into the closure for the #437.
                 // Also, it is needed to be able to assign the closed variable after the closure is passed to the lambda
                 var nonPassedParamsVarIndex = EmitStoreLocalVariable(il, typeof(object[]));
                 EmitLoadLocalVariable(il, nestedLambdaInfo.LambdaVarIndex);
