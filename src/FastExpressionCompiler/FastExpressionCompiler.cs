@@ -606,7 +606,7 @@ namespace FastExpressionCompiler
             public NestedLambdaInfo(LambdaExpression lambdaExpression) => LambdaExpression = lambdaExpression;
 
             /// <summary>Returns the type of lambda</summary>
-            public Type GetLambdaType() => (Lambda is NestedLambdaWithConstantsAndNestedLambdas n ? n.NestedLambda : Lambda).GetType();
+            public Type GetLambdaType() => (Lambda is NestedLambdaForNonPassedParams n ? n.NestedLambda : Lambda).GetType();
 
             /// <summary>Compares 2 lambda expressions for equality</summary>
             public bool HasTheSameLambdaExpression(LambdaExpression lambda) => // todo: @unclear parameters or is comparing the body is enough?
@@ -618,7 +618,7 @@ namespace FastExpressionCompiler
                 ;
 
             public override string ToString() =>
-                $"Lambda: {(Lambda is NestedLambdaWithConstantsAndNestedLambdas n ? "compiled+closure" : Lambda != null ? "compiled" : "null")}, Expr: {LambdaExpression.ToString()}";
+                $"Lambda: {(Lambda is NestedLambdaForNonPassedParams n ? "compiled+closure" : Lambda != null ? "compiled" : "null")}, Expr: {LambdaExpression.ToString()}";
         }
 
         [Flags]
@@ -981,24 +981,30 @@ namespace FastExpressionCompiler
                 NonPassedParams = nonPassedParams;
         }
 
-        // todo: @perf this class is required until we move to single constants list per lambda hierarchy
-        public sealed class NestedLambdaWithConstantsAndNestedLambdas
+        // todo: @perf this class is required until we (maybe) move to single constants list per lambda hierarchy
+        // Those two classes are required only if there are non-passed parameters,
+        // this class stores the context for creating the ArrayClosureWithNonPassedParams at the point of emitting the nested lambda.
+        // See the #437 and #353 for the context
+        public class NestedLambdaForNonPassedParams
         {
             public static FieldInfo NestedLambdaField =
-                typeof(NestedLambdaWithConstantsAndNestedLambdas).GetField(nameof(NestedLambda));
-            public static FieldInfo ConstantsAndNestedLambdasField =
-                typeof(NestedLambdaWithConstantsAndNestedLambdas).GetField(nameof(ConstantsAndNestedLambdas));
+                typeof(NestedLambdaForNonPassedParams).GetField(nameof(NestedLambda));
             public static FieldInfo NonPassedParamsField =
-                typeof(NestedLambdaWithConstantsAndNestedLambdas).GetField(nameof(NonPassedParams));
+                typeof(NestedLambdaForNonPassedParams).GetField(nameof(NonPassedParams));
 
             public readonly object NestedLambda;
-            public readonly object ConstantsAndNestedLambdas;
             public object[] NonPassedParams;
-            public NestedLambdaWithConstantsAndNestedLambdas(object nestedLambda, object constantsAndNestedLambdas)
-            {
-                NestedLambda = nestedLambda;
-                ConstantsAndNestedLambdas = constantsAndNestedLambdas;
-            }
+            public NestedLambdaForNonPassedParams(object nestedLambda) => NestedLambda = nestedLambda;
+        }
+
+        public sealed class NestedLambdaForNonPassedParamsWithConstantsAndNestedLambdas : NestedLambdaForNonPassedParams
+        {
+            public static FieldInfo ConstantsAndNestedLambdasField =
+                typeof(NestedLambdaForNonPassedParamsWithConstantsAndNestedLambdas).GetField(nameof(ConstantsAndNestedLambdas));
+
+            public readonly object ConstantsAndNestedLambdas;
+            public NestedLambdaForNonPassedParamsWithConstantsAndNestedLambdas(object nestedLambda, object constantsAndNestedLambdas)
+                : base(nestedLambda) => ConstantsAndNestedLambdas = constantsAndNestedLambdas;
         }
 
         internal static class CurryClosureFuncs
@@ -1746,8 +1752,10 @@ namespace FastExpressionCompiler
                 ? method.CreateDelegate(nestedLambdaExpr.Type, nestedLambdaClosure)
                 : method.CreateDelegate(Tools.GetFuncOrActionType(closurePlusParamTypes, nestedReturnType), null);
 
-            if (nestedConstsAndLambdas != null & containsConstantsOrNestedLambdas & hasNonPassedParameters)
-                nestedLambdaInfo.Lambda = new NestedLambdaWithConstantsAndNestedLambdas(nestedLambdaInfo.Lambda, nestedConstsAndLambdas);
+            if (hasNonPassedParameters)
+                nestedLambdaInfo.Lambda = nestedConstsAndLambdas == null
+                    ? new NestedLambdaForNonPassedParams(nestedLambdaInfo.Lambda)
+                    : new NestedLambdaForNonPassedParamsWithConstantsAndNestedLambdas(nestedLambdaInfo.Lambda, nestedConstsAndLambdas);
 
             ReturnClosureTypeToParamTypesToPool(closurePlusParamTypes);
             return true;
@@ -2763,7 +2771,7 @@ namespace FastExpressionCompiler
 
                                         // Check if the NonPassedArray field is being set (not null),
                                         // otherwise the nested lambda is not yet emitted, and it is not expected for the variable to be set inside it
-                                        il.Demit(OpCodes.Ldfld, NestedLambdaWithConstantsAndNestedLambdas.NonPassedParamsField);
+                                        il.Demit(OpCodes.Ldfld, NestedLambdaForNonPassedParams.NonPassedParamsField);
                                         var noNestedLambdaYetLabel = il.DefineLabel();
                                         il.Demit(OpCodes.Brfalse_S, noNestedLambdaYetLabel);
 
@@ -2913,12 +2921,7 @@ namespace FastExpressionCompiler
                 il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
                 EmitLoadConstantInt(il, nonPassedParamIndex);
                 il.Demit(OpCodes.Ldelem_Ref);
-
-                // source type is object, NonPassedParams is object array
-                if (isValueType)
-                    il.Demit(OpCodes.Unbox_Any, paramType);
-
-                return true;
+                return il.TryEmitUnboxOf(paramType);
             }
 
 #if LIGHT_EXPRESSION
@@ -4907,43 +4910,46 @@ namespace FastExpressionCompiler
                 EmitLoadLocalVariable(il, nestedLambdaInfo.LambdaVarIndex);
 
                 // If lambda does not use any outer parameters to be set in closure, then we're done
-                if (nestedLambdaInfo.NonPassedParameters.Count == 0)
+                var nonPassedParams = nestedLambdaInfo.NonPassedParameters;
+                if (nonPassedParams.Count == 0)
                     return true;
 
                 //-------------------------------------------------------------------
                 // For the lambda with non-passed parameters (or variables) in closure
                 // we are loading `NestedLambdaWithConstantsAndNestedLambdas` pair.
 
-                var containsConstants = nestedLambdaInfo.Lambda is NestedLambdaWithConstantsAndNestedLambdas;
+                il.Demit(OpCodes.Ldfld, NestedLambdaForNonPassedParams.NestedLambdaField);
+
+                var containsConstants = nestedLambdaInfo.Lambda is NestedLambdaForNonPassedParamsWithConstantsAndNestedLambdas;
                 if (containsConstants)
                 {
-                    il.Demit(OpCodes.Ldfld, NestedLambdaWithConstantsAndNestedLambdas.NestedLambdaField);
                     EmitLoadLocalVariable(il, nestedLambdaInfo.LambdaVarIndex); // load the variable for the second time
-                    il.Demit(OpCodes.Ldfld, NestedLambdaWithConstantsAndNestedLambdas.ConstantsAndNestedLambdasField);
+                    il.Demit(OpCodes.Ldfld, NestedLambdaForNonPassedParamsWithConstantsAndNestedLambdas.ConstantsAndNestedLambdasField);
                 }
 
-                // - create `NonPassedParameters` array for the non-passed parameters and variables
-                EmitLoadConstantInt(il, nestedLambdaInfo.NonPassedParameters.Count); // load the length of array
+                // Emit the NonPassedParams array for the non-passed parameters and variables
+                EmitLoadConstantInt(il, nonPassedParams.Count); // load the length of array
                 il.Demit(OpCodes.Newarr, typeof(object));
 
-                // Store the NonPassedParameter array into the closure for the #437.
-                // Also, it is needed to be able to assign the closed variable after the closure is passed to the lambda
+                // Store the NonPassedParams back into the NestedLambda wrapper for the #437.
+                // Also, it is needed to be able to assign the closed variable after the closure is passed to the lambda, 
+                // e.g. `var x = 1; var f = () => x + 1; x = 2; f();` expects 3, not 2
                 var nonPassedParamsVarIndex = EmitStoreLocalVariable(il, typeof(object[]));
                 EmitLoadLocalVariable(il, nestedLambdaInfo.LambdaVarIndex);
                 EmitLoadLocalVariable(il, nonPassedParamsVarIndex);
-                il.Demit(OpCodes.Stfld, NestedLambdaWithConstantsAndNestedLambdas.NonPassedParamsField);
+                il.Demit(OpCodes.Stfld, NestedLambdaForNonPassedParams.NonPassedParamsField);
 
                 EmitLoadLocalVariable(il, nonPassedParamsVarIndex);
                 nestedLambdaInfo.NonPassedParamsVarIndex = (short)nonPassedParamsVarIndex;
 
-                // - populate the `NonPassedParameters` array
-                for (var nestedParamIndex = 0; nestedParamIndex < nestedLambdaInfo.NonPassedParameters.Count; ++nestedParamIndex)
+                // Populate the NonPassedParams array
+                for (var nestedParamIndex = 0; nestedParamIndex < nonPassedParams.Count; ++nestedParamIndex)
                 {
                     // Duplicate nested array on stack to store the item, and load index to where to store
                     il.Demit(OpCodes.Dup);
                     EmitLoadConstantInt(il, nestedParamIndex);
 
-                    var nestedParam = nestedLambdaInfo.NonPassedParameters.GetSurePresentItemRef(nestedParamIndex);
+                    var nestedParam = nonPassedParams.GetSurePresentItemRef(nestedParamIndex);
                     var outerParamIndex = outerParamExprCount - 1;
                     while (outerParamIndex != -1 && !ReferenceEquals(outerParamExprs.GetParameter(outerParamIndex), nestedParam))
                         --outerParamIndex;
