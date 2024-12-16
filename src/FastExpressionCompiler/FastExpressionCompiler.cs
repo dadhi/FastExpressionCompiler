@@ -981,15 +981,13 @@ namespace FastExpressionCompiler
                 NonPassedParams = nonPassedParams;
         }
 
-        // todo: @perf this class is required until we move to a single constants list per lambda hierarchy 
+        // todo: @perf this class is required until we move to single constants list per lambda hierarchy
         public sealed class NestedLambdaWithConstantsAndNestedLambdas
         {
             public static FieldInfo NestedLambdaField =
                 typeof(NestedLambdaWithConstantsAndNestedLambdas).GetField(nameof(NestedLambda));
-
             public static FieldInfo ConstantsAndNestedLambdasField =
                 typeof(NestedLambdaWithConstantsAndNestedLambdas).GetField(nameof(ConstantsAndNestedLambdas));
-
             public static FieldInfo NonPassedParamsField =
                 typeof(NestedLambdaWithConstantsAndNestedLambdas).GetField(nameof(NonPassedParams));
 
@@ -2759,15 +2757,14 @@ namespace FastExpressionCompiler
                                         // otherwise the nested lambda is not yet emitted, and it is not expected for the variable to be set inside it
                                         il.Demit(OpCodes.Ldfld, NestedLambdaWithConstantsAndNestedLambdas.NonPassedParamsField);
                                         var noNestedLambdaYetLabel = il.DefineLabel();
-                                        il.Demit(OpCodes.Brfalse, noNestedLambdaYetLabel);
+                                        il.Demit(OpCodes.Brfalse_S, noNestedLambdaYetLabel);
 
                                         // load the variable
                                         EmitLoadConstantInt(il, varIndexInNonPassedParams);
                                         il.Demit(OpCodes.Ldelem_Ref);
                                         if (isValueType)
                                             il.Demit(OpCodes.Unbox_Any, paramType);
-                                        il.Demit(OpCodes.Br, doneLabel);
-
+                                        il.Demit(OpCodes.Br_S, doneLabel);
                                         il.DmarkLabel(noNestedLambdaYetLabel);
                                     }
                                 }
