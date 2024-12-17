@@ -32,7 +32,7 @@ public class Issue443_Nested_Calls_with_lambda_parameters : ITest
         var innerLambda =
             Lambda<Func<int>>(
                 Block(
-                    [local],
+                    local,
                     Assign(local, Constant(42)),
 
                     // Invoke works
