@@ -2758,42 +2758,39 @@ namespace FastExpressionCompiler
                     // Check if the variable is passed to the nested closure (#437), so it should be loaded from the nested closure NonPassedParams array
                     var isVarInNestedLambdaClosure = false;
                     var doneLabel = default(Label);
-                    if ((setup & CompilerFlags.NoInvocationLambdaInlining) != 0)
+                    var nestedLambdasCount = closure.NestedLambdas.Count;
+                    if (nestedLambdasCount != 0)
                     {
-                        var nestedLambdasCount = closure.NestedLambdas.Count;
-                        if (nestedLambdasCount != 0)
+                        var nestedLambdas = closure.NestedLambdas.Items;
+                        for (var nestedLambdaIndex = 0; nestedLambdaIndex < nestedLambdasCount; ++nestedLambdaIndex)
                         {
-                            var nestedLambdas = closure.NestedLambdas.Items;
-                            for (var nestedLambdaIndex = 0; nestedLambdaIndex < nestedLambdasCount; ++nestedLambdaIndex)
+                            var lambdaInfo = nestedLambdas[nestedLambdaIndex];
+                            var nonPassedParamCount = lambdaInfo.NonPassedParameters.Count;
+                            if (nonPassedParamCount != 0)
                             {
-                                var lambdaInfo = nestedLambdas[nestedLambdaIndex];
-                                var nonPassedParamCount = lambdaInfo.NonPassedParameters.Count;
-                                if (nonPassedParamCount != 0)
+                                var varIndexInNonPassedParams = lambdaInfo.NonPassedParameters.TryGetIndex(paramExpr, default(RefEq<ParameterExpression>));
+                                isVarInNestedLambdaClosure = varIndexInNonPassedParams != -1;
+                                if (isVarInNestedLambdaClosure)
                                 {
-                                    var varIndexInNonPassedParams = lambdaInfo.NonPassedParameters.TryGetIndex(paramExpr, default(RefEq<ParameterExpression>));
-                                    isVarInNestedLambdaClosure = varIndexInNonPassedParams != -1;
-                                    if (isVarInNestedLambdaClosure)
-                                    {
-                                        // The label to jump if the nested lambda is emitted, to jump over the normal emit code below
-                                        doneLabel = il.DefineLabel();
+                                    // The label to jump if the nested lambda is emitted, to jump over the normal emit code below
+                                    doneLabel = il.DefineLabel();
 
-                                        // Load the nested lambda item from the closure constants and nested lambdas array
-                                        var closureArrayItemIndex = closure.Constants.Count + nestedLambdaIndex;
-                                        EmitLoadClosureArrayItem(il, closureArrayItemIndex);
+                                    // Load the nested lambda item from the closure constants and nested lambdas array
+                                    var closureArrayItemIndex = closure.Constants.Count + nestedLambdaIndex;
+                                    EmitLoadClosureArrayItem(il, closureArrayItemIndex);
 
-                                        // Check if the NonPassedArray field is being set (not null),
-                                        // otherwise the nested lambda is not yet emitted, and it is not expected for the variable to be set inside it
-                                        il.Demit(OpCodes.Ldfld, NestedLambdaForNonPassedParams.NonPassedParamsField);
-                                        var noNestedLambdaYetLabel = il.DefineLabel();
-                                        il.Demit(OpCodes.Brfalse_S, noNestedLambdaYetLabel);
+                                    // Check if the NonPassedArray field is being set (not null),
+                                    // otherwise the nested lambda is not yet emitted, and it is not expected for the variable to be set inside it
+                                    il.Demit(OpCodes.Ldfld, NestedLambdaForNonPassedParams.NonPassedParamsField);
+                                    var noNestedLambdaYetLabel = il.DefineLabel();
+                                    il.Demit(OpCodes.Brfalse_S, noNestedLambdaYetLabel);
 
-                                        // load the variable
-                                        EmitLoadConstantInt(il, varIndexInNonPassedParams);
-                                        il.Demit(OpCodes.Ldelem_Ref);
-                                        il.TryEmitUnboxOf(paramType);
-                                        il.Demit(OpCodes.Br_S, doneLabel);
-                                        il.DmarkLabel(noNestedLambdaYetLabel);
-                                    }
+                                    // load the variable
+                                    EmitLoadConstantInt(il, varIndexInNonPassedParams);
+                                    il.Demit(OpCodes.Ldelem_Ref);
+                                    il.TryEmitUnboxOf(paramType);
+                                    il.Demit(OpCodes.Br_S, doneLabel);
+                                    il.DmarkLabel(noNestedLambdaYetLabel);
                                 }
                             }
                         }

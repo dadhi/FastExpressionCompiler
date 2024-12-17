@@ -15,11 +15,44 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
 {
     public int Run()
     {
+        Simplified_test();
         Simplified_test_no_inlining();
+
         // Nested_lambda_with_shared_variable_Workaround_with_struct();
         Nested_lambda_with_shared_variable();
         Nested_lambda_with_shared_variable_Workaround();
         return 2;
+    }
+
+    [Test]
+    public void Simplified_test()
+    {
+        var myVar = Variable(typeof(int), "myVar");
+        var expr = Lambda<Func<int>>(
+            Block(
+                new[] { myVar },
+                Assign(myVar, Constant(5)),
+                Invoke(Lambda<Action>(Assign(myVar, Constant(3)))),
+                myVar
+            )
+        );
+
+        expr.PrintCSharp();
+
+        var fs = expr.CompileSys();
+        fs.PrintIL();
+
+        var sr = fs();
+        Assert.AreEqual(3, sr);
+
+        var ff = expr.CompileFast(false);
+        ff.PrintIL();
+
+        if (ff.TryGetDebugClosureNestedLambda(0, out var nested))
+            nested.PrintIL("nested");
+
+        var fr = ff();
+        Assert.AreEqual(3, fr);
     }
 
     [Test]
@@ -43,11 +76,11 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
         var sr = fs();
         Assert.AreEqual(3, sr);
 
-        var ff = expr.CompileFast(false, CompilerFlags.NoInvocationLambdaInlining | CompilerFlags.EnableDelegateDebugInfo);
+        var ff = expr.CompileFast(false, CompilerFlags.NoInvocationLambdaInlining);
         ff.PrintIL();
 
-        if (ff.TryGetDebugClosureNestedLambda(0, out var nested))
-            nested.PrintIL("nested");
+        // if (ff.TryGetDebugClosureNestedLambda(0, out var nested))
+        //     nested.PrintIL("nested");
 
         var fr = ff();
         Assert.AreEqual(3, fr);
