@@ -1,11 +1,14 @@
 using System;
 using NUnit.Framework;
+using System.Collections.Generic;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
+using FastExpressionCompiler.LightExpression;
 namespace FastExpressionCompiler.LightExpression.IssueTests;
 #else
 using static System.Linq.Expressions.Expression;
+using System.Linq.Expressions;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
@@ -32,7 +35,7 @@ public class Issue443_Nested_Calls_with_lambda_parameters : ITest
         var innerLambda =
             Lambda<Func<int>>(
                 Block(
-                    local,
+                    new ParameterExpression[] { local },
                     Assign(local, Constant(42)),
 
                     // Invoke works
