@@ -1325,28 +1325,28 @@ namespace FastExpressionCompiler
                             else
                                 rootNestedLambdas.Add(compiledNestedLambda);
                             if (compiledNestedLambda.NonPassedParameters.Count != 0 &&
-                                !PropagateNonPassedParamsToOuterLambda(ref closure, ref nestedClosure,
+                                !PropagateNonPassedParamsToOuterLambda(ref closure,
                                     nestedLambda, paramExprs, nestedParamExprs, ref compiledNestedLambda.NonPassedParameters))
                                 return Result.ParameterIsNotVariableNorInPassedParameters;
                             return r;
                         }
 
-                        var nestedNestedLambda = new NestedLambdaInfo(nestedLambdaExpr);
+                        var newNestedLambda = new NestedLambdaInfo(nestedLambdaExpr);
 
                         if (nestedLambda != null)
-                            nestedLambda.NestedLambdas.Add(nestedNestedLambda);
+                            nestedLambda.NestedLambdas.Add(newNestedLambda);
                         else
-                            rootNestedLambdas.Add(nestedNestedLambda);
+                            rootNestedLambdas.Add(newNestedLambda);
 
-                        if ((r = TryCollectInfo(ref nestedClosure, nestedLambdaExpr.Body, nestedParamExprs, nestedNestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+                        if ((r = TryCollectInfo(ref nestedClosure, nestedLambdaExpr.Body, nestedParamExprs, newNestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
                             return r;
 
-                        if (nestedNestedLambda.NonPassedParameters.Count != 0 &&
-                            !PropagateNonPassedParamsToOuterLambda(ref closure, ref nestedClosure,
-                                nestedLambda, paramExprs, nestedParamExprs, ref nestedNestedLambda.NonPassedParameters))
+                        if (newNestedLambda.NonPassedParameters.Count != 0 &&
+                            !PropagateNonPassedParamsToOuterLambda(ref closure,
+                                nestedLambda, paramExprs, nestedParamExprs, ref newNestedLambda.NonPassedParameters))
                             return Result.ParameterIsNotVariableNorInPassedParameters;
 
-                        if (!TryCompileNestedLambda(ref nestedClosure, nestedNestedLambda, flags))
+                        if (!TryCompileNestedLambda(ref nestedClosure, newNestedLambda, flags))
                             return Result.NestedLambdaCompileError;
 
                         return r;
@@ -1627,21 +1627,21 @@ namespace FastExpressionCompiler
         }
 
 #if LIGHT_EXPRESSION
-        private static bool PropagateNonPassedParamsToOuterLambda(ref ClosureInfo closure, ref ClosureInfo nestedClosure, NestedLambdaInfo nestedLambda,
+        private static bool PropagateNonPassedParamsToOuterLambda(ref ClosureInfo closure, NestedLambdaInfo nestedLambda,
             IParameterProvider paramExprs, IParameterProvider nestedLambdaParamExprs, ref SmallList<ParameterExpression> nestedNonPassedParams)
         {
             var paramExprCount = paramExprs.ParameterCount;
             var nestedLambdaParamExprCount = nestedLambdaParamExprs.ParameterCount;
 #else
-        private static bool PropagateNonPassedParamsToOuterLambda(ref ClosureInfo closure, ref ClosureInfo nestedClosure, NestedLambdaInfo nestedLambda,
+        private static bool PropagateNonPassedParamsToOuterLambda(ref ClosureInfo closure, NestedLambdaInfo nestedLambda,
             IReadOnlyList<PE> paramExprs, IReadOnlyList<PE> nestedLambdaParamExprs, ref SmallList<ParameterExpression> nestedNonPassedParams)
         {
             var paramExprCount = paramExprs.Count;
             var nestedLambdaParamExprCount = nestedLambdaParamExprs.Count;
 #endif
             // If nested non passed parameter is not matched with any outer passed parameter,
-            // then ensure it goes to outer non passed parameter.
-            // But check that having a non-passed parameter in root expression is invalid.
+            // then we ensure it goes to the outer non passed parameter.
+            // But having the non-passed parameter in the root expression (nestedLambda == null) is invalid, and results in false.
             for (var i = 0; i < nestedNonPassedParams.Count; i++)
             {
                 var nestedNonPassedParam = nestedNonPassedParams.GetSurePresentItemRef(i);
@@ -1658,12 +1658,11 @@ namespace FastExpressionCompiler
 
                 if (!isInNestedLambda & !isInOuterLambda)
                 {
-                    if (nestedClosure.IsLocalVar(nestedNonPassedParam))
-                        return true;
-                    if (nestedLambda != null)
-                        _ = nestedLambda.NonPassedParameters.GetIndexOrAdd(nestedNonPassedParam, default(RefEq<ParameterExpression>));
-                    else if (!closure.IsLocalVar(nestedNonPassedParam))
+                    if (closure.IsLocalVar(nestedNonPassedParam))
+                        continue;
+                    if (nestedLambda == null) // means that we at the root level lambda, and non-passed parameter cannot be provided
                         return false;
+                    _ = nestedLambda.NonPassedParameters.GetIndexOrAdd(nestedNonPassedParam, default(RefEq<ParameterExpression>));
                 }
             }
 
