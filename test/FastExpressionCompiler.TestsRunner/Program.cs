@@ -9,7 +9,6 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            new LightExpression.IssueTests.Issue443_Nested_Calls_with_lambda_parameters().Run();
             // new LightExpression.IssueTests.Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_values().Run();
             // new LightExpression.UnitTests.ArithmeticOperationsTests().Run();
 
@@ -339,6 +338,9 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue442_TryCatch_and_the_Goto_outside_problems().Run);
                 Run(new LightExpression.IssueTests.Issue442_TryCatch_and_the_Goto_outside_problems().Run);
+
+                Run(new Issue443_Nested_Calls_with_lambda_parameters().Run);
+                Run(new LightExpression.IssueTests.Issue443_Nested_Calls_with_lambda_parameters().Run);
 
                 Console.WriteLine($"{Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
