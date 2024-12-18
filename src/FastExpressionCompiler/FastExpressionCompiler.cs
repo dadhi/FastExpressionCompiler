@@ -1314,7 +1314,6 @@ namespace FastExpressionCompiler
                         var nestedParamExprs = nestedLambdaExpr.Parameters;
 #endif
                         closure.Status |= ClosureStatus.HasClosure;
-                        var nestedClosure = new ClosureInfo(ClosureStatus.ToBeCollected);
 
                         // Look for the already collected lambdas starting from the root
                         if (rootNestedLambdas.Count != 0 &&
@@ -1331,6 +1330,7 @@ namespace FastExpressionCompiler
                             return r;
                         }
 
+                        var nestedClosure = new ClosureInfo(ClosureStatus.ToBeCollected);
                         var newNestedLambda = new NestedLambdaInfo(nestedLambdaExpr);
 
                         if (nestedLambda != null)
