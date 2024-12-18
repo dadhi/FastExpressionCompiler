@@ -1627,13 +1627,13 @@ namespace FastExpressionCompiler
         }
 
 #if LIGHT_EXPRESSION
-        private static bool PropagateNonPassedParamsToOuterLambda(ref ClosureInfo closure, NestedLambdaInfo nestedLambda,
+        private static bool PropagateNonPassedParamsToOuterLambda(ref ClosureInfo closure, NestedLambdaInfo lambda,
             IParameterProvider paramExprs, IParameterProvider nestedLambdaParamExprs, ref SmallList<ParameterExpression> nestedNonPassedParams)
         {
             var paramExprCount = paramExprs.ParameterCount;
             var nestedLambdaParamExprCount = nestedLambdaParamExprs.ParameterCount;
 #else
-        private static bool PropagateNonPassedParamsToOuterLambda(ref ClosureInfo closure, NestedLambdaInfo nestedLambda,
+        private static bool PropagateNonPassedParamsToOuterLambda(ref ClosureInfo closure, NestedLambdaInfo lambda,
             IReadOnlyList<PE> paramExprs, IReadOnlyList<PE> nestedLambdaParamExprs, ref SmallList<ParameterExpression> nestedNonPassedParams)
         {
             var paramExprCount = paramExprs.Count;
@@ -1651,18 +1651,18 @@ namespace FastExpressionCompiler
                     for (var p = 0; !isInNestedLambda && p < nestedLambdaParamExprCount; ++p)
                         isInNestedLambda = ReferenceEquals(nestedLambdaParamExprs.GetParameter(p), nestedNonPassedParam);
 
-                var isInOuterLambda = false;
+                var isInLambda = false;
                 if (paramExprCount != 0)
-                    for (var p = 0; !isInOuterLambda && p < paramExprCount; ++p)
-                        isInOuterLambda = ReferenceEquals(paramExprs.GetParameter(p), nestedNonPassedParam);
+                    for (var p = 0; !isInLambda && p < paramExprCount; ++p)
+                        isInLambda = ReferenceEquals(paramExprs.GetParameter(p), nestedNonPassedParam);
 
-                if (!isInNestedLambda & !isInOuterLambda)
+                if (!isInNestedLambda & !isInLambda)
                 {
                     if (closure.IsLocalVar(nestedNonPassedParam))
                         continue;
-                    if (nestedLambda == null) // means that we at the root level lambda, and non-passed parameter cannot be provided
+                    if (lambda == null) // means that we at the root level lambda, and non-passed parameter cannot be provided
                         return false;
-                    _ = nestedLambda.NonPassedParameters.GetIndexOrAdd(nestedNonPassedParam, default(RefEq<ParameterExpression>));
+                    _ = lambda.NonPassedParameters.GetIndexOrAdd(nestedNonPassedParam, default(RefEq<ParameterExpression>));
                 }
             }
 
