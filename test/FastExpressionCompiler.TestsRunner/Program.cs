@@ -340,6 +340,9 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue442_TryCatch_and_the_Goto_outside_problems().Run);
                 Run(new LightExpression.IssueTests.Issue442_TryCatch_and_the_Goto_outside_problems().Run);
 
+                Run(new Issue443_Nested_Calls_with_lambda_parameters().Run);
+                Run(new LightExpression.IssueTests.Issue443_Nested_Calls_with_lambda_parameters().Run);
+
                 Console.WriteLine($"{Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
 

@@ -1344,12 +1344,13 @@ namespace FastExpressionCompiler
                             else
                                 rootNestedLambdas.Add(compiledNestedLambda);
                             if (compiledNestedLambda.NonPassedParameters.Count != 0 &&
-                                !PropagateNonPassedParamsToOuterLambda(ref closure, nestedLambda, paramExprs, nestedParamExprs, ref compiledNestedLambda.NonPassedParameters))
+                                !PropagateNonPassedParamsToOuterLambda(ref closure,
+                                    nestedLambda, paramExprs, nestedParamExprs, ref compiledNestedLambda.NonPassedParameters))
                                 return Result.ParameterIsNotVariableNorInPassedParameters;
                             return r;
                         }
 
-                        var nestedClosureInfo = new ClosureInfo(ClosureStatus.ToBeCollected);
+                        var nestedClosure = new ClosureInfo(ClosureStatus.ToBeCollected);
                         var newNestedLambda = new NestedLambdaInfo(nestedLambdaExpr);
 
                         if (nestedLambda != null)
@@ -1357,14 +1358,15 @@ namespace FastExpressionCompiler
                         else
                             rootNestedLambdas.Add(newNestedLambda);
 
-                        if ((r = TryCollectInfo(ref nestedClosureInfo, nestedLambdaExpr.Body, nestedParamExprs, newNestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+                        if ((r = TryCollectInfo(ref nestedClosure, nestedLambdaExpr.Body, nestedParamExprs, newNestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
                             return r;
 
                         if (newNestedLambda.NonPassedParameters.Count != 0 &&
-                            !PropagateNonPassedParamsToOuterLambda(ref closure, nestedLambda, paramExprs, nestedParamExprs, ref newNestedLambda.NonPassedParameters))
+                            !PropagateNonPassedParamsToOuterLambda(ref closure,
+                                nestedLambda, paramExprs, nestedParamExprs, ref newNestedLambda.NonPassedParameters))
                             return Result.ParameterIsNotVariableNorInPassedParameters;
 
-                        if (!TryCompileNestedLambda(ref nestedClosureInfo, newNestedLambda, flags))
+                        if (!TryCompileNestedLambda(ref nestedClosure, newNestedLambda, flags))
                             return Result.NestedLambdaCompileError;
 
                         return r;
@@ -1645,21 +1647,21 @@ namespace FastExpressionCompiler
         }
 
 #if LIGHT_EXPRESSION
-        private static bool PropagateNonPassedParamsToOuterLambda(ref ClosureInfo closure, NestedLambdaInfo nestedLambda,
+        private static bool PropagateNonPassedParamsToOuterLambda(ref ClosureInfo closure, NestedLambdaInfo lambda,
             IParameterProvider paramExprs, IParameterProvider nestedLambdaParamExprs, ref SmallList<ParameterExpression> nestedNonPassedParams)
         {
             var paramExprCount = paramExprs.ParameterCount;
             var nestedLambdaParamExprCount = nestedLambdaParamExprs.ParameterCount;
 #else
-        private static bool PropagateNonPassedParamsToOuterLambda(ref ClosureInfo closure, NestedLambdaInfo nestedLambda,
+        private static bool PropagateNonPassedParamsToOuterLambda(ref ClosureInfo closure, NestedLambdaInfo lambda,
             IReadOnlyList<PE> paramExprs, IReadOnlyList<PE> nestedLambdaParamExprs, ref SmallList<ParameterExpression> nestedNonPassedParams)
         {
             var paramExprCount = paramExprs.Count;
             var nestedLambdaParamExprCount = nestedLambdaParamExprs.Count;
 #endif
             // If nested non passed parameter is not matched with any outer passed parameter,
-            // then ensure it goes to outer non passed parameter.
-            // But check that having a non-passed parameter in root expression is invalid.
+            // then we ensure it goes to the outer non passed parameter.
+            // But having the non-passed parameter in the root expression (nestedLambda == null) is invalid, and results in false.
             for (var i = 0; i < nestedNonPassedParams.Count; i++)
             {
                 var nestedNonPassedParam = nestedNonPassedParams.GetSurePresentItemRef(i);
@@ -1669,17 +1671,18 @@ namespace FastExpressionCompiler
                     for (var p = 0; !isInNestedLambda && p < nestedLambdaParamExprCount; ++p)
                         isInNestedLambda = ReferenceEquals(nestedLambdaParamExprs.GetParameter(p), nestedNonPassedParam);
 
-                var isInOuterLambda = false;
+                var isInLambda = false;
                 if (paramExprCount != 0)
-                    for (var p = 0; !isInOuterLambda && p < paramExprCount; ++p)
-                        isInOuterLambda = ReferenceEquals(paramExprs.GetParameter(p), nestedNonPassedParam);
+                    for (var p = 0; !isInLambda && p < paramExprCount; ++p)
+                        isInLambda = ReferenceEquals(paramExprs.GetParameter(p), nestedNonPassedParam);
 
-                if (!isInNestedLambda & !isInOuterLambda)
+                if (!isInNestedLambda & !isInLambda)
                 {
-                    if (nestedLambda != null)
-                        _ = nestedLambda.NonPassedParameters.GetIndexOrAdd(nestedNonPassedParam, default(RefEq<ParameterExpression>));
-                    else if (!closure.IsLocalVar(nestedNonPassedParam))
+                    if (closure.IsLocalVar(nestedNonPassedParam))
+                        continue;
+                    if (lambda == null) // means that we at the root level lambda, and non-passed parameter cannot be provided
                         return false;
+                    _ = lambda.NonPassedParameters.GetIndexOrAdd(nestedNonPassedParam, default(RefEq<ParameterExpression>));
                 }
             }
 
@@ -1746,8 +1749,7 @@ namespace FastExpressionCompiler
             var method = new DynamicMethod(string.Empty, nestedReturnType, closurePlusParamTypes, typeof(ArrayClosure), true);
             var il = method.GetILGenerator();
 
-            var containsConstantsOrNestedLambdas = nestedClosureInfo.ContainsConstantsOrNestedLambdas();
-            if (containsConstantsOrNestedLambdas & ((nestedClosureInfo.Status & ClosureStatus.HasClosure) != 0))
+            if (nestedConstsAndLambdas != null)
                 EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref nestedClosureInfo);
 
             var parent = nestedReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
@@ -1758,16 +1760,15 @@ namespace FastExpressionCompiler
                 return false;
             il.Demit(OpCodes.Ret);
 
-            // If we don't have closure then create a static or an open delegate to pass closure later with `TryEmitNestedLambda`,
-            // constructing the new closure with non-passed arguments and the rest of items
-            nestedLambdaInfo.Lambda = nestedLambdaClosure != null
+            // If we don't have closure then create a static or an open delegate to pass closure later in `TryEmitNestedLambda`,
+            // constructing the new closure with NonPassedParams and the rest of items stored in NestedLambdaWithConstantsAndNestedLambdas
+            var nestedLambda = nestedLambdaClosure != null
                 ? method.CreateDelegate(nestedLambdaExpr.Type, nestedLambdaClosure)
                 : method.CreateDelegate(Tools.GetFuncOrActionType(closurePlusParamTypes, nestedReturnType), null);
 
-            if (hasNonPassedParameters)
-                nestedLambdaInfo.Lambda = nestedConstsAndLambdas == null
-                    ? new NestedLambdaForNonPassedParams(nestedLambdaInfo.Lambda)
-                    : new NestedLambdaForNonPassedParamsWithConstants(nestedLambdaInfo.Lambda, nestedConstsAndLambdas);
+            nestedLambdaInfo.Lambda = !hasNonPassedParameters ? nestedLambda
+                : nestedConstsAndLambdas == null ? new NestedLambdaForNonPassedParams(nestedLambda)
+                : new NestedLambdaForNonPassedParamsWithConstants(nestedLambda, nestedConstsAndLambdas);
 
             ReturnClosureTypeToParamTypesToPool(closurePlusParamTypes);
             return true;
