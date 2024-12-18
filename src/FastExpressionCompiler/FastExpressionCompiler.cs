@@ -1738,14 +1738,15 @@ namespace FastExpressionCompiler
                 return false;
             il.Demit(OpCodes.Ret);
 
-            // If we don't have closure then create a static or an open delegate to pass closure later with `TryEmitNestedLambda`,
-            // constructing the new closure with non-passed arguments and the rest of items
-            nestedLambdaInfo.Lambda = nestedLambdaClosure != null
+            // If we don't have closure then create a static or an open delegate to pass closure later in `TryEmitNestedLambda`,
+            // constructing the new closure with NonPassedParams and the rest of items stored in NestedLambdaWithConstantsAndNestedLambdas
+            var nestedLambda = nestedLambdaClosure != null
                 ? method.CreateDelegate(nestedLambdaExpr.Type, nestedLambdaClosure)
                 : method.CreateDelegate(Tools.GetFuncOrActionType(closurePlusParamTypes, nestedReturnType), null);
 
-            if (nestedConstsAndLambdas != null & containsConstantsOrNestedLambdas & hasNonPassedParameters)
-                nestedLambdaInfo.Lambda = new NestedLambdaWithConstantsAndNestedLambdas(nestedLambdaInfo.Lambda, nestedConstsAndLambdas);
+            nestedLambdaInfo.Lambda = nestedConstsAndLambdas != null & hasNonPassedParameters
+                ? new NestedLambdaWithConstantsAndNestedLambdas(nestedLambda, nestedConstsAndLambdas)
+                : nestedLambda;
 
             ReturnClosureTypeToParamTypesToPool(closurePlusParamTypes);
             return true;

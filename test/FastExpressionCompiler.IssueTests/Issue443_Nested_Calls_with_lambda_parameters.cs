@@ -17,8 +17,10 @@ public class Issue443_Nested_Calls_with_lambda_parameters : ITest
 {
     public int Run()
     {
-        Original_case_1();
-        return 1;
+        // Original_case();
+        // Case_with_Invoke();
+        Case_with_Invoke_NoInlining();
+        return 2;
     }
 
     public class TestClass
@@ -27,7 +29,7 @@ public class Issue443_Nested_Calls_with_lambda_parameters : ITest
     }
 
     [Test]
-    public void Original_case_1()
+    public void Original_case()
     {
         var executeDelegate = typeof(TestClass).GetMethod(nameof(TestClass.ExecuteDelegate));
         var local = Variable(typeof(int), "local");
@@ -37,10 +39,6 @@ public class Issue443_Nested_Calls_with_lambda_parameters : ITest
                 Block(
                     new ParameterExpression[] { local },
                     Assign(local, Constant(42)),
-
-                    // Invoke works
-                    //Invoke( Lambda<Func<int>>( local ) )
-
                     // Call does not work
                     Call(executeDelegate, Lambda<Func<int>>(local))
                 )
@@ -59,6 +57,78 @@ public class Issue443_Nested_Calls_with_lambda_parameters : ITest
         Assert.AreEqual(42, sr);
 
         var ff = expr.CompileFast(false);
+        ff.PrintIL();
+
+        var fr = ff();
+        Assert.AreEqual(42, fr);
+    }
+
+    [Test]
+    public void Case_with_Invoke()
+    {
+        var executeDelegate = typeof(TestClass).GetMethod(nameof(TestClass.ExecuteDelegate));
+        var local = Variable(typeof(int), "local");
+
+        var innerLambda =
+            Lambda<Func<int>>(
+                Block(
+                    new ParameterExpression[] { local },
+                    Assign(local, Constant(42)),
+
+                    // Invoke works
+                    Invoke(Lambda<Func<int>>(local))
+                )
+            );
+
+        var expr = Lambda<Func<int>>(
+            Call(executeDelegate, innerLambda)
+        );
+
+        expr.PrintCSharp();
+
+        var fs = expr.CompileSys();
+        fs.PrintIL();
+
+        var sr = fs();
+        Assert.AreEqual(42, sr);
+
+        var ff = expr.CompileFast(false);
+        ff.PrintIL();
+
+        var fr = ff();
+        Assert.AreEqual(42, fr);
+    }
+
+    [Test]
+    public void Case_with_Invoke_NoInlining()
+    {
+        var executeDelegate = typeof(TestClass).GetMethod(nameof(TestClass.ExecuteDelegate));
+        var local = Variable(typeof(int), "local");
+
+        var innerLambda =
+            Lambda<Func<int>>(
+                Block(
+                    new ParameterExpression[] { local },
+                    Assign(local, Constant(42)),
+
+                    // Invoke works
+                    Invoke(Lambda<Func<int>>(local))
+                )
+            );
+
+        var expr = Lambda<Func<int>>(
+            Call(executeDelegate, innerLambda)
+        );
+
+        expr.PrintCSharp();
+
+        var fs = expr.CompileSys();
+        fs.PrintIL();
+
+        var sr = fs();
+        Assert.AreEqual(42, sr);
+
+        var ff = expr.CompileFast(false, CompilerFlags.NoInvocationLambdaInlining);
         ff.PrintIL();
 
         var fr = ff();

@@ -6,7 +6,7 @@
         <IsTestProject>false</IsTestProject>
         <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
 
-        <NoWarn>$(NoWarn);NETSDK1005;NETSDK1138;NU1702</NoWarn>
+        <NoWarn>$(NoWarn);NETSDK1005;NETSDK1138;NU1702;NU1900</NoWarn>
     </PropertyGroup>
     <ItemGroup>
         <ProjectReference Include="..\FastExpressionCompiler.UnitTests\FastExpressionCompiler.UnitTests.csproj" />
