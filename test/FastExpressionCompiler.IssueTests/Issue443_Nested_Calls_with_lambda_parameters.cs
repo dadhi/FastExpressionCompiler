@@ -20,7 +20,7 @@ public class Issue443_Nested_Calls_with_lambda_parameters : ITest
         // Original_case();
         // Case_with_Invoke_NoInlining();
         Case_with_Invoke();
-        return 2;
+        return 3;
     }
 
     public class TestClass
