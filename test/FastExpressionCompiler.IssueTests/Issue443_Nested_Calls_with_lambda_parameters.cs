@@ -18,8 +18,8 @@ public class Issue443_Nested_Calls_with_lambda_parameters : ITest
     public int Run()
     {
         // Original_case();
-        // Case_with_Invoke();
-        Case_with_Invoke_NoInlining();
+        // Case_with_Invoke_NoInlining();
+        Case_with_Invoke();
         return 2;
     }
 
