@@ -605,9 +605,6 @@ namespace FastExpressionCompiler
 
             public NestedLambdaInfo(LambdaExpression lambdaExpression) => LambdaExpression = lambdaExpression;
 
-            /// <summary>Returns the type of lambda</summary>
-            public Type GetLambdaType() => (Lambda is NestedLambdaForNonPassedParams n ? n.NestedLambda : Lambda).GetType();
-
             /// <summary>Compares 2 lambda expressions for equality</summary>
             public bool HasTheSameLambdaExpression(LambdaExpression lambda) => // todo: @unclear parameters or is comparing the body is enough?
                 ReferenceEquals(LambdaExpression, lambda) ||
@@ -3541,9 +3538,11 @@ namespace FastExpressionCompiler
                 // Load constants array field from Closure and store it into the variable
                 il.Demit(OpCodes.Ldarg_0);
                 il.Demit(OpCodes.Ldfld, ArrayClosureArrayField);
-                EmitStoreLocalVariable(il, il.GetNextLocalVarIndex(typeof(object[]))); // always does Stloc_0
-                                                                                       // important that the constant will contain the nested lambdas as well in the same array after the actual constants, so the Count indicates where the constants end
-                var constItems = closure.Constants.Items; // todo: @perf why do we getting when non constants is stored but just a nested lambda is present?
+                EmitStoreLocalVariable(il, il.GetNextLocalVarIndex(typeof(object[]))); // always does Stloc_0, because it is done at start of the lambda emit
+
+                // important that the constant will contain the nested lambdas as well in the same array after the actual constants, 
+                // so the Count indicates where the constants end
+                var constItems = closure.Constants.Items;
                 var constCount = closure.Constants.Count;
 
                 short varIndex;
@@ -3571,7 +3570,7 @@ namespace FastExpressionCompiler
                     {
                         var lambdaInfo = nestedLambdas[i];
                         EmitLoadClosureArrayItem(il, constCount + i);
-                        lambdaInfo.LambdaVarIndex = varIndex = (short)il.GetNextLocalVarIndex(lambdaInfo.GetLambdaType());
+                        lambdaInfo.LambdaVarIndex = varIndex = (short)il.GetNextLocalVarIndex(lambdaInfo.Lambda.GetType());
                         EmitStoreLocalVariable(il, varIndex);
                     }
                 }
@@ -4986,8 +4985,7 @@ namespace FastExpressionCompiler
                 il.Demit(OpCodes.Ldfld, NestedLambdaForNonPassedParams.NestedLambdaField);
 
                 // Load the nonPassedParams as a first argument of closure
-                EmitLoadLocalVariable(il, nestedLambdaInfo.LambdaVarIndex);
-                il.Demit(OpCodes.Ldfld, NestedLambdaForNonPassedParams.NonPassedParamsField);
+                EmitLoadLocalVariable(il, nonPassedParamsVarIndex);
 
                 // Load the constants as a second argument and call the closure constructor
                 if (nestedLambdaInfo.Lambda is NestedLambdaForNonPassedParamsWithConstants)
@@ -5000,7 +4998,9 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Newobj, ArrayClosureWithNonPassedParamsCtor);
 
                 // Call the `Curry` method with the nested lambda and closure to produce a closed lambda with the expected signature
-                var lambdaTypeArgs = nestedLambdaInfo.GetLambdaType().GetGenericArguments();
+                var lambda = nestedLambdaInfo.Lambda;
+                var lambdaType = (lambda is NestedLambdaForNonPassedParams lp ? lp.NestedLambda : lambda).GetType();
+                var lambdaTypeArgs = lambdaType.GetGenericArguments();
                 var nestedLambdaExpr = nestedLambdaInfo.LambdaExpression;
                 var closureMethod = nestedLambdaExpr.ReturnType == typeof(void)
                     ? CurryClosureActions.Methods[lambdaTypeArgs.Length - 1].MakeGenericMethod(lambdaTypeArgs)

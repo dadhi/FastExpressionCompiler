@@ -15,10 +15,10 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
 {
     public int Run()
     {
-        Simplified_test();
         Simplified_test_no_inlining();
+        Simplified_test();
 
-        // Nested_lambda_with_shared_variable_Workaround_with_struct();
+        Nested_lambda_with_shared_variable_Workaround_with_struct();
         Nested_lambda_with_shared_variable();
         Nested_lambda_with_shared_variable_Workaround();
         return 2;
@@ -48,9 +48,6 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
         var ff = expr.CompileFast(false);
         ff.PrintIL();
 
-        if (ff.TryGetDebugClosureNestedLambda(0, out var nested))
-            nested.PrintIL("nested");
-
         var fr = ff();
         Assert.AreEqual(3, fr);
     }
@@ -78,9 +75,6 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
 
         var ff = expr.CompileFast(false, CompilerFlags.NoInvocationLambdaInlining);
         ff.PrintIL();
-
-        // if (ff.TryGetDebugClosureNestedLambda(0, out var nested))
-        //     nested.PrintIL("nested");
 
         var fr = ff();
         Assert.AreEqual(3, fr);
