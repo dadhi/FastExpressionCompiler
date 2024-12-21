@@ -2789,6 +2789,7 @@ namespace FastExpressionCompiler
                                     il.TryEmitUnboxOf(paramType);
                                     // il.Demit(OpCodes.Br_S, doneLabel);
                                     // il.DmarkLabel(noNestedLambdaYetLabel);
+                                    return true; // todo: @wip
                                 }
                             }
                         }
