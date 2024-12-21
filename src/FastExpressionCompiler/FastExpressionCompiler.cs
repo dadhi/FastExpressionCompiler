@@ -2787,7 +2787,7 @@ namespace FastExpressionCompiler
                                     EmitLoadConstantInt(il, varIndexInNonPassedParams);
                                     il.Demit(OpCodes.Ldelem_Ref);
                                     il.TryEmitUnboxOf(paramType);
-                                    il.Demit(OpCodes.Br_S, doneLabel);
+                                    // il.Demit(OpCodes.Br_S, doneLabel);
                                     // il.DmarkLabel(noNestedLambdaYetLabel);
                                 }
                             }
