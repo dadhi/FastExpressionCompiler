@@ -2755,7 +2755,7 @@ namespace FastExpressionCompiler
                     // todo: @perf analyze if the variable is actually may be mutated in the nested lambda by being assigned or passed by ref
                     // Check if the variable is passed to the nested closure (#437), so it should be loaded from the nested closure NonPassedParams array
                     var isVarInNestedLambdaClosure = false;
-                    var doneLabel = default(Label);
+                    // var doneLabel = default(Label);
                     var nestedLambdasCount = closure.NestedLambdas.Count;
                     if (nestedLambdasCount != 0)
                     {
