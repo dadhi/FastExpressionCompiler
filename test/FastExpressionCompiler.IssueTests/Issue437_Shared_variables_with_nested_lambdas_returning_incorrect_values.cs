@@ -15,13 +15,76 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
 {
     public int Run()
     {
+        More_simplified_test_no_inlining_for_SystemCompile_with_Execute();
+        More_simplified_test_no_inlining();
         Simplified_test_no_inlining();
         Simplified_test();
 
         Nested_lambda_with_shared_variable_Workaround_with_struct();
         Nested_lambda_with_shared_variable();
         Nested_lambda_with_shared_variable_Workaround();
-        return 2;
+        return 7;
+    }
+
+    public class TestClass
+    {
+        public static void Execute(Action action) => action();
+    }
+
+    [Test]
+    public void More_simplified_test_no_inlining_for_SystemCompile_with_Execute()
+    {
+        var execute = typeof(TestClass).GetMethod(nameof(TestClass.Execute));
+
+        var myVar = Variable(typeof(int), "myVar");
+        var expr = Lambda<Func<int>>(
+            Block(
+                new[] { myVar },
+                Call(execute, Lambda<Action>(Assign(myVar, Constant(3)))),
+                myVar
+            )
+        );
+
+        expr.PrintCSharp();
+
+        var fs = expr.CompileSys();
+        fs.PrintIL();
+
+        var sr = fs();
+        Assert.AreEqual(3, sr);
+
+        var ff = expr.CompileFast(false, CompilerFlags.NoInvocationLambdaInlining);
+        ff.PrintIL();
+
+        var fr = ff();
+        Assert.AreEqual(3, fr);
+    }
+
+    [Test]
+    public void More_simplified_test_no_inlining()
+    {
+        var myVar = Variable(typeof(int), "myVar");
+        var expr = Lambda<Func<int>>(
+            Block(
+                new[] { myVar },
+                Invoke(Lambda<Action>(Assign(myVar, Constant(3)))),
+                myVar
+            )
+        );
+
+        expr.PrintCSharp();
+
+        var fs = expr.CompileSys();
+        fs.PrintIL();
+
+        var sr = fs();
+        Assert.AreEqual(3, sr);
+
+        var ff = expr.CompileFast(false, CompilerFlags.NoInvocationLambdaInlining);
+        ff.PrintIL();
+
+        var fr = ff();
+        Assert.AreEqual(3, fr);
     }
 
     [Test]

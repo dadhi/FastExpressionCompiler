@@ -2770,8 +2770,8 @@ namespace FastExpressionCompiler
                                 isVarInNestedLambdaClosure = varIndexInNonPassedParams != -1;
                                 if (isVarInNestedLambdaClosure)
                                 {
-                                    // The label to jump if the nested lambda is emitted, to jump over the normal emit code below
-                                    doneLabel = il.DefineLabel();
+                                    // // The label to jump if the nested lambda is emitted, to jump over the normal emit code below
+                                    // doneLabel = il.DefineLabel();
 
                                     // Load the nested lambda item from the closure constants and nested lambdas array
                                     var closureArrayItemIndex = closure.Constants.Count + nestedLambdaIndex;
@@ -2780,15 +2780,15 @@ namespace FastExpressionCompiler
                                     // Check if the NonPassedArray field is being set (not null),
                                     // otherwise the nested lambda is not yet emitted, and it is not expected for the variable to be set inside it
                                     il.Demit(OpCodes.Ldfld, NestedLambdaForNonPassedParams.NonPassedParamsField);
-                                    var noNestedLambdaYetLabel = il.DefineLabel();
-                                    il.Demit(OpCodes.Brfalse_S, noNestedLambdaYetLabel);
+                                    // var noNestedLambdaYetLabel = il.DefineLabel();
+                                    // il.Demit(OpCodes.Brfalse_S, noNestedLambdaYetLabel);
 
                                     // load the variable
                                     EmitLoadConstantInt(il, varIndexInNonPassedParams);
                                     il.Demit(OpCodes.Ldelem_Ref);
                                     il.TryEmitUnboxOf(paramType);
                                     il.Demit(OpCodes.Br_S, doneLabel);
-                                    il.DmarkLabel(noNestedLambdaYetLabel);
+                                    // il.DmarkLabel(noNestedLambdaYetLabel);
                                 }
                             }
                         }
@@ -2850,8 +2850,8 @@ namespace FastExpressionCompiler
                         }
                     }
 
-                    if (isVarInNestedLambdaClosure)
-                        il.DmarkLabel(doneLabel);
+                    // if (isVarInNestedLambdaClosure)
+                    //     il.DmarkLabel(doneLabel);
                     return true;
                 }
 
