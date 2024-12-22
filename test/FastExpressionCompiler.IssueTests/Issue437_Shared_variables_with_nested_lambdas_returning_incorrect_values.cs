@@ -15,6 +15,8 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
 {
     public int Run()
     {
+        More_simplified_test_no_inlining_for_SystemCompile_with_Execute_no_assigning();
+
         More_simplified_test_no_inlining_for_SystemCompile_with_Execute();
         More_simplified_test_no_inlining();
         Simplified_test_no_inlining();
@@ -23,18 +25,60 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
         Nested_lambda_with_shared_variable_Workaround_with_struct();
         Nested_lambda_with_shared_variable();
         Nested_lambda_with_shared_variable_Workaround();
-        return 7;
+
+        return 8;
     }
 
     public class TestClass
     {
-        public static void Execute(Action action) => action();
+        public static void ExecuteAction(Action action) => action();
+        public static int ExecuteFunc(Func<int> func) => func();
+    }
+
+    [Test]
+    public void More_simplified_test_no_inlining_for_SystemCompile_with_Execute_no_assigning()
+    {
+        var execute = typeof(TestClass).GetMethod(nameof(TestClass.ExecuteFunc));
+
+        var myVar = Variable(typeof(int), "myVar");
+        var expr = Lambda<Func<int>>(
+            Block(
+                new[] { myVar },
+                Assign(myVar, Constant(5)),
+                Call(execute, Lambda<Func<int>>(Add(myVar, Constant(3)))),
+                myVar
+            )
+        );
+
+        expr.PrintCSharp();
+        // outputs:
+        var @cs = (Func<int>)(() => //int
+        {
+            int myVar = default;
+            myVar = 5;
+            TestClass.ExecuteFunc((Func<int>)(() => //int
+                myVar + 3));
+            return myVar;
+        });
+        Assert.AreEqual(5, @cs());
+
+        var fs = expr.CompileSys();
+        fs.PrintIL();
+
+        var sr = fs();
+        Assert.AreEqual(5, sr);
+
+        var ff = expr.CompileFast(false);
+        ff.PrintIL();
+
+        var fr = ff();
+        Assert.AreEqual(5, fr);
     }
 
     [Test]
     public void More_simplified_test_no_inlining_for_SystemCompile_with_Execute()
     {
-        var execute = typeof(TestClass).GetMethod(nameof(TestClass.Execute));
+        var execute = typeof(TestClass).GetMethod(nameof(TestClass.ExecuteAction));
 
         var myVar = Variable(typeof(int), "myVar");
         var expr = Lambda<Func<int>>(
@@ -53,7 +97,7 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
         var sr = fs();
         Assert.AreEqual(3, sr);
 
-        var ff = expr.CompileFast(false, CompilerFlags.NoInvocationLambdaInlining);
+        var ff = expr.CompileFast(false);
         ff.PrintIL();
 
         var fr = ff();
