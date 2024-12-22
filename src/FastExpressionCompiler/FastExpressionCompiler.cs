@@ -596,6 +596,10 @@ namespace FastExpressionCompiler
             /// The top expression should Not contain not passed parameters.</summary>
             public SmallList<ParameterExpression> NonPassedParameters;
 
+            /// <summary>If the N's bit is set, it means the parameter is mutated (assigned or passed by-ref),
+            /// where N is the index of the param in `NonPassedParameters`</summary>
+            public ulong NonPassedParamMutatedIndexBits;
+
             /// <summary>Index of the compiled lambda in the parent lambda closure array</summary>
             public short LambdaVarIndex;
 
@@ -1340,10 +1344,12 @@ namespace FastExpressionCompiler
                                 nestedLambda.NestedLambdas.Add(compiledNestedLambda);
                             else
                                 rootNestedLambdas.Add(compiledNestedLambda);
+
                             if (compiledNestedLambda.NonPassedParameters.Count != 0 &&
                                 !PropagateNonPassedParamsToOuterLambda(ref closure,
                                     nestedLambda, paramExprs, nestedParamExprs, ref compiledNestedLambda.NonPassedParameters))
                                 return Result.ParameterIsNotVariableNorInPassedParameters;
+
                             return r;
                         }
 
@@ -2754,7 +2760,7 @@ namespace FastExpressionCompiler
                 {
                     // todo: @perf analyze if the variable is actually may be mutated in the nested lambda by being assigned or passed by ref
                     // Check if the variable is passed to the nested closure (#437), so it should be loaded from the nested closure NonPassedParams array
-                    var isVarInNestedLambdaClosure = false;
+                    // var isVarInNestedLambdaClosure = false;
                     // var doneLabel = default(Label);
                     var nestedLambdasCount = closure.NestedLambdas.Count;
                     if (nestedLambdasCount != 0)
@@ -2767,8 +2773,8 @@ namespace FastExpressionCompiler
                             if (nonPassedParamCount != 0)
                             {
                                 var varIndexInNonPassedParams = lambdaInfo.NonPassedParameters.TryGetIndex(paramExpr, default(RefEq<ParameterExpression>));
-                                isVarInNestedLambdaClosure = varIndexInNonPassedParams != -1;
-                                if (isVarInNestedLambdaClosure)
+                                if (varIndexInNonPassedParams != -1 &&
+                                    (lambdaInfo.NonPassedParamMutatedIndexBits & (1UL << varIndexInNonPassedParams)) != 0)
                                 {
                                     // // The label to jump if the nested lambda is emitted, to jump over the normal emit code below
                                     // doneLabel = il.DefineLabel();
@@ -4928,7 +4934,8 @@ namespace FastExpressionCompiler
                 // For the lambda with non-passed parameters (or variables) in closure
 
                 // Emit the NonPassedParams array for the non-passed parameters and variables
-                EmitLoadConstantInt(il, nonPassedParams.Count); // load the length of array
+                var nonPassedParamsCount = nonPassedParams.Count;
+                EmitLoadConstantInt(il, nonPassedParamsCount); // load the length of array
                 il.Demit(OpCodes.Newarr, typeof(object));
                 var nonPassedParamsVarIndex = EmitStoreAndLoadLocalVariable(il, typeof(object[]));
                 nestedLambdaInfo.NonPassedParamsVarIndex = (short)nonPassedParamsVarIndex;
@@ -4939,8 +4946,13 @@ namespace FastExpressionCompiler
                 il.Demit(OpCodes.Stfld, NestedLambdaForNonPassedParams.NonPassedParamsField);
 
                 // Populate the NonPassedParams array
-                for (var nestedParamIndex = 0; nestedParamIndex < nonPassedParams.Count; ++nestedParamIndex)
+                for (var nestedParamIndex = 0; nestedParamIndex < nonPassedParamsCount; ++nestedParamIndex)
                 {
+                    // todo: @wip move this code to where the assignment and by-ref parameter passing
+                    Debug.Assert(nestedParamIndex < 64, "Assume that we don't have more than 64 mutated non-passed parameters");
+                    if (nonPassedParamsCount < 64)
+                        nestedLambdaInfo.NonPassedParamMutatedIndexBits |= 1UL << nestedParamIndex;
+
                     // Load the array and index where to store the item
                     EmitLoadLocalVariable(il, nonPassedParamsVarIndex);
                     EmitLoadConstantInt(il, nestedParamIndex);
