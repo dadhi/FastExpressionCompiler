@@ -93,7 +93,7 @@ public class Issue440_Errors_with_simplified_Switch_cases : ITest
         );
 
         var expr = Lambda<Func<int>>(block);
-        expr.PrintCSharp(); // todo: @fixme for the empty switch
+        expr.PrintCSharp();
 
         var fs = expr.CompileSys();
         fs.PrintIL();

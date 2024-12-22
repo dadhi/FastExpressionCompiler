@@ -309,6 +309,9 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue430_TryCatch_Bad_label_content_in_ILGenerator().Run);
                 Run(new LightExpression.IssueTests.Issue430_TryCatch_Bad_label_content_in_ILGenerator().Run);
 
+                Run(new Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_values().Run);
+                Run(new LightExpression.IssueTests.Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_values().Run);
+
                 Run(new Issue439_Support_unused_Field_access_in_Block().Run);
                 Run(new LightExpression.IssueTests.Issue439_Support_unused_Field_access_in_Block().Run);
 

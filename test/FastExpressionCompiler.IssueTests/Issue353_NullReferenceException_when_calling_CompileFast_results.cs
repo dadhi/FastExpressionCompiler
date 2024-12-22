@@ -49,7 +49,7 @@ namespace FastExpressionCompiler.IssueTests
             var @cs = (Func<int, int>)((int n) =>
             {
                 object[] a = default;
-                a = new object[]{(object)0};
+                a = new object[] { (object)0 };
                 a[0] = (object)999;
                 return (n + ((int)a[0]));
             });
@@ -97,7 +97,7 @@ namespace FastExpressionCompiler.IssueTests
                 object[] b = null;
                 f = (Func<int, int>)((int i) =>
                     i + ((int)b[0]));
-                b = new object[]{(object)999};
+                b = new object[] { (object)999 };
                 return f(
                     n);
             });
@@ -144,10 +144,10 @@ namespace FastExpressionCompiler.IssueTests
                 Func<object[], int, int> f = null;
                 object[] b;
                 f = (Func<object[], int, int>)((
-                    object[] a, 
+                    object[] a,
                     int i) =>
                     i + ((int)a[0]));
-                b = new object[] {(object)999};
+                b = new object[] { (object)999 };
                 return f(
                     b,
                     n);
@@ -229,7 +229,7 @@ namespace FastExpressionCompiler.IssueTests
                 Block(new[] { sumFunc, m },
                     Assign(m, Constant(45)),  // let's assign before and see if the variable value is correctly used in the nested lambda
                     Assign(sumFunc, Lambda(MakeBinary(ExpressionType.Add, i, m), i)),
-                    Assign(m, Constant(999)), // todo: @fixme assign the variable later when the lambda is already created above
+                    Assign(m, Constant(999)),
                     Invoke(sumFunc, n)
                 ),
                 n);

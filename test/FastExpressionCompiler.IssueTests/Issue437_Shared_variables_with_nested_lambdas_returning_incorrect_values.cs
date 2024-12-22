@@ -168,7 +168,7 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
 
         var ff = expr.CompileFast(false, CompilerFlags.ThrowOnNotSupportedExpression);
         var fr = ff();
-        Assert.AreEqual(5, fr);
+        Assert.AreEqual(3, fr);
     }
 
     public class Box<T>

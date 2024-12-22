@@ -2760,8 +2760,6 @@ namespace FastExpressionCompiler
                 {
                     // todo: @perf analyze if the variable is actually may be mutated in the nested lambda by being assigned or passed by ref
                     // Check if the variable is passed to the nested closure (#437), so it should be loaded from the nested closure NonPassedParams array
-                    // var isVarInNestedLambdaClosure = false;
-                    // var doneLabel = default(Label);
                     var nestedLambdasCount = closure.NestedLambdas.Count;
                     if (nestedLambdasCount != 0)
                     {
@@ -2776,9 +2774,6 @@ namespace FastExpressionCompiler
                                 if (varIndexInNonPassedParams != -1 &&
                                     (lambdaInfo.NonPassedParamMutatedIndexBits & (1UL << varIndexInNonPassedParams)) != 0)
                                 {
-                                    // // The label to jump if the nested lambda is emitted, to jump over the normal emit code below
-                                    // doneLabel = il.DefineLabel();
-
                                     // Load the nested lambda item from the closure constants and nested lambdas array
                                     var closureArrayItemIndex = closure.Constants.Count + nestedLambdaIndex;
                                     EmitLoadClosureArrayItem(il, closureArrayItemIndex);
@@ -2786,23 +2781,19 @@ namespace FastExpressionCompiler
                                     // Check if the NonPassedArray field is being set (not null),
                                     // otherwise the nested lambda is not yet emitted, and it is not expected for the variable to be set inside it
                                     il.Demit(OpCodes.Ldfld, NestedLambdaForNonPassedParams.NonPassedParamsField);
-                                    // var noNestedLambdaYetLabel = il.DefineLabel();
-                                    // il.Demit(OpCodes.Brfalse_S, noNestedLambdaYetLabel);
 
-                                    // load the variable
+                                    // Load the variable from the NonPassedParams array
                                     EmitLoadConstantInt(il, varIndexInNonPassedParams);
                                     il.Demit(OpCodes.Ldelem_Ref);
                                     il.TryEmitUnboxOf(paramType);
-                                    // il.Demit(OpCodes.Br_S, doneLabel);
-                                    // il.DmarkLabel(noNestedLambdaYetLabel);
-                                    return true; // todo: @wip
+                                    return true;
                                 }
                             }
                         }
                     }
 
                     var valueTypeMemberButNotIndexAccess = isValueType &
-                        // means the parameter is the instance for what method is called or the instance for the member access, see #274, #283
+                        // means the parameter is the instance for the called method or the instance for the member access, see #274, #283
                         (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0 &
                         (
                             // but the variable is not used as an index for the method call or the member access
@@ -2856,9 +2847,6 @@ namespace FastExpressionCompiler
                                 il.Demit(OpCodes.Ldind_Ref);
                         }
                     }
-
-                    // if (isVarInNestedLambdaClosure)
-                    //     il.DmarkLabel(doneLabel);
                     return true;
                 }
 

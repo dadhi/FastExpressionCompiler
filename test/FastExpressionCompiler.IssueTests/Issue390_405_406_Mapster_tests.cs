@@ -487,7 +487,7 @@ public class Issue390_405_406_Mapster_tests : ITest
         var token = fs(auth);
         Assert.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, token.RefreshTokenExpirationDate);
 
-        var ff = expr.CompileFast(true); // todo: @fixme
+        var ff = expr.CompileFast(true);
         ff.PrintIL();
         token = ff(auth);
         Assert.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, token.RefreshTokenExpirationDate);
