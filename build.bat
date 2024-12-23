@@ -1,7 +1,7 @@
 @echo off
 setlocal EnableDelayedExpansion
 
-echo: # BUILDING AND RUNNNG THE TESTS IN RELEASE MODE
+echo: # BUILDING AND RUNNING THE TESTS IN RELEASE MODE
 echo:
 echo:
 

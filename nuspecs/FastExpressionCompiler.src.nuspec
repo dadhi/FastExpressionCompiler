@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata minClientVersion="3.3.0">
         <id>FastExpressionCompiler.src</id>
-        <version>5.0.0</version>
+        <version>5.0.1</version>
         <authors>Maksim Volkau</authors>
         <copyright>Copyright © 2016-2024 Maksim Volkau</copyright>
         <projectUrl>https://github.com/dadhi/FastExpressionCompiler</projectUrl>
@@ -12,6 +12,16 @@
         <tags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</tags>
         <icon>logo.png</icon>
         <releaseNotes><![CDATA[
+## v5.0.1 Bug-fix release
+
+- fix: #437 Shared variables with nested lambdas returning incorrect values
+- fix: #439 Support unused Field access in Block
+- fix: #440 Errors with simplified Switch cases
+- fix: #441 Fails to pass Constant as call parameter by-reference
+- fix: #442 TryCatch and the Goto outside problems
+- fix: #443 Nested Calls with Lambda Parameters Throwing NotSupportedExpressionException
+
+
 ## v5.0.0 Major feature release
 
 - feat: #271 Add conversion from the System Expression to the Light Expression to allow hoisted system expression embedding in the larger light expression

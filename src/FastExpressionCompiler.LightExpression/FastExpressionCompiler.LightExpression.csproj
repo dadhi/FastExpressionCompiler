@@ -4,7 +4,7 @@
         <TargetFrameworks Condition=" '$(LatestSupportedNet)' == 'net8.0' ">net472;netstandard2.0;netstandard2.1;net6.0;net8.0</TargetFrameworks>
         <TargetFrameworks Condition=" '$(LatestSupportedNet)' == 'net9.0' ">net472;netstandard2.0;netstandard2.1;net6.0;net8.0;net9.0</TargetFrameworks>
 
-        <VersionPrefix>5.0.0</VersionPrefix>
+        <VersionPrefix>5.0.1</VersionPrefix>
         <VersionSuffix></VersionSuffix>
 
         <Product>FastExpressionCompiler.LightExpression</Product>
@@ -14,6 +14,15 @@
         <Description>FastExpressionCompiler for LightExpression is 10-40x times faster than Expression.Compile()</Description>
         <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
         <PackageReleaseNotes><![CDATA[
+
+## v5.0.1 Bug-fix release
+
+- fix: #437 Shared variables with nested lambdas returning incorrect values
+- fix: #439 Support unused Field access in Block
+- fix: #440 Errors with simplified Switch cases
+- fix: #441 Fails to pass Constant as call parameter by-reference
+- fix: #442 TryCatch and the Goto outside problems
+- fix: #443 Nested Calls with Lambda Parameters Throwing NotSupportedExpressionException
 
 ## v5.0.0 Major feature release
 
