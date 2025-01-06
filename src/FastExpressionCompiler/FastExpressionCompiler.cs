@@ -1005,8 +1005,10 @@ namespace FastExpressionCompiler
             public static FieldInfo NonPassedParamsField =
                 typeof(NestedLambdaForNonPassedParams).GetField(nameof(NonPassedParams));
 
+#pragma warning disable CS0649
             public readonly object NestedLambda;
             public object[] NonPassedParams;
+#pragma warning restore CS0649
             public NestedLambdaForNonPassedParams(object nestedLambda) => NestedLambda = nestedLambda;
         }
 
