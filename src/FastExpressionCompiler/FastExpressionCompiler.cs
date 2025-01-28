@@ -9343,3 +9343,10 @@ namespace System.Diagnostics.CodeAnalysis
 }
 #endif
 #nullable restore
+
+#if !NET5_0_OR_GREATER
+namespace System.Runtime.CompilerServices
+{
+    internal static class IsExternalInit { }
+}
+#endif
