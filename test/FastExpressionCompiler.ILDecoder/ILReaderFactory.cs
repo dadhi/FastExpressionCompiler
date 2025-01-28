@@ -112,8 +112,8 @@ public static class ILReaderFactory
         return s;
     }
 
-    public static StringBuilder AppendTypeName(this StringBuilder sb, Type type, bool stripNamespace = false) =>
-        type == null ? sb : sb.Append(type.TypeToCode(stripNamespace));
+    public static StringBuilder AppendTypeName(this StringBuilder sb, Type type) =>
+        type == null ? sb : sb.Append(type.TypeToCode(true));
 
     public static string TypeToCode(this Type type,
         bool stripNamespace = false, Func<Type, string, string> printType = null, bool printGenericTypeArgs = true)

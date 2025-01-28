@@ -3640,23 +3640,18 @@ namespace FastExpressionCompiler
                 return null;
             });
 
-            // todo: @perf merge with EmitLoadLocalVariable 
-            private static int InitValueTypeVariable(ILGenerator il, Type exprType)
+            [MethodImpl((MethodImplOptions)256)]
+            private static int InitValueTypeVariable(ILGenerator il, Type exprType, int valueVarIndex)
             {
-                var locVarIndex = il.GetNextLocalVarIndex(exprType);
-                EmitLoadLocalVariableAddress(il, locVarIndex);
+                Debug.Assert(valueVarIndex != -1);
+                EmitLoadLocalVariableAddress(il, valueVarIndex);
                 il.Demit(OpCodes.Initobj, exprType);
-                return locVarIndex;
+                return valueVarIndex;
             }
 
-            private static int InitValueTypeVariable(ILGenerator il, Type exprType, int locVarIndex)
-            {
-                if (locVarIndex == -1)
-                    locVarIndex = il.GetNextLocalVarIndex(exprType);
-                EmitLoadLocalVariableAddress(il, locVarIndex);
-                il.Demit(OpCodes.Initobj, exprType);
-                return locVarIndex;
-            }
+            // todo: @perf merge with EmitLoadLocalVariable
+            private static int InitValueTypeVariable(ILGenerator il, Type exprType) =>
+                InitValueTypeVariable(il, exprType, il.GetNextLocalVarIndex(exprType));
 
 #if LIGHT_EXPRESSION
             private static bool EmitNewArrayBounds(NewArrayExpression expr, IParameterProvider paramExprs,
@@ -3748,8 +3743,9 @@ namespace FastExpressionCompiler
 #endif
             {
                 var valueVarIndex = -1;
-                if (expr.Type.IsValueType)
-                    valueVarIndex = il.GetNextLocalVarIndex(expr.Type);
+                var exprType = expr.Type;
+                if (exprType.IsValueType)
+                    valueVarIndex = il.GetNextLocalVarIndex(exprType);
 
                 var newExpr = expr.NewExpression;
 #if LIGHT_EXPRESSION
@@ -3776,11 +3772,14 @@ namespace FastExpressionCompiler
                                 return false;
                     }
 
-                    // ReSharper disable once ConditionIsAlwaysTrueOrFalse
                     if (newExpr.Constructor != null)
+                    {
                         il.Demit(OpCodes.Newobj, newExpr.Constructor);
-                    else if (newExpr.Type.IsValueType)
-                        valueVarIndex = InitValueTypeVariable(il, newExpr.Type, valueVarIndex);
+                        if (valueVarIndex != -1)
+                            EmitStoreLocalVariable(il, valueVarIndex);
+                    }
+                    else if (valueVarIndex != -1)
+                        InitValueTypeVariable(il, exprType, valueVarIndex);
                     else
                         return false; // null constructor and not a value type, better to fallback
                 }
@@ -3842,11 +3841,11 @@ namespace FastExpressionCompiler
 #endif
             {
                 var valueVarIndex = -1;
-                if (expr.Type.IsValueType)
-                    valueVarIndex = il.GetNextLocalVarIndex(expr.Type);
+                var exprType = expr.Type;
+                if (exprType.IsValueType)
+                    valueVarIndex = il.GetNextLocalVarIndex(exprType);
 
                 var newExpr = expr.NewExpression;
-                var exprType = newExpr.Type;
 #if SUPPORTS_ARGUMENT_PROVIDER
                 var argExprs = (IArgumentProvider)newExpr;
 #else
@@ -3862,11 +3861,14 @@ namespace FastExpressionCompiler
                             return false;
                 }
 
-                // ReSharper disable once ConditionIsAlwaysTrueOrFalse
                 if (newExpr.Constructor != null)
+                {
                     il.Demit(OpCodes.Newobj, newExpr.Constructor);
-                else if (exprType.IsValueType)
-                    valueVarIndex = InitValueTypeVariable(il, exprType, valueVarIndex);
+                    if (valueVarIndex != -1)
+                        EmitStoreLocalVariable(il, valueVarIndex);
+                }
+                else if (valueVarIndex != -1)
+                    InitValueTypeVariable(il, exprType, valueVarIndex);
                 else
                     return false; // null constructor and not a value type, better to fallback
 
@@ -9343,10 +9345,3 @@ namespace System.Diagnostics.CodeAnalysis
 }
 #endif
 #nullable restore
-
-#if !NET5_0_OR_GREATER
-namespace System.Runtime.CompilerServices
-{
-    internal static class IsExternalInit { }
-}
-#endif
