@@ -327,6 +327,9 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue443_Nested_Calls_with_lambda_parameters().Run);
                 Run(new LightExpression.IssueTests.Issue443_Nested_Calls_with_lambda_parameters().Run);
 
+                Run(new Issue449_MemberInit_produces_InvalidProgram().Run);
+                Run(new LightExpression.IssueTests.Issue449_MemberInit_produces_InvalidProgram().Run);
+
                 Console.WriteLine($"{Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
 

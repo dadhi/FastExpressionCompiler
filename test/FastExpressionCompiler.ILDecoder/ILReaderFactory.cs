@@ -72,7 +72,11 @@ public static class ILReaderFactory
                 if (il is InlineFieldInstruction f)
                     s.Append(' ').AppendTypeName(f.Field.DeclaringType).Append('.').Append(f.Field.Name);
                 else if (il is InlineMethodInstruction m)
-                    s.Append(' ').AppendTypeName(m.Method.DeclaringType).Append('.').Append(m.Method.Name);
+                {
+                    s.Append(' ').AppendTypeName(m.Method.DeclaringType);
+                    if (!m.Method.IsConstructor)
+                        s.Append('.').Append(m.Method.Name);
+                }
                 else if (il is InlineTypeInstruction t)
                     s.Append(' ').AppendTypeName(t.Type);
                 else if (il is InlineTokInstruction tok)

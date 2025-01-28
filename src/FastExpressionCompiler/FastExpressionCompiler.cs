@@ -3753,6 +3753,8 @@ namespace FastExpressionCompiler
                 {
                     if (!TryEmit(expr.Expression, paramExprs, il, ref closure, setup, parent))
                         return false;
+                    if (valueVarIndex != -1)
+                        EmitStoreLocalVariable(il, valueVarIndex);
                 }
                 else
 #endif
@@ -6648,10 +6650,10 @@ namespace FastExpressionCompiler
         }
 
         [MethodImpl((MethodImplOptions)256)]
-        public static void Demit(this ILGenerator il, OpCode opcode, Type value, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
+        public static void Demit(this ILGenerator il, OpCode opcode, Type type, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
-            il.Emit(opcode, value);
-            Debug.WriteLine($"{opcode} {value}  -- {emitterName}:{emitterLine}");
+            il.Emit(opcode, type);
+            Debug.WriteLine($"{opcode} {type.ToCode(stripNamespace: true)}  -- {emitterName}:{emitterLine}");
         }
 
         [MethodImpl((MethodImplOptions)256)]
@@ -6659,13 +6661,14 @@ namespace FastExpressionCompiler
         {
             il.Emit(opcode, value);
             var t = value.DeclaringType;
-            var fieldStr = value.FieldType.Name + " " + t.Name + "." + value.Name;
+            var fieldStr = value.FieldType.ToCode(stripNamespace: true) + " " + t.ToCode(stripNamespace: true) + "." + value.Name;
             Debug.WriteLine($"{opcode} {fieldStr}  -- {emitterName}:{emitterLine}");
         }
 
         [MethodImpl((MethodImplOptions)256)]
         public static void Demit(this ILGenerator il, OpCode opcode, MethodInfo value, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
+            // todo: @wip output Type same as for FieldInfo
             il.Emit(opcode, value);
             Debug.WriteLine($"{opcode} {value}  -- {emitterName}:{emitterLine}");
         }
@@ -6674,7 +6677,7 @@ namespace FastExpressionCompiler
         public static void Demit(this ILGenerator il, OpCode opcode, ConstructorInfo value, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, value);
-            var ctorStr = value.ToString().Replace(".", (value.DeclaringType?.Name ?? "") + ".");
+            var ctorStr = value.ToString().Replace(".", (value.DeclaringType?.ToCode(stripNamespace: true) ?? "") + ".");
             Debug.WriteLine($"{opcode} {ctorStr}  -- {emitterName}:{emitterLine}");
         }
 

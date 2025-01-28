@@ -16,8 +16,9 @@ public class Issue449_MemberInit_produces_InvalidProgram : ITest
 {
     public int Run()
     {
-        // Original_case();
-        return 1;
+        Original_case();
+        Struct_without_ctor_case();
+        return 2;
     }
 
     public struct SampleType
@@ -25,6 +26,11 @@ public class Issue449_MemberInit_produces_InvalidProgram : ITest
         public int? Value { get; set; }
 
         public SampleType() { }
+    }
+
+    public struct SampleType_NoCtor
+    {
+        public int? Value { get; set; }
     }
 
     [Test]
@@ -36,6 +42,31 @@ public class Issue449_MemberInit_produces_InvalidProgram : ITest
         var expr = Lambda<Func<SampleType>>(
             MemberInit(
                 New(ctor),
+                Bind(valueProp, Constant(666, typeof(int?)))));
+
+        expr.PrintCSharp();
+
+        var fs = expr.CompileSys();
+        fs.PrintIL();
+
+        var sr = fs();
+        Assert.AreEqual(666, sr.Value.Value);
+
+        var ff = expr.CompileFast(false);
+        ff.PrintIL();
+
+        var fr = ff();
+        Assert.AreEqual(666, sr.Value.Value);
+    }
+
+    [Test]
+    public void Struct_without_ctor_case()
+    {
+        var valueProp = typeof(SampleType_NoCtor).GetProperty(nameof(SampleType_NoCtor.Value));
+
+        var expr = Lambda<Func<SampleType_NoCtor>>(
+            MemberInit(
+                New(typeof(SampleType_NoCtor)),
                 Bind(valueProp, Constant(666, typeof(int?)))));
 
         expr.PrintCSharp();
