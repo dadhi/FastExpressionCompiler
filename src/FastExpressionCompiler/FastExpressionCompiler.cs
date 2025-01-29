@@ -6660,25 +6660,32 @@ namespace FastExpressionCompiler
         public static void Demit(this ILGenerator il, OpCode opcode, FieldInfo value, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, value);
-            var t = value.DeclaringType;
-            var fieldStr = value.FieldType.ToCode(stripNamespace: true) + " " + t.ToCode(stripNamespace: true) + "." + value.Name;
-            Debug.WriteLine($"{opcode} {fieldStr}  -- {emitterName}:{emitterLine}");
+            var t = value.DeclaringType?.ToCode(stripNamespace: true) ?? "";
+            var fieldType = value.FieldType.ToCode(stripNamespace: true);
+            Debug.WriteLine($"{opcode} {fieldType} {t}.{value.Name}  -- {emitterName}:{emitterLine}");
         }
 
         [MethodImpl((MethodImplOptions)256)]
         public static void Demit(this ILGenerator il, OpCode opcode, MethodInfo value, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
-            // todo: @wip output Type same as for FieldInfo
             il.Emit(opcode, value);
-            Debug.WriteLine($"{opcode} {value}  -- {emitterName}:{emitterLine}");
+            var t = value.DeclaringType?.ToCode(stripNamespace: true) ?? "";
+            var retType = value.ReturnType.ToCode(stripNamespace: true);
+            var sig = value.ToString();
+            var paramStart = sig.IndexOf('(');
+            var paramList = paramStart == -1 ? "()" : sig.Substring(paramStart);
+            Debug.WriteLine($"{opcode} {retType} {t}.{paramList}  -- {emitterName}:{emitterLine}");
         }
 
         [MethodImpl((MethodImplOptions)256)]
         public static void Demit(this ILGenerator il, OpCode opcode, ConstructorInfo value, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, value);
-            var ctorStr = value.ToString().Replace(".", (value.DeclaringType?.ToCode(stripNamespace: true) ?? "") + ".");
-            Debug.WriteLine($"{opcode} {ctorStr}  -- {emitterName}:{emitterLine}");
+            var t = value.DeclaringType?.ToCode(stripNamespace: true) ?? "";
+            var sig = value.ToString();
+            var paramStart = sig.IndexOf('(');
+            var paramList = paramStart == -1 ? "()" : sig.Substring(paramStart);
+            Debug.WriteLine($"{opcode} {t}{paramList}  -- {emitterName}:{emitterLine}");
         }
 
         [MethodImpl((MethodImplOptions)256)]

@@ -70,12 +70,28 @@ public static class ILReaderFactory
                     secondLine = true;
                 s.Append(il.Offset.ToString().PadRight(4, ' ')).Append(' ').Append(il.OpCode);
                 if (il is InlineFieldInstruction f)
-                    s.Append(' ').AppendTypeName(f.Field.DeclaringType).Append('.').Append(f.Field.Name);
+                    s.Append(' ')
+                        .AppendTypeName(f.Field.FieldType).Append(' ')
+                        .AppendTypeName(f.Field.DeclaringType).Append('.')
+                        .Append(f.Field.Name);
                 else if (il is InlineMethodInstruction m)
                 {
-                    s.Append(' ').AppendTypeName(m.Method.DeclaringType);
-                    if (!m.Method.IsConstructor)
-                        s.Append('.').Append(m.Method.Name);
+                    var sig = m.Method.ToString();
+                    var paramStart = sig.IndexOf('(');
+                    var paramList = paramStart == -1 ? "()" : sig.Substring(paramStart);
+
+                    if (m.Method is MethodInfo met)
+                    {
+                        s.Append(' ')
+                            .AppendTypeName(met.ReturnType).Append(' ')
+                            .AppendTypeName(met.DeclaringType).Append('.')
+                            .Append(met.Name)
+                            .Append(paramList);
+                    }
+                    else if (m.Method is ConstructorInfo con)
+                        s.Append(' ').AppendTypeName(con.DeclaringType).Append(paramList);
+                    else
+                        s.Append(' ').AppendTypeName(m.Method.DeclaringType).Append('.').Append(sig);
                 }
                 else if (il is InlineTypeInstruction t)
                     s.Append(' ').AppendTypeName(t.Type);
