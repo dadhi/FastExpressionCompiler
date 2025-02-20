@@ -856,14 +856,14 @@ namespace FastExpressionCompiler
             public bool IsLocalVar(ParameterExpression varParamExpr)
             {
                 ref var blocks = ref _varInBlockMap.TryGetValueRefUnsafe(varParamExpr, out var found);
-                return found & blocks.Count != 0;
+                return found && blocks.Count != 0;
             }
 
             [MethodImpl((MethodImplOptions)256)]
             public int GetDefinedLocalVarOrDefault(ParameterExpression varParamExpr)
             {
                 ref var blocks = ref _varInBlockMap.TryGetValueRefUnsafe(varParamExpr, out var found);
-                return found & blocks.Count != 0 // rare case with the block count 0 may occur when we collected the block and vars, but not yet defined the variable for it
+                return found && blocks.Count != 0 // rare case with the block count 0 may occur when we collected the block and vars, but not yet defined the variable for it
                     ? (int)(blocks.GetLastSurePresentItem() & ushort.MaxValue)
                     : -1;
             }
@@ -882,7 +882,7 @@ namespace FastExpressionCompiler
                 }
             }
             found = false;
-            return ref labels.NotFound();
+            return ref RefTools<LabelInfo>.GetNullRef();
         }
 
         [MethodImpl((MethodImplOptions)256)]

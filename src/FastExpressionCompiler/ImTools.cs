@@ -43,6 +43,21 @@ using System.Runtime.InteropServices;
 
 using static SmallMap4;
 
+/// <summary>Helpers and polyfills for the missing things in the old .NET versions</summary>
+public static class RefTools<T>
+{
+    /// <summary>Polyfill for the missing returning the `ref` in the failed search scenario.
+    /// Note that the result is the `null` even for the struct `T`, so avoid the accessing its members without the check</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public static ref T GetNullRef() =>
+#if NET6_0_OR_GREATER
+           ref Unsafe.NullRef<T>();
+#else
+        ref _missing;
+    internal static T _missing = default;
+#endif
+}
+
 /// <summary>Wrapper for the array of the specific capacity and a separate count less or equal to this capacity </summary>
 public struct SmallList<T>
 {
@@ -184,10 +199,6 @@ public static class SmallList
     [MethodImpl((MethodImplOptions)256)]
     public static ref TItem GetLastSurePresentItem<TItem>(this ref SmallList4<TItem> source) =>
         ref source.GetSurePresentItemRef(source._count - 1);
-
-    /// <summary>Returns the ref to tombstone indicating the missing item.</summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public static ref TItem NotFound<TItem>(this ref SmallList4<TItem> _) => ref SmallList4<TItem>.Missing;
 
     /// <summary>Appends the default item to the end of the list and returns the reference to it.</summary>
     [MethodImpl((MethodImplOptions)256)]
@@ -365,10 +376,6 @@ public static class SmallList
     public static ref TItem GetLastSurePresentItem<TItem>(this ref SmallList2<TItem> source) =>
         ref source.GetSurePresentItemRef(source._count - 1);
 
-    /// <summary>Returns the ref to tombstone indicating the missing item.</summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public static ref TItem NotFound<TItem>(this ref SmallList2<TItem> _) => ref SmallList2<TItem>.Missing;
-
     /// <summary>Appends the default item to the end of the list and returns the reference to it.</summary>
     [MethodImpl((MethodImplOptions)256)]
     public static ref TItem AddDefaultAndGetRef<TItem>(this ref SmallList2<TItem> source)
@@ -447,9 +454,6 @@ public struct SmallList4<TItem>
 {
     /// <summary>The number of entries stored inside the map itself without moving them to array on heap</summary>
     public const int StackCapacity = 4;
-
-    // todo: @check what if someone stores something in it, it would be a memory leak, but isn't it the same as using `out var` in the returning`false` Try...methods?
-    internal static TItem Missing; // return the ref to Tombstone when nothing found
 
     internal int _count;
     internal TItem _it0, _it1, _it2, _it3;
@@ -638,9 +642,6 @@ public struct SmallList2<TItem>
 {
     /// <summary>The number of entries stored inside the map itself without moving them to array on heap</summary>
     public const int StackCapacity = 2;
-
-    // todo: @check what if someone stores something in it, it would be a memory leak, but isn't it the same as using `out var` in the returning`false` Try...methods?
-    internal static TItem Missing; // return the ref to Tombstone when nothing found
 
     internal int _count;
     internal TItem _it0, _it1;
@@ -1076,7 +1077,7 @@ public static class SmallMap4
                 break;
         }
         found = false;
-        return ref SmallMap4<K, V, TEq, TEntries>._missing.Value;
+        return ref RefTools<V>.GetNullRef();
     }
 
     /// <summary>Finds the stored value by key. If found returns ref to the value it can be modified in place.</summary>
@@ -1087,7 +1088,7 @@ public static class SmallMap4
     {
         if (map._count > StackEntriesCount)
         {
-            map.TryGetValueRefByHash(key, out var found);
+            _ = map.TryGetValueRefByHash(key, out var found);
             return found;
         }
 
@@ -1331,7 +1332,7 @@ public static class SmallMap4
             case 2: return ref map._e2;
             case 3: return ref map._e3;
         }
-        return ref SmallMap4<K, V, TEq, TEntries>._missing;
+        return ref RefTools<Entry<K, V>>.GetNullRef();
     }
 
     [MethodImpl((MethodImplOptions)256)]
@@ -1374,7 +1375,7 @@ public static class SmallMap4
         }
 
         found = false;
-        return ref SmallMap4<K, V, TEq, TEntries>._missing.Value;
+        return ref RefTools<V>.GetNullRef();
     }
 
     [MethodImpl((MethodImplOptions)256)]
@@ -1460,8 +1461,6 @@ public struct SmallMap4<K, V, TEq, TEntries>
     where TEq : struct, IEq<K>
     where TEntries : struct, IEntries<K, V, TEq>
 {
-    internal static Entry<K, V> _missing;
-
     internal byte _capacityBitShift;
     internal int _count;
 
