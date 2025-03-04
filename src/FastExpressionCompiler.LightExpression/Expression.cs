@@ -24,8 +24,12 @@ THE SOFTWARE.
 */
 
 // ReSharper disable CoVariantArrayConversion
+#nullable disable
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 #define SUPPORTS_VISITOR
+
+namespace FastExpressionCompiler.LightExpression;
 
 using System;
 using System.Collections.Generic;
@@ -41,14 +45,9 @@ using SysExpr = System.Linq.Expressions.Expression;
 
 using FastExpressionCompiler.LightExpression.ImTools;
 
-namespace FastExpressionCompiler.LightExpression;
-
 using static ExpressionCompiler;
 using static ToCSharpPrinter;
 using static CodePrinter;
-
-#nullable disable
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 /// <summary>The base class and the Factory methods provider for the Expression.</summary>
 public abstract class Expression
@@ -2646,7 +2645,7 @@ public static class FromSysExpressionConverter
                             for (var i = 0; i < restOfExprs.Length; ++i)
                                 restOfExprs[i] = sysExprs[i + 2].ToLightExpression(ref exprsConverted);
                             return Expression.Block(exprType, vars, expr0, expr1, restOfExprs);
-                    };
+                    }
                 }
             case ExpressionType.Try:
                 {

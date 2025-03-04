@@ -24,8 +24,10 @@ THE SOFTWARE.
 */
 
 // ReSharper disable CoVariantArrayConversion
+#nullable disable
 
 // #define LIGHT_EXPRESSION
+
 #if DEBUG && NET6_0_OR_GREATER
 #define DEBUG_INFO_LOCAL_VARIABLE_USAGE
 #define DEMIT
@@ -62,8 +64,6 @@ namespace FastExpressionCompiler
     using System.Diagnostics.CodeAnalysis;
     using static System.Environment;
     using static CodePrinter;
-
-#nullable disable
 
     /// <summary>The flags for the compiler</summary>
     [Flags]
