@@ -9,8 +9,9 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            // new LightExpression.IssueTests.Issue449_MemberInit_produces_InvalidProgram().Run();
+            new LightExpression.IssueTests.Issue451_Operator_implicit_explicit_produces_InvalidProgram().Run();
 
+            // new LightExpression.IssueTests.Issue449_MemberInit_produces_InvalidProgram().Run();
             // new LightExpression.IssueTests.Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_values().Run();
             // new LightExpression.IssueTests.Issue353_NullReferenceException_when_calling_CompileFast_results().Run();
             // new LightExpression.UnitTests.ArithmeticOperationsTests().Run();
