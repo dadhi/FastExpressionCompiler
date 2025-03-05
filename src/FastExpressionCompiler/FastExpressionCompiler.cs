@@ -3141,36 +3141,35 @@ namespace FastExpressionCompiler
                 // for non-primitives and for non-primitive nullable - #73
                 if (underlyingNullableSourceType == null)
                 {
-                    if (!sourceType.IsPrimitive) // for non promitive source type let's look if it has conversion operators
+                    // for non promitive source type let's look if it has conversion operators
+                    if (!sourceType.IsPrimitive)
                     {
+                        if (method != null)
+                        {
+                            EmitMethodCall(il, method);
+                            // if the method returns the underlying nullable target type (there is no need to check if target nullable, because the method.ReturnType cannot be null)
+                            // then wrap the result into the nullable target
+                            if (method.ReturnType == underlyingNullableTargetType)
+                                il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
+                            return il.EmitPopIfIgnoreResult(parent);
+                        }
+
                         // first check that the source type has defined the direction conversion method to the target type,
                         // if so, the conversion is done with the method call
-                        method ??= sourceType.FindConvertOperator(sourceType, targetType);
-                        if (method != null)
-                            return EmitMethodCall(il, method) && il.EmitPopIfIgnoreResult(parent);
+                        method = sourceType.FindConvertOperator(sourceType, targetType);
 
-                        // if no direct conversion is found and the target type is nullable,
-                        // try to find conversion in source for the underlying target nullable
-                        if (underlyingNullableTargetType != null)
-                        {
+                        // if direct conversion is not found but the target is nullable lets look for the conversion to the underlying target type,
+                        // otherwise avoid expenisive method reflection lookup
+                        if (method == null & underlyingNullableTargetType != null)
                             method = sourceType.FindConvertOperator(sourceType, underlyingNullableTargetType);
-                            if (method != null)
-                            {
-                                EmitMethodCall(il, method);
-                                // wrap the result on the conversion in into the nullable target
-                                il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
-                                return il.EmitPopIfIgnoreResult(parent);
-                            }
+
+                        if (method != null)
+                        {
+                            EmitMethodCall(il, method);
+                            if (method.ReturnType == underlyingNullableTargetType)
+                                il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor()); // don't forget to wrap the result into the nullable target
+                            return il.EmitPopIfIgnoreResult(parent);
                         }
-                        // todo: @wip remove
-                        // method ??= sourceType.FindConvertOperator(sourceType, targetType ?? underlyingNullableTargetType);
-                        // if (method != null)
-                        // {
-                        //     EmitMethodCall(il, method);
-                        //     if (underlyingNullableTargetType != null)
-                        //         il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
-                        //     return il.EmitPopIfIgnoreResult(parent);
-                        // }
                     }
                     else if (targetType.IsPrimitive) // for the primitive source type let's look if it has conversion operators
                     {
