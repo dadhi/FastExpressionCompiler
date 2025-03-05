@@ -3092,8 +3092,13 @@ namespace FastExpressionCompiler
 #endif
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
-                // todo: @perf refactor this whole thing in order to handle the hot path without heavy reflection calls
+                // todo: @perf refactor this whole method in order to handle the hot paths without heavy reflection calls
+
                 var opExpr = expr.Operand;
+
+                // If the custom conversion method is provided, then use it. 
+                // Except for the implicit/explicit conversion operators for the nullable source or/and target types,
+                // that can operate on the underlying non-nullable types and require additional lifting to nullables.
                 var method = expr.Method;
                 if (method != null && method.Name != "op_Implicit" && method.Name != "op_Explicit")
                     return TryEmit(opExpr, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult | ParentFlags.InstanceCall, -1)
@@ -3167,15 +3172,27 @@ namespace FastExpressionCompiler
                         //     return il.EmitPopIfIgnoreResult(parent);
                         // }
                     }
-                    else // source type is the primitive type, e.g. Boolean, Byte, SByte, Int16, UInt16, Int32, UInt32, Int64, UInt64, IntPtr, UIntPtr, Char, Double, and Single.
+                    else if (targetType.IsPrimitive) // for the primitive source type let's look if it has conversion operators
                     {
-                        if (method != null && method.DeclaringType == targetType && method.GetParameters()[0].ParameterType == sourceType)
-                            return EmitMethodCall(il, method) && il.EmitPopIfIgnoreResult(parent);
+                        // source type is the primitive type, e.g. Boolean, Byte, SByte, Int16, UInt16, Int32, UInt32, Int64, UInt64, IntPtr, UIntPtr, Char, Double, and Single.
+
+                        // todo: @wip check or move it up later
+                        // if (method != null && method.DeclaringType == targetType && method.GetParameters()[0].ParameterType == sourceType)
+                        //     return EmitMethodCall(il, method) && il.EmitPopIfIgnoreResult(parent);
 
                         // 2025.03.05 - primitive types do not define the conversion operators.
                         // var actualSourceType = underlyingNullableSourceType ?? sourceType;
                         // method ??= actualSourceType.FindConvertOperator(actualSourceType, targetType);
-                        method ??= sourceType.FindConvertOperator(sourceType, targetType);
+                        method ??= targetType.FindConvertOperator(sourceType, targetType);
+                        if (method != null)
+                            return EmitMethodCall(il, method) && il.EmitPopIfIgnoreResult(parent);
+
+                        if (underlyingNullableTargetType != null && !underlyingNullableTargetType.IsPrimitive)
+                        {
+
+                        }
+
+                        method = targetType.FindConvertOperator(sourceType, targetType);
                         if (method != null)
                         {
                             // if (underlyingNullableSourceType != null)
@@ -6475,13 +6492,14 @@ namespace FastExpressionCompiler
             type.GetConstructors()[0];
 
         [RequiresUnreferencedCode(Trimming.Message)]
-        internal static MethodInfo FindConvertOperator(this Type type, Type sourceType, Type targetType)
+        internal static MethodInfo FindConvertOperator(this Type inType, Type sourceType, Type targetType)
         {
+            // note: rememeber that if inType.IsPrimitive it does contain the explicit or implicit conversion operators at all
             if (sourceType == typeof(object) | targetType == typeof(object))
                 return null;
 
             // conversion operators should be declared as static and public 
-            var methods = type.GetMethods(BindingFlags.Static | BindingFlags.Public);
+            var methods = inType.GetMethods(BindingFlags.Static | BindingFlags.Public);
             foreach (var m in methods)
                 if (m.IsSpecialName && m.ReturnType == targetType)
                 {

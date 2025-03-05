@@ -16,6 +16,7 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
 {
     public int Run()
     {
+        The_operator_method_is_provided_in_Convert();
         Original_case();
         return 1;
     }
@@ -65,5 +66,28 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
         var sample_fast2 = lambda2.CompileFast(false);
         sample_fast2.PrintIL();
         sample_fast2();
+    }
+
+    [Test]
+    public void The_operator_method_is_provided_in_Convert()
+    {
+        var ctorMethodInfo = typeof(SampleType).GetConstructors()[0];
+
+        var newExpression = New(ctorMethodInfo, Constant(null, typeof(bool?)));
+
+        // let's use the explicit operator method which converts to bool
+        var convertToNullableBoolMethod = typeof(SampleType).GetMethod("op_explicit");
+        var conversion = Convert(newExpression, typeof(bool?), convertToNullableBoolMethod);
+
+        var lambda = Lambda<Func<bool?>>(conversion);
+        lambda.PrintCSharp();
+
+        var sample = lambda.CompileSys();
+        sample.PrintIL();
+        sample();
+
+        var sample_fast = lambda.CompileFast(false);
+        sample_fast.PrintIL();
+        sample_fast();
     }
 }
