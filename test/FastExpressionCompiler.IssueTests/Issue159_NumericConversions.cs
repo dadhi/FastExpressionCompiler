@@ -15,13 +15,13 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            FloatToDecimalNullableShouldWork();
             UnsignedLongComparisonsWithConversionsShouldWork();
             IntToNullableUlong();
             UnsignedNullableLongComparison();
             UnsignedNullableLongComparisonsWithConversionsShouldWork();
             FloatComparisonsWithConversionsShouldWork();
             FloatComparisonsWithConversionsShouldWork2();
-            FloatToDecimalNullableShouldWork();
             ComparisonsWithConversionsShouldWork3();
             ComparisonsWithConversionsShouldWork4();
             FloatComparisonsWithConversionsShouldWork3();
@@ -288,13 +288,16 @@ namespace FastExpressionCompiler.IssueTests
             var expr = Lambda<Func<ValueHolder<float>, ValueHolder<decimal?>>>(
                 block,
                 floatParamExpr);
-
-            var source = new ValueHolder<float> { Value = 3.14f };
+            expr.PrintCSharp();
 
             var compiled = expr.CompileSys();
+            compiled.PrintIL();
+
+            var source = new ValueHolder<float> { Value = 3.14f };
             Assert.AreEqual(3.14m, compiled(source).Value);
 
             var fastCompiled = expr.CompileFast(true);
+            fastCompiled.PrintIL();
             var result = fastCompiled(source);
             Assert.AreEqual(3.14m, result.Value);
         }

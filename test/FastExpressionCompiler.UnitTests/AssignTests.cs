@@ -102,7 +102,7 @@ namespace FastExpressionCompiler.UnitTests
                     catch (Exception)
                     {
                         return (TryCatchTest)null;
-                    };
+                    }
                 }))();
                 return assigntests_trycatchtest__54708252;
             });
@@ -378,7 +378,7 @@ namespace FastExpressionCompiler.UnitTests
             var restoredExpr = sysExpr.ToLightExpression();
             restoredExpr.PrintCSharp();
             // todo: @wip #431 generates different names for the unnamed variables which is not comparable
-            // Assert.AreEqual(expr.ToCSharpString(), restoredExpr.ToCSharpString());
+            Assert.AreEqual(expr.ToCSharpString(), restoredExpr.ToCSharpString());
 #endif
 
             Assert.IsNotNull(fs);

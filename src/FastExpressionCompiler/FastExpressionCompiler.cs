@@ -3134,32 +3134,57 @@ namespace FastExpressionCompiler
 
                 // check implicit / explicit conversion operators on source and target types
                 // for non-primitives and for non-primitive nullable - #73
-                if (underlyingNullableSourceType == null & !sourceType.IsPrimitive)
+                if (underlyingNullableSourceType == null)
                 {
-                    method ??= sourceType.FindConvertOperator(sourceType, targetType ?? underlyingNullableTargetType);
-                    if (method != null)
+                    if (!sourceType.IsPrimitive) // for non promitive source type let's look if it has conversion operators
                     {
-                        EmitMethodCall(il, method);
-                        if (underlyingNullableTargetType != null)
-                            il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
-                        return il.EmitPopIfIgnoreResult(parent);
-                    }
-                }
-                else if (underlyingNullableTargetType == null) // means sourceType.IsPrimitive
-                {
-                    if (method != null && method.DeclaringType == targetType && method.GetParameters()[0].ParameterType == sourceType)
-                        return EmitMethodCall(il, method) && il.EmitPopIfIgnoreResult(parent);
+                        // first check that the source type has defined the direction conversion method to the target type,
+                        // if so, the conversion is done with the method call
+                        method ??= sourceType.FindConvertOperator(sourceType, targetType);
+                        if (method != null)
+                            return EmitMethodCall(il, method) && il.EmitPopIfIgnoreResult(parent);
 
-                    var actualSourceType = underlyingNullableSourceType ?? sourceType;
-                    method ??= actualSourceType.FindConvertOperator(actualSourceType, targetType);
-                    if (method != null)
-                    {
-                        if (underlyingNullableSourceType != null)
+                        // if no direct conversion is found and the target type is nullable,
+                        // try to find conversion in source for the underlying target nullable
+                        if (underlyingNullableTargetType != null)
                         {
-                            EmitStoreAndLoadLocalVariableAddress(il, sourceType);
-                            EmitMethodCall(il, sourceType.FindNullableValueGetterMethod());
+                            method = sourceType.FindConvertOperator(sourceType, underlyingNullableTargetType);
+                            if (method != null)
+                            {
+                                EmitMethodCall(il, method);
+                                // wrap the result on the conversion in into the nullable target
+                                il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
+                                return il.EmitPopIfIgnoreResult(parent);
+                            }
                         }
-                        return EmitMethodCall(il, method) && il.EmitPopIfIgnoreResult(parent);
+                        // todo: @wip remove
+                        // method ??= sourceType.FindConvertOperator(sourceType, targetType ?? underlyingNullableTargetType);
+                        // if (method != null)
+                        // {
+                        //     EmitMethodCall(il, method);
+                        //     if (underlyingNullableTargetType != null)
+                        //         il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
+                        //     return il.EmitPopIfIgnoreResult(parent);
+                        // }
+                    }
+                    else // source type is the primitive type, e.g. Boolean, Byte, SByte, Int16, UInt16, Int32, UInt32, Int64, UInt64, IntPtr, UIntPtr, Char, Double, and Single.
+                    {
+                        if (method != null && method.DeclaringType == targetType && method.GetParameters()[0].ParameterType == sourceType)
+                            return EmitMethodCall(il, method) && il.EmitPopIfIgnoreResult(parent);
+
+                        // 2025.03.05 - primitive types do not define the conversion operators.
+                        // var actualSourceType = underlyingNullableSourceType ?? sourceType;
+                        // method ??= actualSourceType.FindConvertOperator(actualSourceType, targetType);
+                        method ??= sourceType.FindConvertOperator(sourceType, targetType);
+                        if (method != null)
+                        {
+                            // if (underlyingNullableSourceType != null)
+                            // {
+                            //     EmitStoreAndLoadLocalVariableAddress(il, sourceType);
+                            //     EmitMethodCall(il, sourceType.FindNullableValueGetterMethod());
+                            // }
+                            return EmitMethodCall(il, method) && il.EmitPopIfIgnoreResult(parent);
+                        }
                     }
                 }
 
