@@ -1,5 +1,7 @@
 using System;
 using NUnit.Framework;
+using System.Reflection;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -76,7 +78,7 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
         var newExpression = New(ctorMethodInfo, Constant(null, typeof(bool?)));
 
         // let's use the explicit operator method which converts to bool
-        var convertToNullableBoolMethod = typeof(SampleType).GetMethod("op_explicit");
+        var convertToNullableBoolMethod = typeof(SampleType).FindConvertOperator(typeof(SampleType), typeof(bool));
         var conversion = Convert(newExpression, typeof(bool?), convertToNullableBoolMethod);
 
         var lambda = Lambda<Func<bool?>>(conversion);

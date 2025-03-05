@@ -6491,8 +6491,10 @@ namespace FastExpressionCompiler
             type == typeof(double?) ? NullableReflected<double>.Constructor :
             type.GetConstructors()[0];
 
+        /// <summary>Finds the implicit or explcit conversion operator inType from the sourceType to targetType,
+        /// otherwise returns null</summary>
         [RequiresUnreferencedCode(Trimming.Message)]
-        internal static MethodInfo FindConvertOperator(this Type inType, Type sourceType, Type targetType)
+        public static MethodInfo FindConvertOperator(this Type inType, Type sourceType, Type targetType)
         {
             // note: rememeber that if inType.IsPrimitive it does contain the explicit or implicit conversion operators at all
             if (sourceType == typeof(object) | targetType == typeof(object))
