@@ -38,7 +38,7 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
     {
         var ctorMethodInfo = typeof(SampleType).GetConstructors()[0];
 
-        var newExpression = New(ctorMethodInfo, [Constant(null, typeof(bool?))]);
+        var newExpression = New(ctorMethodInfo, Constant(null, typeof(bool?)));
 
         var conversion1 = Convert(newExpression, typeof(bool));
         var lambda1 = Lambda<Func<bool>>(conversion1);

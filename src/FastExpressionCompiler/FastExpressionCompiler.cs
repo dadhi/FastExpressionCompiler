@@ -3136,7 +3136,7 @@ namespace FastExpressionCompiler
                 // for non-primitives and for non-primitive nullable - #73
                 if (underlyingNullableSourceType == null & !sourceType.IsPrimitive)
                 {
-                    method ??= sourceType.FindConvertOperator(sourceType, underlyingNullableTargetType ?? targetType);
+                    method ??= sourceType.FindConvertOperator(sourceType, targetType ?? underlyingNullableTargetType);
                     if (method != null)
                     {
                         EmitMethodCall(il, method);
