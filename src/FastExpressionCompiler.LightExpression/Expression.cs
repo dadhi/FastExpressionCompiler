@@ -2838,15 +2838,6 @@ internal static class TypeTools
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public static Type GetNonNullable(this Type type) => type.GetGenericArguments()[0];
-
-    [RequiresUnreferencedCode(Trimming.Message)]
-    public static Type GetNonNullableOrSelf(this Type type) => type.IsNullable() ? type.GetGenericArguments()[0] : type;
-
-    [RequiresUnreferencedCode(Trimming.Message)]
-    public static Type GetNullable(this Type type) => typeof(Nullable<>).MakeGenericType(type);
-
-    [RequiresUnreferencedCode(Trimming.Message)]
     public static bool IsArithmetic(this Type type)
     {
         type = type.GetNonNullableOrSelf();
@@ -2892,7 +2883,7 @@ internal static class TypeTools
     internal static bool IsImplicitlyBoxingConvertibleTo(this Type source, Type target) =>
         source.IsValueType &&
         (target == typeof(object) || target == typeof(ValueType)) ||
-         source.IsEnum && target == typeof(Enum);
+        source.IsEnum && target == typeof(Enum);
 
     [RequiresUnreferencedCode(Trimming.Message)]
     private static bool IsImplicitlyNullableConvertibleTo(Type source, Type target) =>
@@ -3100,7 +3091,6 @@ internal static class TypeTools
     {
         var s = Type.GetTypeCode(source);
         var t = Type.GetTypeCode(target);
-
         switch (s)
         {
             case TypeCode.SByte:
@@ -3471,7 +3461,7 @@ internal sealed class LogicalBinaryExpression : BinaryExpression
         {
             var left = Left.ToExpression(ref exprsConverted);
             var right = Right.ToExpression(ref exprsConverted);
-            if (left.Type.GetTypeInfo().IsPrimitive)
+            if (left.Type.IsPrimitive)
             {
                 left = TryConvertSysExprToInt(left);
                 right = TryConvertSysExprToInt(right);

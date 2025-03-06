@@ -32,6 +32,9 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
         public static implicit operator bool?(SampleType left) =>
             (left.Value is not null && left.Value is bool b) ? b : null;
 
+        public static explicit operator bool?(SampleType? left) =>
+            left == null ? null : (left.Value.Value is bool b && b) ? b : null;
+
         public static explicit operator bool(SampleType left) =>
             left.Value is not null && left.Value is bool b && b;
     }
