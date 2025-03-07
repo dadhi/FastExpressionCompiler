@@ -123,6 +123,27 @@ public static class TestTools
     }
 }
 
+// todo: @wip @feat #453 replacing the last NUnit bone of Assert
+public static class Asserts
+{
+    public sealed class AssertionException : Exception
+    {
+        public AssertionException(string message) : base(message) { }
+    }
+
+    public static AssertionException AreEqual<T>(T expected, T actual,
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(expected))] 
+#endif
+        string expectedName = "expected",
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(actual))]
+#endif
+        string actualName = "actual") =>
+        Equals(expected, actual) ? null : throw new AssertionException(
+            $"Expected: {expectedName} == {actualName}, but was: {expected} == {actual}");
+}
+
 public interface ITest
 {
     int Run();
