@@ -3117,6 +3117,7 @@ namespace FastExpressionCompiler
                             return false;
                         il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
                     }
+                    return true; // done with the method
                 }
 
                 // Handle the quick path for the ignored result and conversion which can't cause the exception.
