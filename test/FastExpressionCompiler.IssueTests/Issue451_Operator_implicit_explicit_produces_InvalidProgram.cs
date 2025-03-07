@@ -18,9 +18,11 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
 {
     public int Run()
     {
-        // The_operator_method_is_provided_in_Convert();
+        Convert_nullable_enum_into_the_underlying_nullable_type();
+
         Original_case();
-        return 1;
+        The_operator_method_is_provided_in_Convert();
+        return 3;
     }
 
     public struct SampleType
@@ -37,6 +39,23 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
 
         public static explicit operator bool(SampleType left) =>
             left.Value is not null && left.Value is bool b && b;
+    }
+
+    enum Hey : byte { Sailor = 5 }
+
+    public void Convert_nullable_enum_into_the_underlying_nullable_type()
+    {
+        var conversion = Convert(Constant(Hey.Sailor, typeof(Hey?)), typeof(byte?));
+        var e = Lambda<Func<byte?>>(conversion);
+        e.PrintCSharp();
+
+        var fs = e.CompileSys();
+        fs.PrintIL();
+        Assert.AreEqual(5, fs());
+
+        var ff = e.CompileFast(false);
+        ff.PrintIL();
+        Assert.AreEqual(5, ff());
     }
 
     [Test]
@@ -56,21 +75,21 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
 
         var sample1 = lambda1.CompileSys();
         sample1.PrintIL();
-        sample1();
+        Assert.IsNull(sample1());
 
         var sample2 = lambda2.CompileSys();
         sample2.PrintIL();
-        sample2();
+        Assert.IsNull(sample2());
 
         // <- OK
         var sample_fast1 = lambda1.CompileFast(false);
         sample_fast1.PrintIL();
-        sample_fast1();
+        Assert.IsNull(sample_fast1());
 
         // <- throws exception
         var sample_fast2 = lambda2.CompileFast(false);
         sample_fast2.PrintIL();
-        sample_fast2();
+        Assert.IsNull(sample_fast2());
     }
 
     [Test]
@@ -89,10 +108,10 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
 
         var sample = lambda.CompileSys();
         sample.PrintIL();
-        sample();
+        Assert.IsNull(sample());
 
         var sample_fast = lambda.CompileFast(false);
         sample_fast.PrintIL();
-        sample_fast();
+        Assert.IsNull(sample_fast());
     }
 }

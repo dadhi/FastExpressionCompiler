@@ -3107,7 +3107,9 @@ namespace FastExpressionCompiler
                     // todo: @wip or what if source or/and target types are enums, but the method accepts the underlying type
                     if (!TryEmit(opExpr, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult | ParentFlags.InstanceCall, -1))
                         return false;
+
                     EmitMethodCallOrVirtualCall(il, method);
+
                     // if the method returns the underlying nullable target type (there is no need to check if target nullable, because the method.ReturnType cannot be null)
                     // then wrap the result into the nullable target
                     if (method.ReturnType != targetType)
@@ -3232,7 +3234,7 @@ namespace FastExpressionCompiler
                     }
                 }
 
-                if (sourceType == typeof(object) && targetType.IsValueType ||
+                if (targetType.IsValueType && sourceType == typeof(object) ||
                     // a special case, see the AutoMapper test `StringToEnumConverter.Should_work`
                     targetType.IsEnum && sourceType == typeof(Enum))
                 {
@@ -3240,7 +3242,7 @@ namespace FastExpressionCompiler
                 }
                 else if (underlyingNullableTargetType != null)
                 {
-                    // Conversion to Nullable: `new Nullable<T>(T val);`
+                    // Conversion to the target nullable `new Nullable<TSource>(TSource val)`
                     if (underlyingNullableSourceType == null)
                     {
                         if (!underlyingNullableTargetType.IsEnum && // todo: @clarify hope the source type is convertible to enum, huh 
@@ -3250,17 +3252,16 @@ namespace FastExpressionCompiler
                     }
                     else
                     {
-                        Debug.Assert(underlyingNullableSourceType != null);
                         var sourceVarIndex = EmitStoreAndLoadLocalVariableAddress(il, sourceType);
                         EmitMethodCall(il, sourceType.GetNullableHasValueGetterMethod());
 
                         var labelSourceHasValue = il.DefineLabel();
                         il.Demit(OpCodes.Brtrue_S, labelSourceHasValue); // jump where source has a value
 
-                        // otherwise, emit and load a `new Nullable<TTarget>()` struct (that's why a Init instead of New)
+                        // otherwise, emit and load a `new Nullable<TTarget>()` struct (that's why an Init instead of new)
                         EmitLoadLocalVariable(il, InitValueTypeVariable(il, targetType));
 
-                        // jump to completion
+                        // jump to the completion
                         var labelDone = il.DefineLabel();
                         il.Demit(OpCodes.Br_S, labelDone);
 
@@ -3268,21 +3269,12 @@ namespace FastExpressionCompiler
                         il.DmarkLabel(labelSourceHasValue);
                         EmitLoadLocalVariableAddress(il, sourceVarIndex);
                         il.Demit(OpCodes.Ldfld, sourceType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
-                        if (method != null && method.ReturnType == targetType)
-                        {
-                            EmitMethodCall(il, method);
-                        }
-                        else
-                        {
-                            if (!TryEmitPrimitiveValueConvert(underlyingNullableSourceType, underlyingNullableTargetType, il, expr.NodeType == ExpressionType.ConvertChecked))
-                            {
-                                method ??= underlyingNullableTargetType.FindConvertOperator(underlyingNullableSourceType, underlyingNullableTargetType);
-                                if (method == null)
-                                    return false; // nor conversion nor conversion operator is found
-                                EmitMethodCall(il, method);
-                            }
-                            il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
-                        }
+
+                        if (!TryEmitPrimitiveValueConvert(underlyingNullableSourceType, underlyingNullableTargetType, il,
+                            expr.NodeType == ExpressionType.ConvertChecked))
+                            return false;
+
+                        il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
                         il.DmarkLabel(labelDone);
                     }
                 }
@@ -3299,7 +3291,8 @@ namespace FastExpressionCompiler
                     }
 
                     // cast as the last resort and let's it fail if unlucky
-                    if (!TryEmitPrimitiveValueConvert(underlyingNullableSourceType ?? sourceType, targetType, il, expr.NodeType == ExpressionType.ConvertChecked))
+                    if (!TryEmitPrimitiveValueConvert(underlyingNullableSourceType ?? sourceType, targetType, il,
+                        expr.NodeType == ExpressionType.ConvertChecked))
                     {
                         il.TryEmitBoxOf(sourceType);
                         il.Demit(OpCodes.Castclass, targetType);
