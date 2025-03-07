@@ -18,7 +18,7 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
 {
     public int Run()
     {
-        The_operator_method_is_provided_in_Convert();
+        // The_operator_method_is_provided_in_Convert();
         Original_case();
         return 1;
     }

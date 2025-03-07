@@ -3117,7 +3117,7 @@ namespace FastExpressionCompiler
                             return false;
                         il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
                     }
-                    return true; // done with the method
+                    return il.EmitPopIfIgnoreResult(parent); // done with the method
                 }
 
                 // Handle the quick path for the ignored result and conversion which can't cause the exception.
@@ -3176,35 +3176,35 @@ namespace FastExpressionCompiler
                     Type opParamType = null;
                     foreach (var m in staticMethods)
                     {
-                        if (m.IsSpecialName)
+                        if (!m.IsSpecialName)
+                            continue;
+
+                        opReturnType = m.ReturnType;
+                        Debug.Assert(opReturnType != null, "Pretty good assumption");
+
+                        // Method return type should be convertible to target type, 
+                        // and therefore it does not check for the method return type of Nullable<targetType>
+                        // because it cannot be coalesed to targetType without loss of information
+                        if (opReturnType != targetType && opReturnType != underlyingNullableTargetType ||
+                            m.Name != "op_Implicit" && m.Name != "op_Explicit")
+                            continue;
+
+                        var operatorParams = m.GetParameters();
+                        Debug.Assert(operatorParams.Length == 1, "Pretty good assumption too");
+
+                        opParamType = operatorParams[0].ParameterType;
+                        if (opParamType == sourceType)
                         {
-                            opReturnType = m.ReturnType;
-                            Debug.Assert(opReturnType != null, "Pretty good assumption");
+                            convOpMethod = m;
+                            break;
+                        }
 
-                            // Method return type should be convertible to target type, 
-                            // and therefore it does not check for the method return type of Nullable<targetType>
-                            // because it cannot be coalesed to targetType without loss of information
-                            if ((opReturnType == targetType || opReturnType == underlyingNullableTargetType) &&
-                                (m.Name == "op_Implicit" || m.Name == "op_Explicit"))
-                            {
-                                var operatorParams = m.GetParameters();
-                                Debug.Assert(operatorParams.Length == 1, "Pretty good assumption too");
-
-                                opParamType = operatorParams[0].ParameterType;
-                                if (opParamType == sourceType)
-                                {
-                                    convOpMethod = m;
-                                    break;
-                                }
-
-                                // Check for all variants of the source type which maybe either underlying nullable or nullable of the source type
-                                alternativeSourceType ??= sourceType.GetNullable(); // make the nullable only once for the perf reasons
-                                if (opParamType == alternativeSourceType)
-                                {
-                                    convOpMethod = m;
-                                    break;
-                                }
-                            }
+                        // Check for all variants of the source type which maybe either underlying nullable or nullable of the source type
+                        alternativeSourceType ??= sourceType.GetNullable(); // make the nullable only once for the perf reasons
+                        if (opParamType == alternativeSourceType)
+                        {
+                            convOpMethod = m;
+                            break;
                         }
                     }
 
