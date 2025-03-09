@@ -3157,18 +3157,20 @@ namespace FastExpressionCompiler
                 }
 
                 // Check implicit / explicit conversion operators on source and then on the target type,
-                // check theur underlying nullable types, because Nullable does not contain conversion ops,
+                // check their underlying nullable types, because Nullable does not contain conversion ops,
                 // also check inside that it is not primitive type, nor string or enum because those do no contain the conversion operators either.
                 // see #73, #451 for examples
 
                 // todo: @wip check underlying enum types and `IsImplicitlyNumericConvertibleTo` types
 
-                // The type is either underlying source type value or on demand evaluated Nullable<sourceType>
+                // The type is either underlying source type value or it is on demand evaluated Nullable<sourceType>
                 Type alternativeSourceType = underlyingNullableSourceType;
-
-                for (var (end, convOwnerType) = (false, underlyingNullableSourceType ?? sourceType);
-                    !end; (end, convOwnerType) = (true, underlyingNullableTargetType ?? targetType))
+                for (var lookupCount = 0; lookupCount < 2; ++lookupCount)
                 {
+                    var convOwnerType = lookupCount == 0
+                        ? underlyingNullableSourceType ?? sourceType
+                        : underlyingNullableTargetType ?? targetType;
+
                     if (convOwnerType == typeof(string) || convOwnerType.IsEnum || convOwnerType.IsPrimitive)
                         continue;
 
@@ -3232,7 +3234,7 @@ namespace FastExpressionCompiler
 
                         return il.EmitPopIfIgnoreResult(parent);
                     }
-                }
+                } // end of the while loop
 
                 if (targetType.IsValueType && sourceType == typeof(object) ||
                     // a special case, see the AutoMapper test `StringToEnumConverter.Should_work`

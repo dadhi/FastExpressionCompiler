@@ -116,11 +116,11 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
 
         var fs = e.CompileSys();
         fs.PrintIL();
-        Assert.AreEqual(5, fs());
+        Asserts.AreEqual(5, fs());
 
         var ff = e.CompileFast(false);
         ff.PrintIL();
-        Assert.AreEqual(5, ff());
+        Asserts.AreEqual(5, ff());
     }
 
     public class Foo
