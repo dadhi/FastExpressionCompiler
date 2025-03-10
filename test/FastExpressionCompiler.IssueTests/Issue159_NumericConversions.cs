@@ -294,12 +294,12 @@ namespace FastExpressionCompiler.IssueTests
             compiled.PrintIL();
 
             var source = new ValueHolder<float> { Value = 3.14f };
-            Assert.AreEqual(3.14m, compiled(source).Value);
+            Asserts.AreEqual(3.14m, compiled(source).Value);
 
             var fastCompiled = expr.CompileFast(true);
             fastCompiled.PrintIL();
             var result = fastCompiled(source);
-            Assert.AreEqual(3.14m, result.Value);
+            Asserts.AreEqual(3.14m, result.Value);
         }
 
         [Test]
@@ -510,11 +510,10 @@ namespace FastExpressionCompiler.IssueTests
             var source = new ValueHolder<float?> { Value = 73.62f };
 
             var floatValueOrDefaultFunc = floatValueOrDefaultLambda.CompileFast(true);
-            Assert.IsNotNull(floatValueOrDefaultFunc);
+            Asserts.IsNotNull(floatValueOrDefaultFunc);
 
             var result = floatValueOrDefaultFunc.Invoke(source);
-
-            Assert.AreEqual(73.62m, result.Value);
+            Asserts.AreEqual(73.62m, result.Value);
         }
 
         [Test]

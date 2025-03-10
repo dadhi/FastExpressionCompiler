@@ -3115,7 +3115,6 @@ namespace FastExpressionCompiler
                     {
                         if (underlyingNullableSourceType != null)
                         {
-                            // todo: @wip what if the source type is null???
                             // get the nullable value from the stuff,
                             if (methodParamType == underlyingNullableSourceType)
                             {

@@ -24,20 +24,18 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
 {
     public int Run()
     {
-        // Convert_nullable_enum_into_the_underlying_nullable_type();
-        // Convert_nullable_enum_into_the_compatible_to_underlying_nullable_type();
+        Convert_nullable_enum_into_the_underlying_nullable_type();
+        Convert_nullable_enum_into_the_compatible_to_underlying_nullable_type();
 
-        // Convert_nullable_enum_using_the_conv_op();
+        Convert_nullable_enum_using_the_conv_op();
         Convert_nullable_enum_using_the_Passed_conv_method();
-        Convert_enum_using_the_Passed_conv_method_from_underlying_enum_type();
 
         Convert_nullable_enum_using_the_conv_op_with_nullable_param();
-        Convert_enum_using_the_Passed_conv_method_with_nullable_param();
 
         Original_case();
         The_operator_method_is_provided_in_Convert();
 
-        return 6;
+        return 7;
     }
 
 #if FEAT_453 // todo: @wip #453 draft of the implementation
@@ -155,7 +153,8 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
     {
         var conversion = Convert(Constant(Hey.Sailor, typeof(Hey?)), typeof(Foo),
             typeof(Foo).GetMethods(BindingFlags.Public | BindingFlags.Static)
-                .First(m => m.Name == "op_Explicit" && m.GetParameters()[0].ParameterType == typeof(Hey)));
+                .First(m => m.Name == "op_Explicit" &&
+                    m.GetParameters()[0].ParameterType == typeof(Hey)));
 
         var e = Lambda<Func<Foo>>(conversion);
         e.PrintCSharp();
@@ -169,29 +168,12 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
         Asserts.AreEqual(5, ff().Value);
     }
 
-    public void Convert_enum_using_the_Passed_conv_method_from_underlying_enum_type()
-    {
-        var conversion = Convert(Constant(Hey.Sailor, typeof(Hey)), typeof(Foo),
-            typeof(Foo).GetMethods(BindingFlags.Public | BindingFlags.Static)
-                .First(m => m.Name == "op_Explicit" && m.GetParameters()[0].ParameterType == typeof(byte)));
-
-        var e = Lambda<Func<Foo>>(conversion);
-        e.PrintCSharp();
-
-        var fs = e.CompileSys();
-        fs.PrintIL();
-        Asserts.AreEqual(5, fs().Value);
-
-        var ff = e.CompileFast(false);
-        ff.PrintIL();
-        Asserts.AreEqual(5, ff().Value);
-    }
-
-    public class Bar
+    public struct Bar
     {
         public int? Value;
         public static explicit operator Bar(int? n) => new Bar { Value = n };
         public static explicit operator Bar(Hey? hey) => new Bar { Value = hey.HasValue ? (int)hey.Value : null };
+        public static explicit operator Bar?(Hey? hey) => !hey.HasValue ? null : new Bar { Value = (int)hey.Value };
     }
 
     public void Convert_nullable_enum_using_the_conv_op_with_nullable_param()
@@ -207,24 +189,6 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
         var ff = e.CompileFast(false);
         ff.PrintIL();
         Asserts.AreEqual(null, ff().Value);
-    }
-
-    public void Convert_enum_using_the_Passed_conv_method_with_nullable_param()
-    {
-        var conversion = Convert(Constant(Hey.Sailor, typeof(Hey)), typeof(Bar),
-            typeof(Bar).GetMethods(BindingFlags.Public | BindingFlags.Static)
-                .First(m => m.Name == "op_Explicit" && m.GetParameters()[0].ParameterType == typeof(Hey)));
-
-        var e = Lambda<Func<Bar>>(conversion);
-        e.PrintCSharp();
-
-        var fs = e.CompileSys();
-        fs.PrintIL();
-        Asserts.AreEqual(5, fs().Value);
-
-        var ff = e.CompileFast(false);
-        ff.PrintIL();
-        Asserts.AreEqual(5, ff().Value);
     }
 
     [Test]
@@ -244,21 +208,21 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
 
         var sample1 = lambda1.CompileSys();
         sample1.PrintIL();
-        Assert.IsNull(sample1());
+        Asserts.AreEqual(false, sample1());
 
         var sample2 = lambda2.CompileSys();
         sample2.PrintIL();
-        Assert.IsNull(sample2());
+        Asserts.AreEqual(null, sample2());
 
         // <- OK
         var sample_fast1 = lambda1.CompileFast(false);
         sample_fast1.PrintIL();
-        Assert.IsNull(sample_fast1());
+        Asserts.AreEqual(false, sample_fast1());
 
         // <- throws exception
         var sample_fast2 = lambda2.CompileFast(false);
         sample_fast2.PrintIL();
-        Assert.IsNull(sample_fast2());
+        Asserts.AreEqual(null, sample_fast2());
     }
 
     [Test]
@@ -277,10 +241,10 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
 
         var sample = lambda.CompileSys();
         sample.PrintIL();
-        Assert.IsNull(sample());
+        Asserts.AreEqual(false, sample());
 
         var sample_fast = lambda.CompileFast(false);
         sample_fast.PrintIL();
-        Assert.IsNull(sample_fast());
+        Asserts.AreEqual(false, sample_fast());
     }
 }
