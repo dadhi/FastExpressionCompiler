@@ -3093,7 +3093,10 @@ namespace FastExpressionCompiler
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
                 var opExpr = expr.Operand;
+                var sourceType = opExpr.Type;
                 var targetType = expr.Type;
+                var underlyingNullableSourceType = sourceType.GetUnderlyingNullableTypeOrNull();
+                var underlyingNullableTargetType = targetType.GetUnderlyingNullableTypeOrNull();
 
                 // If the custom conversion method is provided, then use it. 
                 // Except for the implicit/explicit conversion operators for the nullable source or/and target types,
@@ -3104,40 +3107,40 @@ namespace FastExpressionCompiler
                     if (!TryEmit(opExpr, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult | ParentFlags.InstanceCall, -1))
                         return false;
 
-                    // todo: @wip or what if source or/and target types are enums, but the method accepts the underlying type
-                    // if (opParamType == underlyingNullableSourceType)
-                    // {
-                    //     EmitStoreAndLoadLocalVariableAddress(il, sourceType);
-                    //     EmitMethodCall(il, sourceType.FindNullableValueGetterMethod());
-                    // }
-                    // else if (opParamType == alternativeSourceType) // means that it should be the Nullable<sourceType>
-                    // {
-                    //     // lift the source into the nullable parameter
-                    //     il.Demit(OpCodes.Newobj, alternativeSourceType.GetNullableConstructor());
-                    // }
+                    var methodParams = method.GetParameters();
+                    Debug.Assert(methodParams.Length == 1, $"Expected for the conversion method to have a single param, but found {methodParams.Length}");
+
+                    var methodParamType = methodParams[0].ParameterType;
+                    if (methodParamType != sourceType) // in such an unsual case...
+                    {
+                        if (underlyingNullableSourceType != null)
+                        {
+                            // todo: @wip what if the source type is null???
+                            // get the nullable value from the stuff,
+                            if (methodParamType == underlyingNullableSourceType)
+                            {
+                                EmitStoreAndLoadLocalVariableAddress(il, sourceType);
+                                EmitMethodCall(il, sourceType.FindNullableValueGetterMethod());
+                            }
+                        }
+                        else
+                        {
+                            var nullableOfSourceType = sourceType.GetNullable();
+                            if (methodParamType == nullableOfSourceType)
+                                il.Demit(OpCodes.Newobj, nullableOfSourceType.GetNullableConstructor());
+                        }
+                    }
 
                     EmitMethodCallOrVirtualCall(il, method);
 
-                    // todo: @wip or what if source or/and target types are enums, but the method accepts the underlying type
-                    // // lift the result into the nullable target
-                    // if (opReturnType == underlyingNullableTargetType)
-                    //     il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
-
-                    // if the method returns the underlying nullable target type (there is no need to check if target nullable, because the method.ReturnType cannot be null)
-                    // then wrap the result into the nullable target
-                    if (method.ReturnType != targetType)
-                    {
-                        Debug.Assert(targetType.IsNullable(), "Expecting nullable target type");
-                        if (!targetType.IsNullable())
-                            return false;
+                    if (underlyingNullableTargetType != null && method.ReturnType == underlyingNullableTargetType)
                         il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
-                    }
+
                     return il.EmitPopIfIgnoreResult(parent); // done with the method
                 }
 
                 // Handle the quick path for the ignored result and conversion which can't cause the exception.
                 // Let's opExpr emitter to ignore the result.
-                var sourceType = opExpr.Type;
                 if ((parent & ParentFlags.IgnoreResult) != 0 &&
                     (sourceType == targetType || targetType.IsAssignableFrom(sourceType)))
                     return TryEmit(opExpr, paramExprs, il, ref closure, setup, parent & ~ParentFlags.InstanceAccess);
@@ -3153,7 +3156,6 @@ namespace FastExpressionCompiler
                 if (targetType == typeof(object))
                     return il.TryEmitBoxOf(sourceType) && il.EmitPopIfIgnoreResult(parent);
 
-                var underlyingNullableSourceType = sourceType.GetUnderlyingNullableTypeOrNull();
                 if (underlyingNullableSourceType == targetType)
                 {
                     if (!closure.LastEmitIsAddress) // from the opExpr emitter
@@ -3162,7 +3164,6 @@ namespace FastExpressionCompiler
                         && il.EmitPopIfIgnoreResult(parent);
                 }
 
-                var underlyingNullableTargetType = targetType.GetUnderlyingNullableTypeOrNull();
                 if (underlyingNullableTargetType == sourceType)
                 {
                     il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
@@ -3178,6 +3179,7 @@ namespace FastExpressionCompiler
 
                 // The type is either underlying source type value or it is on demand evaluated Nullable<sourceType>
                 Type alternativeSourceType = null;
+
                 for (var lookupCount = 0; lookupCount < 2; ++lookupCount)
                 {
                     var convOwnerType = lookupCount == 0
@@ -3207,7 +3209,7 @@ namespace FastExpressionCompiler
                             continue;
 
                         var operatorParams = m.GetParameters();
-                        Debug.Assert(operatorParams.Length == 1, "Pretty good assumption too");
+                        Debug.Assert(operatorParams.Length == 1, $"Expected for the conversion operator to have a single param, but found {operatorParams.Length}");
 
                         opParamType = operatorParams[0].ParameterType;
                         if (opParamType == sourceType)
