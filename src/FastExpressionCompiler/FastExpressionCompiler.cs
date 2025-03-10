@@ -3164,7 +3164,7 @@ namespace FastExpressionCompiler
                 // todo: @wip check underlying enum types and `IsImplicitlyNumericConvertibleTo` types
 
                 // The type is either underlying source type value or it is on demand evaluated Nullable<sourceType>
-                Type alternativeSourceType = underlyingNullableSourceType;
+                Type alternativeSourceType = null;
                 for (var lookupCount = 0; lookupCount < 2; ++lookupCount)
                 {
                     var convOwnerType = lookupCount == 0
@@ -3204,7 +3204,7 @@ namespace FastExpressionCompiler
                         }
 
                         // Check for all variants of the source type which maybe either underlying nullable or nullable of the source type
-                        alternativeSourceType ??= sourceType.GetNullable(); // make the nullable only once for the perf reasons
+                        alternativeSourceType ??= underlyingNullableSourceType ?? sourceType.GetNullable();
                         if (opParamType == alternativeSourceType)
                         {
                             convOpMethod = m;

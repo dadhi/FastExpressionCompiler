@@ -126,7 +126,7 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
     public class Foo
     {
         public int Value;
-        public static explicit operator Foo(byte b) => new Foo { Value = b };
+        public static explicit operator Foo(byte b) => new Foo { Value = b }; // unused
         public static explicit operator Foo(Hey hey) => new Foo { Value = (int)hey };
     }
 
