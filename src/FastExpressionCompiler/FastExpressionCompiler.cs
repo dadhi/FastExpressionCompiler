@@ -3092,8 +3092,6 @@ namespace FastExpressionCompiler
 #endif
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
-                // todo: @perf refactor this whole method in order to handle the hot paths without heavy reflection calls
-
                 var opExpr = expr.Operand;
                 var targetType = expr.Type;
 
@@ -3103,12 +3101,27 @@ namespace FastExpressionCompiler
                 var method = expr.Method;
                 if (method != null)
                 {
-                    // todo: @wip check later the case when source type is nullable but the method accepts the underlying source type,
-                    // todo: @wip or what if source or/and target types are enums, but the method accepts the underlying type
                     if (!TryEmit(opExpr, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult | ParentFlags.InstanceCall, -1))
                         return false;
 
+                    // todo: @wip or what if source or/and target types are enums, but the method accepts the underlying type
+                    // if (opParamType == underlyingNullableSourceType)
+                    // {
+                    //     EmitStoreAndLoadLocalVariableAddress(il, sourceType);
+                    //     EmitMethodCall(il, sourceType.FindNullableValueGetterMethod());
+                    // }
+                    // else if (opParamType == alternativeSourceType) // means that it should be the Nullable<sourceType>
+                    // {
+                    //     // lift the source into the nullable parameter
+                    //     il.Demit(OpCodes.Newobj, alternativeSourceType.GetNullableConstructor());
+                    // }
+
                     EmitMethodCallOrVirtualCall(il, method);
+
+                    // todo: @wip or what if source or/and target types are enums, but the method accepts the underlying type
+                    // // lift the result into the nullable target
+                    // if (opReturnType == underlyingNullableTargetType)
+                    //     il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
 
                     // if the method returns the underlying nullable target type (there is no need to check if target nullable, because the method.ReturnType cannot be null)
                     // then wrap the result into the nullable target
@@ -3204,6 +3217,7 @@ namespace FastExpressionCompiler
                         }
 
                         // Check for all variants of the source type which maybe either underlying nullable or nullable of the source type
+                        // Calculate it once because less work is better.
                         alternativeSourceType ??= underlyingNullableSourceType ?? sourceType.GetNullable();
                         if (opParamType == alternativeSourceType)
                         {

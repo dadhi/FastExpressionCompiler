@@ -3,6 +3,8 @@ using NUnit.Framework;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Collections.Generic;
+using System.Linq;
+
 
 
 
@@ -25,8 +27,12 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
         // Convert_nullable_enum_into_the_underlying_nullable_type();
         // Convert_nullable_enum_into_the_compatible_to_underlying_nullable_type();
 
-        Convert_nullable_enum_using_the_conv_op_from_convertible_underlying_type();
-        Convert_nullable_enum_using_the_conv_op_from_convertible_nullable_of_underlying_type();
+        // Convert_nullable_enum_using_the_conv_op();
+        Convert_nullable_enum_using_the_Passed_conv_method();
+        Convert_enum_using_the_Passed_conv_method_from_underlying_enum_type();
+
+        Convert_nullable_enum_using_the_conv_op_with_nullable_param();
+        Convert_enum_using_the_Passed_conv_method_with_nullable_param();
 
         Original_case();
         The_operator_method_is_provided_in_Convert();
@@ -130,9 +136,45 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
         public static explicit operator Foo(Hey hey) => new Foo { Value = (int)hey };
     }
 
-    public void Convert_nullable_enum_using_the_conv_op_from_convertible_underlying_type()
+    public void Convert_nullable_enum_using_the_conv_op()
     {
         var conversion = Convert(Constant(Hey.Sailor, typeof(Hey?)), typeof(Foo));
+        var e = Lambda<Func<Foo>>(conversion);
+        e.PrintCSharp();
+
+        var fs = e.CompileSys();
+        fs.PrintIL();
+        Asserts.AreEqual(5, fs().Value);
+
+        var ff = e.CompileFast(false);
+        ff.PrintIL();
+        Asserts.AreEqual(5, ff().Value);
+    }
+
+    public void Convert_nullable_enum_using_the_Passed_conv_method()
+    {
+        var conversion = Convert(Constant(Hey.Sailor, typeof(Hey?)), typeof(Foo),
+            typeof(Foo).GetMethods(BindingFlags.Public | BindingFlags.Static)
+                .First(m => m.Name == "op_Explicit" && m.GetParameters()[0].ParameterType == typeof(Hey)));
+
+        var e = Lambda<Func<Foo>>(conversion);
+        e.PrintCSharp();
+
+        var fs = e.CompileSys();
+        fs.PrintIL();
+        Asserts.AreEqual(5, fs().Value);
+
+        var ff = e.CompileFast(false);
+        ff.PrintIL();
+        Asserts.AreEqual(5, ff().Value);
+    }
+
+    public void Convert_enum_using_the_Passed_conv_method_from_underlying_enum_type()
+    {
+        var conversion = Convert(Constant(Hey.Sailor, typeof(Hey)), typeof(Foo),
+            typeof(Foo).GetMethods(BindingFlags.Public | BindingFlags.Static)
+                .First(m => m.Name == "op_Explicit" && m.GetParameters()[0].ParameterType == typeof(byte)));
+
         var e = Lambda<Func<Foo>>(conversion);
         e.PrintCSharp();
 
@@ -152,9 +194,27 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
         public static explicit operator Bar(Hey? hey) => new Bar { Value = hey.HasValue ? (int)hey.Value : null };
     }
 
-    public void Convert_nullable_enum_using_the_conv_op_from_convertible_nullable_of_underlying_type()
+    public void Convert_nullable_enum_using_the_conv_op_with_nullable_param()
     {
-        var conversion = Convert(Constant(Hey.Sailor, typeof(Hey?)), typeof(Bar));
+        var conversion = Convert(Constant(null, typeof(Hey?)), typeof(Bar));
+        var e = Lambda<Func<Bar>>(conversion);
+        e.PrintCSharp();
+
+        var fs = e.CompileSys();
+        fs.PrintIL();
+        Asserts.AreEqual(null, fs().Value);
+
+        var ff = e.CompileFast(false);
+        ff.PrintIL();
+        Asserts.AreEqual(null, ff().Value);
+    }
+
+    public void Convert_enum_using_the_Passed_conv_method_with_nullable_param()
+    {
+        var conversion = Convert(Constant(Hey.Sailor, typeof(Hey)), typeof(Bar),
+            typeof(Bar).GetMethods(BindingFlags.Public | BindingFlags.Static)
+                .First(m => m.Name == "op_Explicit" && m.GetParameters()[0].ParameterType == typeof(Hey)));
+
         var e = Lambda<Func<Bar>>(conversion);
         e.PrintCSharp();
 
@@ -166,8 +226,6 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
         ff.PrintIL();
         Asserts.AreEqual(5, ff().Value);
     }
-
-    // todo: @wip pass the conversation methods explicitly
 
     [Test]
     public void Original_case()
