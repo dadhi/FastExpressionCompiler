@@ -10,7 +10,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-[TestFixture]
+    [TestFixture]
     public class Issue76_Expression_Convert_causing_signature_or_security_transparency_is_not_compatible_exception : ITest
     {
         public int Run()
@@ -27,21 +27,26 @@ namespace FastExpressionCompiler.IssueTests
             var instance = new TestTarget();
 
             var expr = CreateWriter<TestTarget>();
+            expr.PrintCSharp();
+
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+            fs(instance, id);
+            Asserts.AreEqual(instance.ID, new CustomID(id));
 
             // both ExpressionCompiler.Compile and .CompileFast should work with action
-            var write = expr.CompileFast(true);
-
-            write(instance, id);
-
-            Assert.AreEqual(instance.ID, new CustomID(id));
+            var ff = expr.CompileFast(true);
+            ff.PrintIL();
+            ff(instance, id);
+            Asserts.AreEqual(instance.ID, new CustomID(id));
         }
 
         [Test]
         public void CanConvert()
         {
-            var idParam = Expression.Parameter(typeof(Guid), "id");
-            var cast = Expression.Convert(idParam, typeof(CustomID));
-            var lambda = Expression.Lambda<Func<Guid, CustomID>>(cast, idParam);
+            var idParam = Parameter(typeof(Guid), "id");
+            var cast = Convert(idParam, typeof(CustomID));
+            var lambda = Lambda<Func<Guid, CustomID>>(cast, idParam);
             var convert = lambda.CompileFast();
 
             var id = Guid.NewGuid();
@@ -52,15 +57,15 @@ namespace FastExpressionCompiler.IssueTests
 
         private Expression<Action<T, Guid>> CreateWriter<T>()
         {
-            var docParam = Expression.Parameter(typeof(T), "doc");
-            var idParam = Expression.Parameter(typeof(Guid), "id");
+            var docParam = Parameter(typeof(T), "doc");
+            var idParam = Parameter(typeof(Guid), "id");
 
-            var cast = Expression.Convert(idParam, typeof(CustomID));
+            var cast = Convert(idParam, typeof(CustomID));
 
-            var member = Expression.PropertyOrField(docParam, nameof(TestTarget.ID));
-            var assign = Expression.Assign(member, cast);
+            var member = PropertyOrField(docParam, nameof(TestTarget.ID));
+            var assign = Assign(member, cast);
 
-            var lambda = Expression.Lambda<Action<T, Guid>>(assign, docParam, idParam);
+            var lambda = Lambda<Action<T, Guid>>(assign, docParam, idParam);
 
             return lambda;
         }
@@ -74,10 +79,7 @@ namespace FastExpressionCompiler.IssueTests
         {
             private readonly Guid _id;
 
-            public CustomID(Guid id)
-            {
-                _id = id;
-            }
+            public CustomID(Guid id) => _id = id;
 
             public bool Equals(CustomID other) => _id.Equals(other._id);
 
