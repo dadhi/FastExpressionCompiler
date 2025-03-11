@@ -141,7 +141,23 @@ public static class Asserts
 #endif
         string actualName = "actual") =>
         Equals(expected, actual) ? null : throw new AssertionException(
-            $"Expected `{expectedName} == {actualName}`, but was `{expected?.ToString() ?? "null"} == {actual}`");
+            $"Expected `{expectedName} == {actualName}`, but found `{expected?.ToString() ?? "null"} == {actual}`");
+
+    public static AssertionException IsNull<T>(T actual,
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(actual))]
+#endif
+        string actualName = "actual") where T : class =>
+        actual is null ? null : throw new AssertionException(
+            $"Expected null `{actualName}`, but found `{actual}`");
+
+    public static AssertionException IsNull<T>(T? actual,
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(actual))]
+#endif
+        string actualName = "actual") where T : struct =>
+        !actual.HasValue ? null : throw new AssertionException(
+            $"Expected this nullable `{actualName}` to be null, but found `{actual.Value}`");
 
     public static AssertionException IsNotNull<T>(T actual,
 #if NETCOREAPP3_0_OR_GREATER
@@ -149,7 +165,7 @@ public static class Asserts
 #endif
         string actualName = "actual") where T : class =>
         actual is not null ? null : throw new AssertionException(
-            $"Expected not null {actualName}, but was null");
+            $"Expected not null `{actualName}`, but was null");
 }
 
 public interface ITest

@@ -3104,7 +3104,7 @@ namespace FastExpressionCompiler
                 var method = expr.Method;
                 if (method != null)
                 {
-                    if (!TryEmit(opExpr, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult | ParentFlags.InstanceCall, -1))
+                    if (!TryEmit(opExpr, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess, -1))
                         return false;
 
                     var methodParams = method.GetParameters();
