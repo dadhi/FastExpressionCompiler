@@ -1,5 +1,4 @@
 ﻿using System;
-using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -10,7 +9,6 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
     public class Issue76_Expression_Convert_causing_signature_or_security_transparency_is_not_compatible_exception : ITest
     {
         public int Run()
@@ -20,7 +18,6 @@ namespace FastExpressionCompiler.IssueTests
             return 2;
         }
 
-        [Test]
         public void When_using_fast_expression_compilation()
         {
             var id = Guid.NewGuid();
@@ -41,7 +38,6 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(instance.ID, new CustomID(id));
         }
 
-        [Test]
         public void CanConvert()
         {
             var idParam = Parameter(typeof(Guid), "id");
@@ -52,7 +48,7 @@ namespace FastExpressionCompiler.IssueTests
             var id = Guid.NewGuid();
             var account = convert(id);
 
-            Assert.AreEqual(account, new CustomID(id));
+            Asserts.AreEqual(account, new CustomID(id));
         }
 
         private Expression<Action<T, Guid>> CreateWriter<T>()
