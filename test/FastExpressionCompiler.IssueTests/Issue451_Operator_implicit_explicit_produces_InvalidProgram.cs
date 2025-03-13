@@ -24,6 +24,8 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
 {
     public int Run()
     {
+        Convert_nullable_to_nullable_given_the_conv_op_of_underlying_to_underlying();
+
         Convert_nullable_enum_into_the_underlying_nullable_type();
         Convert_nullable_enum_into_the_compatible_to_underlying_nullable_type();
 
@@ -184,11 +186,32 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
 
         var fs = e.CompileSys();
         fs.PrintIL();
-        Asserts.AreEqual(null, fs().Value);
+        Asserts.IsNull(fs().Value);
 
         var ff = e.CompileFast(false);
         ff.PrintIL();
-        Asserts.AreEqual(null, ff().Value);
+        Asserts.IsNull(ff().Value);
+    }
+
+    public struct Jazz
+    {
+        public int Value;
+        public static explicit operator Jazz(int n) => new Jazz { Value = n };
+    }
+
+    public void Convert_nullable_to_nullable_given_the_conv_op_of_underlying_to_underlying()
+    {
+        var conversion = Convert(Constant(42, typeof(int?)), typeof(Jazz?));
+        var e = Lambda<Func<Jazz?>>(conversion);
+        e.PrintCSharp();
+
+        var fs = e.CompileSys();
+        fs.PrintIL();
+        Asserts.AreEqual(42, fs().Value.Value);
+
+        var ff = e.CompileFast(false);
+        ff.PrintIL();
+        Asserts.AreEqual(42, fs().Value.Value);
     }
 
     [Test]
@@ -212,7 +235,7 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
 
         var sample2 = lambda2.CompileSys();
         sample2.PrintIL();
-        Asserts.AreEqual(null, sample2());
+        Asserts.IsNull(sample2());
 
         // <- OK
         var sample_fast1 = lambda1.CompileFast(false);
@@ -222,7 +245,7 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
         // <- throws exception
         var sample_fast2 = lambda2.CompileFast(false);
         sample_fast2.PrintIL();
-        Asserts.AreEqual(null, sample_fast2());
+        Asserts.IsNull(sample_fast2());
     }
 
     [Test]

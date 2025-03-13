@@ -3098,204 +3098,208 @@ namespace FastExpressionCompiler
                 var underlyingNullableSourceType = sourceType.GetUnderlyingNullableTypeOrNull();
                 var underlyingNullableTargetType = targetType.GetUnderlyingNullableTypeOrNull();
 
-                // If the custom conversion method is provided, then use it. 
-                // Except for the implicit/explicit conversion operators for the nullable source or/and target types,
-                // that can operate on the underlying non-nullable types and require additional lifting to nullables.
-                var method = expr.Method;
-                if (method != null)
+                var convertMethod = expr.Method;
+                if (convertMethod == null)
                 {
-                    if (!TryEmit(opExpr, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess, -1))
+                    // Try fast the special cases which does not require searching for the conversion operators in principle:
+                    if (sourceType == targetType || targetType.IsAssignableFrom(sourceType))
+                        return TryEmit(opExpr, paramExprs, il, ref closure, setup, parent & ~ParentFlags.InstanceAccess);
+
+                    if (!TryEmit(opExpr, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess))
                         return false;
 
-                    var methodParams = method.GetParameters();
-                    Debug.Assert(methodParams.Length == 1, $"Expected for the conversion method to have a single param, but found {methodParams.Length}");
-
-                    var methodParamType = methodParams[0].ParameterType;
-                    if (methodParamType != sourceType) // in such an unsual case...
+                    if (targetType == underlyingNullableSourceType)
                     {
-                        if (underlyingNullableSourceType != null)
-                        {
-                            // get the nullable value from the stuff,
-                            if (methodParamType == underlyingNullableSourceType)
-                            {
-                                EmitStoreAndLoadLocalVariableAddress(il, sourceType);
-                                EmitMethodCall(il, sourceType.FindNullableValueGetterMethod());
-                            }
-                        }
-                        else
-                        {
-                            var nullableOfSourceType = sourceType.GetNullable();
-                            if (methodParamType == nullableOfSourceType)
-                                il.Demit(OpCodes.Newobj, nullableOfSourceType.GetNullableConstructor());
-                        }
+                        if (!closure.LastEmitIsAddress)
+                            EmitStoreAndLoadLocalVariableAddress(il, sourceType);
+                        EmitMethodCall(il, sourceType.GetNullableValueGetterMethod());
+                        return il.EmitPopIfIgnoreResult(parent);
                     }
 
-                    EmitMethodCallOrVirtualCall(il, method);
-
-                    if (underlyingNullableTargetType != null && method.ReturnType == underlyingNullableTargetType)
+                    if (sourceType == underlyingNullableTargetType)
+                    {
                         il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
+                        return il.EmitPopIfIgnoreResult(parent);
+                    }
 
-                    return il.EmitPopIfIgnoreResult(parent); // done with the method
-                }
+                    if (targetType == typeof(object) && sourceType.IsValueType)
+                    {
+                        il.Demit(OpCodes.Box, sourceType);
+                        return il.EmitPopIfIgnoreResult(parent);
+                    }
 
-                // Handle the quick path for the ignored result and conversion which can't cause the exception.
-                // Let's opExpr emitter to ignore the result.
-                if ((parent & ParentFlags.IgnoreResult) != 0 &&
-                    (sourceType == targetType || targetType.IsAssignableFrom(sourceType)))
-                    return TryEmit(opExpr, paramExprs, il, ref closure, setup, parent & ~ParentFlags.InstanceAccess);
-
-                if (!TryEmit(opExpr, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess))
-                    return false;
-
-                // Check the types equality only After the operand emit to embrace its side-effects, 
-                // because the operand may be a complex expression
-                if (sourceType == targetType)
-                    return il.EmitPopIfIgnoreResult(parent);
-
-                if (targetType == typeof(object))
-                    return il.TryEmitBoxOf(sourceType) && il.EmitPopIfIgnoreResult(parent);
-
-                if (underlyingNullableSourceType == targetType)
-                {
-                    if (!closure.LastEmitIsAddress) // from the opExpr emitter
-                        EmitStoreAndLoadLocalVariableAddress(il, sourceType);
-                    return EmitMethodCall(il, sourceType.FindNullableValueGetterMethod())
-                        && il.EmitPopIfIgnoreResult(parent);
-                }
-
-                if (underlyingNullableTargetType == sourceType)
-                {
-                    il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
-                    return true;
+                    if (sourceType == typeof(object) && targetType.IsValueType ||
+                        sourceType == typeof(Enum) && targetType.IsEnum // a special case, see the AutoMapper test `StringToEnumConverter.Should_work`
+                    )
+                    {
+                        il.Demit(OpCodes.Unbox_Any, targetType);
+                        return il.EmitPopIfIgnoreResult(parent);
+                    }
                 }
 
                 // Check implicit / explicit conversion operators on source and then on the target type,
                 // check their underlying nullable types, because Nullable does not contain conversion ops,
                 // also check inside that it is not primitive type, nor string or enum because those do no contain the conversion operators either.
                 // see #73, #451 for examples
-
-                // todo: @wip check underlying enum types and `IsImplicitlyNumericConvertibleTo` types
-
-                // The type is either underlying source type value or it is on demand evaluated Nullable<sourceType>
-                Type alternativeSourceType = null;
-
-                for (var lookupCount = 0; lookupCount < 2; ++lookupCount)
+                Type methodReturnType = null;
+                Type methodParamType = null;
+                if (convertMethod != null)
                 {
-                    var convOwnerType = lookupCount == 0
-                        ? underlyingNullableSourceType ?? sourceType
-                        : underlyingNullableTargetType ?? targetType;
+                    methodReturnType = convertMethod.ReturnType;
 
-                    if (convOwnerType == typeof(string) || convOwnerType.IsEnum || convOwnerType.IsPrimitive)
-                        continue;
-
-                    var staticMethods = convOwnerType.GetMethods(BindingFlags.Static | BindingFlags.Public);
-                    MethodInfo convOpMethod = null;
-                    Type opReturnType = null;
-                    Type opParamType = null;
-                    foreach (var m in staticMethods)
-                    {
-                        if (!m.IsSpecialName)
-                            continue;
-
-                        opReturnType = m.ReturnType;
-                        Debug.Assert(opReturnType != null, "Pretty good assumption");
-
-                        // Method return type should be convertible to target type, 
-                        // and therefore it does not check for the method return type of Nullable<targetType>
-                        // because it cannot be coalesed to targetType without loss of information
-                        if (opReturnType != targetType && opReturnType != underlyingNullableTargetType ||
-                            m.Name != "op_Implicit" && m.Name != "op_Explicit")
-                            continue;
-
-                        var operatorParams = m.GetParameters();
-                        Debug.Assert(operatorParams.Length == 1, $"Expected for the conversion operator to have a single param, but found {operatorParams.Length}");
-
-                        opParamType = operatorParams[0].ParameterType;
-                        if (opParamType == sourceType)
-                        {
-                            convOpMethod = m;
-                            break;
-                        }
-
-                        // Check for all variants of the source type which maybe either underlying nullable or nullable of the source type
-                        // Calculate it once because less work is better.
-                        alternativeSourceType ??= underlyingNullableSourceType ?? sourceType.GetNullable();
-                        if (opParamType == alternativeSourceType)
-                        {
-                            convOpMethod = m;
-                            break;
-                        }
-                    }
-
-                    if (convOpMethod != null)
-                    {
-                        Debug.Assert(opParamType != null & opReturnType != null, "Expecting that actual source and return type are set for the found convercion operator method");
-                        if (opParamType == underlyingNullableSourceType)
-                        {
-                            EmitStoreAndLoadLocalVariableAddress(il, sourceType);
-                            EmitMethodCall(il, sourceType.FindNullableValueGetterMethod());
-                        }
-                        else if (opParamType == alternativeSourceType) // means that it should be the Nullable<sourceType>
-                        {
-                            // lift the source into the nullable parameter
-                            il.Demit(OpCodes.Newobj, alternativeSourceType.GetNullableConstructor());
-                        }
-
-                        EmitMethodCall(il, convOpMethod);
-
-                        // lift the result into the nullable target
-                        if (opReturnType == underlyingNullableTargetType)
-                            il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
-
-                        return il.EmitPopIfIgnoreResult(parent);
-                    }
-                } // end of the while loop
-
-                if (targetType.IsValueType && sourceType == typeof(object) ||
-                    // a special case, see the AutoMapper test `StringToEnumConverter.Should_work`
-                    targetType.IsEnum && sourceType == typeof(Enum))
-                {
-                    il.Demit(OpCodes.Unbox_Any, targetType);
+                    var mParams = convertMethod.GetParameters();
+                    Debug.Assert(mParams.Length == 1, $"Expected for the conversion operator to have a single param, but found {mParams.Length}");
+                    methodParamType = mParams[0].ParameterType;
                 }
-                else if (underlyingNullableTargetType != null)
+                else
                 {
-                    // Conversion to the target nullable `new Nullable<TSource>(TSource val)`
-                    if (underlyingNullableSourceType == null)
+                    // Lookup for the conversion method first in sourceType then in the targetType
+                    Type underlyingOrNullableSourceType = null;
+                    for (var lookupCount = 0; lookupCount < 2 & convertMethod == null; ++lookupCount)
                     {
-                        if (!underlyingNullableTargetType.IsEnum && // todo: @clarify hope the source type is convertible to enum, huh 
-                            !TryEmitPrimitiveValueConvert(sourceType, underlyingNullableTargetType, il, isChecked: false))
-                            return false;
-                        il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
+                        var convOwnerType = lookupCount == 0
+                            ? underlyingNullableSourceType ?? sourceType
+                            : underlyingNullableTargetType ?? targetType;
+
+                        if (convOwnerType == typeof(string) || convOwnerType.IsEnum || convOwnerType.IsPrimitive)
+                            continue;
+
+                        var staticMethods = convOwnerType.GetMethods(BindingFlags.Static | BindingFlags.Public);
+                        foreach (var m in staticMethods)
+                        {
+                            if (!m.IsSpecialName)
+                                continue;
+
+                            methodReturnType = m.ReturnType;
+                            Debug.Assert(methodReturnType != null, "Pretty good assumption");
+
+                            // Method return type should be convertible to target type, 
+                            // and therefore it does not check for the method return type of Nullable<targetType>
+                            // because it cannot be coalesed to targetType without loss of information
+                            if (methodReturnType != targetType && methodReturnType != underlyingNullableTargetType ||
+                                m.Name != "op_Implicit" && m.Name != "op_Explicit")
+                                continue;
+
+                            var operatorParams = m.GetParameters();
+                            Debug.Assert(operatorParams.Length == 1, $"Expected for the conversion operator to have a single param, but found {operatorParams.Length}");
+
+                            methodParamType = operatorParams[0].ParameterType;
+                            if (methodParamType == sourceType)
+                            {
+                                convertMethod = m;
+                                break;
+                            }
+
+                            // Check for all variants of the source type which maybe either underlying nullable or nullable of the source type
+                            // Calculate it once because less work is better.
+                            underlyingOrNullableSourceType ??= underlyingNullableSourceType ?? sourceType.GetNullable();
+                            if (methodParamType == underlyingOrNullableSourceType)
+                            {
+                                convertMethod = m;
+                                break;
+                            }
+                        }
                     }
-                    else
+                }
+
+                // todo: @wip check if we need to add the ParentFlags.Call here or below inside the `convertMethod != null`
+                if (!TryEmit(opExpr, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess))
+                    return false;
+
+                if (convertMethod != null)
+                {
+                    Debug.Assert(methodParamType != null & methodReturnType != null,
+                        "Expecting that actual source and return type are set for the found convercion operator method");
+
+                    // For the both nullable source and target types,
+                    // first check the source value for null and return null without calling the conversion method, otherwise call the conversion method
+                    if (methodParamType == underlyingNullableSourceType &
+                        methodReturnType == underlyingNullableTargetType)
                     {
                         var sourceVarIndex = EmitStoreAndLoadLocalVariableAddress(il, sourceType);
                         EmitMethodCall(il, sourceType.GetNullableHasValueGetterMethod());
 
                         var labelSourceHasValue = il.DefineLabel();
-                        il.Demit(OpCodes.Brtrue_S, labelSourceHasValue); // jump where source has a value
+                        il.Demit(OpCodes.Brtrue_S, labelSourceHasValue); // Jump here when the source has a value
 
-                        // otherwise, emit and load a `new Nullable<TTarget>()` struct (that's why an Init instead of new)
+                        // Otherwise, emit and load the default nullable target without value, e.g. `default(Nullable<TTarget>)`
+                        // and... the conversion is completed, so jumping to the done lable
                         EmitLoadLocalVariable(il, InitValueTypeVariable(il, targetType));
+                        var labelConversionDone = il.DefineLabel();
+                        il.Demit(OpCodes.Br_S, labelConversionDone);
 
-                        // jump to the completion
-                        var labelDone = il.DefineLabel();
-                        il.Demit(OpCodes.Br_S, labelDone);
-
-                        // if source nullable has a value:
+                        // If the nullable source has the value, do the conversion
                         il.DmarkLabel(labelSourceHasValue);
                         EmitLoadLocalVariableAddress(il, sourceVarIndex);
                         il.Demit(OpCodes.Ldfld, sourceType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
 
-                        if (!TryEmitPrimitiveValueConvert(underlyingNullableSourceType, underlyingNullableTargetType, il,
-                            expr.NodeType == ExpressionType.ConvertChecked))
-                            return false;
+                        EmitMethodCallOrVirtualCall(il, convertMethod);
 
                         il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
-                        il.DmarkLabel(labelDone);
+
+                        // We done here.
+                        il.DmarkLabel(labelConversionDone);
+                        return il.EmitPopIfIgnoreResult(parent);
                     }
+
+                    if (methodParamType == underlyingNullableSourceType)
+                    {
+                        EmitStoreAndLoadLocalVariableAddress(il, sourceType);
+                        EmitMethodCall(il, sourceType.GetNullableValueGetterMethod());
+                    }
+                    else if (methodParamType != sourceType) // This is an unlikely case of Target(Source? source)
+                    {
+                        Debug.Assert(methodParamType.GetUnderlyingNullableTypeOrNull() == sourceType, "Expecting that the parameter type is the Nullable<sourceType>");
+                        il.Demit(OpCodes.Newobj, methodParamType.GetNullableConstructor());
+                    }
+
+                    EmitMethodCallOrVirtualCall(il, convertMethod);
+
+                    if (methodReturnType == underlyingNullableTargetType)
+                        il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
+
+                    return il.EmitPopIfIgnoreResult(parent);
                 }
-                else
+
+                if (underlyingNullableSourceType != null &
+                    underlyingNullableTargetType != null)
+                {
+                    var sourceVarIndex = EmitStoreAndLoadLocalVariableAddress(il, sourceType);
+                    EmitMethodCall(il, sourceType.GetNullableHasValueGetterMethod());
+
+                    var labelSourceHasValue = il.DefineLabel();
+                    il.Demit(OpCodes.Brtrue_S, labelSourceHasValue); // Jump here when the source has a value
+
+                    // Otherwise, emit and load the default nullable target without value, e.g. `default(Nullable<TTarget>)`
+                    // and... the conversion is completed, so jumping to the done lable
+                    EmitLoadLocalVariable(il, InitValueTypeVariable(il, targetType));
+                    var labelConversionDone = il.DefineLabel();
+                    il.Demit(OpCodes.Br_S, labelConversionDone);
+
+                    // If the nullable source has the value, do the conversion
+                    il.DmarkLabel(labelSourceHasValue);
+                    EmitLoadLocalVariableAddress(il, sourceVarIndex);
+                    il.Demit(OpCodes.Ldfld, sourceType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+
+                    if (!TryEmitPrimitiveValueConvert(underlyingNullableSourceType, underlyingNullableTargetType, il, expr.NodeType == ExpressionType.ConvertChecked))
+                        return false;
+
+                    il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
+
+                    // We done here.
+                    il.DmarkLabel(labelConversionDone);
+                    return il.EmitPopIfIgnoreResult(parent);
+                }
+
+                if (underlyingNullableTargetType != null) // sourceType is NOT nullable here (checked above)
+                {
+                    // todo: @wip hope the source type is convertible to enum, huh - check with test!
+                    if (!underlyingNullableTargetType.IsEnum &&
+                        !TryEmitPrimitiveValueConvert(sourceType, underlyingNullableTargetType, il, isChecked: false))
+                        return false;
+                    il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
+                }
+                else // targetType is NOT nullable here (checked above)
                 {
                     if (targetType.IsEnum)
                         targetType = Enum.GetUnderlyingType(targetType);
@@ -3304,12 +3308,11 @@ namespace FastExpressionCompiler
                     if (underlyingNullableSourceType != null)
                     {
                         EmitStoreAndLoadLocalVariableAddress(il, sourceType);
-                        EmitMethodCall(il, sourceType.FindNullableValueGetterMethod());
+                        EmitMethodCall(il, sourceType.GetNullableValueGetterMethod());
                     }
 
-                    // cast as the last resort and let's it fail if unlucky
-                    if (!TryEmitPrimitiveValueConvert(underlyingNullableSourceType ?? sourceType, targetType, il,
-                        expr.NodeType == ExpressionType.ConvertChecked))
+                    // Cast as the last resort and let's it fail if unlucky
+                    if (!TryEmitPrimitiveValueConvert(underlyingNullableSourceType ?? sourceType, targetType, il, expr.NodeType == ExpressionType.ConvertChecked))
                     {
                         il.TryEmitBoxOf(sourceType);
                         il.Demit(OpCodes.Castclass, targetType);
@@ -6342,7 +6345,7 @@ namespace FastExpressionCompiler
 
         [RequiresUnreferencedCode(Trimming.Message)]
         [MethodImpl((MethodImplOptions)256)]
-        public static Type GetNonNullable(this Type type) => type.GetGenericArguments()[0];
+        public static Type GetNonNullableUnsafe(this Type type) => type.GetGenericArguments()[0];
 
         [RequiresUnreferencedCode(Trimming.Message)]
         [MethodImpl((MethodImplOptions)256)]
@@ -6482,7 +6485,7 @@ namespace FastExpressionCompiler
 
         [RequiresUnreferencedCode(Trimming.Message)]
         [MethodImpl((MethodImplOptions)256)]
-        internal static MethodInfo FindNullableValueGetterMethod(this Type type) =>
+        internal static MethodInfo GetNullableValueGetterMethod(this Type type) =>
             type == typeof(int?) ? NullableReflected<int>.ValueGetterMethod :
             type == typeof(double?) ? NullableReflected<double>.ValueGetterMethod :
             type.GetProperty("Value").GetMethod;

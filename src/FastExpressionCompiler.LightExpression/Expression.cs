@@ -1934,7 +1934,7 @@ public abstract class Expression
 
         // check for lifted call
         if (lType.IsNullable() && rType.IsNullable() &&
-            ps[0].IsAssignableFrom(lType.GetNonNullable()) && ps[1].IsAssignableFrom(rType.GetNonNullable()) &&
+            ps[0].IsAssignableFrom(lType.GetNonNullableUnsafe()) && ps[1].IsAssignableFrom(rType.GetNonNullableUnsafe()) &&
             type.IsValueType && !type.IsNullable())
         {
             type = type != typeof(bool) || liftToNull ? type.GetNullable() : typeof(bool);
@@ -2086,7 +2086,7 @@ public abstract class Expression
     [RequiresUnreferencedCode(Trimming.Message)]
     private static Type GetCoalesceType(Type left, Type right)
     {
-        var underlyingLeft = left.IsNullable() ? left.GetNonNullable() : null;
+        var underlyingLeft = left.IsNullable() ? left.GetNonNullableUnsafe() : null;
         if (underlyingLeft != null && right.IsImplicitlyConvertibleTo(underlyingLeft))
             return underlyingLeft; // note: For conformity with BCL
 
@@ -2887,7 +2887,7 @@ internal static class TypeTools
 
     [RequiresUnreferencedCode(Trimming.Message)]
     private static bool IsImplicitlyNullableConvertibleTo(Type source, Type target) =>
-        target.IsNullable() && IsImplicitlyConvertibleTo(source.GetNonNullableOrSelf(), target.GetNonNullable());
+        target.IsNullable() && IsImplicitlyConvertibleTo(source.GetNonNullableOrSelf(), target.GetNonNullableUnsafe());
 
     [RequiresUnreferencedCode(Trimming.Message)]
     public static bool IsImplicitlyConvertibleTo(this Type source, Type target) =>

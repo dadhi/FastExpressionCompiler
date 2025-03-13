@@ -131,6 +131,7 @@ public static class Asserts
         public AssertionException(string message) : base(message) { }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static AssertionException AreEqual<T>(T expected, T actual,
 #if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(expected))] 
@@ -143,6 +144,7 @@ public static class Asserts
         Equals(expected, actual) ? null : throw new AssertionException(
             $"Expected `{expectedName} == {actualName}`, but found `{expected?.ToString() ?? "null"} == {actual}`");
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static AssertionException IsNull<T>(T actual,
 #if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(actual))]
@@ -151,6 +153,7 @@ public static class Asserts
         actual is null ? null : throw new AssertionException(
             $"Expected null `{actualName}`, but found `{actual}`");
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static AssertionException IsNull<T>(T? actual,
 #if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(actual))]
@@ -159,6 +162,7 @@ public static class Asserts
         !actual.HasValue ? null : throw new AssertionException(
             $"Expected this nullable `{actualName}` to be null, but found `{actual.Value}`");
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static AssertionException IsNotNull<T>(T actual,
 #if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(actual))]
