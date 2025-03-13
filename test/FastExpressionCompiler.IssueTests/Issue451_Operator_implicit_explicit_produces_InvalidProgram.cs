@@ -40,9 +40,10 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
         return 7;
     }
 
-#if FEAT_453 // todo: @wip #453 draft of the implementation
+
+#if TRUE // todo: @wip #453 draft of the implementation
     public record struct TestFailure(string Message, string TestName, int SourceLineNumber, string TestsName, string TestsFile);
-    public sealed class Context
+    public sealed class TestContext
     {
         public uint EvaluatedTestCount;
         public uint FailedTestCount;
@@ -67,17 +68,37 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
         }
     }
 
-    public void Run(Context c,
-        [CallerFilePath] string sourceFilePath = "")
+    public struct TestMethodContext
     {
-        c.Register(GetType().Name, sourceFilePath);
-        TestFoo(c);
+        public readonly TestContext TestContext;
+        public TestMethodContext(TestContext context) => TestContext = context;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static implicit operator TestMethodContext(TestContext t)
+        {
+            // trick to automatically increment the test count when passing context to the test method
+            t.EvaluatedTestCount += 1;
+            return new TestMethodContext(t);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void Fails(string message)
+        {
+            TestContext.FailedTestCount += 1;
+        }
+    }
+
+    public void Run(TestContext t,
+        [CallerFilePath] string sourceFilePath = "<unknown>")
+    {
+        t.Register(GetType().Name, sourceFilePath);
+        TestFoo(t);
         // TestBar(c);
     }
 
-    public void TestFoo(Context c)
+    public void TestFoo(TestMethodContext t)
     {
-        c.AssertFails("Not implemented");
+        t.Fails("Not implemented");
     }
 #endif
 
