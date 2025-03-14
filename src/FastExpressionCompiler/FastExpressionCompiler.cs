@@ -3226,17 +3226,16 @@ namespace FastExpressionCompiler
 
                     // For the both nullable source and target types,
                     // first check the source value for null and return null without calling the conversion method, otherwise call the conversion method
-                    if (methodParamType == underlyingNullableSourceType &
-                        methodReturnType == underlyingNullableTargetType)
+                    if (methodParamType == underlyingNullableSourceType & underlyingNullableTargetType != null)
                     {
                         var sourceVarIndex = EmitStoreAndLoadLocalVariableAddress(il, sourceType);
                         EmitMethodCall(il, sourceType.GetNullableHasValueGetterMethod());
 
                         var labelSourceHasValue = il.DefineLabel();
-                        il.Demit(OpCodes.Brtrue_S, labelSourceHasValue); // Jump here when the source has a value
+                        il.Demit(OpCodes.Brtrue_S, labelSourceHasValue); // Jump to this label when the source has a value
 
                         // Otherwise, emit and load the default nullable target without value, e.g. `default(Nullable<TTarget>)`
-                        // and... the conversion is completed, so jumping to the done lable
+                        // then... the conversion is completed, so jumping to the done lable
                         EmitLoadLocalVariable(il, InitValueTypeVariable(il, targetType));
                         var labelConversionDone = il.DefineLabel();
                         il.Demit(OpCodes.Br_S, labelConversionDone);
@@ -3248,12 +3247,45 @@ namespace FastExpressionCompiler
 
                         EmitMethodCallOrVirtualCall(il, convertMethod);
 
-                        il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
+                        // Wrap the conversion result into the target type only if the conversion method return the undelying target type,
+                        // otherwise we done
+                        if (methodReturnType == underlyingNullableTargetType)
+                            il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
 
-                        // We done here.
                         il.DmarkLabel(labelConversionDone);
                         return il.EmitPopIfIgnoreResult(parent);
                     }
+
+                    // // For the both nullable source and target types,
+                    // // first check the source value for null and return null without calling the conversion method, otherwise call the conversion method
+                    // if (methodParamType == underlyingNullableSourceType &
+                    //     methodReturnType == underlyingNullableTargetType)
+                    // {
+                    //     var sourceVarIndex = EmitStoreAndLoadLocalVariableAddress(il, sourceType);
+                    //     EmitMethodCall(il, sourceType.GetNullableHasValueGetterMethod());
+
+                    //     var labelSourceHasValue = il.DefineLabel();
+                    //     il.Demit(OpCodes.Brtrue_S, labelSourceHasValue); // Jump here when the source has a value
+
+                    //     // Otherwise, emit and load the default nullable target without value, e.g. `default(Nullable<TTarget>)`
+                    //     // and... the conversion is completed, so jumping to the done lable
+                    //     EmitLoadLocalVariable(il, InitValueTypeVariable(il, targetType));
+                    //     var labelConversionDone = il.DefineLabel();
+                    //     il.Demit(OpCodes.Br_S, labelConversionDone);
+
+                    //     // If the nullable source has the value, do the conversion
+                    //     il.DmarkLabel(labelSourceHasValue);
+                    //     EmitLoadLocalVariableAddress(il, sourceVarIndex);
+                    //     il.Demit(OpCodes.Ldfld, sourceType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+
+                    //     EmitMethodCallOrVirtualCall(il, convertMethod);
+
+                    //     il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
+
+                    //     // We done here.
+                    //     il.DmarkLabel(labelConversionDone);
+                    //     return il.EmitPopIfIgnoreResult(parent);
+                    // }
 
                     if (methodParamType == underlyingNullableSourceType)
                     {
@@ -3274,8 +3306,7 @@ namespace FastExpressionCompiler
                     return il.EmitPopIfIgnoreResult(parent);
                 }
 
-                if (underlyingNullableSourceType != null &
-                    underlyingNullableTargetType != null)
+                if (underlyingNullableSourceType != null & underlyingNullableTargetType != null)
                 {
                     var sourceVarIndex = EmitStoreAndLoadLocalVariableAddress(il, sourceType);
                     EmitMethodCall(il, sourceType.GetNullableHasValueGetterMethod());
