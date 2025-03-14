@@ -3170,12 +3170,10 @@ namespace FastExpressionCompiler
                             if (!m.IsSpecialName)
                                 continue;
 
-                            methodReturnType = m.ReturnType;
-                            Debug.Assert(methodReturnType != null, "Pretty good assumption");
-
                             // Method return type should be convertible to target type, 
                             // and therefore it does not check for the method return type of Nullable<targetType>
                             // because it cannot be coalesed to targetType without loss of information
+                            methodReturnType = m.ReturnType;
                             if (methodReturnType != targetType && methodReturnType != underlyingNullableTargetType ||
                                 m.Name != "op_Implicit" && m.Name != "op_Explicit")
                                 continue;
@@ -3289,7 +3287,7 @@ namespace FastExpressionCompiler
 
                 if (underlyingNullableTargetType != null) // sourceType is NOT nullable here (checked above)
                 {
-                    // todo: @wip hope the source type is convertible to enum, huh - check with test!
+                    // todo: @wip hope the source type is convertible to enum, huh - check with the test!
                     if (!underlyingNullableTargetType.IsEnum &&
                         !TryEmitPrimitiveValueConvert(sourceType, underlyingNullableTargetType, il, isChecked: false))
                         return false;
