@@ -170,6 +170,29 @@ public static class Asserts
         string actualName = "actual") where T : class =>
         actual is not null ? null : throw new AssertionException(
             $"Expected not null `{actualName}`, but was null");
+
+    public static AssertionException Throws<E>(Action action,
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(action))]
+#endif
+        string actionName = "<action to throw>")
+        where E : Exception
+    {
+        try
+        {
+            action();
+        }
+        catch (E)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            throw new AssertionException(
+                $"Expected exception of type `{typeof(E).Name}` in `{actionName}`, but found `{ex.GetType().Name}`: {ex.Message}");
+        }
+        throw new AssertionException($"Expected exception of type `{typeof(E).Name}` in `{actionName}`, but no exception was thrown");
+    }
 }
 
 public interface ITest

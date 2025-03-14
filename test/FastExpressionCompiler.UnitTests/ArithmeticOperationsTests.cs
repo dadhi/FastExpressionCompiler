@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Numerics;
-using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -11,13 +10,13 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
-    [TestFixture]
     public class ArithmeticOperationsTests : ITest
     {
         public int Run()
         {
-            Can_modulus_custom_in_Action();
+            Can_add_string_and_not_string();
 
+            Can_modulus_custom_in_Action();
             Can_modulus_custom();
             Can_sum_bytes_converted_to_ints();
             Can_sum_signed_bytes_converted_to_ints();
@@ -47,12 +46,10 @@ namespace FastExpressionCompiler.UnitTests
 
             Can_calculate_arithmetic_operation_with_vectors();
             Can_add_strings();
-            Can_add_string_and_not_string();
 
             return 29;
         }
 
-        [Test]
         public void Can_sum_bytes_converted_to_ints()
         {
             var a = Parameter(typeof(byte), "a");
@@ -61,11 +58,10 @@ namespace FastExpressionCompiler.UnitTests
 
             var sumFunc = expr.CompileFast(true);
 
-            Assert.IsNotNull(sumFunc);
-            Assert.AreEqual(sumFunc(1, 3), 4);
+            Asserts.IsNotNull(sumFunc);
+            Asserts.AreEqual(sumFunc(1, 3), 4);
         }
 
-        [Test]
         public void Can_sum_signed_bytes_converted_to_ints()
         {
             var a = Parameter(typeof(sbyte), "a");
@@ -74,8 +70,8 @@ namespace FastExpressionCompiler.UnitTests
 
             var sumFunc = expr.CompileFast(true);
 
-            Assert.IsNotNull(sumFunc);
-            Assert.AreEqual(sumFunc(1, 3), 4);
+            Asserts.IsNotNull(sumFunc);
+            Asserts.AreEqual(sumFunc(1, 3), 4);
         }
 
         void AssertAdd<T, R>(T x, T y, R expected, bool convertArgsToResult = false)
@@ -87,11 +83,11 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = expr.CompileFast(true);
 
-            Assert.IsNotNull(f);
-            Assert.AreEqual(expected, f(x, y));
+            Asserts.IsNotNull(f);
+            Asserts.AreEqual(expected, f(x, y));
         }
 
-        [Test]
+
         public void Can_sum_all_primitive_numeric_types_that_define_binary_operator_add()
         {
             AssertAdd<byte, int>(1, 2, 3, true);
@@ -106,13 +102,13 @@ namespace FastExpressionCompiler.UnitTests
             AssertAdd<double, double>(1, 2, 3);
         }
 
-        [Test]
+
         public void Can_sum_with_unchecked_overflow()
         {
             AssertAdd(int.MaxValue, 1, int.MinValue);
         }
 
-        [Test]
+
         public void Can_not_sum_with_checked_overflow()
         {
             var a = Parameter(typeof(int), "a");
@@ -121,8 +117,8 @@ namespace FastExpressionCompiler.UnitTests
 
             var sumFunc = expr.CompileFast(true);
 
-            Assert.IsNotNull(sumFunc);
-            Assert.Throws<OverflowException>(() => sumFunc(int.MaxValue, 1));
+            Asserts.IsNotNull(sumFunc);
+            Asserts.Throws<OverflowException>(() => sumFunc(int.MaxValue, 1));
         }
 
         void AssertSub<T, R>(T x, T y, R expected, bool convertArgsToResult = false)
@@ -134,11 +130,11 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = expr.CompileFast(true);
 
-            Assert.IsNotNull(f);
-            Assert.AreEqual(expected, f(x, y));
+            Asserts.IsNotNull(f);
+            Asserts.AreEqual(expected, f(x, y));
         }
 
-        [Test]
+
         public void Can_substract_all_primitive_numeric_types_that_define_binary_operator_substract()
         {
             AssertSub<byte, int>(5, 1, 4, true);
@@ -153,13 +149,13 @@ namespace FastExpressionCompiler.UnitTests
             AssertSub<double, double>(5, 1, 4);
         }
 
-        [Test]
+
         public void Can_substract_with_unchecked_overflow()
         {
             AssertSub<int, int>(int.MinValue, 1, int.MaxValue);
         }
 
-        [Test]
+
         public void Can_not_substract_with_checked_overflow()
         {
             var a = Parameter(typeof(int), "a");
@@ -168,11 +164,11 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = expr.CompileFast(true);
 
-            Assert.IsNotNull(f);
-            Assert.Throws<OverflowException>(() => f(int.MinValue, 1));
+            Asserts.IsNotNull(f);
+            Asserts.Throws<OverflowException>(() => f(int.MinValue, 1));
         }
 
-        [Test]
+
         public void Can_modulus_custom()
         {
             var a = Parameter(typeof(BigInteger), "a");
@@ -187,11 +183,10 @@ namespace FastExpressionCompiler.UnitTests
             var ff = expr.CompileFast(true);
             ff.PrintIL();
 
-            Assert.AreEqual(new BigInteger(1), fs(7, 6));
-            Assert.AreEqual(new BigInteger(1), ff(7, 6));
+            Asserts.AreEqual(new BigInteger(1), fs(7, 6));
+            Asserts.AreEqual(new BigInteger(1), ff(7, 6));
         }
 
-        [Test, Ignore("todo: fixme")]
         public void Can_modulus_custom_in_Action()
         {
             var a = Parameter(typeof(BigInteger), "a");
@@ -207,7 +202,7 @@ namespace FastExpressionCompiler.UnitTests
             fx(7, 6);
         }
 
-        [Test]
+
         public void Can_modulus()
         {
             var a = Parameter(typeof(short), "a");
@@ -216,11 +211,11 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = expr.CompileFast(true);
 
-            Assert.IsNotNull(f);
-            Assert.AreEqual(1, f(7, 6));
+            Asserts.IsNotNull(f);
+            Asserts.AreEqual(1, f(7, 6));
         }
 
-        [Test]
+
         public void Can_bit_or_1()
         {
             // Expression<Func<int, int, int>> expr = (arg1, arg2) => arg1 | arg2;
@@ -230,12 +225,12 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = expr.CompileFast(true);
 
-            Assert.IsNotNull(f);
-            Assert.AreEqual(1, f(1, 0));
-            Assert.AreEqual(1, f(1, 1));
+            Asserts.IsNotNull(f);
+            Asserts.AreEqual(1, f(1, 0));
+            Asserts.AreEqual(1, f(1, 1));
         }
 
-        [Test]
+
         public void Can_bit_and_1()
         {
             // Expression<Func<int, int, int>> expr = (arg1, arg2) => arg1 & arg2;
@@ -245,12 +240,12 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = expr.CompileFast(true);
 
-            Assert.IsNotNull(f);
-            Assert.AreEqual(1, f(1, 1));
-            Assert.AreEqual(0, f(1, 0));
+            Asserts.IsNotNull(f);
+            Asserts.AreEqual(1, f(1, 1));
+            Asserts.AreEqual(0, f(1, 0));
         }
 
-        [Test]
+
         public void Can_bit_xor_1()
         {
             // Expression<Func<int, int, int>> expr = (arg1, arg2) => arg1 ^ arg2;
@@ -261,11 +256,11 @@ namespace FastExpressionCompiler.UnitTests
             var fs = expr.CompileSys();
             var f = expr.CompileFast(true);
 
-            Assert.IsNotNull(f);
-            Assert.AreEqual(fs(231, 785), f(231, 785));
+            Asserts.IsNotNull(f);
+            Asserts.AreEqual(fs(231, 785), f(231, 785));
         }
 
-        [Test]
+
         public void Can_shift_right_1()
         {
             // Expression<Func<int, int, int>> expr = (arg1, arg2) => arg1 >> arg2;
@@ -276,11 +271,11 @@ namespace FastExpressionCompiler.UnitTests
             var fs = expr.CompileSys();
             var f = expr.CompileFast(true);
 
-            Assert.IsNotNull(f);
-            Assert.AreEqual(fs(231, 785), f(231, 785));
+            Asserts.IsNotNull(f);
+            Asserts.AreEqual(fs(231, 785), f(231, 785));
         }
 
-        [Test]
+
         public void Can_shift_left_1()
         {
             // Expression<Func<int, int, int>> expr = (arg1, arg2) => arg1 << arg2;
@@ -291,8 +286,8 @@ namespace FastExpressionCompiler.UnitTests
             var fs = expr.CompileSys();
             var f = expr.CompileFast(true);
 
-            Assert.IsNotNull(f);
-            Assert.AreEqual(fs(231, 785), f(231, 785));
+            Asserts.IsNotNull(f);
+            Asserts.AreEqual(fs(231, 785), f(231, 785));
         }
 
         void AssertMultiple<T, R>(T x, T y, R expected, Type convertTo = null)
@@ -305,11 +300,11 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = expr.CompileFast(true);
 
-            Assert.IsNotNull(f);
-            Assert.AreEqual(expected, f(x, y));
+            Asserts.IsNotNull(f);
+            Asserts.AreEqual(expected, f(x, y));
         }
 
-        [Test]
+
         public void Can_multiply_all_primitive_numeric_types_that_define_binary_operator_multiply()
         {
             AssertMultiple<sbyte, short>(3, 2, 6, typeof(short));
@@ -324,13 +319,13 @@ namespace FastExpressionCompiler.UnitTests
             AssertMultiple<double, double>(3, 2, 6);
         }
 
-        [Test]
+
         public void Can_multiply_with_unchecked_overflow()
         {
             AssertMultiple<int, int>(int.MaxValue, int.MaxValue, 1);
         }
 
-        [Test]
+
         public void Can_not_multiply_with_checked_overflow()
         {
             var a = Parameter(typeof(int), "a");
@@ -339,8 +334,8 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = expr.CompileFast(true);
 
-            Assert.IsNotNull(f);
-            Assert.Throws<OverflowException>(() => f(int.MaxValue, int.MaxValue));
+            Asserts.IsNotNull(f);
+            Asserts.Throws<OverflowException>(() => f(int.MaxValue, int.MaxValue));
         }
 
         void AssertDivide<T, R>(T x, T y, R expected, bool convertArgsToResult = false)
@@ -353,47 +348,47 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = expr.CompileFast(true);
 
-            Assert.IsNotNull(f);
-            Assert.AreEqual(expected, f(x, y));
+            Asserts.IsNotNull(f);
+            Asserts.AreEqual(expected, f(x, y));
         }
 
-        [Test]
+
         public void Can_divide_bytes()
         {
             AssertDivide<byte, int>(7, 3, 2, true);
         }
 
-        [Test]
+
         public void Can_divide_signed_bytes()
         {
             AssertDivide<sbyte, int>(7, 3, 2, true);
         }
 
-        [Test]
+
         public void Can_sum_decimal_numbers()
         {
             AssertAdd(1.0m, 2.1m, 1.0m + 2.1m);
         }
 
-        [Test]
+
         public void Can_substract_decimal_numbers()
         {
             AssertSub(2.0m, 1.0m, 2.0m - 1.0m);
         }
 
-        [Test]
+
         public void Can_multiply_decimal_numbers()
         {
             AssertMultiple(2.0m, 1.0m, 2.0m * 1.0m);
         }
 
-        [Test]
+
         public void Can_divide_decimal_numbers()
         {
             AssertDivide(2.0m, 1.0m, 2.0m * 1.0m);
         }
 
-        [Test]
+
         public void Can_divide_all_primitive_numeric_types_that_define_binary_operator_divide()
         {
             AssertDivide<short, short>(6, 3, 2);
@@ -406,19 +401,19 @@ namespace FastExpressionCompiler.UnitTests
             AssertDivide<double, double>(6, 3, 2);
         }
 
-        [Test]
+
         public void Can_calculate_arithmetic_operation_on_non_primitive_class()
         {
             AssertAdd(new NonPrimitiveInt32Class(1), new NonPrimitiveInt32Class(2), new NonPrimitiveInt32Class(3));
         }
 
-        [Test]
+
         public void Can_calculate_arithmetic_operation_on_non_primitive_value_type()
         {
             AssertAdd(new NonPrimitiveInt32ValueType(1), new NonPrimitiveInt32ValueType(2), new NonPrimitiveInt32ValueType(3));
         }
 
-        [Test]
+
         public void Can_calculate_arithmetic_function_obeying_operator_precedence()
         {
             System.Linq.Expressions.Expression<Func<int, int, int, int, int>> sExpr = (arg1, arg2, arg3, arg4) => arg1 + arg2 * arg3 / arg4;
@@ -426,11 +421,10 @@ namespace FastExpressionCompiler.UnitTests
 
             var arithmeticFunc = expr.CompileFast(true);
 
-            Assert.IsNotNull(arithmeticFunc);
-            Assert.AreEqual(arithmeticFunc(1, 2, 3, 4), 2);
+            Asserts.IsNotNull(arithmeticFunc);
+            Asserts.AreEqual(arithmeticFunc(1, 2, 3, 4), 2);
         }
 
-        [Test(Description = "Support all types and operations from System.Numerics ")]
         public void Can_calculate_arithmetic_operation_with_vectors()
         {
             System.Linq.Expressions.Expression<Func<Vector2>> sExpr = () => Vector2.One - new Vector2(2.0f, 2.0f);
@@ -438,12 +432,12 @@ namespace FastExpressionCompiler.UnitTests
 
             var vectorMethod = expr.CompileFast(true);
 
-            Assert.IsNotNull(vectorMethod);
+            Asserts.IsNotNull(vectorMethod);
             var result = vectorMethod();
-            Assert.AreEqual(result, new Vector2(-1.0f, -1.0f));
+            Asserts.AreEqual(result, new Vector2(-1.0f, -1.0f));
         }
 
-        [Test]
+
         public void Can_add_strings()
         {
             // AssertAdd("a", "b", "ab");
@@ -454,20 +448,26 @@ namespace FastExpressionCompiler.UnitTests
             var expr = sExpr.FromSysExpression();
 
             var f = expr.CompileFast(true);
-            Assert.AreEqual("ab", f());
+            Asserts.AreEqual("ab", f());
         }
 
-        [Test]
         public void Can_add_string_and_not_string()
         {
             var s1 = "a";
             var s2 = 1;
             System.Linq.Expressions.Expression<Func<string>> sExpr = () => s1 + s2;
             var expr = sExpr.FromSysExpression();
+            expr.PrintCSharp();
 
-            var f = expr.CompileFast(true);
-            Assert.AreEqual("a1", f());
+            var fs = expr.CompileSys();
+            fs.PrintIL();
+            Asserts.AreEqual("a1", fs());
+
+            var ff = expr.CompileFast(true);
+            ff.PrintIL();
+            Asserts.AreEqual("a1", ff());
         }
+
         public override bool Equals(object obj)
         {
             return base.Equals(obj);
