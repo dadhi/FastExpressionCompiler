@@ -3418,7 +3418,8 @@ public abstract class BinaryExpression : Expression
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitBinary(this);
 #endif
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
-        SysExpr.MakeBinary(NodeType, Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted));
+        SysExpr.MakeBinary(NodeType, Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted),
+            IsLiftedToNull, Method, Conversion?.ToLambdaExpression());
 }
 
 public sealed class MethodBinaryExpression : BinaryExpression
@@ -3466,7 +3467,7 @@ internal sealed class LogicalBinaryExpression : BinaryExpression
                 left = TryConvertSysExprToInt(left);
                 right = TryConvertSysExprToInt(right);
             }
-            return SysExpr.MakeBinary(NodeType, left, right);
+            return SysExpr.MakeBinary(NodeType, left, right, IsLiftedToNull, Method, Conversion?.ToLambdaExpression());
         }
         return base.CreateSysExpression(ref exprsConverted);
     }
@@ -3497,7 +3498,8 @@ internal sealed class LiftedToNullBinaryExpression : BinaryExpression
     public override Type Type => typeof(bool?);
     internal LiftedToNullBinaryExpression(ExpressionType nodeType, Expression left, Expression right) : base(left, right) => NodeType = nodeType;
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
-        SysExpr.MakeBinary(NodeType, Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted), true, null);
+        SysExpr.MakeBinary(NodeType, Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted),
+            true, null);
 }
 
 // todo: @perf optimize (split) for the left or right target type
@@ -3559,7 +3561,8 @@ public sealed class OpAssignMethodConversionBinaryExpression : OpAssignBinaryExp
     }
 
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
-        SysExpr.MakeBinary(NodeType, Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted), LiftToNull, Method, Conversion.ToLambdaExpression());
+        SysExpr.MakeBinary(NodeType, Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted),
+            LiftToNull, Method, Conversion.ToLambdaExpression());
 }
 
 public class ElementInit : IArgumentProvider
