@@ -3147,9 +3147,7 @@ namespace FastExpressionCompiler
                     {
                         if (sourceType.IsValueType && !targetType.IsValueType)
                             il.Demit(OpCodes.Box, sourceType);
-#if NETFRAMEWORK
                         il.Demit(OpCodes.Castclass, targetType);
-#endif
                         return il.EmitPopIfIgnoreResult(parent);
                     }
                 }
@@ -3330,9 +3328,7 @@ namespace FastExpressionCompiler
                     if (!TryEmitPrimitiveValueConvert(underlyingNullableSourceType ?? sourceType, targetType, il, expr.NodeType == ExpressionType.ConvertChecked))
                     {
                         il.TryEmitBoxOf(sourceType);
-#if NETFRAMEWORK
                         il.Demit(OpCodes.Castclass, targetType);
-#endif
                     }
                 }
 

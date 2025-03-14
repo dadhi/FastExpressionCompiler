@@ -171,6 +171,24 @@ public static class Asserts
         actual is not null ? null : throw new AssertionException(
             $"Expected not null `{actualName}`, but was null");
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static AssertionException IsTrue(bool actual,
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(actual))]
+#endif
+        string actualName = "actual") =>
+        actual ? null : throw new AssertionException(
+            $"Expected `{actualName} == true`, but was `false`");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static AssertionException IsFalse(bool actual,
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(actual))]
+#endif
+        string actualName = "actual") =>
+        !actual ? null : throw new AssertionException(
+            $"Expected `{actualName} == false`, but was `true`");
+
     public static AssertionException Throws<E>(Action action,
 #if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(action))]

@@ -3,11 +3,9 @@
 using System;
 using System.Linq;
 using System.Linq.Expressions;
-using NUnit.Framework;
 
 namespace FastExpressionCompiler.IssueTests
 {
-    [TestFixture]
     public class Issue357_Invalid_program_exception : ITest
     {
         public int Run()
@@ -19,7 +17,6 @@ namespace FastExpressionCompiler.IssueTests
         static Expression<Func<ActionItem, bool>> Predicate(Id<AccountManager>? value) =>
             x => x.AccountManagerId == value;
 
-        [Test]
         public void Test1()
         {
             var e = Predicate(null);
@@ -45,7 +42,8 @@ namespace FastExpressionCompiler.IssueTests
             //       ]);
 
             var convertMethod = typeof(Id<AccountManager>).GetMethods()
-                .Single(x => !x.IsGenericMethod && x.Name == "op_Implicit" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(Id<AccountManager>) }));
+                .Single(x => !x.IsGenericMethod && x.Name == "op_Implicit" && x.GetParameters().Select(y => y.ParameterType)
+                .SequenceEqual(new[] { typeof(Id<AccountManager>) }));
 
             var actionItem = new ActionItem();
 
@@ -53,12 +51,12 @@ namespace FastExpressionCompiler.IssueTests
             fs.PrintIL();
 
             var xs = fs(actionItem);
-            Assert.IsTrue(xs);
+            Asserts.IsTrue(xs);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
             var xf = ff(actionItem);
-            Assert.IsTrue(xf);
+            Asserts.IsTrue(xf);
         }
 
         public class AccountManager

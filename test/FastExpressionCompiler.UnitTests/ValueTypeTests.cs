@@ -1,5 +1,4 @@
 using System;
-using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -10,7 +9,6 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
-    [TestFixture]
     public class ValueTypeTests : ITest
     {
         public int Run()
@@ -27,7 +25,7 @@ namespace FastExpressionCompiler.UnitTests
             return 8;
         }
 
-        [Test]
+
         public void Should_support_struct_params_with_field_access()
         {
             System.Linq.Expressions.Expression<Func<StructA, int>> sExpr = a => a.N;
@@ -35,10 +33,10 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = expr.CompileFast(true);
 
-            Assert.AreEqual(42, f(new StructA { N = 42 }));
+            Asserts.AreEqual(42, f(new StructA { N = 42 }));
         }
 
-        [Test]
+
         public void Should_support_virtual_calls_on_struct_arguments()
         {
             System.Linq.Expressions.Expression<Func<StructA, string>> sExpr = a => a.ToString();
@@ -46,10 +44,9 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = expr.CompileFast(true);
 
-            Assert.AreEqual("42", f(new StructA { N = 42 }));
+            Asserts.AreEqual("42", f(new StructA { N = 42 }));
         }
 
-        [Test]
         public void Should_support_virtual_calls_with_parameters_on_struct_arguments()
         {
             object aa = new StructA();
@@ -58,10 +55,9 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = expr.CompileFast(true);
 
-            Assert.AreEqual(false, f(new StructA { N = 42 }));
+            Asserts.AreEqual(false, f(new StructA { N = 42 }));
         }
 
-        [Test]
         public void Can_create_struct()
         {
             System.Linq.Expressions.Expression<Func<StructA>> sExpr = () => new StructA();
@@ -69,10 +65,9 @@ namespace FastExpressionCompiler.UnitTests
 
             var newA = expr.CompileFast<Func<StructA>>(true);
 
-            Assert.AreEqual(0, newA().N);
+            Asserts.AreEqual(0, newA().N);
         }
 
-        [Test]
         public void Can_init_struct_member()
         {
             System.Linq.Expressions.Expression<Func<StructA>> sExpr = () => new StructA { N = 43, M = 34, Sf = "sf", Sp = "sp" };
@@ -81,13 +76,13 @@ namespace FastExpressionCompiler.UnitTests
             var newA = expr.CompileFast<Func<StructA>>(true);
 
             var a = newA();
-            Assert.AreEqual(43, a.N);
-            Assert.AreEqual(34, a.M);
-            Assert.AreEqual("sf", a.Sf);
-            Assert.AreEqual("sp", a.Sp);
+            Asserts.AreEqual(43, a.N);
+            Asserts.AreEqual(34, a.M);
+            Asserts.AreEqual("sf", a.Sf);
+            Asserts.AreEqual("sp", a.Sp);
         }
 
-        [Test]
+
         public void Can_get_struct_member()
         {
             System.Linq.Expressions.Expression<Func<int>> sExprN = () => new StructA { N = 43, M = 34, Sf = "sf", Sp = "sp" }.N;
@@ -105,10 +100,10 @@ namespace FastExpressionCompiler.UnitTests
             var sf = exprSf.CompileFast<Func<string>>(true);
             var sp = exprSp.CompileFast<Func<string>>(true);
 
-            Assert.AreEqual(43, n());
-            Assert.AreEqual(34, m());
-            Assert.AreEqual("sf", sf());
-            Assert.AreEqual("sp", sp());
+            Asserts.AreEqual(43, n());
+            Asserts.AreEqual(34, m());
+            Asserts.AreEqual("sf", sf());
+            Asserts.AreEqual("sp", sp());
         }
 
         struct StructA
@@ -121,7 +116,6 @@ namespace FastExpressionCompiler.UnitTests
             public override string ToString() => N.ToString();
         }
 
-        [Test]
         public void Action_using_with_struct_closure_field()
         {
             var s = new SS();
@@ -130,7 +124,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var lambda = expr.CompileFast(ifFastFailedReturnNull: true);
             lambda("a");
-            Assert.AreEqual("a", s.Value);
+            Asserts.AreEqual("a", s.Value);
         }
 
         public void Struct_Convert_to_interface()
@@ -157,7 +151,6 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(new SS { Value = "a" }, ff3(new SS { Value = "a" }));
         }
 
-        [Test]
         public void DateTimeTest()
         {
             var date = new DateTime(2010, 10, 23, 14, 56, 54);
@@ -172,8 +165,8 @@ namespace FastExpressionCompiler.UnitTests
             var compiledResult = lambda.CompileSys()(null);
             var funcResult = func(null);
 
-            Assert.AreEqual(compiledResult, fastCompiledResult);
-            Assert.AreEqual(funcResult, fastCompiledResult);
+            Asserts.AreEqual(compiledResult, fastCompiledResult);
+            Asserts.AreEqual(funcResult, fastCompiledResult);
         }
 
         public struct SS : IDisposable
