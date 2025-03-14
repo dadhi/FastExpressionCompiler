@@ -3105,6 +3105,7 @@ namespace FastExpressionCompiler
                     if (sourceType == targetType || targetType.IsAssignableFrom(sourceType))
                         return TryEmit(opExpr, paramExprs, il, ref closure, setup, parent & ~ParentFlags.InstanceAccess);
 
+                    // required before the fast paths code below
                     if (!TryEmit(opExpr, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess))
                         return false;
 
@@ -3150,6 +3151,10 @@ namespace FastExpressionCompiler
                     var mParams = convertMethod.GetParameters();
                     Debug.Assert(mParams.Length == 1, $"Expected for the conversion operator to have a single param, but found {mParams.Length}");
                     methodParamType = mParams[0].ParameterType;
+
+                    // todo: @wip check if we need to add the ParentFlags.Call here?
+                    if (!TryEmit(opExpr, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess))
+                        return false;
                 }
                 else
                 {
@@ -3199,10 +3204,6 @@ namespace FastExpressionCompiler
                         }
                     }
                 }
-
-                // todo: @wip check if we need to add the ParentFlags.Call here or below inside the `convertMethod != null`
-                if (!TryEmit(opExpr, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess))
-                    return false;
 
                 if (convertMethod != null)
                 {

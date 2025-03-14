@@ -1,13 +1,8 @@
 using System;
-using NUnit.Framework;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Collections.Generic;
 using System.Linq;
-
-
-
-
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -19,7 +14,6 @@ using System.Linq.Expressions;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
-[TestFixture]
 public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
 {
     public int Run()
@@ -128,11 +122,11 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
 
         var fs = e.CompileSys();
         fs.PrintIL();
-        Assert.AreEqual(5, fs());
+        Asserts.AreEqual(5, fs().Value);
 
         var ff = e.CompileFast(false);
         ff.PrintIL();
-        Assert.AreEqual(5, ff());
+        Asserts.AreEqual(5, ff().Value);
     }
 
     public void Convert_nullable_enum_into_the_compatible_to_underlying_nullable_type()
@@ -235,7 +229,6 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
         Asserts.AreEqual(42, fs().Value.Value);
     }
 
-    [Test]
     public void Original_case()
     {
         var ctorMethodInfo = typeof(SampleType).GetConstructors()[0];
@@ -269,7 +262,6 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
         Asserts.IsNull(sample_fast2());
     }
 
-    [Test]
     public void The_operator_method_is_provided_in_Convert()
     {
         var ctorMethodInfo = typeof(SampleType).GetConstructors()[0];
