@@ -3183,14 +3183,18 @@ namespace FastExpressionCompiler
 
                             methodParamType = operatorParams[0].ParameterType;
                             if (methodParamType == sourceType)
-                                convertMethod = m;
-                            else
                             {
-                                // Check for all variants of the source type which maybe either underlying nullable or nullable of the source type
-                                // Calculate it once because less work is better.
-                                underlyingOrNullableSourceType ??= underlyingNullableSourceType ?? sourceType.GetNullable();
-                                if (methodParamType == underlyingOrNullableSourceType)
-                                    convertMethod = m;
+                                convertMethod = m;
+                                break;
+                            }
+
+                            // Check for all variants of the source type which maybe either underlying nullable or nullable of the source type
+                            // Calculate it once because less work is better.
+                            underlyingOrNullableSourceType ??= underlyingNullableSourceType ?? sourceType.GetNullable();
+                            if (methodParamType == underlyingOrNullableSourceType)
+                            {
+                                convertMethod = m;
+                                break;
                             }
                         }
                     }
