@@ -141,10 +141,11 @@ namespace FastExpressionCompiler.UnitTests
 
             var expr = sExpr.FromSysExpression();
 
-            var fs1 = expr.CompileFast(true);
+            var fs1 = expr.CompileSys();
+            fs1.PrintIL();
             Asserts.AreEqual(12, fs1(12));
-
             var ff1 = expr.CompileFast(true);
+            ff1.PrintIL();
             Asserts.AreEqual(12, ff1(12));
 
             var expr2 = sExpr2.FromSysExpression();

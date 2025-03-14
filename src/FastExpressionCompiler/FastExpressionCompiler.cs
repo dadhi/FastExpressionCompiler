@@ -3144,7 +3144,14 @@ namespace FastExpressionCompiler
                     // check only after the checks above for the ValueType or object Type, 
                     // because their require additiona boxing/unboxing operations
                     if (targetType.IsAssignableFrom(sourceType))
+                    {
+                        if (sourceType.IsValueType && !targetType.IsValueType)
+                            il.Demit(OpCodes.Box, sourceType);
+#if NETFRAMEWORK
+                        il.Demit(OpCodes.Castclass, targetType);
+#endif
                         return il.EmitPopIfIgnoreResult(parent);
+                    }
                 }
 
                 // Check implicit / explicit conversion operators on source and then on the target type,
@@ -3323,7 +3330,9 @@ namespace FastExpressionCompiler
                     if (!TryEmitPrimitiveValueConvert(underlyingNullableSourceType ?? sourceType, targetType, il, expr.NodeType == ExpressionType.ConvertChecked))
                     {
                         il.TryEmitBoxOf(sourceType);
+#if NETFRAMEWORK
                         il.Demit(OpCodes.Castclass, targetType);
+#endif
                     }
                 }
 
