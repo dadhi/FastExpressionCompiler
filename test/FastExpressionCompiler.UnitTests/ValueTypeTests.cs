@@ -25,7 +25,6 @@ namespace FastExpressionCompiler.UnitTests
             return 8;
         }
 
-
         public void Should_support_struct_params_with_field_access()
         {
             System.Linq.Expressions.Expression<Func<StructA, int>> sExpr = a => a.N;

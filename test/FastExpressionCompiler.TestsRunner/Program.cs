@@ -9,10 +9,11 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
+            new LightExpression.IssueTests.Issue451_Operator_implicit_explicit_produces_InvalidProgram().Run();
+
             // new Issue357_Invalid_program_exception().Run();
             // new ValueTypeTests().Run();
             // new LightExpression.IssueTestsArithmeticOperationsTests().Run();
-            // new LightExpression.IssueTests.Issue451_Operator_implicit_explicit_produces_InvalidProgram().Run();
 
             // new LightExpression.IssueTests.Issue183_NullableDecimal().Run();
             // new LightExpression.IssueTests.Issue159_NumericConversions().Run();
@@ -357,6 +358,9 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue449_MemberInit_produces_InvalidProgram().Run);
                 Run(new LightExpression.IssueTests.Issue449_MemberInit_produces_InvalidProgram().Run);
+
+                Run(new Issue451_Operator_implicit_explicit_produces_InvalidProgram().Run);
+                Run(new LightExpression.IssueTests.Issue451_Operator_implicit_explicit_produces_InvalidProgram().Run);
 
                 Console.WriteLine($"{Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });

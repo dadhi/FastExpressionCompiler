@@ -330,6 +330,9 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue449_MemberInit_produces_InvalidProgram().Run);
                 Run(new LightExpression.IssueTests.Issue449_MemberInit_produces_InvalidProgram().Run);
 
+                Run(new Issue451_Operator_implicit_explicit_produces_InvalidProgram().Run);
+                Run(new LightExpression.IssueTests.Issue451_Operator_implicit_explicit_produces_InvalidProgram().Run);
+
                 Console.WriteLine($"{Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
 
