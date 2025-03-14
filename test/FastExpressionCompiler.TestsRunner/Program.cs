@@ -9,7 +9,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            new Issue357_Invalid_program_exception().Run();
+            // new Issue357_Invalid_program_exception().Run();
             // new ValueTypeTests().Run();
             // new LightExpression.IssueTestsArithmeticOperationsTests().Run();
             // new LightExpression.IssueTests.Issue451_Operator_implicit_explicit_produces_InvalidProgram().Run();
