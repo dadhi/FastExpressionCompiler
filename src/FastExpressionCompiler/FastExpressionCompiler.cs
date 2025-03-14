@@ -3102,12 +3102,15 @@ namespace FastExpressionCompiler
                 if (convertMethod == null)
                 {
                     // Try fast the special cases which does not require searching for the conversion operators in principle:
-                    if (sourceType == targetType || targetType.IsAssignableFrom(sourceType))
+                    if (parent.IgnoresResult() && (sourceType == targetType || targetType.IsAssignableFrom(sourceType)))
                         return TryEmit(opExpr, paramExprs, il, ref closure, setup, parent & ~ParentFlags.InstanceAccess);
 
-                    // required before the fast paths code below
+                    // Emit the operand before going to the fast checks below
                     if (!TryEmit(opExpr, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess))
                         return false;
+
+                    if (sourceType == targetType)
+                        return il.EmitPopIfIgnoreResult(parent);
 
                     if (targetType == underlyingNullableSourceType)
                     {
@@ -3136,6 +3139,12 @@ namespace FastExpressionCompiler
                         il.Demit(OpCodes.Unbox_Any, targetType);
                         return il.EmitPopIfIgnoreResult(parent);
                     }
+
+                    // At least just check the assingability of the source to the target type, 
+                    // check only after the checks above for the ValueType or object Type, 
+                    // because their require additiona boxing/unboxing operations
+                    if (targetType.IsAssignableFrom(sourceType))
+                        return il.EmitPopIfIgnoreResult(parent);
                 }
 
                 // Check implicit / explicit conversion operators on source and then on the target type,
