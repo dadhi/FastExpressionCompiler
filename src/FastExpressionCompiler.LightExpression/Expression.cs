@@ -3395,7 +3395,7 @@ public abstract class BinaryExpression : Expression
     {
         [RequiresUnreferencedCode(Trimming.Message)]
         get =>
-            NodeType != ExpressionType.Coalesce && NodeType != ExpressionType.Assign &&
+            NodeType != ExpressionType.Coalesce & NodeType != ExpressionType.Assign &&
             Left.Type.IsNullable() &&
             (Method == null || !Method.GetParameters()[0].ParameterType.GetNonRef().IsEquivalentTo(Left.Type));
     }
@@ -3419,7 +3419,7 @@ public abstract class BinaryExpression : Expression
 #endif
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
         SysExpr.MakeBinary(NodeType, Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted),
-            IsLiftedToNull, Method, Conversion?.ToLambdaExpression());
+            false, Method, Conversion?.ToLambdaExpression());
 }
 
 public sealed class MethodBinaryExpression : BinaryExpression
@@ -3467,7 +3467,7 @@ internal sealed class LogicalBinaryExpression : BinaryExpression
                 left = TryConvertSysExprToInt(left);
                 right = TryConvertSysExprToInt(right);
             }
-            return SysExpr.MakeBinary(NodeType, left, right, IsLiftedToNull, Method, Conversion?.ToLambdaExpression());
+            return SysExpr.MakeBinary(NodeType, left, right, false, Method, Conversion?.ToLambdaExpression());
         }
         return base.CreateSysExpression(ref exprsConverted);
     }
