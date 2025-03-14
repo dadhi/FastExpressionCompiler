@@ -9,7 +9,8 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            new LightExpression.UnitTests.ArithmeticOperationsTests().Run();
+            new ValueTypeTests().Run();
+            // new LightExpression.IssueTestsArithmeticOperationsTests().Run();
             // new LightExpression.IssueTests.Issue451_Operator_implicit_explicit_produces_InvalidProgram().Run();
 
             // new LightExpression.IssueTests.Issue183_NullableDecimal().Run();

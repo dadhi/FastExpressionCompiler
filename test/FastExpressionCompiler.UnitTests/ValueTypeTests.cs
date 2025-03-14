@@ -15,6 +15,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public int Run()
         {
+            Struct_Convert_to_interface();
             Should_support_struct_params_with_field_access();
             Should_support_virtual_calls_on_struct_arguments();
             Should_support_virtual_calls_with_parameters_on_struct_arguments();
@@ -22,7 +23,6 @@ namespace FastExpressionCompiler.UnitTests
             Can_init_struct_member();
             Can_get_struct_member();
             Action_using_with_struct_closure_field();
-            Struct_Convert_to_interface();
 
             return 8;
         }
@@ -133,7 +133,6 @@ namespace FastExpressionCompiler.UnitTests
             Assert.AreEqual("a", s.Value);
         }
 
-        [Test]
         public void Struct_Convert_to_interface()
         {
             System.Linq.Expressions.Expression<Func<int, IComparable>> sExpr = a => a;
@@ -141,12 +140,20 @@ namespace FastExpressionCompiler.UnitTests
             System.Linq.Expressions.Expression<Func<SS, IDisposable>> sExpr3 = a => a;
 
             var expr = sExpr.FromSysExpression();
-            var expr2 = sExpr2.FromSysExpression();
-            var expr3 = sExpr3.FromSysExpression();
 
-            Assert.AreEqual(12, expr.CompileFast(ifFastFailedReturnNull: true)(12));
-            Assert.AreEqual(DateTimeKind.Local, expr2.CompileFast(ifFastFailedReturnNull: true)(DateTimeKind.Local));
-            Assert.AreEqual(new SS { Value = "a" }, expr3.CompileFast(ifFastFailedReturnNull: true)(new SS { Value = "a" }));
+            var fs1 = expr.CompileFast(true);
+            Asserts.AreEqual(12, fs1(12));
+
+            var ff1 = expr.CompileFast(true);
+            Asserts.AreEqual(12, ff1(12));
+
+            var expr2 = sExpr2.FromSysExpression();
+            var ff2 = expr2.CompileFast(true);
+            Asserts.AreEqual(DateTimeKind.Local, ff2(DateTimeKind.Local));
+
+            var expr3 = sExpr3.FromSysExpression();
+            var ff3 = expr3.CompileFast(true);
+            Asserts.AreEqual(new SS { Value = "a" }, ff3(new SS { Value = "a" }));
         }
 
         [Test]
