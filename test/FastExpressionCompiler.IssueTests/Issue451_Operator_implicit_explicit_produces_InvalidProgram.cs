@@ -18,6 +18,7 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
 {
     public int Run()
     {
+        ConvertChecked_int_to_byte_enum();
         Convert_int_to_byte_enum();
         Convert_byte_to_enum();
         Convert_byte_to_nullable_enum();
@@ -35,7 +36,7 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
         Original_case();
         The_operator_method_is_provided_in_Convert();
 
-        return 10;
+        return 12;
     }
 
 
@@ -146,6 +147,25 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
         ff.PrintIL();
         Asserts.AreEqual((Hey)Byte.MaxValue, ff(Byte.MaxValue));
         Asserts.AreEqual(default(Hey), ff(Byte.MaxValue + 1));
+    }
+
+    public void ConvertChecked_int_to_byte_enum()
+    {
+        var n = Parameter(typeof(int), "n");
+        var conversion = ConvertChecked(n, typeof(Hey));
+        var e = Lambda<Func<int, Hey>>(conversion, n);
+        e.PrintCSharp();
+
+        var fs = e.CompileSys();
+        fs.PrintIL();
+        var x = fs(Byte.MaxValue);
+        Asserts.AreEqual((Hey)Byte.MaxValue, fs(Byte.MaxValue));
+        Asserts.Throws<OverflowException>(() => fs(Byte.MaxValue + 1));
+
+        var ff = e.CompileFast(false);
+        ff.PrintIL();
+        Asserts.AreEqual((Hey)Byte.MaxValue, ff(Byte.MaxValue));
+        Asserts.Throws<OverflowException>(() => ff(Byte.MaxValue + 1));
     }
 
     public struct SampleType
