@@ -1934,7 +1934,7 @@ public abstract class Expression
 
         // check for lifted call
         if (lType.IsNullable() && rType.IsNullable() &&
-            ps[0].IsAssignableFrom(lType.GetNonNullable()) && ps[1].IsAssignableFrom(rType.GetNonNullable()) &&
+            ps[0].IsAssignableFrom(lType.GetNonNullableUnsafe()) && ps[1].IsAssignableFrom(rType.GetNonNullableUnsafe()) &&
             type.IsValueType && !type.IsNullable())
         {
             type = type != typeof(bool) || liftToNull ? type.GetNullable() : typeof(bool);
@@ -2086,7 +2086,7 @@ public abstract class Expression
     [RequiresUnreferencedCode(Trimming.Message)]
     private static Type GetCoalesceType(Type left, Type right)
     {
-        var underlyingLeft = left.IsNullable() ? left.GetNonNullable() : null;
+        var underlyingLeft = left.IsNullable() ? left.GetNonNullableUnsafe() : null;
         if (underlyingLeft != null && right.IsImplicitlyConvertibleTo(underlyingLeft))
             return underlyingLeft; // note: For conformity with BCL
 
@@ -2838,15 +2838,6 @@ internal static class TypeTools
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public static Type GetNonNullable(this Type type) => type.GetGenericArguments()[0];
-
-    [RequiresUnreferencedCode(Trimming.Message)]
-    public static Type GetNonNullableOrSelf(this Type type) => type.IsNullable() ? type.GetGenericArguments()[0] : type;
-
-    [RequiresUnreferencedCode(Trimming.Message)]
-    public static Type GetNullable(this Type type) => typeof(Nullable<>).MakeGenericType(type);
-
-    [RequiresUnreferencedCode(Trimming.Message)]
     public static bool IsArithmetic(this Type type)
     {
         type = type.GetNonNullableOrSelf();
@@ -2892,11 +2883,11 @@ internal static class TypeTools
     internal static bool IsImplicitlyBoxingConvertibleTo(this Type source, Type target) =>
         source.IsValueType &&
         (target == typeof(object) || target == typeof(ValueType)) ||
-         source.IsEnum && target == typeof(Enum);
+        source.IsEnum && target == typeof(Enum);
 
     [RequiresUnreferencedCode(Trimming.Message)]
     private static bool IsImplicitlyNullableConvertibleTo(Type source, Type target) =>
-        target.IsNullable() && IsImplicitlyConvertibleTo(source.GetNonNullableOrSelf(), target.GetNonNullable());
+        target.IsNullable() && IsImplicitlyConvertibleTo(source.GetNonNullableOrSelf(), target.GetNonNullableUnsafe());
 
     [RequiresUnreferencedCode(Trimming.Message)]
     public static bool IsImplicitlyConvertibleTo(this Type source, Type target) =>
@@ -3100,7 +3091,6 @@ internal static class TypeTools
     {
         var s = Type.GetTypeCode(source);
         var t = Type.GetTypeCode(target);
-
         switch (s)
         {
             case TypeCode.SByte:
@@ -3405,7 +3395,7 @@ public abstract class BinaryExpression : Expression
     {
         [RequiresUnreferencedCode(Trimming.Message)]
         get =>
-            NodeType != ExpressionType.Coalesce && NodeType != ExpressionType.Assign &&
+            NodeType != ExpressionType.Coalesce & NodeType != ExpressionType.Assign &&
             Left.Type.IsNullable() &&
             (Method == null || !Method.GetParameters()[0].ParameterType.GetNonRef().IsEquivalentTo(Left.Type));
     }
@@ -3428,7 +3418,8 @@ public abstract class BinaryExpression : Expression
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitBinary(this);
 #endif
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
-        SysExpr.MakeBinary(NodeType, Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted));
+        SysExpr.MakeBinary(NodeType, Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted),
+            false, Method, Conversion?.ToLambdaExpression());
 }
 
 public sealed class MethodBinaryExpression : BinaryExpression
@@ -3471,12 +3462,12 @@ internal sealed class LogicalBinaryExpression : BinaryExpression
         {
             var left = Left.ToExpression(ref exprsConverted);
             var right = Right.ToExpression(ref exprsConverted);
-            if (left.Type.GetTypeInfo().IsPrimitive)
+            if (left.Type.IsPrimitive)
             {
                 left = TryConvertSysExprToInt(left);
                 right = TryConvertSysExprToInt(right);
             }
-            return SysExpr.MakeBinary(NodeType, left, right);
+            return SysExpr.MakeBinary(NodeType, left, right, false, Method, Conversion?.ToLambdaExpression());
         }
         return base.CreateSysExpression(ref exprsConverted);
     }
@@ -3507,7 +3498,8 @@ internal sealed class LiftedToNullBinaryExpression : BinaryExpression
     public override Type Type => typeof(bool?);
     internal LiftedToNullBinaryExpression(ExpressionType nodeType, Expression left, Expression right) : base(left, right) => NodeType = nodeType;
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
-        SysExpr.MakeBinary(NodeType, Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted), true, null);
+        SysExpr.MakeBinary(NodeType, Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted),
+            true, null);
 }
 
 // todo: @perf optimize (split) for the left or right target type
@@ -3569,7 +3561,8 @@ public sealed class OpAssignMethodConversionBinaryExpression : OpAssignBinaryExp
     }
 
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
-        SysExpr.MakeBinary(NodeType, Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted), LiftToNull, Method, Conversion.ToLambdaExpression());
+        SysExpr.MakeBinary(NodeType, Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted),
+            LiftToNull, Method, Conversion.ToLambdaExpression());
 }
 
 public class ElementInit : IArgumentProvider

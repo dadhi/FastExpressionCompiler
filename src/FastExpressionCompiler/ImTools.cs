@@ -303,7 +303,6 @@ public static class SmallList
         }
     }
 
-    // todo: @wip implement Enumerate and Enumerator for SmallList2
     /// <summary>Enumerates all the items</summary>
     public static SmallList4Enumerable<TItem> Enumerate<TItem>(this ref SmallList4<TItem> list) => new SmallList4Enumerable<TItem>(list);
 

@@ -16,8 +16,9 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            ConvertDecimalParamToNullableDecimal();
             ConvertNullNullableParamToNullableDecimal_CheckAgainstTheSystemExprCompile();
+
+            ConvertDecimalParamToNullableDecimal();
             ConvertDecimalPropertyToNullableDecimal();
             ConvertNullableBytePropertyToNullableDecimal();
             NullableDecimalIssue();
@@ -40,17 +41,18 @@ namespace FastExpressionCompiler.IssueTests
         public void ConvertNullNullableParamToNullableDecimal_CheckAgainstTheSystemExprCompile()
         {
             var ps = Parameter(typeof(byte?), "b");
-            var fs = Lambda<Func<byte?, decimal?>>(
-                Convert(ps, typeof(decimal?)), ps)
-                .CompileSys();
-            var xs = fs(null);
-            Assert.IsNull(xs);
+            var e = Lambda<Func<byte?, decimal?>>(Convert(ps, typeof(decimal?)), ps);
+            e.PrintCSharp();
 
-            var param = Parameter(typeof(byte?), "b");
-            var ff = Lambda<Func<byte?, decimal?>>(Convert(param, typeof(decimal?)), param)
-                .CompileFast(true);
+            var fs = e.CompileSys();
+            fs.PrintIL();
+            var xs = fs(null);
+            Asserts.IsNull(xs);
+
+            var ff = e.CompileFast(true);
+            ff.PrintIL();
             var xf = ff(null);
-            Assert.IsNull(xf);
+            Asserts.IsNull(xf);
         }
 
         [Test]
@@ -59,7 +61,7 @@ namespace FastExpressionCompiler.IssueTests
             var param = Parameter(typeof(DecimalContainer), "d");
 
             var f = Lambda<Func<DecimalContainer, decimal?>>(
-                Convert(Property(param, nameof(DecimalContainer.Decimal)), typeof(decimal?)), 
+                Convert(Property(param, nameof(DecimalContainer.Decimal)), typeof(decimal?)),
                 param
                 ).CompileFast(true);
 
@@ -91,7 +93,7 @@ namespace FastExpressionCompiler.IssueTests
             var param = Parameter(typeof(DecimalContainer));
 
             var body = Equal(
-                Convert(Property(param, nameof(DecimalContainer.NullableByte)), typeof(decimal?)), 
+                Convert(Property(param, nameof(DecimalContainer.NullableByte)), typeof(decimal?)),
                 Convert(Property(param, nameof(DecimalContainer.Decimal)), typeof(decimal?)));
 
             var f = Lambda<Func<DecimalContainer, bool>>(body, param).CompileFast(true);

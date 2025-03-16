@@ -123,6 +123,96 @@ public static class TestTools
     }
 }
 
+// todo: @wip @feat #453 replacing the last NUnit bone of Assert
+public static class Asserts
+{
+    public sealed class AssertionException : Exception
+    {
+        public AssertionException(string message) : base(message) { }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static AssertionException AreEqual<T>(T expected, T actual,
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(expected))] 
+#endif
+        string expectedName = "expected",
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(actual))]
+#endif
+        string actualName = "actual") =>
+        Equals(expected, actual) ? null : throw new AssertionException(
+            $"Expected `{expectedName} == {actualName}`, but found `{expected?.ToString() ?? "null"} == {actual}`");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static AssertionException IsNull<T>(T actual,
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(actual))]
+#endif
+        string actualName = "actual") where T : class =>
+        actual is null ? null : throw new AssertionException(
+            $"Expected null `{actualName}`, but found `{actual}`");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static AssertionException IsNull<T>(T? actual,
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(actual))]
+#endif
+        string actualName = "actual") where T : struct =>
+        !actual.HasValue ? null : throw new AssertionException(
+            $"Expected this nullable `{actualName}` to be null, but found `{actual.Value}`");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static AssertionException IsNotNull<T>(T actual,
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(actual))]
+#endif
+        string actualName = "actual") where T : class =>
+        actual is not null ? null : throw new AssertionException(
+            $"Expected not null `{actualName}`, but was null");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static AssertionException IsTrue(bool actual,
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(actual))]
+#endif
+        string actualName = "actual") =>
+        actual ? null : throw new AssertionException(
+            $"Expected `{actualName} == true`, but was `false`");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static AssertionException IsFalse(bool actual,
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(actual))]
+#endif
+        string actualName = "actual") =>
+        !actual ? null : throw new AssertionException(
+            $"Expected `{actualName} == false`, but was `true`");
+
+    public static AssertionException Throws<E>(Action action,
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(action))]
+#endif
+        string actionName = "<action to throw>")
+        where E : Exception
+    {
+        try
+        {
+            action();
+        }
+        catch (E)
+        {
+            return null;
+        }
+        catch (Exception ex)
+        {
+            throw new AssertionException(
+                $"Expected exception of type `{typeof(E).Name}` in `{actionName}`, but found `{ex.GetType().Name}`: {ex.Message}");
+        }
+        throw new AssertionException($"Expected exception of type `{typeof(E).Name}` in `{actionName}`, but no exception was thrown");
+    }
+}
+
 public interface ITest
 {
     int Run();
