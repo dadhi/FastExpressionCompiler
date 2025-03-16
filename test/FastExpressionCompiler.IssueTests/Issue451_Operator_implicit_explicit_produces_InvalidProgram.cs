@@ -132,17 +132,20 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
 
     public void Convert_int_to_byte_enum()
     {
-        var conversion = Convert(Constant((int)3, typeof(int)), typeof(Hey));
-        var e = Lambda<Func<Hey>>(conversion);
+        var n = Parameter(typeof(int), "n");
+        var conversion = Convert(n, typeof(Hey));
+        var e = Lambda<Func<int, Hey>>(conversion, n);
         e.PrintCSharp();
 
         var fs = e.CompileSys();
         fs.PrintIL();
-        // Asserts.AreEqual(Hey.Sailor, fs());
+        Asserts.AreEqual((Hey)Byte.MaxValue, fs(Byte.MaxValue));
+        Asserts.AreEqual(default(Hey), fs(Byte.MaxValue + 1));
 
         var ff = e.CompileFast(false);
         ff.PrintIL();
-        // Asserts.AreEqual(Hey.Sailor, ff());
+        Asserts.AreEqual((Hey)Byte.MaxValue, ff(Byte.MaxValue));
+        Asserts.AreEqual(default(Hey), ff(Byte.MaxValue + 1));
     }
 
     public struct SampleType
