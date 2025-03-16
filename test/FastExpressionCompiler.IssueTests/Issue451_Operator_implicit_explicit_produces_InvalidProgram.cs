@@ -138,7 +138,7 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
         public List<TestFailure> Failures = new();
     }
 
-    public enum AssertKind : byte
+    public enum AssertKind
     {
         CommandedToFail,
         IsTrue,
