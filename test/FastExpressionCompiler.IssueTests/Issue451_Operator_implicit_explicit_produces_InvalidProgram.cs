@@ -44,7 +44,6 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
 
     public struct FooBarTests : ITest
     {
-        // todo: @wip `t` should be passed with the name of the test and its file set externally
         public void Run(TestRunContext t)
         {
             TestFoo(t);
@@ -82,28 +81,37 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
     }
 
     public record struct TestFailure(
-        string TestName, int SourceLineNumber,
+        string TestMethodName,
+        int SourceLineNumber,
         AssertKind Kind,
         object actual, string actualName,
         object optionalExpected, string optionalExpectedName);
 
     public record struct TestStats(
-        string TestsName, string TestsFile,
-        Exception TestStopException, int TestCount, Range FailuresRange);
+        string TestsName,
+        string TestsFile,
+        Exception TestStopException,
+        int TestCount,
+        Range FailuresRange);
 
     public enum TestRunTracking
     {
-        TrackOnlyFailedTests = 0,
+        TrackFailedTestsOnly = 0,
         TrackAllTests,
     }
 
-    // Per-thread context
+    /// <summary>Per-thread context, accumulating the stats and failures in its Run method.</summary>
     public sealed class TestRunContext
     {
-        public void Run(ITest test, TestRunTracking tracking = TestRunTracking.TrackOnlyFailedTests)
+        public int TotalTestCount;
+        // todo: @perf it may use ImTools.SmallList for the stats and failures to more local access to the Count
+        public List<TestStats> Stats = new();
+        public List<TestFailure> Failures = new();
+
+        public void Run(ITest test, TestRunTracking tracking = TestRunTracking.TrackFailedTestsOnly)
         {
             var totalTestCount = TotalTestCount;
-            var failuresCount = FailuresCount;
+            var failureCount = Failures.Count;
             Exception testStopException = null;
             try
             {
@@ -114,28 +122,23 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
                 testStopException = ex;
             }
 
-            // todo: @wip is there a more performant way to get the test name and file?
+            var newFailureCount = Failures.Count;
             if (testStopException != null ||
                 tracking == TestRunTracking.TrackAllTests ||
-                tracking == TestRunTracking.TrackOnlyFailedTests & failuresCount < FailuresCount)
+                tracking == TestRunTracking.TrackFailedTestsOnly & failureCount < newFailureCount)
             {
+                // todo: @wip is there a more performant way to get the test name and file?
                 var testsType = test.GetType();
                 var testsName = testsType.Name;
                 var testsFile = new Uri(testsType.Assembly.Location).LocalPath;
 
                 var testCount = TotalTestCount - totalTestCount;
-                var failuresRange = failuresCount..FailuresCount;
+                var failuresRange = failureCount..newFailureCount;
 
                 var stats = new TestStats(testsName, testsFile, testStopException, testCount, failuresRange);
                 Stats.Add(stats);
             }
         }
-
-        // Stats gathered while running with each failed assertion
-        public int TotalTestCount;
-        public int FailuresCount;
-        public List<TestStats> Stats = new();
-        public List<TestFailure> Failures = new();
     }
 
     public enum AssertKind
