@@ -40,64 +40,152 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
     }
 
 
-#if FALSE // todo: @wip #453 draft of the implementation
-    public record struct TestFailure(string Message, string TestName, int SourceLineNumber, string TestsName, string TestsFile);
-    public sealed class TestContext
+#if TRUE // todo: @wip #453 draft of the implementation
+
+    public struct FooBarTests : ITest
     {
-        public uint EvaluatedTestCount;
-        public uint FailedTestCount;
-        public List<TestFailure> Failures = new();
-
-        public string CurrentTestsName;
-        public string CurrentTestsFile;
-
-        internal void AssertFails(string message,
-            [CallerMemberName] string testName = "",
-            [CallerLineNumber] int sourceLineNumber = 0)
+        // todo: @wip `t` should be passed with the name of the test and its file set externally
+        public void Run(TestRunContext t)
         {
-            ++EvaluatedTestCount;
-            ++FailedTestCount;
-            Failures.Add(new TestFailure(message, testName, sourceLineNumber, CurrentTestsName, CurrentTestsFile));
+            TestFoo(t);
+            TestBar(t);
         }
 
-        internal void Register(string testsName, string sourceFilePath)
+        public void TestFoo(TestMethodContext t)
         {
-            CurrentTestsName = testsName;
-            CurrentTestsFile = sourceFilePath;
+            t.IsTrue(false);
+            t.Fails("Not implemented");
+        }
+
+        public void TestBar(TestMethodContext t)
+        {
+            t.Fails("Not implemented");
         }
     }
 
+    public interface ITest
+    {
+        void Run(TestRunContext t);
+    }
+
+    public static class TestRunner
+    {
+        // returns number of the tests
+        public static int Run()
+        {
+            var ctx = new TestRunContext();
+
+            ctx.Run(new FooBarTests());
+
+            return ctx.TotalTestCount;
+        }
+    }
+
+    public record struct TestFailure(
+        string TestName, int SourceLineNumber,
+        AssertKind Kind,
+        object actual, string actualName,
+        object optionalExpected, string optionalExpectedName);
+
+    public record struct TestStats(
+        string TestsName, string TestsFile,
+        Exception TestStopException, int TestCount, Range FailuresRange);
+
+    public enum TestRunTracking
+    {
+        TrackOnlyFailedTests = 0,
+        TrackAllTests,
+    }
+
+    // Per-thread context
+    public sealed class TestRunContext
+    {
+        public void Run(ITest test, TestRunTracking tracking = TestRunTracking.TrackOnlyFailedTests)
+        {
+            var totalTestCount = TotalTestCount;
+            var failuresCount = FailuresCount;
+            Exception testStopException = null;
+            try
+            {
+                test.Run(this);
+            }
+            catch (Exception ex)
+            {
+                testStopException = ex;
+            }
+
+            // todo: @wip is there a more performant way to get the test name and file?
+            if (testStopException != null ||
+                tracking == TestRunTracking.TrackAllTests ||
+                tracking == TestRunTracking.TrackOnlyFailedTests & failuresCount < FailuresCount)
+            {
+                var testsType = test.GetType();
+                var testsName = testsType.Name;
+                var testsFile = new Uri(testsType.Assembly.Location).LocalPath;
+
+                var testCount = TotalTestCount - totalTestCount;
+                var failuresRange = failuresCount..FailuresCount;
+
+                var stats = new TestStats(testsName, testsFile, testStopException, testCount, failuresRange);
+                Stats.Add(stats);
+            }
+        }
+
+        // Stats gathered while running with each failed assertion
+        public int TotalTestCount;
+        public int FailuresCount;
+        public List<TestStats> Stats = new();
+        public List<TestFailure> Failures = new();
+    }
+
+    public enum AssertKind : byte
+    {
+        CommandedToFail,
+        IsTrue,
+        IsFalse,
+        AreEqual,
+        AreNotEqual,
+        Throws,
+    }
+
+    // Wrapper for the context per test method
     public struct TestMethodContext
     {
-        public readonly TestContext TestContext;
-        public TestMethodContext(TestContext context) => TestContext = context;
+        public readonly TestRunContext TestRunContext;
+        public TestMethodContext(TestRunContext testRunContext) => TestRunContext = testRunContext;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static implicit operator TestMethodContext(TestContext t)
+        public static implicit operator TestMethodContext(TestRunContext t)
         {
-            // trick to automatically increment the test count when passing context to the test method
-            t.EvaluatedTestCount += 1;
+            // A trick to automatically increment the test count when passing context to the test method
+            t.TotalTestCount += 1;
             return new TestMethodContext(t);
         }
 
+        /// <summary>Always failes with the provided message</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Fails(string message)
+        public void Fails(string message,
+            [CallerMemberName] string testName = "",
+            [CallerLineNumber] int sourceLineNumber = 0)
         {
-            TestContext.FailedTestCount += 1;
+            var failure = new TestFailure(testName, sourceLineNumber, AssertKind.CommandedToFail, null, message, null, null);
+            TestRunContext.Failures.Add(failure);
         }
-    }
 
-    public void Run(TestContext t,
-        [CallerFilePath] string sourceFilePath = "<unknown>")
-    {
-        t.Register(GetType().Name, sourceFilePath);
-        TestFoo(t);
-        // TestBar(c);
-    }
+        /// <summary>Method returns the Assert result to ptentially be used by the User for the latter test logic, e.g. returning early</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool IsTrue(bool actual,
+            [CallerArgumentExpression(nameof(actual))] string actualName = "actual",
+            [CallerMemberName] string testName = "",
+            [CallerLineNumber] int sourceLineNumber = 0)
+        {
+            if (actual)
+                return true;
 
-    public void TestFoo(TestMethodContext t)
-    {
-        t.Fails("Not implemented");
+            var failure = new TestFailure(testName, sourceLineNumber, AssertKind.IsTrue, actual, actualName, null, null);
+            TestRunContext.Failures.Add(failure);
+            return false;
+        }
     }
 #endif
 
