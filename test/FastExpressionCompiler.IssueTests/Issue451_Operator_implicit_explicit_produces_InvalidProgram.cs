@@ -92,7 +92,8 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
         string TestsFile,
         Exception TestStopException,
         int TestCount,
-        Range FailuresRange);
+        int FirstFailureIndex,
+        int FailureCount);
 
     public enum TestRunTracking
     {
@@ -122,10 +123,10 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
                 testStopException = ex;
             }
 
-            var newFailureCount = Failures.Count;
+            var testFailureCount = Failures.Count - failureCount;
             if (testStopException != null ||
                 tracking == TestRunTracking.TrackAllTests ||
-                tracking == TestRunTracking.TrackFailedTestsOnly & failureCount < newFailureCount)
+                tracking == TestRunTracking.TrackFailedTestsOnly & testFailureCount > 0)
             {
                 // todo: @wip is there a more performant way to get the test name and file?
                 var testsType = test.GetType();
@@ -133,9 +134,8 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
                 var testsFile = new Uri(testsType.Assembly.Location).LocalPath;
 
                 var testCount = TotalTestCount - totalTestCount;
-                var failuresRange = failureCount..newFailureCount;
 
-                var stats = new TestStats(testsName, testsFile, testStopException, testCount, failuresRange);
+                var stats = new TestStats(testsName, testsFile, testStopException, testCount, failureCount, testFailureCount);
                 Stats.Add(stats);
             }
         }
@@ -168,8 +168,14 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
         /// <summary>Always failes with the provided message</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Fails(string message,
-            [CallerMemberName] string testName = "",
-            [CallerLineNumber] int sourceLineNumber = 0)
+#if NETCOREAPP3_0_OR_GREATER
+            [CallerMemberName]
+#endif
+            string testName = "<test>",
+#if NETCOREAPP3_0_OR_GREATER
+            [CallerLineNumber]
+#endif
+            int sourceLineNumber = -1)
         {
             var failure = new TestFailure(testName, sourceLineNumber, AssertKind.CommandedToFail, null, message, null, null);
             TestRunContext.Failures.Add(failure);
@@ -178,9 +184,18 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
         /// <summary>Method returns the Assert result to ptentially be used by the User for the latter test logic, e.g. returning early</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool IsTrue(bool actual,
-            [CallerArgumentExpression(nameof(actual))] string actualName = "actual",
-            [CallerMemberName] string testName = "",
-            [CallerLineNumber] int sourceLineNumber = 0)
+#if NETCOREAPP3_0_OR_GREATER
+            [CallerArgumentExpression(nameof(actual))]
+#endif
+            string actualName = "<actual>",
+#if NETCOREAPP3_0_OR_GREATER
+            [CallerMemberName]
+#endif
+            string testName = "<test>",
+#if NETCOREAPP3_0_OR_GREATER
+            [CallerLineNumber]
+#endif
+            int sourceLineNumber = -1)
         {
             if (actual)
                 return true;
