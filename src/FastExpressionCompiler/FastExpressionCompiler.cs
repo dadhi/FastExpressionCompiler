@@ -3306,7 +3306,6 @@ namespace FastExpressionCompiler
 
                 if (underlyingNullableTargetType != null) // sourceType is NOT nullable here (checked above)
                 {
-                    // todo: @wip hope the source type is convertible to enum, huh - check with the test!
                     if (!underlyingNullableTargetType.IsEnum &&
                         !TryEmitPrimitiveValueConvert(sourceType, underlyingNullableTargetType, il, isChecked: false))
                         return false;
@@ -3315,7 +3314,11 @@ namespace FastExpressionCompiler
                 else // targetType is NOT nullable here (checked above)
                 {
                     if (targetType.IsEnum)
+                    {
                         targetType = Enum.GetUnderlyingType(targetType);
+                        if (targetType == sourceType)
+                            return il.EmitPopIfIgnoreResult(parent);
+                    }
 
                     // fixes #159
                     if (underlyingNullableSourceType != null)

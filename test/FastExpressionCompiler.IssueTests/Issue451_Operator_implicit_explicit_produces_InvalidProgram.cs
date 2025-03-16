@@ -18,6 +18,10 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
 {
     public int Run()
     {
+        Convert_int_to_byte_enum();
+        Convert_byte_to_enum();
+        Convert_byte_to_nullable_enum();
+
         Convert_nullable_to_nullable_given_the_conv_op_of_underlying_to_underlying();
 
         Convert_nullable_enum_into_the_underlying_nullable_type();
@@ -31,11 +35,11 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
         Original_case();
         The_operator_method_is_provided_in_Convert();
 
-        return 7;
+        return 10;
     }
 
 
-#if TRUE // todo: @wip #453 draft of the implementation
+#if FALSE // todo: @wip #453 draft of the implementation
     public record struct TestFailure(string Message, string TestName, int SourceLineNumber, string TestsName, string TestsFile);
     public sealed class TestContext
     {
@@ -95,6 +99,51 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
         t.Fails("Not implemented");
     }
 #endif
+
+    public void Convert_byte_to_nullable_enum()
+    {
+        var conversion = Convert(Constant((byte)5, typeof(byte)), typeof(Hey?));
+        var e = Lambda<Func<Hey?>>(conversion);
+        e.PrintCSharp();
+
+        var fs = e.CompileSys();
+        fs.PrintIL();
+        Asserts.AreEqual(Hey.Sailor, fs());
+
+        var ff = e.CompileFast(false);
+        ff.PrintIL();
+        Asserts.AreEqual(Hey.Sailor, ff());
+    }
+
+    public void Convert_byte_to_enum()
+    {
+        var conversion = Convert(Constant((byte)5, typeof(byte)), typeof(Hey));
+        var e = Lambda<Func<Hey>>(conversion);
+        e.PrintCSharp();
+
+        var fs = e.CompileSys();
+        fs.PrintIL();
+        Asserts.AreEqual(Hey.Sailor, fs());
+
+        var ff = e.CompileFast(false);
+        ff.PrintIL();
+        Asserts.AreEqual(Hey.Sailor, ff());
+    }
+
+    public void Convert_int_to_byte_enum()
+    {
+        var conversion = Convert(Constant((int)3, typeof(int)), typeof(Hey));
+        var e = Lambda<Func<Hey>>(conversion);
+        e.PrintCSharp();
+
+        var fs = e.CompileSys();
+        fs.PrintIL();
+        // Asserts.AreEqual(Hey.Sailor, fs());
+
+        var ff = e.CompileFast(false);
+        ff.PrintIL();
+        // Asserts.AreEqual(Hey.Sailor, ff());
+    }
 
     public struct SampleType
     {
