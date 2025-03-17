@@ -53,12 +53,12 @@ public class Issue439_Support_unused_Field_access_in_Block : ITest
         fs.PrintIL();
 
         var sr = fs();
-        Assert.AreEqual(42, sr);
+        Asserts.AreEqual(42, sr);
 
         var ff = expr.CompileFast(false);
         ff.PrintIL();
 
         var fr = ff();
-        Assert.AreEqual(42, fr);
+        Asserts.AreEqual(42, fr);
     }
 }

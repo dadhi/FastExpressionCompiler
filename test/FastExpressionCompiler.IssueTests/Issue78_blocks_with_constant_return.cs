@@ -32,8 +32,8 @@ namespace FastExpressionCompiler.IssueTests
             var ret = Block(Label(Label(typeof(int)), Constant(7)));
             var lambda = Lambda<Func<int>>(ret);
             var fastCompiled = lambda.CompileFast<Func<int>>(true);
-            Assert.IsNotNull(fastCompiled);
-            Assert.AreEqual(7, fastCompiled());
+            Asserts.IsNotNull(fastCompiled);
+            Asserts.AreEqual(7, fastCompiled());
         }
 
         [Test]
@@ -42,8 +42,8 @@ namespace FastExpressionCompiler.IssueTests
             var ret = Block(Constant(7), Constant(7), Constant(7));
             var lambda = Lambda<Func<int>>(ret);
             var fastCompiled = lambda.CompileFast<Func<int>>(true);
-            Assert.IsNotNull(fastCompiled);
-            Assert.AreEqual(7, fastCompiled());
+            Asserts.IsNotNull(fastCompiled);
+            Asserts.AreEqual(7, fastCompiled());
 
             fastCompiled.AssertOpCodes(
                 OpCodes.Ldc_I4_7,
@@ -56,8 +56,8 @@ namespace FastExpressionCompiler.IssueTests
         {
             var lambda = Lambda<Func<int>>(Label(Label(typeof(int)), Constant(7)));
             var fastCompiled = lambda.CompileFast<Func<int>>(true);
-            Assert.IsNotNull(fastCompiled);
-            Assert.AreEqual(7, fastCompiled());
+            Asserts.IsNotNull(fastCompiled);
+            Asserts.AreEqual(7, fastCompiled());
         }
 
         [Test]
@@ -67,8 +67,8 @@ namespace FastExpressionCompiler.IssueTests
             var assign = Assign(varr, Constant(7));
             var lambda = Lambda<Func<int>>(Block(new List<ParameterExpression> { varr }, assign, Label(Label(typeof(int)), varr)));
             var fastCompiled = lambda.CompileFast<Func<int>>(true);
-            Assert.IsNotNull(fastCompiled);
-            Assert.AreEqual(7, fastCompiled());
+            Asserts.IsNotNull(fastCompiled);
+            Asserts.AreEqual(7, fastCompiled());
         }
 
         [Test]
@@ -77,7 +77,7 @@ namespace FastExpressionCompiler.IssueTests
             var ret = Block(Constant(7));
             var lambda = Lambda<Action>(ret);
             var fastCompiled = lambda.CompileFast(true);
-            Assert.IsNotNull(fastCompiled);
+            Asserts.IsNotNull(fastCompiled);
             fastCompiled();
         }
 
@@ -88,7 +88,7 @@ namespace FastExpressionCompiler.IssueTests
             var ret = Block(Convert(p, typeof(string)));
             var lambda = Lambda<Action<object>>(ret, p);
             var fastCompiled = lambda.CompileFast(true);
-            Assert.IsNotNull(fastCompiled);
+            Asserts.IsNotNull(fastCompiled);
             Assert.DoesNotThrow(() => fastCompiled("a"));
             Assert.Throws<InvalidCastException>(() => fastCompiled(1));
         }

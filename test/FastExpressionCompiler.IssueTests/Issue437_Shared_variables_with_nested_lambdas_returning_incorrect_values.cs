@@ -60,19 +60,19 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
                 myVar + 3));
             return myVar;
         });
-        Assert.AreEqual(5, @cs());
+        Asserts.AreEqual(5, @cs());
 
         var fs = expr.CompileSys();
         fs.PrintIL();
 
         var sr = fs();
-        Assert.AreEqual(5, sr);
+        Asserts.AreEqual(5, sr);
 
         var ff = expr.CompileFast(false);
         ff.PrintIL();
 
         var fr = ff();
-        Assert.AreEqual(5, fr);
+        Asserts.AreEqual(5, fr);
     }
 
     [Test]
@@ -95,13 +95,13 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
         fs.PrintIL();
 
         var sr = fs();
-        Assert.AreEqual(3, sr);
+        Asserts.AreEqual(3, sr);
 
         var ff = expr.CompileFast(false);
         ff.PrintIL();
 
         var fr = ff();
-        Assert.AreEqual(3, fr);
+        Asserts.AreEqual(3, fr);
     }
 
     [Test]
@@ -122,13 +122,13 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
         fs.PrintIL();
 
         var sr = fs();
-        Assert.AreEqual(3, sr);
+        Asserts.AreEqual(3, sr);
 
         var ff = expr.CompileFast(false, CompilerFlags.NoInvocationLambdaInlining);
         ff.PrintIL();
 
         var fr = ff();
-        Assert.AreEqual(3, fr);
+        Asserts.AreEqual(3, fr);
     }
 
     [Test]
@@ -150,13 +150,13 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
         fs.PrintIL();
 
         var sr = fs();
-        Assert.AreEqual(3, sr);
+        Asserts.AreEqual(3, sr);
 
         var ff = expr.CompileFast(false);
         ff.PrintIL();
 
         var fr = ff();
-        Assert.AreEqual(3, fr);
+        Asserts.AreEqual(3, fr);
     }
 
     [Test]
@@ -178,13 +178,13 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
         fs.PrintIL();
 
         var sr = fs();
-        Assert.AreEqual(3, sr);
+        Asserts.AreEqual(3, sr);
 
         var ff = expr.CompileFast(false, CompilerFlags.NoInvocationLambdaInlining);
         ff.PrintIL();
 
         var fr = ff();
-        Assert.AreEqual(3, fr);
+        Asserts.AreEqual(3, fr);
     }
 
     [Test]
@@ -208,11 +208,11 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
 
         var fs = expr.CompileSys();
         var sr = fs();
-        Assert.AreEqual(3, sr);
+        Asserts.AreEqual(3, sr);
 
         var ff = expr.CompileFast(false, CompilerFlags.ThrowOnNotSupportedExpression);
         var fr = ff();
-        Assert.AreEqual(3, fr);
+        Asserts.AreEqual(3, fr);
     }
 
     public class Box<T>
@@ -242,11 +242,11 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
 
         var fs = expr.CompileSys();
         var sr = fs();
-        Assert.AreEqual(3, sr.Value);
+        Asserts.AreEqual(3, sr.Value);
 
         var ff = expr.CompileFast(false, CompilerFlags.ThrowOnNotSupportedExpression);
         var fr = ff();
-        Assert.AreEqual(3, fr.Value);
+        Asserts.AreEqual(3, fr.Value);
     }
 
     public class Val<T>
@@ -276,10 +276,10 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
 
         var fs = expr.CompileSys();
         var sr = fs();
-        Assert.AreEqual(3, sr.Value);
+        Asserts.AreEqual(3, sr.Value);
 
         var ff = expr.CompileFast(false, CompilerFlags.ThrowOnNotSupportedExpression);
         var fr = ff();
-        Assert.AreEqual(3, fr.Value);
+        Asserts.AreEqual(3, fr.Value);
     }
 }

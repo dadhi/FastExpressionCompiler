@@ -12,7 +12,7 @@ namespace FastExpressionCompiler.IssueTests
 {
     public class Issue156_InvokeAction : ITest
     {
-        public int Run() 
+        public int Run()
         {
             InvokeFuncConstantIsSupported();
             InvokeActionConstantIsSupported();
@@ -46,7 +46,7 @@ namespace FastExpressionCompiler.IssueTests
             ff.PrintIL();
 
             ff.Invoke();
-            Assert.AreEqual("42", _result);
+            Asserts.AreEqual("42", _result);
         }
 
         [Test]
@@ -72,7 +72,7 @@ namespace FastExpressionCompiler.IssueTests
             ff.PrintIL();
 
             var result = ff.Invoke();
-            Assert.AreEqual("42", result);
+            Asserts.AreEqual("42", result);
         }
     }
 }

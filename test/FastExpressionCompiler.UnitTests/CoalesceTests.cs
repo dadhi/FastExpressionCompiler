@@ -29,7 +29,7 @@ namespace FastExpressionCompiler.UnitTests
             var a = new object();
             var dlgt = Lambda<Func<object>>(Coalesce(Constant(null), Constant(a))).CompileFast(true);
 
-            Assert.IsNotNull(dlgt);
+            Asserts.IsNotNull(dlgt);
             Assert.AreSame(a, dlgt());
         }
 
@@ -39,7 +39,7 @@ namespace FastExpressionCompiler.UnitTests
             var a = new object();
             var dlgt = Lambda<Func<object>>(Coalesce(Constant(a), Constant(new object()))).CompileFast(true);
 
-            Assert.IsNotNull(dlgt);
+            Asserts.IsNotNull(dlgt);
             Assert.AreSame(a, dlgt());
         }
 
@@ -54,7 +54,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var dlgt = Lambda<Func<object>>(block).CompileFast(true);
 
-            Assert.IsNotNull(dlgt);
+            Asserts.IsNotNull(dlgt);
             Assert.AreSame(a, dlgt());
         }
 
@@ -68,8 +68,8 @@ namespace FastExpressionCompiler.UnitTests
 
             var dlgt = Lambda<Func<object>>(block).CompileFast(true);
 
-            Assert.IsNotNull(dlgt);
-            Assert.AreEqual(5, dlgt());
+            Asserts.IsNotNull(dlgt);
+            Asserts.AreEqual(5, dlgt());
         }
 
         [Test]
@@ -83,8 +83,8 @@ namespace FastExpressionCompiler.UnitTests
 
             var dlgt = Lambda<Func<object>>(block).CompileFast(true);
 
-            Assert.IsNotNull(dlgt);
-            Assert.AreEqual(a, dlgt());
+            Asserts.IsNotNull(dlgt);
+            Asserts.AreEqual(a, dlgt());
         }
 
         [Test]
@@ -100,7 +100,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var dlgt = Lambda<Func<object, object, object>>(block, param, param2).CompileFast(true);
 
-            Assert.IsNotNull(dlgt);
+            Asserts.IsNotNull(dlgt);
             Assert.AreSame(a, dlgt(null, a));
             Assert.AreSame(a, dlgt(a, new object()));
         }

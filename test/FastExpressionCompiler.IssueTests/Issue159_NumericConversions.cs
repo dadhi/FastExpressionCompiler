@@ -76,11 +76,11 @@ namespace FastExpressionCompiler.IssueTests
 
             var fs = ulongValueOrDefaultLambda.CompileSys();
             fs.PrintIL();
-            Assert.AreEqual(default(int), fs(new ValueHolder<ulong> { Value = ulong.MaxValue }).Value);
+            Asserts.AreEqual(default(int), fs(new ValueHolder<ulong> { Value = ulong.MaxValue }).Value);
 
             var fx = ulongValueOrDefaultLambda.CompileFast(true);
             fx.PrintIL();
-            Assert.AreEqual(default(int), fx(new ValueHolder<ulong> { Value = ulong.MaxValue }).Value);
+            Asserts.AreEqual(default(int), fx(new ValueHolder<ulong> { Value = ulong.MaxValue }).Value);
         }
 
         [Test]
@@ -98,10 +98,10 @@ namespace FastExpressionCompiler.IssueTests
             var ulongValHolderExpr = Lambda<Func<ValueHolder<ulong?>>>(block);
 
             var expected = ulongValHolderExpr.CompileSys();
-            Assert.AreEqual(int.MaxValue, expected().Value);
+            Asserts.AreEqual((ulong)int.MaxValue, expected().Value);
 
             var actual = ulongValHolderExpr.CompileFast(true);
-            Assert.AreEqual(int.MaxValue, actual().Value);
+            Asserts.AreEqual((ulong)int.MaxValue, actual().Value);
         }
 
         [Test]
@@ -116,7 +116,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var expected = lambdaExpr.CompileSys();
             var expectedResult = expected(new ValueHolder<ulong?> { Value = ulong.MaxValue });
-            Assert.AreEqual(false, expectedResult);
+            Asserts.AreEqual(false, expectedResult);
 
             var actual = lambdaExpr.CompileFast(true);
 
@@ -144,7 +144,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ret);
 
             var actualResult = actual(new ValueHolder<ulong?> { Value = ulong.MaxValue });
-            Assert.AreEqual(false, actualResult);
+            Asserts.AreEqual(false, actualResult);
         }
 
         [Test]
@@ -173,11 +173,11 @@ namespace FastExpressionCompiler.IssueTests
 
             var expected = ulongValueOrDefaultLambda.CompileSys();
             var expectedResult = expected(new ValueHolder<ulong?> { Value = ulong.MaxValue });
-            Assert.AreEqual(default(int?), expectedResult.Value);
+            Asserts.AreEqual(default(int?), expectedResult.Value);
 
             var actual = ulongValueOrDefaultLambda.CompileFast(true);
             var actualResult = actual(new ValueHolder<ulong?> { Value = ulong.MaxValue });
-            Assert.AreEqual(default(int?), actualResult.Value);
+            Asserts.AreEqual(default(int?), actualResult.Value);
         }
 
         [Test]
@@ -222,7 +222,7 @@ namespace FastExpressionCompiler.IssueTests
             var floatValueOrDefaultFunc = floatValueOrDefaultLambda.CompileFast(true);
             var result = floatValueOrDefaultFunc.Invoke(source);
 
-            Assert.AreEqual((short)532, result.Value);
+            Asserts.AreEqual((short)532, result.Value);
         }
 
         [Test]
@@ -267,7 +267,7 @@ namespace FastExpressionCompiler.IssueTests
             var floatValueOrDefaultFunc = floatValueOrDefaultLambda.CompileFast(true);
             var result = floatValueOrDefaultFunc.Invoke(source);
 
-            Assert.AreEqual((short)532, result.Value);
+            Asserts.AreEqual((short)532, result.Value);
         }
 
         [Test]
@@ -327,7 +327,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ceq,
                 OpCodes.Ret);
 
-            Assert.AreEqual(true, compiledFast(source));
+            Asserts.AreEqual(true, compiledFast(source));
         }
 
         [Test]
@@ -369,7 +369,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ldc_I4_0,
                 OpCodes.Ret);
 
-            Assert.AreEqual(false, compiledFast(source));
+            Asserts.AreEqual(false, compiledFast(source));
         }
 
         [Test]
@@ -403,7 +403,7 @@ namespace FastExpressionCompiler.IssueTests
             var func = expr.CompileFast(true);
             var result = func(source);
 
-            Assert.IsNull(result.Value);
+            Asserts.IsNull(result.Value);
         }
 
         [Test]
@@ -448,7 +448,7 @@ namespace FastExpressionCompiler.IssueTests
             var floatValueOrDefaultFunc = floatValueOrDefaultLambda.CompileFast(true);
             var result = floatValueOrDefaultFunc.Invoke(source);
 
-            Assert.AreEqual(8532.00m, result.Value);
+            Asserts.AreEqual(8532.00m, result.Value);
         }
 
         [Test]
@@ -459,15 +459,15 @@ namespace FastExpressionCompiler.IssueTests
             e.PrintCSharp();
             var @cs = (Func<float?, Decimal?>)((float? f) =>
                 (Decimal?)f);
-            Assert.AreEqual(42, cs(42));
+            Asserts.AreEqual(42, cs(42));
 
             var fs = e.CompileSys();
             fs.PrintIL();
-            Assert.AreEqual(42, fs(42));
+            Asserts.AreEqual(42, fs(42));
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
-            Assert.AreEqual(42, ff(42));
+            Asserts.AreEqual(42, ff(42));
         }
 
         [Test]
@@ -558,7 +558,7 @@ namespace FastExpressionCompiler.IssueTests
             var doubleValueOrDefaultFunc = doubleValueOrDefaultLambda.CompileFast(true);
             var result = doubleValueOrDefaultFunc.Invoke(source);
 
-            Assert.IsNull(result.Value);
+            Asserts.IsNull(result.Value);
         }
 
         [Test]
@@ -603,7 +603,7 @@ namespace FastExpressionCompiler.IssueTests
             var doubleValueOrDefaultFunc = doubleValueOrDefaultLambda.CompileFast(true);
             var result = doubleValueOrDefaultFunc.Invoke(source);
 
-            Assert.AreEqual(default(decimal), result.Value);
+            Asserts.AreEqual(default(decimal), result.Value);
         }
 
         // Expression used for the tests below
@@ -648,7 +648,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ret);
 
             var result = adapt(new ValueHolder<int?> { Value = 321 });
-            Assert.AreEqual(321d, result.Value);
+            Asserts.AreEqual(321d, result.Value);
         }
 
         [Test]
@@ -678,7 +678,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ret);
 
             var result = adapt(new ValueHolder<int?> { Value = 321 });
-            Assert.AreEqual(321d, result.Value);
+            Asserts.AreEqual(321d, result.Value);
         }
 
         [Test]
@@ -718,7 +718,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ret);
 
             var result = adapt(source);
-            Assert.AreEqual(938378.637d, result.Value);
+            Asserts.AreEqual(938378.637d, result.Value);
         }
 
         [Test]
@@ -756,7 +756,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ret);
 
             var result = adapt(source);
-            Assert.AreEqual(5332d, result.Value);
+            Asserts.AreEqual(5332d, result.Value);
         }
 
         private class ValueHolder<T>

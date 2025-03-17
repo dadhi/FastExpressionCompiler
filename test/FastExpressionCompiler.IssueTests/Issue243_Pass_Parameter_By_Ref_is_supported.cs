@@ -51,7 +51,7 @@ namespace FastExpressionCompiler.IssueTests
             var fastCompiled = lambda.CompileFast();
 
             Assert.NotNull(fastCompiled);
-            Assert.AreEqual("test", fastCompiled("test"));
+            Asserts.AreEqual("test", fastCompiled("test"));
         }
 
         public delegate string RefDelegate(ref string val);
@@ -73,7 +73,7 @@ namespace FastExpressionCompiler.IssueTests
             var data = "test";
 
             Assert.NotNull(fastCompiled);
-            Assert.AreEqual(data, fastCompiled(ref data));
+            Asserts.AreEqual(data, fastCompiled(ref data));
         }
 
         [Test]
@@ -82,7 +82,7 @@ namespace FastExpressionCompiler.IssueTests
             var parameter = Parameter(typeof(string).MakeByRefType());
 
             var lambda = Lambda<RefDelegate>(
-                Call(GetType().GetMethod(nameof(PassByValue)), parameter), 
+                Call(GetType().GetMethod(nameof(PassByValue)), parameter),
                 parameter);
 
             lambda.PrintCSharp();
@@ -90,7 +90,7 @@ namespace FastExpressionCompiler.IssueTests
             var systCompiled = lambda.CompileSys();
             systCompiled.PrintIL();
             var a = "test";
-            Assert.AreEqual(a, systCompiled(ref a));
+            Asserts.AreEqual(a, systCompiled(ref a));
 
             var fastCompiled = lambda.CompileFast(ifFastFailedReturnNull: true);
             Assert.NotNull(fastCompiled);
@@ -102,10 +102,10 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ret);
 
             var b = "test";
-            Assert.AreEqual(b, fastCompiled(ref b));
+            Asserts.AreEqual(b, fastCompiled(ref b));
         }
 
-        public class PassedByRefClass 
+        public class PassedByRefClass
         {
             public string PassByRef(ref string test) => test.ToString();
 
@@ -129,7 +129,7 @@ namespace FastExpressionCompiler.IssueTests
             var systCompiled = lambda.CompileSys();
             systCompiled.PrintIL();
             var a = "test";
-            Assert.AreEqual(a, systCompiled(ref cls, ref a));
+            Asserts.AreEqual(a, systCompiled(ref cls, ref a));
 
             var fastCompiled = lambda.CompileFast(ifFastFailedReturnNull: true);
             Assert.NotNull(fastCompiled);
@@ -143,7 +143,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ret);
 
             var b = "test";
-            Assert.AreEqual(b, fastCompiled(ref cls, ref b));
+            Asserts.AreEqual(b, fastCompiled(ref cls, ref b));
         }
 
         public struct PassedByRefStruct
@@ -170,7 +170,7 @@ namespace FastExpressionCompiler.IssueTests
             var systCompiled = lambda.CompileSys();
             systCompiled.PrintIL();
             var a = 1;
-            Assert.AreEqual("1", systCompiled(ref cls, ref a));
+            Asserts.AreEqual("1", systCompiled(ref cls, ref a));
 
             var fastCompiled = lambda.CompileFast(ifFastFailedReturnNull: true);
             Assert.NotNull(fastCompiled);
@@ -184,7 +184,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ret);
 
             var b = 2;
-            Assert.AreEqual("2", fastCompiled(ref cls, ref b));
+            Asserts.AreEqual("2", fastCompiled(ref cls, ref b));
         }
 
         [Test]
@@ -205,7 +205,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ret);
 
             var data = 42;
-            Assert.AreEqual(data.ToString(), fastCompiled(ref data));
+            Asserts.AreEqual(data.ToString(), fastCompiled(ref data));
         }
 
         [Test]
@@ -231,7 +231,7 @@ namespace FastExpressionCompiler.IssueTests
             var fastCompiled = lambda.CompileFast(ifFastFailedReturnNull: true);
 
             Assert.NotNull(fastCompiled);
-            Assert.AreEqual("test", fastCompiled("test"));
+            Asserts.AreEqual("test", fastCompiled("test"));
         }
     }
 }

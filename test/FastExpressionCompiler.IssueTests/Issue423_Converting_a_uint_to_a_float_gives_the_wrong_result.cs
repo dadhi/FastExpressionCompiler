@@ -40,8 +40,8 @@ public class Issue423_Converting_a_uint_to_a_float_gives_the_wrong_result : ITes
             OpCodes.Ret
         );
 
-        Assert.AreEqual((float)uint.MaxValue, fs(uint.MaxValue));
+        Asserts.AreEqual((float)uint.MaxValue, fs(uint.MaxValue));
 
-        Assert.AreEqual((float)uint.MaxValue, ff(uint.MaxValue));
+        Asserts.AreEqual((float)uint.MaxValue, ff(uint.MaxValue));
     }
 }

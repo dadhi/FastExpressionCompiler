@@ -45,13 +45,13 @@ public class Issue440_Errors_with_simplified_Switch_cases : ITest
         fs.PrintIL();
 
         var sr = fs();
-        Assert.AreEqual(2, sr);
+        Asserts.AreEqual(2, sr);
 
         var ff = expr.CompileFast(false);
         ff.PrintIL();
 
         var fr = ff();
-        Assert.AreEqual(2, fr);
+        Asserts.AreEqual(2, fr);
     }
 
     [Test]
@@ -72,13 +72,13 @@ public class Issue440_Errors_with_simplified_Switch_cases : ITest
         fs.PrintIL();
 
         var sr = fs();
-        Assert.AreEqual(2, sr);
+        Asserts.AreEqual(2, sr);
 
         var ff = expr.CompileFast(false);
         ff.PrintIL();
 
         var fr = ff();
-        Assert.AreEqual(2, fr);
+        Asserts.AreEqual(2, fr);
     }
 
     [Test]
@@ -99,12 +99,12 @@ public class Issue440_Errors_with_simplified_Switch_cases : ITest
         fs.PrintIL();
 
         var sr = fs();
-        Assert.AreEqual(42, sr);
+        Asserts.AreEqual(42, sr);
 
         var ff = expr.CompileFast(false);
         ff.PrintIL();
 
         var fr = ff();
-        Assert.AreEqual(42, fr);
+        Asserts.AreEqual(42, fr);
     }
 }

@@ -307,9 +307,9 @@ Can be used as following:
 ```cs
 var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
 var di = f.Target as IDelegateDebugInfo;
-Assert.IsNotNull(di.Expression);
-Assert.IsNotNull(di.ExpressionString);
-Assert.IsNotNull(di.CSharpString);
+Asserts.IsNotNull(di.Expression);
+Asserts.IsNotNull(di.ExpressionString);
+Asserts.IsNotNull(di.CSharpString);
 ```
 
 ### ThrowOnNotSupportedExpression and NotSupported_ flags

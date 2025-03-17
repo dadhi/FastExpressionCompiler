@@ -63,8 +63,8 @@ public class Issue426_Directly_passing_a_method_result_to_another_method_by_ref_
             OpCodes.Ret
         );
 
-        Assert.AreEqual(42, fs());
-        Assert.AreEqual(42, ff());
+        Asserts.AreEqual(42, fs());
+        Asserts.AreEqual(42, ff());
     }
 
     [Test]
@@ -91,8 +91,8 @@ public class Issue426_Directly_passing_a_method_result_to_another_method_by_ref_
             OpCodes.Ret
         );
 
-        Assert.AreEqual("DuckAck", fs());
-        Assert.AreEqual("DuckAck", ff());
+        Asserts.AreEqual("DuckAck", fs());
+        Asserts.AreEqual("DuckAck", ff());
     }
 
     [Test]
@@ -122,7 +122,7 @@ public class Issue426_Directly_passing_a_method_result_to_another_method_by_ref_
             OpCodes.Ret
         );
 
-        Assert.AreEqual(80, fs());
-        Assert.AreEqual(80, ff());
+        Asserts.AreEqual(80, fs());
+        Asserts.AreEqual(80, ff());
     }
 }

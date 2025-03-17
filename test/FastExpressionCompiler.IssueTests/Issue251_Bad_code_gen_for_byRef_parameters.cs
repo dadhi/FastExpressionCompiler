@@ -30,7 +30,7 @@ namespace FastExpressionCompiler.IssueTests
             expr.PrintCSharp();
 
             var f = expr.CompileFast(true);
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
             f.PrintIL();
 
             f.AssertOpCodes(
@@ -43,8 +43,8 @@ namespace FastExpressionCompiler.IssueTests
             var a = 1d;
             var b = 1d;
             var c = 2d;
-            Assert.IsTrue(f(in a, in b));
-            Assert.IsFalse(f(in c, in b));
+            Asserts.IsTrue(f(in a, in b));
+            Asserts.IsFalse(f(in c, in b));
         }
 
         public delegate bool EqualsHandler(in double a, in double b);

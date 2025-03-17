@@ -39,7 +39,7 @@ namespace FastExpressionCompiler.UnitTests
             var expr = Lambda<Func<X>>(xConstExpr);
 
             var f = expr.TryCompileWithPreCreatedClosure<Func<X>>(xConstExpr);
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
 
             var result = f();
             Assert.AreSame(x, result);
@@ -53,7 +53,7 @@ namespace FastExpressionCompiler.UnitTests
             var expr = Lambda<Func<X>>(xConstExpr);
 
             var f = expr.TryCompileWithPreCreatedClosure<Func<X>>(xConstExpr);
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
 
             var result = f();
             Assert.AreSame(x, result);
@@ -67,7 +67,7 @@ namespace FastExpressionCompiler.UnitTests
             var expr = Lambda<Func<X>>(Block(xConstExpr));
 
             var f = expr.TryCompileWithPreCreatedClosure<Func<X>>(xConstExpr);
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
 
             var result = f();
             Assert.AreSame(x, result);
@@ -86,10 +86,10 @@ namespace FastExpressionCompiler.UnitTests
                 Call(intDoublerConstExpr, nameof(IntDoubler.Double), Type.EmptyTypes, intVariable)));
 
             var f = expr.TryCompileWithPreCreatedClosure<Action>(intDoublerConstExpr);
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
 
             f();
-            Assert.AreEqual(2, intDoubler.DoubleValue);
+            Asserts.AreEqual(2, intDoubler.DoubleValue);
         }
 
         [Test]
@@ -102,7 +102,7 @@ namespace FastExpressionCompiler.UnitTests
                 Catch(typeof(Exception), Default(xConstExpr.Type))));
 
             var f = expr.TryCompileWithPreCreatedClosure<Func<X>>(xConstExpr);
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
 
             var result = f();
             Assert.AreSame(x, result);
@@ -134,10 +134,10 @@ namespace FastExpressionCompiler.UnitTests
             var expr = Lambda<Func<X>>(Block(New(typeof(X).GetConstructor(Type.EmptyTypes))));
 
             var f = expr.TryCompileWithoutClosure<Func<X>>();
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
 
             var result = f();
-            Assert.IsNotNull(result);
+            Asserts.IsNotNull(result);
         }
 
         [Test]
@@ -152,11 +152,11 @@ namespace FastExpressionCompiler.UnitTests
                 intDoublerVariable));
 
             var f = expr.TryCompileWithoutClosure<Func<IntDoubler>>();
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
 
             var result = f();
-            Assert.IsNotNull(result);
-            Assert.AreEqual(10, result.DoubleValue);
+            Asserts.IsNotNull(result);
+            Asserts.AreEqual(10, result.DoubleValue);
         }
 
         [Test]
@@ -166,10 +166,10 @@ namespace FastExpressionCompiler.UnitTests
             var expr = sExpr.FromSysExpression();
 
             var f = expr.TryCompileWithoutClosure<Func<X>>();
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
 
             var result = f();
-            Assert.IsNotNull(result);
+            Asserts.IsNotNull(result);
         }
 
         [Test]
@@ -180,10 +180,10 @@ namespace FastExpressionCompiler.UnitTests
             var expr = sExpr.FromSysExpression();
 
             var f1 = expr.TryCompile<Func<Y>>();
-            Assert.IsNotNull(f1);
+            Asserts.IsNotNull(f1);
 
             var y = f1();
-            Assert.IsNotNull(y);
+            Asserts.IsNotNull(y);
             Assert.AreSame(y.A, y.B);
         }
 
@@ -195,10 +195,10 @@ namespace FastExpressionCompiler.UnitTests
             var expr = sExpr.FromSysExpression();
 
             var fs = expr.CompileSys();
-            Assert.IsNotNull(fs);
+            Asserts.IsNotNull(fs);
 
             i = 13;
-            Assert.AreEqual(14, fs());
+            Asserts.AreEqual(14, fs());
         }
 
         [Test]
@@ -208,10 +208,10 @@ namespace FastExpressionCompiler.UnitTests
             var expr = Lambda<Func<int>>(Increment(Constant(i)));
 
             var fs = expr.CompileSys();
-            Assert.IsNotNull(fs);
+            Asserts.IsNotNull(fs);
 
             i = 13;
-            Assert.AreEqual(4, fs());
+            Asserts.AreEqual(4, fs());
         }
 
 

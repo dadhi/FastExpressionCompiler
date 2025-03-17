@@ -95,10 +95,10 @@ namespace FastExpressionCompiler.IssueTests
             compiledFast.PrintIL("fast");
 
             var result = compiledSys(a);
-            Assert.AreEqual(expected, result);
+            Asserts.AreEqual(expected, result);
 
             result = compiledFast(a);
-            Assert.AreEqual(expected, result);
+            Asserts.AreEqual(expected, result);
         }
 
         [Test, TestCaseSource(nameof(TestCases))]
@@ -114,10 +114,10 @@ namespace FastExpressionCompiler.IssueTests
             compiledFast.PrintIL("fast");
 
             var result = compiledSys(a, b);
-            Assert.AreEqual(expected, result);
+            Asserts.AreEqual(expected, result);
 
             result = compiledFast(a, b);
-            Assert.AreEqual(expected, result);
+            Asserts.AreEqual(expected, result);
         }
 
         [Test]
@@ -136,10 +136,10 @@ namespace FastExpressionCompiler.IssueTests
             compiledFast.PrintIL("fast");
 
             var result = compiledSys(instance);
-            Assert.IsFalse(result);
+            Asserts.IsFalse(result);
 
             result = compiledFast(instance);
-            Assert.IsFalse(result);
+            Asserts.IsFalse(result);
         }
 
         [Test]
@@ -158,10 +158,10 @@ namespace FastExpressionCompiler.IssueTests
             compiledFast.PrintIL("fast");
 
             var result = compiledSys(instance);
-            Assert.IsFalse(result);
+            Asserts.IsFalse(result);
 
             result = compiledFast(instance);
-            Assert.IsFalse(result);
+            Asserts.IsFalse(result);
         }
 
         [Test]
@@ -180,10 +180,10 @@ namespace FastExpressionCompiler.IssueTests
             compiledFast.PrintIL("fast");
 
             var result = compiledSys(instance);
-            Assert.IsTrue(result);
+            Asserts.IsTrue(result);
 
             result = compiledFast(instance);
-            Assert.IsTrue(result);
+            Asserts.IsTrue(result);
         }
 
         [Test]
@@ -202,10 +202,10 @@ namespace FastExpressionCompiler.IssueTests
             compiledFast.PrintIL("fast");
 
             var result = compiledSys(instance);
-            Assert.IsTrue(result);
+            Asserts.IsTrue(result);
 
             result = compiledFast(instance);
-            Assert.IsTrue(result);
+            Asserts.IsTrue(result);
         }
 
         [Test]
@@ -224,10 +224,10 @@ namespace FastExpressionCompiler.IssueTests
             compiledFast.PrintIL("fast");
 
             var result = compiledSys(instance);
-            Assert.IsTrue(result);
+            Asserts.IsTrue(result);
 
             result = compiledFast(instance);
-            Assert.IsTrue(result);
+            Asserts.IsTrue(result);
         }
 
         [Test]
@@ -246,10 +246,10 @@ namespace FastExpressionCompiler.IssueTests
             compiledFast.PrintIL("fast");
 
             var result = compiledSys(instance);
-            Assert.IsTrue(result);
+            Asserts.IsTrue(result);
 
             result = compiledFast(instance);
-            Assert.IsTrue(result);
+            Asserts.IsTrue(result);
         }
 
         [Test]
@@ -268,10 +268,10 @@ namespace FastExpressionCompiler.IssueTests
             compiledFast.PrintIL("fast");
 
             var result = compiledSys(instance);
-            Assert.IsFalse(result);
+            Asserts.IsFalse(result);
 
             result = compiledFast(instance);
-            Assert.IsFalse(result);
+            Asserts.IsFalse(result);
         }
 
         [Test]
@@ -291,10 +291,10 @@ namespace FastExpressionCompiler.IssueTests
             compiledFast.PrintIL("fast");
 
             var result = compiledSys(instance);
-            Assert.IsTrue(result);
+            Asserts.IsTrue(result);
 
             result = compiledFast(instance);
-            Assert.IsTrue(result);
+            Asserts.IsTrue(result);
         }
 
         [Test]
@@ -308,7 +308,7 @@ namespace FastExpressionCompiler.IssueTests
             compiledSys.PrintIL("sys");
 
             var compiledFast = expression.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
-            Assert.IsNotNull(compiledFast);
+            Asserts.IsNotNull(compiledFast);
 
             compiledFast.PrintIL("fast");
 
@@ -324,10 +324,10 @@ namespace FastExpressionCompiler.IssueTests
             };
 
             var result = compiledSys(instance);
-            Assert.IsTrue(result);
+            Asserts.IsTrue(result);
 
             result = compiledFast(instance);
-            Assert.IsTrue(result);
+            Asserts.IsTrue(result);
         }
 
         public class Test

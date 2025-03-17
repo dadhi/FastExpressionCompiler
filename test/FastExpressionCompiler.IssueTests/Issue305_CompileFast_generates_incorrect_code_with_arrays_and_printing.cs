@@ -51,14 +51,14 @@ namespace FastExpressionCompiler.IssueTests
             fs.PrintIL();
 
             var res = fs();
-            Assert.AreEqual(123.456, res);
+            Asserts.AreEqual(123.456, res);
 
             var ff = expr.CompileFast(true);
             ff.PrintIL();
 
             var res2 = ff();
-            Assert.AreEqual(123.456, res2);
-            Assert.AreEqual(4, _items.Count(x => x == 123.456));
+            Asserts.AreEqual(123.456, res2);
+            Asserts.AreEqual(4, _items.Count(x => x == 123.456));
         }
 
         [Test]
@@ -88,14 +88,14 @@ namespace FastExpressionCompiler.IssueTests
             fs.PrintIL();
 
             var res = fs();
-            Assert.AreEqual(123.456, res);
+            Asserts.AreEqual(123.456, res);
 
             var ff = expr.CompileFast(true);
             ff.PrintIL();
 
             var res2 = ff();
-            Assert.AreEqual(123.456, res2);
-            Assert.AreEqual(4, _items.Count(x => x == 0));
+            Asserts.AreEqual(123.456, res2);
+            Asserts.AreEqual(4, _items.Count(x => x == 0));
         }
     }
 }

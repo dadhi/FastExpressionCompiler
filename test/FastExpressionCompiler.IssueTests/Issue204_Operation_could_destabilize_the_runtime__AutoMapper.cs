@@ -42,7 +42,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var fastCompiled = expression.CompileFast(true);
             var status = fastCompiled();
-            Assert.AreEqual(default(Status?), status);
+            Asserts.AreEqual(default(Status?), status);
         }
 
         /* Test expression:
@@ -68,7 +68,7 @@ namespace FastExpressionCompiler.IssueTests
                 Block(typeof(OrderDtoWithNullableStatus), new[] { destParam, resolvedValueParam, propertyValueParam },
                     Assign(destParam, New(typeof(OrderDtoWithNullableStatus).GetConstructors()[0])),
                     Assign(resolvedValueParam, Property(srcParam, "Status")),
-                    Assign(propertyValueParam, 
+                    Assign(propertyValueParam,
                         Condition(
                             Equal(resolvedValueParam, Constant(null)),
                             Default(typeof(Status?)),
@@ -86,18 +86,18 @@ namespace FastExpressionCompiler.IssueTests
 
             var fs = e.CompileSys();
             fs.PrintIL();
-            
+
             var dest = fs(inProgress);
-            Assert.AreEqual(Status.InProgress, dest.Status);
+            Asserts.AreEqual(Status.InProgress, dest.Status);
             dest = fs(complete);
-            Assert.AreEqual(Status.Complete, dest.Status);
+            Asserts.AreEqual(Status.Complete, dest.Status);
 
             var f = e.CompileFast(true);
             f.PrintIL();
             dest = f(inProgress);
-            Assert.AreEqual(Status.InProgress, dest.Status);
+            Asserts.AreEqual(Status.InProgress, dest.Status);
             dest = f(complete);
-            Assert.AreEqual(Status.Complete, dest.Status);
+            Asserts.AreEqual(Status.Complete, dest.Status);
         }
     }
 }

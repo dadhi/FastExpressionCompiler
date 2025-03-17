@@ -41,7 +41,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var cmd = fFast("x");
             Assert.IsInstanceOf<Command>(cmd);
-            Assert.AreEqual("x", cmd());
+            Asserts.AreEqual("x", cmd());
         }
     }
 }

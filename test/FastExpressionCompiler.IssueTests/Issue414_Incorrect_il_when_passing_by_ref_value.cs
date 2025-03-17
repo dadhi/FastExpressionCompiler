@@ -61,10 +61,10 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
         );
 
         var x = 17;
-        Assert.AreEqual(17, fs(ref x));
+        Asserts.AreEqual(17, fs(ref x));
 
         var y = 18;
-        Assert.AreEqual(18, ff(ref y));
+        Asserts.AreEqual(18, ff(ref y));
     }
 
     public static void IncRef(ref int x) => ++x;
@@ -98,10 +98,10 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
         );
 
         var x = 17;
-        Assert.AreEqual(18, fs(ref x));
+        Asserts.AreEqual(18, fs(ref x));
 
         var y = 18;
-        Assert.AreEqual(19, ff(ref y));
+        Asserts.AreEqual(19, ff(ref y));
     }
 
     public struct MyStruct
@@ -137,8 +137,8 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
             OpCodes.Ret
         );
 
-        Assert.AreEqual(289, fs(new MyStruct()));
-        Assert.AreEqual(289, ff(new MyStruct()));
+        Asserts.AreEqual(289, fs(new MyStruct()));
+        Asserts.AreEqual(289, ff(new MyStruct()));
     }
 
     delegate int MyDelegateNoArgs();
@@ -181,9 +181,9 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
 
 #if !NET472
         // todo: The .NET 472 version generates the wrong IL
-        Assert.AreEqual(289, fs());
+        Asserts.AreEqual(289, fs());
 #endif
-        Assert.AreEqual(289, ff());
+        Asserts.AreEqual(289, ff());
     }
 
 #if LIGHT_EXPRESSION
@@ -217,7 +217,7 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
             OpCodes.Ret
         );
 
-        Assert.AreEqual(18, ff());
+        Asserts.AreEqual(18, ff());
     }
 #endif
 
@@ -244,7 +244,7 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
 
         var x = 17;
         ++ff(ref x);
-        Assert.AreEqual(18, x);
+        Asserts.AreEqual(18, x);
     }
 
     public static ref int ReturnRef(ref int x) => ref x;
@@ -272,7 +272,7 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
 
         var x = 17;
         ++ff(ref x);
-        Assert.AreEqual(18, x);
+        Asserts.AreEqual(18, x);
     }
 
     [Test]
@@ -299,7 +299,7 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
 
         var x = 17;
         var y = ff(ref x);
-        Assert.AreEqual(18, y);
+        Asserts.AreEqual(18, y);
     }
 
 #endif

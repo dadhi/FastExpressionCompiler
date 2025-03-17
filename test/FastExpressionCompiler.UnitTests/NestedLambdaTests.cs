@@ -43,7 +43,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = expr.TryCompile<Func<string, string>>();
 
-            Assert.AreEqual("a", f("a"));
+            Asserts.AreEqual("a", f("a"));
         }
 
         [Test]
@@ -56,7 +56,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = expr.TryCompile<Func<string, string>>();
 
-            Assert.AreEqual("ba", f("a"));
+            Asserts.AreEqual("ba", f("a"));
         }
 
         [Test]
@@ -70,7 +70,7 @@ namespace FastExpressionCompiler.UnitTests
             var f = expr.TryCompile<Func<Action<string>>>();
 
             f()("a");
-            Assert.AreEqual("a", s.Value);
+            Asserts.AreEqual("a", s.Value);
         }
         [Test]
         public void Nested_Hoisted_lambda_using_outer_parameter_and_closed_value_deeply_nested_lambda()
@@ -85,7 +85,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = expr.TryCompile<Func<string, string>>();
 
-            Assert.AreEqual("abb", f("a"));
+            Asserts.AreEqual("abb", f("a"));
         }
 
         [Test]
@@ -149,7 +149,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = expr.TryCompile<Func<string, string>>();
 
-            Assert.AreEqual("a", f("a"));
+            Asserts.AreEqual("a", f("a"));
         }
 
         [Test]
@@ -172,7 +172,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = expr.TryCompile<Func<string, string>>();
 
-            Assert.AreEqual("ba", f("a"));
+            Asserts.AreEqual("ba", f("a"));
         }
 
         [Test]
@@ -202,7 +202,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = expr.TryCompile<Func<string, string>>();
 
-            Assert.AreEqual("abb", f("a"));
+            Asserts.AreEqual("abb", f("a"));
         }
 
         [Test]
@@ -249,7 +249,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var a1 = new A();
             var result1 = func(a1);
-            Assert.AreEqual(3, result1.X);
+            Asserts.AreEqual(3, result1.X);
             Assert.AreSame(a1, result1);
 
             var a2 = new A();
@@ -263,8 +263,8 @@ namespace FastExpressionCompiler.UnitTests
             var aa = new A();
             var bb = new A();
             funcEthalon(aa, bb);
-            Assert.AreEqual(3, aa.X);
-            Assert.AreEqual(-3, bb.X);
+            Asserts.AreEqual(3, aa.X);
+            Asserts.AreEqual(-3, bb.X);
 
             var aExpr = Parameter(typeof(A), "a");
             var bExpr = Parameter(typeof(A), "b");
@@ -296,7 +296,7 @@ namespace FastExpressionCompiler.UnitTests
             var a1 = new A();
             var b1 = new A();
             var result1 = func(a1, b1);
-            Assert.AreEqual(3, result1.X);
+            Asserts.AreEqual(3, result1.X);
             Assert.AreSame(a1, result1);
 
             var a2 = new A();
@@ -310,7 +310,7 @@ namespace FastExpressionCompiler.UnitTests
             Func<A, A, A> funcEthalon = (a, b) => a.Increment(b, () => a.Increment(b, () => a.Increment(b, null, null), () => a), () => a);
             var aa = new A();
             funcEthalon(aa, aa);
-            Assert.AreEqual(0, aa.X);
+            Asserts.AreEqual(0, aa.X);
 
             var aExpr = Parameter(typeof(A));
             var bExpr = Parameter(typeof(A));
@@ -339,7 +339,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var a1 = new A();
             var result1 = func(a1, a1);
-            Assert.AreEqual(0, result1.X);
+            Asserts.AreEqual(0, result1.X);
             Assert.AreSame(a1, result1);
 
             var a2 = new A();
@@ -384,8 +384,8 @@ namespace FastExpressionCompiler.UnitTests
                     Invoke(add, Constant(13))));
 
             var f = e.CompileFast(true);
-            Assert.IsNotNull(f);
-            Assert.AreEqual(50, f());
+            Asserts.IsNotNull(f);
+            Asserts.AreEqual(50, f());
         }
 
         [Test]
@@ -410,18 +410,18 @@ namespace FastExpressionCompiler.UnitTests
                     42) + ((Func<int, int>)((int n) =>
                         n + 1)).Invoke(
                     13));
-            Assert.AreEqual(13, @cs());
+            Asserts.AreEqual(13, @cs());
 
             var fs = e.CompileSys();
             fs.PrintIL();
-            Assert.AreEqual(13, fs());
+            Asserts.AreEqual(13, fs());
 
             var fi = e.CompileFast(true);
             fi.PrintIL();
-            Assert.AreEqual(13, fi());
+            Asserts.AreEqual(13, fi());
 
             var f = e.CompileFast(true, CompilerFlags.NoInvocationLambdaInlining);
-            Assert.AreEqual(13, f());
+            Asserts.AreEqual(13, f());
         }
 
         [Test]
@@ -449,11 +449,11 @@ namespace FastExpressionCompiler.UnitTests
 
             var fs = e.CompileSys();
             fs.PrintIL();
-            Assert.AreEqual(-10, fs(42));
+            Asserts.AreEqual(-10, fs(42));
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
-            Assert.AreEqual(-10, ff(42));
+            Asserts.AreEqual(-10, ff(42));
         }
 
         [Test]
@@ -483,11 +483,11 @@ namespace FastExpressionCompiler.UnitTests
 
             var fs = e.CompileSys();
             fs.PrintIL();
-            Assert.AreEqual(-10, fs(42));
+            Asserts.AreEqual(-10, fs(42));
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
-            Assert.AreEqual(-10, ff(42));
+            Asserts.AreEqual(-10, ff(42));
         }
 
         [Test]
@@ -514,19 +514,19 @@ namespace FastExpressionCompiler.UnitTests
                     int__54267293);
                 return int__54267293;
             });
-            Assert.AreEqual(42, @cs(0));
+            Asserts.AreEqual(42, @cs(0));
 
             var fs = e.CompileSys();
             fs.PrintIL();
-            Assert.AreEqual(42, fs(0));
+            Asserts.AreEqual(42, fs(0));
 
             var fi = e.CompileFast(true);
             fi.PrintIL();
-            Assert.AreEqual(42, fi(0));
+            Asserts.AreEqual(42, fi(0));
 
             // just to be sure the both options work
             var ff = e.CompileFast(true, CompilerFlags.NoInvocationLambdaInlining);
-            Assert.AreEqual(42, ff(0));
+            Asserts.AreEqual(42, ff(0));
         }
     }
 }

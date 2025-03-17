@@ -52,17 +52,17 @@ namespace FastExpressionCompiler.IssueTests
 
             var fs = expr.CompileSys();
             fs.PrintIL();
-            Assert.AreEqual("A", fs(1));
-            Assert.AreEqual("B", fs(2));
-            Assert.AreEqual("C", fs(5));
-            Assert.AreEqual("Z", fs(45));
+            Asserts.AreEqual("A", fs(1));
+            Asserts.AreEqual("B", fs(2));
+            Asserts.AreEqual("C", fs(5));
+            Asserts.AreEqual("Z", fs(45));
 
             var ff = expr.CompileFast(true);
             ff.PrintIL();
-            Assert.AreEqual("A", ff(1));
-            Assert.AreEqual("B", ff(2));
-            Assert.AreEqual("C", ff(5));
-            Assert.AreEqual("Z", ff(45));
+            Asserts.AreEqual("A", ff(1));
+            Asserts.AreEqual("B", ff(2));
+            Asserts.AreEqual("C", ff(5));
+            Asserts.AreEqual("Z", ff(45));
         }
 
         public enum MyEnum
@@ -87,17 +87,17 @@ namespace FastExpressionCompiler.IssueTests
 
             var ff = expr.CompileSys();
             ff.PrintIL();
-            Assert.AreEqual("A", ff(MyEnum.A));
-            Assert.AreEqual("B", ff(MyEnum.B));
-            Assert.AreEqual("C", ff(MyEnum.C));
-            Assert.AreEqual("Z", ff(null));
+            Asserts.AreEqual("A", ff(MyEnum.A));
+            Asserts.AreEqual("B", ff(MyEnum.B));
+            Asserts.AreEqual("C", ff(MyEnum.C));
+            Asserts.AreEqual("Z", ff(null));
 
             var fs = expr.CompileFast(true);
             fs.PrintIL();
-            Assert.AreEqual("A", fs(MyEnum.A));
-            Assert.AreEqual("B", fs(MyEnum.B));
-            Assert.AreEqual("C", fs(MyEnum.C));
-            Assert.AreEqual("Z", fs(null));
+            Asserts.AreEqual("A", fs(MyEnum.A));
+            Asserts.AreEqual("B", fs(MyEnum.B));
+            Asserts.AreEqual("C", fs(MyEnum.C));
+            Asserts.AreEqual("Z", fs(null));
         }
 
         public static bool MyEnumEquals(MyEnum? y, MyEnum? x) =>
@@ -121,17 +121,17 @@ namespace FastExpressionCompiler.IssueTests
 
             var ff = expr.CompileSys();
             ff.PrintIL();
-            Assert.AreEqual("A", ff(MyEnum.A));
-            Assert.AreEqual("B", ff(MyEnum.B));
-            Assert.AreEqual("C", ff(MyEnum.C));
-            Assert.AreEqual("Z", ff(null));
+            Asserts.AreEqual("A", ff(MyEnum.A));
+            Asserts.AreEqual("B", ff(MyEnum.B));
+            Asserts.AreEqual("C", ff(MyEnum.C));
+            Asserts.AreEqual("Z", ff(null));
 
             var fs = expr.CompileFast(true);
             fs.PrintIL();
-            Assert.AreEqual("A", fs(MyEnum.A));
-            Assert.AreEqual("B", fs(MyEnum.B));
-            Assert.AreEqual("C", fs(MyEnum.C));
-            Assert.AreEqual("Z", fs(null));
+            Asserts.AreEqual("A", fs(MyEnum.A));
+            Asserts.AreEqual("B", fs(MyEnum.B));
+            Asserts.AreEqual("C", fs(MyEnum.C));
+            Asserts.AreEqual("Z", fs(null));
         }
 
         public static bool MyEnumEqualsNonNullable(MyEnum y, MyEnum x) => y == x;
@@ -154,17 +154,17 @@ namespace FastExpressionCompiler.IssueTests
 
             var ff = expr.CompileSys();
             ff.PrintIL();
-            Assert.AreEqual("A", ff(MyEnum.A));
-            Assert.AreEqual("B", ff(MyEnum.B));
-            Assert.AreEqual("C", ff(MyEnum.C));
-            Assert.AreEqual("Z", ff(null));
+            Asserts.AreEqual("A", ff(MyEnum.A));
+            Asserts.AreEqual("B", ff(MyEnum.B));
+            Asserts.AreEqual("C", ff(MyEnum.C));
+            Asserts.AreEqual("Z", ff(null));
 
             var fs = expr.CompileFast(true);
             fs.PrintIL();
-            Assert.AreEqual("A", fs(MyEnum.A));
-            Assert.AreEqual("B", fs(MyEnum.B));
-            Assert.AreEqual("C", fs(MyEnum.C));
-            Assert.AreEqual("Z", fs(null));
+            Asserts.AreEqual("A", fs(MyEnum.A));
+            Asserts.AreEqual("B", fs(MyEnum.B));
+            Asserts.AreEqual("C", fs(MyEnum.C));
+            Asserts.AreEqual("Z", fs(null));
         }
 
         [Test]
@@ -187,8 +187,8 @@ namespace FastExpressionCompiler.IssueTests
             f.PrintIL();
 
             Assert.NotNull(f);
-            Assert.AreEqual(2L, f(MyEnum.B));
-            Assert.AreEqual(null, f(MyEnum.C));
+            Asserts.AreEqual(2L, f(MyEnum.B));
+            Asserts.AreEqual(null, f(MyEnum.C));
         }
 
         [Test]
@@ -208,7 +208,7 @@ namespace FastExpressionCompiler.IssueTests
             var f = lambda.CompileFast(true);
 
             Assert.NotNull(f);
-            Assert.AreEqual("B", f(2));
+            Asserts.AreEqual("B", f(2));
         }
 
         [Test]
@@ -226,7 +226,7 @@ namespace FastExpressionCompiler.IssueTests
             var lambda = Lambda<Func<int, string>>(blockExpr, eVar);
             var fastCompiled = lambda.CompileFast(true);
             Assert.NotNull(fastCompiled);
-            Assert.AreEqual("B", fastCompiled(2));
+            Asserts.AreEqual("B", fastCompiled(2));
         }
 
 
@@ -245,7 +245,7 @@ namespace FastExpressionCompiler.IssueTests
             var lambda = Lambda<Func<long, string>>(blockExpr, eVar);
             var fastCompiled = lambda.CompileFast(true);
             Assert.NotNull(fastCompiled);
-            Assert.AreEqual("B", fastCompiled(2));
+            Asserts.AreEqual("B", fastCompiled(2));
         }
 
         [Test]
@@ -257,7 +257,7 @@ namespace FastExpressionCompiler.IssueTests
             var lambda = Lambda<Func<int?, bool>>(blockExpr, eVar);
             var fastCompiled = lambda.CompileFast(true);
             Assert.NotNull(fastCompiled);
-            Assert.AreEqual(true, fastCompiled(94));
+            Asserts.AreEqual(true, fastCompiled(94));
         }
 
         [Test]
@@ -268,7 +268,7 @@ namespace FastExpressionCompiler.IssueTests
             var lambda = Lambda<Func<int?>>(blockExpr);
             var fastCompiled = lambda.CompileFast(true);
             Assert.NotNull(fastCompiled);
-            Assert.AreEqual(94, fastCompiled());
+            Asserts.AreEqual(94, fastCompiled());
         }
 
         [Test]
@@ -286,7 +286,7 @@ namespace FastExpressionCompiler.IssueTests
             var lambda = Lambda<Func<int?, string>>(blockExpr, eVar);
             var fastCompiled = lambda.CompileFast(true);
             Assert.NotNull(fastCompiled);
-            Assert.AreEqual("B", fastCompiled(96));
+            Asserts.AreEqual("B", fastCompiled(96));
         }
 
         [Test]
@@ -304,13 +304,13 @@ namespace FastExpressionCompiler.IssueTests
 
             var fs = e.CompileSys();
             fs.PrintIL();
-            Assert.AreEqual("A", fs(1));
-            Assert.AreEqual("Z", fs(42));
+            Asserts.AreEqual("A", fs(1));
+            Asserts.AreEqual("Z", fs(42));
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
-            Assert.AreEqual("A", ff(1));
-            Assert.AreEqual("Z", ff(42));
+            Asserts.AreEqual("A", ff(1));
+            Asserts.AreEqual("Z", ff(42));
         }
 
         [Test]
@@ -329,13 +329,13 @@ namespace FastExpressionCompiler.IssueTests
 
             var fs = expr.CompileSys();
             fs.PrintIL();
-            Assert.AreEqual("A", fs(true));
-            Assert.AreEqual("B", fs(false));
+            Asserts.AreEqual("A", fs(true));
+            Asserts.AreEqual("B", fs(false));
 
             var ff = expr.CompileFast(true);
             ff.PrintIL();
-            Assert.AreEqual("A", ff(true));
-            Assert.AreEqual("B", ff(false));
+            Asserts.AreEqual("A", ff(true));
+            Asserts.AreEqual("B", ff(false));
         }
 
         [Test]
@@ -354,15 +354,15 @@ namespace FastExpressionCompiler.IssueTests
 
             var fs = expr.CompileSys();
             fs.PrintIL();
-            Assert.AreEqual("A", fs("A"));
-            Assert.AreEqual("B", fs("B"));
-            Assert.AreEqual("C", fs("Z"));
+            Asserts.AreEqual("A", fs("A"));
+            Asserts.AreEqual("B", fs("B"));
+            Asserts.AreEqual("C", fs("Z"));
 
             var ff = expr.CompileFast(true);
             ff.PrintIL();
-            Assert.AreEqual("A", ff("A"));
-            Assert.AreEqual("B", ff("B"));
-            Assert.AreEqual("C", ff("Z"));
+            Asserts.AreEqual("A", ff("A"));
+            Asserts.AreEqual("B", ff("B"));
+            Asserts.AreEqual("C", ff("Z"));
         }
 
         public static bool StringCompareOrdinalIgnoreCase(string x, string y) =>
@@ -385,15 +385,15 @@ namespace FastExpressionCompiler.IssueTests
 
             var fs = expr.CompileSys();
             fs.PrintIL();
-            Assert.AreEqual("A", fs("A"));
-            Assert.AreEqual("B", fs("B"));
-            Assert.AreEqual("C", fs("Z"));
+            Asserts.AreEqual("A", fs("A"));
+            Asserts.AreEqual("B", fs("B"));
+            Asserts.AreEqual("C", fs("Z"));
 
             var ff = expr.CompileFast(true);
             ff.PrintIL();
-            Assert.AreEqual("A", ff("A"));
-            Assert.AreEqual("B", ff("B"));
-            Assert.AreEqual("C", ff("Z"));
+            Asserts.AreEqual("A", ff("A"));
+            Asserts.AreEqual("B", ff("B"));
+            Asserts.AreEqual("C", ff("Z"));
         }
 
         class Helper
@@ -422,8 +422,8 @@ namespace FastExpressionCompiler.IssueTests
             var lambda = Lambda<Func<Helper, string>>(blockExpr, eVar);
             var fastCompiled = lambda.CompileFast(true);
             Assert.NotNull(fastCompiled);
-            Assert.AreEqual("A", fastCompiled(new Helper() { V = "A" }));
-            Assert.AreEqual("C", fastCompiled(new Helper() { V = "Z" }));
+            Asserts.AreEqual("A", fastCompiled(new Helper() { V = "A" }));
+            Asserts.AreEqual("C", fastCompiled(new Helper() { V = "Z" }));
         }
     }
 }

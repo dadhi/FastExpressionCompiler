@@ -51,13 +51,13 @@ public class Issue442_TryCatch_and_the_Goto_outside_problems : ITest
         fs.PrintIL();
 
         var sr = fs();
-        Assert.AreEqual(5, sr);
+        Asserts.AreEqual(5, sr);
 
         var ff = expr.CompileFast(false);
         ff.PrintIL();
 
         var fr = ff();
-        Assert.AreEqual(5, fr);
+        Asserts.AreEqual(5, fr);
     }
 
     [Test]
@@ -89,12 +89,12 @@ public class Issue442_TryCatch_and_the_Goto_outside_problems : ITest
         fs.PrintIL();
 
         var sr = fs();
-        Assert.AreEqual(2, sr);
+        Asserts.AreEqual(2, sr);
 
         var ff = expr.CompileFast(false);
         ff.PrintIL();
 
         var fr = ff();
-        Assert.AreEqual(2, fr);
+        Asserts.AreEqual(2, fr);
     }
 }

@@ -33,7 +33,7 @@ namespace FastExpressionCompiler.IssueTests
             var compiledB = lambda.CompileFast(true);
             var exampleB = 5.0;
             compiledB(ref exampleB);
-            Assert.AreEqual(8.0, exampleB);
+            Asserts.AreEqual(8.0, exampleB);
         }
 
         [Test]
@@ -49,7 +49,7 @@ namespace FastExpressionCompiler.IssueTests
             var lambda = Lambda<Func<string, int>>(condition, pParam);
             var convert1 = lambda.CompileFast(true);
             Assert.NotNull(convert1);
-            Assert.AreEqual(1, convert1("aaa"));
+            Asserts.AreEqual(1, convert1("aaa"));
 
             convert1.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -70,7 +70,7 @@ namespace FastExpressionCompiler.IssueTests
             var compiledB = lambda.CompileFast<ActionRef<double>>(true);
             var exampleB = 5.0;
             compiledB(ref exampleB);
-            Assert.AreEqual(8.0, exampleB);
+            Asserts.AreEqual(8.0, exampleB);
         }
     }
 }

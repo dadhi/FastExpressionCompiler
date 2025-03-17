@@ -9,7 +9,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
     [TestFixture]
-    public class Issue197_Operation_could_destabilize_the_runtime  : ITest
+    public class Issue197_Operation_could_destabilize_the_runtime : ITest
     {
         public int Run()
         {
@@ -56,7 +56,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var func = expression.CompileFast(true);
             var dest = func(src);
-            Assert.AreEqual("Black", dest.Color);
+            Asserts.AreEqual("Black", dest.Color);
         }
 
         [Test]
@@ -92,7 +92,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var func = expression.CompileFast(true);
             var dest = func(src);
-            Assert.AreEqual("Black", dest.Color);
+            Asserts.AreEqual("Black", dest.Color);
         }
 
         class Source

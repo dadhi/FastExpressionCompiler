@@ -54,8 +54,8 @@ namespace FastExpressionCompiler.IssueTests
                                             new D())))))))));
 
             var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
-            Assert.IsNotNull(f);
-            Assert.IsNotNull(f());
+            Asserts.IsNotNull(f);
+            Asserts.IsNotNull(f());
 
             // var d = f.TryGetDebugInfo();
 
@@ -64,8 +64,8 @@ namespace FastExpressionCompiler.IssueTests
             // 3, 3 - compiling D in C in B in A
             // 4    - trying to compile D in B - but already compiled
             // 5    - trying to compile C in A - but already compiled
-            // Assert.AreEqual(5, d.NestedLambdaCount);
-            // Assert.AreEqual(3, d.NestedLambdaCompiledTimesCount);
+            // Asserts.AreEqual(5, d.NestedLambdaCount);
+            // Asserts.AreEqual(3, d.NestedLambdaCompiledTimesCount);
         }
 
         [Test]
@@ -75,8 +75,8 @@ namespace FastExpressionCompiler.IssueTests
             e.PrintCSharp();
 
             var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
-            Assert.IsNotNull(f);
-            Assert.IsNotNull(f());
+            Asserts.IsNotNull(f);
+            Asserts.IsNotNull(f());
 
             // var d = f.TryGetDebugInfo();
 
@@ -86,8 +86,8 @@ namespace FastExpressionCompiler.IssueTests
             // 4    - trying to compile D in C in B in A - but already compiled
             // 5    - trying to compile D in B - but already compiled
             // 6    - trying to compile C in A - but already compiled
-            // Assert.AreEqual(6, d.NestedLambdaCount);
-            // Assert.AreEqual(3, d.NestedLambdaCompiledTimesCount);
+            // Asserts.AreEqual(6, d.NestedLambdaCount);
+            // Asserts.AreEqual(3, d.NestedLambdaCompiledTimesCount);
         }
 
         [Test]
@@ -97,16 +97,16 @@ namespace FastExpressionCompiler.IssueTests
             e.PrintCSharp();
 
             var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
 
             var a = f(new Name("d1"), new Name("c1"), new Name("b1"));
-            Assert.AreEqual("d1", a.D1.Name.Value);
-            Assert.AreEqual("c1", a.C1.Name.Value);
-            Assert.AreEqual("b1", a.B1.Name.Value);
+            Asserts.AreEqual("d1", a.D1.Name.Value);
+            Asserts.AreEqual("c1", a.C1.Name.Value);
+            Asserts.AreEqual("b1", a.B1.Name.Value);
 
             // var d = f.TryGetDebugInfo();
-            // Assert.AreEqual(6, d.NestedLambdaCount);
-            // Assert.AreEqual(3, d.NestedLambdaCompiledTimesCount);
+            // Asserts.AreEqual(6, d.NestedLambdaCount);
+            // Asserts.AreEqual(3, d.NestedLambdaCompiledTimesCount);
         }
 
         [Test]
@@ -116,15 +116,15 @@ namespace FastExpressionCompiler.IssueTests
             e.PrintCSharp();
 
             var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
 
             var dd = f();
-            Assert.IsNotNull(dd);
+            Asserts.IsNotNull(dd);
             Assert.AreSame(dd.D1, dd.D2);
 
             // var d = f.TryGetDebugInfo();
-            // Assert.AreEqual(2, d.NestedLambdaCount);
-            // Assert.AreEqual(1, d.NestedLambdaCompiledTimesCount);
+            // Asserts.AreEqual(2, d.NestedLambdaCount);
+            // Asserts.AreEqual(1, d.NestedLambdaCompiledTimesCount);
         }
 
         [Test]
@@ -134,8 +134,8 @@ namespace FastExpressionCompiler.IssueTests
 
             var f = expr.CompileFast(true);
 
-            Assert.IsNotNull(f);
-            Assert.IsNotNull(f());
+            Asserts.IsNotNull(f);
+            Asserts.IsNotNull(f());
         }
 
         public readonly object[] _objects = new object[3];

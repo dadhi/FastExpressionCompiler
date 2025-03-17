@@ -46,8 +46,8 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = expr.CompileFast(true);
 
-            Assert.IsNotNull(f);
-            Assert.AreEqual("aaa", f("ignored"));
+            Asserts.IsNotNull(f);
+            Asserts.AreEqual("aaa", f("ignored"));
         }
 
         [Test]
@@ -64,15 +64,15 @@ namespace FastExpressionCompiler.UnitTests
             var @cs = (Func<string, Func<string>>)((string s) =>
                 (Func<string>)(() =>
                         s = "aaa"));
-            Assert.AreEqual("aaa", @cs("ignored").Invoke());
+            Asserts.AreEqual("aaa", @cs("ignored").Invoke());
 
             var fs = e.CompileSys();
-            Assert.AreEqual("aaa", fs("ignored").Invoke());
+            Asserts.AreEqual("aaa", fs("ignored").Invoke());
 
             var f = e.CompileFast(true);
 
-            Assert.IsNotNull(f);
-            Assert.AreEqual("aaa", f("ignored").Invoke());
+            Asserts.IsNotNull(f);
+            Asserts.AreEqual("aaa", f("ignored").Invoke());
         }
 
         [Test]
@@ -109,12 +109,12 @@ namespace FastExpressionCompiler.UnitTests
 
             var func = e.CompileFast(true);
 
-            Assert.IsNotNull(func);
+            Asserts.IsNotNull(func);
 
             var input = new TryCatchTest();
             var tryCatchResult = func(input);
             Assert.AreNotSame(input, tryCatchResult);
-            Assert.IsNotNull(tryCatchResult);
+            Asserts.IsNotNull(tryCatchResult);
         }
 
         [Test]
@@ -135,10 +135,10 @@ namespace FastExpressionCompiler.UnitTests
 
             var func = assignExpr.CompileFast(true);
 
-            Assert.IsNotNull(func);
+            Asserts.IsNotNull(func);
 
             var tryCatch = func();
-            Assert.IsNotNull(tryCatch);
+            Asserts.IsNotNull(tryCatch);
         }
 
         [Test]
@@ -150,9 +150,9 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = expr.CompileFast(true);
 
-            Assert.IsNotNull(f);
-            Assert.AreEqual(5, f());
-            Assert.AreEqual(5, a.Prop);
+            Asserts.IsNotNull(f);
+            Asserts.AreEqual(5, f());
+            Asserts.AreEqual(5, a.Prop);
         }
 
         [Test]
@@ -165,9 +165,9 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = expr.CompileFast(true);
 
-            Assert.IsNotNull(f);
-            Assert.AreEqual(5, f());
-            Assert.AreEqual(5, a.Field);
+            Asserts.IsNotNull(f);
+            Asserts.AreEqual(5, f());
+            Asserts.AreEqual(5, a.Field);
         }
 
         [Test]
@@ -194,7 +194,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.Throws<InvalidOperationException>(() => assignExpr.CompileSys());
 
             var func = assignExpr.CompileFast(true);
-            Assert.IsNull(func);
+            Asserts.IsNull(func);
         }
 
         [Test]
@@ -219,10 +219,10 @@ namespace FastExpressionCompiler.UnitTests
 
             var func = assignExpr.CompileFast(true);
 
-            Assert.IsNotNull(func);
+            Asserts.IsNotNull(func);
             var test = func();
-            Assert.IsNotNull(test);
-            Assert.AreEqual(2, test.Prop);
+            Asserts.IsNotNull(test);
+            Asserts.AreEqual(2, test.Prop);
         }
 
         [Test]
@@ -278,17 +278,17 @@ namespace FastExpressionCompiler.UnitTests
             var fs = assignExpr.CompileSys();
             fs.PrintIL();
             var tryCatch = fs();
-            Assert.IsNotNull(tryCatch);
-            Assert.IsNotNull(tryCatch.NestedTest);
-            Assert.AreEqual("Value", tryCatch.NestedTest.Nested);
+            Asserts.IsNotNull(tryCatch);
+            Asserts.IsNotNull(tryCatch.NestedTest);
+            Asserts.AreEqual("Value", tryCatch.NestedTest.Nested);
 
             var ff = assignExpr.CompileFast(true);
             ff.PrintIL();
-            Assert.IsNotNull(ff);
+            Asserts.IsNotNull(ff);
             tryCatch = ff();
-            Assert.IsNotNull(tryCatch);
-            Assert.IsNotNull(tryCatch.NestedTest);
-            Assert.AreEqual("Value", tryCatch.NestedTest.Nested);
+            Asserts.IsNotNull(tryCatch);
+            Asserts.IsNotNull(tryCatch.NestedTest);
+            Asserts.AreEqual("Value", tryCatch.NestedTest.Nested);
         }
         public class Test
         {
@@ -305,8 +305,8 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = expr.CompileFast(true);
 
-            Assert.IsNotNull(f);
-            Assert.AreEqual(5, f());
+            Asserts.IsNotNull(f);
+            Asserts.AreEqual(5, f());
         }
 
         [Test]
@@ -319,8 +319,8 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = expr.CompileFast(true);
 
-            Assert.IsNotNull(f);
-            Assert.AreEqual(a, f());
+            Asserts.IsNotNull(f);
+            Asserts.AreEqual(a, f());
         }
 
         [Test]
@@ -336,8 +336,8 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = expr.CompileFast(true);
 
-            Assert.IsNotNull(f);
-            Assert.AreEqual(5, f());
+            Asserts.IsNotNull(f);
+            Asserts.AreEqual(5, f());
         }
 
         [Test]
@@ -354,8 +354,8 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = expr.CompileFast(true);
 
-            Assert.IsNotNull(f);
-            Assert.AreEqual(a, f());
+            Asserts.IsNotNull(f);
+            Asserts.AreEqual(a, f());
         }
 
         [Test]
@@ -378,11 +378,11 @@ namespace FastExpressionCompiler.UnitTests
             var restoredExpr = sysExpr.ToLightExpression();
             restoredExpr.PrintCSharp();
             // todo: @wip #431 generates different names for the unnamed variables which is not comparable
-            Assert.AreEqual(expr.ToCSharpString(), restoredExpr.ToCSharpString());
+            Asserts.AreEqual(expr.ToCSharpString(), restoredExpr.ToCSharpString());
 #endif
 
-            Assert.IsNotNull(fs);
-            Assert.AreEqual(5, fs());
+            Asserts.IsNotNull(fs);
+            Asserts.AreEqual(5, fs());
         }
 
         [Test]
@@ -400,8 +400,8 @@ namespace FastExpressionCompiler.UnitTests
             var f = expr.CompileFast(true);
             f.PrintIL();
 
-            Assert.IsNotNull(f);
-            Assert.AreEqual(a, f());
+            Asserts.IsNotNull(f);
+            Asserts.AreEqual(a, f());
         }
 
         [Test]
@@ -417,8 +417,8 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = expr.CompileFast(true);
 
-            Assert.IsNotNull(f);
-            Assert.AreEqual(5, f());
+            Asserts.IsNotNull(f);
+            Asserts.AreEqual(5, f());
         }
 
         [Test]
@@ -435,8 +435,8 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = expr.CompileFast(true);
 
-            Assert.IsNotNull(f);
-            Assert.AreEqual(5, f());
+            Asserts.IsNotNull(f);
+            Asserts.AreEqual(5, f());
         }
 
         public class IndexTest

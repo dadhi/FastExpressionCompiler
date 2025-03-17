@@ -33,7 +33,7 @@ namespace FastExpressionCompiler.IssueTests
             var lambda = Lambda<Func<int, string>>(
                 Block(
                     switchStatement,
-                    Label(label, Constant(string.Empty))), 
+                    Label(label, Constant(string.Empty))),
                 param);
 
             lambda.PrintCSharp();
@@ -53,16 +53,16 @@ namespace FastExpressionCompiler.IssueTests
             var fs = lambda.CompileSys();
             fs.PrintIL();
 
-            Assert.AreEqual("foo", fs(1));
-            Assert.AreEqual("foo", fs(2));
-            Assert.AreEqual("bar", fs(42));
+            Asserts.AreEqual("foo", fs(1));
+            Asserts.AreEqual("foo", fs(2));
+            Asserts.AreEqual("bar", fs(42));
 
             var ff = lambda.CompileFast();
             ff.PrintIL();
 
-            Assert.AreEqual("foo", ff(1));
-            Assert.AreEqual("foo", ff(2));
-            Assert.AreEqual("bar", ff(42));
+            Asserts.AreEqual("foo", ff(1));
+            Asserts.AreEqual("foo", ff(2));
+            Asserts.AreEqual("bar", ff(42));
         }
     }
 }

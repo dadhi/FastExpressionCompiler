@@ -24,8 +24,8 @@ namespace FastExpressionCompiler.IssueTests
         {
             var lambda = Lambda<Func<IntPtr>>(Block(Constant(IntPtr.Zero)));
             var compiledB = lambda.CompileFast<Func<IntPtr>>(true);
-            Assert.IsNotNull(compiledB);
-            Assert.AreEqual(IntPtr.Zero, compiledB());
+            Asserts.IsNotNull(compiledB);
+            Asserts.AreEqual(IntPtr.Zero, compiledB());
         }
 
         [Test]
@@ -33,8 +33,8 @@ namespace FastExpressionCompiler.IssueTests
         {
             var lambda = Lambda<Func<UIntPtr>>(Block(Constant(UIntPtr.Zero)));
             var compiledB = lambda.CompileFast<Func<UIntPtr>>(true);
-            Assert.IsNotNull(compiledB);
-            Assert.AreEqual(UIntPtr.Zero, compiledB());
+            Asserts.IsNotNull(compiledB);
+            Asserts.AreEqual(UIntPtr.Zero, compiledB());
         }
     }
 }

@@ -28,8 +28,8 @@ namespace FastExpressionCompiler.IssueTests
             var expression = sExpression.FromSysExpression();
             int? answer = expression.CompileFast(true).Invoke();
 
-            Assert.IsTrue(answer.HasValue);
-            Assert.AreEqual(42, answer.Value);
+            Asserts.IsTrue(answer.HasValue);
+            Asserts.AreEqual(42, answer.Value);
         }
 
         [Test]
@@ -39,7 +39,7 @@ namespace FastExpressionCompiler.IssueTests
             var expression = sExpression.FromSysExpression();
             int? answer = expression.CompileFast(true).Invoke();
 
-            Assert.IsFalse(answer.HasValue);
+            Asserts.IsFalse(answer.HasValue);
         }
 
         [Test]
@@ -51,7 +51,7 @@ namespace FastExpressionCompiler.IssueTests
 
             int? answer = expr.CompileFast(true).Invoke();
 
-            Assert.IsFalse(answer.HasValue);
+            Asserts.IsFalse(answer.HasValue);
         }
     }
 }

@@ -42,15 +42,15 @@ public class Issue430_TryCatch_Bad_label_content_in_ILGenerator : ITest
         var sysExpr = expr.ToLambdaExpression();
         var restoredExpr = sysExpr.ToLightExpression();
         restoredExpr.PrintCSharp();
-        Assert.AreEqual(expr.ToCSharpString(), restoredExpr.ToCSharpString());
+        Asserts.AreEqual(expr.ToCSharpString(), restoredExpr.ToCSharpString());
 #endif
 
         var fs = expr.CompileSys();
         fs.PrintIL();
-        Assert.AreEqual(1, fs());
+        Asserts.AreEqual(1, fs());
 
         var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
         ff.PrintIL();
-        Assert.AreEqual(1, ff());
+        Asserts.AreEqual(1, ff());
     }
 }

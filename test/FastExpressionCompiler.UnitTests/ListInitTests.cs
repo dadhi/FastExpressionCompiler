@@ -74,15 +74,15 @@ namespace FastExpressionCompiler.UnitTests
             fs.PrintIL();
             var lt = new ListInitTests();
             var ps = fs(lt).ToArray();
-            Assert.AreEqual("id42", ps[0].Value);
-            Assert.AreEqual("prop42", ps[1].Value);
+            Asserts.AreEqual("id42", ps[0].Value);
+            Asserts.AreEqual("prop42", ps[1].Value);
 
             expr.PrintCSharp();
             var f = expr.CompileFast(true);
             f.PrintIL();
             ps = f(lt).ToArray();
-            Assert.AreEqual("id42", ps[0].Value);
-            Assert.AreEqual("prop42", ps[1].Value);
+            Asserts.AreEqual("id42", ps[0].Value);
+            Asserts.AreEqual("prop42", ps[1].Value);
         }
 
         public object Id { get; set; } = "id42";

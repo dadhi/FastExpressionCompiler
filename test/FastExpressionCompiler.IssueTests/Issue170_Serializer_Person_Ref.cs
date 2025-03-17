@@ -62,8 +62,8 @@ namespace FastExpressionCompiler.IssueTests
                 int offset = 0;
 
                 invoke(null, ref offset, ref person);
-                Assert.AreEqual(5, person.Health);
-                Assert.AreEqual("test result name", person.Name);
+                Asserts.AreEqual(5, person.Health);
+                Asserts.AreEqual("test result name", person.Name);
             }
 
             LocalAssert(AssigningRefs);
@@ -112,7 +112,7 @@ namespace FastExpressionCompiler.IssueTests
             {
                 var person = new SimplePerson { Health = 1 };
                 invoke(ref person);
-                Assert.AreEqual(5, person.Health);
+                Asserts.AreEqual(5, person.Health);
             }
 
             LocalAssert(AssigningRefs);
@@ -145,7 +145,7 @@ namespace FastExpressionCompiler.IssueTests
             {
                 var person = new SimplePersonStruct { Health = 1 };
                 invoke(ref person);
-                Assert.AreEqual(5, person.Health);
+                Asserts.AreEqual(5, person.Health);
             }
 
             LocalAssert(AssigningRefs);
@@ -171,7 +171,7 @@ namespace FastExpressionCompiler.IssueTests
             {
                 var person = new SimplePersonStruct { Health = 1 };
                 invoke(ref person);
-                Assert.AreEqual(6, person.Health);
+                Asserts.AreEqual(6, person.Health);
             }
 
             LocalAssert(AssigningRefs);
@@ -216,7 +216,7 @@ namespace FastExpressionCompiler.IssueTests
             {
                 var person = new SimplePersonClass { Health = 1 };
                 invoke(ref person);
-                Assert.AreEqual(6, person.Health);
+                Asserts.AreEqual(6, person.Health);
             }
             LocalAssert(AssigningRefs);
 

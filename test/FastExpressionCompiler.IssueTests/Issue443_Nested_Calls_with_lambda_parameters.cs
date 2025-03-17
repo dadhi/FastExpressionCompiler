@@ -54,13 +54,13 @@ public class Issue443_Nested_Calls_with_lambda_parameters : ITest
         fs.PrintIL();
 
         var sr = fs();
-        Assert.AreEqual(42, sr);
+        Asserts.AreEqual(42, sr);
 
         var ff = expr.CompileFast(false);
         ff.PrintIL();
 
         var fr = ff();
-        Assert.AreEqual(42, fr);
+        Asserts.AreEqual(42, fr);
     }
 
     [Test]
@@ -90,13 +90,13 @@ public class Issue443_Nested_Calls_with_lambda_parameters : ITest
         fs.PrintIL();
 
         var sr = fs();
-        Assert.AreEqual(42, sr);
+        Asserts.AreEqual(42, sr);
 
         var ff = expr.CompileFast(false);
         ff.PrintIL();
 
         var fr = ff();
-        Assert.AreEqual(42, fr);
+        Asserts.AreEqual(42, fr);
     }
 
     [Test]
@@ -126,12 +126,12 @@ public class Issue443_Nested_Calls_with_lambda_parameters : ITest
         fs.PrintIL();
 
         var sr = fs();
-        Assert.AreEqual(42, sr);
+        Asserts.AreEqual(42, sr);
 
         var ff = expr.CompileFast(false, CompilerFlags.NoInvocationLambdaInlining);
         ff.PrintIL();
 
         var fr = ff();
-        Assert.AreEqual(42, fr);
+        Asserts.AreEqual(42, fr);
     }
 }

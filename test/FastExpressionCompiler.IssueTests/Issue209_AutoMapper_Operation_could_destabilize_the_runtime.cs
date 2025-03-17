@@ -10,7 +10,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
     [TestFixture]
-    public class Issue209_AutoMapper_Operation_could_destabilize_the_runtime  : ITest
+    public class Issue209_AutoMapper_Operation_could_destabilize_the_runtime : ITest
     {
         public int Run()
         {
@@ -49,8 +49,8 @@ namespace FastExpressionCompiler.IssueTests
 
             var dest = compiled(src);
 
-            Assert.IsNotNull(dest);
-            Assert.AreEqual(Status.InProgress, dest.Status);
+            Asserts.IsNotNull(dest);
+            Asserts.AreEqual(Status.InProgress, dest.Status);
         }
 
         public enum Status

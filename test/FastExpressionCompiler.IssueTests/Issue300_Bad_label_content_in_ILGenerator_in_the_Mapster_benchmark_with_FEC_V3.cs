@@ -114,14 +114,14 @@ namespace FastExpressionCompiler.IssueTests
             var customerName = "Customer 1";
             var customer = new CustomerWithPrivateProperty(customerId, customerName);
             var dto1 = fs(customer);
-            Assert.AreEqual(customerName, dto1.Name);
-            Assert.AreEqual(customerId, dto1.Id);
+            Asserts.AreEqual(customerName, dto1.Name);
+            Asserts.AreEqual(customerId, dto1.Id);
 
             var ff = expr.CompileFast(true);
             ff.PrintIL("fec");
             var dto2 = ff(customer);
-            Assert.AreEqual(customerName, dto2.Name);
-            Assert.AreEqual(customerId, dto2.Id);
+            Asserts.AreEqual(customerName, dto2.Name);
+            Asserts.AreEqual(customerId, dto2.Id);
         }
 
         [Test]
@@ -162,12 +162,12 @@ namespace FastExpressionCompiler.IssueTests
 
             var poco = new SimplePoco { Id = Guid.NewGuid(), Name = "TestName" };
             var dto1 = fs(poco);
-            Assert.AreEqual(poco.Name, dto1.Name);
+            Asserts.AreEqual(poco.Name, dto1.Name);
 
             var ff = expr.CompileFast(true);
             ff.PrintIL("fec");
             var dto2 = ff(poco);
-            Assert.AreEqual(poco.Name, dto2.Name);
+            Asserts.AreEqual(poco.Name, dto2.Name);
         }
 
         [Test]
@@ -189,12 +189,12 @@ namespace FastExpressionCompiler.IssueTests
             var fs = expr.CompileSys();
             fs.PrintIL("sys");
             var n1 = fs();
-            Assert.AreEqual("b", n1.Secret);
+            Asserts.AreEqual("b", n1.Secret);
 
             var ff = expr.CompileFast(true);
             ff.PrintIL("fec");
             var n2 = ff();
-            Assert.AreEqual("b", n2.Secret);
+            Asserts.AreEqual("b", n2.Secret);
         }
 
         [Test]
@@ -212,12 +212,12 @@ namespace FastExpressionCompiler.IssueTests
             var fs = expr.CompileSys();
             fs.PrintIL("sys");
             var n1 = fs();
-            Assert.AreEqual(42, n1);
+            Asserts.AreEqual(42, n1);
 
             var ff = expr.CompileFast(true);
             ff.PrintIL("fec");
             var n2 = ff();
-            Assert.AreEqual(42, n2);
+            Asserts.AreEqual(42, n2);
         }
 
         [Test]
@@ -234,12 +234,12 @@ namespace FastExpressionCompiler.IssueTests
             var fs = expr.CompileSys();
             fs.PrintIL("sys");
             var n1 = fs();
-            Assert.AreEqual(22, n1);
+            Asserts.AreEqual(22, n1);
 
             var ff = expr.CompileFast(true);
             ff.PrintIL("fec");
             var n2 = ff();
-            Assert.AreEqual(22, n2);
+            Asserts.AreEqual(22, n2);
         }
 
         public class Post
@@ -662,17 +662,17 @@ namespace FastExpressionCompiler.IssueTests
                 Name = "test",
             };
             var dict = fs(poco);
-            Assert.AreEqual(2, dict.Count);
-            Assert.AreEqual(poco.Id, dict["Id"]);
-            Assert.AreEqual(poco.Name, dict["Name"]);
+            Asserts.AreEqual(2, dict.Count);
+            Asserts.AreEqual(poco.Id, dict["Id"]);
+            Asserts.AreEqual(poco.Name, dict["Name"]);
 
             var ff = expr.CompileFast(true);
             ff.PrintIL("fec");
 
             var dict1 = ff(poco);
-            Assert.AreEqual(2, dict1.Count);
-            Assert.AreEqual(poco.Id, dict1["Id"]);
-            Assert.AreEqual(poco.Name, dict1["Name"]);
+            Asserts.AreEqual(2, dict1.Count);
+            Asserts.AreEqual(poco.Id, dict1["Id"]);
+            Asserts.AreEqual(poco.Name, dict1["Name"]);
         }
 
         public class SimplePoco
@@ -829,7 +829,7 @@ namespace FastExpressionCompiler.IssueTests
             ff.PrintIL();
             var res2 = ff(test);
 
-            Assert.AreEqual(res.TestString, res2.TestString);
+            Asserts.AreEqual(res.TestString, res2.TestString);
         }
 
         public class Test
@@ -1267,7 +1267,7 @@ namespace FastExpressionCompiler.IssueTests
             ff.PrintIL();
             var res2 = ff(customer, customerDto);
 
-            Assert.AreEqual(res, res2);
+            Asserts.AreEqual(res, res2);
         }
 
         public class TypeAdapterConfig

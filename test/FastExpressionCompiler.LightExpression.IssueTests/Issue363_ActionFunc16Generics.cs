@@ -41,7 +41,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
                 long>>(flags: CompilerFlags.ThrowOnNotSupportedExpression);
 
             Assert.NotNull(compiled);
-            Assert.AreEqual(0L, compiled(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15));
+            Asserts.AreEqual(0L, compiled(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15));
         }
 
         [Test]
@@ -80,7 +80,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             var sysExpr = expr.ToLambdaExpression();
             var restoredExpr = sysExpr.ToLightExpression();
             restoredExpr.PrintCSharp();
-            Assert.AreEqual(expr.ToCSharpString(), restoredExpr.ToCSharpString());
+            Asserts.AreEqual(expr.ToCSharpString(), restoredExpr.ToCSharpString());
 #endif
 
             // (a, b, c, ...) => new[] { a, b, c, ... }
@@ -88,7 +88,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
 
             var result = (int[])fs.DynamicInvoke(parameters.Select(_ => (object)1).ToArray());
 
-            Assert.AreEqual(paramCount, result.Length);
+            Asserts.AreEqual(paramCount, result.Length);
         }
 
         [TestCaseSource(nameof(TestCases))]
@@ -114,7 +114,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
 
             compiled.DynamicInvoke(parameters.Select(_ => (object)1).ToArray());
 
-            Assert.AreEqual(paramCount, list.Sum());
+            Asserts.AreEqual(paramCount, list.Sum());
         }
     }
 }

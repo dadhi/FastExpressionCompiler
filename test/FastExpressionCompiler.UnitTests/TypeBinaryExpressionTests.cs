@@ -30,15 +30,15 @@ namespace FastExpressionCompiler.UnitTests
                 sExpr);
 
             var f = expr.CompileSys(); // TODO: CompileFast, but it does not work ATM
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
             bool result = f(new A());
-            Assert.IsTrue(result, expr.ToString());
+            Asserts.IsTrue(result, expr.ToString());
             bool result2 = f(new B());
-            Assert.IsFalse(result2, expr.GetType().FullName);
+            Asserts.IsFalse(result2, expr.GetType().FullName);
         }
 
         class A { }
-        class B: A { }
+        class B : A { }
 
         [Test]
         public void TypeIs_should_work()
@@ -51,7 +51,7 @@ namespace FastExpressionCompiler.UnitTests
             var f = expr.CompileFast(true);
             bool result = f("123");
 
-            Assert.IsTrue(result);
+            Asserts.IsTrue(result);
         }
 
         [Test]
@@ -64,18 +64,18 @@ namespace FastExpressionCompiler.UnitTests
             var exprString = Lambda<Func<object, bool>>(TypeIs(fromParam, typeof(string)), fromParam).CompileFast(true);
             var exprIgnoredResult = Lambda<Action<object>>(TypeIs(fromParam, typeof(string)), fromParam).CompileFast(true);
 
-            Assert.AreEqual(true, exprInt(1));
-            Assert.AreEqual(false, exprInt("A"));
-            Assert.AreEqual(false, exprInt(1L));
-            Assert.AreEqual(true, exprX(new S()));
-            Assert.AreEqual(false, exprX("A"));
-            Assert.AreEqual(false, exprX(null));
-            Assert.AreEqual(true, exprXEnum(E.A));
-            Assert.AreEqual(false, exprXEnum("A"));
-            Assert.AreEqual(false, exprXEnum(null));
-            Assert.AreEqual(true, exprString("A"));
-            Assert.AreEqual(false, exprString(E.A));
-            Assert.AreEqual(false, exprXEnum(null));
+            Asserts.AreEqual(true, exprInt(1));
+            Asserts.AreEqual(false, exprInt("A"));
+            Asserts.AreEqual(false, exprInt(1L));
+            Asserts.AreEqual(true, exprX(new S()));
+            Asserts.AreEqual(false, exprX("A"));
+            Asserts.AreEqual(false, exprX(null));
+            Asserts.AreEqual(true, exprXEnum(E.A));
+            Asserts.AreEqual(false, exprXEnum("A"));
+            Asserts.AreEqual(false, exprXEnum(null));
+            Asserts.AreEqual(true, exprString("A"));
+            Asserts.AreEqual(false, exprString(E.A));
+            Asserts.AreEqual(false, exprXEnum(null));
             exprIgnoredResult(1);
             exprIgnoredResult("A");
         }

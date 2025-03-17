@@ -71,10 +71,10 @@ namespace FastExpressionCompiler.UnitTests
                         v)));
 
             var fs = fe.CompileSys();
-            Assert.IsNotNull(fs());
+            Asserts.IsNotNull(fs());
 
             var f = fe.CompileFast(true);
-            Assert.IsNotNull(f());
+            Asserts.IsNotNull(f());
         }
 
         /*
@@ -171,19 +171,19 @@ namespace FastExpressionCompiler.UnitTests
             var v = Constant(new V { N = 3 });
 
             var fe = Lambda<Func<A>>(
-            New(typeof(A).GetTypeInfo().DeclaredConstructors.First(), 
+            New(typeof(A).GetTypeInfo().DeclaredConstructors.First(),
                 q, x, y, z, v, New(typeof(B).GetTypeInfo().DeclaredConstructors.First(),
                     q, x, y, z, v), New(typeof(C).GetTypeInfo().DeclaredConstructors.First(),
                     q, x, y, z, v)));
 
             var fs = fe.CompileSys();
-            Assert.IsNotNull(fs());
+            Asserts.IsNotNull(fs());
 
             var f = fe.CompileFast(true);
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
             var result = f();
-            Assert.AreEqual(3, result.V.N);
-            Assert.AreEqual(result.V.N, result.B.V.N);
+            Asserts.AreEqual(3, result.V.N);
+            Asserts.AreEqual(result.V.N, result.B.V.N);
         }
 
         public class Q { }

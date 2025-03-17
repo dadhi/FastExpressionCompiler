@@ -13,7 +13,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-[TestFixture]
+    [TestFixture]
     public class Issue146_bool_par : ITest
     {
         public int Run()
@@ -48,7 +48,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var ret = func.Invoke(new MyObject(), false);
 
-            Assert.AreEqual(true, ret);
+            Asserts.AreEqual(true, ret);
         }
 
         private class MyClass

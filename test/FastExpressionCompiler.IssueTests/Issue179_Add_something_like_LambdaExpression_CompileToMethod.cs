@@ -40,13 +40,13 @@ namespace FastExpressionCompiler.IssueTests
             var funcExpr = Lambda<Func<int, int, int>>(Add(paramA, paramB), paramA, paramB);
 
             var success = funcExpr.CompileFastToIL(methodBuilder.GetILGenerator());
-            Assert.IsTrue(success);
+            Asserts.IsTrue(success);
 
             var dynamicType = typeBuilder.CreateType();
             var myAddMethod = dynamicType.GetTypeInfo().GetDeclaredMethod("MyAdd");
             var func = (Func<int, int, int>)Delegate.CreateDelegate(funcExpr.Type, myAddMethod);
 
-            Assert.AreEqual(42, func(39, 3));
+            Asserts.AreEqual(42, func(39, 3));
         }
     }
 }

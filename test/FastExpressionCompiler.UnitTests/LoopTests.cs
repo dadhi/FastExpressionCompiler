@@ -42,7 +42,7 @@ namespace FastExpressionCompiler.UnitTests
             var loopLambda = Lambda<Action>(lambdaBody);
             var loopFunc = loopLambda.CompileFast(true);
 
-            Assert.IsNotNull(loopFunc);
+            Asserts.IsNotNull(loopFunc);
 
             loopFunc.Invoke();
         }
@@ -57,13 +57,13 @@ namespace FastExpressionCompiler.UnitTests
                 Loop(
                     Block(
                         new[] { intVariable },
-                        IfThen(GreaterThan(intVariable, Constant(3)), Break(breakLabel)), 
+                        IfThen(GreaterThan(intVariable, Constant(3)), Break(breakLabel)),
                         PreIncrementAssign(intVariable)),
                     breakLabel)
                 );
             var loopFunc = loopLambda.CompileFast(true);
 
-            Assert.IsNotNull(loopFunc);
+            Asserts.IsNotNull(loopFunc);
 
             loopFunc.Invoke();
         }
@@ -86,7 +86,7 @@ namespace FastExpressionCompiler.UnitTests
             var loopLambda = Lambda<Action>(lambdaBody);
             var loopFunc = loopLambda.CompileFast(true);
 
-            Assert.IsNotNull(loopFunc);
+            Asserts.IsNotNull(loopFunc);
 
             loopFunc.Invoke();
         }
@@ -117,7 +117,7 @@ namespace FastExpressionCompiler.UnitTests
             var loopLambda = Lambda<Action>(lambdaBody);
             var loopFunc = loopLambda.CompileFast(true);
 
-            Assert.IsNotNull(loopFunc);
+            Asserts.IsNotNull(loopFunc);
 
             loopFunc.Invoke();
         }
@@ -140,7 +140,7 @@ namespace FastExpressionCompiler.UnitTests
             var loopLambda = Lambda<Action>(lambdaBody);
             var loopFunc = loopLambda.CompileFast(true);
 
-            Assert.IsNotNull(loopFunc);
+            Asserts.IsNotNull(loopFunc);
 
             loopFunc.Invoke();
         }
@@ -164,7 +164,7 @@ namespace FastExpressionCompiler.UnitTests
             var loopLambda = Lambda<Action>(lambdaBody);
             var loopFunc = loopLambda.CompileFast(true);
 
-            Assert.IsNotNull(loopFunc);
+            Asserts.IsNotNull(loopFunc);
 
             loopFunc.Invoke();
         }
@@ -186,11 +186,11 @@ namespace FastExpressionCompiler.UnitTests
             var loopLambda = Lambda<Func<int>>(lambdaBody);
             var loopFunc = loopLambda.CompileFast(true);
 
-            Assert.IsNotNull(loopFunc);
+            Asserts.IsNotNull(loopFunc);
 
             var result = loopFunc.Invoke();
 
-            Assert.AreEqual(5, result);
+            Asserts.AreEqual(5, result);
         }
     }
 }

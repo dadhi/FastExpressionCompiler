@@ -27,7 +27,7 @@ namespace FastExpressionCompiler.IssueTests
             var lambda = Lambda<Func<double>>(Power(Constant(5.0), Constant(2.0)));
             var fastCompiled = lambda.CompileFast(true);
             Assert.NotNull(fastCompiled);
-            Assert.AreEqual(25, fastCompiled());
+            Asserts.AreEqual(25, fastCompiled());
         }
 
         [Test]
@@ -39,7 +39,7 @@ namespace FastExpressionCompiler.IssueTests
             var compiledB = lambda.CompileFast(true);
             var exampleB = 5.0;
             compiledB(ref exampleB);
-            Assert.AreEqual(25.0, exampleB);
+            Asserts.AreEqual(25.0, exampleB);
         }
     }
 }

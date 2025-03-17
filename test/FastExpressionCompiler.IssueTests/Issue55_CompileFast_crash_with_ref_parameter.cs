@@ -81,7 +81,7 @@ namespace FastExpressionCompiler.IssueTests
             {
                 var exampleA = default(int);
                 invoke(ref exampleA);
-                Assert.AreEqual(0, exampleA);
+                Asserts.AreEqual(0, exampleA);
             }
             var compiledB = lambda.CompileFast<ActionRef<int>>(true);
             LocalAssert(compiledB);
@@ -100,7 +100,7 @@ namespace FastExpressionCompiler.IssueTests
             {
                 var exampleA = default(BigInteger);
                 invoke(ref exampleA);
-                Assert.AreEqual(new BigInteger(0), exampleA);
+                Asserts.AreEqual(new BigInteger(0), exampleA);
             }
             var compiledB = lambda.CompileFast<ActionRef<BigInteger>>(true);
             LocalAssert(compiledB);
@@ -123,12 +123,12 @@ namespace FastExpressionCompiler.IssueTests
             var compiledB = lambda.CompileFast<ActionRef<int>>(true);
             var exampleB = default(int);
             compiledB(ref exampleB);
-            Assert.AreEqual(3, exampleB);
+            Asserts.AreEqual(3, exampleB);
 
             ActionRef<int> direct = SetSmallConstant;
             var exampleC = default(int);
             direct(ref exampleC);
-            Assert.AreEqual(3, exampleC);
+            Asserts.AreEqual(3, exampleC);
         }
         private static void SetMinus1(ref int localByRef) { localByRef = -1; }
 
@@ -145,7 +145,7 @@ namespace FastExpressionCompiler.IssueTests
             {
                 var exampleA = default(int);
                 invoke(ref exampleA);
-                Assert.AreEqual(-1, exampleA);
+                Asserts.AreEqual(-1, exampleA);
             }
 
             var compiledB = lambda.CompileFast<ActionRef<int>>(true);
@@ -170,7 +170,7 @@ namespace FastExpressionCompiler.IssueTests
             {
                 var exampleA = default(BigInteger);
                 invoke(ref exampleA);
-                Assert.AreEqual(new BigInteger(-1), exampleA);
+                Asserts.AreEqual(new BigInteger(-1), exampleA);
             }
 
             var compiledB = lambda.CompileFast<ActionRef<BigInteger>>(true);
@@ -199,12 +199,12 @@ namespace FastExpressionCompiler.IssueTests
             var compiledB = lambda.CompileFast(true);
             var exampleB = default(int);
             compiledB(ref exampleB);
-            Assert.AreEqual(0, exampleB);
+            Asserts.AreEqual(0, exampleB);
 
             ActionRef<int> direct = SetIntoLocalVariableAndCallOtherRef;
             var exampleC = default(int);
             direct(ref exampleC);
-            Assert.AreEqual(0, exampleC);
+            Asserts.AreEqual(0, exampleC);
         }
 
         private static void SetMinus1_OfString(ref string localByRef) { localByRef = "-1"; }
@@ -232,7 +232,7 @@ namespace FastExpressionCompiler.IssueTests
             });
             var a = "0";
             @cs(ref a);
-            Assert.AreEqual("0", a);
+            Asserts.AreEqual("0", a);
 
             var expectedIL = new[]
             {
@@ -248,18 +248,18 @@ namespace FastExpressionCompiler.IssueTests
             fs.PrintIL();
             a = "0";
             fs(ref a);
-            Assert.AreEqual("0", a);
+            Asserts.AreEqual("0", a);
 
             var ff = lambda.CompileFast(true);
             ff.AssertOpCodes(expectedIL);
             a = "0";
             ff(ref a);
-            Assert.AreEqual("0", a);
+            Asserts.AreEqual("0", a);
 
             ActionRef<string> direct = SetIntoLocalVariableAndCallOtherRef;
             a = "0";
             direct(ref a);
-            Assert.AreEqual("0", a);
+            Asserts.AreEqual("0", a);
         }
 
         record struct RecVal(string S);
@@ -299,12 +299,12 @@ namespace FastExpressionCompiler.IssueTests
 
             var exampleB = new RecVal("0");
             compiledB(ref exampleB);
-            Assert.AreEqual("0", exampleB.S);
+            Asserts.AreEqual("0", exampleB.S);
 
             ActionRef<RecVal> direct = SetIntoLocalVariableAndCallOtherRef;
             var exampleC = new RecVal("0");
             direct(ref exampleC);
-            Assert.AreEqual("0", exampleC.S);
+            Asserts.AreEqual("0", exampleC.S);
         }
 
         private static void OutSetMinus1(out int localByRef) { localByRef = -1; }
@@ -326,12 +326,12 @@ namespace FastExpressionCompiler.IssueTests
             var compiledB = lambda.CompileFast<ActionRef<int>>(true);
             var exampleB = default(int);
             compiledB(ref exampleB);
-            Assert.AreEqual(0, exampleB);
+            Asserts.AreEqual(0, exampleB);
 
             ActionRef<int> direct = SetIntoLocalVariableAndCallOtherRef;
             var exampleC = default(int);
             direct(ref exampleC);
-            Assert.AreEqual(0, exampleC);
+            Asserts.AreEqual(0, exampleC);
         }
 
         private static void Set1AndMinus1(ref int ref1, ref int ref2) { ref2 = -1; ref1 = 1; }
@@ -362,8 +362,8 @@ namespace FastExpressionCompiler.IssueTests
             void LocalAssert(FuncRef<int, int> invoke)
             {
                 var exampleA = default(int);
-                Assert.AreEqual(-1, invoke(ref exampleA));
-                Assert.AreEqual(1, exampleA);
+                Asserts.AreEqual(-1, invoke(ref exampleA));
+                Asserts.AreEqual(1, exampleA);
             }
 
             var compiledB = lambda.CompileFast<FuncRef<int, int>>(true);
@@ -401,8 +401,8 @@ namespace FastExpressionCompiler.IssueTests
             void LocalAssert(FuncRef<int, int> invoke)
             {
                 var exampleA = default(int);
-                Assert.AreEqual(1, invoke(ref exampleA));
-                Assert.AreEqual(-1, exampleA);
+                Asserts.AreEqual(1, invoke(ref exampleA));
+                Asserts.AreEqual(-1, exampleA);
             }
 
             var compiledB = lambda.CompileFast<FuncRef<int, int>>(true);
@@ -438,9 +438,9 @@ namespace FastExpressionCompiler.IssueTests
                 var example2 = default(byte);
                 var example3 = default(short);
                 sut(ref example1, ref example2, ref example3);
-                Assert.AreEqual(1, example1);
-                Assert.AreEqual(2, example2);
-                Assert.AreEqual(3, example3);
+                Asserts.AreEqual(1, example1);
+                Asserts.AreEqual(2, example2);
+                Asserts.AreEqual(3, example3);
             }
 
 
@@ -487,8 +487,8 @@ namespace FastExpressionCompiler.IssueTests
             void LocalAssert(FuncRef<int, int> invoke)
             {
                 var exampleA = default(int);
-                Assert.AreEqual(-1, invoke(ref exampleA));
-                Assert.AreEqual(1, exampleA);
+                Asserts.AreEqual(-1, invoke(ref exampleA));
+                Asserts.AreEqual(1, exampleA);
             }
         }
 
@@ -511,7 +511,7 @@ namespace FastExpressionCompiler.IssueTests
             {
                 var exampleA = default(int);
                 invoke(ref exampleA);
-                Assert.AreEqual(-1, exampleA);
+                Asserts.AreEqual(-1, exampleA);
             }
 
             var compiledB = lambda.CompileFast<ActionRef<int>>(true);
@@ -535,12 +535,12 @@ namespace FastExpressionCompiler.IssueTests
             var compiledB = lambda.CompileFast<ActionRef<byte>>(true);
             var exampleB = default(byte);
             compiledB(ref exampleB);
-            Assert.AreEqual(3, exampleB);
+            Asserts.AreEqual(3, exampleB);
 
             ActionRef<byte> direct = SetSmallConstant;
             var exampleC = default(byte);
             direct(ref exampleC);
-            Assert.AreEqual(3, exampleC);
+            Asserts.AreEqual(3, exampleC);
         }
 
         [Test]
@@ -556,13 +556,13 @@ namespace FastExpressionCompiler.IssueTests
 
             var compiledB = lambda.CompileFast<FuncRef<uint, ushort>>(true);
             var exampleB = default(uint);
-            Assert.AreEqual(7, compiledB(ref exampleB));
-            Assert.AreEqual(3, exampleB);
+            Asserts.AreEqual(7, compiledB(ref exampleB));
+            Asserts.AreEqual(3U, exampleB);
 
             FuncRef<uint, ushort> direct = SetSmallConstant;
             var exampleC = default(uint);
-            Assert.AreEqual(7, direct(ref exampleC));
-            Assert.AreEqual(3, exampleC);
+            Asserts.AreEqual(7, direct(ref exampleC));
+            Asserts.AreEqual(3U, exampleC);
         }
 
         [Test]
@@ -582,12 +582,12 @@ namespace FastExpressionCompiler.IssueTests
             var compiledB = lambda.CompileFast(true);
             var exampleB = default(uint);
             compiledB(ref exampleB);
-            Assert.AreEqual(3, exampleB);
+            Asserts.AreEqual(3U, exampleB);
 
             ActionRef<uint> direct = SetSmallConstant;
             var exampleC = default(uint);
             direct(ref exampleC);
-            Assert.AreEqual(3, exampleC);
+            Asserts.AreEqual(3U, exampleC);
         }
 
         [Test]
@@ -604,12 +604,12 @@ namespace FastExpressionCompiler.IssueTests
             var compiledB = lambda.CompileFast<ActionRef<uint>>(true);
             var exampleB = default(uint);
             compiledB(ref exampleB);
-            Assert.AreEqual(3, exampleB);
+            Asserts.AreEqual(3U, exampleB);
 
             ActionRef<uint> direct = (ref uint x) => SetSmallConstant(ref x);
             var exampleC = default(uint);
             direct(ref exampleC);
-            Assert.AreEqual(3, exampleC);
+            Asserts.AreEqual(3U, exampleC);
         }
 
         [Test]
@@ -626,13 +626,13 @@ namespace FastExpressionCompiler.IssueTests
             var exampleB = default(int);
             var exampleB2 = default(float);
             compiledB(ref exampleB, ref exampleB2);
-            Assert.AreEqual(0, exampleB);
+            Asserts.AreEqual(0, exampleB);
 
             ActionRefRef<int, float> direct = SetSmallConstant;
             var exampleC = default(int);
             var exampleC2 = default(float);
             direct(ref exampleC, ref exampleC2);
-            Assert.AreEqual(0, exampleC);
+            Asserts.AreEqual(0, exampleC);
         }
 
         [Test]
@@ -650,13 +650,13 @@ namespace FastExpressionCompiler.IssueTests
             var exampleB = default(int);
             var exampleB2 = default(float);
             compiledB(ref exampleB, ref exampleB2);
-            Assert.AreEqual(0, exampleB);
+            Asserts.AreEqual(0, exampleB);
 
             ActionRefRef<int, float> direct = (ref int x, ref float y) => SetSmallConstant(ref x, ref y);
             var exampleC = default(int);
             var exampleC2 = default(float);
             direct(ref exampleC, ref exampleC2);
-            Assert.AreEqual(0, exampleC);
+            Asserts.AreEqual(0, exampleC);
         }
 
         [Test]
@@ -665,7 +665,7 @@ namespace FastExpressionCompiler.IssueTests
             System.Linq.Expressions.Expression<Func<IntPtr>> sLambda = () => IntPtr.Zero;
             var lambda = sLambda.FromSysExpression();
             var compiled = lambda.CompileFast<Func<IntPtr>>(true);
-            Assert.AreEqual(IntPtr.Zero, compiled());
+            Asserts.AreEqual(IntPtr.Zero, compiled());
         }
 
         [Test]
@@ -674,7 +674,7 @@ namespace FastExpressionCompiler.IssueTests
             System.Linq.Expressions.Expression<Func<IntPtr>> sLambda = () => new IntPtr(13);
             var lambda = sLambda.FromSysExpression();
             var compiled = lambda.CompileFast<Func<IntPtr>>(true);
-            Assert.AreEqual(new IntPtr(13), compiled());
+            Asserts.AreEqual(new IntPtr(13), compiled());
         }
 
         [Test]
@@ -703,12 +703,12 @@ namespace FastExpressionCompiler.IssueTests
             var exampleB = default(IntPtr);
             var exampleB2 = default(object);
             compiledB(ref exampleB, ref exampleB2);
-            Assert.IsNotNull(exampleB2);
+            Asserts.IsNotNull(exampleB2);
 
             var exampleC = default(IntPtr);
             var exampleC2 = default(object);
             Set2RefsWithPtrAndNewObject(ref exampleC, ref exampleC2);
-            Assert.IsNotNull(exampleC2);
+            Asserts.IsNotNull(exampleC2);
         }
 
         [Test]
@@ -720,13 +720,13 @@ namespace FastExpressionCompiler.IssueTests
 
             var compiledB = lambda.CompileFast<FuncRef<int, int>>(true);
             var exampleB = default(int);
-            Assert.AreEqual(0, compiledB(ref exampleB));
-            Assert.AreEqual(0, exampleB);
+            Asserts.AreEqual(0, compiledB(ref exampleB));
+            Asserts.AreEqual(0, exampleB);
 
             FuncRef<int, int> direct = DoNothing;
             var exampleC = default(int);
-            Assert.AreEqual(0, direct(ref exampleC));
-            Assert.AreEqual(0, exampleC);
+            Asserts.AreEqual(0, direct(ref exampleC));
+            Asserts.AreEqual(0, exampleC);
         }
 
         [Test]
@@ -743,12 +743,12 @@ namespace FastExpressionCompiler.IssueTests
             var compiledB = lambda.CompileFast<ActionRef<int>>(true);
             var exampleB = default(int);
             compiledB(ref exampleB);
-            Assert.AreEqual(42_123_666, exampleB);
+            Asserts.AreEqual(42_123_666, exampleB);
 
             ActionRef<int> direct = SetSmallConstant;
             var exampleC = default(int);
             direct(ref exampleC);
-            Assert.AreEqual(42_123_666, exampleC);
+            Asserts.AreEqual(42_123_666, exampleC);
         }
 
         [Test]
@@ -762,7 +762,7 @@ namespace FastExpressionCompiler.IssueTests
             var compiledB = lambda.CompileFast<ActionRefIn<int, int>>(true);
             var exampleB = default(int);
             compiledB(ref exampleB, 7);
-            Assert.AreEqual(7, exampleB);
+            Asserts.AreEqual(7, exampleB);
         }
 
         [Test]
@@ -788,7 +788,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var exampleB = default(StructWithIntField);
             f(ref exampleB, 7);
-            Assert.AreEqual(7, exampleB.IntField);
+            Asserts.AreEqual(7, exampleB.IntField);
         }
 
 
@@ -814,7 +814,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var x1 = default(StructWithIntField);
             fs(ref x1, 7);
-            Assert.AreEqual(7, x1.IntField);
+            Asserts.AreEqual(7, x1.IntField);
         }
 
         [Test]
@@ -832,7 +832,7 @@ namespace FastExpressionCompiler.IssueTests
             {
                 var exampleA = 5.0;
                 invoke(ref exampleA);
-                Assert.AreEqual(8.0, exampleA);
+                Asserts.AreEqual(8.0, exampleA);
             }
 
             var compiledA = lambda.CompileSys();
@@ -871,7 +871,7 @@ namespace FastExpressionCompiler.IssueTests
             {
                 BigInteger exampleA = 5;
                 invoke(ref exampleA);
-                Assert.AreEqual(new BigInteger(8), exampleA);
+                Asserts.AreEqual(new BigInteger(8), exampleA);
             }
 
             var compiledB = lambda.CompileFast<ActionRef<BigInteger>>(true);
@@ -905,7 +905,7 @@ namespace FastExpressionCompiler.IssueTests
             {
                 var obj = default(object);
                 invoke(ref obj);
-                Assert.AreNotEqual(default(object), obj);
+                Asserts.AreNotEqual(default(object), obj);
             }
 
             LocalAssert(DynamicDeserializer);
@@ -943,7 +943,7 @@ namespace FastExpressionCompiler.IssueTests
             void LocalAssert(Func<int> invoke)
             {
                 var x = invoke();
-                Assert.AreEqual(123, x);
+                Asserts.AreEqual(123, x);
             }
             LocalAssert(conditionFunc);
             LocalAssert(conditionFuncFast);
@@ -971,7 +971,7 @@ namespace FastExpressionCompiler.IssueTests
             var conditionBlock = Block(new[] { intValueParameter }, tryParseCall, intValueParameter);
             var conditionLambda = Lambda<Func<int>>(conditionBlock);
 
-            void LocalAssert(Func<int> invoke) => Assert.AreEqual(123, invoke());
+            void LocalAssert(Func<int> invoke) => Asserts.AreEqual(123, invoke());
             var func = conditionLambda.CompileSys();
             var funcFast = conditionLambda.CompileFast();
 

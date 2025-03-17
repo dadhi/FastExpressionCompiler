@@ -36,11 +36,11 @@ namespace FastExpressionCompiler.IssueTests
 
             var isHello = isHelloExpr.CompileFast<Func<string, bool>>(true);
 
-            Assert.IsTrue(isHello("Hello"));
-            Assert.IsFalse(isHello("Blah"));
+            Asserts.IsTrue(isHello("Hello"));
+            Asserts.IsFalse(isHello("Blah"));
 
             // this is needed because for the string literal above it does reference comparison, and here it does op_Equality
-            Assert.IsTrue(isHello(new StringBuilder("Hello").ToString()));
+            Asserts.IsTrue(isHello(new StringBuilder("Hello").ToString()));
         }
 
         [Test]
@@ -51,11 +51,11 @@ namespace FastExpressionCompiler.IssueTests
 
             var isHello = isHelloExpr.CompileFast<Func<string, bool>>(true);
 
-            Assert.IsFalse(isHello("Hello"));
-            Assert.IsTrue(isHello("Blah"));
+            Asserts.IsFalse(isHello("Hello"));
+            Asserts.IsTrue(isHello("Blah"));
 
             // this is needed because for the string literal above it does reference comparison, and here it does op_Equality
-            Assert.IsFalse(isHello(new StringBuilder("Hello").ToString()));
+            Asserts.IsFalse(isHello(new StringBuilder("Hello").ToString()));
         }
 
         [Test]
@@ -69,7 +69,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var isExpectedId = isExpectedIdExpr.CompileFast<Func<Guid, bool>>(true);
 
-            Assert.IsTrue(isExpectedId(expectedId));
+            Asserts.IsTrue(isExpectedId(expectedId));
         }
 
         [Test]
@@ -83,7 +83,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var isExpectedId = isExpectedIdExpr.CompileFast<Func<Guid, bool>>(true);
 
-            Assert.IsFalse(isExpectedId(expectedId));
+            Asserts.IsFalse(isExpectedId(expectedId));
         }
 
         [Test]
@@ -96,8 +96,8 @@ namespace FastExpressionCompiler.IssueTests
 
             var isExpected = isExpectedExpr.CompileFast<Func<Blah, bool>>(true);
 
-            Assert.IsTrue(isExpected(Blah.Bar));
-            Assert.IsFalse(isExpected(Blah.Foo));
+            Asserts.IsTrue(isExpected(Blah.Bar));
+            Asserts.IsFalse(isExpected(Blah.Foo));
         }
 
         enum Blah { Foo, Bar }
@@ -113,8 +113,8 @@ namespace FastExpressionCompiler.IssueTests
 
             var isExpected = isExpectedExpr.CompileFast<Func<Pooh, bool>>(true);
 
-            Assert.IsTrue(isExpected(expected));
-            Assert.IsFalse(isExpected(new Pooh(53)));
+            Asserts.IsTrue(isExpected(expected));
+            Asserts.IsFalse(isExpected(new Pooh(53)));
         }
 
         class Pooh

@@ -57,7 +57,7 @@ public class Issue390_405_406_Mapster_tests : ITest
             {
                 e.PrintCSharp();
                 var ff = e.CompileFast(true, flags);
-                Assert.IsNotNull(ff);
+                Asserts.IsNotNull(ff);
 
                 var fs = e.CompileSys();
                 fs.PrintIL("sys");
@@ -97,11 +97,11 @@ public class Issue390_405_406_Mapster_tests : ITest
     [Test]
     public void MapsterIssue676_NullReferenceException_with_FastExpressionCompiler()
     {
-        Assert.AreEqual(TestEnum.A, new TestClass { Type = 1 }.Adapt<TestEnum>());
-        Assert.AreEqual(TestEnum.B, new TestClass { Type = 2 }.Adapt<TestEnum>());
-        Assert.AreEqual(TestEnum.C, new TestClass { Type = 3 }.Adapt<TestEnum>());
-        Assert.AreEqual(TestEnum.D, new TestClass { Type = 4 }.Adapt<TestEnum>());
-        Assert.AreEqual(TestEnum.D, new TestClass { Type = 42 }.Adapt<TestEnum>());
+        Asserts.AreEqual(TestEnum.A, new TestClass { Type = 1 }.Adapt<TestEnum>());
+        Asserts.AreEqual(TestEnum.B, new TestClass { Type = 2 }.Adapt<TestEnum>());
+        Asserts.AreEqual(TestEnum.C, new TestClass { Type = 3 }.Adapt<TestEnum>());
+        Asserts.AreEqual(TestEnum.D, new TestClass { Type = 4 }.Adapt<TestEnum>());
+        Asserts.AreEqual(TestEnum.D, new TestClass { Type = 42 }.Adapt<TestEnum>());
     }
 
 
@@ -137,7 +137,7 @@ public class Issue390_405_406_Mapster_tests : ITest
 
         var resultStatus = result.Adapt<AgentStatusDto>();
 
-        Assert.IsNotNull(resultStatus);
+        Asserts.IsNotNull(resultStatus);
     }
 
 
@@ -191,12 +191,12 @@ public class Issue390_405_406_Mapster_tests : ITest
         var fs = expr.CompileSys();
         fs.PrintIL();
         var dt = fs(auth);
-        Assert.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, dt);
+        Asserts.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, dt);
 
         var ff = expr.CompileFast(true);
         ff.PrintIL();
         dt = ff(auth);
-        Assert.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, dt);
+        Asserts.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, dt);
     }
 
     [Test]
@@ -319,17 +319,17 @@ public class Issue390_405_406_Mapster_tests : ITest
         var fs = expr.CompileSys();
         fs.PrintIL();
         var token = fs(auth);
-        Assert.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, token.RefreshTokenExpirationDate);
+        Asserts.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, token.RefreshTokenExpirationDate);
 
         var ff = expr.CompileFast(true);
         ff.PrintIL();
         token = ff(auth);
-        Assert.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, token.RefreshTokenExpirationDate);
+        Asserts.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, token.RefreshTokenExpirationDate);
 
         var ffn = expr.CompileFast(true, flags: CompilerFlags.NoInvocationLambdaInlining);
         ffn.PrintIL();
         token = ffn(auth);
-        Assert.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, token.RefreshTokenExpirationDate);
+        Asserts.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, token.RefreshTokenExpirationDate);
     }
 
     [Test]
@@ -485,17 +485,17 @@ public class Issue390_405_406_Mapster_tests : ITest
         var fs = expr.CompileSys();
         fs.PrintIL();
         var token = fs(auth);
-        Assert.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, token.RefreshTokenExpirationDate);
+        Asserts.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, token.RefreshTokenExpirationDate);
 
         var ff = expr.CompileFast(true);
         ff.PrintIL();
         token = ff(auth);
-        Assert.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, token.RefreshTokenExpirationDate);
+        Asserts.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, token.RefreshTokenExpirationDate);
 
         ff = expr.CompileFast(true, flags: CompilerFlags.NoInvocationLambdaInlining);
         ff.PrintIL();
         token = ff(auth);
-        Assert.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, token.RefreshTokenExpirationDate);
+        Asserts.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, token.RefreshTokenExpirationDate);
     }
 
     [Test]
@@ -505,7 +505,7 @@ public class Issue390_405_406_Mapster_tests : ITest
 
         var token = new DataMapper().Map<Token>(auth);
 
-        Assert.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, token.RefreshTokenExpirationDate);
+        Asserts.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, token.RefreshTokenExpirationDate);
     }
 
     public class DataMapper

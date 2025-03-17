@@ -47,7 +47,7 @@ public class Issue422_InvalidProgramException_when_having_TryCatch_Default_in_Ca
                     return null;
                 }
             }));
-        Assert.IsTrue(@cs(null));
+        Asserts.IsTrue(@cs(null));
 
         var fs = expr.CompileSys();
         fs.PrintIL();
@@ -69,8 +69,8 @@ public class Issue422_InvalidProgramException_when_having_TryCatch_Default_in_Ca
             OpCodes.Ret
         );
 
-        Assert.IsTrue(fs(null));
-        Assert.IsTrue(ff(null));
+        Asserts.IsTrue(fs(null));
+        Asserts.IsTrue(ff(null));
     }
 
     [Test]
@@ -91,8 +91,8 @@ public class Issue422_InvalidProgramException_when_having_TryCatch_Default_in_Ca
         var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
         ff.PrintIL();
 
-        Assert.IsFalse(fs(null));
-        Assert.IsFalse(ff(null));
+        Asserts.IsFalse(fs(null));
+        Asserts.IsFalse(ff(null));
     }
 
     [Test]
@@ -113,8 +113,8 @@ public class Issue422_InvalidProgramException_when_having_TryCatch_Default_in_Ca
         var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
         ff.PrintIL();
 
-        Assert.IsTrue(fs(null));
-        Assert.IsTrue(ff(null));
+        Asserts.IsTrue(fs(null));
+        Asserts.IsTrue(ff(null));
     }
 
     [Test]
@@ -145,7 +145,7 @@ public class Issue422_InvalidProgramException_when_having_TryCatch_Default_in_Ca
                     return null;
                 }
             }) == null);
-        Assert.IsTrue(@cs(null));
+        Asserts.IsTrue(@cs(null));
 
         var fs = expr.CompileSys();
         fs.PrintIL();
@@ -153,7 +153,7 @@ public class Issue422_InvalidProgramException_when_having_TryCatch_Default_in_Ca
         var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
         ff.PrintIL();
 
-        Assert.IsTrue(fs(null));
-        Assert.IsTrue(ff(null));
+        Asserts.IsTrue(fs(null));
+        Asserts.IsTrue(ff(null));
     }
 }

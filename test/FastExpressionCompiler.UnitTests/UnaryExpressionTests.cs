@@ -66,7 +66,7 @@ namespace FastExpressionCompiler.UnitTests
             var f = expression.CompileFast(true);
             var result = f(new[] { 1, 2, 3 });
 
-            Assert.AreEqual(3, result);
+            Asserts.AreEqual(3, result);
         }
 
         [Test]
@@ -79,7 +79,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(1.5);
 
-            Assert.AreEqual(1, result);
+            Asserts.AreEqual(1, result);
         }
 
         [Test]
@@ -92,7 +92,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(1.5);
 
-            Assert.AreEqual(1, result);
+            Asserts.AreEqual(1, result);
         }
 
         [Test]
@@ -103,7 +103,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var result = expression.CompileFast(true)();
 
-            Assert.AreEqual(3.2, result);
+            Asserts.AreEqual(3.2, result);
         }
 
         [Test]
@@ -116,7 +116,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(2);
 
-            Assert.AreEqual(1, result);
+            Asserts.AreEqual(1, result);
         }
 
         [Test]
@@ -129,7 +129,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(2);
 
-            Assert.AreEqual(3, result);
+            Asserts.AreEqual(3, result);
         }
 
         [Test]
@@ -142,7 +142,7 @@ namespace FastExpressionCompiler.UnitTests
 
             bool result = expression.CompileFast(true)(false);
 
-            Assert.IsTrue(result);
+            Asserts.IsTrue(result);
         }
 
         [Test]
@@ -155,7 +155,7 @@ namespace FastExpressionCompiler.UnitTests
 
             bool result = expression.CompileFast(true)(true);
 
-            Assert.IsTrue(result);
+            Asserts.IsTrue(result);
         }
 
         [Test]
@@ -170,7 +170,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var result = f(2);
 
-            Assert.AreEqual(3, result);
+            Asserts.AreEqual(3, result);
         }
 
         [Test]
@@ -182,13 +182,13 @@ namespace FastExpressionCompiler.UnitTests
                 param);
 
             var result = expression.CompileFast(true)(1);
-            Assert.AreEqual(-1, result);
-            
+            Asserts.AreEqual(-1, result);
+
             var result2 = expression.CompileFast(true)(2);
-            Assert.AreEqual(-2, result2);
-            
+            Asserts.AreEqual(-2, result2);
+
             var result3 = expression.CompileFast(true)(-3);
-            Assert.AreEqual(3, result3);
+            Asserts.AreEqual(3, result3);
         }
 
         [Test]
@@ -202,7 +202,7 @@ namespace FastExpressionCompiler.UnitTests
             var f = expression.CompileFast(true);
             var result = f(1);
 
-            Assert.AreEqual(-1, result);
+            Asserts.AreEqual(-1, result);
         }
 
         [Test]
@@ -215,7 +215,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(1);
 
-            Assert.AreEqual(-2, result);
+            Asserts.AreEqual(-2, result);
         }
 
         [Test]
@@ -227,13 +227,13 @@ namespace FastExpressionCompiler.UnitTests
                 param);
 
             var fs = expression.CompileSys();
-            Assert.AreEqual(0x0000FFFF, fs(0xFFFF0000));
-            Assert.AreEqual(0xF000FFFF, fs(0x0FFF0000));
+            Asserts.AreEqual((uint)0x0000FFFF, fs(0xFFFF0000));
+            Asserts.AreEqual(0xF000FFFF, fs(0x0FFF0000));
 
 
             var f = expression.CompileFast(true);
-            Assert.AreEqual(0x0000FFFF, f(0xFFFF0000));
-            Assert.AreEqual(0xF000FFFF, f(0x0FFF0000));
+            Asserts.AreEqual((uint)0x0000FFFF, f(0xFFFF0000));
+            Asserts.AreEqual(0xF000FFFF, f(0x0FFF0000));
         }
 
         [Test]
@@ -247,15 +247,15 @@ namespace FastExpressionCompiler.UnitTests
             e.PrintCSharp();
             var @cs = (Func<int, int>)((int i) =>
                 i--);
-            Assert.AreEqual(2, @cs(2));
+            Asserts.AreEqual(2, @cs(2));
 
             var fs = e.CompileSys();
             fs.PrintIL();
-            Assert.AreEqual(2, fs(2));
+            Asserts.AreEqual(2, fs(2));
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
-            Assert.AreEqual(2, ff(2));
+            Asserts.AreEqual(2, ff(2));
         }
 
         [Test]
@@ -270,11 +270,11 @@ namespace FastExpressionCompiler.UnitTests
 
             var fs = e.CompileSys();
             fs.PrintIL();
-            Assert.AreEqual(2, fs(2));
+            Asserts.AreEqual(2, fs(2));
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
-            Assert.AreEqual(2, ff(2));
+            Asserts.AreEqual(2, ff(2));
         }
 
         delegate int FuncByRef(ref int n);
@@ -292,14 +292,14 @@ namespace FastExpressionCompiler.UnitTests
             var fs = expression.CompileSys();
             fs.PrintIL();
             var n = 2;
-            Assert.AreEqual(2, fs(ref n));
-            Assert.AreEqual(3, n);
+            Asserts.AreEqual(2, fs(ref n));
+            Asserts.AreEqual(3, n);
 
             var ff = expression.CompileFast(true);
             ff.PrintIL();
             n = 3;
-            Assert.AreEqual(3, ff(ref n));
-            Assert.AreEqual(4, n);
+            Asserts.AreEqual(3, ff(ref n));
+            Asserts.AreEqual(4, n);
         }
 
         [Test]
@@ -315,20 +315,20 @@ namespace FastExpressionCompiler.UnitTests
             var fs = expression.CompileSys();
             fs.PrintIL();
             var arr = new[] { 42, 33 };
-            Assert.AreEqual(33, fs(ref arr[1]));
-            Assert.AreEqual(34, arr[1]);
+            Asserts.AreEqual(33, fs(ref arr[1]));
+            Asserts.AreEqual(34, arr[1]);
 
             var ff = expression.CompileFast(true);
             ff.PrintIL();
-            Assert.AreEqual(34, ff(ref arr[1]));
-            Assert.AreEqual(35, arr[1]);
+            Asserts.AreEqual(34, ff(ref arr[1]));
+            Asserts.AreEqual(35, arr[1]);
         }
 
         [Test]
         public void ArrayParameter_PostIncrementAssign_works()
         {
             var a = Parameter(typeof(int[]), "a");
-            var i = Parameter(typeof(int),   "i");
+            var i = Parameter(typeof(int), "i");
             var expression = Lambda<Func<int[], int, int>>(
                 PostIncrementAssign(ArrayAccess(a, i)),
                 a, i);
@@ -339,13 +339,13 @@ namespace FastExpressionCompiler.UnitTests
             fs.PrintIL();
 
             var arr = new int[] { 42, 33 };
-            Assert.AreEqual(33, fs(arr, 1));
-            Assert.AreEqual(34, arr[1]);
+            Asserts.AreEqual(33, fs(arr, 1));
+            Asserts.AreEqual(34, arr[1]);
 
             var ff = expression.CompileFast(true);
             ff.PrintIL();
-            Assert.AreEqual(34, fs(arr, 1));
-            Assert.AreEqual(35, arr[1]);
+            Asserts.AreEqual(34, fs(arr, 1));
+            Asserts.AreEqual(35, arr[1]);
         }
 
         struct X { public int N; public string S; }
@@ -362,20 +362,20 @@ namespace FastExpressionCompiler.UnitTests
             e.PrintCSharp();
 
             var @cs = (Func<X[], int, int>)((
-                X[] a, 
+                X[] a,
                 int i) =>
                 a[i].N--);
 
             var arr = new X[] { new X { N = 42 }, new X { N = 33 } };
-            Assert.AreEqual(33, @cs(arr, 1));
-            Assert.AreEqual(32, arr[1].N);
+            Asserts.AreEqual(33, @cs(arr, 1));
+            Asserts.AreEqual(32, arr[1].N);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
             arr = new X[] { new X { N = 42 }, new X { N = 33 } };
-            Assert.AreEqual(33, fs(arr, 1));
-            Assert.AreEqual(33 /*should be 32*/, arr[1].N); // todo: @sys Compile is wrong and evaluates to 33
+            Asserts.AreEqual(33, fs(arr, 1));
+            Asserts.AreEqual(33 /*should be 32*/, arr[1].N); // todo: @sys Compile is wrong and evaluates to 33
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -396,8 +396,8 @@ namespace FastExpressionCompiler.UnitTests
             );
 
             arr = new X[] { new X { N = 42 }, new X { N = 33 } };
-            Assert.AreEqual(33, ff(arr, 1));
-            Assert.AreEqual(32, arr[1].N);
+            Asserts.AreEqual(33, ff(arr, 1));
+            Asserts.AreEqual(32, arr[1].N);
         }
 
         [Test]
@@ -416,19 +416,19 @@ namespace FastExpressionCompiler.UnitTests
                 (--a[i].N));
 
             var arr = new X[] { new X { N = 42 }, new X { N = 33 } };
-            Assert.AreEqual(32, f(arr, 1));
-            Assert.AreEqual(32, arr[1].N);
+            Asserts.AreEqual(32, f(arr, 1));
+            Asserts.AreEqual(32, arr[1].N);
 
             var fs = expression.CompileSys();
             fs.PrintIL();
 
-            Assert.AreEqual(31, fs(arr, 1));
-            Assert.AreEqual(32, arr[1].N); // It should be 31, No? - The System Expression is wrong, what??
+            Asserts.AreEqual(31, fs(arr, 1));
+            Asserts.AreEqual(32, arr[1].N); // It should be 31, No? - The System Expression is wrong, what??
 
             var ff = expression.CompileFast(true);
             ff.PrintIL();
-            Assert.AreEqual(31, ff(arr, 1));
-            Assert.AreEqual(31, arr[1].N);
+            Asserts.AreEqual(31, ff(arr, 1));
+            Asserts.AreEqual(31, arr[1].N);
         }
 
         delegate int FuncArrByRef(ref int[] a, int i);
@@ -448,13 +448,13 @@ namespace FastExpressionCompiler.UnitTests
             fs.PrintIL();
 
             var arr = new int[] { 42, 33 };
-            Assert.AreEqual(33, fs(ref arr, 1));
-            Assert.AreEqual(34, arr[1]);
+            Asserts.AreEqual(33, fs(ref arr, 1));
+            Asserts.AreEqual(34, arr[1]);
 
             var ff = expression.CompileFast(true);
             ff.PrintIL();
-            Assert.AreEqual(34, fs(ref arr, 1));
-            Assert.AreEqual(35, arr[1]);
+            Asserts.AreEqual(34, fs(ref arr, 1));
+            Asserts.AreEqual(35, arr[1]);
         }
 
         [Test]
@@ -467,7 +467,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = expression.CompileFast(true);
 
-            Assert.AreEqual(1, f(2));
+            Asserts.AreEqual(1, f(2));
         }
 
         [Test]
@@ -480,7 +480,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = expression.CompileFast(true);
 
-            Assert.AreEqual(3, f(2));
+            Asserts.AreEqual(3, f(2));
         }
 
         //[Test] // todo: Quote is not supported yet
@@ -494,13 +494,13 @@ namespace FastExpressionCompiler.UnitTests
             var fs = expression.CompileSys();
             var resultExpression = fs(2);
             var result1 = resultExpression.Compile().Invoke();
-            Assert.AreEqual(2, result1);
+            Asserts.AreEqual(2, result1);
 
             var f = expression.CompileFast(true);
             resultExpression = f(2);
 
             var result2 = resultExpression.Compile().Invoke();
-            Assert.AreEqual(2, result2);
+            Asserts.AreEqual(2, result2);
         }
 
         [Test]
@@ -526,7 +526,7 @@ namespace FastExpressionCompiler.UnitTests
 
             string result = expression.CompileFast(true)("123");
 
-            Assert.AreEqual("123", result);
+            Asserts.AreEqual("123", result);
         }
 
         [Test]
@@ -539,7 +539,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(1);
 
-            Assert.AreEqual(1, result);
+            Asserts.AreEqual(1, result);
         }
 
         [Test]
@@ -551,10 +551,10 @@ namespace FastExpressionCompiler.UnitTests
                 param);
 
             var fs = expression.CompileSys();
-            Assert.AreEqual(1, fs(1));
+            Asserts.AreEqual(1, fs(1));
 
             var f = expression.CompileFast(true);
-            Assert.AreEqual(1, f(1));
+            Asserts.AreEqual(1, f(1));
         }
     }
 }

@@ -55,7 +55,7 @@ public class Issue419_The_JIT_compiler_encountered_invalid_IL_code_or_an_interna
         d.Nested.Y)));
 
     var data = new Obj(10, new Nested(5));
-    Assert.IsFalse(@cs(data));
+    Asserts.IsFalse(@cs(data));
 
     var fs = e.CompileSys();
     fs.PrintIL();
@@ -63,8 +63,8 @@ public class Issue419_The_JIT_compiler_encountered_invalid_IL_code_or_an_interna
     var ff = e.CompileFast(true);
     ff.PrintIL();
 
-    Assert.IsFalse(fs(data));
-    Assert.IsFalse(ff(data));
+    Asserts.IsFalse(fs(data));
+    Asserts.IsFalse(ff(data));
   }
 
   [Test]
@@ -86,8 +86,8 @@ public class Issue419_The_JIT_compiler_encountered_invalid_IL_code_or_an_interna
     var ff = e.CompileFast(true);
     ff.PrintIL();
 
-    Assert.IsFalse(fs(data));
-    Assert.IsFalse(ff(data));
+    Asserts.IsFalse(fs(data));
+    Asserts.IsFalse(ff(data));
   }
 
   [Test]
@@ -109,8 +109,8 @@ public class Issue419_The_JIT_compiler_encountered_invalid_IL_code_or_an_interna
     var ff = e.CompileFast(true);
     ff.PrintIL();
 
-    Assert.IsFalse(fs(data));
-    Assert.IsFalse(ff(data));
+    Asserts.IsFalse(fs(data));
+    Asserts.IsFalse(ff(data));
   }
 
   [Test]
@@ -132,8 +132,8 @@ public class Issue419_The_JIT_compiler_encountered_invalid_IL_code_or_an_interna
     var ff = e.CompileFast(true);
     ff.PrintIL();
 
-    Assert.IsTrue(fs(data));
-    Assert.IsTrue(ff(data));
+    Asserts.IsTrue(fs(data));
+    Asserts.IsTrue(ff(data));
   }
   // #endif
 
@@ -194,7 +194,7 @@ public class Issue419_The_JIT_compiler_encountered_invalid_IL_code_or_an_interna
     ff.PrintIL();
 
     var data = new Obj(5, new Nested(6));
-    Assert.IsFalse(fs(data));
-    Assert.IsFalse(ff(data));
+    Asserts.IsFalse(fs(data));
+    Asserts.IsFalse(ff(data));
   }
 }

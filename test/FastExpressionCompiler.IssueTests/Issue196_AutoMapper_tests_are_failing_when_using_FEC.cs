@@ -57,43 +57,43 @@ public class Issue196_AutoMapper_tests_are_failing_when_using_FEC : ITest
 
 #if LIGHT_EXPRESSION
 
-// todo: @improve to fragile for the test
-//                 var exprCode = expr.CodeString;
-// var expectedCode = 
-// "Lambda(typeof(Func<Source, Dest>)," + NewLine +
-// "Condition(Equal(" + NewLine +
-// "Parameter(typeof(Source), \"source\")," + NewLine +
-// "Constant(null, typeof(Source)))," + NewLine +
-// "Constant(null, typeof(Dest))," + NewLine +
-// "MemberInit(New(typeof(Dest).GetTypeInfo().DeclaredConstructors.ToArray()[0]," + NewLine +
-// "new Expression[0])," + NewLine +
-// "Bind(typeof(Dest).GetTypeInfo().DeclaredMembers.ToArray()[3]," + NewLine +
-// "Property(Parameter(typeof(Source), \"source\")," + NewLine +
-// "typeof(Source).GetTypeInfo().DeclaredProperties.ToArray()[0]))))," + NewLine +
-// "Parameter(typeof(Source), \"source\"))";
+        // todo: @improve to fragile for the test
+        //                 var exprCode = expr.CodeString;
+        // var expectedCode = 
+        // "Lambda(typeof(Func<Source, Dest>)," + NewLine +
+        // "Condition(Equal(" + NewLine +
+        // "Parameter(typeof(Source), \"source\")," + NewLine +
+        // "Constant(null, typeof(Source)))," + NewLine +
+        // "Constant(null, typeof(Dest))," + NewLine +
+        // "MemberInit(New(typeof(Dest).GetTypeInfo().DeclaredConstructors.ToArray()[0]," + NewLine +
+        // "new Expression[0])," + NewLine +
+        // "Bind(typeof(Dest).GetTypeInfo().DeclaredMembers.ToArray()[3]," + NewLine +
+        // "Property(Parameter(typeof(Source), \"source\")," + NewLine +
+        // "typeof(Source).GetTypeInfo().DeclaredProperties.ToArray()[0]))))," + NewLine +
+        // "Parameter(typeof(Source), \"source\"))";
 
-//                 Assert.AreEqual(expectedCode, exprCode);
+        //                 Asserts.AreEqual(expectedCode, exprCode);
 
-            var reincarnatedExpr = 
-                Lambda(typeof(Func<Source, Dest>),
-                Condition(Equal(
-                p,
-                Constant(null, typeof(Source))),
-                Constant(null, typeof(Dest)),
-                MemberInit(New(typeof(Dest).GetTypeInfo().DeclaredConstructors.ToArray()[0],
-                new Expression[0]),
-                Bind(typeof(Dest).GetTypeInfo().DeclaredMembers.ToArray()[3], Property(p,
-                typeof(Source).GetTypeInfo().DeclaredProperties.ToArray()[0])))),
-                p);
+        var reincarnatedExpr =
+            Lambda(typeof(Func<Source, Dest>),
+            Condition(Equal(
+            p,
+            Constant(null, typeof(Source))),
+            Constant(null, typeof(Dest)),
+            MemberInit(New(typeof(Dest).GetTypeInfo().DeclaredConstructors.ToArray()[0],
+            new Expression[0]),
+            Bind(typeof(Dest).GetTypeInfo().DeclaredMembers.ToArray()[3], Property(p,
+            typeof(Source).GetTypeInfo().DeclaredProperties.ToArray()[0])))),
+            p);
 
-            var reincarnatedCompiled = reincarnatedExpr.CompileFast(true);
-            Assert.NotNull(reincarnatedCompiled);
+        var reincarnatedCompiled = reincarnatedExpr.CompileFast(true);
+        Assert.NotNull(reincarnatedCompiled);
 #endif
 
         var ff = expr.CompileFast(true);
 
         var dest = ff(new Source { Value = 42 });
-        Assert.AreEqual(42, dest.Value);
+        Asserts.AreEqual(42, dest.Value);
     }
 
     [Test]
@@ -113,7 +113,7 @@ public class Issue196_AutoMapper_tests_are_failing_when_using_FEC : ITest
         var ff = expr.CompileFast(true);
 
         var dest = ff(new Source { Value = 42 });
-        Assert.AreEqual(42, dest.Value);
+        Asserts.AreEqual(42, dest.Value);
     }
 
     [Test]
@@ -135,12 +135,12 @@ public class Issue196_AutoMapper_tests_are_failing_when_using_FEC : ITest
         var fs = expr.CompileSys();
         fs.PrintIL();
         var dest = fs(new Source { Value = 42 });
-        Assert.AreEqual(13, dest.Value);
+        Asserts.AreEqual(13, dest.Value);
 
         var ff = expr.CompileFast(true);
         ff.PrintIL();
         dest = ff(new Source { Value = 42 });
-        Assert.AreEqual(13, dest.Value);
+        Asserts.AreEqual(13, dest.Value);
     }
 
     [Test]
@@ -199,12 +199,12 @@ public class Issue196_AutoMapper_tests_are_failing_when_using_FEC : ITest
         var fs = expr.CompileSys();
         fs.PrintIL();
         var dst = fs(new Source { Value = 42 }, null);
-        Assert.AreEqual(42, dst.Value);
+        Asserts.AreEqual(42, dst.Value);
 
         var ff = expr.CompileFast(true);
         ff.PrintIL();
         dst = ff(new Source { Value = 42 }, null);
-        Assert.AreEqual(42, dst.Value);
+        Asserts.AreEqual(42, dst.Value);
     }
 
     public class ResolutionContext { }
@@ -227,11 +227,11 @@ public class Issue196_AutoMapper_tests_are_failing_when_using_FEC : ITest
                 resultVar));
 
         //var fs = expression.CompileSys();
-        //Assert.IsNotNull(fs);
-        //Assert.AreEqual(77, fs());
+        //Asserts.IsNotNull(fs);
+        //Asserts.AreEqual(77, fs());
 
         var ff = expression.CompileFast(true);
-        Assert.AreEqual(77, ff());
+        Asserts.AreEqual(77, ff());
     }
 
     [Test]
@@ -254,11 +254,11 @@ public class Issue196_AutoMapper_tests_are_failing_when_using_FEC : ITest
                 resultVar));
 
         //var fs = expression.CompileSys();
-        //Assert.IsNotNull(fs);
-        //Assert.AreEqual(77, fs());
+        //Asserts.IsNotNull(fs);
+        //Asserts.AreEqual(77, fs());
 
         var ff = expression.CompileFast(true);
-        Assert.AreEqual(77, ff());
+        Asserts.AreEqual(77, ff());
     }
 
     [Test]
@@ -304,15 +304,15 @@ public class Issue196_AutoMapper_tests_are_failing_when_using_FEC : ITest
 
         var fs = expression.CompileSys();
         var ds = fs(new Source { Value = 42 }, null, new ResolutionContext());
-        Assert.AreEqual(42, ds.Value);
+        Asserts.AreEqual(42, ds.Value);
 
         var ff = expression.CompileFast(true);
         var df = ff(new Source { Value = 42 }, null, new ResolutionContext());
-        Assert.AreEqual(42, df.Value);
+        Asserts.AreEqual(42, df.Value);
 
         var fa = expression.TryCompileWithoutClosure<Func<Source, Dest, ResolutionContext, Dest>>();
         var da = ff(new Source { Value = 42 }, null, new ResolutionContext());
-        Assert.AreEqual(42, da.Value);
+        Asserts.AreEqual(42, da.Value);
     }
 
     [Test]
@@ -359,13 +359,13 @@ public class Issue196_AutoMapper_tests_are_failing_when_using_FEC : ITest
 
         var fs = expression.CompileSys();
         var ds = fs(new Source { Value = 42 }, null, new ResolutionContext());
-        Assert.AreEqual(42, ds.Value);
+        Asserts.AreEqual(42, ds.Value);
 
         var ff = expression.CompileFast(true);
-        Assert.IsNotNull(ff);
+        Asserts.IsNotNull(ff);
 
         var df = ff(new Source { Value = 42 }, null, new ResolutionContext());
-        Assert.AreEqual(42, df.Value);
+        Asserts.AreEqual(42, df.Value);
     }
 
     [Test]
@@ -413,12 +413,12 @@ public class Issue196_AutoMapper_tests_are_failing_when_using_FEC : ITest
 
         var fs = expression.CompileSys();
         var ds = fs(new Source { Value = 42 }, null, new ResolutionContext());
-        Assert.AreEqual(42, ds.Value);
+        Asserts.AreEqual(42, ds.Value);
 
         var ff = expression.CompileFast(true);
-        Assert.IsNotNull(ff);
+        Asserts.IsNotNull(ff);
 
         var df = ff(new Source { Value = 42 }, null, new ResolutionContext());
-        Assert.AreEqual(42, df.Value);
+        Asserts.AreEqual(42, df.Value);
     }
 }

@@ -51,7 +51,7 @@ public class Issue428_Expression_Switch_without_a_default_case_incorrectly_calls
         fs(1);
         fs(2);
         fs(3);
-        Assert.AreEqual(new[] { "1", "2" }, _cases);
+        Asserts.AreEqual(new[] { "1", "2" }, _cases);
         _cases.Clear();
 
         var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
@@ -59,7 +59,7 @@ public class Issue428_Expression_Switch_without_a_default_case_incorrectly_calls
         ff(1);
         ff(2);
         ff(3);
-        Assert.AreEqual(new[] { "1", "2" }, _cases);
+        Asserts.AreEqual(new[] { "1", "2" }, _cases);
         _cases.Clear();
     }
 

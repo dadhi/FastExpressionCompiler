@@ -28,7 +28,7 @@ namespace FastExpressionCompiler.IssueTests
             var compiledB = lambda.CompileFast(true);
             var exampleB = 5.0;
             compiledB(ref exampleB);
-            Assert.AreEqual(8.0, exampleB);
+            Asserts.AreEqual(8.0, exampleB);
         }
     }
 }

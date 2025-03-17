@@ -65,12 +65,12 @@ namespace FastExpressionCompiler.IssueTests
 
             var f = e.CompileFast(true);
             var f2 = e.Compile();
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
 
-            Assert.AreEqual(f2(new Foo() { Prop = 1 }), f(new Foo() { Prop = 1 }));
-            Assert.AreEqual(f2(new Foo() { Prop = null }), f(new Foo() { Prop = null }));
-            Assert.AreEqual(f2(new Foo() { Prop = -1 }), f(new Foo() { Prop = -1 }));
-            Assert.AreEqual(f2(new Foo() { Prop = 0 }), f(new Foo() { Prop = 0 }));
+            Asserts.AreEqual(f2(new Foo() { Prop = 1 }), f(new Foo() { Prop = 1 }));
+            Asserts.AreEqual(f2(new Foo() { Prop = null }), f(new Foo() { Prop = null }));
+            Asserts.AreEqual(f2(new Foo() { Prop = -1 }), f(new Foo() { Prop = -1 }));
+            Asserts.AreEqual(f2(new Foo() { Prop = 0 }), f(new Foo() { Prop = 0 }));
         }
 
         [Test]
@@ -81,9 +81,9 @@ namespace FastExpressionCompiler.IssueTests
 
             var f = e.CompileFast(true);
             var f2 = e.Compile();
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
 
-            Assert.AreEqual(f2(new Foo() { Prop4 = aaComparand }), f(new Foo() { Prop4 = aaComparand }));
+            Asserts.AreEqual(f2(new Foo() { Prop4 = aaComparand }), f(new Foo() { Prop4 = aaComparand }));
         }
 
         [Test]
@@ -94,11 +94,11 @@ namespace FastExpressionCompiler.IssueTests
 
             var f = e.CompileFast(true);
             var f2 = e.Compile();
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
 
-            Assert.AreEqual(f2(new Foo() { Prop3 = 1 }), f(new Foo() { Prop3 = 1 }));
-            Assert.AreEqual(f2(new Foo() { Prop3 = -1 }), f(new Foo() { Prop3 = -1 }));
-            Assert.AreEqual(f2(new Foo() { Prop3 = 0 }), f(new Foo() { Prop3 = 0 }));
+            Asserts.AreEqual(f2(new Foo() { Prop3 = 1 }), f(new Foo() { Prop3 = 1 }));
+            Asserts.AreEqual(f2(new Foo() { Prop3 = -1 }), f(new Foo() { Prop3 = -1 }));
+            Asserts.AreEqual(f2(new Foo() { Prop3 = 0 }), f(new Foo() { Prop3 = 0 }));
         }
 
         [Test]
@@ -109,11 +109,11 @@ namespace FastExpressionCompiler.IssueTests
 
             var f = e.CompileFast(true);
             var f2 = e.Compile();
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
 
-            Assert.AreEqual(f2(new Foo() { PropP = new Point(4, 6) }), f(new Foo() { PropP = new Point(4, 6) }));
-            Assert.AreEqual(f2(new Foo() { PropP = null }), f(new Foo() { PropP = null }));
-            Assert.AreEqual(f2(new Foo() { PropP = new Point(4, 7) }), f(new Foo() { PropP = new Point(4, 7) }));
+            Asserts.AreEqual(f2(new Foo() { PropP = new Point(4, 6) }), f(new Foo() { PropP = new Point(4, 6) }));
+            Asserts.AreEqual(f2(new Foo() { PropP = null }), f(new Foo() { PropP = null }));
+            Asserts.AreEqual(f2(new Foo() { PropP = new Point(4, 7) }), f(new Foo() { PropP = new Point(4, 7) }));
         }
 
         [Test]
@@ -125,10 +125,10 @@ namespace FastExpressionCompiler.IssueTests
             var f2 = e.Compile();
             var f = e.CompileFast(true);
 
-            Assert.AreEqual(f2(new Foo() { Prop = 1 }),     f(new Foo() { Prop = 1 }));
-            Assert.AreEqual(f2(new Foo() { Prop = null }),  f(new Foo() { Prop = null }));
-            Assert.AreEqual(f2(new Foo() { Prop = -1 }),    f(new Foo() { Prop = -1 }));
-            Assert.AreEqual(f2(new Foo() { Prop = 0 }),     f(new Foo() { Prop = 0 }));
+            Asserts.AreEqual(f2(new Foo() { Prop = 1 }), f(new Foo() { Prop = 1 }));
+            Asserts.AreEqual(f2(new Foo() { Prop = null }), f(new Foo() { Prop = null }));
+            Asserts.AreEqual(f2(new Foo() { Prop = -1 }), f(new Foo() { Prop = -1 }));
+            Asserts.AreEqual(f2(new Foo() { Prop = 0 }), f(new Foo() { Prop = 0 }));
 
             int? int32Comparand2 = null;
             Expression<Func<Foo, bool>> e2 = foo => foo.Prop != int32Comparand;
@@ -136,10 +136,10 @@ namespace FastExpressionCompiler.IssueTests
             var fa2 = e2.Compile();
             var fa = e2.CompileFast(true);
 
-            Assert.AreEqual(fa2(new Foo() { Prop = 1 }),    fa(new Foo() { Prop = 1 }));
-            Assert.AreEqual(fa2(new Foo() { Prop = null }), fa(new Foo() { Prop = null }));
-            Assert.AreEqual(fa2(new Foo() { Prop = -1 }),   fa(new Foo() { Prop = -1 }));
-            Assert.AreEqual(fa2(new Foo() { Prop = 0 }),    fa(new Foo() { Prop = 0 }));
+            Asserts.AreEqual(fa2(new Foo() { Prop = 1 }), fa(new Foo() { Prop = 1 }));
+            Asserts.AreEqual(fa2(new Foo() { Prop = null }), fa(new Foo() { Prop = null }));
+            Asserts.AreEqual(fa2(new Foo() { Prop = -1 }), fa(new Foo() { Prop = -1 }));
+            Asserts.AreEqual(fa2(new Foo() { Prop = 0 }), fa(new Foo() { Prop = 0 }));
         }
 
         [Test]
@@ -150,26 +150,26 @@ namespace FastExpressionCompiler.IssueTests
 
             var f = e.CompileFast(true);
             var f2 = e.Compile();
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
 
-            Assert.AreEqual(f2(new Foo() { Prop = 1 }), f(new Foo() { Prop = 1 }));
-            Assert.AreEqual(f2(new Foo() { Prop = 2 }), f(new Foo() { Prop = 2 }));
-            Assert.AreEqual(f2(new Foo() { Prop = null }), f(new Foo() { Prop = null }));
-            Assert.AreEqual(f2(new Foo() { Prop = -1 }), f(new Foo() { Prop = -1 }));
-            Assert.AreEqual(f2(new Foo() { Prop = 0 }), f(new Foo() { Prop = 0 }));
+            Asserts.AreEqual(f2(new Foo() { Prop = 1 }), f(new Foo() { Prop = 1 }));
+            Asserts.AreEqual(f2(new Foo() { Prop = 2 }), f(new Foo() { Prop = 2 }));
+            Asserts.AreEqual(f2(new Foo() { Prop = null }), f(new Foo() { Prop = null }));
+            Asserts.AreEqual(f2(new Foo() { Prop = -1 }), f(new Foo() { Prop = -1 }));
+            Asserts.AreEqual(f2(new Foo() { Prop = 0 }), f(new Foo() { Prop = 0 }));
 
             int? int32Comparand2 = null;
             Expression<Func<Foo, bool>> e2 = foo => foo.Prop > int32Comparand;
 
             var fa = e2.CompileFast(true);
             var fa2 = e2.Compile();
-            Assert.IsNotNull(fa);
+            Asserts.IsNotNull(fa);
 
-            Assert.AreEqual(fa2(new Foo() { Prop = 1 }), fa(new Foo() { Prop = 1 }));
-            Assert.AreEqual(fa2(new Foo() { Prop = 2 }), fa(new Foo() { Prop = 2 }));
-            Assert.AreEqual(fa2(new Foo() { Prop = null }), fa(new Foo() { Prop = null }));
-            Assert.AreEqual(fa2(new Foo() { Prop = -1 }), fa(new Foo() { Prop = -1 }));
-            Assert.AreEqual(fa2(new Foo() { Prop = 0 }), fa(new Foo() { Prop = 0 }));
+            Asserts.AreEqual(fa2(new Foo() { Prop = 1 }), fa(new Foo() { Prop = 1 }));
+            Asserts.AreEqual(fa2(new Foo() { Prop = 2 }), fa(new Foo() { Prop = 2 }));
+            Asserts.AreEqual(fa2(new Foo() { Prop = null }), fa(new Foo() { Prop = null }));
+            Asserts.AreEqual(fa2(new Foo() { Prop = -1 }), fa(new Foo() { Prop = -1 }));
+            Asserts.AreEqual(fa2(new Foo() { Prop = 0 }), fa(new Foo() { Prop = 0 }));
         }
 
         [Test]
@@ -180,26 +180,26 @@ namespace FastExpressionCompiler.IssueTests
 
             var f = e.CompileFast(true);
             var f2 = e.Compile();
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
 
-            Assert.AreEqual(f2(new Foo() { Prop = 1 }), f(new Foo() { Prop = 1 }));
-            Assert.AreEqual(f2(new Foo() { Prop = 2 }), f(new Foo() { Prop = 2 }));
-            Assert.AreEqual(f2(new Foo() { Prop = null }), f(new Foo() { Prop = null }));
-            Assert.AreEqual(f2(new Foo() { Prop = -1 }), f(new Foo() { Prop = -1 }));
-            Assert.AreEqual(f2(new Foo() { Prop = 0 }), f(new Foo() { Prop = 0 }));
+            Asserts.AreEqual(f2(new Foo() { Prop = 1 }), f(new Foo() { Prop = 1 }));
+            Asserts.AreEqual(f2(new Foo() { Prop = 2 }), f(new Foo() { Prop = 2 }));
+            Asserts.AreEqual(f2(new Foo() { Prop = null }), f(new Foo() { Prop = null }));
+            Asserts.AreEqual(f2(new Foo() { Prop = -1 }), f(new Foo() { Prop = -1 }));
+            Asserts.AreEqual(f2(new Foo() { Prop = 0 }), f(new Foo() { Prop = 0 }));
 
             int? int32Comparand2 = null;
             Expression<Func<Foo, bool>> e2 = foo => foo.Prop >= int32Comparand;
 
             var fa = e2.CompileFast(true);
             var fa2 = e2.Compile();
-            Assert.IsNotNull(fa);
+            Asserts.IsNotNull(fa);
 
-            Assert.AreEqual(fa2(new Foo() { Prop = 1 }), fa(new Foo() { Prop = 1 }));
-            Assert.AreEqual(fa2(new Foo() { Prop = 2 }), fa(new Foo() { Prop = 2 }));
-            Assert.AreEqual(fa2(new Foo() { Prop = null }), fa(new Foo() { Prop = null }));
-            Assert.AreEqual(fa2(new Foo() { Prop = -1 }), fa(new Foo() { Prop = -1 }));
-            Assert.AreEqual(fa2(new Foo() { Prop = 0 }), fa(new Foo() { Prop = 0 }));
+            Asserts.AreEqual(fa2(new Foo() { Prop = 1 }), fa(new Foo() { Prop = 1 }));
+            Asserts.AreEqual(fa2(new Foo() { Prop = 2 }), fa(new Foo() { Prop = 2 }));
+            Asserts.AreEqual(fa2(new Foo() { Prop = null }), fa(new Foo() { Prop = null }));
+            Asserts.AreEqual(fa2(new Foo() { Prop = -1 }), fa(new Foo() { Prop = -1 }));
+            Asserts.AreEqual(fa2(new Foo() { Prop = 0 }), fa(new Foo() { Prop = 0 }));
         }
 
         [Test]
@@ -210,26 +210,26 @@ namespace FastExpressionCompiler.IssueTests
 
             var f = e.CompileFast(true);
             var f2 = e.Compile();
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
 
-            Assert.AreEqual(f2(new Foo() { Prop = 1 }), f(new Foo() { Prop = 1 }));
-            Assert.AreEqual(f2(new Foo() { Prop = 2 }), f(new Foo() { Prop = 2 }));
-            Assert.AreEqual(f2(new Foo() { Prop = null }), f(new Foo() { Prop = null }));
-            Assert.AreEqual(f2(new Foo() { Prop = -1 }), f(new Foo() { Prop = -1 }));
-            Assert.AreEqual(f2(new Foo() { Prop = 0 }), f(new Foo() { Prop = 0 }));
+            Asserts.AreEqual(f2(new Foo() { Prop = 1 }), f(new Foo() { Prop = 1 }));
+            Asserts.AreEqual(f2(new Foo() { Prop = 2 }), f(new Foo() { Prop = 2 }));
+            Asserts.AreEqual(f2(new Foo() { Prop = null }), f(new Foo() { Prop = null }));
+            Asserts.AreEqual(f2(new Foo() { Prop = -1 }), f(new Foo() { Prop = -1 }));
+            Asserts.AreEqual(f2(new Foo() { Prop = 0 }), f(new Foo() { Prop = 0 }));
 
             int? int32Comparand2 = null;
             Expression<Func<Foo, bool>> e2 = foo => foo.Prop < int32Comparand;
 
             var fa = e2.CompileFast(true);
             var fa2 = e2.Compile();
-            Assert.IsNotNull(fa);
+            Asserts.IsNotNull(fa);
 
-            Assert.AreEqual(fa2(new Foo() { Prop = 1 }), fa(new Foo() { Prop = 1 }));
-            Assert.AreEqual(fa2(new Foo() { Prop = 2 }), fa(new Foo() { Prop = 2 }));
-            Assert.AreEqual(fa2(new Foo() { Prop = null }), fa(new Foo() { Prop = null }));
-            Assert.AreEqual(fa2(new Foo() { Prop = -1 }), fa(new Foo() { Prop = -1 }));
-            Assert.AreEqual(fa2(new Foo() { Prop = 0 }), fa(new Foo() { Prop = 0 }));
+            Asserts.AreEqual(fa2(new Foo() { Prop = 1 }), fa(new Foo() { Prop = 1 }));
+            Asserts.AreEqual(fa2(new Foo() { Prop = 2 }), fa(new Foo() { Prop = 2 }));
+            Asserts.AreEqual(fa2(new Foo() { Prop = null }), fa(new Foo() { Prop = null }));
+            Asserts.AreEqual(fa2(new Foo() { Prop = -1 }), fa(new Foo() { Prop = -1 }));
+            Asserts.AreEqual(fa2(new Foo() { Prop = 0 }), fa(new Foo() { Prop = 0 }));
         }
 
         [Test]
@@ -240,26 +240,26 @@ namespace FastExpressionCompiler.IssueTests
 
             var f = e.CompileFast(true);
             var f2 = e.Compile();
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
 
-            Assert.AreEqual(f2(new Foo() { Prop = 1 }), f(new Foo() { Prop = 1 }));
-            Assert.AreEqual(f2(new Foo() { Prop = 2 }), f(new Foo() { Prop = 2 }));
-            Assert.AreEqual(f2(new Foo() { Prop = null }), f(new Foo() { Prop = null }));
-            Assert.AreEqual(f2(new Foo() { Prop = -1 }), f(new Foo() { Prop = -1 }));
-            Assert.AreEqual(f2(new Foo() { Prop = 0 }), f(new Foo() { Prop = 0 }));
+            Asserts.AreEqual(f2(new Foo() { Prop = 1 }), f(new Foo() { Prop = 1 }));
+            Asserts.AreEqual(f2(new Foo() { Prop = 2 }), f(new Foo() { Prop = 2 }));
+            Asserts.AreEqual(f2(new Foo() { Prop = null }), f(new Foo() { Prop = null }));
+            Asserts.AreEqual(f2(new Foo() { Prop = -1 }), f(new Foo() { Prop = -1 }));
+            Asserts.AreEqual(f2(new Foo() { Prop = 0 }), f(new Foo() { Prop = 0 }));
 
             int? int32Comparand2 = null;
             Expression<Func<Foo, bool>> e2 = foo => foo.Prop <= int32Comparand;
 
             var fa = e2.CompileFast(true);
             var fa2 = e2.Compile();
-            Assert.IsNotNull(fa);
+            Asserts.IsNotNull(fa);
 
-            Assert.AreEqual(fa2(new Foo() { Prop = 1 }), fa(new Foo() { Prop = 1 }));
-            Assert.AreEqual(fa2(new Foo() { Prop = 2 }), fa(new Foo() { Prop = 2 }));
-            Assert.AreEqual(fa2(new Foo() { Prop = null }), fa(new Foo() { Prop = null }));
-            Assert.AreEqual(fa2(new Foo() { Prop = -1 }), fa(new Foo() { Prop = -1 }));
-            Assert.AreEqual(fa2(new Foo() { Prop = 0 }), fa(new Foo() { Prop = 0 }));
+            Asserts.AreEqual(fa2(new Foo() { Prop = 1 }), fa(new Foo() { Prop = 1 }));
+            Asserts.AreEqual(fa2(new Foo() { Prop = 2 }), fa(new Foo() { Prop = 2 }));
+            Asserts.AreEqual(fa2(new Foo() { Prop = null }), fa(new Foo() { Prop = null }));
+            Asserts.AreEqual(fa2(new Foo() { Prop = -1 }), fa(new Foo() { Prop = -1 }));
+            Asserts.AreEqual(fa2(new Foo() { Prop = 0 }), fa(new Foo() { Prop = 0 }));
         }
 
         [Test]
@@ -268,10 +268,10 @@ namespace FastExpressionCompiler.IssueTests
             Expression<Func<Foo, bool>> e = foo => Nullable.Equals(foo.Prop, null);
 
             var f = e.CompileFast(true);
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
 
-            Assert.IsTrue(f(new Foo { Prop = null }));
-            Assert.IsFalse(f(new Foo { Prop = 3 }));
+            Asserts.IsTrue(f(new Foo { Prop = null }));
+            Asserts.IsFalse(f(new Foo { Prop = 3 }));
         }
     }
 }
