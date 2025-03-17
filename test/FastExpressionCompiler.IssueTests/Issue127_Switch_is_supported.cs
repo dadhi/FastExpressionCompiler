@@ -186,7 +186,7 @@ namespace FastExpressionCompiler.IssueTests
             var f = e.CompileFast(true);
             f.PrintIL();
 
-            Assert.NotNull(f);
+            Asserts.IsNotNull(f);
             Asserts.AreEqual(2L, f(MyEnum.B));
             Asserts.AreEqual(null, f(MyEnum.C));
         }
@@ -207,7 +207,7 @@ namespace FastExpressionCompiler.IssueTests
             var lambda = Lambda<Func<int, string>>(blockExpr, eVar);
             var f = lambda.CompileFast(true);
 
-            Assert.NotNull(f);
+            Asserts.IsNotNull(f);
             Asserts.AreEqual("B", f(2));
         }
 
@@ -225,7 +225,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var lambda = Lambda<Func<int, string>>(blockExpr, eVar);
             var fastCompiled = lambda.CompileFast(true);
-            Assert.NotNull(fastCompiled);
+            Asserts.IsNotNull(fastCompiled);
             Asserts.AreEqual("B", fastCompiled(2));
         }
 
@@ -244,7 +244,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var lambda = Lambda<Func<long, string>>(blockExpr, eVar);
             var fastCompiled = lambda.CompileFast(true);
-            Assert.NotNull(fastCompiled);
+            Asserts.IsNotNull(fastCompiled);
             Asserts.AreEqual("B", fastCompiled(2));
         }
 
@@ -256,7 +256,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var lambda = Lambda<Func<int?, bool>>(blockExpr, eVar);
             var fastCompiled = lambda.CompileFast(true);
-            Assert.NotNull(fastCompiled);
+            Asserts.IsNotNull(fastCompiled);
             Asserts.AreEqual(true, fastCompiled(94));
         }
 
@@ -267,7 +267,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var lambda = Lambda<Func<int?>>(blockExpr);
             var fastCompiled = lambda.CompileFast(true);
-            Assert.NotNull(fastCompiled);
+            Asserts.IsNotNull(fastCompiled);
             Asserts.AreEqual(94, fastCompiled());
         }
 
@@ -285,7 +285,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var lambda = Lambda<Func<int?, string>>(blockExpr, eVar);
             var fastCompiled = lambda.CompileFast(true);
-            Assert.NotNull(fastCompiled);
+            Asserts.IsNotNull(fastCompiled);
             Asserts.AreEqual("B", fastCompiled(96));
         }
 
@@ -421,7 +421,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var lambda = Lambda<Func<Helper, string>>(blockExpr, eVar);
             var fastCompiled = lambda.CompileFast(true);
-            Assert.NotNull(fastCompiled);
+            Asserts.IsNotNull(fastCompiled);
             Asserts.AreEqual("A", fastCompiled(new Helper() { V = "A" }));
             Asserts.AreEqual("C", fastCompiled(new Helper() { V = "Z" }));
         }

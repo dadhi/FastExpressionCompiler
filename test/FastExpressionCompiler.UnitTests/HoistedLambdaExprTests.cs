@@ -30,7 +30,7 @@ namespace FastExpressionCompiler.UnitTests
             var getX = getXExpr.CompileFast(true);
 
             var x = getX();
-            Assert.AreSame(a, x.A);
+            Asserts.AreSame(a, x.A);
         }
 
         public class A { }

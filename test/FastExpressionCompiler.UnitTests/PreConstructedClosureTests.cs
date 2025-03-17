@@ -42,7 +42,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsNotNull(f);
 
             var result = f();
-            Assert.AreSame(x, result);
+            Asserts.AreSame(x, result);
         }
 
         [Test]
@@ -56,7 +56,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsNotNull(f);
 
             var result = f();
-            Assert.AreSame(x, result);
+            Asserts.AreSame(x, result);
         }
 
         [Test]
@@ -70,7 +70,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsNotNull(f);
 
             var result = f();
-            Assert.AreSame(x, result);
+            Asserts.AreSame(x, result);
         }
 
         [Test]
@@ -105,7 +105,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsNotNull(f);
 
             var result = f();
-            Assert.AreSame(x, result);
+            Asserts.AreSame(x, result);
         }
 
         public class X { }
@@ -184,7 +184,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var y = f1();
             Asserts.IsNotNull(y);
-            Assert.AreSame(y.A, y.B);
+            Asserts.AreSame(y.A, y.B);
         }
 
         [Test]

@@ -87,7 +87,7 @@ public class Issue196_AutoMapper_tests_are_failing_when_using_FEC : ITest
             p);
 
         var reincarnatedCompiled = reincarnatedExpr.CompileFast(true);
-        Assert.NotNull(reincarnatedCompiled);
+        Asserts.IsNotNull(reincarnatedCompiled);
 #endif
 
         var ff = expr.CompileFast(true);

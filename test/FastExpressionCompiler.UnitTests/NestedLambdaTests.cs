@@ -99,15 +99,15 @@ namespace FastExpressionCompiler.UnitTests
             var func = expr.CompileSys();
 
             var arg1 = new object();
-            Assert.AreSame(arg1, func(arg1));
+            Asserts.AreSame(arg1, func(arg1));
 
             var arg2 = new object();
-            Assert.AreSame(arg2, func(arg2));
+            Asserts.AreSame(arg2, func(arg2));
 
             var funcFec = expr.TryCompile<Func<object, object>>();
 
-            Assert.AreSame(arg1, funcFec(arg1));
-            Assert.AreSame(arg2, funcFec(arg2));
+            Asserts.AreSame(arg1, funcFec(arg1));
+            Asserts.AreSame(arg2, funcFec(arg2));
         }
 
         public static string GetS(Func<string> getS)
@@ -217,12 +217,12 @@ namespace FastExpressionCompiler.UnitTests
             var funcFec = funcExpr.TryCompile<Func<object, object>>();
 
             var arg1 = new object();
-            Assert.AreSame(arg1, funcFec(arg1));
+            Asserts.AreSame(arg1, funcFec(arg1));
 
             var arg2 = new object();
-            Assert.AreSame(arg2, funcFec(arg2));
+            Asserts.AreSame(arg2, funcFec(arg2));
 
-            Assert.AreSame(arg1, funcFec(arg1));
+            Asserts.AreSame(arg1, funcFec(arg1));
         }
 
         [Test]
@@ -250,10 +250,10 @@ namespace FastExpressionCompiler.UnitTests
             var a1 = new A();
             var result1 = func(a1);
             Asserts.AreEqual(3, result1.X);
-            Assert.AreSame(a1, result1);
+            Asserts.AreSame(a1, result1);
 
             var a2 = new A();
-            Assert.AreSame(a2, func(a2));
+            Asserts.AreSame(a2, func(a2));
         }
 
         [Test]
@@ -297,11 +297,11 @@ namespace FastExpressionCompiler.UnitTests
             var b1 = new A();
             var result1 = func(a1, b1);
             Asserts.AreEqual(3, result1.X);
-            Assert.AreSame(a1, result1);
+            Asserts.AreSame(a1, result1);
 
             var a2 = new A();
             var b2 = new A();
-            Assert.AreSame(a2, func(a2, b2));
+            Asserts.AreSame(a2, func(a2, b2));
         }
 
         [Test]
@@ -340,10 +340,10 @@ namespace FastExpressionCompiler.UnitTests
             var a1 = new A();
             var result1 = func(a1, a1);
             Asserts.AreEqual(0, result1.X);
-            Assert.AreSame(a1, result1);
+            Asserts.AreSame(a1, result1);
 
             var a2 = new A();
-            Assert.AreSame(a2, func(a2, a2));
+            Asserts.AreSame(a2, func(a2, a2));
         }
 
         public class A

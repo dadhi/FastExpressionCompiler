@@ -50,7 +50,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var fastCompiled = lambda.CompileFast();
 
-            Assert.NotNull(fastCompiled);
+            Asserts.IsNotNull(fastCompiled);
             Asserts.AreEqual("test", fastCompiled("test"));
         }
 
@@ -72,7 +72,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var data = "test";
 
-            Assert.NotNull(fastCompiled);
+            Asserts.IsNotNull(fastCompiled);
             Asserts.AreEqual(data, fastCompiled(ref data));
         }
 
@@ -93,7 +93,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(a, systCompiled(ref a));
 
             var fastCompiled = lambda.CompileFast(ifFastFailedReturnNull: true);
-            Assert.NotNull(fastCompiled);
+            Asserts.IsNotNull(fastCompiled);
 
             fastCompiled.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -132,7 +132,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(a, systCompiled(ref cls, ref a));
 
             var fastCompiled = lambda.CompileFast(ifFastFailedReturnNull: true);
-            Assert.NotNull(fastCompiled);
+            Asserts.IsNotNull(fastCompiled);
 
             fastCompiled.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -173,7 +173,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual("1", systCompiled(ref cls, ref a));
 
             var fastCompiled = lambda.CompileFast(ifFastFailedReturnNull: true);
-            Assert.NotNull(fastCompiled);
+            Asserts.IsNotNull(fastCompiled);
             fastCompiled.PrintIL();
 
             fastCompiled.AssertOpCodes(
@@ -196,7 +196,7 @@ namespace FastExpressionCompiler.IssueTests
             var lambda = Lambda<RefValueTypeDelegate>(call, parameter);
 
             var fastCompiled = lambda.CompileFast(ifFastFailedReturnNull: true);
-            Assert.NotNull(fastCompiled);
+            Asserts.IsNotNull(fastCompiled);
 
             fastCompiled.Method.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -230,7 +230,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var fastCompiled = lambda.CompileFast(ifFastFailedReturnNull: true);
 
-            Assert.NotNull(fastCompiled);
+            Asserts.IsNotNull(fastCompiled);
             Asserts.AreEqual("test", fastCompiled("test"));
         }
     }

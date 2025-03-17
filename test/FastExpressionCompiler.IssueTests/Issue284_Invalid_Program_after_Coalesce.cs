@@ -72,7 +72,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var fs = lambda.CompileSys();
             fs.PrintIL();
-            Assert.NotNull(fs(null, "a"));
+            Asserts.IsNotNull(fs(null, "a"));
 
             var f = lambda.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             f.PrintIL();
@@ -98,7 +98,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var fs = lambda.CompileSys();
             fs.PrintIL();
-            Assert.NotNull(fs(null, "a"));
+            Asserts.IsNotNull(fs(null, "a"));
 
             var f = lambda.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             f.PrintIL();

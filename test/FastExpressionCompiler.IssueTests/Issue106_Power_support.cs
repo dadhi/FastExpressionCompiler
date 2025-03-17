@@ -26,7 +26,7 @@ namespace FastExpressionCompiler.IssueTests
         {
             var lambda = Lambda<Func<double>>(Power(Constant(5.0), Constant(2.0)));
             var fastCompiled = lambda.CompileFast(true);
-            Assert.NotNull(fastCompiled);
+            Asserts.IsNotNull(fastCompiled);
             Asserts.AreEqual(25, fastCompiled());
         }
 

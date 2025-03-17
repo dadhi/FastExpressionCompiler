@@ -1044,7 +1044,7 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
     fs.PrintIL();
 
     var f = expr.CompileFast(true);
-    Assert.NotNull(f);
+    Asserts.IsNotNull(f);
     f.PrintIL();
   }
 #endif

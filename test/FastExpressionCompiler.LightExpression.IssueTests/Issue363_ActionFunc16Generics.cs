@@ -40,7 +40,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
                 int, int, int, int,
                 long>>(flags: CompilerFlags.ThrowOnNotSupportedExpression);
 
-            Assert.NotNull(compiled);
+            Asserts.IsNotNull(compiled);
             Asserts.AreEqual(0L, compiled(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15));
         }
 
@@ -60,7 +60,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
                 int, int, int, int
                 >>(flags: CompilerFlags.ThrowOnNotSupportedExpression);
 
-            Assert.NotNull(compiled);
+            Asserts.IsNotNull(compiled);
         }
 
         [TestCaseSource(nameof(TestCases))]

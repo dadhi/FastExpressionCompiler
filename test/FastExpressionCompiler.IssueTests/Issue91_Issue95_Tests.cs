@@ -48,7 +48,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var lambda = Lambda<Func<string, int>>(condition, pParam);
             var convert1 = lambda.CompileFast(true);
-            Assert.NotNull(convert1);
+            Asserts.IsNotNull(convert1);
             Asserts.AreEqual(1, convert1("aaa"));
 
             convert1.AssertOpCodes(

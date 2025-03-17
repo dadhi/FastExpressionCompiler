@@ -42,7 +42,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var lambda = Lambda<Func<int>>(blockExpr);
             var fastCompiled = lambda.CompileFast<Func<int>>(true);
-            Assert.NotNull(fastCompiled);
+            Asserts.IsNotNull(fastCompiled);
         }
 
         [Test]

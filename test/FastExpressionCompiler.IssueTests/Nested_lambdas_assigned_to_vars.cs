@@ -120,7 +120,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var dd = f();
             Asserts.IsNotNull(dd);
-            Assert.AreSame(dd.D1, dd.D2);
+            Asserts.AreSame(dd.D1, dd.D2);
 
             // var d = f.TryGetDebugInfo();
             // Asserts.AreEqual(2, d.NestedLambdaCount);

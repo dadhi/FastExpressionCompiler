@@ -383,7 +383,7 @@ namespace FastExpressionCompiler.IssueTests
             var input = new ReadOnlySequence<byte>(buffer);
             var isDeserialized = Serializer.TryDeserialize(ref input, deserialized, out var bytesRead);
 
-            Assert.True(isDeserialized);
+            Asserts.IsTrue(isDeserialized);
             Asserts.AreEqual(buffer.Length, bytesRead);
             Asserts.AreEqual(expected, deserialized);
         }

@@ -113,7 +113,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var input = new TryCatchTest();
             var tryCatchResult = func(input);
-            Assert.AreNotSame(input, tryCatchResult);
+            Asserts.AreNotSame(input, tryCatchResult);
             Asserts.IsNotNull(tryCatchResult);
         }
 

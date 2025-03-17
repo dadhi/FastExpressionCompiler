@@ -22,19 +22,19 @@ namespace FastExpressionCompiler.IssueTests
         {
             var delegateType = typeof(MyDelegate<>).MakeGenericType(typeof(string));
             var xExpr = Parameter(typeof(string), "x");
-            var lambda = Lambda(delegateType, 
-                Call(null, GetType().GetTypeInfo().GetDeclaredMethod("Out"), xExpr), 
+            var lambda = Lambda(delegateType,
+                Call(null, GetType().GetTypeInfo().GetDeclaredMethod("Out"), xExpr),
                 xExpr);
 
             var sysLambdaType = lambda.CompileSys().GetType();
-            Assert.AreSame(delegateType, sysLambdaType); 
+            Asserts.AreSame(delegateType, sysLambdaType);
 
             var fastLambdaType = lambda.CompileFast(true).GetType();
-            Assert.AreSame(delegateType, fastLambdaType);
+            Asserts.AreSame(delegateType, fastLambdaType);
         }
 
         public delegate void MyDelegate<T>(T x);
 
-        public static void Out(string x)  {}
+        public static void Out(string x) { }
     }
 }

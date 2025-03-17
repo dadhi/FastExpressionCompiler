@@ -134,6 +134,32 @@ public static class Asserts
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool AreSame<T>(T expected, T actual,
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(expected))] 
+#endif
+        string expectedName = "expected",
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(actual))]
+#endif
+        string actualName = "actual") where T : class =>
+        ReferenceEquals(expected, actual) ? true : throw new AssertionException(
+            $"Expected the same `ReferenceEquals({expectedName}, {actualName})`, but found Not the same `{expected?.ToString() ?? "null"}` and `{actual}`");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool AreNotSame<T>(T expected, T actual,
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(expected))] 
+#endif
+        string expectedName = "expected",
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(actual))]
+#endif
+        string actualName = "actual") where T : class =>
+        !ReferenceEquals(expected, actual) ? true : throw new AssertionException(
+            $"Expected Not same `!ReferenceEquals({expectedName}, {actualName})`, but found the same `{expected?.ToString() ?? "null"}` and `{actual}`");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool AreEqual<T>(T expected, T actual,
 #if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(expected))] 
