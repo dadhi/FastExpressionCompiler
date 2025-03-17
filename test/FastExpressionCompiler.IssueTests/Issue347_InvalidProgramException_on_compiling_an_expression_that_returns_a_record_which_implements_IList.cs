@@ -52,14 +52,14 @@ namespace FastExpressionCompiler.IssueTests
             var arr = new object[] { new NotifyModel(42, -1) };
 
             var x = fs(arr);
-            Assert.AreEqual(42, x);
+            Asserts.AreEqual(42, x);
 
             var f = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             Assert.IsNotNull(f);
             f.PrintIL();
 
             var y = f(arr);
-            Assert.AreEqual(42, y);
+            Asserts.AreEqual(42, y);
         }
 
         [Test]
@@ -82,7 +82,7 @@ namespace FastExpressionCompiler.IssueTests
             var m = new NotifyModel(42, -1);
 
             var x = fs(m);
-            Assert.AreEqual(43, x);
+            Asserts.AreEqual(43, x);
 
             var f = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             Assert.IsNotNull(f);
@@ -105,7 +105,7 @@ namespace FastExpressionCompiler.IssueTests
             }
 
             var y = f(m);
-            Assert.AreEqual(43, y);
+            Asserts.AreEqual(43, y);
         }
 
         [Test]
@@ -126,14 +126,14 @@ namespace FastExpressionCompiler.IssueTests
             fs.PrintIL();
 
             var x = fs(42);
-            Assert.AreEqual(43, x);
+            Asserts.AreEqual(43, x);
 
             var f = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             Assert.IsNotNull(f);
             f.PrintIL();
 
             var y = f(42);
-            Assert.AreEqual(43, y);
+            Asserts.AreEqual(43, y);
         }
 
         public static int Inc(Func<int> f) => f() + 1;
@@ -170,14 +170,14 @@ namespace FastExpressionCompiler.IssueTests
             fs.PrintIL();
 
             var x = fs(container);
-            Assert.AreEqual(43, x);
+            Asserts.AreEqual(43, x);
 
             var f = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             Assert.IsNotNull(f);
             f.PrintIL();
 
             var y = f(container);
-            Assert.AreEqual(43, y);
+            Asserts.AreEqual(43, y);
         }
 
         [Test]
@@ -240,7 +240,7 @@ namespace FastExpressionCompiler.IssueTests
             fs.PrintIL();
 
             var x = fs(container);
-            Assert.AreEqual(1, x.Count);
+            Asserts.AreEqual(1, x.Count);
 
             var f = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             Assert.IsNotNull(f);
@@ -250,7 +250,7 @@ namespace FastExpressionCompiler.IssueTests
                 d.PrintIL("nested");
 
             var y = f(container);
-            Assert.AreEqual(1, y.Count);
+            Asserts.AreEqual(1, y.Count);
         }
 
         public record struct NotifyContainer(List<NotifyModel> collectionA, NotifyModel model);

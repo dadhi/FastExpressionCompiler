@@ -46,7 +46,7 @@ namespace FastExpressionCompiler.IssueTests
             var myAddMethod = dynamicType.GetTypeInfo().GetDeclaredMethod("MyAdd");
             var func = (Func<int, int, int>)Delegate.CreateDelegate(funcExpr.Type, myAddMethod);
 
-            Assert.AreEqual(42, func(39, 3));
+            Asserts.AreEqual(42, func(39, 3));
         }
     }
 }

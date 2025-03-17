@@ -13,6 +13,8 @@ using System.Diagnostics;
 using NUnit.Framework;
 using FastExpressionCompiler.ILDecoder;
 using System.IO;
+using System.Collections;
+using System.Collections.Generic;
 #if LIGHT_EXPRESSION
 namespace FastExpressionCompiler.LightExpression;
 #else
@@ -143,6 +145,52 @@ public static class Asserts
         string actualName = "actual") =>
         Equals(expected, actual) ? null : throw new AssertionException(
             $"Expected `{expectedName} == {actualName}`, but found `{expected?.ToString() ?? "null"} == {actual}`");
+
+    public static AssertionException AreEqual<T>(IEnumerable<T> expected, IEnumerable<T> actual,
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(expected))] 
+#endif
+        string expectedName = "expected",
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(actual))]
+#endif
+        string actualName = "actual")
+    {
+        var index = 0;
+        var expectedEnumerator = expected.GetEnumerator();
+        var actualEnumerator = actual.GetEnumerator();
+        var hasExpected = true;
+        var hasActual = true;
+        var expectedCount = 0;
+        var actualCount = 0;
+
+        // Traverse until the end of the largest collection
+        while (hasExpected | hasActual)
+        {
+            hasExpected = hasExpected && expectedEnumerator.MoveNext();
+            if (hasExpected) ++expectedCount;
+
+            hasActual = hasActual && actualEnumerator.MoveNext();
+            if (hasActual) ++actualCount;
+
+            if (hasExpected & hasActual)
+            {
+                var exp = expectedEnumerator.Current;
+                var act = actualEnumerator.Current;
+                if (!Equals(exp, act))
+                    // todo: @wip gather the all differences, or better up-to the specified number! 
+                    return new AssertionException(
+                        $"Expected the collection `{expectedName} to have the equal items in order with {actualName}`, but found the difference at the index #{index}: `{exp?.ToString() ?? "null"} == {act?.ToString() ?? "null"}`");
+            }
+            ++index;
+        }
+
+        if (hasExpected != hasActual)
+            return new AssertionException(
+                $"Expected the collection `{expectedName} to have the same count as {actualName}, but found {expectedCount} != {actualCount}");
+
+        return null;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static AssertionException IsNull<T>(T actual,

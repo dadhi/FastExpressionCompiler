@@ -58,12 +58,12 @@ namespace FastExpressionCompiler.IssueTests
             var fSys = hoistedExpr.CompileSys();
             fSys.PrintIL("sys");
             var x = fSys();
-            Assert.AreEqual("foo", x.Value);
+            Asserts.AreEqual("foo", x.Value);
 
             var fFast = hoistedExpr.CompileFast(true);
             fFast.PrintIL("fast");
             var y = fFast();
-            Assert.AreEqual("foo", y.Value);
+            Asserts.AreEqual("foo", y.Value);
         }
 
         private sealed class Widget

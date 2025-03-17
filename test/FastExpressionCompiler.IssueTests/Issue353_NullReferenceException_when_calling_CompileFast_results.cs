@@ -53,20 +53,20 @@ namespace FastExpressionCompiler.IssueTests
                 a[0] = (object)999;
                 return (n + ((int)a[0]));
             });
-            Assert.AreEqual(1009, @cs(10));
+            Asserts.AreEqual(1009, @cs(10));
 
             var fs = expr.CompileSys();
             fs.PrintIL();
 
             var x = fs(10);
-            Assert.AreEqual(1009, x);
+            Asserts.AreEqual(1009, x);
 
             var ff = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             Assert.IsNotNull(ff);
             ff.PrintIL();
 
             var y = ff(10);
-            Assert.AreEqual(1009, y);
+            Asserts.AreEqual(1009, y);
         }
 
         [Test]
@@ -101,20 +101,20 @@ namespace FastExpressionCompiler.IssueTests
                 return f(
                     n);
             });
-            Assert.AreEqual(1009, @cs(10));
+            Asserts.AreEqual(1009, @cs(10));
 
             var fs = expr.CompileSys();
             fs.PrintIL();
 
             var x = fs(10);
-            Assert.AreEqual(1009, x);
+            Asserts.AreEqual(1009, x);
 
             var ff = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             Assert.IsNotNull(ff);
             ff.PrintIL();
 
             var y = ff(10);
-            Assert.AreEqual(1009, y);
+            Asserts.AreEqual(1009, y);
         }
 
         [Test]
@@ -152,20 +152,20 @@ namespace FastExpressionCompiler.IssueTests
                     b,
                     n);
             });
-            Assert.AreEqual(1009, @cs(10));
+            Asserts.AreEqual(1009, @cs(10));
 
             var fs = expr.CompileSys();
             fs.PrintIL();
 
             var x = fs(10);
-            Assert.AreEqual(1009, x);
+            Asserts.AreEqual(1009, x);
 
             var ff = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             Assert.IsNotNull(ff);
             ff.PrintIL();
 
             var y = ff(10);
-            Assert.AreEqual(1009, y);
+            Asserts.AreEqual(1009, y);
         }
 
         [Test]
@@ -198,13 +198,13 @@ namespace FastExpressionCompiler.IssueTests
                 return sumFunc(
                     n);
             });
-            Assert.AreEqual(1009, @cs(10));
+            Asserts.AreEqual(1009, @cs(10));
 
             var fs = expr.CompileSys();
             fs.PrintIL();
 
             var x = fs(10);
-            Assert.AreEqual(1009, x);
+            Asserts.AreEqual(1009, x);
 
             var f = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             Assert.IsNotNull(f);
@@ -214,7 +214,7 @@ namespace FastExpressionCompiler.IssueTests
                 d.PrintIL("sumFunc");
 
             var y = f(10);
-            Assert.AreEqual(1009, y);
+            Asserts.AreEqual(1009, y);
         }
 
         [Test]
@@ -247,7 +247,7 @@ namespace FastExpressionCompiler.IssueTests
                 return sumFunc.Invoke(
                     n);
             });
-            Assert.AreEqual(1009, @cs(10));
+            Asserts.AreEqual(1009, @cs(10));
 
             // how it is done right now
             var @cs2 = (Func<int, int>)((int n) =>
@@ -265,20 +265,20 @@ namespace FastExpressionCompiler.IssueTests
                 closure[0] = 999;
                 return sumFunc(closure, n);
             });
-            Assert.AreEqual(1009, @cs2(10));
+            Asserts.AreEqual(1009, @cs2(10));
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
             var x = fs(10);
-            Assert.AreEqual(1009, x);
+            Asserts.AreEqual(1009, x);
 
             var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             Assert.IsNotNull(f);
             f.PrintIL();
 
             var y = f(10);
-            Assert.AreEqual(1009, y);
+            Asserts.AreEqual(1009, y);
         }
 
         [Test]
@@ -319,20 +319,20 @@ namespace FastExpressionCompiler.IssueTests
                 return sumFunc(
                     n);
             });
-            Assert.AreEqual(55, @cs(10));
+            Asserts.AreEqual(55, @cs(10));
 
             var fs = expr.CompileSys();
             fs.PrintIL();
 
             var x = fs(10);
-            Assert.AreEqual(55, x);
+            Asserts.AreEqual(55, x);
 
             var f = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             Assert.IsNotNull(f);
             f.PrintIL();
 
             var y = f(10);
-            Assert.AreEqual(55, y);
+            Asserts.AreEqual(55, y);
         }
     }
 }

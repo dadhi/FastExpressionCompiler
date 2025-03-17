@@ -123,24 +123,24 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = ExpressionCompiler.TryCompile<Func<XByte>>(e);
 
-            Assert.AreEqual(XByte.A, f());
+            Asserts.AreEqual(XByte.A, f());
         }
 
         [Test(Description = "Support all types and operations from System.Numerics")]
         public void Can_return_constant()
         {
-            Assert.AreEqual(ExpressionCompiler.CompileFast(() => 1u, true)(), 1u);
-            Assert.AreEqual(ExpressionCompiler.CompileFast(() => (short)1, true)(), (short)1);
-            Assert.AreEqual(ExpressionCompiler.CompileFast(() => 1L, true)(), 1L);
-            Assert.AreEqual(ExpressionCompiler.CompileFast(() => 1uL, true)(), 1uL);
-            Assert.AreEqual(ExpressionCompiler.CompileFast(() => (byte)1, true)(), (byte)1);
-            Assert.AreEqual(ExpressionCompiler.CompileFast(() => (sbyte)1, true)(), (sbyte)1);
-            Assert.AreEqual(ExpressionCompiler.CompileFast(() => 1, true)(), 1);
-            Assert.AreEqual(ExpressionCompiler.CompileFast(() => 1.1f, true)(), 1.1f);
-            Assert.AreEqual(ExpressionCompiler.CompileFast(() => 1.1d, true)(), 1.1d);
-            Assert.AreEqual(ExpressionCompiler.CompileFast(() => 1.1M, true)(), 1.1M);
-            Assert.AreEqual(ExpressionCompiler.CompileFast(() => 'c', true)(), 'c');
-            Assert.AreEqual(ExpressionCompiler.CompileFast(() => true, true)(), true);
+            Asserts.AreEqual(ExpressionCompiler.CompileFast(() => 1u, true)(), 1u);
+            Asserts.AreEqual(ExpressionCompiler.CompileFast(() => (short)1, true)(), (short)1);
+            Asserts.AreEqual(ExpressionCompiler.CompileFast(() => 1L, true)(), 1L);
+            Asserts.AreEqual(ExpressionCompiler.CompileFast(() => 1uL, true)(), 1uL);
+            Asserts.AreEqual(ExpressionCompiler.CompileFast(() => (byte)1, true)(), (byte)1);
+            Asserts.AreEqual(ExpressionCompiler.CompileFast(() => (sbyte)1, true)(), (sbyte)1);
+            Asserts.AreEqual(ExpressionCompiler.CompileFast(() => 1, true)(), 1);
+            Asserts.AreEqual(ExpressionCompiler.CompileFast(() => 1.1f, true)(), 1.1f);
+            Asserts.AreEqual(ExpressionCompiler.CompileFast(() => 1.1d, true)(), 1.1d);
+            Asserts.AreEqual(ExpressionCompiler.CompileFast(() => 1.1M, true)(), 1.1M);
+            Asserts.AreEqual(ExpressionCompiler.CompileFast(() => 'c', true)(), 'c');
+            Asserts.AreEqual(ExpressionCompiler.CompileFast(() => true, true)(), true);
         }
 
         [Test(Description = "Support all types and operations from System.Numerics")]
@@ -154,7 +154,7 @@ namespace FastExpressionCompiler.UnitTests
                     );
                 var lambda = Expression.Lambda<Func<int>>(blockExpr);
                 var fastCompiled = lambda.CompileFast(true);
-                Assert.AreEqual(n, fastCompiled());
+                Asserts.AreEqual(n, fastCompiled());
             }
         }
 

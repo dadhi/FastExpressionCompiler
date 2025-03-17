@@ -77,7 +77,7 @@ namespace FastExpressionCompiler.IssueTests
             var f = lambda.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             f.PrintIL();
             var v = f(null, "a");
-            Assert.AreEqual("a", v.Name);
+            Asserts.AreEqual("a", v.Name);
         }
 
         [Test]
@@ -103,7 +103,7 @@ namespace FastExpressionCompiler.IssueTests
             var f = lambda.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             f.PrintIL();
             var v = f(null, "a");
-            Assert.AreEqual("default", v.Name);
+            Asserts.AreEqual("default", v.Name);
         }
 
         [Test]
@@ -118,7 +118,7 @@ namespace FastExpressionCompiler.IssueTests
                 Block(
                     Coalesce(input, New(ctor, Constant("default"))),
                     Assign(Property(input, property), text),
-                    input), 
+                    input),
                 input,
                 text);
 

@@ -40,12 +40,12 @@ namespace FastExpressionCompiler.IssueTests
             //     List<string> list_string___32854180,
             //     int int__27252167) => //string
             //     list_string___32854180[int__27252167].ToString());
-            
+
             var fs = e.CompileSys();
             fs.PrintIL();
 
             var m = new List<string> { "a" };
-            Assert.AreEqual("a", fs(m, 0));
+            Asserts.AreEqual("a", fs(m, 0));
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -57,7 +57,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ret
             );
 
-            Assert.AreEqual("a", ff(m, 0));
+            Asserts.AreEqual("a", ff(m, 0));
         }
     }
 }

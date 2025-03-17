@@ -33,7 +33,7 @@ namespace FastExpressionCompiler.IssueTests
             var lambda = Lambda<Func<int>>(ret);
             var fastCompiled = lambda.CompileFast<Func<int>>(true);
             Assert.IsNotNull(fastCompiled);
-            Assert.AreEqual(7, fastCompiled());
+            Asserts.AreEqual(7, fastCompiled());
         }
 
         [Test]
@@ -43,7 +43,7 @@ namespace FastExpressionCompiler.IssueTests
             var lambda = Lambda<Func<int>>(ret);
             var fastCompiled = lambda.CompileFast<Func<int>>(true);
             Assert.IsNotNull(fastCompiled);
-            Assert.AreEqual(7, fastCompiled());
+            Asserts.AreEqual(7, fastCompiled());
 
             fastCompiled.AssertOpCodes(
                 OpCodes.Ldc_I4_7,
@@ -57,7 +57,7 @@ namespace FastExpressionCompiler.IssueTests
             var lambda = Lambda<Func<int>>(Label(Label(typeof(int)), Constant(7)));
             var fastCompiled = lambda.CompileFast<Func<int>>(true);
             Assert.IsNotNull(fastCompiled);
-            Assert.AreEqual(7, fastCompiled());
+            Asserts.AreEqual(7, fastCompiled());
         }
 
         [Test]
@@ -68,7 +68,7 @@ namespace FastExpressionCompiler.IssueTests
             var lambda = Lambda<Func<int>>(Block(new List<ParameterExpression> { varr }, assign, Label(Label(typeof(int)), varr)));
             var fastCompiled = lambda.CompileFast<Func<int>>(true);
             Assert.IsNotNull(fastCompiled);
-            Assert.AreEqual(7, fastCompiled());
+            Asserts.AreEqual(7, fastCompiled());
         }
 
         [Test]

@@ -16,7 +16,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
         [Test]
         public void Test()
         {
-            Assert.AreEqual("42", GetAnA(42)?.GetTheAnswer());
+            Asserts.AreEqual("42", GetAnA(42)?.GetTheAnswer());
 
             var n = Parameter(typeof(int), "n");
             var block = CallIfNotNull(
@@ -29,7 +29,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
 
             var f = getTheAnswer.CompileFast(ifFastFailedReturnNull: true);
             Assert.IsNull(f(43));
-            Assert.AreEqual("42", f(42));
+            Asserts.AreEqual("42", f(42));
         }
 
         public static A GetAnA(int n) => n == 42 ? new A() : null;

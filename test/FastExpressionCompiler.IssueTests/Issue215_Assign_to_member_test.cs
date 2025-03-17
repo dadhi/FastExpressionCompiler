@@ -39,7 +39,7 @@ namespace FastExpressionCompiler.IssueTests
                 Block(
                     Assign(MakeMemberAccess(castedType, fieldInfo_m_Attributes),
                         Convert(And(Convert(MakeMemberAccess(castedType, fieldInfo_m_Attributes), typeof(int)), Constant((int)(~FieldAttributes.InitOnly)))
-                            ,typeof(System.Reflection.FieldAttributes))
+                            , typeof(System.Reflection.FieldAttributes))
                         )
                     , Return(returnLabel)
                     , Label(returnLabel))
@@ -52,7 +52,7 @@ namespace FastExpressionCompiler.IssueTests
             var fieldF = typeof(A).GetField(nameof(A.F));
             nra(fieldF);
             var x = getAttr(fieldF);
-            Assert.AreEqual(0, x & (int)FieldAttributes.InitOnly);
+            Asserts.AreEqual(0, x & (int)FieldAttributes.InitOnly);
 
             var r = Lambda(
                 Block(
@@ -72,7 +72,7 @@ namespace FastExpressionCompiler.IssueTests
             Assert.AreNotEqual(0, y & (int)FieldAttributes.InitOnly);
         }
 
-        public class A 
+        public class A
         {
             public int F;
         }

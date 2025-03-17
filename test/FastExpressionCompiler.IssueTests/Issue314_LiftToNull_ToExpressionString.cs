@@ -36,7 +36,7 @@ namespace FastExpressionCompiler.IssueTests
             var str = expr.ToExpressionString(out _, out _, out _, true);
 
             // for Add and other arithmetics operations the liftToNull is ignored so we won't repro it in the final expression.
-            Assert.AreEqual(
+            Asserts.AreEqual(
                 "var e = new Expression[2]; // the unique expressions" + Environment.NewLine +
                 "var expr = MakeBinary(ExpressionType.Add," + Environment.NewLine +
                 "  e[0]=Constant(1, typeof(int?))," + Environment.NewLine +
@@ -54,7 +54,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var str = expr.ToExpressionString(out _, out _, out _, true);
 
-            Assert.AreEqual(
+            Asserts.AreEqual(
                 @"var p = new ParameterExpression[1]; // the parameter expressions" + Environment.NewLine +
                 @"var expr = MakeBinary(ExpressionType.Add," + Environment.NewLine +
                 @"  p[0]=Parameter(typeof(Issue314_LiftToNull_ToExpressionString.A), ""x"")," + Environment.NewLine +
@@ -73,7 +73,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var str = expr.ToExpressionString();
 
-            Assert.AreEqual(@$"var expr = Constant(DateTime.Parse(""{dt}""));", str);
+            Asserts.AreEqual(@$"var expr = Constant(DateTime.Parse(""{dt}""));", str);
         }
 
         [Test]
@@ -84,7 +84,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var str = expr.ToExpressionString();
 
-            Assert.AreEqual(@$"var expr = Constant(DateTime.Parse(""{dt}""), typeof(System.DateTime?));", str);
+            Asserts.AreEqual(@$"var expr = Constant(DateTime.Parse(""{dt}""), typeof(System.DateTime?));", str);
         }
 
         class A

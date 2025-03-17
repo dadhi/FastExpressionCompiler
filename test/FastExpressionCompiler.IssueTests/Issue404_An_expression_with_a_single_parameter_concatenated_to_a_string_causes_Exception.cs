@@ -43,7 +43,7 @@ namespace FastExpressionCompiler.IssueTests
             double x = 1.6;
             var res2 = (string)dlg2.DynamicInvoke(x);
 
-            Assert.AreEqual(res2, "The value is " + x.ToString());
+            Asserts.AreEqual(res2, "The value is " + x.ToString());
         }
     }
 }

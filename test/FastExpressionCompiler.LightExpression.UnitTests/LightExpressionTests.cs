@@ -98,7 +98,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
             var f = expr.CompileFast<Func<string, string>>();
 
-            Assert.AreEqual("a", f("a"));
+            Asserts.AreEqual("a", f("a"));
         }
 
         public static string GetS(Func<string> getS)
@@ -125,7 +125,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var f = expr.CompileFast<Func<Action<string>>>();
 
             f()("a");
-            Assert.AreEqual("a", s.Value);
+            Asserts.AreEqual("a", s.Value);
         }
 
         public class S
@@ -241,7 +241,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                 input[i] = i + "";
             var x = func(input);
 
-            Assert.AreEqual("11", ((A)x).Sop);
+            Asserts.AreEqual("11", ((A)x).Sop);
         }
 
         [Test]
@@ -256,7 +256,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                 input[i] = i + "";
             var x = func(input);
 
-            Assert.AreEqual("11", ((A)x).Sop);
+            Asserts.AreEqual("11", ((A)x).Sop);
         }
 
         [Test]
@@ -269,7 +269,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var les = le.ToExpressionString();
 
             StringAssert.Contains("MemberInit", ses);
-            Assert.AreEqual(ses, les);
+            Asserts.AreEqual(ses, les);
         }
 
         [Test]
@@ -282,7 +282,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var les = le.ToCSharpString();
 
             StringAssert.Contains("Prop = new LightExpressionTests.P(new LightExpressionTests.B())", ses);
-            Assert.AreEqual(ses, les);
+            Asserts.AreEqual(ses, les);
         }
 
         [Test]

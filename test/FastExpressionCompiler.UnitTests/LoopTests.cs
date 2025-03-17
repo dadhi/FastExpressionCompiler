@@ -57,7 +57,7 @@ namespace FastExpressionCompiler.UnitTests
                 Loop(
                     Block(
                         new[] { intVariable },
-                        IfThen(GreaterThan(intVariable, Constant(3)), Break(breakLabel)), 
+                        IfThen(GreaterThan(intVariable, Constant(3)), Break(breakLabel)),
                         PreIncrementAssign(intVariable)),
                     breakLabel)
                 );
@@ -190,7 +190,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var result = loopFunc.Invoke();
 
-            Assert.AreEqual(5, result);
+            Asserts.AreEqual(5, result);
         }
     }
 }

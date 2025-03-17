@@ -89,7 +89,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.IsNotNull(f);
 
             f();
-            Assert.AreEqual(2, intDoubler.DoubleValue);
+            Asserts.AreEqual(2, intDoubler.DoubleValue);
         }
 
         [Test]
@@ -156,7 +156,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var result = f();
             Assert.IsNotNull(result);
-            Assert.AreEqual(10, result.DoubleValue);
+            Asserts.AreEqual(10, result.DoubleValue);
         }
 
         [Test]
@@ -198,7 +198,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.IsNotNull(fs);
 
             i = 13;
-            Assert.AreEqual(14, fs());
+            Asserts.AreEqual(14, fs());
         }
 
         [Test]
@@ -211,7 +211,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.IsNotNull(fs);
 
             i = 13;
-            Assert.AreEqual(4, fs());
+            Asserts.AreEqual(4, fs());
         }
 
 

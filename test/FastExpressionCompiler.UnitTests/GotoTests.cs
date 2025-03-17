@@ -35,10 +35,10 @@ namespace FastExpressionCompiler.UnitTests
             var f = expr.CompileFast(true);
 
             Assert.IsNotNull(f);
-            Assert.AreEqual("TEN", f(10));
-            Assert.AreEqual("FIVE", f(5));
-            Assert.AreEqual("THREE", f(3));
-            Assert.AreEqual("ZERO", f(1));
+            Asserts.AreEqual("TEN", f(10));
+            Asserts.AreEqual("FIVE", f(5));
+            Asserts.AreEqual("THREE", f(3));
+            Asserts.AreEqual("ZERO", f(1));
         }
     }
 }

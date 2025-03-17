@@ -50,13 +50,13 @@ public class Issue449_MemberInit_produces_InvalidProgram : ITest
         fs.PrintIL();
 
         var sr = fs();
-        Assert.AreEqual(666, sr.Value.Value);
+        Asserts.AreEqual(666, sr.Value.Value);
 
         var ff = expr.CompileFast(false);
         ff.PrintIL();
 
         var fr = ff();
-        Assert.AreEqual(666, sr.Value.Value);
+        Asserts.AreEqual(666, sr.Value.Value);
     }
 
     [Test]
@@ -75,12 +75,12 @@ public class Issue449_MemberInit_produces_InvalidProgram : ITest
         fs.PrintIL();
 
         var sr = fs();
-        Assert.AreEqual(666, sr.Value.Value);
+        Asserts.AreEqual(666, sr.Value.Value);
 
         var ff = expr.CompileFast(false);
         ff.PrintIL();
 
         var fr = ff();
-        Assert.AreEqual(666, sr.Value.Value);
+        Asserts.AreEqual(666, sr.Value.Value);
     }
 }

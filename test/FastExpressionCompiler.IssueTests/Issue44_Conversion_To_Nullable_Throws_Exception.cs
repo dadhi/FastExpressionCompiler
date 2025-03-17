@@ -29,7 +29,7 @@ namespace FastExpressionCompiler.IssueTests
             int? answer = expression.CompileFast(true).Invoke();
 
             Assert.IsTrue(answer.HasValue);
-            Assert.AreEqual(42, answer.Value);
+            Asserts.AreEqual(42, answer.Value);
         }
 
         [Test]

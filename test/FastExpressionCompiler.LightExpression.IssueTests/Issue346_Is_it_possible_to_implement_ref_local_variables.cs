@@ -12,12 +12,12 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
         public int Run()
         {
             Check_assignment_to_by_ref_float_parameter_PostIncrement_Returning();
-            
+
             Check_assignment_to_by_ref_int_parameter_PostIncrement_Returning();
             Check_assignment_to_by_ref_int_parameter_PostIncrement_Void();
             Get_array_element_ref_and_member_change_and_Pre_increment_it();
             Get_array_element_ref_and_member_change_and_Post_increment_it();
-            
+
             Real_world_test_ref_array_element();
             Get_array_element_ref_and_member_change_and_increment_it_then_method_call_on_ref_value_elem();
             Get_array_element_ref_and_member_change_and_increment_it();
@@ -48,7 +48,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
 
             var x = 1;
             s(ref x);
-            Assert.AreEqual(2, x);
+            Asserts.AreEqual(2, x);
 
             var f = e.CompileFast(true);
             f.PrintIL();
@@ -64,7 +64,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
 
             var y = 1;
             f(ref y);
-            Assert.AreEqual(2, y);
+            Asserts.AreEqual(2, y);
         }
 
         [Test]
@@ -86,7 +86,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
 
             var x = 1;
             s(ref x);
-            Assert.AreEqual(2, x);
+            Asserts.AreEqual(2, x);
 
             var f = e.CompileFast(true);
             f.PrintIL();
@@ -104,7 +104,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
 
             var y = 1;
             f(ref y);
-            Assert.AreEqual(2, y);
+            Asserts.AreEqual(2, y);
         }
 
         delegate float IncRefFloatReturning(ref float x);
@@ -140,32 +140,32 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
                 OpCodes.Ldloc_0,
                 OpCodes.Ret
             );
-            
+
             var x = 1.0f;
             var y = s(ref x);
-            Assert.AreEqual(2.0f, x);
-            Assert.AreEqual(1.0f, y);
+            Asserts.AreEqual(2.0f, x);
+            Asserts.AreEqual(1.0f, y);
 
             var f = e.CompileFast(true);
             f.PrintIL();
             // todo: @wip the IL codes is the same for the System Compile but the expected values are different
             // f.AssertOpCodes(
-                // IL_0000: ldarg.1
-                // IL_0001: ldarg.1
-                // IL_0002: ldind.r4
-                // IL_0003: stloc.0
-                // IL_0004: ldloc.0
-                // IL_0005: ldc.r4 1
-                // IL_000a: add
-                // IL_000b: stind.r4
-                // IL_000c: ldloc.0
-                // IL_000d: ret
+            // IL_0000: ldarg.1
+            // IL_0001: ldarg.1
+            // IL_0002: ldind.r4
+            // IL_0003: stloc.0
+            // IL_0004: ldloc.0
+            // IL_0005: ldc.r4 1
+            // IL_000a: add
+            // IL_000b: stind.r4
+            // IL_000c: ldloc.0
+            // IL_000d: ret
             // );
-            
+
             x = 1.0f;
             y = f(ref x);
-            Assert.AreEqual(1.0f, y);
-            // Assert.AreEqual(2.0f, x); // @wip inconsistent: 2.0f in Debug, and 1.0f in Release, but why?
+            Asserts.AreEqual(1.0f, y);
+            // Asserts.AreEqual(2.0f, x); // @wip inconsistent: 2.0f in Debug, and 1.0f in Release, but why?
         }
 
         [Test]
@@ -187,8 +187,8 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
 
             var x = 1;
             var y = s(ref x);
-            Assert.AreEqual(2, x);
-            Assert.AreEqual(1, y);
+            Asserts.AreEqual(2, x);
+            Asserts.AreEqual(1, y);
 
             var f = e.CompileFast(true);
             f.PrintIL();
@@ -209,8 +209,8 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
 
             x = 1;
             y = f(ref x);
-            Assert.AreEqual(1, y);
-            Assert.AreEqual(2, x);
+            Asserts.AreEqual(1, y);
+            Asserts.AreEqual(2, x);
         }
 
         [Test]
@@ -236,7 +236,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
 
             var array = new[] { 42 };
             @cs(array);
-            Assert.AreEqual(43, array[0]);
+            Asserts.AreEqual(43, array[0]);
 
             var fs = e.CompileFast(true);
             fs.PrintIL();
@@ -256,7 +256,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
 
             array = new[] { 42 };
             fs(array);
-            Assert.AreEqual(43, array[0]);
+            Asserts.AreEqual(43, array[0]);
         }
 
         [Test]
@@ -290,7 +290,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             });
             // @cs.PrintIL();
             var vs = @cs();
-            Assert.AreEqual(12, vs[0].x);
+            Asserts.AreEqual(12, vs[0].x);
 
             var fs = e.CompileFast(true);
             fs.PrintIL();
@@ -316,14 +316,14 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             );
 
             vs = fs();
-            Assert.AreEqual(12, vs[0].x);
+            Asserts.AreEqual(12, vs[0].x);
         }
 
         [Test]
         public void Get_array_element_ref_and_member_change_and_Post_increment_it()
         {
             var aPar = Parameter(typeof(Vector3[]), "aPar");
-            var aVar = Variable(typeof(Vector3[]),  "aVar");
+            var aVar = Variable(typeof(Vector3[]), "aVar");
             var i = Variable(typeof(int), "i");
             var vRef = Variable(typeof(Vector3).MakeByRefType(), "v");
             var bField = typeof(Vector3).GetField(nameof(Vector3.x));
@@ -350,8 +350,8 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             });
             var a = new Vector3[10];
             var x = @cs(a);
-            Assert.AreEqual(0, x);
-            Assert.AreEqual(1, a[9].x);
+            Asserts.AreEqual(0, x);
+            Asserts.AreEqual(1, a[9].x);
 
             var fs = e.CompileFast(true);
             fs.PrintIL();
@@ -378,15 +378,15 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             );
             a = new Vector3[10];
             x = fs(a);
-            Assert.AreEqual(0, x);
-            Assert.AreEqual(1, a[9].x);
+            Asserts.AreEqual(0, x);
+            Asserts.AreEqual(1, a[9].x);
         }
 
         [Test]
         public void Get_array_element_ref_and_member_change_and_Pre_increment_it()
         {
             var aPar = Parameter(typeof(Vector3[]), "aPar");
-            var aVar = Variable(typeof(Vector3[]),  "aVar");
+            var aVar = Variable(typeof(Vector3[]), "aVar");
             var i = Variable(typeof(int), "i");
             var vRef = Variable(typeof(Vector3).MakeByRefType(), "v");
             var bField = typeof(Vector3).GetField(nameof(Vector3.x));
@@ -413,8 +413,8 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             });
             var a = new Vector3[10];
             var x = @cs(a);
-            Assert.AreEqual(1, x);
-            Assert.AreEqual(1, a[9].x);
+            Asserts.AreEqual(1, x);
+            Asserts.AreEqual(1, a[9].x);
 
             var fs = e.CompileFast(true);
             fs.PrintIL();
@@ -441,8 +441,8 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             );
             a = new Vector3[10];
             x = fs(a);
-            Assert.AreEqual(1, x);
-            Assert.AreEqual(1, a[9].x);
+            Asserts.AreEqual(1, x);
+            Asserts.AreEqual(1, a[9].x);
         }
 
         [Test]
@@ -479,7 +479,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             });
             // @cs.PrintIL();
             var vs = @cs();
-            Assert.AreEqual(53, vs[0].x);
+            Asserts.AreEqual(53, vs[0].x);
 
             var fs = e.CompileFast(true);
             fs.PrintIL();
@@ -507,7 +507,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             );
 
             vs = fs();
-            Assert.AreEqual(53, vs[0].x);
+            Asserts.AreEqual(53, vs[0].x);
         }
 
         [Test]
@@ -582,7 +582,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
                 return array;
             });
             var a = @cs();
-            Assert.AreEqual(100, a.Length);
+            Asserts.AreEqual(100, a.Length);
 
             var f = e.CompileFast(true);
             f.PrintIL();
@@ -622,9 +622,9 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             );
 
             a = f();
-            Assert.AreEqual(100, a.Length);
-            Assert.AreEqual(a[0].x, 53);
-            Assert.AreEqual(a[99].x, 53);
+            Asserts.AreEqual(100, a.Length);
+            Asserts.AreEqual(a[0].x, 53);
+            Asserts.AreEqual(a[99].x, 53);
         }
 
         public struct Vector3

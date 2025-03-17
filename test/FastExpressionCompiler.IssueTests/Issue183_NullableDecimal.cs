@@ -34,7 +34,7 @@ namespace FastExpressionCompiler.IssueTests
             var x = f(42);
 
             Assert.IsNotNull(x);
-            Assert.AreEqual(42, x.Value);
+            Asserts.AreEqual(42, x.Value);
         }
 
         [Test]
@@ -68,7 +68,7 @@ namespace FastExpressionCompiler.IssueTests
             var x = f(new DecimalContainer { Decimal = 42 });
 
             Assert.IsNotNull(x);
-            Assert.AreEqual(42, x.Value);
+            Asserts.AreEqual(42, x.Value);
         }
 
         [Test]
@@ -84,7 +84,7 @@ namespace FastExpressionCompiler.IssueTests
             var x = f(new DecimalContainer { NullableByte = 42 });
 
             Assert.IsNotNull(x);
-            Assert.AreEqual(42, x.Value);
+            Asserts.AreEqual(42, x.Value);
         }
 
         [Test]

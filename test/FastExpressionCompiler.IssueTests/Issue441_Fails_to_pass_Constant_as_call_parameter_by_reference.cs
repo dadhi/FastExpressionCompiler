@@ -44,13 +44,13 @@ public class Issue441_Fails_to_pass_Constant_as_call_parameter_by_reference : IT
         fs.PrintIL();
 
         var sr = fs();
-        Assert.AreEqual(43, sr);
+        Asserts.AreEqual(43, sr);
 
         var ff = expr.CompileFast(false);
         ff.PrintIL();
 
         var fr = ff();
-        Assert.AreEqual(43, fr);
+        Asserts.AreEqual(43, fr);
     }
 
     [Test]
@@ -70,13 +70,13 @@ public class Issue441_Fails_to_pass_Constant_as_call_parameter_by_reference : IT
         fs.PrintIL();
 
         var sr = fs();
-        Assert.AreEqual(2, sr);
+        Asserts.AreEqual(2, sr);
 
         var ff = expr.CompileFast(false);
         ff.PrintIL();
 
         var fr = ff();
-        Assert.AreEqual(2, fr);
+        Asserts.AreEqual(2, fr);
     }
 
     [Test]
@@ -96,12 +96,12 @@ public class Issue441_Fails_to_pass_Constant_as_call_parameter_by_reference : IT
         fs.PrintIL();
 
         var sr = fs();
-        Assert.AreEqual(2, sr);
+        Asserts.AreEqual(2, sr);
 
         var ff = expr.CompileFast(false);
         ff.PrintIL();
 
         var fr = ff();
-        Assert.AreEqual(2, fr);
+        Asserts.AreEqual(2, fr);
     }
 }

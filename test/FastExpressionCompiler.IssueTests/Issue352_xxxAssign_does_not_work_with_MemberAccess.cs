@@ -86,13 +86,13 @@ namespace FastExpressionCompiler.IssueTests
             });
             var a1 = new[] { 1, 2, 9 };
             @cs(a1);
-            Assert.AreEqual(33, a1[2]);
+            Asserts.AreEqual(33, a1[2]);
 
             var fs = e.CompileSys();
             fs.PrintIL();
             a1 = new[] { 1, 2, 9 };
             fs(a1);
-            Assert.AreEqual(33, a1[2]);
+            Asserts.AreEqual(33, a1[2]);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -105,7 +105,7 @@ namespace FastExpressionCompiler.IssueTests
             );
             a1 = new[] { 1, 2, 9 };
             ff(a1);
-            Assert.AreEqual(33, a1[2]);
+            Asserts.AreEqual(33, a1[2]);
         }
 
         public delegate void ArrAndRefParam(int[] a, ref int b);
@@ -129,13 +129,13 @@ namespace FastExpressionCompiler.IssueTests
             var a1 = new[] { 1, 2, 9 };
             var b1 = 33;
             @cs(a1, ref b1);
-            Assert.AreEqual(33, a1[2]);
+            Asserts.AreEqual(33, a1[2]);
 
             var fs = e.CompileSys();
             fs.PrintIL();
             a1 = new[] { 1, 2, 9 };
             fs(a1, ref b1);
-            Assert.AreEqual(33, a1[2]);
+            Asserts.AreEqual(33, a1[2]);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -149,7 +149,7 @@ namespace FastExpressionCompiler.IssueTests
             );
             a1 = new[] { 1, 2, 9 };
             ff(a1, ref b1);
-            Assert.AreEqual(33, a1[2]);
+            Asserts.AreEqual(33, a1[2]);
         }
 
         [Test]
@@ -167,13 +167,13 @@ namespace FastExpressionCompiler.IssueTests
             });
             var a1 = new[,] { { 1, 2, 9 }, { 3, 4, 5 } };
             @cs(a1);
-            Assert.AreEqual(33, a1[1, 2]);
+            Asserts.AreEqual(33, a1[1, 2]);
 
             var fs = e.CompileSys();
             fs.PrintIL();
             a1 = new[,] { { 1, 2, 9 }, { 3, 4, 5 } };
             fs(a1);
-            Assert.AreEqual(33, a1[1, 2]);
+            Asserts.AreEqual(33, a1[1, 2]);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -187,7 +187,7 @@ namespace FastExpressionCompiler.IssueTests
             );
             a1 = new[,] { { 1, 2, 9 }, { 3, 4, 5 } };
             ff(a1);
-            Assert.AreEqual(33, a1[1, 2]);
+            Asserts.AreEqual(33, a1[1, 2]);
         }
 
         public class Arr
@@ -251,13 +251,13 @@ namespace FastExpressionCompiler.IssueTests
             });
             var a1 = new Arr { Elem = 9 };
             @cs(a1);
-            Assert.AreEqual(-33, a1.Elem);
+            Asserts.AreEqual(-33, a1.Elem);
 
             var fs = e.CompileSys();
             fs.PrintIL();
             a1 = new Arr { Elem = 9 };
             fs(a1);
-            Assert.AreEqual(-33, a1.Elem);
+            Asserts.AreEqual(-33, a1.Elem);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -271,7 +271,7 @@ namespace FastExpressionCompiler.IssueTests
             );
             a1 = new Arr { Elem = 9 };
             ff(a1);
-            Assert.AreEqual(-33, a1.Elem);
+            Asserts.AreEqual(-33, a1.Elem);
         }
 
         [Test]
@@ -289,13 +289,13 @@ namespace FastExpressionCompiler.IssueTests
             });
             var a1 = new ArrVal { Elem = 9 };
             @cs(a1);
-            Assert.AreEqual(9, a1.Elem); // does not change because passed-by-value
+            Asserts.AreEqual(9, a1.Elem); // does not change because passed-by-value
 
             var fs = e.CompileSys();
             fs.PrintIL();
             a1 = new ArrVal { Elem = 9 };
             fs(a1);
-            Assert.AreEqual(9, a1.Elem);
+            Asserts.AreEqual(9, a1.Elem);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -309,7 +309,7 @@ namespace FastExpressionCompiler.IssueTests
             );
             a1 = new ArrVal { Elem = 9 };
             ff(a1);
-            Assert.AreEqual(9, a1.Elem);
+            Asserts.AreEqual(9, a1.Elem);
         }
 
         delegate void RefArrVal(ref ArrVal a);
@@ -329,13 +329,13 @@ namespace FastExpressionCompiler.IssueTests
             });
             var a1 = new ArrVal { Elem = 9 };
             @cs(ref a1);
-            Assert.AreEqual(-33, a1.Elem);
+            Asserts.AreEqual(-33, a1.Elem);
 
             var fs = e.CompileSys();
             fs.PrintIL();
             a1 = new ArrVal { Elem = 9 };
             fs(ref a1);
-            Assert.AreEqual(-33, a1.Elem);
+            Asserts.AreEqual(-33, a1.Elem);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -349,7 +349,7 @@ namespace FastExpressionCompiler.IssueTests
             );
             a1 = new ArrVal { Elem = 9 };
             ff(ref a1);
-            Assert.AreEqual(-33, a1.Elem);
+            Asserts.AreEqual(-33, a1.Elem);
         }
 
         [Test]
@@ -367,21 +367,21 @@ namespace FastExpressionCompiler.IssueTests
             });
             var a1 = new Arr { Elem = 9 };
             @cs(a1);
-            Assert.AreEqual(-3, a1.Elem);
+            Asserts.AreEqual(-3, a1.Elem);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
             a1 = new Arr { Elem = 9 };
             fs(a1);
-            Assert.AreEqual(-3, a1.Elem);
+            Asserts.AreEqual(-3, a1.Elem);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
 
             a1 = new Arr { Elem = 9 };
             ff(a1);
-            Assert.AreEqual(-3, a1.Elem);
+            Asserts.AreEqual(-3, a1.Elem);
         }
 
         [Test]
@@ -399,20 +399,20 @@ namespace FastExpressionCompiler.IssueTests
             });
             var a1 = new[] { 1, 2, 9 };
             @cs(a1);
-            Assert.AreEqual(42, a1[2]);
+            Asserts.AreEqual(42, a1[2]);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
             var a2 = new[] { 1, 2, 9 };
             fs(a2);
-            Assert.AreEqual(42, a2[2]);
+            Asserts.AreEqual(42, a2[2]);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
 
             ff(a2);
-            Assert.AreEqual(75, a2[2]);
+            Asserts.AreEqual(75, a2[2]);
         }
 
         [Test]
@@ -432,24 +432,24 @@ namespace FastExpressionCompiler.IssueTests
             });
             var a1 = new[] { 1, 2, 9 };
             var res = @cs(a1);
-            Assert.AreEqual(42, a1[2]);
-            Assert.AreEqual(res, a1[2]);
+            Asserts.AreEqual(42, a1[2]);
+            Asserts.AreEqual(res, a1[2]);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
             a1 = new[] { 1, 2, 9 };
             res = fs(a1);
-            Assert.AreEqual(42, res);
-            Assert.AreEqual(res, a1[2]);
+            Asserts.AreEqual(42, res);
+            Asserts.AreEqual(res, a1[2]);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
 
             a1 = new[] { 1, 2, 9 };
             res = ff(a1);
-            Assert.AreEqual(42, res);
-            Assert.AreEqual(res, a1[2]);
+            Asserts.AreEqual(42, res);
+            Asserts.AreEqual(res, a1[2]);
         }
 
         [Test]
@@ -467,21 +467,21 @@ namespace FastExpressionCompiler.IssueTests
             });
             var a1 = new[] { 1, 2, 9 };
             @cs(a1);
-            Assert.AreEqual(10, a1[2]);
+            Asserts.AreEqual(10, a1[2]);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
             a1 = new[] { 1, 2, 9 };
             fs(a1);
-            Assert.AreEqual(10, a1[2]);
+            Asserts.AreEqual(10, a1[2]);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
 
             a1 = new[] { 1, 2, 9 };
             ff(a1);
-            Assert.AreEqual(10, a1[2]);
+            Asserts.AreEqual(10, a1[2]);
         }
 
         [Test]
@@ -499,21 +499,21 @@ namespace FastExpressionCompiler.IssueTests
             });
             var a1 = new[] { 1, 2, 9 };
             @cs(a1);
-            Assert.AreEqual(10, a1[2]);
+            Asserts.AreEqual(10, a1[2]);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
             a1 = new[] { 1, 2, 9 };
             fs(a1);
-            Assert.AreEqual(10, a1[2]);
+            Asserts.AreEqual(10, a1[2]);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
 
             a1 = new[] { 1, 2, 9 };
             ff(a1);
-            Assert.AreEqual(10, a1[2]);
+            Asserts.AreEqual(10, a1[2]);
         }
 
         [Test]
@@ -531,21 +531,21 @@ namespace FastExpressionCompiler.IssueTests
             });
             var a1 = new[,] { { 1, 2, 9 }, { 3, 4, 5 } };
             @cs(a1);
-            Assert.AreEqual(6, a1[1, 2]);
+            Asserts.AreEqual(6, a1[1, 2]);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
             a1 = new[,] { { 1, 2, 9 }, { 3, 4, 5 } };
             fs(a1);
-            Assert.AreEqual(6, a1[1, 2]);
+            Asserts.AreEqual(6, a1[1, 2]);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
 
             a1 = new[,] { { 1, 2, 9 }, { 3, 4, 5 } };
             ff(a1);
-            Assert.AreEqual(6, a1[1, 2]);
+            Asserts.AreEqual(6, a1[1, 2]);
         }
 
         delegate void RefArr(ref int[] a);
@@ -565,14 +565,14 @@ namespace FastExpressionCompiler.IssueTests
             });
             var a1 = new[] { 1, 2, 9 };
             @cs(ref a1);
-            Assert.AreEqual(10, a1[2]);
+            Asserts.AreEqual(10, a1[2]);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
             a1 = new[] { 1, 2, 9 };
             fs(ref a1);
-            Assert.AreEqual(10, a1[2]);
+            Asserts.AreEqual(10, a1[2]);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -595,7 +595,7 @@ namespace FastExpressionCompiler.IssueTests
 
             a1 = new[] { 1, 2, 9 };
             ff(ref a1);
-            Assert.AreEqual(10, a1[2]);
+            Asserts.AreEqual(10, a1[2]);
         }
 
         [Test]
@@ -613,13 +613,13 @@ namespace FastExpressionCompiler.IssueTests
             });
             var a1 = new ArrVal { Elem = 9 };
             @cs(a1);
-            Assert.AreEqual(9, a1.Elem); // NOTE!!! it does not change because passed-by-value
+            Asserts.AreEqual(9, a1.Elem); // NOTE!!! it does not change because passed-by-value
 
             var fs = e.CompileSys();
             fs.PrintIL();
             a1 = new ArrVal { Elem = 9 };
             fs(a1);
-            Assert.AreEqual(9, a1.Elem);
+            Asserts.AreEqual(9, a1.Elem);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -644,7 +644,7 @@ namespace FastExpressionCompiler.IssueTests
             );
             a1 = new ArrVal { Elem = 9 };
             ff(a1);
-            Assert.AreEqual(9, a1.Elem);
+            Asserts.AreEqual(9, a1.Elem);
         }
 
         [Test]
@@ -662,13 +662,13 @@ namespace FastExpressionCompiler.IssueTests
             });
             var a1 = new ArrVal { Elem = 9 };
             @cs(ref a1);
-            Assert.AreEqual(-3, a1.Elem);
+            Asserts.AreEqual(-3, a1.Elem);
 
             var fs = e.CompileSys();
             fs.PrintIL();
             a1 = new ArrVal { Elem = 9 };
             fs(ref a1);
-            Assert.AreEqual(9, a1.Elem); // todo: @sys does not work, or is there bug in converting to the Expression?
+            Asserts.AreEqual(9, a1.Elem); // todo: @sys does not work, or is there bug in converting to the Expression?
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -693,7 +693,7 @@ namespace FastExpressionCompiler.IssueTests
             );
             a1 = new ArrVal { Elem = 9 };
             ff(ref a1);
-            Assert.AreEqual(-3, a1.Elem);
+            Asserts.AreEqual(-3, a1.Elem);
         }
 
         delegate void RefArrValNoIndexer(ref ArrValNoIndexer a);
@@ -722,13 +722,13 @@ namespace FastExpressionCompiler.IssueTests
 
             var a1 = new ArrValNoIndexer { Elem = 9 };
             @cs(ref a1);
-            Assert.AreEqual(-3, a1.Elem);
+            Asserts.AreEqual(-3, a1.Elem);
 
             var fs = e.CompileSys();
             fs.PrintIL();
             a1 = new ArrValNoIndexer { Elem = 9 };
             fs(ref a1);
-            Assert.AreEqual(-3, a1.Elem); // todo: @sys does not work, or is there bug in converting to the Expression?
+            Asserts.AreEqual(-3, a1.Elem); // todo: @sys does not work, or is there bug in converting to the Expression?
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -747,7 +747,7 @@ namespace FastExpressionCompiler.IssueTests
             );
             a1 = new ArrValNoIndexer { Elem = 9 };
             ff(ref a1);
-            Assert.AreEqual(-3, a1.Elem);
+            Asserts.AreEqual(-3, a1.Elem);
         }
 
         [Test]
@@ -767,21 +767,21 @@ namespace FastExpressionCompiler.IssueTests
             });
             var a1 = new[] { 1, 2, 9 };
             @cs(a1);
-            Assert.AreEqual(10, a1[2]);
+            Asserts.AreEqual(10, a1[2]);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
             a1 = new[] { 1, 2, 9 };
             fs(a1);
-            Assert.AreEqual(10, a1[2]);
+            Asserts.AreEqual(10, a1[2]);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
 
             a1 = new[] { 1, 2, 9 };
             ff(a1);
-            Assert.AreEqual(10, a1[2]);
+            Asserts.AreEqual(10, a1[2]);
         }
 
         [Test]
@@ -801,21 +801,21 @@ namespace FastExpressionCompiler.IssueTests
             });
             var a1 = new[] { 1, 9, 3 };
             @cs(a1);
-            Assert.AreEqual(42, a1[1]);
+            Asserts.AreEqual(42, a1[1]);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
             a1 = new[] { 1, 9 };
             fs(a1);
-            Assert.AreEqual(42, a1[1]);
+            Asserts.AreEqual(42, a1[1]);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
 
             a1 = new[] { 1, 9 };
             ff(a1);
-            Assert.AreEqual(42, a1[1]);
+            Asserts.AreEqual(42, a1[1]);
         }
 
         class Box
@@ -867,14 +867,14 @@ namespace FastExpressionCompiler.IssueTests
             });
             Box.StaticField = 0;
             @cs();
-            Assert.AreEqual(33, Box.StaticField);
+            Asserts.AreEqual(33, Box.StaticField);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
             Box.StaticField = 0;
             fs();
-            Assert.AreEqual(33, Box.StaticField);
+            Asserts.AreEqual(33, Box.StaticField);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -888,7 +888,7 @@ namespace FastExpressionCompiler.IssueTests
 
             Box.StaticField = 0;
             ff();
-            Assert.AreEqual(33, Box.StaticField);
+            Asserts.AreEqual(33, Box.StaticField);
         }
 
         [Test]
@@ -905,14 +905,14 @@ namespace FastExpressionCompiler.IssueTests
             });
             Box.StaticProp = 0;
             @cs();
-            Assert.AreEqual(33, Box.StaticProp);
+            Asserts.AreEqual(33, Box.StaticProp);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
             Box.StaticProp = 0;
             fs();
-            Assert.AreEqual(33, Box.StaticProp);
+            Asserts.AreEqual(33, Box.StaticProp);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -926,7 +926,7 @@ namespace FastExpressionCompiler.IssueTests
 
             Box.StaticProp = 0;
             ff();
-            Assert.AreEqual(33, Box.StaticProp);
+            Asserts.AreEqual(33, Box.StaticProp);
         }
 
         [Test]
@@ -945,14 +945,14 @@ namespace FastExpressionCompiler.IssueTests
             });
             var b1 = new Box { Field = 9 };
             @cs(b1);
-            Assert.AreEqual(42, b1.Field);
+            Asserts.AreEqual(42, b1.Field);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
             b1 = new Box { Field = 9 };
             fs(b1);
-            Assert.AreEqual(42, b1.Field);
+            Asserts.AreEqual(42, b1.Field);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -968,7 +968,7 @@ namespace FastExpressionCompiler.IssueTests
 
             b1 = new Box { Field = 9 };
             ff(b1);
-            Assert.AreEqual(42, b1.Field);
+            Asserts.AreEqual(42, b1.Field);
         }
 
         [Test]
@@ -990,8 +990,8 @@ namespace FastExpressionCompiler.IssueTests
             var b2 = new Box { NullableField = 9 };
             @cs(b1);
             @cs(b2);
-            Assert.AreEqual(null, b1.NullableField);
-            Assert.AreEqual(42, b2.NullableField);
+            Asserts.AreEqual(null, b1.NullableField);
+            Asserts.AreEqual(42, b2.NullableField);
 
             var fs = e.CompileSys();
             fs.PrintIL();
@@ -1000,8 +1000,8 @@ namespace FastExpressionCompiler.IssueTests
             b2 = new Box { NullableField = 9 };
             fs(b1);
             fs(b2);
-            Assert.AreEqual(null, b1.NullableField);
-            Assert.AreEqual(42, b2.NullableField);
+            Asserts.AreEqual(null, b1.NullableField);
+            Asserts.AreEqual(42, b2.NullableField);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -1035,8 +1035,8 @@ namespace FastExpressionCompiler.IssueTests
             b2 = new Box { NullableField = 9 };
             ff(b1);
             ff(b2);
-            Assert.AreEqual(null, b1.NullableField);
-            Assert.AreEqual(42, b2.NullableField);
+            Asserts.AreEqual(null, b1.NullableField);
+            Asserts.AreEqual(42, b2.NullableField);
         }
 
         [Test]
@@ -1057,8 +1057,8 @@ namespace FastExpressionCompiler.IssueTests
             var a2 = new int?[] { 1, 2, 9, 4 };
             @cs(a1);
             @cs(a2);
-            Assert.AreEqual(null, a1[2]);
-            Assert.AreEqual(42, a2[2]);
+            Asserts.AreEqual(null, a1[2]);
+            Asserts.AreEqual(42, a2[2]);
 
             var fs = e.CompileSys();
             fs.PrintIL();
@@ -1067,8 +1067,8 @@ namespace FastExpressionCompiler.IssueTests
             a2 = new int?[] { 1, 2, 9, 4 };
             fs(a1);
             fs(a2);
-            Assert.AreEqual(null, a1[2]);
-            Assert.AreEqual(42, a2[2]);
+            Asserts.AreEqual(null, a1[2]);
+            Asserts.AreEqual(42, a2[2]);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -1102,8 +1102,8 @@ namespace FastExpressionCompiler.IssueTests
             a2 = new int?[] { 1, 2, 9, 4 };
             fs(a1);
             fs(a2);
-            Assert.AreEqual(null, a1[2]);
-            Assert.AreEqual(42, a2[2]);
+            Asserts.AreEqual(null, a1[2]);
+            Asserts.AreEqual(42, a2[2]);
         }
 
         [Test]
@@ -1125,8 +1125,8 @@ namespace FastExpressionCompiler.IssueTests
             var b2 = new Box { NullableProp = 9 };
             @cs(b1);
             @cs(b2);
-            Assert.AreEqual(null, b1.NullableProp);
-            Assert.AreEqual(42, b2.NullableProp);
+            Asserts.AreEqual(null, b1.NullableProp);
+            Asserts.AreEqual(42, b2.NullableProp);
 
             var fs = e.CompileSys();
             fs.PrintIL();
@@ -1135,8 +1135,8 @@ namespace FastExpressionCompiler.IssueTests
             b2 = new Box { NullableProp = 9 };
             fs(b1);
             fs(b2);
-            Assert.AreEqual(null, b1.NullableProp);
-            Assert.AreEqual(42, b2.NullableProp);
+            Asserts.AreEqual(null, b1.NullableProp);
+            Asserts.AreEqual(42, b2.NullableProp);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -1170,8 +1170,8 @@ namespace FastExpressionCompiler.IssueTests
             b2 = new Box { NullableProp = 9 };
             ff(b1);
             ff(b2);
-            Assert.AreEqual(null, b1.NullableProp);
-            Assert.AreEqual(42, b2.NullableProp);
+            Asserts.AreEqual(null, b1.NullableProp);
+            Asserts.AreEqual(42, b2.NullableProp);
         }
 
         [Test]
@@ -1191,24 +1191,24 @@ namespace FastExpressionCompiler.IssueTests
                 return new Box(42).Field += 33;
             });
             var a = @cs();
-            Assert.AreEqual(42 + 33, a);
-            Assert.AreEqual(1, Box.CtorCalls);
+            Asserts.AreEqual(42 + 33, a);
+            Asserts.AreEqual(1, Box.CtorCalls);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
             Box.CtorCalls = 0;
             var x = fs();
-            Assert.AreEqual(42 + 33, x);
-            Assert.AreEqual(1, Box.CtorCalls);
+            Asserts.AreEqual(42 + 33, x);
+            Asserts.AreEqual(1, Box.CtorCalls);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
 
             Box.CtorCalls = 0;
             var y = ff();
-            Assert.AreEqual(42 + 33, y);
-            Assert.AreEqual(1, Box.CtorCalls);
+            Asserts.AreEqual(42 + 33, y);
+            Asserts.AreEqual(1, Box.CtorCalls);
         }
 
         [Test]
@@ -1227,7 +1227,7 @@ namespace FastExpressionCompiler.IssueTests
             });
             var b1 = new Box { Field = 9 };
             @cs(b1);
-            Assert.AreEqual(10, b1.Field);
+            Asserts.AreEqual(10, b1.Field);
 
             var fs = e.CompileSys();
             fs.PrintIL();
@@ -1245,7 +1245,7 @@ namespace FastExpressionCompiler.IssueTests
             */
             b1 = new Box { Field = 9 };
             fs(b1);
-            Assert.AreEqual(10, b1.Field);
+            Asserts.AreEqual(10, b1.Field);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -1261,7 +1261,7 @@ namespace FastExpressionCompiler.IssueTests
 
             b1 = new Box { Field = 9 };
             ff(b1);
-            Assert.AreEqual(10, b1.Field);
+            Asserts.AreEqual(10, b1.Field);
         }
 
         [Test]
@@ -1280,14 +1280,14 @@ namespace FastExpressionCompiler.IssueTests
             });
             var b1 = new Box { Field = 9 };
             @cs(b1);
-            Assert.AreEqual(10, b1.Field);
+            Asserts.AreEqual(10, b1.Field);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
             b1 = new Box { Field = 9 };
             fs(b1);
-            Assert.AreEqual(10, b1.Field);
+            Asserts.AreEqual(10, b1.Field);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -1303,7 +1303,7 @@ namespace FastExpressionCompiler.IssueTests
 
             b1 = new Box { Field = 9 };
             ff(b1);
-            Assert.AreEqual(10, b1.Field);
+            Asserts.AreEqual(10, b1.Field);
         }
 
         [Test]
@@ -1323,24 +1323,24 @@ namespace FastExpressionCompiler.IssueTests
 
             var b1 = new Box { Field = 9 };
             var x1 = @cs(b1);
-            Assert.AreEqual(10, b1.Field);
-            Assert.AreEqual(10, x1);
+            Asserts.AreEqual(10, b1.Field);
+            Asserts.AreEqual(10, x1);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
             b1 = new Box { Field = 9 };
             x1 = fs(b1);
-            Assert.AreEqual(10, b1.Field);
-            Assert.AreEqual(10, x1);
+            Asserts.AreEqual(10, b1.Field);
+            Asserts.AreEqual(10, x1);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
 
             b1 = new Box { Field = 9 };
             x1 = ff(b1);
-            Assert.AreEqual(10, b1.Field);
-            Assert.AreEqual(10, x1);
+            Asserts.AreEqual(10, b1.Field);
+            Asserts.AreEqual(10, x1);
         }
 
         [Test]
@@ -1361,24 +1361,24 @@ namespace FastExpressionCompiler.IssueTests
 
             var b1 = new Box { Field = 9 };
             var x1 = @cs(b1);
-            Assert.AreEqual(10, b1.Field);
-            Assert.AreEqual(9, x1);
+            Asserts.AreEqual(10, b1.Field);
+            Asserts.AreEqual(9, x1);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
             b1 = new Box { Field = 9 };
             x1 = fs(b1);
-            Assert.AreEqual(10, b1.Field);
-            Assert.AreEqual(9, x1);
+            Asserts.AreEqual(10, b1.Field);
+            Asserts.AreEqual(9, x1);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
 
             b1 = new Box { Field = 9 };
             x1 = ff(b1);
-            Assert.AreEqual(10, b1.Field);
-            Assert.AreEqual(9, x1);
+            Asserts.AreEqual(10, b1.Field);
+            Asserts.AreEqual(9, x1);
         }
 
         delegate void RefVal(ref Val v);
@@ -1400,15 +1400,15 @@ namespace FastExpressionCompiler.IssueTests
 
             var v1 = new Val { Field = 9 };
             @cs(ref v1);
-            Assert.AreEqual(10, v1.Field);
+            Asserts.AreEqual(10, v1.Field);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
             v1 = new Val { Field = 9 };
             fs(ref v1);
-            // Assert.AreEqual(10, v1.Value); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
-            Assert.AreEqual(9, v1.Field); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
+            // Asserts.AreEqual(10, v1.Value); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
+            Asserts.AreEqual(9, v1.Field); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -1426,7 +1426,7 @@ namespace FastExpressionCompiler.IssueTests
 
             v1 = new Val { Field = 9 };
             ff(ref v1);
-            Assert.AreEqual(10, v1.Field);
+            Asserts.AreEqual(10, v1.Field);
         }
 
         [Test]
@@ -1448,8 +1448,8 @@ namespace FastExpressionCompiler.IssueTests
             var v2 = new Val { NullableField = 9 };
             @cs(ref v1);
             @cs(ref v2);
-            Assert.AreEqual(null, v1.NullableField);
-            Assert.AreEqual(10, v2.NullableField);
+            Asserts.AreEqual(null, v1.NullableField);
+            Asserts.AreEqual(10, v2.NullableField);
 
             var fs = e.CompileSys();
             fs.PrintIL();
@@ -1458,8 +1458,8 @@ namespace FastExpressionCompiler.IssueTests
             v2 = new Val { NullableField = 9 };
             fs(ref v1);
             fs(ref v2);
-            Assert.AreEqual(null, v1.NullableField);
-            Assert.AreEqual(9, v2.NullableField); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
+            Asserts.AreEqual(null, v1.NullableField);
+            Asserts.AreEqual(9, v2.NullableField); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -1488,8 +1488,8 @@ namespace FastExpressionCompiler.IssueTests
             v2 = new Val { NullableField = 9 };
             ff(ref v1);
             ff(ref v2);
-            Assert.AreEqual(null, v1.NullableField);
-            Assert.AreEqual(10, v2.NullableField);
+            Asserts.AreEqual(null, v1.NullableField);
+            Asserts.AreEqual(10, v2.NullableField);
         }
 
         [Test]
@@ -1511,8 +1511,8 @@ namespace FastExpressionCompiler.IssueTests
             var v2 = new Val { NullableProp = 9 };
             @cs(ref v1);
             @cs(ref v2);
-            Assert.AreEqual(null, v1.NullableProp);
-            Assert.AreEqual(10, v2.NullableProp);
+            Asserts.AreEqual(null, v1.NullableProp);
+            Asserts.AreEqual(10, v2.NullableProp);
 
             var fs = e.CompileSys();
             fs.PrintIL();
@@ -1521,8 +1521,8 @@ namespace FastExpressionCompiler.IssueTests
             v2 = new Val { NullableProp = 9 };
             fs(ref v1);
             fs(ref v2);
-            Assert.AreEqual(null, v1.NullableProp);
-            Assert.AreEqual(9, v2.NullableProp); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
+            Asserts.AreEqual(null, v1.NullableProp);
+            Asserts.AreEqual(9, v2.NullableProp); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -1550,8 +1550,8 @@ namespace FastExpressionCompiler.IssueTests
             v2 = new Val { NullableProp = 9 };
             ff(ref v1);
             ff(ref v2);
-            Assert.AreEqual(null, v1.NullableProp);
-            Assert.AreEqual(10, v2.NullableProp);
+            Asserts.AreEqual(null, v1.NullableProp);
+            Asserts.AreEqual(10, v2.NullableProp);
         }
 
         delegate int? RefValReturningNullable(ref Val v);
@@ -1575,10 +1575,10 @@ namespace FastExpressionCompiler.IssueTests
             var v2 = new Val { NullableField = 9 };
             var x1 = @cs(ref v1);
             var x2 = @cs(ref v2);
-            Assert.AreEqual(null, v1.NullableField);
-            Assert.AreEqual(null, x1);
-            Assert.AreEqual(10, v2.NullableField);
-            Assert.AreEqual(10, x2);
+            Asserts.AreEqual(null, v1.NullableField);
+            Asserts.AreEqual(null, x1);
+            Asserts.AreEqual(10, v2.NullableField);
+            Asserts.AreEqual(10, x2);
 
             var fs = e.CompileSys();
             fs.PrintIL();
@@ -1587,10 +1587,10 @@ namespace FastExpressionCompiler.IssueTests
             v2 = new Val { NullableField = 9 };
             x1 = fs(ref v1);
             x2 = fs(ref v2);
-            Assert.AreEqual(null, v1.NullableField);
-            Assert.AreEqual(null, x1);
-            Assert.AreEqual(9, v2.NullableField); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
-            Assert.AreEqual(10, x2);
+            Asserts.AreEqual(null, v1.NullableField);
+            Asserts.AreEqual(null, x1);
+            Asserts.AreEqual(9, v2.NullableField); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
+            Asserts.AreEqual(10, x2);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -1621,10 +1621,10 @@ namespace FastExpressionCompiler.IssueTests
             v2 = new Val { NullableField = 9 };
             x1 = ff(ref v1);
             x2 = ff(ref v2);
-            Assert.AreEqual(null, v1.NullableField);
-            Assert.AreEqual(null, x1);
-            Assert.AreEqual(10, v2.NullableField);
-            Assert.AreEqual(10, x2);
+            Asserts.AreEqual(null, v1.NullableField);
+            Asserts.AreEqual(null, x1);
+            Asserts.AreEqual(10, v2.NullableField);
+            Asserts.AreEqual(10, x2);
         }
 
         [Test]
@@ -1646,10 +1646,10 @@ namespace FastExpressionCompiler.IssueTests
             var v2 = new Val { NullableProp = 9 };
             var x1 = @cs(ref v1);
             var x2 = @cs(ref v2);
-            Assert.AreEqual(null, v1.NullableProp);
-            Assert.AreEqual(null, x1);
-            Assert.AreEqual(10, v2.NullableProp);
-            Assert.AreEqual(10, x2);
+            Asserts.AreEqual(null, v1.NullableProp);
+            Asserts.AreEqual(null, x1);
+            Asserts.AreEqual(10, v2.NullableProp);
+            Asserts.AreEqual(10, x2);
 
             var fs = e.CompileSys();
             fs.PrintIL();
@@ -1658,10 +1658,10 @@ namespace FastExpressionCompiler.IssueTests
             v2 = new Val { NullableProp = 9 };
             x1 = fs(ref v1);
             x2 = fs(ref v2);
-            Assert.AreEqual(null, v1.NullableProp);
-            Assert.AreEqual(null, x1);
-            Assert.AreEqual(9, v2.NullableProp); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
-            Assert.AreEqual(10, x2);
+            Asserts.AreEqual(null, v1.NullableProp);
+            Asserts.AreEqual(null, x1);
+            Asserts.AreEqual(9, v2.NullableProp); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
+            Asserts.AreEqual(10, x2);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -1691,10 +1691,10 @@ namespace FastExpressionCompiler.IssueTests
             v2 = new Val { NullableProp = 9 };
             x1 = ff(ref v1);
             x2 = ff(ref v2);
-            Assert.AreEqual(null, v1.NullableProp);
-            Assert.AreEqual(null, x1);
-            Assert.AreEqual(10, v2.NullableProp);
-            Assert.AreEqual(10, x2);
+            Asserts.AreEqual(null, v1.NullableProp);
+            Asserts.AreEqual(null, x1);
+            Asserts.AreEqual(10, v2.NullableProp);
+            Asserts.AreEqual(10, x2);
         }
 
         [Test]
@@ -1716,10 +1716,10 @@ namespace FastExpressionCompiler.IssueTests
             var v2 = new Val { NullableField = 9 };
             var x1 = @cs(ref v1);
             var x2 = @cs(ref v2);
-            Assert.AreEqual(null, v1.NullableField);
-            Assert.AreEqual(null, x1);
-            Assert.AreEqual(10, v2.NullableField);
-            Assert.AreEqual(9, x2);
+            Asserts.AreEqual(null, v1.NullableField);
+            Asserts.AreEqual(null, x1);
+            Asserts.AreEqual(10, v2.NullableField);
+            Asserts.AreEqual(9, x2);
 
             var fs = e.CompileSys();
             fs.PrintIL();
@@ -1728,10 +1728,10 @@ namespace FastExpressionCompiler.IssueTests
             v2 = new Val { NullableField = 9 };
             x1 = fs(ref v1);
             x2 = fs(ref v2);
-            Assert.AreEqual(null, v1.NullableField);
-            Assert.AreEqual(null, x1);
-            Assert.AreEqual(9, v2.NullableField); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
-            Assert.AreEqual(9, x2);
+            Asserts.AreEqual(null, v1.NullableField);
+            Asserts.AreEqual(null, x1);
+            Asserts.AreEqual(9, v2.NullableField); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
+            Asserts.AreEqual(9, x2);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -1760,10 +1760,10 @@ namespace FastExpressionCompiler.IssueTests
             v2 = new Val { NullableField = 9 };
             x1 = ff(ref v1);
             x2 = ff(ref v2);
-            Assert.AreEqual(null, v1.NullableField);
-            Assert.AreEqual(null, x1);
-            Assert.AreEqual(10, v2.NullableField);
-            Assert.AreEqual(9, x2);
+            Asserts.AreEqual(null, v1.NullableField);
+            Asserts.AreEqual(null, x1);
+            Asserts.AreEqual(10, v2.NullableField);
+            Asserts.AreEqual(9, x2);
         }
 
         delegate int RefValReturning(ref Val v);
@@ -1785,16 +1785,16 @@ namespace FastExpressionCompiler.IssueTests
 
             var v1 = new Val { Field = 9 };
             var x1 = @cs(ref v1);
-            Assert.AreEqual(10, v1.Field);
-            Assert.AreEqual(10, x1);
+            Asserts.AreEqual(10, v1.Field);
+            Asserts.AreEqual(10, x1);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
             v1 = new Val { Field = 9 };
             x1 = fs(ref v1);
-            Assert.AreEqual(9, v1.Field); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
-            Assert.AreEqual(10, x1);
+            Asserts.AreEqual(9, v1.Field); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
+            Asserts.AreEqual(10, x1);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -1814,8 +1814,8 @@ namespace FastExpressionCompiler.IssueTests
 
             v1 = new Val { Field = 9 };
             x1 = ff(ref v1);
-            Assert.AreEqual(10, v1.Field);
-            Assert.AreEqual(10, x1);
+            Asserts.AreEqual(10, v1.Field);
+            Asserts.AreEqual(10, x1);
         }
 
         [Test]
@@ -1835,16 +1835,16 @@ namespace FastExpressionCompiler.IssueTests
 
             var v1 = new Val { Field = 9 };
             var x1 = @cs(ref v1);
-            Assert.AreEqual(10, v1.Field);
-            Assert.AreEqual(9, x1);
+            Asserts.AreEqual(10, v1.Field);
+            Asserts.AreEqual(9, x1);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
             v1 = new Val { Field = 9 };
             x1 = fs(ref v1);
-            Assert.AreEqual(9, v1.Field); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
-            Assert.AreEqual(9, x1);
+            Asserts.AreEqual(9, v1.Field); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
+            Asserts.AreEqual(9, x1);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -1864,8 +1864,8 @@ namespace FastExpressionCompiler.IssueTests
 
             v1 = new Val { Field = 9 };
             x1 = ff(ref v1);
-            Assert.AreEqual(10, v1.Field);
-            Assert.AreEqual(9, x1);
+            Asserts.AreEqual(10, v1.Field);
+            Asserts.AreEqual(9, x1);
         }
 
         [Test]
@@ -1888,8 +1888,8 @@ namespace FastExpressionCompiler.IssueTests
             var b2 = new Box { NullableField = 41 };
             @cs(b1);
             @cs(b2);
-            Assert.AreEqual(null, b1.NullableField);
-            Assert.AreEqual(42, b2.NullableField);
+            Asserts.AreEqual(null, b1.NullableField);
+            Asserts.AreEqual(42, b2.NullableField);
 
             var fs = e.CompileSys();
             fs.PrintIL();
@@ -1898,8 +1898,8 @@ namespace FastExpressionCompiler.IssueTests
             b2 = new Box { NullableField = 41 };
             fs(b1);
             fs(b2);
-            Assert.AreEqual(null, b1.NullableField);
-            Assert.AreEqual(42, b2.NullableField);
+            Asserts.AreEqual(null, b1.NullableField);
+            Asserts.AreEqual(42, b2.NullableField);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -1926,8 +1926,8 @@ namespace FastExpressionCompiler.IssueTests
             b2 = new Box { NullableField = 41 };
             ff(b1);
             ff(b2);
-            Assert.AreEqual(null, b1.NullableField);
-            Assert.AreEqual(42, b2.NullableField);
+            Asserts.AreEqual(null, b1.NullableField);
+            Asserts.AreEqual(42, b2.NullableField);
         }
 
         [Test]
@@ -1948,10 +1948,10 @@ namespace FastExpressionCompiler.IssueTests
             var b2 = new Box { NullableField = 41 };
             var x1 = @cs(b1);
             var x2 = @cs(b2);
-            Assert.AreEqual(null, b1.NullableField);
-            Assert.AreEqual(null, x1);
-            Assert.AreEqual(42, b2.NullableField);
-            Assert.AreEqual(42, x2);
+            Asserts.AreEqual(null, b1.NullableField);
+            Asserts.AreEqual(null, x1);
+            Asserts.AreEqual(42, b2.NullableField);
+            Asserts.AreEqual(42, x2);
 
             var fs = e.CompileSys();
             fs.PrintIL();
@@ -1962,10 +1962,10 @@ namespace FastExpressionCompiler.IssueTests
             b2 = new Box { NullableField = 41 };
             x1 = fs(b1);
             x2 = fs(b2);
-            Assert.AreEqual(null, b1.NullableField);
-            Assert.AreEqual(null, x1);
-            Assert.AreEqual(42, b2.NullableField);
-            Assert.AreEqual(42, x2);
+            Asserts.AreEqual(null, b1.NullableField);
+            Asserts.AreEqual(null, x1);
+            Asserts.AreEqual(42, b2.NullableField);
+            Asserts.AreEqual(42, x2);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -1995,10 +1995,10 @@ namespace FastExpressionCompiler.IssueTests
             b2 = new Box { NullableField = 41 };
             x1 = ff(b1);
             x2 = ff(b2);
-            Assert.AreEqual(null, b1.NullableField);
-            Assert.AreEqual(null, x1);
-            Assert.AreEqual(42, b2.NullableField);
-            Assert.AreEqual(42, x2);
+            Asserts.AreEqual(null, b1.NullableField);
+            Asserts.AreEqual(null, x1);
+            Asserts.AreEqual(42, b2.NullableField);
+            Asserts.AreEqual(42, x2);
         }
 
         [Test]
@@ -2019,10 +2019,10 @@ namespace FastExpressionCompiler.IssueTests
             var b2 = new Box { NullableField = 41 };
             var x1 = @cs(b1);
             var x2 = @cs(b2);
-            Assert.AreEqual(null, b1.NullableField);
-            Assert.AreEqual(null, x1);
-            Assert.AreEqual(42, b2.NullableField);
-            Assert.AreEqual(41, x2);
+            Asserts.AreEqual(null, b1.NullableField);
+            Asserts.AreEqual(null, x1);
+            Asserts.AreEqual(42, b2.NullableField);
+            Asserts.AreEqual(41, x2);
 
             var fs = e.CompileSys();
             fs.PrintIL();
@@ -2031,10 +2031,10 @@ namespace FastExpressionCompiler.IssueTests
             b2 = new Box { NullableField = 41 };
             x1 = fs(b1);
             x2 = fs(b2);
-            Assert.AreEqual(null, b1.NullableField);
-            Assert.AreEqual(null, x1);
-            Assert.AreEqual(42, b2.NullableField);
-            Assert.AreEqual(41, x2);
+            Asserts.AreEqual(null, b1.NullableField);
+            Asserts.AreEqual(null, x1);
+            Asserts.AreEqual(42, b2.NullableField);
+            Asserts.AreEqual(41, x2);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -2043,10 +2043,10 @@ namespace FastExpressionCompiler.IssueTests
             b2 = new Box { NullableField = 41 };
             x1 = ff(b1);
             x2 = ff(b2);
-            Assert.AreEqual(null, b1.NullableField);
-            Assert.AreEqual(null, x1);
-            Assert.AreEqual(42, b2.NullableField);
-            Assert.AreEqual(41, x2);
+            Asserts.AreEqual(null, b1.NullableField);
+            Asserts.AreEqual(null, x1);
+            Asserts.AreEqual(42, b2.NullableField);
+            Asserts.AreEqual(41, x2);
         }
 
         [Test]
@@ -2067,20 +2067,20 @@ namespace FastExpressionCompiler.IssueTests
                 return --(new Box(42)).Field;
             });
             var a = @cs();
-            Assert.AreEqual(41, a);
+            Asserts.AreEqual(41, a);
 
             var fs = e.CompileSys();
             fs.PrintIL();
 
             var x = fs();
-            Assert.AreEqual(41, x);
+            Asserts.AreEqual(41, x);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
 
             var y = ff();
-            Assert.AreEqual(41, y);
-            Assert.AreEqual(3, Box.CtorCalls);
+            Asserts.AreEqual(41, y);
+            Asserts.AreEqual(3, Box.CtorCalls);
         }
     }
 }

@@ -93,7 +93,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var compiled = expr.CompileFast(true);
 
-            Assert.AreEqual(10, compiled("10"));
+            Asserts.AreEqual(10, compiled("10"));
         }
 
         [Test]
@@ -114,11 +114,11 @@ namespace FastExpressionCompiler.IssueTests
 
             var fs = expr.CompileSys();
             fs.PrintIL();
-            Assert.AreEqual(10, fs("10"));
+            Asserts.AreEqual(10, fs("10"));
 
             var ff = expr.CompileFast(true);
             ff.PrintIL();
-            Assert.AreEqual(10, ff("10"));
+            Asserts.AreEqual(10, ff("10"));
         }
 
         interface IQueryRunner
@@ -375,16 +375,16 @@ namespace FastExpressionCompiler.IssueTests
             fs.PrintIL();
             var res = fs(new QueryRunner(), new SQLiteDataReader(false));
             Assert.IsNotNull(res);
-            Assert.AreEqual(TypeCodeEnum.A2, res.TypeCode);
-            Assert.AreEqual(new Guid("ef129165-6ffe-4df9-bb6b-bb16e413c883"), res.GuidValue);
+            Asserts.AreEqual(TypeCodeEnum.A2, res.TypeCode);
+            Asserts.AreEqual(new Guid("ef129165-6ffe-4df9-bb6b-bb16e413c883"), res.GuidValue);
 
             var ff = expr.CompileFast(true);
             ff.PrintIL();
 
             res = ff(new QueryRunner(), new SQLiteDataReader(false));
             Assert.IsNotNull(res);
-            Assert.AreEqual(TypeCodeEnum.A2, res.TypeCode);
-            Assert.AreEqual(new Guid("ef129165-6ffe-4df9-bb6b-bb16e413c883"), res.GuidValue);
+            Asserts.AreEqual(TypeCodeEnum.A2, res.TypeCode);
+            Asserts.AreEqual(new Guid("ef129165-6ffe-4df9-bb6b-bb16e413c883"), res.GuidValue);
         }
 
         enum TestEnum1
@@ -442,8 +442,8 @@ namespace FastExpressionCompiler.IssueTests
             var compiled = expr.CompileFast(true);
             var c = expr.CompileSys();
 
-            Assert.AreEqual(c(pp), compiled(pp));
-            Assert.AreEqual(c(new Patient()), compiled(new Patient()));
+            Asserts.AreEqual(c(pp), compiled(pp));
+            Asserts.AreEqual(c(new Patient()), compiled(new Patient()));
         }
 
         [Test]
@@ -457,8 +457,8 @@ namespace FastExpressionCompiler.IssueTests
             var compiled = expr.CompileFast(true);
             var c = expr.CompileSys();
 
-            Assert.AreEqual(c(pp), compiled(pp));
-            Assert.AreEqual(c(new Patient()), compiled(new Patient()));
+            Asserts.AreEqual(c(pp), compiled(pp));
+            Asserts.AreEqual(c(new Patient()), compiled(new Patient()));
         }
 
         [Test]
@@ -472,8 +472,8 @@ namespace FastExpressionCompiler.IssueTests
             var compiled = expr.CompileFast(true);
             var c = expr.CompileSys();
 
-            Assert.AreEqual(c(pp), compiled(pp));
-            Assert.AreEqual(c(new Patient()), compiled(new Patient()));
+            Asserts.AreEqual(c(pp), compiled(pp));
+            Asserts.AreEqual(c(new Patient()), compiled(new Patient()));
         }
 
         [Test]
@@ -488,8 +488,8 @@ namespace FastExpressionCompiler.IssueTests
 
             var pp = new Patient();
             var s = "a";
-            Assert.AreEqual(c(pp), compiled(pp));
-            Assert.AreEqual(c(s), compiled(s));
+            Asserts.AreEqual(c(pp), compiled(pp));
+            Asserts.AreEqual(c(s), compiled(s));
         }
 
         [Test]
@@ -504,8 +504,8 @@ namespace FastExpressionCompiler.IssueTests
 
             var pp = new Patient();
             var s = "a";
-            Assert.AreEqual(c(pp), compiled(pp));
-            Assert.AreEqual(c(s), compiled(s));
+            Asserts.AreEqual(c(pp), compiled(pp));
+            Asserts.AreEqual(c(s), compiled(s));
         }
 
         [Test]
@@ -524,7 +524,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var compiled = expr.CompileFast(true);
 
-            Assert.AreEqual(Enum2.Value2, compiled(Enum3.Value2));
+            Asserts.AreEqual(Enum2.Value2, compiled(Enum3.Value2));
         }
 
         [Test]
@@ -543,7 +543,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var compiled = expr.CompileFast(true);
 
-            Assert.AreEqual(Enum3.Value2, compiled(Enum3.Value2));
+            Asserts.AreEqual(Enum3.Value2, compiled(Enum3.Value2));
         }
 
         [Test]
@@ -562,12 +562,12 @@ namespace FastExpressionCompiler.IssueTests
 
             var fs = e.CompileSys();
             fs.PrintIL();
-            Assert.AreEqual(Enum3.Value2, fs(Enum3.Value2));
+            Asserts.AreEqual(Enum3.Value2, fs(Enum3.Value2));
             Assert.Throws<InvalidOperationException>(() => fs(null));
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
-            Assert.AreEqual(Enum3.Value2, ff(Enum3.Value2));
+            Asserts.AreEqual(Enum3.Value2, ff(Enum3.Value2));
             Assert.Throws<InvalidOperationException>(() => ff(null));
         }
 
@@ -582,7 +582,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var compiled = expr.CompileFast(true);
 
-            Assert.AreEqual(' ', compiled());
+            Asserts.AreEqual(' ', compiled());
         }
 
         public static int CheckNullValue(IDataRecord reader, object context)
@@ -867,8 +867,8 @@ namespace FastExpressionCompiler.IssueTests
             var compiled1 = lambda.CompileSys();
             var compiled2 = lambda.CompileFast(true);
 
-            Assert.AreEqual("aa", compiled1());
-            Assert.AreEqual("aa", compiled2());
+            Asserts.AreEqual("aa", compiled1());
+            Asserts.AreEqual("aa", compiled2());
         }
 
         [Test]
@@ -879,8 +879,8 @@ namespace FastExpressionCompiler.IssueTests
             var compiled1 = lambda.CompileSys();
             var compiled2 = lambda.CompileFast(true);
 
-            Assert.AreEqual("aa", compiled1());
-            Assert.AreEqual("aa", compiled2());
+            Asserts.AreEqual("aa", compiled1());
+            Asserts.AreEqual("aa", compiled2());
         }
 
         [Test]
@@ -892,8 +892,8 @@ namespace FastExpressionCompiler.IssueTests
             var compiled1 = lambda.CompileSys();
             var compiled2 = lambda.CompileFast(true);
 
-            Assert.AreEqual("aa", compiled1());
-            Assert.AreEqual("aa", compiled2());
+            Asserts.AreEqual("aa", compiled1());
+            Asserts.AreEqual("aa", compiled2());
         }
 
         [Test]
@@ -905,8 +905,8 @@ namespace FastExpressionCompiler.IssueTests
             var compiled1 = lambda.CompileSys();
             var compiled2 = lambda.CompileFast(true);
 
-            Assert.AreEqual("aa", compiled1());
-            Assert.AreEqual("aa", compiled2());
+            Asserts.AreEqual("aa", compiled1());
+            Asserts.AreEqual("aa", compiled2());
         }
 
         [Test]
@@ -983,12 +983,12 @@ namespace FastExpressionCompiler.IssueTests
             var a = compiled1(new sPrp() { v = short.MaxValue });
             var b = compiled2(new sPrp() { v = short.MaxValue });
 
-            Assert.AreEqual(a, b);
+            Asserts.AreEqual(a, b);
 
             var c = compiled1(new sPrp() { v = short.MinValue });
             var d = compiled2(new sPrp() { v = short.MinValue });
 
-            Assert.AreEqual(c, d);
+            Asserts.AreEqual(c, d);
         }
 
         public static string aa(int nr)
@@ -1010,7 +1010,7 @@ namespace FastExpressionCompiler.IssueTests
             var a = compiled1(5);
             var b = compiled2(5);
 
-            Assert.AreEqual(a, b);
+            Asserts.AreEqual(a, b);
         }
 
         [Test]
@@ -1227,7 +1227,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var ret = compiled();
 
-            Assert.AreEqual("True", ret);
+            Asserts.AreEqual("True", ret);
         }
 
         [Test]
@@ -1244,7 +1244,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var ret = compiled(true);
 
-            Assert.AreEqual("True", ret);
+            Asserts.AreEqual("True", ret);
         }
 
         [Test]
@@ -1257,7 +1257,7 @@ namespace FastExpressionCompiler.IssueTests
             var compiled = expr.CompileFast(true);
 
             var ret = compiled();
-            Assert.AreEqual(5.64m, ret);
+            Asserts.AreEqual(5.64m, ret);
         }
 
         [Test]
@@ -1270,7 +1270,7 @@ namespace FastExpressionCompiler.IssueTests
             var compiled = expr.CompileFast(true);
 
             var ret = compiled();
-            Assert.AreEqual(5m, ret);
+            Asserts.AreEqual(5m, ret);
         }
 
         [Test]
@@ -1285,7 +1285,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var ret = compiled(true);
 
-            Assert.AreEqual(false, ret);
+            Asserts.AreEqual(false, ret);
         }
 
         [Test]
@@ -1300,7 +1300,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var ret = compiled(false);
 
-            Assert.AreEqual(true, ret);
+            Asserts.AreEqual(true, ret);
         }
 
         [Test]
@@ -1338,7 +1338,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var ret = compiled();
 
-            Assert.AreEqual('\x10', ret);
+            Asserts.AreEqual('\x10', ret);
         }
 
         [Test]
@@ -1352,7 +1352,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var ret = compiled();
 
-            Assert.AreEqual(0x10, ret);
+            Asserts.AreEqual(0x10, ret);
         }
 
         [Test]
@@ -1368,8 +1368,8 @@ namespace FastExpressionCompiler.IssueTests
             var fx = expr.CompileFast(true);
             fx.PrintIL();
 
-            Assert.AreEqual(9, fx(5));
-            Assert.AreEqual(null, fx(null));
+            Asserts.AreEqual(9, fx(5));
+            Asserts.AreEqual(null, fx(null));
         }
 
         [Test]
@@ -1379,8 +1379,8 @@ namespace FastExpressionCompiler.IssueTests
             var body = Add(p, Constant(4, typeof(int?)));
             var expr = Lambda<Func<int?, int?>>(body, p);
             var compiled = expr.CompileFast(true);
-            Assert.AreEqual(9, compiled(5));
-            Assert.AreEqual(null, compiled(null));
+            Asserts.AreEqual(9, compiled(5));
+            Asserts.AreEqual(null, compiled(null));
         }
 
         public class Patient2 : Patient { }
@@ -1480,7 +1480,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var expr = Lambda<Func<object>>(body);
             var compiled = expr.CompileFast(true);
-            Assert.AreEqual(2m, compiled());
+            Asserts.AreEqual(2m, compiled());
         }
 
 
@@ -1494,7 +1494,7 @@ namespace FastExpressionCompiler.IssueTests
             );
 
             var f = expr.CompileFast(true);
-            Assert.AreEqual(2m, f((object)2m));
+            Asserts.AreEqual(2m, f((object)2m));
         }
 
         [Test]
@@ -1508,7 +1508,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var f = expr.CompileFast(true);
             decimal? x = 2m;
-            Assert.AreEqual(2m, f((object)x));
+            Asserts.AreEqual(2m, f((object)x));
         }
 
         [Test]
@@ -1522,7 +1522,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var f = expr.CompileFast(true);
             decimal? x = null;
-            Assert.AreEqual(null, f((object)x));
+            Asserts.AreEqual(null, f((object)x));
         }
 
         [Test]
@@ -1535,7 +1535,7 @@ namespace FastExpressionCompiler.IssueTests
             );
 
             var f = expr.CompileFast(true);
-            Assert.AreEqual(-2m, f(2m));
+            Asserts.AreEqual(-2m, f(2m));
         }
 
         [Test]
@@ -1548,7 +1548,7 @@ namespace FastExpressionCompiler.IssueTests
             );
 
             var f = expr.CompileFast(true);
-            Assert.AreEqual(3m, f(2m));
+            Asserts.AreEqual(3m, f(2m));
         }
 
         [Test]
@@ -1561,7 +1561,7 @@ namespace FastExpressionCompiler.IssueTests
             );
 
             var f = expr.CompileFast(true);
-            Assert.AreEqual(1m, f(2m));
+            Asserts.AreEqual(1m, f(2m));
         }
     }
 }

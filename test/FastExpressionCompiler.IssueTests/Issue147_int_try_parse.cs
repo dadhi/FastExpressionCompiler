@@ -14,7 +14,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-[TestFixture]
+    [TestFixture]
     public class Issue147_int_try_parse : ITest
     {
         public int Run()
@@ -60,7 +60,7 @@ namespace FastExpressionCompiler.IssueTests
             var conditionFuncFast = conditionLambda.CompileFast(true);
             var parsedValueFast = conditionFuncFast.Invoke();
 
-            Assert.AreEqual(parsedValue, parsedValueFast);
+            Asserts.AreEqual(parsedValue, parsedValueFast);
         }
     }
 }

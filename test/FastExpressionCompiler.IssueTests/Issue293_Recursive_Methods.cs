@@ -33,13 +33,13 @@ namespace FastExpressionCompiler.IssueTests
             f.PrintIL();
             var res2 = f(4);
 
-            Assert.AreEqual(res, res2);
+            Asserts.AreEqual(res, res2);
         }
 
         public Expression<Func<T, T>> MakeFactorialExpressionWithTheTrick<T>()
         {
             var nParam = Parameter(typeof(T), "n");
-            var methodVar  = Variable(typeof(Func<T, T>),   "fac");
+            var methodVar = Variable(typeof(Func<T, T>), "fac");
             var methodsVar = Variable(typeof(Func<T, T>[]), "facs");
             var one = Constant(1, typeof(T));
 

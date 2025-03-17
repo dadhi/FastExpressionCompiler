@@ -38,14 +38,14 @@ public class Issue366_FEC334_gives_incorrect_results_in_some_linq_operations : I
         ff.PrintIL();
 
         var result1 = fs.DynamicInvoke(new object[]{ 3.0, new List<double>{1.0,2.0,3.0,4.0,5.0 } });
-        Assert.AreEqual(4.0, result1);
+        Asserts.AreEqual(4.0, result1);
         var result1_1 = ((Func<double, List<double>, double>)fs)(3.0, new List<double>{1.0,2.0,3.0,4.0,5.0 });
-        Assert.AreEqual(4.0, result1_1);
+        Asserts.AreEqual(4.0, result1_1);
 
         var result2 = ff.DynamicInvoke(new object[]{ 3.0, new List<double>{1.0,2.0,3.0,4.0,5.0 } });
-        Assert.AreEqual(result1, result2);
+        Asserts.AreEqual(result1, result2);
         var result2_1 = ((Func<double, List<double>, double>)ff)(3.0, new List<double>{1.0,2.0,3.0,4.0,5.0 });
-        Assert.AreEqual(result2, result2_1);
+        Asserts.AreEqual(result2, result2_1);
     }
 }
 

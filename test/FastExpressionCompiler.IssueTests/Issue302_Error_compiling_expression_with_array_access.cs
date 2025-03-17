@@ -37,13 +37,13 @@ namespace FastExpressionCompiler.IssueTests
             };
 
             var res = fs(model);
-            Assert.AreEqual(1, res);
+            Asserts.AreEqual(1, res);
 
             var ff = expr.CompileFast(true);
             ff.PrintIL();
 
             var res2 = ff(model);
-            Assert.AreEqual(1, res2);
+            Asserts.AreEqual(1, res2);
         }
 
         public class LinqTestModel

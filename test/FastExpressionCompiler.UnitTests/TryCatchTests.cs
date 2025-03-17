@@ -120,13 +120,13 @@ namespace FastExpressionCompiler.UnitTests
 
             var fs = fe.CompileSys();
             fs.PrintIL();
-            Assert.AreEqual(47, fs("A"));
-            Assert.AreEqual(123, fs("123"));
+            Asserts.AreEqual(47, fs("A"));
+            Asserts.AreEqual(123, fs("123"));
 
             var ff = fe.CompileFast(ifFastFailedReturnNull: true);
             ff.PrintIL();
-            Assert.AreEqual(47, ff("A"));
-            Assert.AreEqual(123, ff("123"));
+            Asserts.AreEqual(47, ff("A"));
+            Asserts.AreEqual(123, ff("123"));
         }
 
         [Test]
@@ -237,11 +237,11 @@ namespace FastExpressionCompiler.UnitTests
 
             var fs = expr.CompileSys();
             fs.PrintIL();
-            Assert.AreEqual("From Try block", fs());
+            Asserts.AreEqual("From Try block", fs());
 
             var ff = expr.CompileFast(true);
             ff.PrintIL();
-            Assert.AreEqual("From Try block", ff());
+            Asserts.AreEqual("From Try block", ff());
         }
 
         [Test]
@@ -266,11 +266,11 @@ namespace FastExpressionCompiler.UnitTests
 
             var fs = expr.CompileSys();
             fs.PrintIL();
-            Assert.AreEqual("From Try block", fs());
+            Asserts.AreEqual("From Try block", fs());
 
             var ff = expr.CompileFast(true);
             ff.PrintIL();
-            Assert.AreEqual("From Try block", ff());
+            Asserts.AreEqual("From Try block", ff());
         }
 
         [Test]
@@ -300,11 +300,11 @@ namespace FastExpressionCompiler.UnitTests
 
             var fs = expr.CompileSys();
             fs.PrintIL();
-            Assert.AreEqual("the end", fs());
+            Asserts.AreEqual("the end", fs());
 
             var ff = expr.CompileFast(true);
             ff.PrintIL();
-            Assert.AreEqual("the end", ff());
+            Asserts.AreEqual("the end", ff());
         }
 
         [Test]
@@ -324,10 +324,10 @@ namespace FastExpressionCompiler.UnitTests
             expr.PrintCSharp();
 
             var funcSys = expr.CompileSys();
-            Assert.AreEqual("From Catch block", funcSys());
+            Asserts.AreEqual("From Catch block", funcSys());
 
             var func = expr.CompileFast(true);
-            Assert.AreEqual("From Catch block", func());
+            Asserts.AreEqual("From Catch block", func());
 
             var funcWithoutClosure = expr.TryCompileWithoutClosure<Func<string>>();// ?? expr.CompileSys();
             Assert.IsNull(funcWithoutClosure);
@@ -363,11 +363,11 @@ namespace FastExpressionCompiler.UnitTests
 
             var fs = expr.CompileSys();
             fs.PrintIL();
-            Assert.AreEqual("From inner Try block", fs());
+            Asserts.AreEqual("From inner Try block", fs());
 
             var ff = expr.CompileFast(true);
             ff.PrintIL();
-            Assert.AreEqual("From inner Try block", ff());
+            Asserts.AreEqual("From inner Try block", ff());
         }
 
         [Test]
@@ -401,7 +401,7 @@ namespace FastExpressionCompiler.UnitTests
             var func = expr.CompileFast(true);
 
             Assert.IsNotNull(func);
-            Assert.AreEqual("From inner Catch block", func());
+            Asserts.AreEqual("From inner Catch block", func());
         }
 
         [Test]
@@ -429,8 +429,8 @@ namespace FastExpressionCompiler.UnitTests
             compiledFast.PrintIL();
 
             // no exception
-            Assert.AreEqual("ok", compiledFast(() => "ok"));
-            Assert.AreEqual("ok", compiled(() => "ok"));
+            Asserts.AreEqual("ok", compiledFast(() => "ok"));
+            Asserts.AreEqual("ok", compiled(() => "ok"));
             // rethrown exception
             Assert.IsEmpty(exceptions);
             Assert.Throws<ArgumentException>(() => compiledFast(() => { throw new ArgumentException(); }));
@@ -462,9 +462,9 @@ namespace FastExpressionCompiler.UnitTests
             // no exception
             var executed = 0;
             compiledFast(() => executed++);
-            Assert.AreEqual(1, executed);
+            Asserts.AreEqual(1, executed);
             compiled(() => executed++);
-            Assert.AreEqual(2, executed);
+            Asserts.AreEqual(2, executed);
             // rethrown exception
             Assert.Throws<ArgumentException>(() => compiledFast(() => { throw new ArgumentException(); }));
             Assert.Throws<ArgumentException>(() => compiled(() => { throw new ArgumentException(); }));
@@ -499,17 +499,17 @@ namespace FastExpressionCompiler.UnitTests
             compiledFast.PrintIL();
 
             // no exception
-            Assert.AreEqual("ok", compiledFast(() => "ok"));
-            Assert.AreEqual("ok", compiled(() => "ok"));
+            Asserts.AreEqual("ok", compiledFast(() => "ok"));
+            Asserts.AreEqual("ok", compiled(() => "ok"));
             // rethrown exception
             Assert.Throws<ArgumentException>(() => compiledFast(() => { throw new ArgumentException(); }));
             Assert.Throws<ArgumentException>(() => compiled(() => { throw new ArgumentException(); }));
             // wrapped exception
             var exception = Assert.Throws<Exception>(() => compiledFast(() => { throw new InvalidOperationException(); }));
-            Assert.AreEqual("wrapped", exception.Message);
+            Asserts.AreEqual("wrapped", exception.Message);
             Assert.IsInstanceOf<InvalidOperationException>(exception.InnerException);
             exception = Assert.Throws<Exception>(() => compiled(() => { throw new InvalidOperationException(); }));
-            Assert.AreEqual("wrapped", exception.Message);
+            Asserts.AreEqual("wrapped", exception.Message);
             Assert.IsInstanceOf<InvalidOperationException>(exception.InnerException);
         }
 
@@ -539,14 +539,14 @@ namespace FastExpressionCompiler.UnitTests
             compiledFast.PrintIL();
 
             // no exception
-            Assert.AreEqual("ok", compiledFast(() => "ok"));
-            Assert.AreEqual("ok", compiled(() => "ok"));
+            Asserts.AreEqual("ok", compiledFast(() => "ok"));
+            Asserts.AreEqual("ok", compiled(() => "ok"));
             // rethrown exception
             Assert.Throws<ArgumentException>(() => compiledFast(() => { throw new ArgumentException(); }));
             Assert.Throws<ArgumentException>(() => compiled(() => { throw new ArgumentException(); }));
             // caught exception
-            Assert.AreEqual("exception suppressed", compiledFast(() => { throw new InvalidOperationException(); }));
-            Assert.AreEqual("exception suppressed", compiled(() => { throw new InvalidOperationException(); }));
+            Asserts.AreEqual("exception suppressed", compiledFast(() => { throw new InvalidOperationException(); }));
+            Asserts.AreEqual("exception suppressed", compiled(() => { throw new InvalidOperationException(); }));
 
             // throw null;
         }
@@ -568,12 +568,12 @@ namespace FastExpressionCompiler.UnitTests
             expr.PrintCSharp();
 
             var fs = expr.CompileSys();
-            Assert.AreEqual(3, fs(() => 2));
-            Assert.AreEqual(1, fs(() => throw new Exception()));
+            Asserts.AreEqual(3, fs(() => 2));
+            Asserts.AreEqual(1, fs(() => throw new Exception()));
 
             var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
-            Assert.AreEqual(3, ff(() => 2));
-            Assert.AreEqual(1, ff(() => throw new Exception()));
+            Asserts.AreEqual(3, ff(() => 2));
+            Asserts.AreEqual(1, ff(() => throw new Exception()));
         }
 
         [Test]
@@ -648,18 +648,18 @@ namespace FastExpressionCompiler.UnitTests
                     }
                 })));
 
-            Assert.AreEqual("a b c", @cs(() => "a", () => "b", () => "c"));
-            Assert.AreEqual("a errB c", @cs(() => "a", () => throw new Exception("errB"), () => "c"));
+            Asserts.AreEqual("a b c", @cs(() => "a", () => "b", () => "c"));
+            Asserts.AreEqual("a errB c", @cs(() => "a", () => throw new Exception("errB"), () => "c"));
 
             var fs = expr.CompileSys();
             fs.PrintIL();
-            Assert.AreEqual("a b c", fs(() => "a", () => "b", () => "c"));
-            Assert.AreEqual("a errB c", fs(() => "a", () => throw new Exception("errB"), () => "c"));
+            Asserts.AreEqual("a b c", fs(() => "a", () => "b", () => "c"));
+            Asserts.AreEqual("a errB c", fs(() => "a", () => throw new Exception("errB"), () => "c"));
 
             var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
             ff.PrintIL();
-            Assert.AreEqual("a b c", ff(() => "a", () => "b", () => "c"));
-            Assert.AreEqual("a errB c", ff(() => "a", () => throw new Exception("errB"), () => "c"));
+            Asserts.AreEqual("a b c", ff(() => "a", () => "b", () => "c"));
+            Asserts.AreEqual("a errB c", ff(() => "a", () => throw new Exception("errB"), () => "c"));
         }
 
         public static string TestMethod(string a, string b, string c) => $"{a} {b} {c}";

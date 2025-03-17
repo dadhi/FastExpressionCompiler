@@ -35,12 +35,12 @@ namespace FastExpressionCompiler.IssueTests
             var fSys = expr.CompileSys();
             fSys.PrintIL("sys");
             var x = fSys();
-            Assert.AreEqual(15, x.OptionalArgument);
+            Asserts.AreEqual(15, x.OptionalArgument);
 
             var fFast = expr.CompileFast();
             fFast.PrintIL("fast");
             var y = fFast();
-            Assert.AreEqual(15, y.OptionalArgument);
+            Asserts.AreEqual(15, y.OptionalArgument);
         }
 
         interface IOtherDependency { }

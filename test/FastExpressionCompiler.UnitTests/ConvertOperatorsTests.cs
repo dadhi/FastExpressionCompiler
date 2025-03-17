@@ -35,7 +35,7 @@ namespace FastExpressionCompiler.UnitTests
             var f = expr.CompileFast(true);
             var x = f("hey");
 
-            Assert.AreEqual("X:hey", x.S);
+            Asserts.AreEqual("X:hey", x.S);
         }
 
         [Test]
@@ -47,7 +47,7 @@ namespace FastExpressionCompiler.UnitTests
             var f = expr.CompileFast(true);
             var x = f(new Z("a"));
 
-            Assert.AreEqual("a", x.S);
+            Asserts.AreEqual("a", x.S);
         }
 
         [Test]
@@ -59,7 +59,7 @@ namespace FastExpressionCompiler.UnitTests
             var f = expr.CompileFast(true);
             var y = f("hey");
 
-            Assert.AreEqual("X:hey", y.S);
+            Asserts.AreEqual("X:hey", y.S);
         }
 
         public delegate string GetString();
@@ -77,7 +77,7 @@ namespace FastExpressionCompiler.UnitTests
             var @cs = (Func<Func<string>, GetString>)((Func<string> fs) =>
                 (GetString)fs.Invoke);
             var getString = @cs(() => "hey");
-            Assert.AreEqual("hey", getString());
+            Asserts.AreEqual("hey", getString());
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -89,7 +89,7 @@ namespace FastExpressionCompiler.UnitTests
             );
 
             getString = ff(() => "hey");
-            Assert.AreEqual("hey", getString());
+            Asserts.AreEqual("hey", getString());
         }
 #else
         [Test]
@@ -101,7 +101,7 @@ namespace FastExpressionCompiler.UnitTests
             var @cs = (Func<Func<string>, GetString>)((Func<string> fs) =>
                 (GetString)fs.Invoke);
             var getString = @cs(() => "hey");
-            Assert.AreEqual("hey", getString());
+            Asserts.AreEqual("hey", getString());
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
@@ -123,7 +123,7 @@ namespace FastExpressionCompiler.UnitTests
 #endif
 
             getString = ff(() => "hey");
-            Assert.AreEqual("hey", getString());
+            Asserts.AreEqual("hey", getString());
         }
 #endif
 
@@ -144,13 +144,13 @@ namespace FastExpressionCompiler.UnitTests
         {
             var expr = GetGenericConverter<int, XEnum>();
             var fs = expr.CompileSys();
-            Assert.AreEqual(XEnum.C, fs(2));
+            Asserts.AreEqual(XEnum.C, fs(2));
 
             var f = expr.CompileFast(true);
-            Assert.AreEqual(XEnum.C, f(2));
+            Asserts.AreEqual(XEnum.C, f(2));
 
             var f1 = expr.TryCompileWithoutClosure<Func<int, XEnum>>();
-            Assert.AreEqual(XEnum.C, f1(2));
+            Asserts.AreEqual(XEnum.C, f1(2));
         }
 
         public static Expression<Func<TFrom, TTo>> GetGenericConverter<TFrom, TTo>()

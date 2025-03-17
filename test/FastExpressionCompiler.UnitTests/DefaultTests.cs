@@ -57,7 +57,7 @@ namespace FastExpressionCompiler.UnitTests
             var dlgt = Lambda<Func<object>>(Convert(Default(type), typeof(object))).CompileFast(true);
 
             Assert.IsNotNull(dlgt);
-            Assert.AreEqual(expectedResult, dlgt());
+            Asserts.AreEqual(expectedResult, dlgt());
         }
 
         [Test]
@@ -66,7 +66,7 @@ namespace FastExpressionCompiler.UnitTests
             var dlgt = Lambda<Func<decimal>>(Default(typeof(decimal))).CompileFast(true);
 
             Assert.IsNotNull(dlgt);
-            Assert.AreEqual(default(decimal), dlgt());
+            Asserts.AreEqual(default(decimal), dlgt());
         }
 
         [Test]
@@ -75,7 +75,7 @@ namespace FastExpressionCompiler.UnitTests
             var dlgt = Lambda<Func<DateTime>>(Default(typeof(DateTime))).CompileFast(true);
 
             Assert.IsNotNull(dlgt);
-            Assert.AreEqual(default(DateTime), dlgt());
+            Asserts.AreEqual(default(DateTime), dlgt());
         }
 
         [Test]
@@ -84,7 +84,7 @@ namespace FastExpressionCompiler.UnitTests
             var dlgt = Lambda<Func<TimeSpan>>(Default(typeof(TimeSpan))).CompileFast(true);
 
             Assert.IsNotNull(dlgt);
-            Assert.AreEqual(default(TimeSpan), dlgt());
+            Asserts.AreEqual(default(TimeSpan), dlgt());
         }
     }
 }

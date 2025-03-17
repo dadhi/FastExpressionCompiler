@@ -13,7 +13,7 @@ namespace FastExpressionCompiler.IssueTests
     [TestFixture]
     public class Issue153_MinValueMethodNotSupported : ITest
     {
-        public int Run() 
+        public int Run()
         {
             Int_MinValue_Should_Work();
             return 1;
@@ -26,7 +26,7 @@ namespace FastExpressionCompiler.IssueTests
             var minValue = Field(null, minValueField);
             var minValueLambda = Lambda<Func<int>>(minValue);
             var res = minValueLambda.CompileFast(true);
-            Assert.AreEqual(int.MinValue, res());
+            Asserts.AreEqual(int.MinValue, res());
         }
     }
 }

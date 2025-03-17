@@ -95,10 +95,10 @@ namespace FastExpressionCompiler.IssueTests
             compiledFast.PrintIL("fast");
 
             var result = compiledSys(a);
-            Assert.AreEqual(expected, result);
+            Asserts.AreEqual(expected, result);
 
             result = compiledFast(a);
-            Assert.AreEqual(expected, result);
+            Asserts.AreEqual(expected, result);
         }
 
         [Test, TestCaseSource(nameof(TestCases))]
@@ -114,10 +114,10 @@ namespace FastExpressionCompiler.IssueTests
             compiledFast.PrintIL("fast");
 
             var result = compiledSys(a, b);
-            Assert.AreEqual(expected, result);
+            Asserts.AreEqual(expected, result);
 
             result = compiledFast(a, b);
-            Assert.AreEqual(expected, result);
+            Asserts.AreEqual(expected, result);
         }
 
         [Test]

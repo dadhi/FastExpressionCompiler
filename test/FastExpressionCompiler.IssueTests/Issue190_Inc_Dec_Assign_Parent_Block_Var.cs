@@ -22,7 +22,7 @@ namespace FastExpressionCompiler.IssueTests
         {
             var eVar1 = Variable(typeof(int));
             var eVar2 = Variable(typeof(int));
-            
+
             var blockExpr =
                 Block(new[] { eVar1 },
                     Block(new[] { eVar2 }, PreIncrementAssign(eVar1))
@@ -32,7 +32,7 @@ namespace FastExpressionCompiler.IssueTests
             var fastCompiled = lambda.CompileFast(true);
 
             Assert.NotNull(fastCompiled);
-            Assert.AreEqual(1, fastCompiled());
+            Asserts.AreEqual(1, fastCompiled());
         }
     }
 }

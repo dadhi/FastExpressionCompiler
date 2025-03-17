@@ -24,11 +24,11 @@ namespace FastExpressionCompiler.IssueTests
         public void Test_1()
         {
             var serializer = Parameter(typeof(ISerializer), "serializer");
-            var data       = Parameter(typeof(Test).MakeByRefType(), "data");
+            var data = Parameter(typeof(Test).MakeByRefType(), "data");
 
             var expr = Lambda<SerializerDelegate>(
-                Call(serializer, typeof(ISerializer).GetMethod(nameof(ISerializer.WriteDecimal)), 
-                    Field(data, typeof(Test).GetField(nameof(Test.Field1)))), 
+                Call(serializer, typeof(ISerializer).GetMethod(nameof(ISerializer.WriteDecimal)),
+                    Field(data, typeof(Test).GetField(nameof(Test.Field1)))),
                 serializer, data);
 
             expr.PrintCSharp();
@@ -46,19 +46,19 @@ namespace FastExpressionCompiler.IssueTests
 
             var test = new Test { Field1 = 35m };
             serialize(new MySerializer(), ref test); // does nothing
-            Assert.AreEqual(35m, test.Field1);
+            Asserts.AreEqual(35m, test.Field1);
         }
 
         [Test]
         public void Test_2()
         {
             var serializer = Parameter(typeof(ISerializer), "serializer");
-            var data       = Parameter(typeof(Test).MakeByRefType(), "data");
+            var data = Parameter(typeof(Test).MakeByRefType(), "data");
 
             var expr = Lambda<SerializerDelegate>(
                 Call(serializer, typeof(ISerializer).GetMethod(nameof(ISerializer.WriteDecimal)),
                     Field(
-                        Field(data, typeof(Test).GetField(nameof(Test.NestedTest))), 
+                        Field(data, typeof(Test).GetField(nameof(Test.NestedTest))),
                         typeof(NestedTest).GetField(nameof(NestedTest.Field1)))),
                 serializer, data);
 
@@ -86,19 +86,19 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Callvirt,
                 OpCodes.Ret);
 
-            var test = new Test { NestedTest = { Field1 = 35m }};
+            var test = new Test { NestedTest = { Field1 = 35m } };
             serialize(new MySerializer(), ref test); // does nothing
-            Assert.AreEqual(35m, test.NestedTest.Field1);
+            Asserts.AreEqual(35m, test.NestedTest.Field1);
         }
 
         [Test]
         public void Test_3()
         {
             var serializer = Parameter(typeof(ISerializer), "serializer");
-            var data       = Parameter(typeof(Test).MakeByRefType(), "data");
+            var data = Parameter(typeof(Test).MakeByRefType(), "data");
 
             var expr = Lambda<SerializerDelegate>(
-                Call(serializer, typeof(ISerializer).GetMethod(nameof(ISerializer.WriteDecimalByVal)), 
+                Call(serializer, typeof(ISerializer).GetMethod(nameof(ISerializer.WriteDecimalByVal)),
                     Field(data, typeof(Test).GetField(nameof(Test.Field1)))),
                 serializer, data);
 
@@ -126,17 +126,17 @@ namespace FastExpressionCompiler.IssueTests
 
             var test = new Test { Field1 = 35m };
             serialize(new MySerializer(), ref test); // does nothing
-            Assert.AreEqual(35m, test.Field1);
+            Asserts.AreEqual(35m, test.Field1);
         }
 
         [Test]
         public void Test_4()
         {
             var serializer = Parameter(typeof(ISerializer), "serializer");
-            var data       = Parameter(typeof(Test).MakeByRefType(), "data");
+            var data = Parameter(typeof(Test).MakeByRefType(), "data");
 
             var expr = Lambda<SerializerDelegate>(
-                Call(serializer, typeof(ISerializer).GetMethod(nameof(ISerializer.WriteDecimalTwoArgs)), 
+                Call(serializer, typeof(ISerializer).GetMethod(nameof(ISerializer.WriteDecimalTwoArgs)),
                     Field(data, typeof(Test).GetField(nameof(Test.Field1))),
                     Field(New(typeof(Klaz).GetConstructors()[0], Constant(true), Constant(0.3f)),
                         typeof(Klaz).GetField(nameof(Klaz.KlazField)))
@@ -174,7 +174,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var test = new Test { Field1 = 35m };
             serialize(new MySerializer(), ref test); // does nothing
-            Assert.AreEqual(35m, test.Field1);
+            Asserts.AreEqual(35m, test.Field1);
         }
 
         public interface ISerializer
@@ -186,21 +186,21 @@ namespace FastExpressionCompiler.IssueTests
 
         class MySerializer : ISerializer
         {
-            public void WriteDecimal(in decimal value) => Assert.AreEqual(35m, value);
-            public void WriteDecimalByVal(decimal value) => Assert.AreEqual(35m, value);
-            
+            public void WriteDecimal(in decimal value) => Asserts.AreEqual(35m, value);
+            public void WriteDecimalByVal(decimal value) => Asserts.AreEqual(35m, value);
+
             public void WriteDecimalTwoArgs(in decimal value, decimal klaz)
             {
-                Assert.AreEqual(35m, value);
-                Assert.AreEqual(35m, klaz);
+                Asserts.AreEqual(35m, value);
+                Asserts.AreEqual(35m, klaz);
             }
         }
 
-        public class Klaz 
+        public class Klaz
         {
             public decimal KlazField;
             public Klaz(bool b, float f) { KlazField = 35m; }
-        } 
+        }
 
         public struct Test
         {

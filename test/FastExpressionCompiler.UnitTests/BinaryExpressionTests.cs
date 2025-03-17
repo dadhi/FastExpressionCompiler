@@ -77,7 +77,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(1);
 
-            Assert.AreEqual(3, result);
+            Asserts.AreEqual(3, result);
         }
 
         [Test]
@@ -90,7 +90,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(1);
 
-            Assert.AreEqual(3, result);
+            Asserts.AreEqual(3, result);
         }
 
         [Test]
@@ -103,7 +103,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(1);
 
-            Assert.AreEqual(3, result);
+            Asserts.AreEqual(3, result);
         }
 
         [Test]
@@ -116,7 +116,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(1);
 
-            Assert.AreEqual(3, result);
+            Asserts.AreEqual(3, result);
         }
 
         [Test]
@@ -129,7 +129,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(5);
 
-            Assert.AreEqual(1, result);
+            Asserts.AreEqual(1, result);
         }
 
         [Test]
@@ -155,7 +155,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(5);
 
-            Assert.AreEqual(1, result);
+            Asserts.AreEqual(1, result);
         }
 
         [Test]
@@ -168,7 +168,7 @@ namespace FastExpressionCompiler.UnitTests
 
             string result = expression.CompileFast(true)(new[] { "1", "2" });
 
-            Assert.AreEqual("2", result);
+            Asserts.AreEqual("2", result);
         }
 
         [Test]
@@ -181,7 +181,7 @@ namespace FastExpressionCompiler.UnitTests
 
             string result = expression.CompileFast(true)("original");
 
-            Assert.AreEqual("test", result);
+            Asserts.AreEqual("test", result);
         }
 
         [Test]
@@ -194,7 +194,7 @@ namespace FastExpressionCompiler.UnitTests
 
             string result = expression.CompileFast(true)(null);
 
-            Assert.AreEqual("<null>", result);
+            Asserts.AreEqual("<null>", result);
         }
 
         [Test]
@@ -207,7 +207,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(6);
 
-            Assert.AreEqual(3, result);
+            Asserts.AreEqual(3, result);
         }
 
         [Test]
@@ -220,7 +220,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(6);
 
-            Assert.AreEqual(3, result);
+            Asserts.AreEqual(3, result);
         }
 
         [Test]
@@ -246,7 +246,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(5);
 
-            Assert.AreEqual(6, result);
+            Asserts.AreEqual(6, result);
         }
 
         [Test]
@@ -259,7 +259,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(5);
 
-            Assert.AreEqual(6, result);
+            Asserts.AreEqual(6, result);
         }
 
         [Test]
@@ -302,7 +302,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(3);
 
-            Assert.AreEqual(12, result);
+            Asserts.AreEqual(12, result);
         }
 
         [Test]
@@ -315,7 +315,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(3);
 
-            Assert.AreEqual(12, result);
+            Asserts.AreEqual(12, result);
         }
 
         [Test]
@@ -354,7 +354,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(1);
 
-            Assert.AreEqual(3, result);
+            Asserts.AreEqual(3, result);
         }
 
         [Test]
@@ -367,7 +367,7 @@ namespace FastExpressionCompiler.UnitTests
 
             string result = expression.CompileFast(true)(new[] { "1", "2" });
 
-            Assert.AreEqual("2", result);
+            Asserts.AreEqual("2", result);
         }
 
         [Test]
@@ -380,7 +380,7 @@ namespace FastExpressionCompiler.UnitTests
 
             string result = expression.CompileFast(true)("original");
 
-            Assert.AreEqual("test", result);
+            Asserts.AreEqual("test", result);
         }
 
         [Test]
@@ -393,7 +393,7 @@ namespace FastExpressionCompiler.UnitTests
 
             string result = expression.CompileFast(true)(null);
 
-            Assert.AreEqual("<null>", result);
+            Asserts.AreEqual("<null>", result);
         }
 
         [Test]
@@ -415,13 +415,13 @@ namespace FastExpressionCompiler.UnitTests
             fs.PrintIL();
             var d = new Destination();
             fs(new Source(), d);
-            Assert.AreEqual(0, d.Number);
+            Asserts.AreEqual(0, d.Number);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
             d = new Destination();
             ff(new Source(), d);
-            Assert.AreEqual(0, d.Number);
+            Asserts.AreEqual(0, d.Number);
         }
 
         [Test]
@@ -443,13 +443,13 @@ namespace FastExpressionCompiler.UnitTests
             fs.PrintIL();
             var d = new Destination();
             fs(new Source(), d);
-            Assert.AreEqual(0, d.NumberNonNullable);
+            Asserts.AreEqual(0, d.NumberNonNullable);
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
             d = new Destination();
             ff(new Source(), d);
-            Assert.AreEqual(0, d.NumberNonNullable);
+            Asserts.AreEqual(0, d.NumberNonNullable);
         }
 
         class Source
@@ -472,7 +472,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(5);
 
-            Assert.AreEqual(2, result);
+            Asserts.AreEqual(2, result);
         }
 
         [Test]
@@ -485,7 +485,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(5);
 
-            Assert.AreEqual(2, result);
+            Asserts.AreEqual(2, result);
         }
 
         [Test]
@@ -498,7 +498,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(2);
 
-            Assert.AreEqual(6, result);
+            Asserts.AreEqual(6, result);
         }
 
         [Test]
@@ -511,7 +511,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(2);
 
-            Assert.AreEqual(6, result);
+            Asserts.AreEqual(6, result);
         }
 
         [Test]
@@ -524,7 +524,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(2);
 
-            Assert.AreEqual(6, result);
+            Asserts.AreEqual(6, result);
         }
 
         [Test]
@@ -537,7 +537,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(2);
 
-            Assert.AreEqual(6, result);
+            Asserts.AreEqual(6, result);
         }
 
         [Test]
@@ -563,7 +563,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(5);
 
-            Assert.AreEqual(7, result);
+            Asserts.AreEqual(7, result);
         }
 
         [Test]
@@ -576,7 +576,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(5);
 
-            Assert.AreEqual(7, result);
+            Asserts.AreEqual(7, result);
         }
 
         [Test]
@@ -602,7 +602,7 @@ namespace FastExpressionCompiler.UnitTests
 
             double result = expression.CompileFast(true)(3.0);
 
-            Assert.AreEqual(9.0, result);
+            Asserts.AreEqual(9.0, result);
         }
 
         [Test]
@@ -615,7 +615,7 @@ namespace FastExpressionCompiler.UnitTests
 
             double result = expression.CompileFast(true)(3.0);
 
-            Assert.AreEqual(9.0, result);
+            Asserts.AreEqual(9.0, result);
         }
 
         [Test]
@@ -677,7 +677,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(12);
 
-            Assert.AreEqual(3, result);
+            Asserts.AreEqual(3, result);
         }
 
         [Test]
@@ -690,7 +690,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(12);
 
-            Assert.AreEqual(3, result);
+            Asserts.AreEqual(3, result);
         }
 
         [Test]
@@ -703,7 +703,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(3);
 
-            Assert.AreEqual(1, result);
+            Asserts.AreEqual(1, result);
         }
 
         [Test]
@@ -716,7 +716,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(3);
 
-            Assert.AreEqual(1, result);
+            Asserts.AreEqual(1, result);
         }
 
         [Test]
@@ -729,7 +729,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(3);
 
-            Assert.AreEqual(1, result);
+            Asserts.AreEqual(1, result);
         }
 
         [Test]
@@ -742,7 +742,7 @@ namespace FastExpressionCompiler.UnitTests
 
             int result = expression.CompileFast(true)(3);
 
-            Assert.AreEqual(1, result);
+            Asserts.AreEqual(1, result);
         }
     }
 }

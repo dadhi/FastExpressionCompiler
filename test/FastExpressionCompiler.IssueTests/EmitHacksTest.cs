@@ -26,7 +26,7 @@ namespace FastExpressionCompiler.IssueTests
         {
             var f = Get_DynamicMethod_Emit_Hack();
             var a = f(41);
-            Assert.AreEqual(42, a);
+            Asserts.AreEqual(42, a);
         }
 
         static Type ilType = typeof(ILGenerator).Assembly.GetType("System.Reflection.Emit.DynamicILGenerator");
@@ -147,7 +147,7 @@ namespace FastExpressionCompiler.IssueTests
         {
             var f = Get_DynamicMethod_Emit_OpCodes_Call();
             var a = f(41);
-            Assert.AreEqual(42, a);
+            Asserts.AreEqual(42, a);
         }
 
         public static Func<int, int> Get_DynamicMethod_Emit_OpCodes_Call()

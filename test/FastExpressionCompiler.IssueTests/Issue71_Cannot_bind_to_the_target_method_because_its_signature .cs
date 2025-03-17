@@ -43,7 +43,7 @@ namespace FastExpressionCompiler.IssueTests
 
             dlg.Invoke(data, "Kevin");
 
-            Assert.AreEqual("Kevin", data.Boss.Name.First);
+            Asserts.AreEqual("Kevin", data.Boss.Name.First);
         }
 
         [Test]
@@ -66,7 +66,7 @@ namespace FastExpressionCompiler.IssueTests
             };
 
             dlg.Invoke(data, "Kevin");
-            Assert.AreEqual("Kevin", data.Boss.Name.First);
+            Asserts.AreEqual("Kevin", data.Boss.Name.First);
         }
 
         [Test]
@@ -81,7 +81,7 @@ namespace FastExpressionCompiler.IssueTests
             };
 
             dlg.Invoke(data, 40);
-            Assert.AreEqual(40, data.Age);
+            Asserts.AreEqual(40, data.Age);
         }
 
         [Test]
@@ -96,7 +96,7 @@ namespace FastExpressionCompiler.IssueTests
             };
 
             dlg.Invoke(data, 40);
-            Assert.AreEqual(40, data.Age);
+            Asserts.AreEqual(40, data.Age);
         }
 
         public class Person

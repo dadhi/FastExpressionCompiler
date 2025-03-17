@@ -23,7 +23,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
             var f = expr.CompileFast();
 
-            Assert.AreEqual(42, f().N);
+            Asserts.AreEqual(42, f().N);
         }
 
         [Test]
@@ -39,7 +39,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
             var f = expr.CompileFast();
 
-            Assert.AreEqual(24, f().R);
+            Asserts.AreEqual(24, f().R);
         }
 
         public class A

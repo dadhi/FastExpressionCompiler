@@ -69,7 +69,7 @@ namespace FastExpressionCompiler.UnitTests
             var dlgt = Lambda<Func<object>>(block).CompileFast(true);
 
             Assert.IsNotNull(dlgt);
-            Assert.AreEqual(5, dlgt());
+            Asserts.AreEqual(5, dlgt());
         }
 
         [Test]
@@ -84,7 +84,7 @@ namespace FastExpressionCompiler.UnitTests
             var dlgt = Lambda<Func<object>>(block).CompileFast(true);
 
             Assert.IsNotNull(dlgt);
-            Assert.AreEqual(a, dlgt());
+            Asserts.AreEqual(a, dlgt());
         }
 
         [Test]

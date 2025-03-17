@@ -99,7 +99,7 @@ namespace FastExpressionCompiler.UnitTests
             var dlg = expr.TryCompile<Func<object>>();
 
             Assert.IsNotNull(dlg);
-            Assert.AreEqual(s, dlg());
+            Asserts.AreEqual(s, dlg());
         }
 
         [Test]
@@ -113,7 +113,7 @@ namespace FastExpressionCompiler.UnitTests
             var dlg = expr.TryCompile<Func<object>>();
 
             Assert.IsNotNull(dlg);
-            Assert.AreEqual(string.Empty, dlg());
+            Asserts.AreEqual(string.Empty, dlg());
         }
 
         [Test]
@@ -127,7 +127,7 @@ namespace FastExpressionCompiler.UnitTests
             var dlg = expr.TryCompile<Func<object>>();
 
             Assert.IsNotNull(dlg);
-            Assert.AreEqual(string.Empty, dlg());
+            Asserts.AreEqual(string.Empty, dlg());
         }
 
         [Test]
@@ -141,7 +141,7 @@ namespace FastExpressionCompiler.UnitTests
             var dlg = expr.TryCompile<Func<object>>();
 
             Assert.IsNotNull(dlg);
-            Assert.AreEqual(string.Concat(s, "ccc"), dlg());
+            Asserts.AreEqual(string.Concat(s, "ccc"), dlg());
         }
 
         [Test]
@@ -160,7 +160,7 @@ namespace FastExpressionCompiler.UnitTests
             var dlg = expr.TryCompile<Func<object>>();
 
             Assert.IsNotNull(dlg);
-            Assert.AreEqual(string.Concat(s, "ccc"), dlg());
+            Asserts.AreEqual(string.Concat(s, "ccc"), dlg());
         }
 
         [Test]
@@ -208,8 +208,8 @@ namespace FastExpressionCompiler.UnitTests
             var dlgt = Lambda<Func<bool, int>>(block, param).TryCompile<Func<bool, int>>();
 
             Assert.IsNotNull(dlgt);
-            Assert.AreEqual(5, dlgt(true));
-            Assert.AreEqual(default(int), dlgt(false));
+            Asserts.AreEqual(5, dlgt(true));
+            Asserts.AreEqual(default(int), dlgt(false));
         }
 
         [Test]
@@ -229,8 +229,8 @@ namespace FastExpressionCompiler.UnitTests
             var dlgt = Lambda<Func<bool, int>>(block, param).TryCompile<Func<bool, int>>();
 
             Assert.IsNotNull(dlgt);
-            Assert.AreEqual(5, dlgt(true));
-            Assert.AreEqual(6, dlgt(false));
+            Asserts.AreEqual(5, dlgt(true));
+            Asserts.AreEqual(6, dlgt(false));
         }
     }
 }

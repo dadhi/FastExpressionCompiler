@@ -177,8 +177,8 @@ namespace FastExpressionCompiler.IssueTests
         }
 #else
         public static void CreateLightExpression_and_CompileFast(
-            out DeserializerDlg<Word> desWord, 
-            out DeserializerDlg<Simple> desSimple) 
+            out DeserializerDlg<Word> desWord,
+            out DeserializerDlg<Simple> desSimple)
         {
             var reader = Variable(typeof(SequenceReader<byte>), "reader");
             var bytesRead = Parameter(typeof(long).MakeByRefType(), "bytesRead");
@@ -384,8 +384,8 @@ namespace FastExpressionCompiler.IssueTests
             var isDeserialized = Serializer.TryDeserialize(ref input, deserialized, out var bytesRead);
 
             Assert.True(isDeserialized);
-            Assert.AreEqual(buffer.Length, bytesRead);
-            Assert.AreEqual(expected, deserialized);
+            Asserts.AreEqual(buffer.Length, bytesRead);
+            Asserts.AreEqual(expected, deserialized);
         }
 
         [Test]
@@ -413,13 +413,13 @@ namespace FastExpressionCompiler.IssueTests
 
             var fs = expr.CompileSys();
             fs.PrintIL("system compiled il");
-            Assert.AreEqual("true", fs(true));
-            Assert.AreEqual("false", fs(false));
+            Asserts.AreEqual("true", fs(true));
+            Asserts.AreEqual("false", fs(false));
 
             var f = expr.CompileFast(true);
             f.PrintIL();
-            Assert.AreEqual("true", f(true));
-            Assert.AreEqual("false", f(false));
+            Asserts.AreEqual("true", f(true));
+            Asserts.AreEqual("false", f(false));
         }
 
         [Test]
@@ -446,8 +446,8 @@ namespace FastExpressionCompiler.IssueTests
             Assert.IsNotNull(f);
             f.PrintIL();
 
-            Assert.AreEqual("true", f(0));
-            Assert.AreEqual("false", f(42));
+            Asserts.AreEqual("true", f(0));
+            Asserts.AreEqual("false", f(42));
         }
 
         [Test]
@@ -471,8 +471,8 @@ namespace FastExpressionCompiler.IssueTests
             Assert.IsNotNull(f);
             f.PrintIL();
 
-            Assert.AreEqual("true", f(true));
-            Assert.AreEqual("false", f(false));
+            Asserts.AreEqual("true", f(true));
+            Asserts.AreEqual("false", f(false));
         }
 
         [Test]
@@ -496,8 +496,8 @@ namespace FastExpressionCompiler.IssueTests
             Assert.IsNotNull(f);
             f.PrintIL();
 
-            Assert.AreEqual("true", f(true));
-            Assert.AreEqual("false", f(false));
+            Asserts.AreEqual("true", f(true));
+            Asserts.AreEqual("false", f(false));
         }
 
         [Test]
@@ -521,8 +521,8 @@ namespace FastExpressionCompiler.IssueTests
             Assert.IsNotNull(f);
             f.PrintIL();
 
-            Assert.AreEqual("true", f(true));
-            Assert.AreEqual("false", f(false));
+            Asserts.AreEqual("true", f(true));
+            Asserts.AreEqual("false", f(false));
         }
 
         public void Try_compare_strings()
@@ -549,14 +549,14 @@ namespace FastExpressionCompiler.IssueTests
 
             var fs = expr.CompileSys();
             fs.PrintIL();
-            Assert.AreEqual("true", fs("42"));
-            Assert.AreEqual("false", fs("35"));
+            Asserts.AreEqual("true", fs("42"));
+            Asserts.AreEqual("false", fs("35"));
 
             var ff = expr.CompileFast(true);
             ff.PrintIL();
 
-            Assert.AreEqual("true", ff("42"));
-            Assert.AreEqual("false", ff("35"));
+            Asserts.AreEqual("true", ff("42"));
+            Asserts.AreEqual("false", ff("35"));
         }
     }
 

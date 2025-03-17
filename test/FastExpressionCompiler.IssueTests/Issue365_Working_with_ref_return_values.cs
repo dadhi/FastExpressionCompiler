@@ -42,7 +42,7 @@ public class Issue365_Working_with_ref_return_values : ITest
         var paramValue = new ParamValue() { Value = 5 };
         var paramProcessor = new ParamProcessor(paramValue);
         @cs(paramProcessor);
-        Assert.AreEqual(8, paramProcessor.ParamValue.Value);
+        Asserts.AreEqual(8, paramProcessor.ParamValue.Value);
 
         // var fs = e.CompileSys(); // todo: does not convert ref returning method calls, cause unable to find the property on the T& type
 
@@ -60,7 +60,7 @@ public class Issue365_Working_with_ref_return_values : ITest
         paramValue = new ParamValue() { Value = 5 };
         paramProcessor = new ParamProcessor(paramValue);
         ff(paramProcessor);
-        Assert.AreEqual(8, paramProcessor.ParamValue.Value);
+        Asserts.AreEqual(8, paramProcessor.ParamValue.Value);
     }
 
     [Test]
@@ -72,7 +72,7 @@ public class Issue365_Working_with_ref_return_values : ITest
         var pp = Parameter(typeof(ParamProcessor), "pp");
         var e = Lambda<Action<ParamProcessor>>(
             Assign(
-                MakeMemberAccess(Call(pp, getParamValueByRefMethod), valueProperty), 
+                MakeMemberAccess(Call(pp, getParamValueByRefMethod), valueProperty),
                 Constant(7)),
             pp);
 
@@ -85,7 +85,7 @@ public class Issue365_Working_with_ref_return_values : ITest
         var paramValue = new ParamValue() { Value = 5 };
         var paramProcessor = new ParamProcessor(paramValue);
         @cs(paramProcessor);
-        Assert.AreEqual(7, paramProcessor.ParamValue.Value);
+        Asserts.AreEqual(7, paramProcessor.ParamValue.Value);
 
         // var fs = e.CompileSys(); // todo: does not conver ref returning method calls, cause unable cannot find the property on the T& type
 
@@ -101,7 +101,7 @@ public class Issue365_Working_with_ref_return_values : ITest
         paramValue = new ParamValue() { Value = 5 };
         paramProcessor = new ParamProcessor(paramValue);
         ff(paramProcessor);
-        Assert.AreEqual(7, paramProcessor.ParamValue.Value);
+        Asserts.AreEqual(7, paramProcessor.ParamValue.Value);
     }
 
     public struct ParamValue

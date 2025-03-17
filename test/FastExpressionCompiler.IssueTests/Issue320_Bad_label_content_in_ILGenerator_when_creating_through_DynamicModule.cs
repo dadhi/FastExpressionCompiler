@@ -43,12 +43,12 @@ namespace FastExpressionCompiler.IssueTests
 
             var s = expr.CompileSys();
             s.PrintIL("sys");
-            Assert.AreEqual(314, s());
+            Asserts.AreEqual(314, s());
 
             var f = expr.CompileFast(true);
             f.PrintIL("fec");
             Assert.IsNotNull(f);
-            Assert.AreEqual(314, f());
+            Asserts.AreEqual(314, f());
 
             GenerateAssemblyManually(expr);
         }
@@ -61,7 +61,7 @@ namespace FastExpressionCompiler.IssueTests
             var f = expr.CompileFast(true);
             Assert.IsNotNull(f);
 
-            Assert.AreEqual(8675309, f());
+            Asserts.AreEqual(8675309, f());
 
             GenerateAssemblyManually(expr);
         }

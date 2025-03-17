@@ -45,7 +45,7 @@ namespace FastExpressionCompiler.IssueTests
             //(object awaiter) => (object)((TaskAwaiter<int>)awaiter).GetResult();
 
             var awaiterParamExpr = Expression.Parameter(typeof(object), "awaiter");
-            
+
             var expr = Expression.Lambda<Func<object, object>>(
                 Expression.Convert(
                     Expression.Call(
@@ -60,7 +60,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var awaiter = FooInt(1, 2).GetAwaiter();
             var sum = (int)result(awaiter);
-            Assert.AreEqual(3, sum);
+            Asserts.AreEqual(3, sum);
         }
 
         [Test]
@@ -71,10 +71,10 @@ namespace FastExpressionCompiler.IssueTests
             Assert.IsTrue(executor.IsMethodAsync);
 
             var sumTask = (Task<int>)executor.Execute(this, new object[] { 1, 2 });
-            Assert.AreEqual(3, sumTask.Result);
+            Asserts.AreEqual(3, sumTask.Result);
 
             var sum = executor.ExecuteAsync(this, new object[] { 1, 2 });
-            Assert.AreEqual(3, sum.GetAwaiter().GetResult());
+            Asserts.AreEqual(3, sum.GetAwaiter().GetResult());
         }
 
         [Test]

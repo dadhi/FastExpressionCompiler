@@ -31,12 +31,12 @@ namespace FastExpressionCompiler.IssueTests
             var x = -1;
             var y = 0x7fffffff;
             var param = Parameter(typeof(int));
-            var lambda = Lambda<Func<int,uint>>(
+            var lambda = Lambda<Func<int, uint>>(
                 RightShift(Convert(param, typeof(uint)), Constant(1)),
                 param
             );
-            Assert.AreEqual(y,lambda.CompileSys()(x));
-            Assert.AreEqual(y,lambda.CompileFast(true)(x));
+            Asserts.AreEqual((uint)y, lambda.CompileSys()(x));
+            Asserts.AreEqual((uint)y, lambda.CompileFast(true)(x));
         }
     }
 }

@@ -12,7 +12,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-[TestFixture]
+    [TestFixture]
     public class Issue19_Nested_CallExpression_causes_AccessViolationException : ITest
     {
         public int Run()
@@ -44,9 +44,9 @@ namespace FastExpressionCompiler.IssueTests
 
             // test
             var entity = new Test();
-        
+
             var ffnRes = ffn(entity);
-            Assert.AreEqual(ffnRes.Name, ffnRes.Id.ToString());
+            Asserts.AreEqual(ffnRes.Name, ffnRes.Id.ToString());
         }
 
         static readonly MethodInfo _toStringMethod = typeof(object).GetTypeInfo().DeclaredMethods.First(x => x.Name == "ToString" && x.GetParameters().Length == 0);
@@ -72,7 +72,7 @@ namespace FastExpressionCompiler.IssueTests
                 ex is MemberExpression ? ((MemberExpression)ex).Member :
                 ex is MethodCallExpression ? ((MethodCallExpression)ex).Method : (MemberInfo)((NewExpression)ex).Constructor;
         }
-   
+
         public class Test
         {
             public int Id { get; set; }
