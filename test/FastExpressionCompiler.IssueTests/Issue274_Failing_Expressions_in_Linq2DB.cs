@@ -416,8 +416,7 @@ public class Issue274_Failing_Expressions_in_Linq2DB : ITest
     var f = expr.CompileFast(true);
     f.PrintIL();
 
-    Assert.DoesNotThrow(() =>
-      f(new NullQueryRunner(), new SQLiteDataReader()));
+    _ = f(new NullQueryRunner(), new SQLiteDataReader());
   }
 
   public class Customer
@@ -539,13 +538,13 @@ public class Issue274_Failing_Expressions_in_Linq2DB : ITest
     fs.PrintIL();
     var obj1 = new object();
     var s1 = fs(obj1);
-    Assert.IsInstanceOf<SampleClass>(s1);
+    Asserts.IsInstanceOf<SampleClass>(s1);
 
     var f = expr.CompileFast(true);
     f.PrintIL();
     var obj2 = new object();
     var s2 = f(obj2);
-    Assert.IsInstanceOf<SampleClass>(s2);
+    Asserts.IsInstanceOf<SampleClass>(s2);
   }
 
   [Test]
@@ -694,11 +693,11 @@ public class Issue274_Failing_Expressions_in_Linq2DB : ITest
 
     var fs = expr.CompileSys();
     fs.PrintIL();
-    Assert.That(fs(null), Is.EqualTo(null));
+    Asserts.IsNull(fs(null));
 
     var fx = expr.CompileFast(true);
     fx.PrintIL();
-    Assert.That(fx(null), Is.EqualTo(null));
+    Asserts.IsNull(fx(null));
   }
 
   public enum Enum1 { X }
@@ -718,11 +717,11 @@ public class Issue274_Failing_Expressions_in_Linq2DB : ITest
 
     var fs = expr.CompileSys();
     fs.PrintIL();
-    Assert.That(fs(1), Is.EqualTo("1"));
+    Asserts.AreEqual("1", fs(1));
 
     var fx = expr.CompileFast(true);
     fx.PrintIL();
-    Assert.That(fx(1), Is.EqualTo("1"));
+    Asserts.AreEqual("1", fx(1));
   }
 
   [Test]
@@ -749,11 +748,11 @@ public class Issue274_Failing_Expressions_in_Linq2DB : ITest
 
     var fs = expr.CompileSys();
     fs.PrintIL();
-    Assert.That(fs(concrete, 22), Is.EqualTo("OtherStrValue22"));
+    Asserts.AreEqual("OtherStrValue22", fs(concrete, 22));
 
     var fx = expr.CompileFast(true);
     fx.PrintIL();
-    Assert.That(fx(concrete, 22), Is.EqualTo("OtherStrValue22"));
+    Asserts.AreEqual("OtherStrValue22", fx(concrete, 22));
   }
 
   [Test]

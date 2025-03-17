@@ -21,7 +21,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
 
             var f = e.CompileFast(true);
 
-            Assert.IsInstanceOf<Example>(f());
+            Asserts.IsInstanceOf<Example>(f());
         }
 
         struct Example { }

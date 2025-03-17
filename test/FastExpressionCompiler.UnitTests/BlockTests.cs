@@ -137,7 +137,7 @@ namespace FastExpressionCompiler.UnitTests
 
             Assert.NotNull(f);
             var ff = f(17);
-            Assert.IsInstanceOf<Func<int>>(ff);
+            Asserts.IsInstanceOf<Func<int>>(ff);
 
             Asserts.AreEqual(42, ff());
         }
@@ -170,7 +170,7 @@ namespace FastExpressionCompiler.UnitTests
             var ff = lambda.CompileFast(true);
             ff.PrintIL();
             f = ff(17);
-            Assert.IsInstanceOf<Func<int>>(f);
+            Asserts.IsInstanceOf<Func<int>>(f);
             Asserts.AreEqual(18, f());
         }
 
@@ -193,7 +193,7 @@ namespace FastExpressionCompiler.UnitTests
 
             Assert.NotNull(f);
             var ff = f(17);
-            Assert.IsInstanceOf<Func<int>>(ff);
+            Asserts.IsInstanceOf<Func<int>>(ff);
 
             Asserts.AreEqual(42, ff());
         }
@@ -222,7 +222,7 @@ namespace FastExpressionCompiler.UnitTests
 
             Assert.NotNull(f);
             var ff = f();
-            Assert.IsInstanceOf<Func<string>>(ff);
+            Asserts.IsInstanceOf<Func<string>>(ff);
             Asserts.AreEqual("42", ff());
         }
 
@@ -242,7 +242,7 @@ namespace FastExpressionCompiler.UnitTests
             Assert.NotNull(f);
 
             var ff = f();
-            Assert.IsInstanceOf<Func<int>>(ff);
+            Asserts.IsInstanceOf<Func<int>>(ff);
             Asserts.AreEqual(42, ff());
         }
 

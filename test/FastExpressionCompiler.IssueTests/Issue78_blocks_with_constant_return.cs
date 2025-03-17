@@ -89,7 +89,7 @@ namespace FastExpressionCompiler.IssueTests
             var lambda = Lambda<Action<object>>(ret, p);
             var fastCompiled = lambda.CompileFast(true);
             Asserts.IsNotNull(fastCompiled);
-            Assert.DoesNotThrow(() => fastCompiled("a"));
+            fastCompiled("a");
             Assert.Throws<InvalidCastException>(() => fastCompiled(1));
         }
     }

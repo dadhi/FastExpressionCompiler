@@ -29,7 +29,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var lambda = manualExpr.CompileFast(true);
 
-            Assert.IsInstanceOf<X>(lambda());
+            Asserts.IsInstanceOf<X>(lambda());
         }
 
         private static Expression<Func<object>> ComposeManualExpr()
@@ -50,7 +50,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var lambda = manualExpr.CompileFast<Func<B, X>>();
 
-            Assert.IsInstanceOf<X>(lambda(new B()));
+            Asserts.IsInstanceOf<X>(lambda(new B()));
         }
 
         private static LambdaExpression ComposeManualExprWithParams()

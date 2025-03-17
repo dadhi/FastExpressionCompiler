@@ -40,7 +40,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.IsNotNull(func);
 
             var x = func();
-            Assert.IsInstanceOf<X>(x);
+            Asserts.IsInstanceOf<X>(x);
         }
 
         public class Y { }
@@ -63,7 +63,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.IsNotNull(func);
 
             var x = func();
-            Assert.IsInstanceOf<X>(x);
+            Asserts.IsInstanceOf<X>(x);
         }
 
         [Test]
@@ -78,7 +78,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.IsNotNull(func);
 
             var x = func();
-            Assert.IsInstanceOf<X>(x);
+            Asserts.IsInstanceOf<X>(x);
         }
 
         public static X PropX => new X(new Y());
@@ -367,7 +367,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
         {
             var func = Lambda(New(_ctorOfP, New(_ctorOfB))).CompileFast<Func<P>>();
 
-            Assert.IsInstanceOf<P>(func());
+            Asserts.IsInstanceOf<P>(func());
         }
     }
 }

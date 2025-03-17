@@ -150,7 +150,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var func = expr.CompileFast(true);
             Asserts.IsNotNull(func);
-            Assert.DoesNotThrow(() => func());
+            func();
         }
 
         [Test]
@@ -434,9 +434,9 @@ namespace FastExpressionCompiler.UnitTests
             // rethrown exception
             Assert.IsEmpty(exceptions);
             Assert.Throws<ArgumentException>(() => compiledFast(() => { throw new ArgumentException(); }));
-            Assert.That(exceptions, Has.Count.EqualTo(1));
+            Asserts.AreEqual(1, exceptions.Count);
             Assert.Throws<ArgumentException>(() => compiled(() => { throw new ArgumentException(); }));
-            Assert.That(exceptions, Has.Count.EqualTo(2));
+            Asserts.AreEqual(2, exceptions.Count);
         }
 
         [Test]
@@ -507,10 +507,10 @@ namespace FastExpressionCompiler.UnitTests
             // wrapped exception
             var exception = Assert.Throws<Exception>(() => compiledFast(() => { throw new InvalidOperationException(); }));
             Asserts.AreEqual("wrapped", exception.Message);
-            Assert.IsInstanceOf<InvalidOperationException>(exception.InnerException);
+            Asserts.IsInstanceOf<InvalidOperationException>(exception.InnerException);
             exception = Assert.Throws<Exception>(() => compiled(() => { throw new InvalidOperationException(); }));
             Asserts.AreEqual("wrapped", exception.Message);
-            Assert.IsInstanceOf<InvalidOperationException>(exception.InnerException);
+            Asserts.IsInstanceOf<InvalidOperationException>(exception.InnerException);
         }
 
         [Test]

@@ -34,13 +34,13 @@ namespace FastExpressionCompiler.IssueTests
             var fSys = expr.CompileSys();
             fSys.PrintIL();
 
-            Assert.IsInstanceOf<Command>(fSys(null));
+            Asserts.IsInstanceOf<Command>(fSys(null));
 
             var fFast = expr.CompileFast(true);
             fFast.PrintIL();
 
             var cmd = fFast("x");
-            Assert.IsInstanceOf<Command>(cmd);
+            Asserts.IsInstanceOf<Command>(cmd);
             Asserts.AreEqual("x", cmd());
         }
     }

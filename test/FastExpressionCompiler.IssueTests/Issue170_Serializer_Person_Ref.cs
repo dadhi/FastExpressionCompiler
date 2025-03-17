@@ -150,7 +150,7 @@ namespace FastExpressionCompiler.IssueTests
 
             LocalAssert(AssigningRefs);
 
-            Assert.DoesNotThrow(() => lambda.CompileSys());
+            _ = lambda.CompileSys();
 
             var funcFast = lambda.CompileFast(true);
             LocalAssert(funcFast);

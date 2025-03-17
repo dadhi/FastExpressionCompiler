@@ -96,7 +96,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var f = expr.CompileFast<Func<A>>(true);
             Asserts.IsNotNull(f);
             var a = f();
-            Assert.IsInstanceOf<A>(a);
+            Asserts.IsInstanceOf<A>(a);
         }
 
         public readonly object[] _objects = new object[3];

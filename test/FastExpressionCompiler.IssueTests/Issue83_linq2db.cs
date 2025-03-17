@@ -1058,7 +1058,7 @@ namespace FastExpressionCompiler.IssueTests
 
             compiled(obj, 42);
 
-            Assert.That(obj.Class2.Class3.Class4.Field1, Is.EqualTo(42));
+            Asserts.AreEqual(42, obj.Class2.Class3.Class4.Field1);
         }
 
         [Test]
@@ -1109,7 +1109,7 @@ namespace FastExpressionCompiler.IssueTests
 
             compiled(obj, 42);
 
-            Assert.That(obj.Class2.Struct1.Class3.Class4.Field1, Is.EqualTo(42));
+            Asserts.AreEqual(42, obj.Class2.Struct1.Class3.Class4.Field1);
         }
 
         [Test]
@@ -1160,7 +1160,7 @@ namespace FastExpressionCompiler.IssueTests
 
             compiled(obj, 42);
 
-            Assert.That(obj.Class2.Struct1P.Class3P.Class4.Field1, Is.EqualTo(42));
+            Asserts.AreEqual(42, obj.Class2.Struct1P.Class3P.Class4.Field1);
         }
 
         [Test]
@@ -1180,7 +1180,7 @@ namespace FastExpressionCompiler.IssueTests
 
             compiled(obj);
 
-            Assert.That(obj.NullEnum2, Is.EqualTo(Enum2.Value1));
+            Asserts.AreEqual(Enum2.Value1, obj.NullEnum2);
         }
 
         [Test]

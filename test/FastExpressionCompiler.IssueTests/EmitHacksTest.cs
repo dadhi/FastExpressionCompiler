@@ -172,7 +172,7 @@ namespace FastExpressionCompiler.IssueTests
         {
             var f = Get_DynamicMethod_Emit_Newobj();
             var a = f();
-            Assert.IsInstanceOf<A>(a);
+            Asserts.IsInstanceOf<A>(a);
         }
 
         // [Test]
@@ -180,7 +180,7 @@ namespace FastExpressionCompiler.IssueTests
         {
             var f = Get_DynamicMethod_Hack_Emit_Newobj();
             var a = f();
-            Assert.IsInstanceOf<A>(a);
+            Asserts.IsInstanceOf<A>(a);
         }
 
         public static Func<A> Get_DynamicMethod_Emit_Newobj()

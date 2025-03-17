@@ -259,6 +259,15 @@ public static class Asserts
         !actual ? null : throw new AssertionException(
             $"Expected `{actualName}` to be false, but found true");
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static AssertionException IsInstanceOf<T>(object actual,
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(actual))]
+#endif
+        string actualName = "actual") =>
+        actual is T ? null : throw new AssertionException(
+            $"Expected `{actualName}` to be an instance of `{typeof(T).ToCode()}`, but found `{actual?.GetType().ToCode() ?? "null"}`");
+
     public static AssertionException Throws<E>(Action action,
 #if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(action))]
