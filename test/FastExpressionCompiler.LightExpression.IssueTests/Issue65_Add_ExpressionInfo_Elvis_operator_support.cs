@@ -28,7 +28,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             getTheAnswer.PrintCSharp();
 
             var f = getTheAnswer.CompileFast(ifFastFailedReturnNull: true);
-            Assert.IsNull(f(43));
+            Asserts.IsNull(f(43));
             Asserts.AreEqual("42", f(42));
         }
 

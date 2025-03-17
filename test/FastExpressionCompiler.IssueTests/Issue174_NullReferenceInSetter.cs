@@ -35,10 +35,10 @@ namespace FastExpressionCompiler.IssueTests
             var source = new ValueHolder<decimal> { Value = 1 };
 
             var compiled = expr.CompileSys();
-            Assert.IsTrue(compiled(source));
+            Asserts.IsTrue(compiled(source));
 
             var compiledFast = expr.CompileFast(true);
-            Assert.IsTrue(compiledFast(source));
+            Asserts.IsTrue(compiledFast(source));
         }
 
         private class ValueHolder<T>

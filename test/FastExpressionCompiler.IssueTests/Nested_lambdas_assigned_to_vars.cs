@@ -54,8 +54,8 @@ namespace FastExpressionCompiler.IssueTests
                                             new D())))))))));
 
             var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
-            Assert.IsNotNull(f);
-            Assert.IsNotNull(f());
+            Asserts.IsNotNull(f);
+            Asserts.IsNotNull(f());
 
             // var d = f.TryGetDebugInfo();
 
@@ -75,8 +75,8 @@ namespace FastExpressionCompiler.IssueTests
             e.PrintCSharp();
 
             var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
-            Assert.IsNotNull(f);
-            Assert.IsNotNull(f());
+            Asserts.IsNotNull(f);
+            Asserts.IsNotNull(f());
 
             // var d = f.TryGetDebugInfo();
 
@@ -97,7 +97,7 @@ namespace FastExpressionCompiler.IssueTests
             e.PrintCSharp();
 
             var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
 
             var a = f(new Name("d1"), new Name("c1"), new Name("b1"));
             Asserts.AreEqual("d1", a.D1.Name.Value);
@@ -116,10 +116,10 @@ namespace FastExpressionCompiler.IssueTests
             e.PrintCSharp();
 
             var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
 
             var dd = f();
-            Assert.IsNotNull(dd);
+            Asserts.IsNotNull(dd);
             Assert.AreSame(dd.D1, dd.D2);
 
             // var d = f.TryGetDebugInfo();
@@ -134,8 +134,8 @@ namespace FastExpressionCompiler.IssueTests
 
             var f = expr.CompileFast(true);
 
-            Assert.IsNotNull(f);
-            Assert.IsNotNull(f());
+            Asserts.IsNotNull(f);
+            Asserts.IsNotNull(f());
         }
 
         public readonly object[] _objects = new object[3];

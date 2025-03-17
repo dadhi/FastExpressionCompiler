@@ -56,7 +56,7 @@ namespace FastExpressionCompiler.IssueTests
                 awaiterParamExpr);
 
             var result = expr.CompileFast();
-            Assert.IsNotNull(result);
+            Asserts.IsNotNull(result);
 
             var awaiter = FooInt(1, 2).GetAwaiter();
             var sum = (int)result(awaiter);
@@ -67,8 +67,8 @@ namespace FastExpressionCompiler.IssueTests
         public void FastCompiledOK()
         {
             var executor = ObjectMethodExecutorCompiledFast.Create(_t.GetMethod(TestMethodName), _ti);
-            Assert.IsNotNull(executor);
-            Assert.IsTrue(executor.IsMethodAsync);
+            Asserts.IsNotNull(executor);
+            Asserts.IsTrue(executor.IsMethodAsync);
 
             var sumTask = (Task<int>)executor.Execute(this, new object[] { 1, 2 });
             Asserts.AreEqual(3, sumTask.Result);

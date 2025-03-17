@@ -42,7 +42,7 @@ namespace FastExpressionCompiler.UnitTests
             var loopLambda = Lambda<Action>(lambdaBody);
             var loopFunc = loopLambda.CompileFast(true);
 
-            Assert.IsNotNull(loopFunc);
+            Asserts.IsNotNull(loopFunc);
 
             loopFunc.Invoke();
         }
@@ -63,7 +63,7 @@ namespace FastExpressionCompiler.UnitTests
                 );
             var loopFunc = loopLambda.CompileFast(true);
 
-            Assert.IsNotNull(loopFunc);
+            Asserts.IsNotNull(loopFunc);
 
             loopFunc.Invoke();
         }
@@ -86,7 +86,7 @@ namespace FastExpressionCompiler.UnitTests
             var loopLambda = Lambda<Action>(lambdaBody);
             var loopFunc = loopLambda.CompileFast(true);
 
-            Assert.IsNotNull(loopFunc);
+            Asserts.IsNotNull(loopFunc);
 
             loopFunc.Invoke();
         }
@@ -117,7 +117,7 @@ namespace FastExpressionCompiler.UnitTests
             var loopLambda = Lambda<Action>(lambdaBody);
             var loopFunc = loopLambda.CompileFast(true);
 
-            Assert.IsNotNull(loopFunc);
+            Asserts.IsNotNull(loopFunc);
 
             loopFunc.Invoke();
         }
@@ -140,7 +140,7 @@ namespace FastExpressionCompiler.UnitTests
             var loopLambda = Lambda<Action>(lambdaBody);
             var loopFunc = loopLambda.CompileFast(true);
 
-            Assert.IsNotNull(loopFunc);
+            Asserts.IsNotNull(loopFunc);
 
             loopFunc.Invoke();
         }
@@ -164,7 +164,7 @@ namespace FastExpressionCompiler.UnitTests
             var loopLambda = Lambda<Action>(lambdaBody);
             var loopFunc = loopLambda.CompileFast(true);
 
-            Assert.IsNotNull(loopFunc);
+            Asserts.IsNotNull(loopFunc);
 
             loopFunc.Invoke();
         }
@@ -186,7 +186,7 @@ namespace FastExpressionCompiler.UnitTests
             var loopLambda = Lambda<Func<int>>(lambdaBody);
             var loopFunc = loopLambda.CompileFast(true);
 
-            Assert.IsNotNull(loopFunc);
+            Asserts.IsNotNull(loopFunc);
 
             var result = loopFunc.Invoke();
 

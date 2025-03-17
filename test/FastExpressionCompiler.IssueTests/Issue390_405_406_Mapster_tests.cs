@@ -57,7 +57,7 @@ public class Issue390_405_406_Mapster_tests : ITest
             {
                 e.PrintCSharp();
                 var ff = e.CompileFast(true, flags);
-                Assert.IsNotNull(ff);
+                Asserts.IsNotNull(ff);
 
                 var fs = e.CompileSys();
                 fs.PrintIL("sys");
@@ -137,7 +137,7 @@ public class Issue390_405_406_Mapster_tests : ITest
 
         var resultStatus = result.Adapt<AgentStatusDto>();
 
-        Assert.IsNotNull(resultStatus);
+        Asserts.IsNotNull(resultStatus);
     }
 
 

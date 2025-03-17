@@ -27,7 +27,7 @@ namespace FastExpressionCompiler.IssueTests
             var returnTarget = Label("aaa");
 
             var writeLineMethod = typeof(Console).GetTypeInfo().DeclaredMethods.First(x => x.Name == "WriteLine" && x.GetParameters().Length == 1 && x.GetParameters()[0].ParameterType == typeof(string));
-            Assert.IsNotNull(writeLineMethod);
+            Asserts.IsNotNull(writeLineMethod);
 
             var blockExpr =
                 Block(

@@ -25,7 +25,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             StringAssert.Contains("new Expression[17];", s);
 
             var f = e.CompileFast(true);
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
         }
 
         private Expression<Func<A>> CreateExpression()
@@ -94,7 +94,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                   typeof(FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest.B)),
                 e[7]), new ParameterExpression[0]);
             var f = expr.CompileFast<Func<A>>(true);
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
             var a = f();
             Assert.IsInstanceOf<A>(a);
         }

@@ -403,7 +403,7 @@ namespace FastExpressionCompiler.IssueTests
             var func = expr.CompileFast(true);
             var result = func(source);
 
-            Assert.IsNull(result.Value);
+            Asserts.IsNull(result.Value);
         }
 
         [Test]
@@ -558,7 +558,7 @@ namespace FastExpressionCompiler.IssueTests
             var doubleValueOrDefaultFunc = doubleValueOrDefaultLambda.CompileFast(true);
             var result = doubleValueOrDefaultFunc.Invoke(source);
 
-            Assert.IsNull(result.Value);
+            Asserts.IsNull(result.Value);
         }
 
         [Test]

@@ -116,16 +116,16 @@ namespace FastExpressionCompiler.IssueTests
         public void Test_get_parameters()
         {
             var c = typeof(A).GetConstructors()[0];
-            Assert.IsFalse(c.GetParameters() == c.GetParameters());
-            Assert.IsTrue(c.GetParameters()[0] == c.GetParameters()[0]);
+            Asserts.IsFalse(c.GetParameters() == c.GetParameters());
+            Asserts.IsTrue(c.GetParameters()[0] == c.GetParameters()[0]);
         }
 
         public class A
         {
-            public A(B b, C c) {}
+            public A(B b, C c) { }
         }
 
-        public class B {}
-        public class C {}
+        public class B { }
+        public class C { }
     }
 }

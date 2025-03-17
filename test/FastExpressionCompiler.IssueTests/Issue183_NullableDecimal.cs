@@ -33,7 +33,7 @@ namespace FastExpressionCompiler.IssueTests
             var f = Lambda<Func<decimal, decimal?>>(Convert(param, typeof(decimal?)), param).CompileFast(true);
             var x = f(42);
 
-            Assert.IsNotNull(x);
+            Asserts.IsNotNull(x);
             Asserts.AreEqual(42, x.Value);
         }
 
@@ -67,7 +67,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var x = f(new DecimalContainer { Decimal = 42 });
 
-            Assert.IsNotNull(x);
+            Asserts.IsNotNull(x);
             Asserts.AreEqual(42, x.Value);
         }
 
@@ -83,7 +83,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var x = f(new DecimalContainer { NullableByte = 42 });
 
-            Assert.IsNotNull(x);
+            Asserts.IsNotNull(x);
             Asserts.AreEqual(42, x.Value);
         }
 
@@ -99,7 +99,7 @@ namespace FastExpressionCompiler.IssueTests
             var f = Lambda<Func<DecimalContainer, bool>>(body, param).CompileFast(true);
 
             var x = f(new DecimalContainer { Decimal = 1 });
-            Assert.IsFalse(x); // cause byte? to decimal? would be `null`
+            Asserts.IsFalse(x); // cause byte? to decimal? would be `null`
         }
     }
 

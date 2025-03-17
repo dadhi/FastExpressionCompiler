@@ -703,12 +703,12 @@ namespace FastExpressionCompiler.IssueTests
             var exampleB = default(IntPtr);
             var exampleB2 = default(object);
             compiledB(ref exampleB, ref exampleB2);
-            Assert.IsNotNull(exampleB2);
+            Asserts.IsNotNull(exampleB2);
 
             var exampleC = default(IntPtr);
             var exampleC2 = default(object);
             Set2RefsWithPtrAndNewObject(ref exampleC, ref exampleC2);
-            Assert.IsNotNull(exampleC2);
+            Asserts.IsNotNull(exampleC2);
         }
 
         [Test]
@@ -905,7 +905,7 @@ namespace FastExpressionCompiler.IssueTests
             {
                 var obj = default(object);
                 invoke(ref obj);
-                Assert.AreNotEqual(default(object), obj);
+                Asserts.AreNotEqual(default(object), obj);
             }
 
             LocalAssert(DynamicDeserializer);

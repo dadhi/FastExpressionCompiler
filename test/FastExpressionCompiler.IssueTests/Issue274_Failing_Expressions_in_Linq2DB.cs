@@ -56,12 +56,12 @@ public class Issue274_Failing_Expressions_in_Linq2DB : ITest
     var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
 
     var de = f.Target as IDelegateDebugInfo;
-    Assert.IsNotNull(de.Expression);
+    Asserts.IsNotNull(de.Expression);
 
-    Assert.IsNotNull(de.ExpressionString);
+    Asserts.IsNotNull(de.ExpressionString);
     StringAssert.DoesNotContain("<>", de.ExpressionString);
 
-    Assert.IsNotNull(de.CSharpString);
+    Asserts.IsNotNull(de.CSharpString);
     StringAssert.DoesNotContain("<>", de.CSharpString);
   }
 
@@ -470,11 +470,11 @@ public class Issue274_Failing_Expressions_in_Linq2DB : ITest
 
     var fs = expr.CompileSys();
     fs.PrintIL();
-    Assert.IsNull(fs());
+    Asserts.IsNull(fs());
 
     var f = expr.CompileFast(true);
     f.PrintIL();
-    Assert.IsNull(f());
+    Asserts.IsNull(f());
   }
 
   public static void SimpleStringHandler(string s) { }

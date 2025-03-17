@@ -36,7 +36,7 @@ public class Issue418_Wrong_output_when_comparing_NaN_value : ITest
         var @cs = (Func<double, bool>)((double double__58225482) => //bool
             double__58225482 >= 0);
 
-        Assert.IsFalse(@cs(double.NaN));
+        Asserts.IsFalse(@cs(double.NaN));
 
         var fs = expr.CompileSys();
         fs.PrintIL();
@@ -53,8 +53,8 @@ public class Issue418_Wrong_output_when_comparing_NaN_value : ITest
             OpCodes.Ret
         );
 
-        Assert.IsFalse(fs(double.NaN));
-        Assert.IsFalse(ff(double.NaN));
+        Asserts.IsFalse(fs(double.NaN));
+        Asserts.IsFalse(ff(double.NaN));
     }
 
     [Test]
@@ -80,8 +80,8 @@ public class Issue418_Wrong_output_when_comparing_NaN_value : ITest
             OpCodes.Ret
         );
 
-        Assert.IsFalse(fs(int.MinValue));
-        Assert.IsFalse(ff(int.MinValue));
+        Asserts.IsFalse(fs(int.MinValue));
+        Asserts.IsFalse(ff(int.MinValue));
     }
 
     [Test]
@@ -107,8 +107,8 @@ public class Issue418_Wrong_output_when_comparing_NaN_value : ITest
             OpCodes.Ret
         );
 
-        Assert.IsTrue(fs(uint.MinValue));
-        Assert.IsTrue(ff(uint.MinValue));
+        Asserts.IsTrue(fs(uint.MinValue));
+        Asserts.IsTrue(ff(uint.MinValue));
     }
 
     [Test]
@@ -122,7 +122,7 @@ public class Issue418_Wrong_output_when_comparing_NaN_value : ITest
         var @cs = (Func<double, bool>)((double double__58225482) => //bool
             double__58225482 < 0);
 
-        Assert.IsFalse(@cs(double.NaN));
+        Asserts.IsFalse(@cs(double.NaN));
 
         var fs = expr.CompileSys();
         fs.PrintIL();
@@ -137,8 +137,8 @@ public class Issue418_Wrong_output_when_comparing_NaN_value : ITest
             OpCodes.Ret
         );
 
-        Assert.IsFalse(fs(double.NaN));
-        Assert.IsFalse(ff(double.NaN));
+        Asserts.IsFalse(fs(double.NaN));
+        Asserts.IsFalse(ff(double.NaN));
     }
 
     [Test]
@@ -152,7 +152,7 @@ public class Issue418_Wrong_output_when_comparing_NaN_value : ITest
         var @cs = (Func<double, bool>)((double double__58225482) => //bool
             double__58225482 >= 1.0);
 
-        Assert.IsFalse(@cs(double.NaN));
+        Asserts.IsFalse(@cs(double.NaN));
 
         var fs = expr.CompileSys();
         fs.PrintIL();
@@ -169,8 +169,8 @@ public class Issue418_Wrong_output_when_comparing_NaN_value : ITest
             OpCodes.Ret
         );
 
-        Assert.IsFalse(fs(double.NaN));
-        Assert.IsFalse(ff(double.NaN));
+        Asserts.IsFalse(fs(double.NaN));
+        Asserts.IsFalse(ff(double.NaN));
     }
 
     [Test]
@@ -184,7 +184,7 @@ public class Issue418_Wrong_output_when_comparing_NaN_value : ITest
         var @cs = (Func<double, bool>)((double double__58225482) => //bool
             double__58225482 >= -1.0);
 
-        Assert.IsFalse(@cs(double.NaN));
+        Asserts.IsFalse(@cs(double.NaN));
 
         var fs = expr.CompileSys();
         fs.PrintIL();
@@ -201,8 +201,8 @@ public class Issue418_Wrong_output_when_comparing_NaN_value : ITest
             OpCodes.Ret
         );
 
-        Assert.IsFalse(fs(double.NaN));
-        Assert.IsFalse(ff(double.NaN));
+        Asserts.IsFalse(fs(double.NaN));
+        Asserts.IsFalse(ff(double.NaN));
     }
 
     [Test]
@@ -216,7 +216,7 @@ public class Issue418_Wrong_output_when_comparing_NaN_value : ITest
         var @cs = (Func<double, bool>)((double double__58225482) => //bool
             double__58225482 <= 0);
 
-        Assert.IsFalse(@cs(double.NaN));
+        Asserts.IsFalse(@cs(double.NaN));
 
         var fs = expr.CompileSys();
         fs.PrintIL();
@@ -233,7 +233,7 @@ public class Issue418_Wrong_output_when_comparing_NaN_value : ITest
             OpCodes.Ret
         );
 
-        Assert.IsFalse(fs(double.NaN));
-        Assert.IsFalse(ff(double.NaN));
+        Asserts.IsFalse(fs(double.NaN));
+        Asserts.IsFalse(ff(double.NaN));
     }
 }

@@ -36,7 +36,7 @@ namespace FastExpressionCompiler.UnitTests
         {
             var x = 65535;
             var y = 65535;
-            Assert.IsTrue(ExpressionCompiler.CompileFast(() => x == (long)y, true)());
+            Asserts.IsTrue(ExpressionCompiler.CompileFast(() => x == (long)y, true)());
         }
 
         [Test]
@@ -44,75 +44,75 @@ namespace FastExpressionCompiler.UnitTests
         {
             var y = 65536;
             var yn1 = y + 1;
-            Assert.IsTrue(ExpressionCompiler.CompileFast(() => yn1 != (long)y, true)());
+            Asserts.IsTrue(ExpressionCompiler.CompileFast(() => yn1 != (long)y, true)());
         }
 
         [Test]
         public void Expressions_with_long_constants_and_casts()
         {
-            Assert.IsFalse(ExpressionCompiler.CompileFast(() => 0L == (long)"x".Length, true)());
+            Asserts.IsFalse(ExpressionCompiler.CompileFast(() => 0L == (long)"x".Length, true)());
         }
 
         [Test]
         public void Expressions_with_ulong_constants_and_casts()
         {
-            Assert.IsFalse(ExpressionCompiler.CompileFast(() => 0UL == (ulong)"x".Length, true)());
+            Asserts.IsFalse(ExpressionCompiler.CompileFast(() => 0UL == (ulong)"x".Length, true)());
         }
 
         [Test]
         public void Expressions_with_DateTime()
         {
-            Assert.IsFalse(ExpressionCompiler.CompileFast(() => 0 == DateTime.Now.Day, true)());
+            Asserts.IsFalse(ExpressionCompiler.CompileFast(() => 0 == DateTime.Now.Day, true)());
         }
 
         [Test]
         public void Expressions_with_DateTime_and_long_constant()
         {
-            Assert.IsFalse(ExpressionCompiler.CompileFast(() => 0L == (long)DateTime.Now.Day, true)());
+            Asserts.IsFalse(ExpressionCompiler.CompileFast(() => 0L == (long)DateTime.Now.Day, true)());
         }
 
         [Test]
         public void Expressions_with_DateTime_and_ulong_constant()
         {
-            Assert.IsFalse(ExpressionCompiler.CompileFast(() => 0UL == (ulong)DateTime.Now.Day, true)());
+            Asserts.IsFalse(ExpressionCompiler.CompileFast(() => 0UL == (ulong)DateTime.Now.Day, true)());
         }
 
         [Test]
         public void Expressions_with_DateTime_and_uint_constant()
         {
-            Assert.IsFalse(ExpressionCompiler.CompileFast(() => 0u == (uint)DateTime.Now.Day, true)());
+            Asserts.IsFalse(ExpressionCompiler.CompileFast(() => 0u == (uint)DateTime.Now.Day, true)());
         }
 
         [Test]
         public void Expressions_with_max_uint_constant()
         {
             const uint maxuint = UInt32.MaxValue;
-            Assert.IsFalse(maxuint == -1);
-            Assert.IsFalse(ExpressionCompiler.CompileFast(() => maxuint == -1, true)());
+            Asserts.IsFalse(maxuint == -1);
+            Asserts.IsFalse(ExpressionCompiler.CompileFast(() => maxuint == -1, true)());
         }
 
         [Test]
         public void Expressions_with_DateTime_and_double_constant()
         {
-            Assert.IsFalse(ExpressionCompiler.CompileFast(() => (double)DateTime.Now.Day == 0d, true)());
+            Asserts.IsFalse(ExpressionCompiler.CompileFast(() => (double)DateTime.Now.Day == 0d, true)());
         }
 
         [Test]
         public void Expressions_with_DateTime_and_float_constant()
         {
-            Assert.IsFalse(ExpressionCompiler.CompileFast(() => 0f == (float)DateTime.Now.Day, true)());
+            Asserts.IsFalse(ExpressionCompiler.CompileFast(() => 0f == (float)DateTime.Now.Day, true)());
         }
 
         [Test]
         public void Expressions_with_char_and_int()
         {
-            Assert.IsTrue(ExpressionCompiler.CompileFast(() => 'z' != 0, true)());
+            Asserts.IsTrue(ExpressionCompiler.CompileFast(() => 'z' != 0, true)());
         }
 
         [Test]
         public void Expressions_with_char_and_short()
         {
-            Assert.IsTrue(ExpressionCompiler.CompileFast(() => 'z' != (ushort)0, true)());
+            Asserts.IsTrue(ExpressionCompiler.CompileFast(() => 'z' != (ushort)0, true)());
         }
 
         [Test(Description = "Issue #7 InvalidCastException for enum constant of unsigned type")]

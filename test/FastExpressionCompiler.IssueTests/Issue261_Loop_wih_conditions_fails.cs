@@ -416,7 +416,7 @@ public class Issue261_Loop_wih_conditions_fails : ITest
       p[5] = Parameter(typeof(Binary<BufferedStream, Settings_827720117>), "io"));
 
     var f = expr.CompileFast(true);
-    Assert.IsNotNull(f);
+    Asserts.IsNotNull(f);
   }
 
   [Test]
@@ -449,7 +449,7 @@ public class Issue261_Loop_wih_conditions_fails : ITest
       p[2] = Parameter(typeof(Binary<BufferedStream, Settings_827720117>), "io"));
 
     var f = expr.CompileFast(true);
-    Assert.IsNotNull(f);
+    Asserts.IsNotNull(f);
   }
 
   [Test]
@@ -489,7 +489,7 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
       p[2] = Parameter(typeof(Binary<BufferedStream, Settings_827720117>), "io"));
 
     var f = expr.CompileFast(true);
-    Assert.IsNotNull(f);
+    Asserts.IsNotNull(f);
   }
 
   [Test]
@@ -546,7 +546,7 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
         ]);
 
     var f = expr.CompileFast(true);
-    Assert.IsNotNull(f);
+    Asserts.IsNotNull(f);
   }
 
   [StructLayout(LayoutKind.Explicit)]
@@ -1305,12 +1305,12 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
     var stream = new BufferedStream();
     var binary = new Binary<BufferedStream, Settings_827720117>();
     var x = fs(ref stream, binary);
-    Assert.IsNotNull(x);
+    Asserts.IsNotNull(x);
 
     var f = (ReadMethods<ConstructorTests.Test[], BufferedStream, Settings_827720117>.ReadSealed)expr.CompileFast();
     f.PrintIL();
     var y = f(ref stream, binary);
-    Assert.IsNotNull(y);
+    Asserts.IsNotNull(y);
   }
 
   ReadMethods<ConstructorTests.Test[], BufferedStream, Settings_827720117>.ReadSealed F = (
@@ -1654,11 +1654,11 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
 
     var f = e.CompileFast(true);
     f.PrintIL("FEC IL:");
-    Assert.IsTrue(f());
+    Asserts.IsTrue(f());
 
     var fs = e.CompileSys();
     fs.PrintIL("System IL:");
-    Assert.IsTrue(fs());
+    Asserts.IsTrue(fs());
   }
 
   [Test]
@@ -1669,7 +1669,7 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
         .Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(typeof(int)) : x)
         .Single(x => x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int) }));
 
-    Assert.IsNotNull(m);
+    Asserts.IsNotNull(m);
 
     var s = new StringBuilder().AppendMethod(m, true, null).ToString();
     Asserts.AreEqual("typeof(Issue261_Loop_wih_conditions_fails.BufferedStream).GetMethods().Where(x => x.IsGenericMethod && x.Name == \"Write\" && x.GetGenericArguments().Length == 1).Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(typeof(int)) : x).Single(x => x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int) }))", s);

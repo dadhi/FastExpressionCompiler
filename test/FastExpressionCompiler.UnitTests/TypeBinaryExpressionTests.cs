@@ -30,11 +30,11 @@ namespace FastExpressionCompiler.UnitTests
                 sExpr);
 
             var f = expr.CompileSys(); // TODO: CompileFast, but it does not work ATM
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
             bool result = f(new A());
-            Assert.IsTrue(result, expr.ToString());
+            Asserts.IsTrue(result, expr.ToString());
             bool result2 = f(new B());
-            Assert.IsFalse(result2, expr.GetType().FullName);
+            Asserts.IsFalse(result2, expr.GetType().FullName);
         }
 
         class A { }
@@ -51,7 +51,7 @@ namespace FastExpressionCompiler.UnitTests
             var f = expr.CompileFast(true);
             bool result = f("123");
 
-            Assert.IsTrue(result);
+            Asserts.IsTrue(result);
         }
 
         [Test]

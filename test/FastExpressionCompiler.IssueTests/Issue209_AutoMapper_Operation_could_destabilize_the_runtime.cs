@@ -49,7 +49,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var dest = compiled(src);
 
-            Assert.IsNotNull(dest);
+            Asserts.IsNotNull(dest);
             Asserts.AreEqual(Status.InProgress, dest.Status);
         }
 

@@ -130,7 +130,7 @@ namespace FastExpressionCompiler.IssueTests
                 fSys(null, "a"));
 
             var fFec = lambda.CompileFast();
-            Assert.IsNotNull(fFec);
+            Asserts.IsNotNull(fFec);
             fFec.PrintIL();
             Assert.Throws(typeof(NullReferenceException), () =>
                 fFec(null, "a"));

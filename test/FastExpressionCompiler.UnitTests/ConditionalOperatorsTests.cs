@@ -41,8 +41,8 @@ namespace FastExpressionCompiler.UnitTests
 
             var dlg = expr.TryCompile<Func<bool>>();
 
-            Assert.IsNotNull(dlg);
-            Assert.IsFalse(dlg());
+            Asserts.IsNotNull(dlg);
+            Asserts.IsFalse(dlg());
         }
 
         [Test]
@@ -55,7 +55,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var dele = expr.TryCompile<Func<bool>>();
 
-            Assert.IsNotNull(dele);
+            Asserts.IsNotNull(dele);
         }
 
         [Test]
@@ -68,7 +68,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var dele = expr.TryCompile<Func<bool>>();
 
-            Assert.IsNotNull(dele);
+            Asserts.IsNotNull(dele);
         }
 
         [Test]
@@ -84,8 +84,8 @@ namespace FastExpressionCompiler.UnitTests
 
             var dlg = expr.TryCompile<Func<bool>>();
 
-            Assert.IsNotNull(dlg);
-            Assert.IsTrue(dlg());
+            Asserts.IsNotNull(dlg);
+            Asserts.IsTrue(dlg());
         }
 
         [Test]
@@ -98,7 +98,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var dlg = expr.TryCompile<Func<object>>();
 
-            Assert.IsNotNull(dlg);
+            Asserts.IsNotNull(dlg);
             Asserts.AreEqual(s, dlg());
         }
 
@@ -112,7 +112,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var dlg = expr.TryCompile<Func<object>>();
 
-            Assert.IsNotNull(dlg);
+            Asserts.IsNotNull(dlg);
             Asserts.AreEqual(string.Empty, dlg());
         }
 
@@ -126,7 +126,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var dlg = expr.TryCompile<Func<object>>();
 
-            Assert.IsNotNull(dlg);
+            Asserts.IsNotNull(dlg);
             Asserts.AreEqual(string.Empty, dlg());
         }
 
@@ -140,7 +140,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var dlg = expr.TryCompile<Func<object>>();
 
-            Assert.IsNotNull(dlg);
+            Asserts.IsNotNull(dlg);
             Asserts.AreEqual(string.Concat(s, "ccc"), dlg());
         }
 
@@ -159,7 +159,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var dlg = expr.TryCompile<Func<object>>();
 
-            Assert.IsNotNull(dlg);
+            Asserts.IsNotNull(dlg);
             Asserts.AreEqual(string.Concat(s, "ccc"), dlg());
         }
 
@@ -184,7 +184,7 @@ namespace FastExpressionCompiler.UnitTests
             // The following statement first creates an expression tree,
             // then compiles it, and then runs it.
             var f = Lambda<Action>(ifThenElseExpr).CompileFast(true);
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
 
             f();
         }
@@ -207,7 +207,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var dlgt = Lambda<Func<bool, int>>(block, param).TryCompile<Func<bool, int>>();
 
-            Assert.IsNotNull(dlgt);
+            Asserts.IsNotNull(dlgt);
             Asserts.AreEqual(5, dlgt(true));
             Asserts.AreEqual(default(int), dlgt(false));
         }
@@ -228,7 +228,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var dlgt = Lambda<Func<bool, int>>(block, param).TryCompile<Func<bool, int>>();
 
-            Assert.IsNotNull(dlgt);
+            Asserts.IsNotNull(dlgt);
             Asserts.AreEqual(5, dlgt(true));
             Asserts.AreEqual(6, dlgt(false));
         }

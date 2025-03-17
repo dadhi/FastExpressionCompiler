@@ -54,7 +54,7 @@ public class Issue420_Nullable_DateTime_comparison_differs_from_Expression_Compi
         ff.PrintIL();
 
         var hasDT = new HasDateTime(time);
-        Assert.IsTrue(fs(hasDT));
-        Assert.IsTrue(ff(hasDT));
+        Asserts.IsTrue(fs(hasDT));
+        Asserts.IsTrue(ff(hasDT));
     }
 }

@@ -384,7 +384,7 @@ namespace FastExpressionCompiler.UnitTests
                     Invoke(add, Constant(13))));
 
             var f = e.CompileFast(true);
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
             Asserts.AreEqual(50, f());
         }
 

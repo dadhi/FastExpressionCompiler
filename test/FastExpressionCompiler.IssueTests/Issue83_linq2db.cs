@@ -374,7 +374,7 @@ namespace FastExpressionCompiler.IssueTests
             var fs = expr.CompileSys();
             fs.PrintIL();
             var res = fs(new QueryRunner(), new SQLiteDataReader(false));
-            Assert.IsNotNull(res);
+            Asserts.IsNotNull(res);
             Asserts.AreEqual(TypeCodeEnum.A2, res.TypeCode);
             Asserts.AreEqual(new Guid("ef129165-6ffe-4df9-bb6b-bb16e413c883"), res.GuidValue);
 
@@ -382,7 +382,7 @@ namespace FastExpressionCompiler.IssueTests
             ff.PrintIL();
 
             res = ff(new QueryRunner(), new SQLiteDataReader(false));
-            Assert.IsNotNull(res);
+            Asserts.IsNotNull(res);
             Asserts.AreEqual(TypeCodeEnum.A2, res.TypeCode);
             Asserts.AreEqual(new Guid("ef129165-6ffe-4df9-bb6b-bb16e413c883"), res.GuidValue);
         }

@@ -34,7 +34,7 @@ namespace FastExpressionCompiler.IssueTests
             expr.PrintCSharp();
 
             var serialize = expr.CompileFast(true);
-            Assert.IsNotNull(serialize);
+            Asserts.IsNotNull(serialize);
             serialize.PrintIL();
 
             serialize.AssertOpCodes(
@@ -75,7 +75,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ret);
 
             var serialize = expr.CompileFast(true);
-            Assert.IsNotNull(serialize);
+            Asserts.IsNotNull(serialize);
             serialize.PrintIL();
 
             serialize.AssertOpCodes(
@@ -114,7 +114,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ret);
 
             var serialize = expr.CompileFast(true);
-            Assert.IsNotNull(serialize);
+            Asserts.IsNotNull(serialize);
             serialize.PrintIL();
 
             serialize.AssertOpCodes(
@@ -158,7 +158,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ret);
 
             var serialize = expr.CompileFast(true);
-            Assert.IsNotNull(serialize);
+            Asserts.IsNotNull(serialize);
             serialize.PrintIL();
 
             serialize.AssertOpCodes(

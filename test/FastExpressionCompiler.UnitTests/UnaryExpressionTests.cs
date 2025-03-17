@@ -142,7 +142,7 @@ namespace FastExpressionCompiler.UnitTests
 
             bool result = expression.CompileFast(true)(false);
 
-            Assert.IsTrue(result);
+            Asserts.IsTrue(result);
         }
 
         [Test]
@@ -155,7 +155,7 @@ namespace FastExpressionCompiler.UnitTests
 
             bool result = expression.CompileFast(true)(true);
 
-            Assert.IsTrue(result);
+            Asserts.IsTrue(result);
         }
 
         [Test]

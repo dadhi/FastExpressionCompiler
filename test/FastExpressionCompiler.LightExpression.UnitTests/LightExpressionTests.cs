@@ -37,7 +37,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                         New(typeof(Y).GetTypeInfo().GetConstructors()[0])));
 
             var func = funcExpr.CompileFast<Func<X>>(true);
-            Assert.IsNotNull(func);
+            Asserts.IsNotNull(func);
 
             var x = func();
             Assert.IsInstanceOf<X>(x);
@@ -60,7 +60,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var funcExpr = Lambda(Property(thisType.GetProperty(nameof(PropX))));
 
             var func = funcExpr.CompileFast<Func<X>>(true);
-            Assert.IsNotNull(func);
+            Asserts.IsNotNull(func);
 
             var x = func();
             Assert.IsInstanceOf<X>(x);
@@ -75,7 +75,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                     Property(thisType.GetProperty(nameof(PropX)))));
 
             var func = funcExpr.CompileFast<Func<X>>(true);
-            Assert.IsNotNull(func);
+            Asserts.IsNotNull(func);
 
             var x = func();
             Assert.IsInstanceOf<X>(x);

@@ -54,7 +54,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var func = expr.CompileFast(true);
 
-            Assert.IsNotNull(func);
+            Asserts.IsNotNull(func);
             Assert.Throws<InvalidTimeZoneException>(() => func());
         }
 
@@ -73,7 +73,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var func = expr.CompileFast(true);
 
-            Assert.IsNotNull(func);
+            Asserts.IsNotNull(func);
             Assert.Throws<InvalidDataSourceException>(() => func());
         }
 
@@ -149,7 +149,7 @@ namespace FastExpressionCompiler.UnitTests
             ));
 
             var func = expr.CompileFast(true);
-            Assert.IsNotNull(func);
+            Asserts.IsNotNull(func);
             Assert.DoesNotThrow(() => func());
         }
 
@@ -170,11 +170,11 @@ namespace FastExpressionCompiler.UnitTests
 
             var fs = expr.CompileSys();
             fs.PrintIL("sys");
-            Assert.IsTrue(fs());
+            Asserts.IsTrue(fs());
 
             var f = expr.CompileFast(true);
             f.PrintIL("fec");
-            Assert.IsTrue(f());
+            Asserts.IsTrue(f());
         }
 
         [Test]
@@ -199,11 +199,11 @@ namespace FastExpressionCompiler.UnitTests
 
             var fs = expr.CompileSys();
             fs.PrintIL("sys");
-            Assert.IsTrue(fs());
+            Asserts.IsTrue(fs());
 
             var f = expr.CompileFast();
             f.PrintIL("fec");
-            Assert.IsTrue(f());
+            Asserts.IsTrue(f());
         }
 
         [Test]
@@ -213,7 +213,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var func = expr.CompileFast(true);
 
-            Assert.IsNotNull(func);
+            Asserts.IsNotNull(func);
             Assert.Throws<DivideByZeroException>(() => func());
         }
 
@@ -330,7 +330,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual("From Catch block", func());
 
             var funcWithoutClosure = expr.TryCompileWithoutClosure<Func<string>>();// ?? expr.CompileSys();
-            Assert.IsNull(funcWithoutClosure);
+            Asserts.IsNull(funcWithoutClosure);
         }
 
         [Test]
@@ -400,7 +400,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var func = expr.CompileFast(true);
 
-            Assert.IsNotNull(func);
+            Asserts.IsNotNull(func);
             Asserts.AreEqual("From inner Catch block", func());
         }
 

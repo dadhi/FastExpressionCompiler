@@ -443,7 +443,7 @@ namespace FastExpressionCompiler.IssueTests
             fs.PrintIL("system compiled il");
 
             var f = expr.CompileFast(true);
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
             f.PrintIL();
 
             Asserts.AreEqual("true", f(0));
@@ -468,7 +468,7 @@ namespace FastExpressionCompiler.IssueTests
                 boolParam);
 
             var f = expr.CompileFast(true);
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
             f.PrintIL();
 
             Asserts.AreEqual("true", f(true));
@@ -493,7 +493,7 @@ namespace FastExpressionCompiler.IssueTests
                 boolParam);
 
             var f = expr.CompileFast(true);
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
             f.PrintIL();
 
             Asserts.AreEqual("true", f(true));
@@ -518,7 +518,7 @@ namespace FastExpressionCompiler.IssueTests
                 boolParam);
 
             var f = expr.CompileFast(true);
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
             f.PrintIL();
 
             Asserts.AreEqual("true", f(true));

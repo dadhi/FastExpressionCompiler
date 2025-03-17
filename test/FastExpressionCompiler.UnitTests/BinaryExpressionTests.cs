@@ -142,7 +142,7 @@ namespace FastExpressionCompiler.UnitTests
 
             bool result = expression.CompileFast(true)(true);
 
-            Assert.IsFalse(result);
+            Asserts.IsFalse(result);
         }
 
         [Test]
@@ -233,7 +233,7 @@ namespace FastExpressionCompiler.UnitTests
 
             bool result = expression.CompileFast(true)(1);
 
-            Assert.IsTrue(result);
+            Asserts.IsTrue(result);
         }
 
         [Test]
@@ -272,7 +272,7 @@ namespace FastExpressionCompiler.UnitTests
 
             bool result = expression.CompileFast(true)(3);
 
-            Assert.IsTrue(result);
+            Asserts.IsTrue(result);
         }
 
         [Test]
@@ -289,7 +289,7 @@ namespace FastExpressionCompiler.UnitTests
             var fx = expression.CompileFast(true);
             fx.PrintIL();
 
-            Assert.IsTrue(fx(2));
+            Asserts.IsTrue(fx(2));
         }
 
         [Test]
@@ -328,7 +328,7 @@ namespace FastExpressionCompiler.UnitTests
 
             bool result = expression.CompileFast(true)(1);
 
-            Assert.IsTrue(result);
+            Asserts.IsTrue(result);
         }
 
         [Test]
@@ -341,7 +341,7 @@ namespace FastExpressionCompiler.UnitTests
 
             bool result = expression.CompileFast(true)(2);
 
-            Assert.IsTrue(result);
+            Asserts.IsTrue(result);
         }
 
         [Test]
@@ -550,7 +550,7 @@ namespace FastExpressionCompiler.UnitTests
 
             bool result = expression.CompileFast(true)(1);
 
-            Assert.IsFalse(result);
+            Asserts.IsFalse(result);
         }
 
         [Test]
@@ -589,7 +589,7 @@ namespace FastExpressionCompiler.UnitTests
 
             bool result = expression.CompileFast(true)(false);
 
-            Assert.IsTrue(result);
+            Asserts.IsTrue(result);
         }
 
         [Test]
@@ -629,7 +629,7 @@ namespace FastExpressionCompiler.UnitTests
 
             bool result = expression.CompileFast(true)(Value);
 
-            Assert.IsTrue(result);
+            Asserts.IsTrue(result);
         }
 
         [Test]
@@ -664,7 +664,7 @@ namespace FastExpressionCompiler.UnitTests
             var fx = expression.CompileFast(true);
             fx.PrintIL();
 
-            Assert.IsFalse(fx(Value));
+            Asserts.IsFalse(fx(Value));
         }
 
         [Test]

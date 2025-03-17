@@ -227,7 +227,7 @@ public class Issue196_AutoMapper_tests_are_failing_when_using_FEC : ITest
                 resultVar));
 
         //var fs = expression.CompileSys();
-        //Assert.IsNotNull(fs);
+        //Asserts.IsNotNull(fs);
         //Asserts.AreEqual(77, fs());
 
         var ff = expression.CompileFast(true);
@@ -254,7 +254,7 @@ public class Issue196_AutoMapper_tests_are_failing_when_using_FEC : ITest
                 resultVar));
 
         //var fs = expression.CompileSys();
-        //Assert.IsNotNull(fs);
+        //Asserts.IsNotNull(fs);
         //Asserts.AreEqual(77, fs());
 
         var ff = expression.CompileFast(true);
@@ -362,7 +362,7 @@ public class Issue196_AutoMapper_tests_are_failing_when_using_FEC : ITest
         Asserts.AreEqual(42, ds.Value);
 
         var ff = expression.CompileFast(true);
-        Assert.IsNotNull(ff);
+        Asserts.IsNotNull(ff);
 
         var df = ff(new Source { Value = 42 }, null, new ResolutionContext());
         Asserts.AreEqual(42, df.Value);
@@ -416,7 +416,7 @@ public class Issue196_AutoMapper_tests_are_failing_when_using_FEC : ITest
         Asserts.AreEqual(42, ds.Value);
 
         var ff = expression.CompileFast(true);
-        Assert.IsNotNull(ff);
+        Asserts.IsNotNull(ff);
 
         var df = ff(new Source { Value = 42 }, null, new ResolutionContext());
         Asserts.AreEqual(42, df.Value);

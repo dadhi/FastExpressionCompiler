@@ -36,10 +36,10 @@ public class Issue380_Comparisons_with_nullable_types : ITest
         var p = new ParameterExpression[1]; // the parameter expressions
         var e = new Expression[5]; // the unique expressions
         var expr = Lambda<Func<DecimalTest, bool>>(
-        e[0]=MakeBinary(ExpressionType.GreaterThan,
-            e[3]=Constant(20m, typeof(decimal?)),
-            e[4]=Property(
-                p[0]=Parameter(typeof(DecimalTest), "t"),
+        e[0] = MakeBinary(ExpressionType.GreaterThan,
+            e[3] = Constant(20m, typeof(decimal?)),
+            e[4] = Property(
+                p[0] = Parameter(typeof(DecimalTest), "t"),
                 typeof(DecimalTest).GetTypeInfo().GetDeclaredProperty("D1")),
             liftToNull: false,
             typeof(Decimal).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "op_GreaterThan" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(Decimal), typeof(Decimal) }))),
@@ -57,16 +57,16 @@ public class Issue380_Comparisons_with_nullable_types : ITest
 
         var d = new DecimalTest { D1 = null };
         var r = fs(d);
-        Assert.IsFalse(r);
+        Asserts.IsFalse(r);
 
         var ff = expr.CompileFast(true);
         ff.PrintIL();
 
         r = ff(d);
-        Assert.IsFalse(r);
+        Asserts.IsFalse(r);
 
         r = ff(new DecimalTest { D1 = 19m });
-        Assert.IsTrue(r);
+        Asserts.IsTrue(r);
     }
 
     [Test]
@@ -76,15 +76,15 @@ public class Issue380_Comparisons_with_nullable_types : ITest
         var p = new ParameterExpression[1]; // the parameter expressions
         var e = new Expression[5]; // the unique expressions
         var expr = Lambda<Func<DecimalTest, bool>>(
-        e[0]=MakeBinary(ExpressionType.GreaterThan,
-            e[1]=Convert(
-                e[2]=Convert(
-                    e[3]=Constant(20),
+        e[0] = MakeBinary(ExpressionType.GreaterThan,
+            e[1] = Convert(
+                e[2] = Convert(
+                    e[3] = Constant(20),
                     typeof(Decimal),
                     typeof(Decimal).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "op_Implicit" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int) }))),
                 typeof(Decimal?)),
-            e[4]=Property(
-                p[0]=Parameter(typeof(DecimalTest), "t"),
+            e[4] = Property(
+                p[0] = Parameter(typeof(DecimalTest), "t"),
                 typeof(DecimalTest).GetTypeInfo().GetDeclaredProperty("D1")),
             liftToNull: false,
             typeof(Decimal).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "op_GreaterThan" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(Decimal), typeof(Decimal) }))),
@@ -102,16 +102,16 @@ public class Issue380_Comparisons_with_nullable_types : ITest
 
         var d = new DecimalTest { D1 = null };
         var r = fs(d);
-        Assert.IsFalse(r);
+        Asserts.IsFalse(r);
 
         var ff = expr.CompileFast(true);
         ff.PrintIL();
 
         r = ff(d);
-        Assert.IsFalse(r);
+        Asserts.IsFalse(r);
 
         r = ff(new DecimalTest { D1 = 19m });
-        Assert.IsTrue(r);
+        Asserts.IsTrue(r);
     }
 
     [Test]
@@ -121,13 +121,13 @@ public class Issue380_Comparisons_with_nullable_types : ITest
         var p = new ParameterExpression[1]; // the parameter expressions
         var e = new Expression[5]; // the unique expressions
         var expr = Lambda<Func<DecimalTest, bool>>(
-        e[0]=MakeBinary(ExpressionType.LessThan,
-            e[1]=Property(
-                p[0]=Parameter(typeof(DecimalTest), "t"),
+        e[0] = MakeBinary(ExpressionType.LessThan,
+            e[1] = Property(
+                p[0] = Parameter(typeof(DecimalTest), "t"),
                 typeof(DecimalTest).GetTypeInfo().GetDeclaredProperty("D1")),
-            e[2]=Convert(
-                e[3]=Convert(
-                    e[4]=Constant(20),
+            e[2] = Convert(
+                e[3] = Convert(
+                    e[4] = Constant(20),
                     typeof(Decimal),
                     typeof(Decimal).GetMethods().Single(x => !x.IsGenericMethod && x.Name == "op_Implicit" && x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int) }))),
                 typeof(Decimal?)),
@@ -147,15 +147,15 @@ public class Issue380_Comparisons_with_nullable_types : ITest
 
         var d = new DecimalTest { D1 = null };
         var r = fs(d);
-        Assert.IsFalse(r);
+        Asserts.IsFalse(r);
 
         var ff = expr.CompileFast(true);
         ff.PrintIL();
 
         r = ff(d);
-        Assert.IsFalse(r);
+        Asserts.IsFalse(r);
 
         r = ff(new DecimalTest { D1 = 19m });
-        Assert.IsTrue(r);
+        Asserts.IsTrue(r);
     }
 }

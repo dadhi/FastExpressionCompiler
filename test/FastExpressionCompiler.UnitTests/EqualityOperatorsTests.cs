@@ -35,7 +35,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = e.CompileFast(true);
 
-            Assert.IsFalse(f(DateTime.Now - TimeSpan.FromDays(1)));
+            Asserts.IsFalse(f(DateTime.Now - TimeSpan.FromDays(1)));
         }
 
         [Test]
@@ -47,7 +47,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = e.CompileFast(true);
 
-            Assert.IsFalse(f(DateTime.Now + TimeSpan.FromDays(1)));
+            Asserts.IsFalse(f(DateTime.Now + TimeSpan.FromDays(1)));
         }
 
         [Test]
@@ -61,7 +61,7 @@ namespace FastExpressionCompiler.UnitTests
             var entityWithEquals = new EntityWithImplicitEquality { AvailableDate = DateTime.Now };
             var entity = new Entity { AvailableDate = entityWithEquals.AvailableDate };
             var value = f(entityWithEquals, entity);
-            Assert.IsTrue(value);
+            Asserts.IsTrue(value);
         }
 
         [Test]
@@ -90,7 +90,7 @@ namespace FastExpressionCompiler.UnitTests
                 StartTime = "a",
                 EndTime = "y"
             };
-            Assert.IsTrue(f(tested));
+            Asserts.IsTrue(f(tested));
         }
 
         [Test]
@@ -102,7 +102,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = e.CompileFast(true);
 
-            Assert.IsTrue(f());
+            Asserts.IsTrue(f());
         }
 
         [Test]
@@ -114,7 +114,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var f = e.CompileFast(true);
 
-            Assert.IsTrue(f());
+            Asserts.IsTrue(f());
         }
 
         public class Entity

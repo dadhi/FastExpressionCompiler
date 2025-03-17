@@ -34,12 +34,12 @@ namespace FastExpressionCompiler.IssueTests
             var fSys = expr.CompileSys();
             fSys.PrintIL();
 
-            Assert.IsNull(fSys());
+            Asserts.IsNull(fSys());
 
             var fFast = expr.CompileFast();
             fFast.PrintIL();
 
-            Assert.IsNull(fFast());
+            Asserts.IsNull(fFast());
         }
     }
 }

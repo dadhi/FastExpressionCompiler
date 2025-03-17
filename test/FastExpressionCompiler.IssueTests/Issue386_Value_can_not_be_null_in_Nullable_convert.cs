@@ -64,12 +64,12 @@ public class Issue386_Value_can_not_be_null_in_Nullable_convert : ITest
         var fs = expr.CompileSys();
         fs.PrintIL();
         var r = fs(new Message { UserType = UserType.Foo });
-        Assert.IsFalse(r);
+        Asserts.IsFalse(r);
 
         var ff = expr.CompileFast(true);
         ff.PrintIL();
         r = ff(new Message { UserType = UserType.Foo });
-        Assert.IsFalse(r);
+        Asserts.IsFalse(r);
     }
 
     public class MessageSpec_NullableType
@@ -104,12 +104,12 @@ public class Issue386_Value_can_not_be_null_in_Nullable_convert : ITest
         var fs = expr.CompileSys();
         fs.PrintIL();
         var r = fs(new Message { UserType = UserType.Foo });
-        Assert.IsTrue(r);
+        Asserts.IsTrue(r);
 
         var ff = expr.CompileFast(true);
         ff.PrintIL();
         r = ff(new Message { UserType = UserType.Foo });
-        Assert.IsTrue(r);
+        Asserts.IsTrue(r);
     }
 
     public class Message_non_nullable
@@ -143,12 +143,12 @@ public class Issue386_Value_can_not_be_null_in_Nullable_convert : ITest
 
         var fs = expr.CompileSys();
         fs.PrintIL();
-        Assert.Throws<NullReferenceException>(() => 
+        Assert.Throws<NullReferenceException>(() =>
             fs(new Message_non_nullable { UserType = UserType.Foo }));
 
         var ff = expr.CompileFast(true);
         ff.PrintIL();
-        Assert.Throws<NullReferenceException>(() => 
+        Assert.Throws<NullReferenceException>(() =>
             ff(new Message_non_nullable { UserType = UserType.Foo }));
     }
 
@@ -179,12 +179,12 @@ public class Issue386_Value_can_not_be_null_in_Nullable_convert : ITest
         var fs = expr.CompileSys();
         fs.PrintIL();
         var r = fs(new Message_non_nullable { UserType = UserType.Foo });
-        Assert.IsFalse(r);
+        Asserts.IsFalse(r);
 
         var ff = expr.CompileFast(true);
         ff.PrintIL();
         r = ff(new Message_non_nullable { UserType = UserType.Foo });
-        Assert.IsFalse(r);
+        Asserts.IsFalse(r);
     }
 
     [Test]
@@ -214,11 +214,11 @@ public class Issue386_Value_can_not_be_null_in_Nullable_convert : ITest
         var fs = expr.CompileSys();
         fs.PrintIL();
         var r = fs(new Message_non_nullable { UserType = UserType.Foo });
-        Assert.IsTrue(r);
+        Asserts.IsTrue(r);
 
         var ff = expr.CompileFast(true);
         ff.PrintIL();
         r = ff(new Message_non_nullable { UserType = UserType.Foo });
-        Assert.IsTrue(r);
+        Asserts.IsTrue(r);
     }
 }

@@ -71,10 +71,10 @@ namespace FastExpressionCompiler.UnitTests
                         v)));
 
             var fs = fe.CompileSys();
-            Assert.IsNotNull(fs());
+            Asserts.IsNotNull(fs());
 
             var f = fe.CompileFast(true);
-            Assert.IsNotNull(f());
+            Asserts.IsNotNull(f());
         }
 
         /*
@@ -177,10 +177,10 @@ namespace FastExpressionCompiler.UnitTests
                     q, x, y, z, v)));
 
             var fs = fe.CompileSys();
-            Assert.IsNotNull(fs());
+            Asserts.IsNotNull(fs());
 
             var f = fe.CompileFast(true);
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
             var result = f();
             Asserts.AreEqual(3, result.V.N);
             Asserts.AreEqual(result.V.N, result.B.V.N);

@@ -55,7 +55,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(42, x);
 
             var f = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
             f.PrintIL();
 
             var y = f(arr);
@@ -85,7 +85,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(43, x);
 
             var f = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
             f.PrintIL();
 
             if (f.TryGetDebugClosureNestedLambda(0, out var d))
@@ -129,7 +129,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(43, x);
 
             var f = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
             f.PrintIL();
 
             var y = f(42);
@@ -173,7 +173,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(43, x);
 
             var f = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
             f.PrintIL();
 
             var y = f(container);
@@ -243,7 +243,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(1, x.Count);
 
             var f = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
-            Assert.IsNotNull(f);
+            Asserts.IsNotNull(f);
             f.PrintIL();
 
             if (f.TryGetDebugClosureNestedLambdaOrConstant(out var item) && item is Delegate d)

@@ -47,7 +47,7 @@ namespace FastExpressionCompiler.IssueTests
 
             nr.PrintCSharp();
             var nra = (Action<FieldInfo>)nr.CompileFast(true);
-            Assert.IsNotNull(nra);
+            Asserts.IsNotNull(nra);
 
             var fieldF = typeof(A).GetField(nameof(A.F));
             nra(fieldF);
@@ -66,10 +66,10 @@ namespace FastExpressionCompiler.IssueTests
 
             r.PrintCSharp();
             var ra = (Action<FieldInfo>)r.CompileFast(true);
-            Assert.IsNotNull(ra);
+            Asserts.IsNotNull(ra);
             ra(fieldF);
             var y = getAttr(fieldF);
-            Assert.AreNotEqual(0, y & (int)FieldAttributes.InitOnly);
+            Asserts.AreNotEqual(0, y & (int)FieldAttributes.InitOnly);
         }
 
         public class A
