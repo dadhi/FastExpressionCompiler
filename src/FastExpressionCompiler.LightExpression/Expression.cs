@@ -490,7 +490,7 @@ public abstract class Expression
                         return new HasIndexerManyArgumentsIndexExpression(instance, indexer, arguments);
                 }
             }
-        throw new ArgumentException($"Indexer property '{propertyName}' is not found in '{instance.Type}' with the argument types '{arguments.Select(a => a.Type).ToCode(null)}]",
+        throw new ArgumentException($"Indexer property '{propertyName}' is not found in '{instance.Type}' with the argument types '{arguments.Select(a => a.Type).ToCode()}]",
             nameof(propertyName));
     }
 

@@ -8979,6 +8979,9 @@ namespace FastExpressionCompiler
         public static string ToCode(this Type type,
             bool stripNamespace = false, Func<Type, string, string> printType = null, bool printGenericTypeArgs = false)
         {
+            if (type == null)
+                return "null";
+
             if (type.IsGenericParameter)
                 return !printGenericTypeArgs ? string.Empty : (printType?.Invoke(type, type.Name) ?? type.Name);
 
@@ -9138,7 +9141,8 @@ namespace FastExpressionCompiler
 
         /// <summary>Prints valid C# String escaping the things</summary>
         public static string ToCode(this string x) =>
-            x == null ? "null" : $"\"{x.Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n")}\"";
+            x == null ? "null"
+                : $"\"{x.Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n")}\"";
 
         private static readonly char[] _enumValueSeparators = new[] { ',', ' ' };
 
@@ -9215,8 +9219,8 @@ namespace FastExpressionCompiler
         /// otherwise uses passed <paramref name="notRecognizedToCode"/> or falls back to `ToString()`.
         /// </summary>
         [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
-        public static string ToCode(this object x, ObjectToCode notRecognizedToCode,
-            bool stripNamespace = false, Func<Type, string, string> printType = null)
+        public static string ToCode(this object x,
+            ObjectToCode notRecognizedToCode = null, bool stripNamespace = false, Func<Type, string, string> printType = null)
         {
             if (x == null)
                 return "null";

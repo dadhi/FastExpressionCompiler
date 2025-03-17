@@ -144,7 +144,7 @@ public static class Asserts
 #endif
         string actualName = "actual") where T : class =>
         ReferenceEquals(expected, actual) ? true : throw new AssertionException(
-            $"Expected the same `ReferenceEquals({expectedName}, {actualName})`, but found Not the same `{expected?.ToString() ?? "null"}` and `{actual}`");
+            $"Expected the same `ReferenceEquals({expectedName}, {actualName})`, but found Not the same `{expected.ToCode()}` and `{actual.ToCode()}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool AreNotSame<T>(T expected, T actual,
@@ -157,7 +157,7 @@ public static class Asserts
 #endif
         string actualName = "actual") where T : class =>
         !ReferenceEquals(expected, actual) ? true : throw new AssertionException(
-            $"Expected Not same `!ReferenceEquals({expectedName}, {actualName})`, but found the same `{expected?.ToString() ?? "null"}` and `{actual}`");
+            $"Expected Not same `!ReferenceEquals({expectedName}, {actualName})`, but found the same `{expected.ToCode()}` and `{actual.ToCode()}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool AreEqual<T>(T expected, T actual,
@@ -170,7 +170,7 @@ public static class Asserts
 #endif
         string actualName = "actual") =>
         Equals(expected, actual) ? true : throw new AssertionException(
-            $"Expected `{expectedName} == {actualName}`, but found `{expected?.ToString() ?? "null"} != {actual}`");
+            $"Expected `{expectedName} == {actualName}`, but found `{expected.ToCode()} != {actual.ToCode()}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool AreNotEqual<T>(T expected, T actual,
@@ -183,7 +183,7 @@ public static class Asserts
 #endif
         string actualName = "actual") =>
         !Equals(expected, actual) ? true : throw new AssertionException(
-            $"Expected `{expectedName} != {actualName}`, but found `{expected?.ToString() ?? "null"} == {actual}`");
+            $"Expected `{expectedName} != {actualName}`, but found `{expected.ToCode()} == {actual.ToCode()}`");
 
     public static bool AreEqual<T>(IEnumerable<T> expected, IEnumerable<T> actual,
 #if NETCOREAPP3_0_OR_GREATER
@@ -219,7 +219,7 @@ public static class Asserts
                 if (!Equals(exp, act))
                     // todo: @wip gather the all differences, or better up-to the specified number! 
                     throw new AssertionException(
-                        $"Expected the collection `{expectedName} to have the equal items in order with {actualName}`, but found the difference at the index #{index}: `{exp?.ToString() ?? "null"} != {act?.ToString() ?? "null"}`");
+                        $"Expected the collection `{expectedName} to have the equal items in order with {actualName}`, but found the difference at the index #{index}: `{exp.ToCode()} != {act.ToCode()}`");
             }
             ++index;
         }
@@ -232,13 +232,27 @@ public static class Asserts
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool GreaterOrEqual<T>(T expected, T actual,
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(expected))] 
+#endif
+        string expectedName = "expected",
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(actual))]
+#endif
+        string actualName = "actual")
+        where T : IComparable<T> =>
+        expected.CompareTo(actual) >= 0 ? true : throw new AssertionException(
+            $"Expected `{expectedName} >= {actualName}`, but found `{expected.ToCode()} < {actual.ToCode()}`");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsNull<T>(T actual,
 #if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(actual))]
 #endif
         string actualName = "actual") where T : class =>
         actual is null ? true : throw new AssertionException(
-            $"Expected null `{actualName}`, but found `{actual}`");
+            $"Expected null `{actualName}`, but found `{actual.ToCode()}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsNull<T>(T? actual,
@@ -292,7 +306,7 @@ public static class Asserts
 #endif
         string actualName = "actual") =>
         actual is T ? true : throw new AssertionException(
-            $"Expected `{actualName}` to be an instance of `{typeof(T).ToCode()}`, but found `{actual?.GetType().ToCode() ?? "null"}`");
+            $"Expected `{actualName}` to be an instance of `{typeof(T).ToCode()}`, but found `{actual.GetType().ToCode()}`");
 
     public static E Throws<E>(Action action,
 #if NETCOREAPP3_0_OR_GREATER
@@ -312,9 +326,9 @@ public static class Asserts
         catch (Exception ex)
         {
             throw new AssertionException(
-                $"Expected exception of type `{typeof(E).Name}` in `{actionName}`, but found `{ex.GetType().Name}`: {ex.Message}");
+                $"Expected exception of type `{typeof(E).ToCode()}` in `{actionName}`, but found `{ex.GetType().ToCode()}` with message '{ex.Message}'");
         }
-        throw new AssertionException($"Expected exception of type `{typeof(E).Name}` in `{actionName}`, but no exception was thrown");
+        throw new AssertionException($"Expected exception of type `{typeof(E).ToCode()}` in `{actionName}`, but no exception was thrown");
     }
 }
 

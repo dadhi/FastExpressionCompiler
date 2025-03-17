@@ -40,8 +40,8 @@ public class Issue421_Date_difference_is_giving_wrong_negative_value : ITest
         var ff = e.CompileFast(true);
         ff.PrintIL();
 
-        Assert.GreaterOrEqual(fs(), 250);
-        Assert.GreaterOrEqual(ff(), 250);
+        Asserts.GreaterOrEqual(fs(), 250);
+        Asserts.GreaterOrEqual(ff(), 250);
     }
 
     [Test]
@@ -59,7 +59,7 @@ public class Issue421_Date_difference_is_giving_wrong_negative_value : ITest
         var ff = e.CompileFast(true);
         ff.PrintIL();
 
-        Assert.GreaterOrEqual(fs(), 250);
-        Assert.GreaterOrEqual(ff(), 250);
+        Asserts.GreaterOrEqual(fs(), 250);
+        Asserts.GreaterOrEqual(ff(), 250);
     }
 }
