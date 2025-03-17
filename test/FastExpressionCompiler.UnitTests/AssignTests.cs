@@ -191,7 +191,7 @@ namespace FastExpressionCompiler.UnitTests
 
             // InvalidOperationException:
             // 'variable '' of type 'FastExpressionCompiler.LightExpression.UnitTests.AssignTests+Test' referenced from scope '', but it is not defined'
-            Assert.Throws<InvalidOperationException>(() => assignExpr.CompileSys());
+            Asserts.Throws<InvalidOperationException>(() => assignExpr.CompileSys());
 
             var func = assignExpr.CompileFast(true);
             Asserts.IsNull(func);

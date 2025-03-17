@@ -65,11 +65,11 @@ namespace FastExpressionCompiler.IssueTests
 
             var fSys = expr.CompileSys();
             fSys.PrintIL("sys");
-            Assert.Throws<ParseException>(() => fSys());
+            Asserts.Throws<ParseException>(() => fSys());
 
             var fFast = expr.CompileFast();
             fFast.PrintIL("fast");
-            Assert.Throws<ParseException>(() => fFast());
+            Asserts.Throws<ParseException>(() => fFast());
         }
 
 #if LIGHT_EXPRESSION
@@ -84,11 +84,11 @@ namespace FastExpressionCompiler.IssueTests
 
             var fSys = expr.CompileSys();
             fSys.PrintIL("sys");
-            Assert.Throws<ParseExceptionNoByRefArgs>(() => fSys());
+            Asserts.Throws<ParseExceptionNoByRefArgs>(() => fSys());
 
             var fFast = expr.CompileFast();
             fFast.PrintIL("fast");
-            Assert.Throws<ParseExceptionNoByRefArgs>(() => fFast());
+            Asserts.Throws<ParseExceptionNoByRefArgs>(() => fFast());
         }
 #endif
 
@@ -105,11 +105,11 @@ namespace FastExpressionCompiler.IssueTests
 
             var fSys = expr.CompileSys();
             fSys.PrintIL("sys");
-            Assert.Throws<ParseException>(() => fSys());
+            Asserts.Throws<ParseException>(() => fSys());
 
             var fFast = expr.CompileFast();
             fFast.PrintIL("fast");
-            Assert.Throws<ParseException>(() => fFast());
+            Asserts.Throws<ParseException>(() => fFast());
         }
 
         [Test]

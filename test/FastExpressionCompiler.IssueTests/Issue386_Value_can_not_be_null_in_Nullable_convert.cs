@@ -143,12 +143,12 @@ public class Issue386_Value_can_not_be_null_in_Nullable_convert : ITest
 
         var fs = expr.CompileSys();
         fs.PrintIL();
-        Assert.Throws<NullReferenceException>(() =>
+        Asserts.Throws<NullReferenceException>(() =>
             fs(new Message_non_nullable { UserType = UserType.Foo }));
 
         var ff = expr.CompileFast(true);
         ff.PrintIL();
-        Assert.Throws<NullReferenceException>(() =>
+        Asserts.Throws<NullReferenceException>(() =>
             ff(new Message_non_nullable { UserType = UserType.Foo }));
     }
 

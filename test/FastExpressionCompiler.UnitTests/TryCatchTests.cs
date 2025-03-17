@@ -55,7 +55,7 @@ namespace FastExpressionCompiler.UnitTests
             var func = expr.CompileFast(true);
 
             Asserts.IsNotNull(func);
-            Assert.Throws<InvalidTimeZoneException>(() => func());
+            Asserts.Throws<InvalidTimeZoneException>(() => func());
         }
 
         [Test]
@@ -74,7 +74,7 @@ namespace FastExpressionCompiler.UnitTests
             var func = expr.CompileFast(true);
 
             Asserts.IsNotNull(func);
-            Assert.Throws<InvalidDataSourceException>(() => func());
+            Asserts.Throws<InvalidDataSourceException>(() => func());
         }
 
         [Test]
@@ -214,7 +214,7 @@ namespace FastExpressionCompiler.UnitTests
             var func = expr.CompileFast(true);
 
             Asserts.IsNotNull(func);
-            Assert.Throws<DivideByZeroException>(() => func());
+            Asserts.Throws<DivideByZeroException>(() => func());
         }
 
         [Test]
@@ -433,9 +433,9 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual("ok", compiled(() => "ok"));
             // rethrown exception
             Assert.IsEmpty(exceptions);
-            Assert.Throws<ArgumentException>(() => compiledFast(() => { throw new ArgumentException(); }));
+            Asserts.Throws<ArgumentException>(() => compiledFast(() => { throw new ArgumentException(); }));
             Asserts.AreEqual(1, exceptions.Count);
-            Assert.Throws<ArgumentException>(() => compiled(() => { throw new ArgumentException(); }));
+            Asserts.Throws<ArgumentException>(() => compiled(() => { throw new ArgumentException(); }));
             Asserts.AreEqual(2, exceptions.Count);
         }
 
@@ -466,8 +466,8 @@ namespace FastExpressionCompiler.UnitTests
             compiled(() => executed++);
             Asserts.AreEqual(2, executed);
             // rethrown exception
-            Assert.Throws<ArgumentException>(() => compiledFast(() => { throw new ArgumentException(); }));
-            Assert.Throws<ArgumentException>(() => compiled(() => { throw new ArgumentException(); }));
+            Asserts.Throws<ArgumentException>(() => compiledFast(() => { throw new ArgumentException(); }));
+            Asserts.Throws<ArgumentException>(() => compiled(() => { throw new ArgumentException(); }));
         }
 
         [Test]
@@ -502,13 +502,13 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual("ok", compiledFast(() => "ok"));
             Asserts.AreEqual("ok", compiled(() => "ok"));
             // rethrown exception
-            Assert.Throws<ArgumentException>(() => compiledFast(() => { throw new ArgumentException(); }));
-            Assert.Throws<ArgumentException>(() => compiled(() => { throw new ArgumentException(); }));
+            Asserts.Throws<ArgumentException>(() => compiledFast(() => { throw new ArgumentException(); }));
+            Asserts.Throws<ArgumentException>(() => compiled(() => { throw new ArgumentException(); }));
             // wrapped exception
-            var exception = Assert.Throws<Exception>(() => compiledFast(() => { throw new InvalidOperationException(); }));
+            var exception = Asserts.Throws<Exception>(() => compiledFast(() => { throw new InvalidOperationException(); }));
             Asserts.AreEqual("wrapped", exception.Message);
             Asserts.IsInstanceOf<InvalidOperationException>(exception.InnerException);
-            exception = Assert.Throws<Exception>(() => compiled(() => { throw new InvalidOperationException(); }));
+            exception = Asserts.Throws<Exception>(() => compiled(() => { throw new InvalidOperationException(); }));
             Asserts.AreEqual("wrapped", exception.Message);
             Asserts.IsInstanceOf<InvalidOperationException>(exception.InnerException);
         }
@@ -542,8 +542,8 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual("ok", compiledFast(() => "ok"));
             Asserts.AreEqual("ok", compiled(() => "ok"));
             // rethrown exception
-            Assert.Throws<ArgumentException>(() => compiledFast(() => { throw new ArgumentException(); }));
-            Assert.Throws<ArgumentException>(() => compiled(() => { throw new ArgumentException(); }));
+            Asserts.Throws<ArgumentException>(() => compiledFast(() => { throw new ArgumentException(); }));
+            Asserts.Throws<ArgumentException>(() => compiled(() => { throw new ArgumentException(); }));
             // caught exception
             Asserts.AreEqual("exception suppressed", compiledFast(() => { throw new InvalidOperationException(); }));
             Asserts.AreEqual("exception suppressed", compiled(() => { throw new InvalidOperationException(); }));

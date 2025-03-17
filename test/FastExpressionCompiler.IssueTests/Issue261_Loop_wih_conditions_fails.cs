@@ -1626,7 +1626,7 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
   [Test]
   public void Should_throw_for_the_equal_expression_of_different_types()
   {
-    var ex = Assert.Throws<InvalidOperationException>(() =>
+    var ex = Asserts.Throws<InvalidOperationException>(() =>
       Equal(
         Constant(0),
         Call(GetType().GetMethod(nameof(GetByte)))
@@ -1801,11 +1801,11 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
   {
     var bar = new Bar();
 
-    var ex = Assert.Throws<InvalidOperationException>(() =>
+    var ex = Asserts.Throws<InvalidOperationException>(() =>
       Lambda<Action>(Call(Constant(bar), "Nah", new Type[] { typeof(int) }, Constant(5))));
     StringAssert.StartsWith("More than one", ex.Message);
 
-    ex = Assert.Throws<InvalidOperationException>(() =>
+    ex = Asserts.Throws<InvalidOperationException>(() =>
       SysExpr.Lambda<Action>(SysExpr.Call(SysExpr.Constant(bar), "Nah", new Type[] { typeof(int) }, SysExpr.Constant(5))));
     StringAssert.StartsWith("More than one", ex.Message);
 
@@ -1817,19 +1817,19 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
     es.Compile()();
     Asserts.AreEqual(8, bar.MethodIndex);
 
-    ex = Assert.Throws<InvalidOperationException>(() =>
+    ex = Asserts.Throws<InvalidOperationException>(() =>
       Lambda<Action>(Call(Constant(bar), "Nah", new Type[] { typeof(double) }, Constant((double)42.3))));
     StringAssert.StartsWith("More than one", ex.Message);
 
-    ex = Assert.Throws<InvalidOperationException>(() =>
+    ex = Asserts.Throws<InvalidOperationException>(() =>
       SysExpr.Lambda<Action>(SysExpr.Call(SysExpr.Constant(bar), "Nah", new Type[] { typeof(double) }, SysExpr.Constant((double)42.3))));
     StringAssert.StartsWith("More than one", ex.Message);
 
-    ex = Assert.Throws<InvalidOperationException>(() =>
+    ex = Asserts.Throws<InvalidOperationException>(() =>
       Lambda<Action>(Call(Constant(bar), "Nah", Type.EmptyTypes, Constant((double)42.3))));
     StringAssert.StartsWith("More than one", ex.Message);
 
-    ex = Assert.Throws<InvalidOperationException>(() =>
+    ex = Asserts.Throws<InvalidOperationException>(() =>
       SysExpr.Lambda<Action>(SysExpr.Call(SysExpr.Constant(bar), "Nah", Type.EmptyTypes, SysExpr.Constant((double)42.3))));
     StringAssert.StartsWith("More than one", ex.Message);
 

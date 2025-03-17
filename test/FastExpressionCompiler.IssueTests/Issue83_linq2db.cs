@@ -563,12 +563,12 @@ namespace FastExpressionCompiler.IssueTests
             var fs = e.CompileSys();
             fs.PrintIL();
             Asserts.AreEqual(Enum3.Value2, fs(Enum3.Value2));
-            Assert.Throws<InvalidOperationException>(() => fs(null));
+            Asserts.Throws<InvalidOperationException>(() => fs(null));
 
             var ff = e.CompileFast(true);
             ff.PrintIL();
             Asserts.AreEqual(Enum3.Value2, ff(Enum3.Value2));
-            Assert.Throws<InvalidOperationException>(() => ff(null));
+            Asserts.Throws<InvalidOperationException>(() => ff(null));
         }
 
         [Test]
@@ -661,7 +661,7 @@ namespace FastExpressionCompiler.IssueTests
             var compiled = lambda.CompileFast(true);
             var c = lambda.CompileSys();
 
-            Assert.Throws<InvalidOperationException>(() => compiled(new QueryRunner(), new SQLiteDataReader(true)));
+            Asserts.Throws<InvalidOperationException>(() => compiled(new QueryRunner(), new SQLiteDataReader(true)));
         }
 
         [Test]
@@ -726,7 +726,7 @@ namespace FastExpressionCompiler.IssueTests
             var compiled = lambda.CompileFast(true);
             var c = lambda.CompileSys();
 
-            Assert.Throws<InvalidOperationException>(() => compiled(new QueryRunner(), new SQLiteDataReader(true)));
+            Asserts.Throws<InvalidOperationException>(() => compiled(new QueryRunner(), new SQLiteDataReader(true)));
         }
 
         [Test]
@@ -789,11 +789,11 @@ namespace FastExpressionCompiler.IssueTests
 
             var fs = lambda.CompileSys();
             fs.PrintIL();
-            Assert.Throws<InvalidOperationException>(() => fs(new QueryRunner(), new SQLiteDataReader(true)));
+            Asserts.Throws<InvalidOperationException>(() => fs(new QueryRunner(), new SQLiteDataReader(true)));
 
             var ff = lambda.CompileFast(true);
             ff.PrintIL();
-            Assert.Throws<InvalidOperationException>(() => ff(new QueryRunner(), new SQLiteDataReader(true)));
+            Asserts.Throws<InvalidOperationException>(() => ff(new QueryRunner(), new SQLiteDataReader(true)));
         }
 
         public static int GetDefault2(int n)
@@ -945,8 +945,8 @@ namespace FastExpressionCompiler.IssueTests
             var compiled1 = mapper.CompileSys();
             var compiled2 = mapper.CompileFast(true);
 
-            Assert.Throws<NullReferenceException>(() => compiled1(null, null, null, null, null));
-            Assert.Throws<NullReferenceException>(() => compiled2(null, null, null, null, null));
+            Asserts.Throws<NullReferenceException>(() => compiled1(null, null, null, null, null));
+            Asserts.Throws<NullReferenceException>(() => compiled2(null, null, null, null, null));
         }
 
         [Test]
@@ -1312,7 +1312,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var compiled = expr.CompileFast(true);
 
-            Assert.Throws<OverflowException>(() => compiled());
+            Asserts.Throws<OverflowException>(() => compiled());
         }
 
         [Test]

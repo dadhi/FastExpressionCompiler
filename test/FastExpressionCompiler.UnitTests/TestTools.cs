@@ -134,7 +134,7 @@ public static class Asserts
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static AssertionException AreEqual<T>(T expected, T actual,
+    public static bool AreEqual<T>(T expected, T actual,
 #if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(expected))] 
 #endif
@@ -143,11 +143,11 @@ public static class Asserts
         [CallerArgumentExpression(nameof(actual))]
 #endif
         string actualName = "actual") =>
-        Equals(expected, actual) ? null : throw new AssertionException(
+        Equals(expected, actual) ? true : throw new AssertionException(
             $"Expected `{expectedName} == {actualName}`, but found `{expected?.ToString() ?? "null"} != {actual}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static AssertionException AreNotEqual<T>(T expected, T actual,
+    public static bool AreNotEqual<T>(T expected, T actual,
 #if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(expected))] 
 #endif
@@ -156,10 +156,10 @@ public static class Asserts
         [CallerArgumentExpression(nameof(actual))]
 #endif
         string actualName = "actual") =>
-        !Equals(expected, actual) ? null : throw new AssertionException(
+        !Equals(expected, actual) ? true : throw new AssertionException(
             $"Expected `{expectedName} != {actualName}`, but found `{expected?.ToString() ?? "null"} == {actual}`");
 
-    public static AssertionException AreEqual<T>(IEnumerable<T> expected, IEnumerable<T> actual,
+    public static bool AreEqual<T>(IEnumerable<T> expected, IEnumerable<T> actual,
 #if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(expected))] 
 #endif
@@ -192,83 +192,83 @@ public static class Asserts
                 var act = actualEnumerator.Current;
                 if (!Equals(exp, act))
                     // todo: @wip gather the all differences, or better up-to the specified number! 
-                    return new AssertionException(
+                    throw new AssertionException(
                         $"Expected the collection `{expectedName} to have the equal items in order with {actualName}`, but found the difference at the index #{index}: `{exp?.ToString() ?? "null"} != {act?.ToString() ?? "null"}`");
             }
             ++index;
         }
 
         if (hasExpected != hasActual)
-            return new AssertionException(
+            throw new AssertionException(
                 $"Expected the collection `{expectedName} to have the same count as {actualName}, but found {expectedCount} != {actualCount}");
 
-        return null;
+        return true;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static AssertionException IsNull<T>(T actual,
+    public static bool IsNull<T>(T actual,
 #if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(actual))]
 #endif
         string actualName = "actual") where T : class =>
-        actual is null ? null : throw new AssertionException(
+        actual is null ? true : throw new AssertionException(
             $"Expected null `{actualName}`, but found `{actual}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static AssertionException IsNull<T>(T? actual,
+    public static bool IsNull<T>(T? actual,
 #if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(actual))]
 #endif
         string actualName = "actual") where T : struct =>
-        !actual.HasValue ? null : throw new AssertionException(
+        !actual.HasValue ? true : throw new AssertionException(
             $"Expected this nullable `{actualName}` to be null, but found `{actual.Value}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static AssertionException IsNotNull<T>(T actual,
+    public static bool IsNotNull<T>(T actual,
 #if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(actual))]
 #endif
         string actualName = "actual") where T : class =>
-        actual is not null ? null : throw new AssertionException(
+        actual is not null ? true : throw new AssertionException(
             $"Expected not null `{actualName}`, but found null");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static AssertionException IsNotNull<T>(T? actual,
+    public static bool IsNotNull<T>(T? actual,
 #if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(actual))]
 #endif
         string actualName = "actual") where T : struct =>
-        actual.HasValue ? null : throw new AssertionException(
+        actual.HasValue ? true : throw new AssertionException(
             $"Expected this nullable `{actualName}` to have value, but found null");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static AssertionException IsTrue(bool actual,
+    public static bool IsTrue(bool actual,
 #if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(actual))]
 #endif
         string actualName = "actual") =>
-        actual ? null : throw new AssertionException(
+        actual ? true : throw new AssertionException(
             $"Expected `{actualName}` to be true, but found false");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static AssertionException IsFalse(bool actual,
+    public static bool IsFalse(bool actual,
 #if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(actual))]
 #endif
         string actualName = "actual") =>
-        !actual ? null : throw new AssertionException(
+        !actual ? true : throw new AssertionException(
             $"Expected `{actualName}` to be false, but found true");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static AssertionException IsInstanceOf<T>(object actual,
+    public static bool IsInstanceOf<T>(object actual,
 #if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(actual))]
 #endif
         string actualName = "actual") =>
-        actual is T ? null : throw new AssertionException(
+        actual is T ? true : throw new AssertionException(
             $"Expected `{actualName}` to be an instance of `{typeof(T).ToCode()}`, but found `{actual?.GetType().ToCode() ?? "null"}`");
 
-    public static AssertionException Throws<E>(Action action,
+    public static E Throws<E>(Action action,
 #if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(action))]
 #endif
@@ -279,9 +279,9 @@ public static class Asserts
         {
             action();
         }
-        catch (E)
+        catch (E ex)
         {
-            return null;
+            return ex;
         }
         catch (Exception ex)
         {

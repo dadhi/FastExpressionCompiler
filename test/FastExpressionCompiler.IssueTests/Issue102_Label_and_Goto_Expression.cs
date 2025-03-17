@@ -51,9 +51,9 @@ namespace FastExpressionCompiler.IssueTests
             var lambda = Lambda(
                 Return(Label(), Constant(1)));
 
-            Assert.Throws<InvalidOperationException>(() => lambda.CompileSys());
+            Asserts.Throws<InvalidOperationException>(() => lambda.CompileSys());
 
-            Assert.Throws<InvalidOperationException>(() => lambda.CompileFast(true));
+            Asserts.Throws<InvalidOperationException>(() => lambda.CompileFast(true));
         }
     }
 }

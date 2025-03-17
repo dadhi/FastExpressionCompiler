@@ -513,7 +513,7 @@ namespace FastExpressionCompiler.UnitTests
 
             Action<Exception> result = expression.CompileFast(true);
 
-            Assert.Throws<DivideByZeroException>(() => result(new DivideByZeroException()));
+            Asserts.Throws<DivideByZeroException>(() => result(new DivideByZeroException()));
         }
 
         [Test]

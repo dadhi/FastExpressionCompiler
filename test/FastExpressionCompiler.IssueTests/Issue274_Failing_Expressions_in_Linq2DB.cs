@@ -282,14 +282,14 @@ public class Issue274_Failing_Expressions_in_Linq2DB : ITest
     fs.PrintIL();
     Asserts.AreEqual(10, fs(Enum15.AA));
     Asserts.AreEqual(20, fs(Enum15.BB));
-    Assert.Throws<InvalidOperationException>(() =>
+    Asserts.Throws<InvalidOperationException>(() =>
       fs((Enum15)3));
 
     var f = expr.CompileFast(true);
     f.PrintIL();
     Asserts.AreEqual(10, f(Enum15.AA));
     Asserts.AreEqual(20, f(Enum15.BB));
-    Assert.Throws<InvalidOperationException>(() =>
+    Asserts.Throws<InvalidOperationException>(() =>
       f((Enum15)3));
   }
 

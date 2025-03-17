@@ -43,12 +43,12 @@ namespace FastExpressionCompiler.IssueTests
 
             var fs = lambda.CompileSys();
             fs.PrintIL();
-            Assert.Throws(typeof(NullReferenceException), () =>
+            Asserts.Throws<NullReferenceException>(() =>
                 fs(null, "a"));
 
             var fx = lambda.CompileFast(true);
             fx.PrintIL();
-            Assert.Throws(typeof(NullReferenceException), () =>
+            Asserts.Throws<NullReferenceException>(() =>
                 fx(null, "a"));
         }
 
@@ -126,13 +126,13 @@ namespace FastExpressionCompiler.IssueTests
 
             var fSys = lambda.CompileSys();
             fSys.PrintIL();
-            Assert.Throws(typeof(NullReferenceException), () =>
+            Asserts.Throws<NullReferenceException>(() =>
                 fSys(null, "a"));
 
             var fFec = lambda.CompileFast();
             Asserts.IsNotNull(fFec);
             fFec.PrintIL();
-            Assert.Throws(typeof(NullReferenceException), () =>
+            Asserts.Throws<NullReferenceException>(() =>
                 fFec(null, "a"));
         }
 
