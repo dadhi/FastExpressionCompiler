@@ -115,7 +115,7 @@ public class Issue390_405_406_Mapster_tests : ITest
 
         var dto = model.Adapt<ExportInfoDto>();
 
-        CollectionAssert.AreEqual(new long[] { 1, 0 }, dto.Locations);
+        Asserts.AreEqual(new long[] { 1, 0 }, dto.Locations);
     }
 
 

@@ -6,14 +6,13 @@ namespace FastExpressionCompiler.ILDecoder;
 
 public abstract class ILInstruction
 {
+    public readonly int Offset;
+    public readonly OpCode OpCode;
     internal ILInstruction(int offset, OpCode opCode)
     {
         Offset = offset;
         OpCode = opCode;
     }
-
-    public int Offset { get; }
-    public OpCode OpCode { get; }
 
     public abstract void Accept(ILInstructionVisitor visitor);
 }
@@ -87,7 +86,7 @@ public class InlineSwitchInstruction : ILInstruction
             if (m_targetOffsets == null)
             {
                 var cases = m_deltas.Length;
-                var itself = 1 + 4 + 4*cases;
+                var itself = 1 + 4 + 4 * cases;
                 m_targetOffsets = new int[cases];
                 for (var i = 0; i < cases; i++)
                     m_targetOffsets[i] = Offset + m_deltas[i] + itself;

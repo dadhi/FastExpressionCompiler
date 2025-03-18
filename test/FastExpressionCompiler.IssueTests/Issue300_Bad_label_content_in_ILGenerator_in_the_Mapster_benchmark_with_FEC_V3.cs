@@ -1088,7 +1088,7 @@ namespace FastExpressionCompiler.IssueTests
             ff.PrintIL();
             var res2 = ff(addresses);
 
-            CollectionAssert.AreEqual(res, res2);
+            Asserts.AreEqual(res, res2);
         }
 
         [Test]

@@ -432,7 +432,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual("ok", compiledFast(() => "ok"));
             Asserts.AreEqual("ok", compiled(() => "ok"));
             // rethrown exception
-            Assert.IsEmpty(exceptions);
+            Asserts.AreEqual(0, exceptions.Count);
             Asserts.Throws<ArgumentException>(() => compiledFast(() => { throw new ArgumentException(); }));
             Asserts.AreEqual(1, exceptions.Count);
             Asserts.Throws<ArgumentException>(() => compiled(() => { throw new ArgumentException(); }));

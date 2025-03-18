@@ -59,21 +59,22 @@ public static class ILReaderFactory
 
         var ilReader = Create(method);
 
-        var secondLine = false;
+        var line = 0;
         foreach (var il in ilReader)
         {
             try
             {
-                if (secondLine)
-                    s.AppendLine();
-                else
-                    secondLine = true;
-                s.Append(il.Offset.ToString().PadRight(4, ' ')).Append(' ').Append(il.OpCode);
+                s = line++ > 0 ? s.AppendLine() : s;
+
+                s.Append($"{il.Offset,-4}{il.OpCode}");
+
                 if (il is InlineFieldInstruction f)
+                {
                     s.Append(' ')
                         .AppendTypeName(f.Field.FieldType).Append(' ')
                         .AppendTypeName(f.Field.DeclaringType).Append('.')
                         .Append(f.Field.Name);
+                }
                 else if (il is InlineMethodInstruction m)
                 {
                     var sig = m.Method.ToString();
