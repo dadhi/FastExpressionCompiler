@@ -186,6 +186,7 @@ public static class Asserts
         !Equals(expected, actual) ? true : throw new AssertionException(
             $"Expected `AreNotEqual({expectedName}, {actualName})`, but found `{expected.ToCode()}` is equal to `{actual.ToCode()}`");
 
+    /// <summary>Should cover the case with the `expected` to be an array as well.</summary>
     public static bool AreEqual<T>(IEnumerable<T> expected, IEnumerable<T> actual,
 #if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(expected))] 
@@ -240,7 +241,6 @@ public static class Asserts
 #endif
         string actualName = "actual") =>
         AreEqual((IEnumerable<T>)expected, actual, expectedName, actualName);
-
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool GreaterOrEqual<T>(T expected, T actual,
@@ -347,4 +347,3 @@ public interface ITest
 {
     int Run();
 }
-
