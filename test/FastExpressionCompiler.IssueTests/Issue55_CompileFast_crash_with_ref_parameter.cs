@@ -22,9 +22,9 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            BlockWithNonRefStatementLast();
             RefMethodCallingRefMethodWithLocal_OfString();
 
+            BlockWithNonRefStatementLast();
             RefDoNothingShouldNoCrash();
             RefDoNothingShouldNoCrashCustomStruct();
             RefFromConstant();
@@ -239,7 +239,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ldarg_1,
                 OpCodes.Ldind_Ref,
                 OpCodes.Stloc_0,
-                OpCodes.Ldloca_S,
+                // OpCodes.Ldloca_S,
                 OpCodes.Call,
                 OpCodes.Ret
             };

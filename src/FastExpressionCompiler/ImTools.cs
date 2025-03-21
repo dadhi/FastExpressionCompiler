@@ -151,6 +151,7 @@ public static class SmallList
     public static int TryGetIndex<TItem, TEq>(this TItem[] items, in TItem it, int startIndex, int count, TEq eq = default, int notFoundResult = -1)
         where TEq : struct, IEq<TItem>
     {
+        Debug.Assert(items != null);
         for (var i = startIndex; i < count; ++i)
         {
             ref var di = ref items[i]; // todo: @perf Marshall?
@@ -240,15 +241,16 @@ public static class SmallList
                 if (eq.Equals(it, source._it2)) return 2;
                 break;
 
-            default:
+            case var n:
                 if (eq.Equals(it, source._it0)) return 0;
                 if (eq.Equals(it, source._it1)) return 1;
                 if (eq.Equals(it, source._it2)) return 2;
                 if (eq.Equals(it, source._it3)) return 3;
-                if (source._rest != null)
-                    return source._rest.TryGetIndex(in it, 0, source._count - SmallList4<TItem>.StackCapacity, eq,
-                        -1 - SmallList4<TItem>.StackCapacity) + SmallList4<TItem>.StackCapacity;
-                break;
+                const int StackCapacity = SmallList4<TItem>.StackCapacity;
+                if (n == StackCapacity)
+                    break;
+
+                return source._rest.TryGetIndex(in it, 0, source._count - StackCapacity, eq, -1 - StackCapacity) + StackCapacity;
         }
         return -1;
     }
@@ -402,13 +404,13 @@ public static class SmallList
                 if (eq.Equals(it, source._it0)) return 0;
                 break;
 
-            default:
+            case var n:
                 if (eq.Equals(it, source._it0)) return 0;
                 if (eq.Equals(it, source._it1)) return 1;
-                if (source._rest != null)
-                    return source._rest.TryGetIndex(in it, 0, source._count - SmallList2<TItem>.StackCapacity, eq,
-                        -1 - SmallList2<TItem>.StackCapacity) + SmallList2<TItem>.StackCapacity;
-                break;
+                const int StackCapacity = SmallList2<TItem>.StackCapacity;
+                if (n == StackCapacity)
+                    break;
+                return source._rest.TryGetIndex(in it, 0, source._count - StackCapacity, eq, -1 - StackCapacity) + StackCapacity;
         }
         return -1;
     }
@@ -469,7 +471,7 @@ public struct SmallList4<TItem>
 
     /// <summary>Populate with one item</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public void Populate1(TItem it0)
+    public void Init1(TItem it0)
     {
         _count = 1;
         _it0 = it0;
@@ -477,7 +479,7 @@ public struct SmallList4<TItem>
 
     /// <summary>Populate with two items</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public void Populate2(TItem it0, TItem it1)
+    public void Init2(TItem it0, TItem it1)
     {
         _count = 2;
         _it0 = it0;
@@ -486,7 +488,7 @@ public struct SmallList4<TItem>
 
     /// <summary>Populate with 3 items</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public void Populate3(TItem it0, TItem it1, TItem it2)
+    public void Init3(TItem it0, TItem it1, TItem it2)
     {
         _count = 3;
         _it0 = it0;
@@ -496,7 +498,7 @@ public struct SmallList4<TItem>
 
     /// <summary>Populate with 4 items</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public void Populate4(TItem it0, TItem it1, TItem it2, TItem it3)
+    public void Init4(TItem it0, TItem it1, TItem it2, TItem it3)
     {
         _count = StackCapacity;
         _it0 = it0;
@@ -505,39 +507,39 @@ public struct SmallList4<TItem>
         _it3 = it3;
     }
 
-    /// <summary>Populate with more than two items</summary>
+    /// <summary>Populates the list stack items and owns/uses the provided rest array and its count</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public void Populate(TItem it0, TItem it1, TItem it2, TItem it3, params TItem[] rest)
+    public void Embed(TItem it0, TItem it1, TItem it2, TItem it3, TItem[] rest, int restCount)
     {
-        _count = StackCapacity + rest.Length;
         _it0 = it0;
         _it1 = it1;
         _it2 = it2;
         _it3 = it3;
         _rest = rest;
+        _count = StackCapacity + restCount;
     }
 
     /// <summary>Populate with arbitrary items</summary>
-    public void Populate<TList>(TList items) where TList : IReadOnlyList<TItem>
+    public void InitFromList<TList>(TList items) where TList : IReadOnlyList<TItem>
     {
         switch (items.Count)
         {
             case 0:
                 break;
             case 1:
-                Populate1(items[0]);
+                Init1(items[0]);
                 break;
             case 2:
-                Populate2(items[0], items[1]);
+                Init2(items[0], items[1]);
                 break;
             case 3:
-                Populate3(items[0], items[1], items[2]);
+                Init3(items[0], items[1], items[2]);
                 break;
             case 4:
-                Populate4(items[0], items[1], items[2], items[3]);
+                Init4(items[0], items[1], items[2], items[3]);
                 break;
             default:
-                Populate4(items[0], items[1], items[2], items[3]);
+                Init4(items[0], items[1], items[2], items[3]);
 
                 // keep the capacity at count + StackCapacity
                 _count = items.Count;
@@ -599,7 +601,7 @@ public struct SmallList4<TItem>
     [MethodImpl((MethodImplOptions)256)]
     public void RemoveLastSurePresentItem()
     {
-        Debug.Assert(Count != 0);
+        Debug.Assert(_count != 0);
         var index = --_count;
         switch (index)
         {
@@ -614,10 +616,152 @@ public struct SmallList4<TItem>
         }
     }
 
+    /// <summary>Adds another list to the current list</summary>
+    public void AddList(in SmallList4<TItem> added)
+    {
+        if (_count == 0)
+        {
+            Init4(added._it0, added._it1, added._it2, added._it3);
+            var addedRestCount = added.Count - StackCapacity;
+            if (addedRestCount > 0)
+            {
+                _rest = new TItem[addedRestCount + StackCapacity]; // add a bit of the empty room of `StackCapacity` at the end, so you may add the new items without immediate resize 
+                Array.Copy(added._rest, 0, _rest, 0, addedRestCount);
+            }
+            // Setting the _count here because Init4 above sets the count to 4, but in reality the added list may have less items than 4
+            _count = added.Count;
+            return;
+        }
+        switch (added.Count)
+        {
+            case 0: break;
+            case 1: Add(added._it0); break;
+            case 2: Add(added._it0); Add(added._it1); break;
+            case 3: Add(added._it0); Add(added._it1); Add(added._it2); break;
+            case 4: Add(added._it0); Add(added._it1); Add(added._it2); Add(added._it3); break;
+            case var addedCount:
+                Add(added._it0); Add(added._it1); Add(added._it2); Add(added._it3);
+
+                // Here the _count reflects the 4 added items above
+                var addedRestCount = addedCount - StackCapacity;
+                var currRestCount = _count - StackCapacity;
+
+                // Expand the rest so it can hold the current items and added items
+                if (_rest.Length < currRestCount + addedRestCount)
+                {
+                    var newRest = new TItem[currRestCount + addedRestCount + StackCapacity]; // add a bit of the empty room of `StackCapacity` at the end
+                    Array.Copy(_rest, 0, newRest, 0, currRestCount);
+                    _rest = newRest;
+                }
+
+                // Copy the added items to the rest
+                Array.Copy(added._rest, 0, _rest, currRestCount, addedRestCount);
+                _count += addedRestCount;
+                break;
+        }
+    }
+
+    /// <summary>Drops the first item out of the list, and shifts the remaining items indeces by -1, so the second item become the first and so on.
+    /// If the list is empty the method does nothing.
+    /// The method returns number of the dropped items, e.g. 0 or 1.
+    /// The method is similar to JS Array.shift</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public int DropFirst()
+    {
+        switch (_count)
+        {
+            case 0: return 0;
+            case 1: _it0 = default; break;
+            case 2: _it0 = _it1; _it1 = default; break;
+            case 3: _it0 = _it1; _it1 = _it2; _it2 = default; break;
+            case 4: _it0 = _it1; _it1 = _it2; _it2 = _it3; _it3 = default; break;
+            default:
+                _it0 = _it1; _it1 = _it2; _it2 = _it3; _it3 = _rest[0];
+                Array.Copy(_rest, 1, _rest, 0, (_count - StackCapacity) - 1);
+                _rest[(_count - StackCapacity) - 1] = default;
+                break;
+        }
+        --_count;
+        return 1;
+    }
+
+    ///<summary>Clears the list, but keeps the already allocated array on heap to reuse in the future</summary>
+    public void Clear()
+    {
+        _it0 = default;
+        _it1 = default;
+        _it2 = default;
+        _it3 = default;
+        if (_count > StackCapacity)
+        {
+            Debug.Assert(_rest != null);
+            Array.Clear(_rest, 0, _rest.Length);
+        }
+        _count = 0;
+    }
+
+    /// <summary>Drops the first `n` items out of the list, and shifts the remaining items indeces by -1, so the second item become the first and so on.
+    /// If the list is empty the method does nothing.
+    /// The method returns number of the dropped items, e.g. 0 or 1.
+    /// The method is similar to JS Array.shift</summary>
+    public int DropFirstN(int n)
+    {
+        if (n <= 0)
+            return 0;
+
+        if (n >= _count)
+        {
+            Clear();
+            return _count;
+        }
+
+        if (_count <= StackCapacity)
+        {
+            switch (n)
+            {
+                case 1: _it0 = _it1; _it1 = _it2; _it2 = _it3; _it3 = default; break;
+                case 2: _it0 = _it2; _it1 = _it3; _it2 = default; _it3 = default; break;
+                // no need to check for n == 4, as the n is strictly less than _count in the check above
+                default: _it0 = _it3; _it1 = default; _it2 = default; _it3 = default; break;
+            }
+        }
+        else
+        {
+            Debug.Assert(_rest != null);
+            var last = (_count - StackCapacity) - n;
+            switch (n)
+            {
+                case 1:
+                    _it0 = _it1; _it1 = _it2; _it2 = _it3; _it3 = _rest[0];
+                    Array.Copy(_rest, 1, _rest, 0, last); // don't worry if the `last` is 0 (for the 5 item list), Array.Copy will haandle 0 just fine.
+                    _rest[last] = default;
+                    break;
+                case 2:
+                    _it0 = _it2; _it1 = _it3; _it2 = _rest[0]; _it3 = _rest[1];
+                    Array.Copy(_rest, 2, _rest, 0, last);
+                    _rest[last] = default; _rest[last + 1] = default;
+                    break;
+                case 3:
+                    _it0 = _it3; _it1 = _rest[0]; _it2 = _rest[1]; _it3 = _rest[2];
+                    Array.Copy(_rest, 3, _rest, 0, last);
+                    _rest[last] = default; _rest[last + 1] = default; _rest[last + 2] = default;
+                    break;
+                default:
+                    _it0 = _rest[0]; _it1 = _rest[1]; _it2 = _rest[2]; _it3 = _rest[3];
+                    Array.Copy(_rest, n, _rest, 0, last);
+                    Array.Clear(_rest, last, n);
+                    break;
+            }
+        }
+
+        _count -= n;
+        return n;
+    }
+
     /// <summary>Copy items to new the array</summary>
     public TItem[] ToArray()
     {
-        switch (Count)
+        switch (_count)
         {
             case 0: return Tools.Empty<TItem>();
             case 1: return new[] { _it0 };
@@ -625,12 +769,12 @@ public struct SmallList4<TItem>
             case 3: return new[] { _it0, _it1, _it2 };
             case 4: return new[] { _it0, _it1, _it2, _it3 };
             default:
-                var items = new TItem[Count];
+                var items = new TItem[_count];
                 items[0] = _it0;
                 items[1] = _it1;
                 items[2] = _it2;
                 items[3] = _it3;
-                Array.Copy(_rest, 0, items, 4, Count - StackCapacity);
+                Array.Copy(_rest, 0, items, 4, _count - StackCapacity);
                 return items;
         }
     }
@@ -763,7 +907,7 @@ public struct SmallList2<TItem>
     [MethodImpl((MethodImplOptions)256)]
     public void RemoveLastSurePresentItem()
     {
-        Debug.Assert(Count != 0);
+        Debug.Assert(_count != 0);
         var index = --_count;
         switch (index)
         {
@@ -780,16 +924,16 @@ public struct SmallList2<TItem>
     [MethodImpl((MethodImplOptions)256)]
     public TItem[] ToArray()
     {
-        switch (Count)
+        switch (_count)
         {
             case 0: return Tools.Empty<TItem>();
             case 1: return new[] { _it0 };
             case 2: return new[] { _it0, _it1 };
             default:
-                var items = new TItem[Count];
+                var items = new TItem[_count];
                 items[0] = _it0;
                 items[1] = _it1;
-                Array.Copy(_rest, 0, items, 2, Count - StackCapacity);
+                Array.Copy(_rest, 0, items, 2, _count - StackCapacity);
                 return items;
         }
     }

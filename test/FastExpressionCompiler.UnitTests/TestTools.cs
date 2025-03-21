@@ -15,8 +15,10 @@ using System.IO;
 using System.Collections.Generic;
 #if LIGHT_EXPRESSION
 namespace FastExpressionCompiler.LightExpression;
+using FastExpressionCompiler.LightExpression.ImTools;
 #else
 namespace FastExpressionCompiler;
+using FastExpressionCompiler.ImTools;
 #endif
 
 public static class TestTools
@@ -33,13 +35,22 @@ public static class TestTools
             return;
         }
         var actualCodes = ilReader.Select(x => x.OpCode).ToArray();
+
         var sb = new StringBuilder();
         var index = 0;
         foreach (var code in actualCodes)
-            sb.AppendLine($"{index++,-4}{code}");
+        {
+            if (index < 1000)
+                sb.AppendLine($"{index,-4}{code}");
+            else if (index < 10000000)
+                sb.AppendLine($"{index,-8}{code}");
+            else
+                sb.AppendLine($"{index,-12}{code}");
+            ++index;
+        }
 
         // todo: @wip
-        // Asserts.AreEqual(expectedCodes, actualCodes, "Unexpected IL OpCodes, actual codes are: " + Environment.NewLine + sb);
+        // Asserts.AreEq    ual(expectedCodes, actualCodes, "Unexpected IL OpCodes, actual codes are: " + Environment.NewLine + sb);
         Asserts.AreEqual<OpCode>(expectedCodes, actualCodes);
     }
 
@@ -202,6 +213,31 @@ public static class Asserts
         var expectedCount = 0;
         var actualCount = 0;
 
+        // Collecting the context around the non-equal items, lets call it a window,
+        // If the window size is 8 it means: 
+        // - it will be 4 or less equal items before the first non-equal,
+        // - 8 or less equal items between the non-equal items (if there more than 8 equal items inbetween, then it will be 4 after and 4 before the next non-equal item)
+        // - 4 or less equal items after the last non-equal item
+
+        // Example output with window size 2:
+        // #0  == 1, 1
+        // #1  == 3, 3
+        // #2  != 3, 4
+        // #3  == 7, 7
+        // #4  == 9, 9
+        // ...
+        // #10 == 51, 51
+        // #11 == 53, 53
+        // #12 != 55, 53
+        //
+        SmallList4<(int Index, bool IsEqual, T expected, T actual)> nonEqualItemsWithEqualContext = default;
+        SmallList4<(int Index, bool IsEqual, T expected, T actual)> equalItemsBeforeNonEqual = default;
+        const int ContextWindowCount = 8; // should be power of 2, with half before and half after the non-equal item
+        const int HalfContextWindowCount = ContextWindowCount >> 1;
+        const int MaxNonEqualItemCount = 64;
+        var nonEqualItemCount = 0;
+        var equalItemsAroundNonEqualCount = 0; // the Max value of it is ContextWindowCount
+
         // Traverse until the end of the largest collection
         var hasExpected = true;
         var hasActual = true;
@@ -218,15 +254,78 @@ public static class Asserts
                 var exp = expectedEnumerator.Current;
                 var act = actualEnumerator.Current;
                 if (!Equals(exp, act))
-                    // todo: @wip gather the all differences, or better up-to the specified number! 
-                    throw new AssertionException(
-                        $"Expected the collection `{expectedName} to have the equal items in order with {actualName}`, but found the difference at the index #{index}: `{exp.ToCode()} != {act.ToCode()}`");
+                {
+                    if (nonEqualItemCount > MaxNonEqualItemCount)
+                        break; // we're done after we found one more non-equal faster than collecting the last non-equal context
+
+                    // Drop the collected context items before the non-equal item to the whole list of items
+                    if (equalItemsBeforeNonEqual.Count > 0)
+                    {
+                        if (nonEqualItemsWithEqualContext.Count == 0)
+                            nonEqualItemsWithEqualContext = equalItemsBeforeNonEqual;
+                        else
+                            nonEqualItemsWithEqualContext.AddList(equalItemsBeforeNonEqual);
+                        equalItemsBeforeNonEqual.Clear(); // reuse the context window for the latter items
+                    }
+
+                    nonEqualItemsWithEqualContext.Add((index, false, exp, act));
+                    ++nonEqualItemCount;
+                    equalItemsAroundNonEqualCount = HalfContextWindowCount; // the context window is set to the center
+                }
+                else
+                {
+                    ++equalItemsAroundNonEqualCount;
+
+                    // In the context window before the next non-equal item
+                    if (equalItemsAroundNonEqualCount <= HalfContextWindowCount)
+                    {
+                        if (equalItemsAroundNonEqualCount == HalfContextWindowCount)
+                        {
+                            equalItemsBeforeNonEqual.DropFirst();
+                            --equalItemsAroundNonEqualCount; // prevent it to grow over the half-window size
+                        }
+                        equalItemsBeforeNonEqual.Add((index, true, exp, act));
+                    }
+                    else if (equalItemsAroundNonEqualCount <= ContextWindowCount)
+                    {
+                        // We're done with the context around the last non-equal item, so let's start over
+                        if (equalItemsAroundNonEqualCount == ContextWindowCount)
+                        {
+                            equalItemsAroundNonEqualCount = 0;
+                            if (nonEqualItemCount >= MaxNonEqualItemCount)
+                                break; // we're done after collecting the context around the last non-equal item
+                        }
+
+                        // In the context window after the last non-equal item
+                        nonEqualItemsWithEqualContext.Add((index, true, exp, act));
+                    }
+                }
             }
         }
 
-        if (hasExpected != hasActual)
-            throw new AssertionException(
-                $"Expected `AreEqual({expectedName}, {actualName})`, but found the expected count {expectedCount} is not equal to actual count {actualCount}");
+        if (nonEqualItemCount != 0 | expectedCount != actualCount)
+        {
+            var sb = new StringBuilder();
+
+            sb.AppendLine($"Expected collections `AreEqual({expectedName}, {actualName})`, but found ");
+            if (expectedCount != actualCount)
+                sb.Append($"the different counts {expectedCount} != {actualCount}");
+
+            if (nonEqualItemCount != 0)
+            {
+                if (expectedCount != actualCount)
+                    sb.Append(" and ");
+                if (nonEqualItemCount < MaxNonEqualItemCount)
+                    sb.AppendLine($"total {nonEqualItemCount} non equal items:");
+                else
+                    sb.AppendLine($"first {MaxNonEqualItemCount} non equal items (and stopped searching):");
+
+                foreach (var (index, isEqual, expectedItem, actualItem) in nonEqualItemsWithEqualContext.Enumerate())
+                    sb.AppendLine($"#{index,-8} {(isEqual ? "  " : "!=")} {expectedItem.ToCode()}, {actualItem.ToCode()}");
+            }
+
+            throw new AssertionException(sb.ToString());
+        }
 
         return true;
     }
@@ -255,6 +354,48 @@ public static class Asserts
         where T : IComparable<T> =>
         expected.CompareTo(actual) >= 0 ? true : throw new AssertionException(
             $"Expected `GreaterOrEqual({expectedName}, {actualName})`, but found `{expected.ToCode()} < {actual.ToCode()}`");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool Less<T>(T expected, T actual,
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(expected))] 
+#endif
+        string expectedName = "expected",
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(actual))]
+#endif
+        string actualName = "actual")
+        where T : IComparable<T> =>
+        expected.CompareTo(actual) < 0 ? true : throw new AssertionException(
+            $"Expected `Less({expectedName}, {actualName})`, but found `{expected.ToCode()} >= {actual.ToCode()}`");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool Greater<T>(T expected, T actual,
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(expected))] 
+#endif
+        string expectedName = "expected",
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(actual))]
+#endif
+        string actualName = "actual")
+        where T : IComparable<T> =>
+        expected.CompareTo(actual) > 0 ? true : throw new AssertionException(
+            $"Expected `Greater({expectedName}, {actualName})`, but found `{expected.ToCode()} <= {actual.ToCode()}`");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool LessOrEqual<T>(T expected, T actual,
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(expected))] 
+#endif
+        string expectedName = "expected",
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(actual))]
+#endif
+        string actualName = "actual")
+        where T : IComparable<T> =>
+        expected.CompareTo(actual) <= 0 ? true : throw new AssertionException(
+            $"Expected `LessOrEqual({expectedName}, {actualName})`, but found `{expected.ToCode()} > {actual.ToCode()}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsNull<T>(T actual,
