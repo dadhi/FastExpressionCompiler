@@ -9,7 +9,8 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            new LightExpression.IssueTests.Issue451_Operator_implicit_explicit_produces_InvalidProgram().Run();
+            // new LightExpression.IssueTests.Issue455_TypeAs_should_return_null().Run();
+            // new LightExpression.IssueTests.Issue451_Operator_implicit_explicit_produces_InvalidProgram().Run();
             // new LightExpression.IssueTests.Issue55_CompileFast_crash_with_ref_parameter().Run();
 
             // new Issue357_Invalid_program_exception().Run();

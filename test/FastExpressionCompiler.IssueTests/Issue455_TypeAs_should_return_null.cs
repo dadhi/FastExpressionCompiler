@@ -1,6 +1,4 @@
 using System;
-using NUnit.Framework;
-using System.Collections.Generic;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -12,8 +10,7 @@ using System.Linq.Expressions;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
-[TestFixture]
-public class Issue444_TEMP : ITest
+public class Issue455_TypeAs_should_return_null : ITest
 {
     public int Run()
     {
@@ -21,16 +18,13 @@ public class Issue444_TEMP : ITest
         return 1;
     }
 
-    [Test]
     public void Original_case()
     {
-        var x1 = 12345L as int?;
-
         var x = Parameter(typeof(int?), "x");
 
         var expr = Lambda<Func<int?>>(
             Block(
-                [x],
+                new[] { x },
                 Assign(x, TypeAs(Constant(12345L), typeof(int?)))
             )
         );
@@ -49,5 +43,4 @@ public class Issue444_TEMP : ITest
         var fr = ff();
         Asserts.AreEqual(null, fr);
     }
-
 }
