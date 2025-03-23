@@ -325,7 +325,7 @@ public static class Asserts
                     sb.AppendLine($"first {MaxNonEqualItemCount} non equal items (and stopped searching):");
 
                 foreach (var (index, isEqual, expectedItem, actualItem) in nonEqualItemsWithEqualContext.Enumerate())
-                    sb.AppendLine($"#{index,-4}{(isEqual ? "  " : "!=")} {expectedItem.ToCode()}, {actualItem.ToCode()}");
+                    sb.AppendLine($"{index,-4}{(isEqual ? " == " : " != ")}{expectedItem.ToCode(),16},{actualItem.ToCode(),16}");
             }
 
             throw new AssertionException(sb.ToString());

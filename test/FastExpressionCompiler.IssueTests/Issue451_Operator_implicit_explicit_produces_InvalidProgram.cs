@@ -19,6 +19,8 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
 {
     public int Run()
     {
+        TestCollectionAssertAreEqual_3();
+        TestCollectionAssertAreEqual_2();
         TestCollectionAssertAreEqual();
 
         ConvertChecked_int_to_byte_enum();
@@ -214,6 +216,24 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
     {
         var expected = new[] { 1, 3, 5, 7, 9, 11, 13, 15 };
         var actual = new[] { 1, 3, 6, 7, 9, 12, 14, 15 };
+
+        Asserts.Throws<Asserts.AssertionException>(() =>
+        Asserts.AreEqual(expected, actual));
+    }
+
+    public void TestCollectionAssertAreEqual_2()
+    {
+        var expected = new[] { 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 0 };
+        var actual = new[] { 0, 3, 5, 7, 9, 11, 13, 15, 17, 19, 22, 0, 1 };
+
+        Asserts.Throws<Asserts.AssertionException>(() =>
+        Asserts.AreEqual(expected, actual));
+    }
+
+    public void TestCollectionAssertAreEqual_3()
+    {
+        var expected = new[] { "1", "3", "55555555555555555555555555555555555555555555555555555", "7", "9", "11", "13", "15", "17", "19", "21", "0" };
+        var actual = new[] { "1", "3", "555555555555555555555555yuh55555555555555555555555555", "7", "9", "11", "13", "15", "17", "19", "21", "1" };
 
         Asserts.Throws<Asserts.AssertionException>(() =>
         Asserts.AreEqual(expected, actual));
