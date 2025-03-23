@@ -250,6 +250,7 @@ public static class Asserts
             hasActual = hasActual && actualEnumerator.MoveNext();
             if (hasActual) ++actualCount;
 
+            // todo: @wip if the one collection is completed, it still be good to add the item to context from the other collection
             if (!collectedMaxNonEqualItems & hasExpected & hasActual)
             {
                 var exp = expectedEnumerator.Current;
