@@ -236,6 +236,7 @@ public static class Asserts
         const int HalfContextWindowCount = ContextWindowCount >> 1;
         const int MaxNonEqualItemCount = 64;
         var nonEqualItemCount = 0;
+        var collectedMaxNonEqualItems = false;
         var equalItemsAroundNonEqualCount = 0; // the Max value of it is ContextWindowCount
 
         // Traverse until the end of the largest collection
@@ -249,28 +250,30 @@ public static class Asserts
             hasActual = hasActual && actualEnumerator.MoveNext();
             if (hasActual) ++actualCount;
 
-            if (hasExpected & hasActual)
+            if (!collectedMaxNonEqualItems & hasExpected & hasActual)
             {
                 var exp = expectedEnumerator.Current;
                 var act = actualEnumerator.Current;
                 if (!Equals(exp, act))
                 {
-                    if (nonEqualItemCount > MaxNonEqualItemCount)
-                        break; // we're done after we found one more non-equal faster than collecting the last non-equal context
-
-                    // Drop the collected context items before the non-equal item to the whole list of items
-                    if (equalItemsBeforeNonEqual.Count > 0)
+                    // we're done after we found one more non-equal faster than collecting the last non-equal context
+                    collectedMaxNonEqualItems = nonEqualItemCount > MaxNonEqualItemCount;
+                    if (!collectedMaxNonEqualItems)
                     {
-                        if (nonEqualItemsWithEqualContext.Count == 0)
-                            nonEqualItemsWithEqualContext = equalItemsBeforeNonEqual;
-                        else
-                            nonEqualItemsWithEqualContext.AddList(equalItemsBeforeNonEqual);
-                        equalItemsBeforeNonEqual.Clear(); // reuse the context window for the latter items
-                    }
+                        // Drop the collected context items before the non-equal item to the whole list of items
+                        if (equalItemsBeforeNonEqual.Count > 0)
+                        {
+                            if (nonEqualItemsWithEqualContext.Count == 0)
+                                nonEqualItemsWithEqualContext = equalItemsBeforeNonEqual;
+                            else
+                                nonEqualItemsWithEqualContext.AddList(equalItemsBeforeNonEqual);
+                            equalItemsBeforeNonEqual.Clear(); // reuse the context window for the latter items
+                        }
 
-                    nonEqualItemsWithEqualContext.Add((index, false, exp, act));
-                    ++nonEqualItemCount;
-                    equalItemsAroundNonEqualCount = HalfContextWindowCount; // the context window is set to the center
+                        nonEqualItemsWithEqualContext.Add((index, false, exp, act));
+                        ++nonEqualItemCount;
+                        equalItemsAroundNonEqualCount = HalfContextWindowCount; // the context window is set to the center
+                    }
                 }
                 else
                 {
@@ -292,12 +295,13 @@ public static class Asserts
                         if (equalItemsAroundNonEqualCount == ContextWindowCount)
                         {
                             equalItemsAroundNonEqualCount = 0;
-                            if (nonEqualItemCount >= MaxNonEqualItemCount)
-                                break; // we're done after collecting the context around the last non-equal item
+                            // We're done collecting the context around the last non-equal item
+                            collectedMaxNonEqualItems = nonEqualItemCount >= MaxNonEqualItemCount;
                         }
 
                         // In the context window after the last non-equal item
-                        nonEqualItemsWithEqualContext.Add((index, true, exp, act));
+                        if (!collectedMaxNonEqualItems)
+                            nonEqualItemsWithEqualContext.Add((index, true, exp, act));
                     }
                 }
             }
@@ -307,7 +311,7 @@ public static class Asserts
         {
             var sb = new StringBuilder();
 
-            sb.AppendLine($"Expected collections `AreEqual({expectedName}, {actualName})`, but found ");
+            sb.Append($"Expected collections `AreEqual({expectedName}, {actualName})`, but found ");
             if (expectedCount != actualCount)
                 sb.Append($"the different counts {expectedCount} != {actualCount}");
 
@@ -316,12 +320,12 @@ public static class Asserts
                 if (expectedCount != actualCount)
                     sb.Append(" and ");
                 if (nonEqualItemCount < MaxNonEqualItemCount)
-                    sb.AppendLine($"total {nonEqualItemCount} non equal items:");
+                    sb.AppendLine($"{nonEqualItemCount} non equal items:");
                 else
                     sb.AppendLine($"first {MaxNonEqualItemCount} non equal items (and stopped searching):");
 
                 foreach (var (index, isEqual, expectedItem, actualItem) in nonEqualItemsWithEqualContext.Enumerate())
-                    sb.AppendLine($"#{index,-8} {(isEqual ? "  " : "!=")} {expectedItem.ToCode()}, {actualItem.ToCode()}");
+                    sb.AppendLine($"#{index,-4}{(isEqual ? "  " : "!=")} {expectedItem.ToCode()}, {actualItem.ToCode()}");
             }
 
             throw new AssertionException(sb.ToString());

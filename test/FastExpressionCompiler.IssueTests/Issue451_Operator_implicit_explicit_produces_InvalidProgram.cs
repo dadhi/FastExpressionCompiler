@@ -212,7 +212,7 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
     public void TestCollectionAssertAreEqual()
     {
         var expected = new[] { 1, 3, 5, 7, 9, 11, 13, 15 };
-        var actual = new[] { 1, 3, 6, 7, 9, 12, 14, 15 };
+        var actual =   new[] { 1, 3, 6, 7, 9, 12, 14, 15 };
 
         Asserts.AreEqual(expected, actual);
     }
