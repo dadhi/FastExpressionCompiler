@@ -3,7 +3,6 @@ using System.Linq;
 using System.Numerics;
 using System.Reflection;
 using System.Reflection.Emit;
-using NUnit.Framework;
 #pragma warning disable 649
 #pragma warning disable 219
 
@@ -17,7 +16,6 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
     // considers in/out/ref in C# represented by ByRef in expressions (i.e. single representation for 3 C# keywords)
-    [TestFixture]
     public class Issue55_CompileFast_crash_with_ref_parameter : ITest
     {
         public int Run()
@@ -71,7 +69,6 @@ namespace FastExpressionCompiler.IssueTests
 
         struct StructWithIntField { public int IntField; }
 
-        [Test]
         public void RefDoNothingShouldNoCrash()
         {
             void DoNothing(ref int ignore) { }
@@ -90,7 +87,6 @@ namespace FastExpressionCompiler.IssueTests
             LocalAssert(direct);
         }
 
-        [Test]
         public void RefDoNothingShouldNoCrashCustomStruct()
         {
             void DoNothing(ref BigInteger ignore) { }
@@ -109,7 +105,7 @@ namespace FastExpressionCompiler.IssueTests
             LocalAssert(direct);
         }
 
-        [Test]
+
         public void RefFromConstant()
         {
             void SetSmallConstant(ref int localByRef)
@@ -132,7 +128,7 @@ namespace FastExpressionCompiler.IssueTests
         }
         private static void SetMinus1(ref int localByRef) { localByRef = -1; }
 
-        [Test]
+
         public void RefMethodCallingRefMethod()
         {
             void CallOtherRef(ref int localByRef) => SetMinus1(ref localByRef);
@@ -157,7 +153,7 @@ namespace FastExpressionCompiler.IssueTests
 
         private static void SetMinusBigInteger1(ref BigInteger localByRef) { localByRef = new BigInteger(-1); }
 
-        [Test]
+
         public void RefMethodCallingRefMethodCustomStruct()
         {
             void CallOtherRef(ref BigInteger localByRef) => SetMinusBigInteger1(ref localByRef);
@@ -180,7 +176,7 @@ namespace FastExpressionCompiler.IssueTests
             LocalAssert(direct);
         }
 
-        [Test]
+
         public void RefMethodCallingRefMethodWithLocal_OfInt()
         {
             void SetIntoLocalVariableAndCallOtherRef(ref int localByRef)
@@ -209,7 +205,7 @@ namespace FastExpressionCompiler.IssueTests
 
         private static void SetMinus1_OfString(ref string localByRef) { localByRef = "-1"; }
 
-        [Test]
+
         public void RefMethodCallingRefMethodWithLocal_OfString()
         {
             static void SetIntoLocalVariableAndCallOtherRef(ref string localByRef)
@@ -239,7 +235,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ldarg_1,
                 OpCodes.Ldind_Ref,
                 OpCodes.Stloc_0,
-                // OpCodes.Ldloca_S,
+                OpCodes.Ldloca_S,
                 OpCodes.Call,
                 OpCodes.Ret
             };
@@ -266,7 +262,7 @@ namespace FastExpressionCompiler.IssueTests
 
         private static void SetMinus1_OfStruct(ref RecVal localByRef) { localByRef = new RecVal("-1"); }
 
-        [Test]
+
         public void RefMethodCallingRefMethodWithLocal_OfStruct()
         {
             void SetIntoLocalVariableAndCallOtherRef(ref RecVal localByRef)
@@ -309,7 +305,7 @@ namespace FastExpressionCompiler.IssueTests
 
         private static void OutSetMinus1(out int localByRef) { localByRef = -1; }
 
-        [Test]
+
         public void OutRefMethodCallingRefMethodWithLocal()
         {
             void SetIntoLocalVariableAndCallOtherRef(ref int localByRef)
@@ -336,7 +332,7 @@ namespace FastExpressionCompiler.IssueTests
 
         private static void Set1AndMinus1(ref int ref1, ref int ref2) { ref2 = -1; ref1 = 1; }
 
-        [Test]
+
         public void RefMethodCallingRefMethodWithLocalReturnLocalCalled()
         {
             int SetIntoLocalVariableAndCallOtherRef(ref int localByRef)
@@ -375,7 +371,7 @@ namespace FastExpressionCompiler.IssueTests
 
         private static void SetVariableOneAndMinusForParameter(ref int ref1, ref int ref2) { ref2 = -1; ref1 = 1; }
 
-        [Test]
+
         public void VariableVariableRefVariableRefParameterReturn()
         {
             int SetIntoLocalVariableAndCallOtherRef(ref int localByRef)
@@ -416,7 +412,7 @@ namespace FastExpressionCompiler.IssueTests
 
 
 
-        [Test]
+
         public void Ref1Ref2Ref3()
         {
             void SetIntoLocalVariableAndCallOtherRef(ref long ref1, ref byte ref2, ref short ref3)
@@ -453,7 +449,7 @@ namespace FastExpressionCompiler.IssueTests
 
         private static void SetMinusOneAndOneForDoubleRefParameterInCallCall(ref int ref1, ref int ref2) { ref2 = -1; ref1 = 1; }
 
-        [Test]
+
         public void SetMinusOneAndOneForDoubleRefParameterInCall()
         {
             int SetIntoLocalVariableAndCallOtherRef(ref int localByRef)
@@ -494,7 +490,7 @@ namespace FastExpressionCompiler.IssueTests
 
         private static void AsValueAndSetMinusOneAsRefCall(int ref1, ref int ref2) { ref2 = -1; }
 
-        [Test]
+
         public void AsValueAndAsRef()
         {
             void SetIntoLocalVariableAndCallOtherRef(ref int localByRef)
@@ -521,7 +517,7 @@ namespace FastExpressionCompiler.IssueTests
             LocalAssert(direct);
         }
 
-        [Test]
+
         public void GenericRefFromConstant()
         {
             void SetSmallConstant(ref byte localByRef)
@@ -543,7 +539,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(3, exampleC);
         }
 
-        [Test]
+
         public void GenericRefFromConstantReturn()
         {
             ushort SetSmallConstant(ref uint localByRef)
@@ -565,7 +561,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(3U, exampleC);
         }
 
-        [Test]
+
         public void BlockWithNonRefStatementLast()
         {
             void SetSmallConstant(ref uint localByRef)
@@ -590,7 +586,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(3U, exampleC);
         }
 
-        [Test]
+
         public void RefReturnToVoid()
         {
             ushort SetSmallConstant(ref uint localByRef)
@@ -612,7 +608,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(3U, exampleC);
         }
 
-        [Test]
+
         public void RefRefVoid()
         {
             void SetSmallConstant(ref int a1, ref float a2)
@@ -635,7 +631,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(0, exampleC);
         }
 
-        [Test]
+
         public void RefRefReturnToVoid()
         {
             string SetSmallConstant(ref int a1, ref float a2)
@@ -659,7 +655,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(0, exampleC);
         }
 
-        [Test]
+
         public void IntPtrZeroReturn()
         {
             System.Linq.Expressions.Expression<Func<IntPtr>> sLambda = () => IntPtr.Zero;
@@ -668,7 +664,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(IntPtr.Zero, compiled());
         }
 
-        [Test]
+
         public void NewIntPtr13Return()
         {
             System.Linq.Expressions.Expression<Func<IntPtr>> sLambda = () => new IntPtr(13);
@@ -677,7 +673,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(new IntPtr(13), compiled());
         }
 
-        [Test]
+
 
         public void RefSetSetForFields()
         {
@@ -711,7 +707,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.IsNotNull(exampleC2);
         }
 
-        [Test]
+
         public void RefDoNothingReturnConstant()
         {
             int DoNothing(ref int localByRef) => default(int);
@@ -729,7 +725,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(0, exampleC);
         }
 
-        [Test]
+
         public void RefFromLargeConstant()
         {
             void SetSmallConstant(ref int localByRef)
@@ -751,7 +747,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(42_123_666, exampleC);
         }
 
-        [Test]
+
         public void RefSetFromParameter()
         {
             var objRef = Parameter(typeof(int).MakeByRefType());
@@ -765,7 +761,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(7, exampleB);
         }
 
-        [Test]
+
         public void NonGenericSetterFieldShould_not_crash()
         {
             var objRef = Parameter(typeof(StructWithIntField).MakeByRefType());
@@ -792,7 +788,7 @@ namespace FastExpressionCompiler.IssueTests
         }
 
 
-        [Test]
+
         public void GenericRefStructFieldShould_not_crash()
         {
             var objRef = Parameter(typeof(StructWithIntField).MakeByRefType());
@@ -817,7 +813,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(7, x1.IntField);
         }
 
-        [Test]
+
         public void RefAssign()
         {
             void AddSet(ref double byRef)
@@ -855,7 +851,7 @@ namespace FastExpressionCompiler.IssueTests
             LocalAssert(direct);
         }
 
-        [Test]
+
         public void RefAssignCustomStruct()
         {
             void AddSet(ref BigInteger byRef)
@@ -881,7 +877,7 @@ namespace FastExpressionCompiler.IssueTests
             LocalAssert(direct);
         }
 
-        [Test]
+
         public void CoalesceIntoByRef()
         {
             void DynamicDeserializer(ref object value) =>
@@ -913,7 +909,7 @@ namespace FastExpressionCompiler.IssueTests
             LocalAssert(compiledFast);
         }
 
-        [Test]
+
         public void ConstantOutInCondition()
         {
             int TryParseCondition()
@@ -950,7 +946,7 @@ namespace FastExpressionCompiler.IssueTests
             LocalAssert(TryParseCondition);
         }
 
-        [Test]
+
         public void ConstantOut()
         {
             int TryParseReturn()
