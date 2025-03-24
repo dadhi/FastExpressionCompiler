@@ -1,6 +1,6 @@
 using System;
 using System.Reflection.Emit;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -10,7 +10,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
-[TestFixture]
+
 public class Issue423_Converting_a_uint_to_a_float_gives_the_wrong_result : ITest
 {
     public int Run()
@@ -19,7 +19,7 @@ public class Issue423_Converting_a_uint_to_a_float_gives_the_wrong_result : ITes
         return 1;
     }
 
-    [Test]
+
     public void Original_case()
     {
         var p = Parameter(typeof(uint), "p");

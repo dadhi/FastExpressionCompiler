@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Reflection;
-using NUnit.Framework;
+
 
 #pragma warning disable IDE1006 // Naming Styles for linq2db
 #pragma warning disable 649 // Unassigned fields
@@ -14,7 +14,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue147_int_try_parse : ITest
     {
         public int Run()
@@ -31,7 +31,7 @@ namespace FastExpressionCompiler.IssueTests
             }
         }
 
-        [Test]
+
         public void Test1()
         {
             var intValueParameter = Parameter(typeof(int), "intValue");

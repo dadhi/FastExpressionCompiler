@@ -1,4 +1,4 @@
-using NUnit.Framework;
+
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -17,7 +17,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3 : ITest
     {
         public int Run()
@@ -62,7 +62,7 @@ namespace FastExpressionCompiler.IssueTests
             }
         }
 
-        [Test]
+
         public void Test_301_MemberInit_PrivateProperty()
         {
             var p = new ParameterExpression[2]; // the parameter expressions 
@@ -124,7 +124,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(customerId, dto2.Id);
         }
 
-        [Test]
+
         public void Test_301_MemberInit_InternalProperty()
         {
             var p = new ParameterExpression[1]; // the parameter expressions 
@@ -170,7 +170,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(poco.Name, dto2.Name);
         }
 
-        [Test]
+
         public void Test_301_Goto_to_label_with_default_value_should_not_return_when_followup_expression_is_present_Custom_constant_output()
         {
             var labelTarget = Label();
@@ -197,7 +197,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual("b", n2.Secret);
         }
 
-        [Test]
+
         public void Test_301_Goto_to_label_with_default_value_should_not_return_when_followup_expression_is_present()
         {
             var labelTarget = Label();
@@ -220,7 +220,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(42, n2);
         }
 
-        [Test]
+
         public void Test_301_Goto_to_label_with_default_value_should_return_the_goto_value_when_no_other_expressions_is_present()
         {
             var labelTarget = Label(typeof(int));
@@ -248,7 +248,7 @@ namespace FastExpressionCompiler.IssueTests
             public string Secret { get; set; }
         }
 
-        [Test]
+
         public void Test_301_Invoke_Lambda_inlining_case_simplified()
         {
             var postPar = Parameter(typeof(Post), "post");
@@ -292,7 +292,7 @@ namespace FastExpressionCompiler.IssueTests
             var post2 = ff(p1);
         }
 
-        [Test]
+
         public void Test_301_Invoke_Lambda_inlining_case()
         {
             var f = (Func<Post, Post, Post>)((
@@ -579,7 +579,7 @@ namespace FastExpressionCompiler.IssueTests
             var post2 = ff(p1, p1);
         }
 
-        [Test]
+
         public void Test_301_Dictionary_case()
         {
             var f = (Func<object, Dictionary<string, object>>)((object object__58225482) => //$
@@ -687,7 +687,7 @@ namespace FastExpressionCompiler.IssueTests
             public string Name { get; internal set; }
         }
 
-        [Test]
+
         public void Test_301_TryCatch_case()
         {
             var p = new ParameterExpression[7]; // the parameter expressions 
@@ -941,7 +941,7 @@ namespace FastExpressionCompiler.IssueTests
             }
         }
 
-        [Test]
+
         public void Test_301()
         {
             var p = new ParameterExpression[6]; // the parameter expressions 
@@ -1091,7 +1091,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(res, res2);
         }
 
-        [Test]
+
         public void Test_300()
         {
             var p = new ParameterExpression[3]; // the parameter expressions 

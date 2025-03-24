@@ -1,12 +1,12 @@
 #if LIGHT_EXPRESSION
 using System;
 using System.Reflection.Emit;
-using NUnit.Framework;
+
 
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.IssueTests;
 
-[TestFixture]
+
 public class Issue365_Working_with_ref_return_values : ITest
 {
     public int Run()
@@ -16,7 +16,7 @@ public class Issue365_Working_with_ref_return_values : ITest
         return 2;
     }
 
-    [Test]
+
     public void Test_access_ref_returning_method_assigned_var_then_property()
     {
         var getParamValueByRefMethod = typeof(ParamProcessor).GetMethod(nameof(ParamProcessor.GetParamValueByRef));
@@ -63,7 +63,7 @@ public class Issue365_Working_with_ref_return_values : ITest
         Asserts.AreEqual(8, paramProcessor.ParamValue.Value);
     }
 
-    [Test]
+
     public void Test_access_ref_returning_method_then_property()
     {
         var getParamValueByRefMethod = typeof(ParamProcessor).GetMethod(nameof(ParamProcessor.GetParamValueByRef));

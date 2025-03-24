@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 using System.Reflection;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using System.Text;
@@ -12,7 +12,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue333_AccessViolationException_and_other_suspicious_behavior_on_invoking_result_of_CompileFast : ITest
     {
         public int Run()
@@ -23,7 +23,7 @@ namespace FastExpressionCompiler.IssueTests
 
         private readonly S _foo = "foo";
 
-        [Test]
+
         public void Test()
         {
             System.Linq.Expressions.Expression<Func<S>> sHoistedExpr = () => new Widget(null, null, null, _foo, null).Dodgy;

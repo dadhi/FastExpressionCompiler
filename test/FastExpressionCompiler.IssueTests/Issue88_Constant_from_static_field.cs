@@ -1,5 +1,5 @@
 ﻿using System;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -19,7 +19,7 @@ namespace FastExpressionCompiler.IssueTests
             return 2;
         }
 
-        [Test]
+
         public void ConstantFromStaticField()
         {
             var lambda = Lambda<Func<IntPtr>>(Block(Constant(IntPtr.Zero)));
@@ -28,7 +28,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(IntPtr.Zero, compiledB());
         }
 
-        [Test]
+
         public void ConstantFromStaticField2()
         {
             var lambda = Lambda<Func<UIntPtr>>(Block(Constant(UIntPtr.Zero)));

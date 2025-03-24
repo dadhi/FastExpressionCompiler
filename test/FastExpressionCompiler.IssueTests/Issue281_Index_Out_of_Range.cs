@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
-using NUnit.Framework;
+
 #pragma warning disable CS0164, CS0649
 
 #if LIGHT_EXPRESSION
@@ -13,7 +13,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue281_Index_Out_of_Range : ITest
     {
         public int Run()
@@ -22,7 +22,7 @@ namespace FastExpressionCompiler.IssueTests
             return 1;
         }
 
-        [Test]
+
         public void Index_Out_of_Range()
         {
             var input = Parameter(typeof(List<string>));

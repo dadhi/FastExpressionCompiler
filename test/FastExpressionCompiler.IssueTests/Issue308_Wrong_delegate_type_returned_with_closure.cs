@@ -1,4 +1,4 @@
-using NUnit.Framework;
+
 using System;
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -8,7 +8,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue308_Wrong_delegate_type_returned_with_closure : ITest
     {
         public int Run()
@@ -19,7 +19,7 @@ namespace FastExpressionCompiler.IssueTests
 
         delegate string Command();
 
-        [Test]
+
         public void Test1()
         {
             var p = Parameter(typeof(string), "vm");

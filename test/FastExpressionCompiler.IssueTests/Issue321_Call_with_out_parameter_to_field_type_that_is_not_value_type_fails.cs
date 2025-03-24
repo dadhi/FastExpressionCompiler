@@ -2,7 +2,7 @@ using System.Linq.Expressions;
 using System.Reflection.Emit;
 using System.Reflection;
 using System;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 namespace FastExpressionCompiler.LightExpression.IssueTests
@@ -11,7 +11,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue321_Call_with_out_parameter_to_field_type_that_is_not_value_type_fails : ITest
     {
         public int Run()
@@ -29,7 +29,7 @@ namespace FastExpressionCompiler.IssueTests
         static private void TestStringOutMethod(string input, out string output) => output = input;
         static private void TestIntOutMethod(int input, out int output) => output = input;
 
-        [Test]
+
         public void Test_outparameter()
         {
             var stringMethod = this.GetType().GetMethod("TestStringOutMethod", bindingAttr: BindingFlags.NonPublic | BindingFlags.Static)!;

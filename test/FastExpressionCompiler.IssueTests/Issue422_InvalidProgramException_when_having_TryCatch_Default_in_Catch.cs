@@ -1,6 +1,6 @@
 using System;
 using System.Reflection.Emit;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -10,7 +10,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
-[TestFixture]
+
 public class Issue422_InvalidProgramException_when_having_TryCatch_Default_in_Catch : ITest
 {
     public int Run()
@@ -22,7 +22,7 @@ public class Issue422_InvalidProgramException_when_having_TryCatch_Default_in_Ca
         return 4;
     }
 
-    [Test]
+
     public void Original_case()
     {
         var pEntity = Parameter(typeof(Tuple<object>));
@@ -73,7 +73,7 @@ public class Issue422_InvalidProgramException_when_having_TryCatch_Default_in_Ca
         Asserts.IsTrue(ff(null));
     }
 
-    [Test]
+
     public void Original_case_but_comparing_with_non_null_left_operand()
     {
         var pEntity = Parameter(typeof(Tuple<object>));
@@ -95,7 +95,7 @@ public class Issue422_InvalidProgramException_when_having_TryCatch_Default_in_Ca
         Asserts.IsFalse(ff(null));
     }
 
-    [Test]
+
     public void Original_case_but_comparing_with_nullable_left_operand()
     {
         var pEntity = Parameter(typeof(Tuple<DateTime?>));
@@ -117,7 +117,7 @@ public class Issue422_InvalidProgramException_when_having_TryCatch_Default_in_Ca
         Asserts.IsTrue(ff(null));
     }
 
-    [Test]
+
     public void Change_comparison_operators_order_as_expected()
     {
         var pEntity = Parameter(typeof(Tuple<object>));

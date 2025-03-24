@@ -1,5 +1,5 @@
 using System.Reflection.Emit;
-using NUnit.Framework;
+
 
 #pragma warning disable 649
 #pragma warning disable 219
@@ -13,7 +13,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue170_Serializer_Person_Ref : ITest
     {
         public int Run()
@@ -35,7 +35,7 @@ namespace FastExpressionCompiler.IssueTests
             public Person BestFriend;
         }
 
-        [Test]
+
         public void InvokeActionConstantIsSupported()
         {
             var bufferArg = Parameter(typeof(byte[]), "buffer");
@@ -98,7 +98,7 @@ namespace FastExpressionCompiler.IssueTests
             public int Health;
         }
 
-        [Test]
+
         public void InvokeActionConstantIsSupportedSimple()
         {
             var refValueArg = Parameter(typeof(SimplePerson).MakeByRefType(), "value");
@@ -130,7 +130,7 @@ namespace FastExpressionCompiler.IssueTests
             public int Health;
         }
 
-        [Test]
+
         public void InvokeActionConstantIsSupportedSimpleStruct()
         {
             var refValueArg = Parameter(typeof(SimplePersonStruct).MakeByRefType(), "value");
@@ -156,7 +156,7 @@ namespace FastExpressionCompiler.IssueTests
             LocalAssert(funcFast);
         }
 
-        [Test]
+
         public void InvokeActionConstantIsSupportedSimpleStruct_AddAssign()
         {
             var refValueArg = Parameter(typeof(SimplePersonStruct).MakeByRefType(), "value");
@@ -200,7 +200,7 @@ namespace FastExpressionCompiler.IssueTests
             public int Health;
         }
 
-        [Test]
+
         public void InvokeActionConstantIsSupportedSimpleClass_AddAssign()
         {
             var refValueArg = Parameter(typeof(SimplePersonClass).MakeByRefType(), "value");

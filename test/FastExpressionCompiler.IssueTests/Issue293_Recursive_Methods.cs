@@ -1,4 +1,4 @@
-using NUnit.Framework;
+
 using System;
 using System.Linq.Expressions;
 #if LIGHT_EXPRESSION
@@ -10,7 +10,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue293_Recursive_Methods : ITest
     {
         public int Run()
@@ -19,7 +19,7 @@ namespace FastExpressionCompiler.IssueTests
             return 1;
         }
 
-        [Test]
+
         public void Test_Recursive_Expression()
         {
             var expr = MakeFactorialExpressionWithTheTrick<int>();

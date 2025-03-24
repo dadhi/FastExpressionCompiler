@@ -4,7 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using System.Linq.Expressions;
@@ -17,7 +17,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue347_InvalidProgramException_on_compiling_an_expression_that_returns_a_record_which_implements_IList : ITest
     {
         public int Run()
@@ -30,7 +30,7 @@ namespace FastExpressionCompiler.IssueTests
             return 5;
         }
 
-        [Test]
+
         public void Test_passing_struct_item_in_object_array_parameter()
         {
             var incMethod = GetType().GetMethod(nameof(Inc), BindingFlags.Public | BindingFlags.Static);
@@ -62,7 +62,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(42, y);
         }
 
-        [Test]
+
         public void Test_struct_parameter_in_closure_of_the_nested_lambda()
         {
             var incMethod = GetType().GetMethod(nameof(Inc), BindingFlags.Public | BindingFlags.Static);
@@ -108,7 +108,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(43, y);
         }
 
-        [Test]
+
         public void Test_nullable_param_in_closure_of_the_nested_lambda()
         {
             var incMethod = GetType().GetMethod(nameof(Inc), BindingFlags.Public | BindingFlags.Static);
@@ -138,7 +138,7 @@ namespace FastExpressionCompiler.IssueTests
 
         public static int Inc(Func<int> f) => f() + 1;
 
-        [Test]
+
         public void Test_nullable_of_struct_and_struct_field_in_the_nested_lambda()
         {
             var incMethod = GetType().GetMethod(nameof(Inc), BindingFlags.Public | BindingFlags.Static);
@@ -180,7 +180,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(43, y);
         }
 
-        [Test]
+
         public void Test_original()
         {
             // Expression<Func<NotifyContainer?, IReadOnlyListRecord<NotifyModel>>> e =

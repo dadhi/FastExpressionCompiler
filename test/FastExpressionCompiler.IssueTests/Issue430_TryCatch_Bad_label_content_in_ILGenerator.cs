@@ -1,5 +1,5 @@
 using System;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -9,7 +9,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
-[TestFixture]
+
 public class Issue430_TryCatch_Bad_label_content_in_ILGenerator : ITest
 {
     public int Run()
@@ -20,7 +20,7 @@ public class Issue430_TryCatch_Bad_label_content_in_ILGenerator : ITest
 
     public static void DoSome() { }
 
-    [Test]
+
     public void Original_case()
     {
         var returnLabelTarget = Label(typeof(int), "ReturnLabel");

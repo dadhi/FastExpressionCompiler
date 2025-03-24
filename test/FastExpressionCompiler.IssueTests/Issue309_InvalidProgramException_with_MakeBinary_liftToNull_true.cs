@@ -1,4 +1,4 @@
-using NUnit.Framework;
+
 using System;
 using System.Linq.Expressions;
 #if LIGHT_EXPRESSION
@@ -9,7 +9,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue309_InvalidProgramException_with_MakeBinary_liftToNull_true : ITest
     {
         public int Run()
@@ -18,7 +18,7 @@ namespace FastExpressionCompiler.IssueTests
             return 1;
         }
 
-        [Test]
+
         public void Test1()
         {
             var expr = Lambda<Func<object>>(

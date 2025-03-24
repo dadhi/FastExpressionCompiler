@@ -1,6 +1,6 @@
 using System;
 using System.Reflection.Emit;
-using NUnit.Framework;
+
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.IssueTests
@@ -9,7 +9,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue251_Bad_code_gen_for_byRef_parameters : ITest
     {
         public int Run()

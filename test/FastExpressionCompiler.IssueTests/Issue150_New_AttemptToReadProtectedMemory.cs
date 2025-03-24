@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using NUnit.Framework;
+
 #pragma warning disable 659
 
 #if LIGHT_EXPRESSION
@@ -14,16 +14,16 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
     using System.Linq;
     using System.Reflection;
 
-    [TestFixture]
+
     public class Issue150_New_AttemptToReadProtectedMemory : ITest
     {
-        public int Run() 
+        public int Run()
         {
             Nested_Assignments_Should_Work();
             return 1;
         }
 
-        [Test]
+
         public void Nested_Assignments_Should_Work()
         {
             // Builds:

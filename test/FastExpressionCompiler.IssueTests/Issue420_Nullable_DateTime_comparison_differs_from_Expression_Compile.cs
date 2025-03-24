@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 using System.Linq.Expressions;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using FastExpressionCompiler.LightExpression;
@@ -12,7 +12,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
-[TestFixture]
+
 public class Issue420_Nullable_DateTime_comparison_differs_from_Expression_Compile : ITest
 {
     public int Run()
@@ -27,7 +27,7 @@ public class Issue420_Nullable_DateTime_comparison_differs_from_Expression_Compi
         public HasDateTime(DateTime? t) => T = t;
     }
 
-    [Test]
+
     public void Original_case()
     {
         var time = DateTime.UtcNow;

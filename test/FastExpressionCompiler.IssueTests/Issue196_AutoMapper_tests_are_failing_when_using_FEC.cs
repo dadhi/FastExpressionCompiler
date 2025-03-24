@@ -1,7 +1,7 @@
 ﻿using System.Linq;
 using System.Reflection;
 using System;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -12,7 +12,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
-[TestFixture]
+
 public class Issue196_AutoMapper_tests_are_failing_when_using_FEC : ITest
 {
     public int Run()
@@ -41,7 +41,7 @@ public class Issue196_AutoMapper_tests_are_failing_when_using_FEC : ITest
         public int Value { get; set; }
     }
 
-    [Test]
+
     public void Comparison_with_null_should_produce_optimal_Brtrue_or_Brfalse_opcodes()
     {
         var p = Parameter(typeof(Source), "source");
@@ -96,7 +96,7 @@ public class Issue196_AutoMapper_tests_are_failing_when_using_FEC : ITest
         Asserts.AreEqual(42, dest.Value);
     }
 
-    [Test]
+
     public void Logical_OrElse_should_be_reduced_if_one_of_operands_is_known_boolean_value()
     {
         var sourceParam = Parameter(typeof(Source), "source");
@@ -116,7 +116,7 @@ public class Issue196_AutoMapper_tests_are_failing_when_using_FEC : ITest
         Asserts.AreEqual(42, dest.Value);
     }
 
-    [Test]
+
     public void Coalesce_should_produce_optimal_opcodes()
     {
         var sourceParam = Parameter(typeof(Source), "source");
@@ -143,7 +143,7 @@ public class Issue196_AutoMapper_tests_are_failing_when_using_FEC : ITest
         Asserts.AreEqual(13, dest.Value);
     }
 
-    [Test]
+
     public void Coalesce_should_work_with_throw()
     {
         var srcParam = Parameter(typeof(Source), "src");
@@ -172,7 +172,7 @@ public class Issue196_AutoMapper_tests_are_failing_when_using_FEC : ITest
         Asserts.Contains("meh!", ex.Message);
     }
 
-    [Test]
+
     public void Test_the_tmp_var_block_reduction()
     {
         var srcParam = Parameter(typeof(Source), "src");
@@ -214,7 +214,7 @@ public class Issue196_AutoMapper_tests_are_failing_when_using_FEC : ITest
         public AutoMapperException(string message, Exception innerException) : base(message, innerException) { }
     }
 
-    [Test]
+
     public void Setting_the_outside_variable()
     {
         var resultVar = Parameter(typeof(int), "i");
@@ -234,7 +234,7 @@ public class Issue196_AutoMapper_tests_are_failing_when_using_FEC : ITest
         Asserts.AreEqual(77, ff());
     }
 
-    [Test]
+
     public void TryCatch_setting_the_outside_variable()
     {
         var resultVar = Parameter(typeof(int), "i");
@@ -261,7 +261,7 @@ public class Issue196_AutoMapper_tests_are_failing_when_using_FEC : ITest
         Asserts.AreEqual(77, ff());
     }
 
-    [Test]
+
     public void TryCatch_with_void_rethrows_error_in_catch()
     {
         var srcParam = Parameter(typeof(Source), "source");
@@ -315,7 +315,7 @@ public class Issue196_AutoMapper_tests_are_failing_when_using_FEC : ITest
         Asserts.AreEqual(42, da.Value);
     }
 
-    [Test]
+
     public void TryCatch_with_rethrow_error_in_catch_and_the_unreachable_code_after_the_throw()
     {
         var srcParam = Parameter(typeof(Source), "source");
@@ -368,7 +368,7 @@ public class Issue196_AutoMapper_tests_are_failing_when_using_FEC : ITest
         Asserts.AreEqual(42, df.Value);
     }
 
-    [Test]
+
     public void TryCatch_with_non_void_rethrows_error_in_catch()
     {
         var srcParam = Parameter(typeof(Source), "source");

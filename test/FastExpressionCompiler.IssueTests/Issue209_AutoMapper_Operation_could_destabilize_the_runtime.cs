@@ -1,5 +1,5 @@
 ﻿using System;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -9,7 +9,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue209_AutoMapper_Operation_could_destabilize_the_runtime : ITest
     {
         public int Run()
@@ -18,7 +18,7 @@ namespace FastExpressionCompiler.IssueTests
             return 1;
         }
 
-        [Test]
+
         public void ShouldAlsoWork()
         {
             var srcParam = Parameter(typeof(OrderWithNullableStatus), "src");

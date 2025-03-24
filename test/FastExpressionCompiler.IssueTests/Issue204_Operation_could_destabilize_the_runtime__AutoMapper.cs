@@ -1,5 +1,5 @@
 ﻿using System;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -9,7 +9,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue204_Operation_could_destabilize_the_runtime__AutoMapper : ITest
     {
         public int Run()
@@ -35,7 +35,7 @@ namespace FastExpressionCompiler.IssueTests
             public Status? Status { get; set; }
         }
 
-        [Test]
+
         public void Default_with_struct()
         {
             var expression = Lambda<Func<Status?>>(Default(typeof(Status?)));
@@ -56,7 +56,7 @@ namespace FastExpressionCompiler.IssueTests
                 return dest;
             }
          */
-        [Test]
+
         public void ShouldAlsoWork()
         {
             var srcParam = Parameter(typeof(OrderWithNullableStatus), "src");

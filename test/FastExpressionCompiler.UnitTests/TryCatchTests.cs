@@ -2,8 +2,6 @@
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
-using NUnit.Framework;
-using NUnit.Framework.Internal;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -13,7 +11,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
-    [TestFixture]
+
     public class TryCatchTests : ITest
     {
         public int Run()
@@ -41,7 +39,7 @@ namespace FastExpressionCompiler.UnitTests
             return 19;
         }
 
-        [Test]
+
         public void Can_catch_exception()
         {
             var expr = Lambda<Action>(TryCatch(
@@ -58,7 +56,8 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.Throws<InvalidTimeZoneException>(() => func());
         }
 
-        [Test]
+        public class InvalidDataSourceException : Exception { }
+
         public void Can_execute_finally()
         {
             var expr = Lambda<Action>(
@@ -77,7 +76,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.Throws<InvalidDataSourceException>(() => func());
         }
 
-        [Test]
+
         public void Can_handle_the_exception_and_return_result_from_TryCatch_block()
         {
             var aParamExpr = Parameter(typeof(string), "a");
@@ -129,7 +128,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(123, ff("123"));
         }
 
-        [Test]
+
         public void Can_use_exception_parameter()
         {
             var exPar = Parameter(typeof(Exception), "exc");
@@ -153,7 +152,7 @@ namespace FastExpressionCompiler.UnitTests
             func();
         }
 
-        [Test]
+
         public void Can_return_from_catch_block()
         {
             var expr = Lambda<Func<bool>>(TryCatch(
@@ -177,7 +176,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsTrue(f());
         }
 
-        [Test]
+
         public void Can_return_with_return_goto_from_the_catch_block()
         {
             var returnLabel = Label(typeof(bool));
@@ -206,7 +205,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsTrue(f());
         }
 
-        [Test]
+
         public void Can_throw_an_exception()
         {
             var expr = Lambda<Action>(Throw(Constant(new DivideByZeroException())));
@@ -217,7 +216,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.Throws<DivideByZeroException>(() => func());
         }
 
-        [Test]
+
         public void Can_return_from_try_block_using_label()
         {
             var returnLabel = Label(typeof(string));
@@ -244,7 +243,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual("From Try block", ff());
         }
 
-        [Test]
+
         public void Can_return_from_try_block_using_goto_to_label_with_default_value()
         {
             var label = Label(typeof(string));
@@ -273,7 +272,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual("From Try block", ff());
         }
 
-        [Test]
+
         public void Can_return_from_try_block_using_goto_to_label_with_the_more_code_after_label()
         {
             var label = Label(typeof(void));
@@ -307,7 +306,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual("the end", ff());
         }
 
-        [Test]
+
         public void Can_return_from_catch_block_using_label()
         {
             var returnLabel = Label(typeof(string));
@@ -333,7 +332,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsNull(funcWithoutClosure);
         }
 
-        [Test]
+
         public void Can_return_try_block_result_using_label_from_the_inner_try()
         {
             var returnType = typeof(string);
@@ -370,7 +369,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual("From inner Try block", ff());
         }
 
-        [Test]
+
         public void Can_return_nested_catch_block_result()
         {
             var returnType = typeof(string);
@@ -404,7 +403,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual("From inner Catch block", func());
         }
 
-        [Test]
+
         public void Can_rethrow()
         {
             var exceptions = new System.Collections.Generic.List<Exception>();
@@ -439,7 +438,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(2, exceptions.Count);
         }
 
-        [Test]
+
         public void Can_rethrow_void()
         {
             var pFn = Parameter(typeof(Action), "fn");
@@ -470,7 +469,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.Throws<ArgumentException>(() => compiled(() => { throw new ArgumentException(); }));
         }
 
-        [Test]
+
         public void Can_rethrow_or_wrap()
         {
             var pFn = Parameter(typeof(Func<string>), "fn");
@@ -513,7 +512,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsInstanceOf<InvalidOperationException>(exception.InnerException);
         }
 
-        [Test]
+
         public void Can_rethrow_or_suppress()
         {
             var pFn = Parameter(typeof(Func<string>), "fn");
@@ -551,7 +550,7 @@ namespace FastExpressionCompiler.UnitTests
             // throw null;
         }
 
-        [Test]
+
         public void Can_be_nested_in_binary()
         {
             var p = Parameter(typeof(Func<int>), "p");
@@ -576,7 +575,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(1, ff(() => throw new Exception()));
         }
 
-        [Test]
+
         public void Issue424_Can_be_nested_in_call_expression()
         {
             var pa = Parameter(typeof(Func<string>), "pa");

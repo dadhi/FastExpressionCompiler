@@ -1,9 +1,9 @@
 ﻿using System;
-using NUnit.Framework;
+
 
 namespace FastExpressionCompiler.LightExpression.IssueTests
 {
-    [TestFixture]
+
     public class Issue231_ExpressionNew_does_not_work_with_struct : ITest
     {
         public int Run()
@@ -12,7 +12,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             return 1;
         }
 
-        [Test]
+
         public void Test()
         {
             var newExample = Expression.New(typeof(Example));

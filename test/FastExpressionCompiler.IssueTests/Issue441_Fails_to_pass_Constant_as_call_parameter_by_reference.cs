@@ -1,5 +1,5 @@
 using System;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -9,7 +9,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
-[TestFixture]
+
 public class Issue441_Fails_to_pass_Constant_as_call_parameter_by_reference : ITest
 {
     public int Run()
@@ -27,7 +27,7 @@ public class Issue441_Fails_to_pass_Constant_as_call_parameter_by_reference : IT
         public static int MethodThatTakesARefNullable(ref int? s) => s ?? 2;
     }
 
-    [Test]
+
     public void Original_case()
     {
         var callRefMethod = typeof(TestClass).GetMethod(nameof(TestClass.MethodThatTakesARefInt));
@@ -53,7 +53,7 @@ public class Issue441_Fails_to_pass_Constant_as_call_parameter_by_reference : IT
         Asserts.AreEqual(43, fr);
     }
 
-    [Test]
+
     public void Case_with_string()
     {
         var callRefMethod = typeof(TestClass).GetMethod(nameof(TestClass.MethodThatTakesARefString));
@@ -79,7 +79,7 @@ public class Issue441_Fails_to_pass_Constant_as_call_parameter_by_reference : IT
         Asserts.AreEqual(2, fr);
     }
 
-    [Test]
+
     public void Case_with_nullable()
     {
         var callRefMethod = typeof(TestClass).GetMethod(nameof(TestClass.MethodThatTakesARefNullable));

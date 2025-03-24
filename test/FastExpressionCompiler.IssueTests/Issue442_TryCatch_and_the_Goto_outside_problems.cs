@@ -1,5 +1,5 @@
 using System;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -9,7 +9,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
-[TestFixture]
+
 public class Issue442_TryCatch_and_the_Goto_outside_problems : ITest
 {
     public int Run()
@@ -19,7 +19,7 @@ public class Issue442_TryCatch_and_the_Goto_outside_problems : ITest
         return 2;
     }
 
-    [Test]
+
     public void Original_case_1()
     {
         var label = Label("label");
@@ -60,7 +60,7 @@ public class Issue442_TryCatch_and_the_Goto_outside_problems : ITest
         Asserts.AreEqual(5, fr);
     }
 
-    [Test]
+
     public void Original_case_2()
     {
         // FEC throws `System.ArgumentException: Bad label content in ILGenerator.`

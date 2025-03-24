@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Linq.Expressions;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -10,7 +10,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Nested_lambdas_assigned_to_vars : ITest
     {
         public int Run()
@@ -23,7 +23,7 @@ namespace FastExpressionCompiler.IssueTests
             return 5;
         }
 
-        [Test]
+
         public void Test_shared_sub_expressions()
         {
             var e = CreateExpression();
@@ -68,7 +68,7 @@ namespace FastExpressionCompiler.IssueTests
             // Asserts.AreEqual(3, d.NestedLambdaCompiledTimesCount);
         }
 
-        [Test]
+
         public void Test_shared_sub_expressions_with_3_dublicate_D()
         {
             var e = CreateExpressionWith3DinA();
@@ -90,7 +90,7 @@ namespace FastExpressionCompiler.IssueTests
             // Asserts.AreEqual(3, d.NestedLambdaCompiledTimesCount);
         }
 
-        [Test]
+
         public void Test_shared_sub_expressions_with_non_passed_params_in_closure()
         {
             var e = CreateExpressionWithNonPassedParamsInClosure();
@@ -109,7 +109,7 @@ namespace FastExpressionCompiler.IssueTests
             // Asserts.AreEqual(3, d.NestedLambdaCompiledTimesCount);
         }
 
-        [Test]
+
         public void Test_2_shared_lambdas_on_the_same_level()
         {
             var e = CreateExpressionWith2SharedLambdasOnTheSameLevels();
@@ -127,7 +127,7 @@ namespace FastExpressionCompiler.IssueTests
             // Asserts.AreEqual(1, d.NestedLambdaCompiledTimesCount);
         }
 
-        [Test]
+
         public void Test_shared_sub_expressions_assigned_to_vars()
         {
             var expr = CreateExpressionWithVars();

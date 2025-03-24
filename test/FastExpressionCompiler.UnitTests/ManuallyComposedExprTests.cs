@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Reflection;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -12,7 +12,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
-    [TestFixture]
+
     public class ManuallyComposedExprTests : ITest
     {
         public int Run()
@@ -22,7 +22,7 @@ namespace FastExpressionCompiler.UnitTests
             return 2;
         }
 
-        [Test]
+
         public void Should_compile_manually_composed_expr()
         {
             var manualExpr = ComposeManualExpr();
@@ -43,7 +43,7 @@ namespace FastExpressionCompiler.UnitTests
             return e;
         }
 
-        [Test]
+
         public void Should_compile_manually_composed_expr_with_parameters()
         {
             var manualExpr = ComposeManualExprWithParams();

@@ -1,5 +1,5 @@
 ﻿using System;
-using NUnit.Framework;
+
 #pragma warning disable 659
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -50,7 +50,7 @@ namespace FastExpressionCompiler.IssueTests
 
         public static int CounterFieldStatic = 6;
 
-        [Test]
+
         public void TryEmitIncDecAssign_Supports_PreIncrement_Property_Action()
         {
             var p = Parameter(typeof(Issue181_TryEmitIncDecAssign_InvalidCastException));
@@ -71,7 +71,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(expectedValue, CounterProperty);
         }
 
-        [Test]
+
         public void TryEmitIncDecAssign_Supports_PreIncrement_Nested_Property_Action()
         {
             var p = Parameter(typeof(Issue181_TryEmitIncDecAssign_InvalidCastException));
@@ -92,7 +92,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(expectedValue, CounterObjField.CounterProperty);
         }
 
-        [Test]
+
         public void TryEmitIncDecAssign_Supports_PreIncrement_Field_Action()
         {
             var p = Parameter(typeof(Issue181_TryEmitIncDecAssign_InvalidCastException));
@@ -113,7 +113,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(expectedValue, CounterField);
         }
 
-        [Test]
+
         public void TryEmitIncDecAssign_Supports_PreIncrement_Nested_Field_Action()
         {
             var p = Parameter(typeof(Issue181_TryEmitIncDecAssign_InvalidCastException));
@@ -134,7 +134,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(expectedValue, CounterObjField.CounterField);
         }
 
-        [Test]
+
         public void TryEmitIncDecAssign_Supports_PostIncrement_Property_Action()
         {
             var p = Parameter(typeof(Issue181_TryEmitIncDecAssign_InvalidCastException));
@@ -162,7 +162,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(expectedValue, CounterProperty);
         }
 
-        [Test]
+
         public void TryEmitIncDecAssign_Supports_PreDecrement_Nested_Property_Action()
         {
             var p = Parameter(typeof(Issue181_TryEmitIncDecAssign_InvalidCastException));
@@ -183,7 +183,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(expectedValue, CounterObjField.CounterProperty);
         }
 
-        [Test]
+
         public void TryEmitIncDecAssign_Supports_PostDecrement_Field_Action()
         {
             var p = Parameter(typeof(Issue181_TryEmitIncDecAssign_InvalidCastException));
@@ -204,7 +204,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(expectedValue, CounterField);
         }
 
-        [Test]
+
         public void TryEmitIncDecAssign_Supports_PreIncrement_Nested_Property_Func()
         {
             var p = Parameter(typeof(Issue181_TryEmitIncDecAssign_InvalidCastException));
@@ -221,7 +221,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(CounterObjField.CounterProperty + 1, del.Invoke(this));
         }
 
-        [Test]
+
         public void TryEmitIncDecAssign_Supports_PostIncrement_Field_Func()
         {
             var p = Parameter(typeof(Issue181_TryEmitIncDecAssign_InvalidCastException));
@@ -242,7 +242,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(startValue + 1, CounterField);
         }
 
-        [Test]
+
         public void TryEmitIncDecAssign_Supports_PostIncrement_Static_Field_Func()
         {
             var staticField = typeof(Issue181_TryEmitIncDecAssign_InvalidCastException)
@@ -263,7 +263,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(startValue + 1, CounterFieldStatic);
         }
 
-        [Test]
+
         public void TryEmitIncDecAssign_Supports_PreDecrement_Property_Func()
         {
             var p = Parameter(typeof(Issue181_TryEmitIncDecAssign_InvalidCastException));
@@ -280,7 +280,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(CounterProperty - 1, del.Invoke(this));
         }
 
-        [Test]
+
         public void TryEmitIncDecAssign_Supports_PreDecrement_Static_Property_Func()
         {
             var staticProperty = typeof(Issue181_TryEmitIncDecAssign_InvalidCastException)
@@ -297,7 +297,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(CounterPropertyStatic - 1, del.Invoke());
         }
 
-        [Test]
+
         public void TryEmitIncDecAssign_Supports_PostDecrement_Nested_Field_Func()
         {
             var p = Parameter(typeof(Issue181_TryEmitIncDecAssign_InvalidCastException));

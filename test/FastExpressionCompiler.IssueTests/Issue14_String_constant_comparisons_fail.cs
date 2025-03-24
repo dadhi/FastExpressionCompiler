@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Text;
-using NUnit.Framework;
+
 #pragma warning disable 659
 
 #if LIGHT_EXPRESSION
@@ -12,7 +12,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue14_String_constant_comparisons_fail : ITest
     {
         public int Run()
@@ -28,7 +28,7 @@ namespace FastExpressionCompiler.IssueTests
             return 6;
         }
 
-        [Test]
+
         public void String_equality_should_work()
         {
             System.Linq.Expressions.Expression<Func<string, bool>> se = str => str == "Hello";
@@ -43,7 +43,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.IsTrue(isHello(new StringBuilder("Hello").ToString()));
         }
 
-        [Test]
+
         public void String_not_equality_should_work()
         {
             System.Linq.Expressions.Expression<Func<string, bool>> se = str => str != "Hello";
@@ -58,7 +58,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.IsFalse(isHello(new StringBuilder("Hello").ToString()));
         }
 
-        [Test]
+
         public void Guid_equality_should_work()
         {
             var expectedId = Guid.NewGuid();
@@ -72,7 +72,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.IsTrue(isExpectedId(expectedId));
         }
 
-        [Test]
+
         public void Guid_not_equality_should_work()
         {
             var expectedId = Guid.NewGuid();
@@ -86,7 +86,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.IsFalse(isExpectedId(expectedId));
         }
 
-        [Test]
+
         public void Enum_equality_should_work()
         {
             var expectedExpr = Constant(Blah.Bar, typeof(Blah));
@@ -102,7 +102,7 @@ namespace FastExpressionCompiler.IssueTests
 
         enum Blah { Foo, Bar }
 
-        [Test]
+
         public void Class_Equals_equality_should_work()
         {
             var expected = new Pooh(42);

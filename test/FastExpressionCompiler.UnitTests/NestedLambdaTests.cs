@@ -1,5 +1,5 @@
 ﻿using System;
-using NUnit.Framework;
+
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.UnitTests
@@ -8,7 +8,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
-    [TestFixture]
+
     public class NestedLambdaTests : ITest
     {
         public int Run()
@@ -35,7 +35,7 @@ namespace FastExpressionCompiler.UnitTests
             return 17;
         }
 
-        [Test]
+
         public void Nested_Hoisted_Func_using_outer_parameter()
         {
             System.Linq.Expressions.Expression<Func<string, string>> sExpr = a => GetS(() => a);
@@ -46,7 +46,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual("a", f("a"));
         }
 
-        [Test]
+
         public void Nested_Hoisted_Func_using_outer_parameter_and_closed_value()
         {
             var b = new S { Value = "b" };
@@ -59,7 +59,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual("ba", f("a"));
         }
 
-        [Test]
+
         public void Nested_Hoisted_Action_using_outer_parameter_and_closed_value()
         {
             // The same hoisted expression: 
@@ -72,7 +72,7 @@ namespace FastExpressionCompiler.UnitTests
             f()("a");
             Asserts.AreEqual("a", s.Value);
         }
-        [Test]
+
         public void Nested_Hoisted_lambda_using_outer_parameter_and_closed_value_deeply_nested_lambda()
         {
             var b = new S { Value = "b" };
@@ -88,7 +88,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual("abb", f("a"));
         }
 
-        [Test]
+
         public void Given_hoisted_expr_with_closure_over_parameters_in_nested_lambda_should_work()
         {
             System.Linq.Expressions.Expression<Func<object, object>> sExpr = a =>
@@ -135,7 +135,7 @@ namespace FastExpressionCompiler.UnitTests
             }
         }
 
-        [Test]
+
         public void Nested_lambda_using_outer_parameter()
         {
             // The same hoisted expression: 
@@ -152,7 +152,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual("a", f("a"));
         }
 
-        [Test]
+
         public void Nested_lambda_using_outer_parameter_and_closed_value()
         {
             var b = new S { Value = "b" };
@@ -175,7 +175,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual("ba", f("a"));
         }
 
-        [Test]
+
         public void Nested_lambda_using_outer_parameter_and_closed_value_deeply_nested_lambda()
         {
             var b = new S { Value = "b" };
@@ -205,7 +205,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual("abb", f("a"));
         }
 
-        [Test]
+
         public void Given_composed_expr_with_closure_over_parameters_in_nested_lambda_should_work()
         {
             var argExpr = Parameter(typeof(object));
@@ -225,7 +225,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreSame(arg1, funcFec(arg1));
         }
 
-        [Test]
+
         public void Given_composed_expr_with_closure_over_parameters_used_in_2_levels_of_nested_lambda()
         {
             //Func<A, A> funcEthalon = a => a.Increment(() => a.Increment(() => a.Increment(null)));
@@ -256,7 +256,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreSame(a2, func(a2));
         }
 
-        [Test]
+
         public void Given_composed_expr_with_closure_over_2_parameters_used_in_2_levels_of_nested_lambda()
         {
             Func<A, A, A> funcEthalon = (a, b) => a.Increment(b, () => a.Increment(b, () => a.Increment(b, null, null), () => a), () => a);
@@ -304,7 +304,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreSame(a2, func(a2, b2));
         }
 
-        [Test]
+
         public void Given_composed_expr_with_closure_over_2_same_parameters_used_in_2_levels_of_nested_lambda()
         {
             Func<A, A, A> funcEthalon = (a, b) => a.Increment(b, () => a.Increment(b, () => a.Increment(b, null, null), () => a), () => a);
@@ -368,7 +368,7 @@ namespace FastExpressionCompiler.UnitTests
             }
         }
 
-        [Test]
+
         public void Two_same_nested_lambdas_should_compile_once()
         {
             var n = Parameter(typeof(int), "n");
@@ -388,7 +388,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(50, f());
         }
 
-        [Test]
+
         public void Hmm_I_can_use_the_same_parameter_for_outer_and_nested_lambda()
         {
             var nParam = Parameter(typeof(int), "n");
@@ -424,7 +424,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(13, f());
         }
 
-        [Test]
+
         public void Using_try_finally_as_arithmetic_operand()
         {
             var n = Parameter(typeof(int), "n");
@@ -456,7 +456,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(-10, ff(42));
         }
 
-        [Test]
+
         public void Using_try_finally_as_arithmetic_operand_use_void_block_in_finally()
         {
             var n = Parameter(typeof(int), "n");
@@ -490,7 +490,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(-10, ff(42));
         }
 
-        [Test]
+
         public void Issue401_What_happens_if_inlined_invocation_of_lambda_overrides_the_same_parameter()
         {
             var np = Parameter(typeof(int));

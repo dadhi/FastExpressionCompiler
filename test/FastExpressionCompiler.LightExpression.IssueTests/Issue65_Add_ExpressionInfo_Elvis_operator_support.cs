@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Reflection;
-using NUnit.Framework;
+
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.IssueTests
 {
-    [TestFixture]
+
     public class Issue65_Add_LightExpression_Elvis_operator_support : ITest
     {
         public int Run()
@@ -13,7 +13,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             return 1;
         }
 
-        [Test]
+
         public void Test()
         {
             Asserts.AreEqual("42", GetAnA(42)?.GetTheAnswer());

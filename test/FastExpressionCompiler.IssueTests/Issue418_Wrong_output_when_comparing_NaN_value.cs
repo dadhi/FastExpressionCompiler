@@ -1,6 +1,6 @@
 using System;
 using System.Reflection.Emit;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -10,7 +10,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
-[TestFixture]
+
 public class Issue418_Wrong_output_when_comparing_NaN_value : ITest
 {
     public int Run()
@@ -25,7 +25,7 @@ public class Issue418_Wrong_output_when_comparing_NaN_value : ITest
         return 7;
     }
 
-    [Test]
+
     public void Original_case()
     {
         var p = Parameter(typeof(double));
@@ -57,7 +57,7 @@ public class Issue418_Wrong_output_when_comparing_NaN_value : ITest
         Asserts.IsFalse(ff(double.NaN));
     }
 
-    [Test]
+
     public void Case_with_int()
     {
         var p = Parameter(typeof(int));
@@ -84,7 +84,7 @@ public class Issue418_Wrong_output_when_comparing_NaN_value : ITest
         Asserts.IsFalse(ff(int.MinValue));
     }
 
-    [Test]
+
     public void Case_with_Uint()
     {
         var p = Parameter(typeof(uint));
@@ -111,7 +111,7 @@ public class Issue418_Wrong_output_when_comparing_NaN_value : ITest
         Asserts.IsTrue(ff(uint.MinValue));
     }
 
-    [Test]
+
     public void Case_with_less_then()
     {
         var p = Parameter(typeof(double));
@@ -141,7 +141,7 @@ public class Issue418_Wrong_output_when_comparing_NaN_value : ITest
         Asserts.IsFalse(ff(double.NaN));
     }
 
-    [Test]
+
     public void Case_with_one()
     {
         var p = Parameter(typeof(double));
@@ -173,7 +173,7 @@ public class Issue418_Wrong_output_when_comparing_NaN_value : ITest
         Asserts.IsFalse(ff(double.NaN));
     }
 
-    [Test]
+
     public void Case_with_Minus_one()
     {
         var p = Parameter(typeof(double));
@@ -205,7 +205,7 @@ public class Issue418_Wrong_output_when_comparing_NaN_value : ITest
         Asserts.IsFalse(ff(double.NaN));
     }
 
-    [Test]
+
     public void Case_with_lte_instead_of_gte()
     {
         var p = Parameter(typeof(double));

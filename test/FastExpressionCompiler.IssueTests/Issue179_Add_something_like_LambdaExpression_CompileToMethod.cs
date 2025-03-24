@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using System.Reflection.Emit;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -11,7 +11,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue179_Add_something_like_LambdaExpression_CompileToMethod : ITest
     {
         public int Run()
@@ -20,7 +20,7 @@ namespace FastExpressionCompiler.IssueTests
             return 1;
         }
 
-        [Test]
+
         public void Test()
         {
             var assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("MyDynamicAssembly"), AssemblyBuilderAccess.Run);

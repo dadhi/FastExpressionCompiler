@@ -736,14 +736,12 @@ public void Given_$that$_When_Then()&#xD;
 }</s:String>
 	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=FC9E42FA59733B45BDDE218F8F19A28C/@KeyIndexDefined">True</s:Boolean>
 	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=FC9E42FA59733B45BDDE218F8F19A28C/Applicability/=Live/@EntryIndexedValue">True</s:Boolean>
-	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=FC9E42FA59733B45BDDE218F8F19A28C/Description/@EntryValue">Test Method (nunit)</s:String>
 	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=FC9E42FA59733B45BDDE218F8F19A28C/Field/=Test/@KeyIndexDefined">True</s:Boolean>
 	<s:Int64 x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=FC9E42FA59733B45BDDE218F8F19A28C/Field/=Test/Order/@EntryValue">0</s:Int64>
 	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=FC9E42FA59733B45BDDE218F8F19A28C/Reformat/@EntryValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=FC9E42FA59733B45BDDE218F8F19A28C/Scope/=B68999B9D6B43E47A02B22C12A54C3CC/@KeyIndexDefined">True</s:Boolean>
 	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=FC9E42FA59733B45BDDE218F8F19A28C/Scope/=B68999B9D6B43E47A02B22C12A54C3CC/CustomProperties/=minimumLanguageVersion/@EntryIndexedValue">2.0</s:String>
 	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=FC9E42FA59733B45BDDE218F8F19A28C/Scope/=B68999B9D6B43E47A02B22C12A54C3CC/Type/@EntryValue">InCSharpTypeMember</s:String>
-	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=FC9E42FA59733B45BDDE218F8F19A28C/Shortcut/@EntryValue">Test (nunit)</s:String>
 	<s:Boolean x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=FC9E42FA59733B45BDDE218F8F19A28C/ShortenQualifiedReferences/@EntryValue">True</s:Boolean>
 	<s:String x:Key="/Default/PatternsAndTemplates/LiveTemplates/Template/=FC9E42FA59733B45BDDE218F8F19A28C/Text/@EntryValue">[Test]&#xD;
 public void $Test$()&#xD;

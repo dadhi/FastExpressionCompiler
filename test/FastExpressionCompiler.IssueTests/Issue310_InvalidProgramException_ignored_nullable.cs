@@ -1,4 +1,4 @@
-using NUnit.Framework;
+
 using System;
 using System.Linq.Expressions;
 #if LIGHT_EXPRESSION
@@ -9,7 +9,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue310_InvalidProgramException_ignored_nullable
     {
         public int Run()
@@ -19,11 +19,11 @@ namespace FastExpressionCompiler.IssueTests
             return 2;
         }
 
-        [Test]
+
         public void Test1()
         {
             var p = Parameter(typeof(int), "tmp0");
-            var expr = 
+            var expr =
                 Lambda<Action<int>>(Block(
                 Convert(p, typeof(int?)),
                 Default(typeof(void))), p);
@@ -32,11 +32,11 @@ namespace FastExpressionCompiler.IssueTests
             f(2);
         }
 
-        [Test]
+
         public void Test2()
         {
             var p = Parameter(typeof(int), "tmp0");
-            var expr = 
+            var expr =
                 Lambda<Action<int>>(Convert(p, typeof(int?)), new[] { p });
             var f = expr.CompileFast();
             f(2);

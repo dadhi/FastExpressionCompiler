@@ -3,7 +3,7 @@ using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using System.Linq.Expressions;
@@ -16,7 +16,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue355_Error_with_converting_to_from_signed_unsigned_integers : ITest
     {
         public int Run()
@@ -25,7 +25,7 @@ namespace FastExpressionCompiler.IssueTests
             return 1;
         }
 
-        [Test]
+
         public void Test1()
         {
             var x = -1;

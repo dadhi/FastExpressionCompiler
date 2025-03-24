@@ -1,6 +1,6 @@
 using System;
 using System.Reflection.Emit;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -11,7 +11,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
-[TestFixture]
+
 public class Issue374_CompileFast_doesnot_work_with_HasFlag : ITest
 {
     public int Run()
@@ -20,7 +20,7 @@ public class Issue374_CompileFast_doesnot_work_with_HasFlag : ITest
         return 1;
     }
 
-    [Test]
+
     public void Test1()
     {
         System.Linq.Expressions.Expression<Func<Bar, bool>> se = x => x.Foo.HasFlag(Foo.Green);

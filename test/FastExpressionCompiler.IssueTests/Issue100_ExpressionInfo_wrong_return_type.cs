@@ -1,4 +1,4 @@
-﻿using NUnit.Framework;
+﻿
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -19,7 +19,7 @@ namespace FastExpressionCompiler.IssueTests
 
         delegate void ActionRef<T>(ref T a1);
 
-        [Test]
+
         public void RefAssignExpression()
         {
             var objRef = Parameter(typeof(double).MakeByRefType());

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Reflection;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -11,7 +11,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
-    [TestFixture]
+
     public class ClosureConstantTests : ITest
     {
         public int Run()
@@ -59,7 +59,7 @@ namespace FastExpressionCompiler.UnitTests
         ```
          */
 
-        [Test]
+
         public void Should_load_value_type_constant()
         {
             var v = Constant(new V { N = 3 });
@@ -161,7 +161,7 @@ namespace FastExpressionCompiler.UnitTests
     ```
         */
 
-        [Test]
+
         public void Repeating_the_constants_should_load_variables()
         {
             var q = Constant(new Q());

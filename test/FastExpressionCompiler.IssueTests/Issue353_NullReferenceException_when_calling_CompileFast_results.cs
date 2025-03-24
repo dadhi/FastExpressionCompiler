@@ -3,7 +3,7 @@ using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using System.Linq.Expressions;
@@ -16,7 +16,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue353_NullReferenceException_when_calling_CompileFast_results : ITest
     {
         public int Run()
@@ -30,7 +30,7 @@ namespace FastExpressionCompiler.IssueTests
             return 6;
         }
 
-        [Test]
+
         public void Test1_isolated_assign_int_to_the_array_of_objects_and_use_for_addition()
         {
             var n = Parameter(typeof(int), "n");
@@ -69,7 +69,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(1009, y);
         }
 
-        [Test]
+
         public void Test1_closure_over_array_and_changing_its_element()
         {
             var n = Parameter(typeof(int), "n");
@@ -117,7 +117,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(1009, y);
         }
 
-        [Test]
+
         public void Test1_manual_closure()
         {
             var n = Parameter(typeof(int), "n");
@@ -168,7 +168,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(1009, y);
         }
 
-        [Test]
+
         public void Test1_simplified()
         {
             var sumFunc = Parameter(typeof(Func<int, int>), "sumFunc");
@@ -217,7 +217,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(1009, y);
         }
 
-        [Test]
+
         public void Test1()
         {
             var sumFunc = Parameter(typeof(Func<int, int>), "sumFunc");
@@ -281,7 +281,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(1009, y);
         }
 
-        [Test]
+
         public void Test2_original_issue_case()
         {
             var sumFunc = Parameter(typeof(Func<int, int>), "sumFunc");

@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using NUnit.Framework;
+
 using static FastExpressionCompiler.LightExpression.Expression;
 
 namespace FastExpressionCompiler.LightExpression.IssueTests
 {
-    [TestFixture]
+
     public class Issue363_ActionFunc16Generics : ITest
     {
         public static readonly object[] TestCases = Enumerable.Range(0, 16).Cast<object>().ToArray();
@@ -24,7 +24,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             return 4;
         }
 
-        [Test]
+
         public void Supports_16_Func_Params()
         {
             LambdaExpression lambda = Lambda(
@@ -44,7 +44,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             Asserts.AreEqual(0L, compiled(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15));
         }
 
-        [Test]
+
         public void Supports_16_Action_Params()
         {
             LambdaExpression lambda = Lambda(
@@ -63,7 +63,6 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             Asserts.IsNotNull(compiled);
         }
 
-        [TestCaseSource(nameof(TestCases))]
         public void Can_Create_Func(int paramCount)
         {
             var parameters = Enumerable
@@ -91,7 +90,6 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             Asserts.AreEqual(paramCount, result.Length);
         }
 
-        [TestCaseSource(nameof(TestCases))]
         public void Can_Create_Action(int paramCount)
         {
             ParameterExpression[] parameters = Enumerable

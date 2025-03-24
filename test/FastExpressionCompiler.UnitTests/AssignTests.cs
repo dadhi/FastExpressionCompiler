@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Reflection;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -11,7 +11,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
-    [TestFixture]
+
     public class AssignTests : ITest
     {
         public int Run()
@@ -36,7 +36,7 @@ namespace FastExpressionCompiler.UnitTests
             return 17;
         }
 
-        [Test]
+
         public void Can_assign_to_parameter()
         {
             var sParamExpr = Parameter(typeof(string), "s");
@@ -50,7 +50,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual("aaa", f("ignored"));
         }
 
-        [Test]
+
         public void Can_assign_to_parameter_in_nested_lambda()
         {
             // s => () => s = "aaa" 
@@ -75,7 +75,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual("aaa", f("ignored").Invoke());
         }
 
-        [Test]
+
         public void Parameter_test_try_catch_finally_result()
         {
             var tryCatchParameter = Variable(typeof(TryCatchTest));
@@ -117,7 +117,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsNotNull(tryCatchResult);
         }
 
-        [Test]
+
         public void Local_Variable_test_try_catch_finally_result()
         {
             var tryCatchVar = Variable(typeof(TryCatchTest));
@@ -141,7 +141,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsNotNull(tryCatch);
         }
 
-        [Test]
+
         public void Member_test_prop()
         {
             var a = new Test();
@@ -155,7 +155,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(5, a.Prop);
         }
 
-        [Test]
+
         public void Member_test_field()
         {
             var a = new Test();
@@ -170,7 +170,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(5, a.Field);
         }
 
-        [Test]
+
         public void Member_test_block_result_should_detect_non_block_variable()
         {
             var testVar = Variable(typeof(Test));
@@ -197,7 +197,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsNull(func);
         }
 
-        [Test]
+
         public void Member_test_block_result()
         {
             var testVar = Variable(typeof(Test));
@@ -225,7 +225,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(2, test.Prop);
         }
 
-        [Test]
+
         public void Member_test_try_catch_finally_result()
         {
             var tryCatchVar = Variable(typeof(TryCatchTest));
@@ -296,7 +296,7 @@ namespace FastExpressionCompiler.UnitTests
             public int Field;
         }
 
-        [Test]
+
         public void Array_index_assign_body_less()
         {
             var expr = Lambda<Func<int>>(
@@ -309,7 +309,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(5, f());
         }
 
-        [Test]
+
         public void Array_index_assign_ref_type_body_less()
         {
             var a = new object();
@@ -323,7 +323,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(a, f());
         }
 
-        [Test]
+
         public void Array_index_assign_value_type_block()
         {
             var variable = Variable(typeof(int[]));
@@ -340,7 +340,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(5, f());
         }
 
-        [Test]
+
         public void Array_index_assign_ref_type_block()
         {
             var a = new object();
@@ -358,7 +358,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(a, f());
         }
 
-        [Test]
+
         public void Array_multi_dimensional_index_assign_value_type_block()
         {
             var variable = Variable(typeof(int[,]));
@@ -385,7 +385,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(5, fs());
         }
 
-        [Test]
+
         public void Array_multi_dimensional_index_assign_ref_type_block()
         {
             var a = new object();
@@ -404,7 +404,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(a, f());
         }
 
-        [Test]
+
         public void Array_index_assign_custom_indexer()
         {
             var a = new IndexTest();
@@ -421,7 +421,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(5, f());
         }
 
-        [Test]
+
         public void Array_index_assign_custom_indexer_with_get()
         {
             var a = new IndexTest();

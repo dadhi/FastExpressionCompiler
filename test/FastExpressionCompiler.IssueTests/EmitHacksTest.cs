@@ -6,11 +6,11 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Buffers.Binary;
 using System.Runtime.CompilerServices;
-using NUnit.Framework;
+
 
 namespace FastExpressionCompiler.IssueTests
 {
-    [TestFixture]
+    
     public class EmitHacksTest : ITest
     {
         public int Run()
@@ -21,7 +21,7 @@ namespace FastExpressionCompiler.IssueTests
             return 3;
         }
 
-        [Test]
+        
         public void DynamicMethod_Emit_Hack()
         {
             var f = Get_DynamicMethod_Emit_Hack();
@@ -142,7 +142,7 @@ namespace FastExpressionCompiler.IssueTests
             return stackChange;
         }
 
-        [Test]
+        
         public void DynamicMethod_Emit_OpCodes_Call()
         {
             var f = Get_DynamicMethod_Emit_OpCodes_Call();
@@ -167,7 +167,7 @@ namespace FastExpressionCompiler.IssueTests
             return (Func<int, int>)dynMethod.CreateDelegate(typeof(Func<int, int>), ExpressionCompiler.EmptyArrayClosure);
         }
 
-        [Test]
+        
         public void DynamicMethod_Emit_Newobj()
         {
             var f = Get_DynamicMethod_Emit_Newobj();
@@ -175,7 +175,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.IsInstanceOf<A>(a);
         }
 
-        // [Test]
+        
         public void DynamicMethod_Hack_Emit_Newobj()
         {
             var f = Get_DynamicMethod_Hack_Emit_Newobj();

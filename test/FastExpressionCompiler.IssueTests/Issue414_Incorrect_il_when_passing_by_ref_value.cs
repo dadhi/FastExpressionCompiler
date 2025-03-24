@@ -1,4 +1,4 @@
-using NUnit.Framework;
+
 using System.Reflection.Emit;
 
 #if LIGHT_EXPRESSION
@@ -11,7 +11,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
-[TestFixture]
+
 public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
 {
     public int Run()
@@ -40,7 +40,7 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
 
     delegate int MyDelegate(ref int x);
 
-    [Test]
+
     public void Issue414_ReturnRefParameter()
     {
         var p = Parameter(typeof(int).MakeByRefType());
@@ -69,7 +69,7 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
 
     public static void IncRef(ref int x) => ++x;
 
-    [Test]
+
     public void Issue414_PassByRefParameter()
     {
         var p = Parameter(typeof(int).MakeByRefType());
@@ -113,7 +113,7 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
 
     delegate int MyDelegateStruct(MyStruct x);
 
-    [Test]
+
     public void Issue413_ParameterStructIndexer()
     {
         var p = Parameter(typeof(MyStruct));
@@ -143,7 +143,7 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
 
     delegate int MyDelegateNoArgs();
 
-    [Test]
+
     public void Issue413_VariableStructIndexer()
     {
         var p = Parameter(typeof(MyStruct));
@@ -189,7 +189,7 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
 #if LIGHT_EXPRESSION
     delegate int MyDelegateNoPars();
 
-    [Test]
+
     public void Issue414_PassByRefVariable()
     {
         var p = Parameter(typeof(int).MakeByRefType());
@@ -224,7 +224,7 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
 #if LIGHT_EXPRESSION && !NET472
     delegate ref int MyDelegateByRef(ref int x);
 
-    [Test]
+    
     public void Issue415_ReturnRefParameterByRef()
     {
         var p = Parameter(typeof(int).MakeByRefType());
@@ -249,7 +249,7 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
 
     public static ref int ReturnRef(ref int x) => ref x;
 
-    [Test]
+    
     public void Issue415_ReturnRefParameterByRef_ReturnRefCall()
     {
         var p = Parameter(typeof(int).MakeByRefType());
@@ -275,7 +275,7 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
         Asserts.AreEqual(18, x);
     }
 
-    [Test]
+    
     public void Issue415_ReturnRefParameter_ReturnRefCall()
     {
         var p = Parameter(typeof(int).MakeByRefType());

@@ -1,5 +1,5 @@
 using System;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -9,7 +9,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
-    [TestFixture]
+
     public class ToCSharpStringTests : ITest
     {
         public int Run()
@@ -20,7 +20,7 @@ namespace FastExpressionCompiler.UnitTests
             return 3;
         }
 
-        [Test]
+
         public void Outputs_closed_generic_type_constant_correctly()
         {
             var e = Lambda<Func<Type>>(Constant(typeof(A<string>)));
@@ -33,7 +33,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(typeof(A<string>), f());
         }
 
-        [Test]
+
         public void Outputs_type_equals()
         {
             var p = Parameter(typeof(object), "p");

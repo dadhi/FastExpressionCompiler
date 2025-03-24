@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
-using NUnit.Framework;
+
 
 #pragma warning disable IDE1006 // Naming Styles for linq2db
 #pragma warning disable 649 // Unassigned fields
@@ -17,7 +17,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public sealed class Issue83_linq2db : ITest
     {
         public int Run()
@@ -76,7 +76,7 @@ namespace FastExpressionCompiler.IssueTests
             return 51;
         }
 
-        [Test]
+
         public void String_to_number_conversion_using_convert_with_method()
         {
             var from = typeof(string);
@@ -96,7 +96,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(10, compiled("10"));
         }
 
-        [Test]
+
         public void String_to_number_conversion_using_convert_with_method_with_DefaultExpression()
         {
             var from = typeof(string);
@@ -263,7 +263,7 @@ namespace FastExpressionCompiler.IssueTests
             Two
         }
 
-        [Test]
+
         public void linq2db_NullReferenceException()
         {
             var a1 = Parameter(typeof(IQueryRunner), "qr");
@@ -401,7 +401,7 @@ namespace FastExpressionCompiler.IssueTests
 
         const int RID = 101;
 
-        [Test]
+
         public void linq2db_Expression()
         {
             var param = TestEnum1.Value1;
@@ -431,7 +431,7 @@ namespace FastExpressionCompiler.IssueTests
             Value2 = 2,
         }
 
-        [Test]
+
         public void Equal1_Test()
         {
             var p = Parameter(typeof(object));
@@ -446,7 +446,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(c(new Patient()), compiled(new Patient()));
         }
 
-        [Test]
+
         public void Equal2_Test()
         {
             var p = Parameter(typeof(Patient));
@@ -461,7 +461,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(c(new Patient()), compiled(new Patient()));
         }
 
-        [Test]
+
         public void Equal3_Test()
         {
             var p = Parameter(typeof(Patient));
@@ -476,7 +476,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(c(new Patient()), compiled(new Patient()));
         }
 
-        [Test]
+
         public void TypeAs_Test()
         {
             var p = Parameter(typeof(object));
@@ -492,7 +492,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(c(s), compiled(s));
         }
 
-        [Test]
+
         public void TypeIs_Test()
         {
             var p = Parameter(typeof(object));
@@ -508,7 +508,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(c(s), compiled(s));
         }
 
-        [Test]
+
         public void Enum_to_enum_conversion()
         {
             var from = typeof(Enum3);
@@ -527,7 +527,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(Enum2.Value2, compiled(Enum3.Value2));
         }
 
-        [Test]
+
         public void Enum_to_enumNull_conversion()
         {
             var from = typeof(Enum3);
@@ -546,7 +546,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(Enum3.Value2, compiled(Enum3.Value2));
         }
 
-        [Test]
+
         public void EnumNull_to_enum_conversion()
         {
             var from = typeof(Enum3?);
@@ -571,7 +571,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.Throws<InvalidOperationException>(() => ff(null));
         }
 
-        [Test]
+
         public void AccessViolationException_on_nullable_char_convert_to_object()
         {
             var body = Convert(
@@ -609,7 +609,7 @@ namespace FastExpressionCompiler.IssueTests
             }
         }
 
-        [Test]
+
         public void linq2db_InvalidProgramException()
         {
             var a1 = Parameter(typeof(IQueryRunner), "qr");
@@ -664,7 +664,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.Throws<InvalidOperationException>(() => compiled(new QueryRunner(), new SQLiteDataReader(true)));
         }
 
-        [Test]
+
         public void linq2db_InvalidProgramException2()
         {
             var a1 = Parameter(typeof(IQueryRunner), "qr");
@@ -729,7 +729,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.Throws<InvalidOperationException>(() => compiled(new QueryRunner(), new SQLiteDataReader(true)));
         }
 
-        [Test]
+
         public void linq2db_InvalidProgramException2_reuse_variable_for_upper_and_nested_lambda()
         {
             var qr = Parameter(typeof(IQueryRunner), "qr");
@@ -801,7 +801,7 @@ namespace FastExpressionCompiler.IssueTests
             return n;
         }
 
-        [Test]
+
         public void linq2db_InvalidProgramException3()
         {
             var a3 = Parameter(typeof(IDataReader), "rd");
@@ -843,7 +843,7 @@ namespace FastExpressionCompiler.IssueTests
             ff(new SQLiteDataReader(true));
         }
 
-        [Test]
+
         public void linq2db_InvalidProgramException4()
         {
             var mapperBody = Coalesce(Constant(null, typeof(int?)), Constant(7));
@@ -854,7 +854,7 @@ namespace FastExpressionCompiler.IssueTests
             c();
         }
 
-        [Test]
+
         public void TestDoubleConvertSupported()
         {
             var lambda = Lambda<Func<object>>(Convert(
@@ -871,7 +871,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual("aa", compiled2());
         }
 
-        [Test]
+
         public void TestLambdaInvokeSupported()
         {
             var lambda = Lambda<Func<string>>(Invoke(Lambda<Func<String>>(Constant("aa"))));
@@ -883,7 +883,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual("aa", compiled2());
         }
 
-        [Test]
+
         public void TestLambdaInvokeSupported2()
         {
             var l = Lambda<Func<String>>(Constant("aa"));
@@ -896,7 +896,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual("aa", compiled2());
         }
 
-        [Test]
+
         public void TestLambdaInvokeSupported3()
         {
             var l = Lambda<Func<String>>(Block(Constant("aa"), Constant("aa"), Constant("aa"), Constant("aa"), Constant("aa")));
@@ -909,7 +909,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual("aa", compiled2());
         }
 
-        [Test]
+
         public void TestFirstLambda()
         {
             var a1 = Parameter(typeof(IQueryRunner), "qr");
@@ -949,7 +949,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.Throws<NullReferenceException>(() => compiled2(null, null, null, null, null));
         }
 
-        [Test]
+
         public void TestConverterFailure()
         {
             var p = Parameter(typeof(int?), "p");
@@ -969,7 +969,7 @@ namespace FastExpressionCompiler.IssueTests
             public short? v;
         }
 
-        [Test]
+
         public void TestConverterNullable()
         {
             var p = Parameter(typeof(sPrp), "p");
@@ -996,7 +996,7 @@ namespace FastExpressionCompiler.IssueTests
             return nr.ToString();
         }
 
-        [Test]
+
         public void TestLdArg()
         {
             var p = Parameter(typeof(int), "p");
@@ -1013,7 +1013,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(a, b);
         }
 
-        [Test]
+
         public void Jit_compiler_internal_limitation()
         {
             var objParam = Parameter(typeof(object), "obj");
@@ -1061,7 +1061,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(42, obj.Class2.Class3.Class4.Field1);
         }
 
-        [Test]
+
         public void Struct_test()
         {
             var objParam = Parameter(typeof(object), "obj");
@@ -1112,7 +1112,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(42, obj.Class2.Struct1.Class3.Class4.Field1);
         }
 
-        [Test]
+
         public void Struct_test2()
         {
             var objParam = Parameter(typeof(object), "obj");
@@ -1163,7 +1163,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(42, obj.Class2.Struct1P.Class3P.Class4.Field1);
         }
 
-        [Test]
+
         public void NullableEnum()
         {
             var objParam = Parameter(typeof(TestClass2), "obj");
@@ -1183,7 +1183,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(Enum2.Value1, obj.NullEnum2);
         }
 
-        [Test]
+
         public void NullableEnum2()
         {
             var objParam = Parameter(typeof(TestClass2), "obj");
@@ -1202,7 +1202,7 @@ namespace FastExpressionCompiler.IssueTests
             compiled(obj);
         }
 
-        [Test]
+
         public void NewNullableTest()
         {
             var body = New(typeof(int?).GetTypeInfo().DeclaredConstructors.First(), Constant(6, typeof(int)));
@@ -1214,7 +1214,7 @@ namespace FastExpressionCompiler.IssueTests
             compiled();
         }
 
-        [Test]
+
         public void TestToString()
         {
             var body = Call(Constant(true),
@@ -1230,7 +1230,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual("True", ret);
         }
 
-        [Test]
+
         public void Test2ToString()
         {
             var p = Parameter(typeof(bool));
@@ -1247,7 +1247,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual("True", ret);
         }
 
-        [Test]
+
         public void TestDecimal()
         {
             var body = Constant(5.64m);
@@ -1260,7 +1260,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(5.64m, ret);
         }
 
-        [Test]
+
         public void TestDecimal1()
         {
             var body = Constant(5m);
@@ -1273,7 +1273,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(5m, ret);
         }
 
-        [Test]
+
         public void Test3Bool()
         {
             var p = Parameter(typeof(bool));
@@ -1288,7 +1288,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(false, ret);
         }
 
-        [Test]
+
         public void Test4Bool()
         {
             var p = Parameter(typeof(bool));
@@ -1303,7 +1303,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(true, ret);
         }
 
-        [Test]
+
         public void ConvertNullableTest()
         {
             var body = Convert(ConvertChecked(Constant(long.MaxValue - 1, typeof(long)), typeof(int)), typeof(int?));
@@ -1315,7 +1315,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.Throws<OverflowException>(() => compiled());
         }
 
-        [Test]
+
         public void ConvertNullable2Test()
         {
             var body = Convert(ConvertChecked(Constant(5L, typeof(long)), typeof(int)), typeof(int?));
@@ -1327,7 +1327,7 @@ namespace FastExpressionCompiler.IssueTests
             compiled();
         }
 
-        [Test]
+
         public void ConvertTest()
         {
             var body = ConvertChecked(Constant(0x10, typeof(int)), typeof(char));
@@ -1341,7 +1341,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual('\x10', ret);
         }
 
-        [Test]
+
         public void ConvertTest2()
         {
             var body = ConvertChecked(Constant('\x10', typeof(char)), typeof(int));
@@ -1355,7 +1355,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(0x10, ret);
         }
 
-        [Test]
+
         public void AddNullTest()
         {
             var p = Parameter(typeof(int?));
@@ -1372,7 +1372,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(null, fx(null));
         }
 
-        [Test]
+
         public void AddNullTest2()
         {
             var p = Parameter(typeof(int?));
@@ -1466,7 +1466,7 @@ namespace FastExpressionCompiler.IssueTests
             public TestClass3 Class3P { get; set; }
         }
 
-        [Test]
+
         public void Triple_convert_with_decimal_nullables()
         {
             var body = Convert(
@@ -1484,7 +1484,7 @@ namespace FastExpressionCompiler.IssueTests
         }
 
 
-        [Test]
+
         public void Unbox_the_decimal()
         {
             var decObj = Parameter(typeof(object), "decObj");
@@ -1497,7 +1497,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(2m, f((object)2m));
         }
 
-        [Test]
+
         public void Type_as_nullable_decimal()
         {
             var decObj = Parameter(typeof(object), "decObj");
@@ -1511,7 +1511,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(2m, f((object)x));
         }
 
-        [Test]
+
         public void Type_as_nullable_decimal_passing_the_null()
         {
             var decObj = Parameter(typeof(object), "decObj");
@@ -1525,7 +1525,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(null, f((object)x));
         }
 
-        [Test]
+
         public void Negate_decimal()
         {
             var decObj = Parameter(typeof(object), "decObj");
@@ -1538,7 +1538,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(-2m, f(2m));
         }
 
-        [Test]
+
         public void Increment_decimal()
         {
             var decObj = Parameter(typeof(object), "decObj");
@@ -1551,7 +1551,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(3m, f(2m));
         }
 
-        [Test]
+
         public void Decrement_decimal()
         {
             var decObj = Parameter(typeof(object), "decObj");

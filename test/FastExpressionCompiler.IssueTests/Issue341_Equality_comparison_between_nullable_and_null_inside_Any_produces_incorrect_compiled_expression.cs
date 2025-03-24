@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
-using NUnit.Framework;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -12,7 +11,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue341_Equality_comparison_between_nullable_and_null_inside_Any_produces_incorrect_compiled_expression : ITest
     {
         public int Run()
@@ -80,9 +79,9 @@ namespace FastExpressionCompiler.IssueTests
             (null, Ops.NotEqual, null, false),
         };
 
+        public record struct TestCaseData(decimal? a, Ops op, decimal? b, bool expected);
         public static readonly IEnumerable<TestCaseData> TestCases = Data.Select(x => new TestCaseData(x.Item1, x.Item2, x.Item3, x.Item4));
 
-        [Test, TestCaseSource(nameof(TestCases))]
         public void Nullable_decimal_parameters_comparison_cases(decimal? a, Ops op, decimal? b, bool expected)
         {
             var expression = oneParamExpressions[(int)op](b);
@@ -101,7 +100,6 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(expected, result);
         }
 
-        [Test, TestCaseSource(nameof(TestCases))]
         public void Nullable_decimal_parameter_with_decimal_constant_comparison_cases(decimal? a, Ops op, decimal? b, bool expected)
         {
             var expression = twoParamsExpressions[(int)op];
@@ -120,7 +118,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(expected, result);
         }
 
-        [Test]
+
         public void Nullable_decimal_not_equal_to_zero()
         {
             System.Linq.Expressions.Expression<Func<decimal?, bool>> sExpression = n => n != 0M;
@@ -142,7 +140,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.IsFalse(result);
         }
 
-        [Test]
+
         public void Nullable_decimal_greater_than_zero()
         {
             System.Linq.Expressions.Expression<Func<decimal?, bool>> sExpression = n => n > 0M;
@@ -164,7 +162,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.IsFalse(result);
         }
 
-        [Test]
+
         public void Nullable_decimal_not_equal_decimal()
         {
             System.Linq.Expressions.Expression<Func<decimal?, bool>> sExpression = n => n != 1.11M;
@@ -186,7 +184,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.IsTrue(result);
         }
 
-        [Test]
+
         public void Nullable_decimal_less_then_decimal()
         {
             System.Linq.Expressions.Expression<Func<decimal?, bool>> sExpression = n => n < 1.11M;
@@ -208,7 +206,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.IsTrue(result);
         }
 
-        [Test]
+
         public void Nullable_decimal_not_equal_to_null()
         {
             System.Linq.Expressions.Expression<Func<decimal?, bool>> sExpression = n => n != null;
@@ -230,7 +228,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.IsTrue(result);
         }
 
-        [Test]
+
         public void Null_not_equal_to_nullable_decimal()
         {
             System.Linq.Expressions.Expression<Func<decimal?, bool>> sExpression = n => null != n;
@@ -252,7 +250,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.IsTrue(result);
         }
 
-        [Test]
+
         public void Nullable_decimal_equal_to_null()
         {
             System.Linq.Expressions.Expression<Func<decimal?, bool>> sExpression = n => n == null;
@@ -274,7 +272,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.IsFalse(result);
         }
 
-        [Test]
+
         public void Nullable_decimal_member_not_equal_to_null()
         {
             // todo: @perf optimize comparison of nullable with null
@@ -297,7 +295,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.IsTrue(result);
         }
 
-        [Test]
+
         public void Nullable_decimal_member_not_equal_to_null_inside_predicate()
         {
             System.Linq.Expressions.Expression<Func<Test, bool>> sExpression = t => t.A.Any(e => e.Value != null);

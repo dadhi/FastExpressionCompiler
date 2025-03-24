@@ -1,5 +1,5 @@
 ﻿using System;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -10,7 +10,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
-    [TestFixture]
+
     public class EqualityOperatorsTests : ITest
     {
         public int Run()
@@ -26,7 +26,7 @@ namespace FastExpressionCompiler.UnitTests
             return 6;
         }
 
-        [Test]
+
         public void Greater_or_equal_than_DateTime_parameter()
         {
             System.Linq.Expressions.Expression<Func<DateTime, bool>> se =
@@ -38,7 +38,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsFalse(f(DateTime.Now - TimeSpan.FromDays(1)));
         }
 
-        [Test]
+
         public void Less_or_equal_than_DateTime_parameter()
         {
             System.Linq.Expressions.Expression<Func<DateTime, bool>> se =
@@ -50,7 +50,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsFalse(f(DateTime.Now + TimeSpan.FromDays(1)));
         }
 
-        [Test]
+
         public void Implicit_equal()
         {
             System.Linq.Expressions.Expression<Func<EntityWithImplicitEquality, Entity, bool>> se =
@@ -64,7 +64,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsTrue(value);
         }
 
-        [Test]
+
         public void Complex_expression_with_DateTime_Strings_and_Int()
         {
             var dtNow = DateTime.Now;
@@ -93,7 +93,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsTrue(f(tested));
         }
 
-        [Test]
+
         public void Greater_or_equal_than_DateTime_constant()
         {
             var dtNow = Constant(DateTime.Now);
@@ -105,7 +105,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsTrue(f());
         }
 
-        [Test]
+
         public void Less_or_equal_than_DateTime_constant()
         {
             var dtNow = Constant(DateTime.Now);

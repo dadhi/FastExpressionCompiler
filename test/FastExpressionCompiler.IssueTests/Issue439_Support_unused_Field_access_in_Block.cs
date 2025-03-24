@@ -1,6 +1,6 @@
 using System;
 using System.Linq.Expressions;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -10,7 +10,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
-[TestFixture]
+
 public class Issue439_Support_unused_Field_access_in_Block : ITest
 {
     public int Run()
@@ -25,7 +25,7 @@ public class Issue439_Support_unused_Field_access_in_Block : ITest
         public int Result1;
     }
 
-    [Test]
+
     public void Original_case()
     {
         var variable = Variable(typeof(TestClass), "testClass");

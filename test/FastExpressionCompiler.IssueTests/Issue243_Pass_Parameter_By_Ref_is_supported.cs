@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Reflection.Emit;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -10,7 +10,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue243_Pass_Parameter_By_Ref_is_supported : ITest
     {
         public int Run()
@@ -40,7 +40,7 @@ namespace FastExpressionCompiler.IssueTests
             return test.ToString();
         }
 
-        [Test]
+
         public void Lambda_Parameter_Passed_Into_Ref_Method()
         {
             var parameter = Parameter(typeof(string));
@@ -60,7 +60,7 @@ namespace FastExpressionCompiler.IssueTests
 
         public delegate string RefValueTypeDelegate(ref int val);
 
-        [Test]
+
         public void Lambda_Ref_Parameter_Passed_Into_Ref_Method()
         {
             var parameter = Parameter(typeof(string).MakeByRefType());
@@ -76,7 +76,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(data, fastCompiled(ref data));
         }
 
-        [Test]
+
         public void Lambda_Ref_Parameter_Passed_Into_Static_Value_Method()
         {
             var parameter = Parameter(typeof(string).MakeByRefType());
@@ -112,7 +112,7 @@ namespace FastExpressionCompiler.IssueTests
             public string PassByValue(string test) => test.ToString();
         }
 
-        [Test]
+
         public void Lambda_Ref_Parameter_Passed_Into_Instance_Value_Method()
         {
             var i = Parameter(typeof(PassedByRefClass).MakeByRefType());
@@ -153,7 +153,7 @@ namespace FastExpressionCompiler.IssueTests
             public string PassByValue(int test) => test.ToString();
         }
 
-        [Test]
+
         public void Lambda_Ref_Parameter_Passed_Into_Struct_Instance_Value_Method()
         {
             var i = Parameter(typeof(PassedByRefStruct).MakeByRefType());
@@ -187,7 +187,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual("2", fastCompiled(ref cls, ref b));
         }
 
-        [Test]
+
         public void Lambda_Ref_ValueType_Parameter_Passed_Into_Value_Method()
         {
             var parameter = Parameter(typeof(int).MakeByRefType());
@@ -208,7 +208,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(data.ToString(), fastCompiled(ref data));
         }
 
-        [Test]
+
         public void Lambda_Parameter_Passed_Into_Ref_Method_Extra_Assignment()
         {
             var parameter = Parameter(typeof(string));

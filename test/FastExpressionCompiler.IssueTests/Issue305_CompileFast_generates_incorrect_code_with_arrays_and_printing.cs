@@ -1,4 +1,4 @@
-using NUnit.Framework;
+
 using System;
 using System.Linq;
 using System.Collections.Generic;
@@ -10,7 +10,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue305_CompileFast_generates_incorrect_code_with_arrays_and_printing : ITest
     {
         public int Run()
@@ -25,7 +25,7 @@ namespace FastExpressionCompiler.IssueTests
         public void WriteLine(double n) => _items.Add(n);
         public void WriteLine(int n) => _items.Add(n);
 
-        [Test]
+
         public void Test_double_array_index_access()
         {
             var arr = Variable(typeof(double[]), "arr");
@@ -61,7 +61,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(4, _items.Count(x => x == 123.456));
         }
 
-        [Test]
+
         public void Test_double_array_index_access_and_instance_call()
         {
             var arr = Variable(typeof(double[]), "arr");

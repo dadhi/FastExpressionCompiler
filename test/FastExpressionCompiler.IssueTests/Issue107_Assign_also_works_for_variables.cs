@@ -1,5 +1,5 @@
 ﻿using System;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -10,7 +10,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue107_Assign_also_works_for_variables : ITest
     {
         public int Run()
@@ -22,7 +22,7 @@ namespace FastExpressionCompiler.IssueTests
             return 4;
         }
 
-        [Test]
+
         public void VariableAssignIsSupported()
         {
             var eVar = Variable(typeof(int));
@@ -38,7 +38,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(7, fastCompiled());
         }
 
-        [Test]
+
         public void VariableAssignIsSupportedWithUneededConstant()
         {
             var eVar = Variable(typeof(int));
@@ -55,7 +55,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(7, fastCompiled());
         }
 
-        [Test]
+
         public void VariableAssignIsSupportedWithConstantReturn()
         {
             var eVar = Variable(typeof(int));
@@ -72,7 +72,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(9, fastCompiled());
         }
 
-        [Test]
+
         public void VariableAddAssignIsSupported()
         {
             var eVar = Variable(typeof(int));

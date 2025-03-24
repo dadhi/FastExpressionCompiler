@@ -1,4 +1,4 @@
-using NUnit.Framework;
+
 using System;
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -8,7 +8,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue307_Switch_with_fall_through_throws_InvalidProgramException : ITest
     {
         public int Run()
@@ -17,7 +17,7 @@ namespace FastExpressionCompiler.IssueTests
             return 1;
         }
 
-        [Test]
+
         public void Test1()
         {
             var param = Parameter(typeof(int), "p");

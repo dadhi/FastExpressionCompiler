@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq.Expressions;
 using System.Globalization;
-using NUnit.Framework;
+
 #pragma warning disable CS0164, CS0649
 
 #if LIGHT_EXPRESSION
@@ -16,7 +16,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
-[TestFixture]
+
 public class Issue274_Failing_Expressions_in_Linq2DB : ITest
 {
   public int Run()
@@ -46,7 +46,7 @@ public class Issue274_Failing_Expressions_in_Linq2DB : ITest
     return 17;
   }
 
-  [Test]
+
   public void The_expression_with_anonymous_class_should_output_without_special_symbols()
   {
     int? fortyTwo = 42;
@@ -65,7 +65,7 @@ public class Issue274_Failing_Expressions_in_Linq2DB : ITest
     Asserts.DoesNotContain("<>", de.CSharpString);
   }
 
-  [Test]
+
   public void Test_case_1_Minimal_compare_nullable_with_null_conditional()
   {
     var p = Parameter(typeof(int?), "i");
@@ -81,7 +81,7 @@ public class Issue274_Failing_Expressions_in_Linq2DB : ITest
     Asserts.AreEqual(100, f(42));
   }
 
-  [Test]
+
   public void Test_case_1_Minimal_compare_nullable_returned_by_the_method_with_null_conditional()
   {
     var p = Parameter(typeof(int?), "i");
@@ -101,7 +101,7 @@ public class Issue274_Failing_Expressions_in_Linq2DB : ITest
     Asserts.AreEqual(100, f(42));
   }
 
-  [Test]
+
   public void Test_case_1_Minimal_compare_nullable_with_null_conditional_and_nested_conditional()
   {
     var i = Parameter(typeof(int?), "i");
@@ -126,7 +126,7 @@ public class Issue274_Failing_Expressions_in_Linq2DB : ITest
 
   public static int? CheckNullable(int? i) => 5;
 
-  [Test]
+
   public void Test_case_1_Full_AccessViolationException()
   {
     var p = new ParameterExpression[10]; // the parameter expressions i
@@ -232,7 +232,7 @@ public class Issue274_Failing_Expressions_in_Linq2DB : ITest
     f.PrintIL();
   }
 
-  [Test]
+
   public void Test_case_2_Full_ExecutionEngineException()
   {
     var p = new ParameterExpression[1]; // the parameter expressions 
@@ -293,7 +293,7 @@ public class Issue274_Failing_Expressions_in_Linq2DB : ITest
       f((Enum15)3));
   }
 
-  [Test]
+
   public void Test_case_3_Full_NullReferenceException()
   {
     var p = new ParameterExpression[9]; // the parameter expressions 
@@ -455,7 +455,7 @@ public class Issue274_Failing_Expressions_in_Linq2DB : ITest
     }
   }
 
-  [Test]
+
   public void Test_case_4_simplified_InvalidCastException()
   {
     var hs = Constant(new Delegate[] { (Action<string>)null });
@@ -478,7 +478,7 @@ public class Issue274_Failing_Expressions_in_Linq2DB : ITest
 
   public static void SimpleStringHandler(string s) { }
 
-  [Test]
+
   public void Test_case_4_Full_InvalidCastException()
   {
     var p = new ParameterExpression[2]; // the parameter expressions 
@@ -547,7 +547,7 @@ public class Issue274_Failing_Expressions_in_Linq2DB : ITest
     Asserts.IsInstanceOf<SampleClass>(s2);
   }
 
-  [Test]
+
   public void Test_287_Case2_SimpleDelegate_as_nested_lambda_in_TesCollection_test()
   {
     string gotS = null;
@@ -588,7 +588,7 @@ public class Issue274_Failing_Expressions_in_Linq2DB : ITest
     Asserts.AreEqual("2", gotS);
   }
 
-  [Test]
+
   public void Test_287_Case1_ConvertTests_NullableParameterInOperatorConvert_VerificationException()
   {
     var p = new ParameterExpression[1]; // the parameter expressions 
@@ -622,7 +622,7 @@ public class Issue274_Failing_Expressions_in_Linq2DB : ITest
       new CustomMoneyType() { Amount = amount };
   }
 
-  [Test]
+
   public void Test_283_Case6_MappingSchemaTests_CultureInfo_VerificationException()
   {
     var ci = (CultureInfo)new CultureInfo("ru-RU", false).Clone();
@@ -667,7 +667,7 @@ public class Issue274_Failing_Expressions_in_Linq2DB : ITest
     public System.Globalization.CultureInfo info;
   }
 
-  [Test]
+
   public void Test_283_Case5_ConvertTests_NullableIntToNullableEnum_NullReferenceException()
   {
     var p = new ParameterExpression[1]; // the parameter expressions 
@@ -702,7 +702,7 @@ public class Issue274_Failing_Expressions_in_Linq2DB : ITest
 
   public enum Enum1 { X }
 
-  [Test]
+
   public void Test_283_Case4_SecurityVerificationException()
   {
     var p = new ParameterExpression[1]; // the parameter expressions 
@@ -724,7 +724,7 @@ public class Issue274_Failing_Expressions_in_Linq2DB : ITest
     Asserts.AreEqual("1", fx(1));
   }
 
-  [Test]
+
   public void Test_283_Case3_SecurityVerificationException()
   {
     var p = new ParameterExpression[2]; // the parameter expressions 
@@ -755,7 +755,7 @@ public class Issue274_Failing_Expressions_in_Linq2DB : ITest
     Asserts.AreEqual("OtherStrValue22", fx(concrete, 22));
   }
 
-  [Test]
+
   public void Test_283_Case2_NullRefException()
   {
     var p = new ParameterExpression[3]; // the parameter expressions 
@@ -831,7 +831,7 @@ public class Issue274_Failing_Expressions_in_Linq2DB : ITest
     f.PrintIL();
   }
 
-  [Test]
+
   public void Test_283_Case2_Minimal_NullRefException()
   {
     var p = Parameter(typeof(object), "o");

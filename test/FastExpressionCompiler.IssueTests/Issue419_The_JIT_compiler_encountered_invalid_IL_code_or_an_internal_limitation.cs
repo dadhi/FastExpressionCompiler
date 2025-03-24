@@ -1,7 +1,7 @@
 using System;
 using System.Linq.Expressions;
 using System.Reflection;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -11,7 +11,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
-[TestFixture]
+
 public class Issue419_The_JIT_compiler_encountered_invalid_IL_code_or_an_internal_limitation : ITest
 {
   public int Run()
@@ -37,7 +37,7 @@ public class Issue419_The_JIT_compiler_encountered_invalid_IL_code_or_an_interna
     public Nested(double? y) => Y = y;
   }
 
-  [Test]
+
   public void Original_Case_1()
   {
     System.Linq.Expressions.Expression<Func<Obj, bool>> se = d =>
@@ -67,7 +67,7 @@ public class Issue419_The_JIT_compiler_encountered_invalid_IL_code_or_an_interna
     Asserts.IsFalse(ff(data));
   }
 
-  [Test]
+
   public void Case_1_Simplified_less_reversed_mul_args()
   {
     System.Linq.Expressions.Expression<Func<Obj, bool>> se = d =>
@@ -90,7 +90,7 @@ public class Issue419_The_JIT_compiler_encountered_invalid_IL_code_or_an_interna
     Asserts.IsFalse(ff(data));
   }
 
-  [Test]
+
   public void Case_1_Simplified_less()
   {
     System.Linq.Expressions.Expression<Func<Obj, bool>> se = d =>
@@ -113,7 +113,7 @@ public class Issue419_The_JIT_compiler_encountered_invalid_IL_code_or_an_interna
     Asserts.IsFalse(ff(data));
   }
 
-  [Test]
+
   public void Case_1_simplified()
   {
     System.Linq.Expressions.Expression<Func<Obj, bool>> se = d =>
@@ -139,7 +139,7 @@ public class Issue419_The_JIT_compiler_encountered_invalid_IL_code_or_an_interna
 
   public delegate TOut RefFunc<TIn, TOut>(in TIn t);
 
-  [Test]
+
   public void Original_Case_2()
   {
     var p = new ParameterExpression[1]; // the parameter expressions

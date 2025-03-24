@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection.Emit;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -13,7 +13,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
-[TestFixture]
+
 public class Issue428_Expression_Switch_without_a_default_case_incorrectly_calls_first_case_for_unmatched_values : ITest
 {
     public int Run()
@@ -27,7 +27,7 @@ public class Issue428_Expression_Switch_without_a_default_case_incorrectly_calls
     public static void AddCase(string value) => _cases.Add(value);
     public static void DebugWriteCase(string value, int n) => Debug.WriteLine($"{value}-{n}");
 
-    [Test]
+
     public void Original_case()
     {
         var number = Parameter(typeof(int), "n");
@@ -63,7 +63,7 @@ public class Issue428_Expression_Switch_without_a_default_case_incorrectly_calls
         _cases.Clear();
     }
 
-    [Test]
+
     public void Not_so_original_case()
     {
         var number = Parameter(typeof(int), "n");

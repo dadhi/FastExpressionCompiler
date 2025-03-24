@@ -2,14 +2,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using NUnit.Framework;
+
 using static FastExpressionCompiler.LightExpression.Expression;
 using System.Linq.Expressions;
 using SysExpr = System.Linq.Expressions.Expression;
 
 namespace FastExpressionCompiler.LightExpression.UnitTests
 {
-    [TestFixture]
+
     public class LightExpressionTests : ITest
     {
         public int Run()
@@ -29,7 +29,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             return 11;
         }
 
-        [Test]
+
         public void Can_compile_lambda_without_converting_to_expression()
         {
             var funcExpr = Lambda(
@@ -53,7 +53,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             }
         }
 
-        [Test]
+
         public void Can_compile_lambda_with_property()
         {
             var thisType = GetType().GetTypeInfo();
@@ -66,7 +66,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.IsInstanceOf<X>(x);
         }
 
-        [Test]
+
         public void Can_compile_lambda_with_call_and_property()
         {
             var thisType = GetType().GetTypeInfo();
@@ -84,7 +84,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
         public static X PropX => new X(new Y());
         public static X GetX(X x) => x;
 
-        [Test]
+
         public void Nested_Func_using_outer_parameter()
         {
             // The same hoisted expression: 
@@ -106,7 +106,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             return getS();
         }
 
-        [Test]
+
         public void Nested_Action_using_outer_parameter_and_closed_value()
         {
             //Expression<Func<Action<string>>> expr = () => a => s.SetValue(a);
@@ -229,7 +229,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             return expr;
         }
 
-        [Test]
+
         public void Can_compile_complex_expr_with_Arrays_and_Casts()
         {
             var expr = CreateComplexLightExpression();
@@ -244,7 +244,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.AreEqual("11", ((A)x).Sop);
         }
 
-        [Test]
+
         public void Can_compile_complex_expr_with_perf_tricks_with_Arrays_and_Casts()
         {
             var expr = CreateComplexLightExpression_with_intrinsics();
@@ -259,7 +259,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.AreEqual("11", ((A)x).Sop);
         }
 
-        [Test]
+
         public void Should_output_the_System_and_LightExpression_to_the_identical_construction_syntax()
         {
             var se = CreateComplexExpression("p");
@@ -272,7 +272,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.AreEqual(ses, les);
         }
 
-        [Test]
+
         public void Should_output_the_System_and_LightExpression_to_the_identical_CSharp_syntax()
         {
             var se = CreateComplexExpression("p");
@@ -285,7 +285,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.AreEqual(ses, les);
         }
 
-        [Test]
+
         public void Expression_produced_by_ToExpressionString_should_compile()
         {
             var p = new ParameterExpression[1]; // the parameter expressions 
@@ -326,7 +326,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             f(new object[22]);
         }
 
-        [Test]
+
         public void Multiple_methods_in_block_should_be_aligned_when_output_to_csharp()
         {
             var sayHi = GetType().GetMethod(nameof(SayHi));
@@ -362,7 +362,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
         public class D1 : ID { }
         public class D2 : ID { }
 
-        [Test]
+
         public void Can_embed_normal_Expression_into_LightExpression_eg_as_Constructor_argument()
         {
             var func = Lambda(New(_ctorOfP, New(_ctorOfB))).CompileFast<Func<P>>();

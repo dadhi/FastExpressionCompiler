@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Drawing;
 using System.Linq.Expressions;
-using NUnit.Framework;
+
 #pragma warning disable 219
 
 namespace FastExpressionCompiler.IssueTests
 {
-    [TestFixture]
+
     public class Issue67_Equality_comparison_with_nullables_throws_at_delegate_invoke : ITest
     {
         public int Run()
@@ -57,7 +57,7 @@ namespace FastExpressionCompiler.IssueTests
             }
         }
 
-        [Test]
+
         public void Comparing_nullable_equal_works()
         {
             var int32Comparand = 1;
@@ -73,7 +73,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(f2(new Foo() { Prop = 0 }), f(new Foo() { Prop = 0 }));
         }
 
-        [Test]
+
         public void Comparing_struct_equal_works()
         {
             var aaComparand = new Aa();
@@ -86,7 +86,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(f2(new Foo() { Prop4 = aaComparand }), f(new Foo() { Prop4 = aaComparand }));
         }
 
-        [Test]
+
         public void Comparing_int_equal_works()
         {
             var int32Comparand = 1;
@@ -101,7 +101,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(f2(new Foo() { Prop3 = 0 }), f(new Foo() { Prop3 = 0 }));
         }
 
-        [Test]
+
         public void Comparing_nullable_equal_point_works()
         {
             var pComparand = new Point(4, 6);
@@ -116,7 +116,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(f2(new Foo() { PropP = new Point(4, 7) }), f(new Foo() { PropP = new Point(4, 7) }));
         }
 
-        [Test]
+
         public void Comparing_nullable_unequal_works()
         {
             var int32Comparand = 1;
@@ -142,7 +142,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(fa2(new Foo() { Prop = 0 }), fa(new Foo() { Prop = 0 }));
         }
 
-        [Test]
+
         public void Comparing_nullable_greater_works()
         {
             var int32Comparand = 1;
@@ -172,7 +172,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(fa2(new Foo() { Prop = 0 }), fa(new Foo() { Prop = 0 }));
         }
 
-        [Test]
+
         public void Comparing_nullable_greaterOrEqual_works()
         {
             var int32Comparand = 1;
@@ -202,7 +202,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(fa2(new Foo() { Prop = 0 }), fa(new Foo() { Prop = 0 }));
         }
 
-        [Test]
+
         public void Comparing_nullable_less_works()
         {
             var int32Comparand = 1;
@@ -232,7 +232,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(fa2(new Foo() { Prop = 0 }), fa(new Foo() { Prop = 0 }));
         }
 
-        [Test]
+
         public void Comparing_nullable_lessOrEqual_works()
         {
             var int32Comparand = 1;
@@ -262,7 +262,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(fa2(new Foo() { Prop = 0 }), fa(new Foo() { Prop = 0 }));
         }
 
-        [Test]
+
         public void Compare_nullable_to_null_should_work()
         {
             Expression<Func<Foo, bool>> e = foo => Nullable.Equals(foo.Prop, null);

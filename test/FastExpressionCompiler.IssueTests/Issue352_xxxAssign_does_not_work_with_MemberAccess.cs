@@ -4,7 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using System.Linq.Expressions;
@@ -17,7 +17,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue352_xxxAssign_does_not_work_with_MemberAccess : ITest
     {
         public int Run()
@@ -71,7 +71,7 @@ namespace FastExpressionCompiler.IssueTests
             return 40;
         }
 
-        [Test]
+
         public void Check_ArrayAccess_Assign_InAction()
         {
             var a = Parameter(typeof(int[]), "a");
@@ -110,7 +110,7 @@ namespace FastExpressionCompiler.IssueTests
 
         public delegate void ArrAndRefParam(int[] a, ref int b);
 
-        [Test]
+
         public void Check_ArrayAccess_Assign_ParameterByRef_InAction()
         {
             var a = Parameter(typeof(int[]), "a");
@@ -152,7 +152,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(33, a1[2]);
         }
 
-        [Test]
+
         public void Check_MultiArrayAccess_Assign_InAction()
         {
             var a = Parameter(typeof(int[,]), "a");
@@ -236,7 +236,7 @@ namespace FastExpressionCompiler.IssueTests
             }
         }
 
-        [Test]
+
         public void Check_IndexerAccess_Assign_InAction()
         {
             var a = Parameter(typeof(Arr), "a");
@@ -274,7 +274,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(-33, a1.Elem);
         }
 
-        [Test]
+
         public void Check_Val_IndexerAccess_Assign_InAction()
         {
             var a = Parameter(typeof(ArrVal), "a");
@@ -314,7 +314,7 @@ namespace FastExpressionCompiler.IssueTests
 
         delegate void RefArrVal(ref ArrVal a);
 
-        [Test]
+
         public void Check_Val_Ref_IndexerAccess_Assign_InAction()
         {
             var a = Parameter(typeof(ArrVal).MakeByRefType(), "a");
@@ -352,7 +352,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(-33, a1.Elem);
         }
 
-        [Test]
+
         public void Check_IndexerAccess_AddAssign_PlusOne_InAction()
         {
             var a = Parameter(typeof(Arr), "a");
@@ -384,7 +384,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(-3, a1.Elem);
         }
 
-        [Test]
+
         public void Check_ArrayAccess_AddAssign_InAction()
         {
             var a = Parameter(typeof(int[]), "a");
@@ -415,7 +415,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(75, a2[2]);
         }
 
-        [Test]
+
         public void Check_ArrayAccess_AddAssign_ReturnResultInFunction()
         {
             var a = Parameter(typeof(int[]), "a");
@@ -452,7 +452,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(res, a1[2]);
         }
 
-        [Test]
+
         public void Check_ArrayAccess_PreIncrement()
         {
             var a = Parameter(typeof(int[]), "a");
@@ -484,7 +484,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(10, a1[2]);
         }
 
-        [Test]
+
         public void Check_ArrayAccess_AddAssign_PlusOne()
         {
             var a = Parameter(typeof(int[]), "a");
@@ -516,7 +516,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(10, a1[2]);
         }
 
-        [Test]
+
         public void Check_MultiArrayAccess_AddAssign_PlusOne()
         {
             var a = Parameter(typeof(int[,]), "a");
@@ -550,7 +550,7 @@ namespace FastExpressionCompiler.IssueTests
 
         delegate void RefArr(ref int[] a);
 
-        [Test]
+
         public void Check_Ref_ArrayAccess_AddAssign_PlusOne()
         {
             var a = Parameter(typeof(int[]).MakeByRefType(), "a");
@@ -598,7 +598,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(10, a1[2]);
         }
 
-        [Test]
+
         public void Check_Val_IndexerAccess_AddAssign_PlusOne_InAction()
         {
             var a = Parameter(typeof(ArrVal), "a");
@@ -647,7 +647,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(9, a1.Elem);
         }
 
-        [Test]
+
         public void Check_Val_Ref_IndexerAccess_AddAssign_PlusOne_InAction()
         {
             var a = Parameter(typeof(ArrVal).MakeByRefType(), "a");
@@ -698,7 +698,7 @@ namespace FastExpressionCompiler.IssueTests
 
         delegate void RefArrValNoIndexer(ref ArrValNoIndexer a);
 
-        [Test]
+
         public void Check_Val_Ref_NoIndexer_AddAssign_PlusOne()
         {
             var a = Parameter(typeof(ArrValNoIndexer).MakeByRefType(), "a");
@@ -750,7 +750,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(-3, a1.Elem);
         }
 
-        [Test]
+
         public void Check_ArrayAccess_PreIncrement_Nullable()
         {
             var a = Parameter(typeof(int[]), "a");
@@ -784,7 +784,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(10, a1[2]);
         }
 
-        [Test]
+
         public void Check_ArrayAccess_Add()
         {
             var a = Parameter(typeof(int[]), "a");
@@ -853,7 +853,7 @@ namespace FastExpressionCompiler.IssueTests
             }
         }
 
-        [Test]
+
         public void Check_MemberAccess_AddAssign_StaticMember()
         {
             var bField = typeof(Box).GetField(nameof(Box.StaticField));
@@ -891,7 +891,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(33, Box.StaticField);
         }
 
-        [Test]
+
         public void Check_MemberAccess_AddAssign_StaticProp()
         {
             var bField = typeof(Box).GetProperty(nameof(Box.StaticProp));
@@ -929,7 +929,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(33, Box.StaticProp);
         }
 
-        [Test]
+
         public void Check_MemberAccess_AddAssign()
         {
             var b = Parameter(typeof(Box), "b");
@@ -971,7 +971,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(42, b1.Field);
         }
 
-        [Test]
+
         public void Check_MemberAccess_AddAssign_NullablePlusNullable()
         {
             var b = Parameter(typeof(Box), "b");
@@ -1039,7 +1039,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(42, b2.NullableField);
         }
 
-        [Test]
+
         public void Check_ArrayAccess_AddAssign_NullablePlusNullable()
         {
             var a = Parameter(typeof(int?[]), "a");
@@ -1106,7 +1106,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(42, a2[2]);
         }
 
-        [Test]
+
         public void Check_MemberAccess_AddAssign_NullablePlusNullable_Prop()
         {
             var b = Parameter(typeof(Box), "b");
@@ -1174,7 +1174,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(42, b2.NullableProp);
         }
 
-        [Test]
+
         public void Check_MemberAccess_AddAssign_ToNewExpression()
         {
             Box.CtorCalls = 0;
@@ -1211,7 +1211,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(1, Box.CtorCalls);
         }
 
-        [Test]
+
         public void Check_MemberAccess_PreIncrementAssign()
         {
             var b = Parameter(typeof(Box), "b");
@@ -1264,7 +1264,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(10, b1.Field);
         }
 
-        [Test]
+
         public void Check_MemberAccess_PlusOneAssign()
         {
             var b = Parameter(typeof(Box), "b");
@@ -1306,7 +1306,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(10, b1.Field);
         }
 
-        [Test]
+
         public void Check_MemberAccess_PreIncrementAssign_Returning()
         {
             var b = Parameter(typeof(Box), "b");
@@ -1343,7 +1343,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(10, x1);
         }
 
-        [Test]
+
         public void Check_MemberAccess_PostIncrementAssign_Returning()
         {
             var b = Parameter(typeof(Box), "b");
@@ -1383,7 +1383,7 @@ namespace FastExpressionCompiler.IssueTests
 
         delegate void RefVal(ref Val v);
 
-        [Test]
+
         public void Check_Ref_ValueType_MemberAccess_PreIncrementAssign()
         {
             var v = Parameter(typeof(Val).MakeByRefType(), "v");
@@ -1429,7 +1429,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(10, v1.Field);
         }
 
-        [Test]
+
         public void Check_Ref_ValueType_MemberAccess_PreIncrementAssign_Nullable()
         {
             var v = Parameter(typeof(Val).MakeByRefType(), "v");
@@ -1492,7 +1492,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(10, v2.NullableField);
         }
 
-        [Test]
+
         public void Check_Ref_ValueType_MemberAccess_PreIncrementAssign_Nullable_Prop()
         {
             var v = Parameter(typeof(Val).MakeByRefType(), "v");
@@ -1556,7 +1556,7 @@ namespace FastExpressionCompiler.IssueTests
 
         delegate int? RefValReturningNullable(ref Val v);
 
-        [Test]
+
         public void Check_Ref_ValueType_MemberAccess_PreIncrementAssign_Nullable_ReturningNullable()
         {
             var v = Parameter(typeof(Val).MakeByRefType(), "v");
@@ -1627,7 +1627,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(10, x2);
         }
 
-        [Test]
+
         public void Check_Ref_ValueType_MemberAccess_PreIncrementAssign_Nullable_ReturningNullable_Prop()
         {
             var v = Parameter(typeof(Val).MakeByRefType(), "v");
@@ -1697,7 +1697,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(10, x2);
         }
 
-        [Test]
+
         public void Check_Ref_ValueType_MemberAccess_PostIncrementAssign_Nullable_ReturningNullable()
         {
             var v = Parameter(typeof(Val).MakeByRefType(), "v");
@@ -1768,7 +1768,7 @@ namespace FastExpressionCompiler.IssueTests
 
         delegate int RefValReturning(ref Val v);
 
-        [Test]
+
         public void Check_Ref_ValueType_MemberAccess_PreIncrementAssign_Returning()
         {
             var v = Parameter(typeof(Val).MakeByRefType(), "v");
@@ -1818,7 +1818,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(10, x1);
         }
 
-        [Test]
+
         public void Check_Ref_ValueType_MemberAccess_PostIncrementAssign_Returning()
         {
             var v = Parameter(typeof(Val).MakeByRefType(), "v");
@@ -1868,7 +1868,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(9, x1);
         }
 
-        [Test]
+
         public void Check_MemberAccess_PreIncrementAssign_Nullable()
         {
             var b = Parameter(typeof(Box), "b");
@@ -1930,7 +1930,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(42, b2.NullableField);
         }
 
-        [Test]
+
         public void Check_MemberAccess_PreIncrementAssign_Nullable_ReturningNullable()
         {
             var b = Parameter(typeof(Box), "b");
@@ -2001,7 +2001,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(42, x2);
         }
 
-        [Test]
+
         public void Check_MemberAccess_PostIncrementAssign_Nullable_ReturningNullable()
         {
             var b = Parameter(typeof(Box), "b");
@@ -2049,7 +2049,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(41, x2);
         }
 
-        [Test]
+
         public void Check_MemberAccess_PreDecrementAssign_ToNewExpression()
         {
             Box.CtorCalls = 0; // assuming that the tests are not running in parallel

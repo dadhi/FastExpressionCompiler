@@ -1,5 +1,5 @@
 ﻿using System.Reflection;
-using NUnit.Framework;
+
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.IssueTests
@@ -8,7 +8,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue177_Cannot_compile_to_the_required_delegate_type_with_non_generic_CompileFast : ITest
     {
         public int Run()
@@ -17,7 +17,7 @@ namespace FastExpressionCompiler.IssueTests
             return 1;
         }
 
-        [Test]
+
         public void Test()
         {
             var delegateType = typeof(MyDelegate<>).MakeGenericType(typeof(string));

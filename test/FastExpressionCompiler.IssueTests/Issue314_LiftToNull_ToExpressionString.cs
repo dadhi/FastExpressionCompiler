@@ -1,4 +1,4 @@
-using NUnit.Framework;
+
 using System;
 using System.Linq.Expressions;
 #if LIGHT_EXPRESSION
@@ -9,7 +9,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue314_LiftToNull_ToExpressionString
     {
         public int Run()
@@ -21,7 +21,7 @@ namespace FastExpressionCompiler.IssueTests
             return 4;
         }
 
-        [Test]
+
         public void LiftToNull()
         {
             var p = Parameter(typeof(int), "tmp0");
@@ -46,7 +46,7 @@ namespace FastExpressionCompiler.IssueTests
                 , str);
         }
 
-        [Test]
+
         public void CustomMethod()
         {
             var x = Parameter(typeof(A), "x");
@@ -65,7 +65,7 @@ namespace FastExpressionCompiler.IssueTests
                 , str);
         }
 
-        [Test]
+
         public void DateTimeConstant()
         {
             var dt = new DateTime(2020, 3, 13);
@@ -76,7 +76,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(@$"var expr = Constant(DateTime.Parse(""{dt}""));", str);
         }
 
-        [Test]
+
         public void NullableDateTimeConstant()
         {
             var dt = new DateTime(2020, 3, 13);

@@ -8,7 +8,7 @@ using System.Reflection.Emit;
 using System.Text;
 using System.Runtime.InteropServices;
 
-using NUnit.Framework;
+
 
 using SysExpr = System.Linq.Expressions.Expression;
 
@@ -81,20 +81,20 @@ public class Issue261_Loop_wih_conditions_fails : ITest
 #endif
   }
 
-  [Test]
+
   public void Constant_of_Type_value_should_be_of_RuntimeType_because_the_SystemConstant_works_this_way()
   {
     var t = GetType();
     Asserts.AreEqual("RuntimeType", Constant(t).Type.Name);
   }
 
-  [Test]
+
   public void Constant_of_Byte_should_stay_the_Byte_and_not_to_be_changed_to_int()
   {
     Asserts.AreEqual(typeof(byte), Constant((byte)0).Type);
   }
 
-  [Test]
+
   public void Serialize_the_nullable_decimal_array()
   {
     var p = new ParameterExpression[5]; // the parameter expressions 
@@ -289,7 +289,7 @@ public class Issue261_Loop_wih_conditions_fails : ITest
     f.PrintIL();
   }
 
-  [Test]
+
   public void Serialize_the_nullable_struct_array()
   {
     var p = new ParameterExpression[6]; // the parameter expressions 
@@ -419,7 +419,7 @@ public class Issue261_Loop_wih_conditions_fails : ITest
     Asserts.IsNotNull(f);
   }
 
-  [Test]
+
   public void Serialize_hard_coded()
   {
     var p = new ParameterExpression[3]; // the parameter expressions 
@@ -452,7 +452,7 @@ public class Issue261_Loop_wih_conditions_fails : ITest
     Asserts.IsNotNull(f);
   }
 
-  [Test]
+
   public void Serialize_struct_with_the_explicit_layout_and_boxed_on_return()
   {
     var p = new ParameterExpression[3]; // the parameter expressions 
@@ -492,7 +492,7 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
     Asserts.IsNotNull(f);
   }
 
-  [Test]
+
   public void Test_unbox_struct_with_the_struct_member_with_the_explicit_layout_and_casted_ref_serialize()
   {
     var p = new ParameterExpression[4]; // the parameter expressions 
@@ -578,7 +578,7 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
     internal object _array;
   }
 
-  [Test]
+
   public void Test_class_items_array_index_via_variable_access_then_the_member_access()
   {
 
@@ -625,7 +625,7 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
     Asserts.AreEqual("13", ff(new[] { new El() }, 0));
   }
 
-  [Test]
+
   public void Test_struct_items_array_index_via_variable_access_then_the_member_access()
   {
     var elArr = Parameter(typeof(ElVal[]), "elArr");
@@ -1033,7 +1033,7 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
     return expr;
   }
 
-  [Test]
+  
   public void Test_serialization_of_the_Dictionary()
   {
     var expr = CreateSerializeDictionaryExpression();
@@ -1049,7 +1049,7 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
   }
 #endif
 
-  [Test]
+
   public void Test_assignment_with_the_block_on_the_right_side_with_just_a_constant()
   {
     var result = Parameter(typeof(int), "result");
@@ -1075,7 +1075,7 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
     Asserts.AreEqual(42, f());
   }
 
-  [Test]
+
   public void Test_assignment_with_the_block_on_the_right_side()
   {
     var result = Parameter(typeof(int[]), "result");
@@ -1104,7 +1104,7 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
     Asserts.AreEqual(42, f()[0]);
   }
 
-  [Test]
+
   public void Test_DictionaryTest_StringDictionary()
   {
     var p = new ParameterExpression[3]; // the parameter expressions 
@@ -1143,7 +1143,7 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
     f.PrintIL();
   }
 
-  [Test]
+
   public void Test_the_big_re_engineering_test_from_the_Apex_Serializer_with_the_simple_mock_arguments()
   {
     var p = new ParameterExpression[7]; // the parameter expressions 
@@ -1623,7 +1623,7 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
   public static byte GetByte() => 0;
 
 #if !LIGHT_EXPRESSION
-  [Test]
+  
   public void Should_throw_for_the_equal_expression_of_different_types()
   {
     var ex = Asserts.Throws<InvalidOperationException>(() =>
@@ -1638,7 +1638,7 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
 #endif
 
 #if LIGHT_EXPRESSION
-  [Test]
+
   public void Can_make_convert_and_compile_binary_equal_expression_of_different_types()
   {
     var e = Lambda<Func<bool>>(
@@ -1661,7 +1661,7 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
     Asserts.IsTrue(fs());
   }
 
-  [Test]
+
   public void Test_find_generic_method_with_the_generic_param()
   {
     var m = typeof(BufferedStream).GetMethods()
@@ -1675,7 +1675,7 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
     Asserts.AreEqual("typeof(Issue261_Loop_wih_conditions_fails.BufferedStream).GetMethods().Where(x => x.IsGenericMethod && x.Name == \"Write\" && x.GetGenericArguments().Length == 1).Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(typeof(int)) : x).Single(x => x.GetParameters().Select(y => y.ParameterType).SequenceEqual(new[] { typeof(int) }))", s);
   }
 
-  [Test]
+
   public void Test_method_to_expression_code_string()
   {
     var m = typeof(BufferedStream).GetMethods()
@@ -1705,7 +1705,7 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
     Asserts.AreEqual("typeof(Issue261_Loop_wih_conditions_fails.BufferedStream).GetMethods(BindingFlags.NonPublic|BindingFlags.Static).Where(x => x.IsGenericMethod && x.Name == \"Read2\" && x.GetParameters().Length == 0 && x.GetGenericArguments().Length == 1).Select(x => x.IsGenericMethodDefinition ? x.MakeGenericMethod(typeof(int)) : x).Single()", s);
   }
 
-  [Test]
+
   public void Test_nested_generic_type_output()
   {
     var s = typeof(ReadMethods<ConstructorTests.Test[], BufferedStream, Settings_827720117>.ReadSealed)
@@ -1714,7 +1714,7 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
     Asserts.AreEqual("ReadMethods<ConstructorTests.Test[], BufferedStream, Settings_827720117>.ReadSealed", s);
   }
 
-  [Test]
+
   public void Test_triple_nested_non_generic()
   {
     var s = typeof(A<int>.B<string>.Z).ToCode(true);
@@ -1730,7 +1730,7 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
     Asserts.AreEqual("A<int>.B<string>.Z[]", s);
   }
 
-  [Test]
+
   public void Test_triple_nested_open_generic()
   {
     var s = typeof(A<>).ToCode(true, (_, x) => x.Replace("Issue261_Loop_wih_conditions_fails.", ""));
@@ -1749,7 +1749,7 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
     Asserts.AreEqual("A<X>.B<Y>.Z", s);
   }
 
-  [Test]
+
   public void Test_non_generic_classes()
   {
     var s = typeof(A.B.C).ToCode(true, (_, x) => x.Replace("Issue261_Loop_wih_conditions_fails.", ""));
@@ -1796,7 +1796,7 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
     public void Nah<T>(ref T d) { MethodIndex = 8; }
   }
 
-  [Test]
+
   public void FindMethodOrThrow_in_the_class_hierarchy()
   {
     var bar = new Bar();

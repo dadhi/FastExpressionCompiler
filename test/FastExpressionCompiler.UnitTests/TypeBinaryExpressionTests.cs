@@ -1,5 +1,5 @@
 using System;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -9,7 +9,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
-    [TestFixture]
+
     public class TypeBinaryExpressionTests : ITest
     {
         public int Run()
@@ -21,7 +21,7 @@ namespace FastExpressionCompiler.UnitTests
             return 3;
         }
 
-        [Test]
+
         public void TypeEqual_should_work()
         {
             var sExpr = Parameter(typeof(object), "o");
@@ -40,7 +40,7 @@ namespace FastExpressionCompiler.UnitTests
         class A { }
         class B : A { }
 
-        [Test]
+
         public void TypeIs_should_work()
         {
             var sExpr = Parameter(typeof(object), "o");
@@ -54,7 +54,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsTrue(result);
         }
 
-        [Test]
+
         public void TypeIs_more_advanced()
         {
             var fromParam = Parameter(typeof(object));

@@ -1,5 +1,5 @@
 ﻿using System;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -9,7 +9,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
-    [TestFixture]
+
     public class LoopTests : ITest
     {
         public int Run()
@@ -24,7 +24,7 @@ namespace FastExpressionCompiler.UnitTests
             return 7;
         }
 
-        [Test]
+
         public void Loop_with_return()
         {
             var intVariable = Variable(typeof(int), "i");
@@ -47,7 +47,7 @@ namespace FastExpressionCompiler.UnitTests
             loopFunc.Invoke();
         }
 
-        [Test]
+
         public void Loop_with_break()
         {
             var intVariable = Variable(typeof(int), "i");
@@ -68,7 +68,7 @@ namespace FastExpressionCompiler.UnitTests
             loopFunc.Invoke();
         }
 
-        [Test]
+
         public void Loop_with_unused_break()
         {
             var intVariable = Variable(typeof(int), "i");
@@ -91,7 +91,7 @@ namespace FastExpressionCompiler.UnitTests
             loopFunc.Invoke();
         }
 
-        [Test]
+
         public void Loop_with_break_and_continue()
         {
             var intVariable1 = Variable(typeof(int), "i");
@@ -122,7 +122,7 @@ namespace FastExpressionCompiler.UnitTests
             loopFunc.Invoke();
         }
 
-        [Test]
+
         public void Loop_with_unused_continue()
         {
             var intVariable = Variable(typeof(int), "i");
@@ -145,7 +145,7 @@ namespace FastExpressionCompiler.UnitTests
             loopFunc.Invoke();
         }
 
-        [Test]
+
         public void Loop_with_unused_break_and_continue()
         {
             var intVariable = Variable(typeof(int), "i");
@@ -169,7 +169,7 @@ namespace FastExpressionCompiler.UnitTests
             loopFunc.Invoke();
         }
 
-        [Test]
+
         public void Loop_with_return_value()
         {
             var intVariable = Variable(typeof(int), "i");

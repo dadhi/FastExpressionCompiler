@@ -4,7 +4,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Linq.Expressions;
-using NUnit.Framework;
+
 using Mapster;
 using Mapster.Utils;
 using MapsterMapper;
@@ -12,7 +12,7 @@ using static System.Linq.Expressions.Expression;
 
 namespace FastExpressionCompiler.IssueTests;
 
-[TestFixture]
+
 public class Issue390_405_406_Mapster_tests : ITest
 {
     public int Run()
@@ -94,7 +94,7 @@ public class Issue390_405_406_Mapster_tests : ITest
         D
     }
 
-    [Test]
+    
     public void MapsterIssue676_NullReferenceException_with_FastExpressionCompiler()
     {
         Asserts.AreEqual(TestEnum.A, new TestClass { Type = 1 }.Adapt<TestEnum>());
@@ -108,7 +108,7 @@ public class Issue390_405_406_Mapster_tests : ITest
     private sealed record ExportInfoDto(long[] Locations);
     private sealed record ExportInfoModel(long?[] Locations);
 
-    [Test]
+    
     public void Issue405_NullItemArray()
     {
         var model = new ExportInfoModel(new long?[] { 1, null });
@@ -130,7 +130,7 @@ public class Issue390_405_406_Mapster_tests : ITest
 
     public sealed record ResponseAgent(int ErrorType, int TaskType, int Code);
 
-    [Test]
+    
     public void Issue406_NullReferenceException()
     {
         var result = new ResultAgent(new ResponseAgent(1, 2, 3));
@@ -141,7 +141,7 @@ public class Issue390_405_406_Mapster_tests : ITest
     }
 
 
-    [Test]
+    
     public void Issue390_Test_extracted_small_just_mapping_code_No_issue()
     {
         var p = new ParameterExpression[7]; // the parameter expressions
@@ -199,7 +199,7 @@ public class Issue390_405_406_Mapster_tests : ITest
         Asserts.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, dt);
     }
 
-    [Test]
+    
     public void Issue390_Test_extracted_small_mapping_code()
     {
         var p = new ParameterExpression[7]; // the parameter expressions
@@ -332,7 +332,7 @@ public class Issue390_405_406_Mapster_tests : ITest
         Asserts.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, token.RefreshTokenExpirationDate);
     }
 
-    [Test]
+    
     public void Issue390_Test_extracted_mapping_code()
     {
         var p = new ParameterExpression[7]; // the parameter expressions
@@ -498,7 +498,7 @@ public class Issue390_405_406_Mapster_tests : ITest
         Asserts.AreEqual(auth.RefreshToken.ExpirationDate.LocalDateTime, token.RefreshTokenExpirationDate);
     }
 
-    [Test]
+    
     public void Issue390_Test_original_Mapster_mapping()
     {
         var auth = new AuthResultDto() { RefreshToken = new() };

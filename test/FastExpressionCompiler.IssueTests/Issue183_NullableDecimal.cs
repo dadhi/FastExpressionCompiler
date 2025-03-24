@@ -1,5 +1,5 @@
 using System;
-using NUnit.Framework;
+
 
 #pragma warning disable IDE1006 // Naming Styles for linq2db
 #pragma warning disable 649 // Unassigned fields
@@ -25,7 +25,7 @@ namespace FastExpressionCompiler.IssueTests
             return 5;
         }
 
-        [Test]
+
         public void ConvertDecimalParamToNullableDecimal()
         {
             var param = Parameter(typeof(decimal), "d");
@@ -37,7 +37,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(42, x.Value);
         }
 
-        [Test]
+
         public void ConvertNullNullableParamToNullableDecimal_CheckAgainstTheSystemExprCompile()
         {
             var ps = Parameter(typeof(byte?), "b");
@@ -55,7 +55,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.IsNull(xf);
         }
 
-        [Test]
+
         public void ConvertDecimalPropertyToNullableDecimal()
         {
             var param = Parameter(typeof(DecimalContainer), "d");
@@ -71,7 +71,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(42, x.Value);
         }
 
-        [Test]
+
         public void ConvertNullableBytePropertyToNullableDecimal()
         {
             var param = Parameter(typeof(DecimalContainer), "d");
@@ -87,7 +87,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(42, x.Value);
         }
 
-        [Test]
+
         public void NullableDecimalIssue()
         {
             var param = Parameter(typeof(DecimalContainer));

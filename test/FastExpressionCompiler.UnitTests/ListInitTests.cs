@@ -3,7 +3,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Linq;
 using System.Collections.Generic;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -13,7 +13,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
-    [TestFixture]
+
     public class ListInitTests : ITest
     {
         public int Run()
@@ -65,7 +65,7 @@ namespace FastExpressionCompiler.UnitTests
             return expr;
         }
 
-        [Test]
+
         public void Simple_ListInit_works()
         {
             var expr = Get_Simple_ListInit_Expression();

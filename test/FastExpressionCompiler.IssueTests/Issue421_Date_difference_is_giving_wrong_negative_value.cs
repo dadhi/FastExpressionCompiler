@@ -1,5 +1,5 @@
 using System;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -10,7 +10,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
-[TestFixture]
+
 public class Issue421_Date_difference_is_giving_wrong_negative_value : ITest
 {
     public int Run()
@@ -25,7 +25,7 @@ public class Issue421_Date_difference_is_giving_wrong_negative_value : ITest
         public readonly DateTime StartDate = new DateTime(2024, 1, 1);
     }
 
-    [Test]
+
     public void Original_case_1()
     {
         var contract = new Contract();
@@ -44,7 +44,7 @@ public class Issue421_Date_difference_is_giving_wrong_negative_value : ITest
         Asserts.GreaterOrEqual(ff(), 250);
     }
 
-    [Test]
+
     public void Original_case_2()
     {
         var contract = new Contract();

@@ -2,7 +2,7 @@ using System.Linq.Expressions;
 using System.Reflection.Emit;
 using System.Reflection;
 using System;
-using NUnit.Framework;
+
 #pragma warning disable CS0164
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -12,7 +12,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue320_Bad_label_content_in_ILGenerator_when_creating_through_DynamicModule : ITest
     {
         public int Run()
@@ -22,7 +22,7 @@ namespace FastExpressionCompiler.IssueTests
             return 2;
         }
 
-        [Test]
+
         public void Test_instance_call()
         {
             var expr = CreateExpression();
@@ -53,7 +53,7 @@ namespace FastExpressionCompiler.IssueTests
             GenerateAssemblyManually(expr);
         }
 
-        [Test]
+
         public void Test_instance_call_without_ifthen()
         {
             var expr = CreateNonIfThenExpression();

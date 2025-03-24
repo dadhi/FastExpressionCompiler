@@ -5,7 +5,7 @@ using System.Text;
 using System.Buffers;
 using System.Reflection;
 using System.Buffers.Binary;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -17,7 +17,7 @@ namespace FastExpressionCompiler.IssueTests
 {
     public delegate bool DeserializerDlg<in T>(ref ReadOnlySequence<byte> seq, T value, out long bytesRead);
 
-    [TestFixture]
+    
     public class Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown : ITest
     {
         private static readonly MethodInfo _tryRead = typeof(ReaderExtensions).GetMethod(nameof(ReaderExtensions.TryReadValue));
@@ -39,7 +39,7 @@ namespace FastExpressionCompiler.IssueTests
             return 8;
         }
 
-        [Test]
+        
         public void Should_Deserialize_Simple_via_manual_CSharp_code()
         {
             DeserializerDlg<Word> dlgWord =
@@ -273,7 +273,7 @@ namespace FastExpressionCompiler.IssueTests
             return Serializer.TryDeserialize(ref input, deserialized, out var bytesRead);
         }
 
-        [Test]
+        
         public void Should_Deserialize_Simple()
         {
             var reader = Variable(typeof(SequenceReader<byte>), "reader");
@@ -388,7 +388,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(expected, deserialized);
         }
 
-        [Test]
+        
         public void Conditional_with_Equal_true_should_shortcircuit_to_Brtrue_or_Brfalse()
         {
             var returnTarget = Label(typeof(string));
@@ -422,7 +422,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual("false", f(false));
         }
 
-        [Test]
+        
         public void Conditional_with_Equal_0_should_shortcircuit_to_Brtrue_or_Brfalse()
         {
             var returnTarget = Label(typeof(string));
@@ -450,7 +450,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual("false", f(42));
         }
 
-        [Test]
+        
         public void Conditional_with_Equal_false_should_shortcircuit_to_Brtrue_or_Brfalse()
         {
             var returnTarget = Label(typeof(string));
@@ -475,7 +475,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual("false", f(false));
         }
 
-        [Test]
+        
         public void Conditional_with_NotEqual_true_should_shortcircuit_to_Brtrue_or_Brfalse()
         {
             var returnTarget = Label(typeof(string));
@@ -500,7 +500,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual("false", f(false));
         }
 
-        [Test]
+        
         public void Conditional_with_NotEqual_false_should_shortcircuit_to_Brtrue_or_Brfalse()
         {
             var returnTarget = Label(typeof(string));

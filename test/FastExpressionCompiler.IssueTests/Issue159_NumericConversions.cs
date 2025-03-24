@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using System.Reflection.Emit;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -37,7 +37,7 @@ namespace FastExpressionCompiler.IssueTests
             return 19;
         }
 
-        [Test]
+
         public void UnsignedLongComparisonsWithConversionsShouldWork()
         {
             var ulongParameter = Parameter(typeof(ValueHolder<ulong>), "ulongValue");
@@ -83,7 +83,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(default(int), fx(new ValueHolder<ulong> { Value = ulong.MaxValue }).Value);
         }
 
-        [Test]
+
         public void IntToNullableUlong()
         {
             var outputHolderExpr = Variable(typeof(ValueHolder<ulong?>), "nullableUlongValue");
@@ -104,7 +104,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual((ulong)int.MaxValue, actual().Value);
         }
 
-        [Test]
+
         public void UnsignedNullableLongComparison()
         {
             var ulongParameter = Parameter(typeof(ValueHolder<ulong?>), "nullableUlongValue");
@@ -147,7 +147,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(false, actualResult);
         }
 
-        [Test]
+
         public void UnsignedNullableLongComparisonsWithConversionsShouldWork()
         {
             var ulongParameter = Parameter(typeof(ValueHolder<ulong?>), "nullableUlongValue");
@@ -180,7 +180,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(default(int?), actualResult.Value);
         }
 
-        [Test]
+
         public void FloatComparisonsWithConversionsShouldWork()
         {
             var floatParameter = Parameter(typeof(ValueHolder<float>), "floatValue");
@@ -225,7 +225,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual((short)532, result.Value);
         }
 
-        [Test]
+
         public void FloatComparisonsWithConversionsShouldWork2()
         {
             var floatParameter = Parameter(typeof(ValueHolder<float>), "floatValue");
@@ -270,7 +270,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual((short)532, result.Value);
         }
 
-        [Test]
+
         public void FloatToDecimalNullableShouldWork()
         {
             var floatParamExpr = Parameter(typeof(ValueHolder<float>), "floatValue");
@@ -302,7 +302,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(3.14m, result.Value);
         }
 
-        [Test]
+
         public void ComparisonsWithConversionsShouldWork3()
         {
             var floatParamExpr = Parameter(typeof(ValueHolder<float>), "floatValue");
@@ -330,7 +330,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(true, compiledFast(source));
         }
 
-        [Test]
+
         public void ComparisonsWithConversionsShouldWork4()
         {
             var floatParamExpr = Parameter(typeof(ValueHolder<float>), "floatValue");
@@ -372,7 +372,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(false, compiledFast(source));
         }
 
-        [Test]
+
         public void FloatComparisonsWithConversionsShouldWork3()
         {
             var floatParamExpr = Parameter(typeof(ValueHolder<float>), "floatValue");
@@ -406,7 +406,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.IsNull(result.Value);
         }
 
-        [Test]
+
         public void FloatComparisonsWithConversionsShouldWork4()
         {
             var floatParameter = Parameter(typeof(ValueHolder<float>), "floatValue");
@@ -451,7 +451,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(8532.00m, result.Value);
         }
 
-        [Test]
+
         public void ConvertNullableFloatToDecimal()
         {
             var p = Parameter(typeof(float?), "f");
@@ -470,7 +470,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(42, ff(42));
         }
 
-        [Test]
+
         public void NullableFloatComparisonsWithConversionsShouldWork()
         {
             var floatParameter = Parameter(typeof(ValueHolder<float?>), "nullableFloatValue");
@@ -516,7 +516,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(73.62m, result.Value);
         }
 
-        [Test]
+
         public void DoubleComparisonsWithConversionsShouldWork()
         {
             var doubleParameter = Parameter(typeof(ValueHolder<double>), "doubleValue");
@@ -561,7 +561,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.IsNull(result.Value);
         }
 
-        [Test]
+
         public void DoubleComparisonsWithConversionsShouldWork2()
         {
             var doubleParameter = Parameter(typeof(ValueHolder<double>), "doubleValue");
@@ -614,7 +614,7 @@ namespace FastExpressionCompiler.IssueTests
         //    return vd;
         //}
 
-        [Test]
+
         public void NullableIntToDoubleCastsShouldWork()
         {
             var nullableIntHolderParam = Parameter(typeof(ValueHolder<int?>), "nullableIntHolder");
@@ -651,7 +651,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(321d, result.Value);
         }
 
-        [Test]
+
         public void NullableIntToDoubleCastsShouldWork_with_MemberInit()
         {
             var nullableIntHolderParam = Parameter(typeof(ValueHolder<int?>), "nullableIntHolder");
@@ -681,7 +681,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(321d, result.Value);
         }
 
-        [Test]
+
         public void NullableDecimalToDoubleCastsShouldWork()
         {
             var decimalParameter = Parameter(typeof(ValueHolder<decimal?>), "nullableDecimalValue");
@@ -721,7 +721,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(938378.637d, result.Value);
         }
 
-        [Test]
+
         public void DecimalToNullableDoubleCastsShouldWork()
         {
             var decimalParameter = Parameter(typeof(ValueHolder<decimal>), "decimalValue");

@@ -1,16 +1,16 @@
 ﻿using System;
 using System.Linq;
 using System.Reflection;
-using NUnit.Framework;
+
 
 namespace FastExpressionCompiler.LightExpression.UnitTests
 {
     using static Expression;
 
-    [TestFixture]
+
     public class MemberInitLightExpressionTests
     {
-        [Test]
+
         public void Can_assign_member_of_existing_object()
         {
             var a = new A();
@@ -26,7 +26,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.AreEqual(42, f().N);
         }
 
-        [Test]
+
         public void Can_assign_Readonly_member_of_existing_object()
         {
             var a = new A();

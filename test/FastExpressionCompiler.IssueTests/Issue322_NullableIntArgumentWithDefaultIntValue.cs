@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 using System.Reflection;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -12,7 +12,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue322_NullableIntArgumentWithDefaultIntValue : ITest
     {
         public int Run()
@@ -21,7 +21,7 @@ namespace FastExpressionCompiler.IssueTests
             return 1;
         }
 
-        [Test]
+
         public void Test()
         {
             var e = new Expression[3]; // the unique expressions

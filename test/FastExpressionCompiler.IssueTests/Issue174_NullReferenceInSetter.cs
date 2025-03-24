@@ -1,5 +1,5 @@
 ﻿using System;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -17,7 +17,7 @@ namespace FastExpressionCompiler.IssueTests
             return 1;
         }
 
-        [Test]
+
         public void PropertyAssignmentFromEqualityComparisonShouldWork()
         {
             var boolParameter = Parameter(typeof(ValueHolder<bool>), "boolValue");

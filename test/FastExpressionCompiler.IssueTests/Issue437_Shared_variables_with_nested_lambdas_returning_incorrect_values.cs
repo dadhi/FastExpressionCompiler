@@ -1,6 +1,6 @@
 using System;
 using System.Linq.Expressions;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -10,7 +10,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
-[TestFixture]
+
 public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_values : ITest
 {
     public int Run()
@@ -35,7 +35,7 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
         public static int ExecuteFunc(Func<int> func) => func();
     }
 
-    [Test]
+
     public void More_simplified_test_no_inlining_for_SystemCompile_with_Execute_no_assigning()
     {
         var execute = typeof(TestClass).GetMethod(nameof(TestClass.ExecuteFunc));
@@ -75,7 +75,7 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
         Asserts.AreEqual(5, fr);
     }
 
-    [Test]
+
     public void More_simplified_test_no_inlining_for_SystemCompile_with_Execute()
     {
         var execute = typeof(TestClass).GetMethod(nameof(TestClass.ExecuteAction));
@@ -104,7 +104,7 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
         Asserts.AreEqual(3, fr);
     }
 
-    [Test]
+
     public void More_simplified_test_no_inlining()
     {
         var myVar = Variable(typeof(int), "myVar");
@@ -131,7 +131,7 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
         Asserts.AreEqual(3, fr);
     }
 
-    [Test]
+
     public void Simplified_test()
     {
         var myVar = Variable(typeof(int), "myVar");
@@ -159,7 +159,7 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
         Asserts.AreEqual(3, fr);
     }
 
-    [Test]
+
     public void Simplified_test_no_inlining()
     {
         var myVar = Variable(typeof(int), "myVar");
@@ -187,7 +187,7 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
         Asserts.AreEqual(3, fr);
     }
 
-    [Test]
+
     public void Nested_lambda_with_shared_variable()
     {
         System.Linq.Expressions.Expression<Action<Action>> invokeParamLambda = lambda => lambda();
@@ -220,7 +220,7 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
         public T Value;
     }
 
-    [Test]
+
     public void Nested_lambda_with_shared_variable_Workaround()
     {
         System.Linq.Expressions.Expression<Action<Action>> invokeParamLambda = lambda => lambda();
@@ -254,7 +254,7 @@ public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_v
         public T Value;
     }
 
-    [Test]
+
     public void Nested_lambda_with_shared_variable_Workaround_with_struct()
     {
         System.Linq.Expressions.Expression<Action<Action>> invokeParamLambda = lambda => lambda();

@@ -1,7 +1,7 @@
 <Project>
     <PropertyGroup>
         <Authors>Maksim Volkau</Authors>
-        <Copyright>Copyright © 2016-2024 Maksim Volkau</Copyright>
+        <Copyright>Copyright © 2016-2025 Maksim Volkau</Copyright>
 
         <NeutralLanguage>en-US</NeutralLanguage>
         <LangVersion>latest</LangVersion>

@@ -1,4 +1,4 @@
-﻿using NUnit.Framework;
+﻿
 using System;
 using System.Diagnostics;
 
@@ -11,7 +11,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
-    [TestFixture]
+
     public class ConditionalOperatorsTests : ITest
     {
         public int Run()
@@ -31,7 +31,7 @@ namespace FastExpressionCompiler.UnitTests
             return 11;
         }
 
-        [Test]
+
         public void Logical_and()
         {
             var x = 1;
@@ -45,7 +45,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsFalse(dlg());
         }
 
-        [Test]
+
         public void Logical_or()
         {
             var x = 1;
@@ -58,7 +58,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsNotNull(dele);
         }
 
-        [Test]
+
         public void Logical_and_with_or()
         {
             var x = 1;
@@ -71,7 +71,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsNotNull(dele);
         }
 
-        [Test]
+
         public void Logical_and_or_and()
         {
             var f = false;
@@ -88,7 +88,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsTrue(dlg());
         }
 
-        [Test]
+
         public void Ternarary_operator_with_equality()
         {
             var x = 1;
@@ -102,7 +102,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(s, dlg());
         }
 
-        [Test]
+
         public void Ternarary_operator_with_not_equality()
         {
             var x = 1;
@@ -116,7 +116,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(string.Empty, dlg());
         }
 
-        [Test]
+
         public void Ternarary_operator_with_less_then()
         {
             var x = 1;
@@ -130,7 +130,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(string.Empty, dlg());
         }
 
-        [Test]
+
         public void Ternarary_operator_with_greater_then()
         {
             var x = 1;
@@ -144,7 +144,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(string.Concat(s, "ccc"), dlg());
         }
 
-        [Test]
+
         public void Ternarary_operator_with_logical_op()
         {
             var x = 1;
@@ -163,7 +163,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(string.Concat(s, "ccc"), dlg());
         }
 
-        [Test]
+
         public void Test_IfThenElse()
         {
             const bool test = true;
@@ -191,7 +191,7 @@ namespace FastExpressionCompiler.UnitTests
 
         public static void WriteLine(string s) => Debug.WriteLine(s);
 
-        [Test]
+
         public void IfThen_with_block()
         {
             var variable = Variable(typeof(int));
@@ -212,7 +212,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(default(int), dlgt(false));
         }
 
-        [Test]
+
         public void IfThenElse_with_block()
         {
             var variable = Variable(typeof(int));

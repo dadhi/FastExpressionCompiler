@@ -1,5 +1,5 @@
 ﻿using System;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -9,7 +9,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
-    [TestFixture]
+
     public class GotoTests : ITest
     {
         public int Run()
@@ -18,7 +18,7 @@ namespace FastExpressionCompiler.UnitTests
             return 1;
         }
 
-        [Test]
+
         public void Can_goto_with_value()
         {
             var intParameter = Parameter(typeof(int));

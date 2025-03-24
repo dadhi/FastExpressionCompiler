@@ -1,12 +1,12 @@
 ﻿using System;
-using NUnit.Framework;
+
 using System.Reflection.Emit;
 using static FastExpressionCompiler.LightExpression.Expression;
 
 namespace FastExpressionCompiler.LightExpression.IssueTests
 {
 
-    [TestFixture]
+
     public class Issue346_Is_it_possible_to_implement_ref_local_variables : ITest
     {
         public int Run()
@@ -29,7 +29,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
 
         delegate void IncRefInt(ref int x);
 
-        [Test]
+
         public void Check_assignment_to_by_ref_int_parameter_PlusOne()
         {
             var p = Parameter(typeof(int).MakeByRefType(), "x");
@@ -67,7 +67,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             Asserts.AreEqual(2, y);
         }
 
-        [Test]
+
         public void Check_assignment_to_by_ref_int_parameter_PostIncrement_Void()
         {
             var p = Parameter(typeof(int).MakeByRefType(), "x");
@@ -110,7 +110,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
         delegate float IncRefFloatReturning(ref float x);
         delegate int IncRefintReturning(ref int x);
 
-        [Test]
+
         public void Check_assignment_to_by_ref_float_parameter_PostIncrement_Returning()
         {
             var p = Parameter(typeof(float).MakeByRefType(), "x");
@@ -168,7 +168,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             // Asserts.AreEqual(2.0f, x); // @wip inconsistent: 2.0f in Debug, and 1.0f in Release, but why?
         }
 
-        [Test]
+
         public void Check_assignment_to_by_ref_int_parameter_PostIncrement_Returning()
         {
             var p = Parameter(typeof(int).MakeByRefType(), "x");
@@ -213,7 +213,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             Asserts.AreEqual(2, x);
         }
 
-        [Test]
+
         public void Get_array_element_ref_and_increment_it()
         {
             var a = Parameter(typeof(int[]), "a");
@@ -259,7 +259,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             Asserts.AreEqual(43, array[0]);
         }
 
-        [Test]
+
         public void Get_array_element_ref_and_member_change_and_increment_it()
         {
             var a = Variable(typeof(Vector3[]), "a");
@@ -319,7 +319,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             Asserts.AreEqual(12, vs[0].x);
         }
 
-        [Test]
+
         public void Get_array_element_ref_and_member_change_and_Post_increment_it()
         {
             var aPar = Parameter(typeof(Vector3[]), "aPar");
@@ -382,7 +382,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             Asserts.AreEqual(1, a[9].x);
         }
 
-        [Test]
+
         public void Get_array_element_ref_and_member_change_and_Pre_increment_it()
         {
             var aPar = Parameter(typeof(Vector3[]), "aPar");
@@ -445,7 +445,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             Asserts.AreEqual(1, a[9].x);
         }
 
-        [Test]
+
         public void Get_array_element_ref_and_member_change_and_increment_it_then_method_call_on_ref_value_elem()
         {
             var a = Variable(typeof(Vector3[]), "a");
@@ -510,7 +510,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             Asserts.AreEqual(53, vs[0].x);
         }
 
-        [Test]
+
         public void Real_world_test_ref_array_element()
         {
             // Vector3[] array = new Vector3[100]; // struct btw

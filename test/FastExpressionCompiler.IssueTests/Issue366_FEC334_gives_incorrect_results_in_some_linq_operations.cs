@@ -5,11 +5,11 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Linq.Dynamic.Core;
 using System.Linq.Dynamic.Core.Parser;
-using NUnit.Framework;
+
 
 namespace FastExpressionCompiler.IssueTests;
 
-[TestFixture]
+
 public class Issue366_FEC334_gives_incorrect_results_in_some_linq_operations : ITest
 {
     public int Run()
@@ -18,7 +18,7 @@ public class Issue366_FEC334_gives_incorrect_results_in_some_linq_operations : I
         return 1;
     }
 
-    [Test]
+    
     public void Test1()
     {
         ParameterExpression x = Expression.Parameter(typeof(double), "threshold");

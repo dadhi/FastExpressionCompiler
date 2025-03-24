@@ -1,6 +1,6 @@
 using System;
 using System.Linq.Expressions;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -10,7 +10,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
-[TestFixture]
+
 public class Issue440_Errors_with_simplified_Switch_cases : ITest
 {
     public int Run()
@@ -25,7 +25,7 @@ public class Issue440_Errors_with_simplified_Switch_cases : ITest
         return 1;
     }
 
-    [Test]
+
     public void Switch_with_single_case_without_default()
     {
         var label = Label("after_switch");
@@ -54,7 +54,7 @@ public class Issue440_Errors_with_simplified_Switch_cases : ITest
         Asserts.AreEqual(2, fr);
     }
 
-    [Test]
+
     public void Switch_with_no_cases()
     {
         var block = Block(
@@ -81,7 +81,7 @@ public class Issue440_Errors_with_simplified_Switch_cases : ITest
         Asserts.AreEqual(2, fr);
     }
 
-    [Test]
+
     public void Switch_with_no_cases_but_default()
     {
         var block = Block(

@@ -1,5 +1,5 @@
 using System;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -11,7 +11,7 @@ using System.Linq.Expressions;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
-[TestFixture]
+
 public class Issue449_MemberInit_produces_InvalidProgram : ITest
 {
     public int Run()
@@ -33,7 +33,7 @@ public class Issue449_MemberInit_produces_InvalidProgram : ITest
         public int? Value { get; set; }
     }
 
-    [Test]
+
     public void Original_case()
     {
         var ctor = typeof(SampleType).GetConstructors()[0];
@@ -59,7 +59,7 @@ public class Issue449_MemberInit_produces_InvalidProgram : ITest
         Asserts.AreEqual(666, sr.Value.Value);
     }
 
-    [Test]
+
     public void Struct_without_ctor_case()
     {
         var valueProp = typeof(SampleType_NoCtor).GetProperty(nameof(SampleType_NoCtor.Value));

@@ -2,7 +2,7 @@ using System;
 using System.Reflection;
 using System.Linq;
 using System.Collections.Generic;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using System.Linq.Expressions;
@@ -15,7 +15,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-  [TestFixture]
+
   public class Issue408_Dictionary_mapping_failing_when_the_InvocationExpression_inlining_is_involved : ITest
   {
     public int Run()
@@ -56,7 +56,7 @@ namespace FastExpressionCompiler.IssueTests
 
     #endregion
 
-    [Test]
+
     public void AutoMapper_UnitTests_When_mapping_to_a_generic_dictionary_with_mapped_value_pairs()
     {
       var propertyMap = new PropertyMap();

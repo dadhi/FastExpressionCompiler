@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Reflection;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -11,7 +11,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue71_Cannot_bind_to_the_target_method_because_its_signature : ITest
     {
         public int Run()
@@ -23,7 +23,7 @@ namespace FastExpressionCompiler.IssueTests
             return 4;
         }
 
-        [Test]
+
         public void MultiplePropertiesFailure()
         {
             var expr = BuildExpression<object, object>(typeof(Person), "Boss.Name.First");
@@ -46,7 +46,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual("Kevin", data.Boss.Name.First);
         }
 
-        [Test]
+
         public void MultiplePropertiesSuccess()
         {
             var expr = BuildExpression<object, object>(typeof(Person), "Boss.Name.First");
@@ -69,7 +69,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual("Kevin", data.Boss.Name.First);
         }
 
-        [Test]
+
         public void SinglePropertyFailure()
         {
             var expr = BuildExpression<object, object>(typeof(Person), "Age");
@@ -84,7 +84,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(40, data.Age);
         }
 
-        [Test]
+
         public void SinglePropertySuccess()
         {
             var expr = BuildExpression<object, object>(typeof(Person), "Age");

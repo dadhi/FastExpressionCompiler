@@ -1,4 +1,4 @@
-﻿using NUnit.Framework;
+﻿
 using System;
 
 #if LIGHT_EXPRESSION
@@ -9,7 +9,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
-    [TestFixture]
+
     public class CoalesceTests : ITest
     {
         public int Run()
@@ -23,7 +23,7 @@ namespace FastExpressionCompiler.UnitTests
             return 6;
         }
 
-        [Test]
+
         public void Coalesce_bodyless_left_null()
         {
             var a = new object();
@@ -33,7 +33,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreSame(a, dlgt());
         }
 
-        [Test]
+
         public void Coalesce_bodyless_left_not_null()
         {
             var a = new object();
@@ -43,7 +43,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreSame(a, dlgt());
         }
 
-        [Test]
+
         public void Coalesce_block_variable_assign_constant()
         {
             var a = new object();
@@ -58,7 +58,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreSame(a, dlgt());
         }
 
-        [Test]
+
         public void Coalesce_block_variable_assign_constant_right_box()
         {
             var variable = Variable(typeof(object));
@@ -72,7 +72,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(5, dlgt());
         }
 
-        [Test]
+
         public void Coalesce_block_variable_assign_constant_right_cast()
         {
             var a = new A();
@@ -87,7 +87,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(a, dlgt());
         }
 
-        [Test]
+
         public void Coalesce_block_variable_assign_with_param()
         {
             var a = new object();

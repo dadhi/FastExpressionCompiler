@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Reflection;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -21,7 +21,7 @@ namespace FastExpressionCompiler.IssueTests
             return 2;
         }
 
-        [Test]
+
         public void BlockWithGotoIsSupported()
         {
             var returnTarget = Label("aaa");
@@ -45,7 +45,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.IsNotNull(fastCompiled);
         }
 
-        [Test]
+
         public void UnknownLabelShouldThrow()
         {
             var lambda = Lambda(

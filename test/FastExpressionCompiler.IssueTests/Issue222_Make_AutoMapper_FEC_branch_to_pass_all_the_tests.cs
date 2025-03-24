@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -15,7 +15,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue222_Make_AutoMapper_FEC_branch_to_pass_all_the_tests : ITest
     {
         public int Run()
@@ -53,7 +53,7 @@ namespace FastExpressionCompiler.IssueTests
             public AutoMapperMappingException(string message, Exception innerException, MemberMap memberMap) { }
         }
 
-        // [Test]
+
         public void Should_map_the_existing_array_elements_over()
         {
             var p = new ParameterExpression[17]; // the parameter expressions 

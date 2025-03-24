@@ -1,5 +1,5 @@
 ﻿using System;
-using NUnit.Framework;
+
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.IssueTests
@@ -8,7 +8,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue197_Operation_could_destabilize_the_runtime : ITest
     {
         public int Run()
@@ -18,7 +18,7 @@ namespace FastExpressionCompiler.IssueTests
             return 2;
         }
 
-        [Test]
+
         public void Test()
         {
             /*
@@ -59,7 +59,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual("Black", dest.Color);
         }
 
-        [Test]
+
         public void Test2()
         {
             /*

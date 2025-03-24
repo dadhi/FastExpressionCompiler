@@ -1,5 +1,5 @@
 ﻿using System;
-using NUnit.Framework;
+
 #pragma warning disable 659
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -10,7 +10,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue153_MinValueMethodNotSupported : ITest
     {
         public int Run()
@@ -19,7 +19,7 @@ namespace FastExpressionCompiler.IssueTests
             return 1;
         }
 
-        [Test]
+
         public void Int_MinValue_Should_Work()
         {
             var minValueField = typeof(int).GetField("MinValue");

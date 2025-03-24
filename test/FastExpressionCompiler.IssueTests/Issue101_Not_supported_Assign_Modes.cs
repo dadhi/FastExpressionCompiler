@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Reflection;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -11,7 +11,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue101_Not_supported_Assign_Modes : ITest
     {
         public int Run()
@@ -29,7 +29,7 @@ namespace FastExpressionCompiler.IssueTests
             return 10;
         }
 
-        [Test]
+
         public void PreIncIsSupported()
         {
             var eVar = Variable(typeof(int));
@@ -44,7 +44,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(1, fastCompiled());
         }
 
-        [Test]
+
         public void PostIncIsSupported()
         {
             var eVar = Variable(typeof(int));
@@ -59,7 +59,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(0, fastCompiled());
         }
 
-        [Test]
+
         public void PreDecIsSupported()
         {
             var eVar = Variable(typeof(int));
@@ -74,7 +74,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(-1, fastCompiled());
         }
 
-        [Test]
+
         public void PostDecIsSupported()
         {
             var eVar = Variable(typeof(int));
@@ -89,7 +89,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(0, fastCompiled());
         }
 
-        [Test]
+
         public void PreIncShortIsSupported()
         {
             var eVar = Variable(typeof(short));
@@ -104,7 +104,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(1, fastCompiled());
         }
 
-        [Test]
+
         public void PreInc3IsSupported()
         {
             var eVar = Variable(typeof(int));
@@ -121,7 +121,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(3, fastCompiled());
         }
 
-        [Test]
+
         public void ComplexSupported_SinglePreIncrement()
         {
             int j = 0;
@@ -140,7 +140,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(1, fastCompiled());
         }
 
-        [Test]
+
         public void ComplexSupported_MultiPreIncrement()
         {
             int j = 0;
@@ -161,7 +161,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(3, fastCompiled());
         }
 
-        [Test]
+
         public void Complex2Supported()
         {
             int j = 0;
@@ -179,7 +179,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(88, fastCompiled());
         }
 
-        [Test]
+
         public void Complex3Supported()
         {
             int j = 0;

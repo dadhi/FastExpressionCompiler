@@ -1,5 +1,5 @@
 using System.Reflection.Emit;
-using NUnit.Framework;
+
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.IssueTests
@@ -8,7 +8,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue248_Calling_method_with_in_out_parameters_in_expression_lead_to_NullReferenceException_on_calling_site : ITest
     {
         public int Run()
@@ -20,7 +20,7 @@ namespace FastExpressionCompiler.IssueTests
             return 4;
         }
 
-        [Test]
+
         public void Test_1()
         {
             var serializer = Parameter(typeof(ISerializer), "serializer");
@@ -49,7 +49,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(35m, test.Field1);
         }
 
-        [Test]
+
         public void Test_2()
         {
             var serializer = Parameter(typeof(ISerializer), "serializer");
@@ -91,7 +91,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(35m, test.NestedTest.Field1);
         }
 
-        [Test]
+
         public void Test_3()
         {
             var serializer = Parameter(typeof(ISerializer), "serializer");
@@ -129,7 +129,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(35m, test.Field1);
         }
 
-        [Test]
+
         public void Test_4()
         {
             var serializer = Parameter(typeof(ISerializer), "serializer");

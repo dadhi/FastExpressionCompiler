@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -15,7 +15,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
-    [TestFixture]
+
     public class BlockTests : ITest
     {
         public int Run()
@@ -42,7 +42,7 @@ namespace FastExpressionCompiler.UnitTests
             return 18;
         }
 
-        [Test]
+
         public void Block_local_variable_assignment()
         {
             var variable = Variable(typeof(int));
@@ -72,7 +72,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(6, fs());
         }
 
-        [Test]
+
         public void Block_local_variable_assignment_array_closure()
         {
             var variables = Vars<int>().Take(2).ToArray();
@@ -89,7 +89,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(6, fastCompiled());
         }
 
-        [Test]
+
         public void Block_local_variable_assignment_with_lambda_invoke()
         {
             var variable = Variable(typeof(int));
@@ -115,7 +115,7 @@ namespace FastExpressionCompiler.UnitTests
 
         public static int Inc(int i) => i + 1;
 
-        [Test]
+
         public void Block_calling_non_void_method_returning_the_nested_lambda_assigning_the_outer_parameter()
         {
             var p = Parameter(typeof(int), "p");
@@ -142,7 +142,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(42, ff());
         }
 
-        [Test]
+
         public void Block_calling_non_void_method_returning_the_nested_lambda_incrementing_the_outer_parameter()
         {
             var p = Parameter(typeof(int), "p");
@@ -174,7 +174,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(18, f());
         }
 
-        [Test]
+
         public void Block_returning_the_nested_lambda_assigning_the_outer_parameter()
         {
             var p = Parameter(typeof(int), "p");
@@ -198,7 +198,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(42, ff());
         }
 
-        [Test]
+
         public void Block_assigning_local_variable_then_returning_the_nested_lambda_which_reassigns_the_variable()
         {
             var variable = Variable(typeof(string));
@@ -226,7 +226,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual("42", ff());
         }
 
-        [Test]
+
         public void Block_assigning_local_ValueType_variable_then_returning_the_nested_lambda_which_reassigns_the_variable()
         {
             var variable = Variable(typeof(int));
@@ -246,7 +246,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(42, ff());
         }
 
-        [Test]
+
         public void Block_local_variable_assignment_with_lambda_invoke_plus_external_assignment()
         {
             var variable = Variable(typeof(int));
@@ -261,7 +261,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(6, f());
         }
 
-        [Test]
+
         public void Block_local_variable_assignment_with_lambda_invoke_array_closure()
         {
             var variables = Vars<int>().Take(20).ToArray();
@@ -278,7 +278,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(6, f());
         }
 
-        [Test]
+
         public void Block_local_variable_assignment_with_lambda_with_param()
         {
             var variable = Variable(typeof(int));
@@ -298,7 +298,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(8, fastCompiled(8));
         }
 
-        [Test]
+
         public void Block_local_variable_assignment_with_lambda_with_param_array_closure()
         {
             var variables = Vars<int>().Take(20).ToArray();
@@ -317,7 +317,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(8, fastCompiled(8));
         }
 
-        [Test]
+
         public void Block_local_variable_assignment_with_lambda_invoke_with_param_override()
         {
             var variable = Variable(typeof(int));
@@ -335,7 +335,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(5, fastCompiled(8));
         }
 
-        [Test]
+
         public void Block_local_variable_assignment_with_lambda_invoke_with_param_override_array_closure()
         {
             var variables = Vars<int>().Take(20).ToArray();
@@ -353,7 +353,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(5, fastCompiled(8));
         }
 
-        [Test]
+
         public void Block_local_variable_assignment_return_with_variable()
         {
             var variable = Variable(typeof(int));
@@ -370,7 +370,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(5, fastCompiled());
         }
 
-        [Test]
+
         public void Block_local_variable_assignment_return_with_variable_array_closure()
         {
             var variables = Vars<int>().Take(20).ToArray();
@@ -387,7 +387,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(5, fastCompiled());
         }
 
-        [Test]
+
         public void Block_local_variable_assignment_with_member_init()
         {
             var variable = Variable(typeof(A));
@@ -406,7 +406,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(5, fastCompiled());
         }
 
-        [Test]
+
         public void Block_local_variable_assignment_with_member_init_array_closure()
         {
             var variables = Vars<A>().Take(20).ToArray();

@@ -1,5 +1,5 @@
 ﻿using System;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using ExpressionType = System.Linq.Expressions.ExpressionType;
@@ -11,7 +11,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
-    [TestFixture]
+
     public class BinaryExpressionTests : ITest
     {
         public int Run()
@@ -67,7 +67,7 @@ namespace FastExpressionCompiler.UnitTests
             return 48;
         }
 
-        [Test]
+
         public void Add_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -80,7 +80,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(3, result);
         }
 
-        [Test]
+
         public void AddAssign_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -93,7 +93,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(3, result);
         }
 
-        [Test]
+
         public void AddAssignChecked_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -106,7 +106,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(3, result);
         }
 
-        [Test]
+
         public void AddChecked_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -119,7 +119,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(3, result);
         }
 
-        [Test]
+
         public void And_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -132,7 +132,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(1, result);
         }
 
-        [Test]
+
         public void AndAlso_compiles()
         {
             var param = Parameter(typeof(bool), "b");
@@ -145,7 +145,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsFalse(result);
         }
 
-        [Test]
+
         public void AndAssign_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -158,7 +158,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(1, result);
         }
 
-        [Test]
+
         public void ArrayIndex_compiles()
         {
             var param = Parameter(typeof(string[]), "s");
@@ -171,7 +171,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual("2", result);
         }
 
-        [Test]
+
         public void Assign_compiles()
         {
             var param = Parameter(typeof(string), "s");
@@ -184,7 +184,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual("test", result);
         }
 
-        [Test]
+
         public void Coalesce_compiles()
         {
             var param = Parameter(typeof(string), "s");
@@ -197,7 +197,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual("<null>", result);
         }
 
-        [Test]
+
         public void Divide_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -210,7 +210,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(3, result);
         }
 
-        [Test]
+
         public void DivideAssign_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -223,7 +223,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(3, result);
         }
 
-        [Test]
+
         public void Equal_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -236,7 +236,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsTrue(result);
         }
 
-        [Test]
+
         public void ExclusiveOr_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -249,7 +249,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(6, result);
         }
 
-        [Test]
+
         public void ExclusiveOrAssign_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -262,7 +262,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(6, result);
         }
 
-        [Test]
+
         public void GreaterThan_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -275,7 +275,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsTrue(result);
         }
 
-        [Test]
+
         public void GreaterThanOrEqual_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -292,7 +292,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsTrue(fx(2));
         }
 
-        [Test]
+
         public void LeftShift_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -305,7 +305,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(12, result);
         }
 
-        [Test]
+
         public void LeftShiftAssign_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -318,7 +318,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(12, result);
         }
 
-        [Test]
+
         public void LessThan_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -331,7 +331,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsTrue(result);
         }
 
-        [Test]
+
         public void LessThanOrEqual_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -344,7 +344,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsTrue(result);
         }
 
-        [Test]
+
         public void MakeBinary_Add_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -357,7 +357,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(3, result);
         }
 
-        [Test]
+
         public void MakeBinary_ArrayIndex_compiles()
         {
             var param = Parameter(typeof(string[]), "s");
@@ -370,7 +370,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual("2", result);
         }
 
-        [Test]
+
         public void MakeBinary_Assign_compiles()
         {
             var param = Parameter(typeof(string), "s");
@@ -383,7 +383,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual("test", result);
         }
 
-        [Test]
+
         public void MakeBinary_Coalesce_compiles()
         {
             var param = Parameter(typeof(string), "s");
@@ -396,7 +396,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual("<null>", result);
         }
 
-        [Test]
+
         public void Issue399_Coalesce_for_nullable_long_Automapper_test_Should_substitute_zero_for_null()
         {
             var paramSource = Parameter(typeof(Source), "s");
@@ -424,7 +424,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(0, d.Number);
         }
 
-        [Test]
+
         public void Issue399_Coalesce_for_nullable_long_and_non_nullable_long()
         {
             var paramSource = Parameter(typeof(Source), "s");
@@ -462,7 +462,7 @@ namespace FastExpressionCompiler.UnitTests
             public long NumberNonNullable { get; set; }
         }
 
-        [Test]
+
         public void Modulo_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -475,7 +475,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(2, result);
         }
 
-        [Test]
+
         public void ModuloAssign_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -488,7 +488,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(2, result);
         }
 
-        [Test]
+
         public void Multiply_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -501,7 +501,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(6, result);
         }
 
-        [Test]
+
         public void MultiplyAssign_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -514,7 +514,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(6, result);
         }
 
-        [Test]
+
         public void MultiplyAssignChecked_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -527,7 +527,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(6, result);
         }
 
-        [Test]
+
         public void MultiplyChecked_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -540,7 +540,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(6, result);
         }
 
-        [Test]
+
         public void NotEqual_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -553,7 +553,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsFalse(result);
         }
 
-        [Test]
+
         public void Or_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -566,7 +566,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(7, result);
         }
 
-        [Test]
+
         public void OrAssign_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -579,7 +579,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(7, result);
         }
 
-        [Test]
+
         public void OrElse_compiles()
         {
             var param = Parameter(typeof(bool), "b");
@@ -592,7 +592,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsTrue(result);
         }
 
-        [Test]
+
         public void Power_compiles()
         {
             var param = Parameter(typeof(double), "d");
@@ -605,7 +605,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(9.0, result);
         }
 
-        [Test]
+
         public void PowerAssign_compiles()
         {
             var param = Parameter(typeof(double), "d");
@@ -618,7 +618,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(9.0, result);
         }
 
-        [Test]
+
         public void ReferenceEqual_compiles()
         {
             const string Value = "test";
@@ -632,7 +632,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsTrue(result);
         }
 
-        [Test]
+
         public void ReferenceEqual_in_Action_compiles()
         {
             const string Value = "test";
@@ -649,7 +649,7 @@ namespace FastExpressionCompiler.UnitTests
             fx(Value);
         }
 
-        [Test]
+
         public void ReferenceNotEqual_compiles()
         {
             const string Value = "test";
@@ -667,7 +667,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsFalse(fx(Value));
         }
 
-        [Test]
+
         public void RightShift_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -680,7 +680,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(3, result);
         }
 
-        [Test]
+
         public void RightShiftAssign_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -693,7 +693,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(3, result);
         }
 
-        [Test]
+
         public void Subtract_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -706,7 +706,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(1, result);
         }
 
-        [Test]
+
         public void SubtractAssign_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -719,7 +719,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(1, result);
         }
 
-        [Test]
+
         public void SubtractAssignChecked_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -732,7 +732,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(1, result);
         }
 
-        [Test]
+
         public void SubtractChecked_compiles()
         {
             var param = Parameter(typeof(int), "i");

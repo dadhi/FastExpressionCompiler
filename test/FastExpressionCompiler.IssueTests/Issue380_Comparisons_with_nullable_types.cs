@@ -1,5 +1,5 @@
 using System;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using System.Reflection;
@@ -13,7 +13,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
-[TestFixture]
+
 public class Issue380_Comparisons_with_nullable_types : ITest
 {
     public int Run()
@@ -29,7 +29,7 @@ public class Issue380_Comparisons_with_nullable_types : ITest
         public decimal? D1 { get; set; }
     }
 
-    [Test]
+
     public void Test_left_decimal_Nullable_constant()
     {
 #if LIGHT_EXPRESSION
@@ -69,7 +69,7 @@ public class Issue380_Comparisons_with_nullable_types : ITest
         Asserts.IsTrue(r);
     }
 
-    [Test]
+
     public void Test_left_decimal_constant()
     {
 #if LIGHT_EXPRESSION
@@ -114,7 +114,7 @@ public class Issue380_Comparisons_with_nullable_types : ITest
         Asserts.IsTrue(r);
     }
 
-    [Test]
+
     public void Test_right_decimal_constant()
     {
 #if LIGHT_EXPRESSION

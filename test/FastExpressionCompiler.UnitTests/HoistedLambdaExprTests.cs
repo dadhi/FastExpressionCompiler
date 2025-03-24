@@ -1,5 +1,5 @@
 ﻿using System;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -10,7 +10,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
-    [TestFixture]
+
     public class HoistedLambdaExprTests : ITest
     {
         public int Run()
@@ -19,7 +19,7 @@ namespace FastExpressionCompiler.UnitTests
             return 1;
         }
 
-        [Test]
+
         public void Should_compile_nested_lambda()
         {
             var a = new A();

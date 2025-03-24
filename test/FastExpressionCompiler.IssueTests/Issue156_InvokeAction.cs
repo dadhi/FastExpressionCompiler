@@ -1,5 +1,5 @@
 ﻿using System;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -22,7 +22,7 @@ namespace FastExpressionCompiler.IssueTests
         string _result;
         string Join(object x, object y) => _result = ("" + x) + y;
 
-        [Test]
+
         public void InvokeActionConstantIsSupported()
         {
             Action<object, object> testAction = (o1, o2) => Join(o1, o2);
@@ -49,7 +49,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual("42", _result);
         }
 
-        [Test]
+
         public void InvokeFuncConstantIsSupported()
         {
             Func<int, int, string> testAction = (n1, n2) => "" + n1 + n2;

@@ -4,11 +4,11 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Internal;
-using NUnit.Framework;
+
 
 namespace FastExpressionCompiler.IssueTests
 {
-    [TestFixture]
+
     public class Issue72_Try_CompileFast_for_MS_Extensions_ObjectMethodExecutor : ITest
     {
         public int Run()
@@ -39,7 +39,7 @@ namespace FastExpressionCompiler.IssueTests
 
         private static readonly object[] _parameters = { 1, 2 };
 
-        [Test]
+
         public void ObjectToStructConversionAndBackShouldWork()
         {
             //(object awaiter) => (object)((TaskAwaiter<int>)awaiter).GetResult();
@@ -63,7 +63,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(3, sum);
         }
 
-        [Test]
+
         public void FastCompiledOK()
         {
             var executor = ObjectMethodExecutorCompiledFast.Create(_t.GetMethod(TestMethodName), _ti);
@@ -77,19 +77,19 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(3, sum.GetAwaiter().GetResult());
         }
 
-        [Test]
+
         public async Task AsyncExecutor_CompiledNormally_ExecuteAsync_WithAwait()
         {
             await _execCompiled.ExecuteAsync(this, _parameters);
         }
 
-        [Test]
+
         public async Task AsyncExecutor_CompiledFast_ExecuteAsync_WithAwait()
         {
             await _execCompiledFast.ExecuteAsync(this, _parameters);
         }
 
-        [Test]
+
         public void AsyncExecutor_CompiledFast_ExecuteAsync_WithoutAwait()
         {
             _execCompiledFast.ExecuteAsync(this, _parameters);

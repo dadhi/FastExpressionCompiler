@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Reflection.Emit;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -24,7 +24,7 @@ namespace FastExpressionCompiler.IssueTests
 
         delegate void ActionRef<T>(ref T a1);
 
-        [Test]
+
         public void RefAssign()
         {
             var objRef = Parameter(typeof(double).MakeByRefType());
@@ -36,7 +36,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(8.0, exampleB);
         }
 
-        [Test]
+
         public void NullComparisonTest()
         {
             var pParam = Parameter(typeof(string), "p");
@@ -61,7 +61,7 @@ namespace FastExpressionCompiler.IssueTests
             );
         }
 
-        [Test]
+
         public void TestAddAssign()
         {
             var objRef = Parameter(typeof(double).MakeByRefType());

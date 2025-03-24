@@ -1,5 +1,5 @@
 using System;
-using NUnit.Framework;
+
 using System.Collections.Generic;
 
 #if LIGHT_EXPRESSION
@@ -12,7 +12,7 @@ using System.Linq.Expressions;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
-[TestFixture]
+
 public class Issue443_Nested_Calls_with_lambda_parameters : ITest
 {
     public int Run()
@@ -28,7 +28,7 @@ public class Issue443_Nested_Calls_with_lambda_parameters : ITest
         public static int ExecuteDelegate(Func<int> action) => action();
     }
 
-    [Test]
+
     public void Original_case()
     {
         var executeDelegate = typeof(TestClass).GetMethod(nameof(TestClass.ExecuteDelegate));
@@ -63,7 +63,7 @@ public class Issue443_Nested_Calls_with_lambda_parameters : ITest
         Asserts.AreEqual(42, fr);
     }
 
-    [Test]
+
     public void Case_with_Invoke()
     {
         var executeDelegate = typeof(TestClass).GetMethod(nameof(TestClass.ExecuteDelegate));
@@ -99,7 +99,7 @@ public class Issue443_Nested_Calls_with_lambda_parameters : ITest
         Asserts.AreEqual(42, fr);
     }
 
-    [Test]
+
     public void Case_with_Invoke_NoInlining()
     {
         var executeDelegate = typeof(TestClass).GetMethod(nameof(TestClass.ExecuteDelegate));

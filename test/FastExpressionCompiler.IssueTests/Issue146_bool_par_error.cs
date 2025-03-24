@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
-using NUnit.Framework;
+
 
 #pragma warning disable IDE1006 // Naming Styles for linq2db
 #pragma warning disable 649 // Unassigned fields
@@ -13,7 +13,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue146_bool_par : ITest
     {
         public int Run()
@@ -31,7 +31,7 @@ namespace FastExpressionCompiler.IssueTests
             }
         }
 
-        [Test]
+
         public void Test1()
         {
             var objParam = Parameter(typeof(MyObject), "myObj");
@@ -61,7 +61,7 @@ namespace FastExpressionCompiler.IssueTests
             }
         }
 
-        [Test]
+
         public void Test2()
         {
             var objParam = Parameter(typeof(MyClass), "myObj");

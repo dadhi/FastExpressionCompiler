@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -26,7 +26,7 @@ namespace FastExpressionCompiler.IssueTests
             return 6;
         }
 
-        [Test]
+
         public void BlockWithConstantReturnIsSupported()
         {
             var ret = Block(Label(Label(typeof(int)), Constant(7)));
@@ -36,7 +36,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(7, fastCompiled());
         }
 
-        [Test]
+
         public void MultipleConstantReturnsAreRemoved()
         {
             var ret = Block(Constant(7), Constant(7), Constant(7));
@@ -51,7 +51,7 @@ namespace FastExpressionCompiler.IssueTests
             );
         }
 
-        [Test]
+
         public void ConstantReturnIsSupported()
         {
             var lambda = Lambda<Func<int>>(Label(Label(typeof(int)), Constant(7)));
@@ -60,7 +60,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(7, fastCompiled());
         }
 
-        [Test]
+
         public void ConstantReturnIsSupported2()
         {
             var varr = Variable(typeof(int), "xxx");
@@ -71,7 +71,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(7, fastCompiled());
         }
 
-        [Test]
+
         public void Block1()
         {
             var ret = Block(Constant(7));
@@ -81,7 +81,7 @@ namespace FastExpressionCompiler.IssueTests
             fastCompiled();
         }
 
-        [Test]
+
         public void Block2()
         {
             var p = Parameter(typeof(object));

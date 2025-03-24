@@ -1,5 +1,5 @@
 using System;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using System.Linq.Expressions;
@@ -12,7 +12,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
-[TestFixture]
+
 public class Issue386_Value_can_not_be_null_in_Nullable_convert : ITest
 {
     public int Run()
@@ -37,7 +37,7 @@ public class Issue386_Value_can_not_be_null_in_Nullable_convert : ITest
         public UserType type;
     }
 
-    [Test]
+
     public void Test_non_nullable_type()
     {
         var spec = new MessageSpec { type = UserType.Foo };
@@ -77,7 +77,7 @@ public class Issue386_Value_can_not_be_null_in_Nullable_convert : ITest
         public UserType? type;
     }
 
-    [Test]
+
     public void Test_nullable_type()
     {
         var spec = new MessageSpec_NullableType { type = null };
@@ -117,7 +117,7 @@ public class Issue386_Value_can_not_be_null_in_Nullable_convert : ITest
         public UserType UserType { get; set; }
     }
 
-    [Test]
+
     public void Test_null_spec()
     {
         var spec = default(MessageSpec);
@@ -152,7 +152,7 @@ public class Issue386_Value_can_not_be_null_in_Nullable_convert : ITest
             ff(new Message_non_nullable { UserType = UserType.Foo }));
     }
 
-    [Test]
+
     public void Test_non_nullable_UserType_non_nullable_type()
     {
         var spec = new MessageSpec { type = UserType.Foo };
@@ -187,7 +187,7 @@ public class Issue386_Value_can_not_be_null_in_Nullable_convert : ITest
         Asserts.IsFalse(r);
     }
 
-    [Test]
+
     public void Test_non_nullable_UserType_nullable_type()
     {
         var spec = new MessageSpec_NullableType { type = null };

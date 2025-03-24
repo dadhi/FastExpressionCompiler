@@ -1,5 +1,5 @@
 ﻿using System;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -21,7 +21,7 @@ namespace FastExpressionCompiler.IssueTests
 
         delegate void ActionRef<T>(ref T a1);
 
-        [Test]
+
         public void PowerIsSupported()
         {
             var lambda = Lambda<Func<double>>(Power(Constant(5.0), Constant(2.0)));
@@ -30,7 +30,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(25, fastCompiled());
         }
 
-        [Test]
+
         public void TestPowerAssign()
         {
             var objRef = Parameter(typeof(double).MakeByRefType());

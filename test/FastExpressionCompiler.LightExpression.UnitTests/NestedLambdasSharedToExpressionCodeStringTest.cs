@@ -1,12 +1,12 @@
 using System;
 using System.Linq;
 using System.Reflection;
-using NUnit.Framework;
+
 using static FastExpressionCompiler.LightExpression.Expression;
 
 namespace FastExpressionCompiler.LightExpression.UnitTests
 {
-    [TestFixture]
+
     public class NestedLambdasSharedToExpressionCodeStringTest : ITest
     {
         public int Run()
@@ -16,7 +16,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             return 2;
         }
 
-        [Test]
+
         public void Should_output_a_valid_expression_code()
         {
             var e = CreateExpression();
@@ -53,7 +53,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             return Lambda<Func<A>>(New(_aCtor, b, c), typeof(A));
         }
 
-        [Test]
+
         public void Test_the_output_expression_code()
         {
             var e = new Expression[17]; // unique expressions

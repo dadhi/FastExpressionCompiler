@@ -1,5 +1,5 @@
 ﻿using System;
-using NUnit.Framework;
+
 using System.Reflection.Emit;
 
 #if LIGHT_EXPRESSION
@@ -11,7 +11,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
-    [TestFixture]
+
     public class ConvertOperatorsTests : ITest
     {
         public int Run()
@@ -26,7 +26,7 @@ namespace FastExpressionCompiler.UnitTests
             return 6;
         }
 
-        [Test]
+
         public void Target_type_implicit_operator()
         {
             System.Linq.Expressions.Expression<Func<string, X>> sExpr = s => s;
@@ -38,7 +38,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual("X:hey", x.S);
         }
 
-        [Test]
+
         public void Source_type_implicit_operator()
         {
             System.Linq.Expressions.Expression<Func<Z, X>> sExpr = z => z;
@@ -50,7 +50,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual("a", x.S);
         }
 
-        [Test]
+
         public void Target_type_explicit_operator()
         {
             System.Linq.Expressions.Expression<Func<string, Y>> sExpr = s => (Y)s;
@@ -66,7 +66,7 @@ namespace FastExpressionCompiler.UnitTests
 
 #if LIGHT_EXPRESSION
 
-        [Test]
+
         public void Convert_Func_to_Custom_delegate_should_work()
         {
             var p = Parameter(typeof(Func<string>), "fs");
@@ -92,7 +92,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual("hey", getString());
         }
 #else
-        [Test]
+        
         public void Convert_Func_to_Custom_delegate_should_work()
         {
             Expression<Func<Func<string>, GetString>> e = p => (GetString)p.Invoke;
@@ -127,7 +127,7 @@ namespace FastExpressionCompiler.UnitTests
         }
 #endif
 
-        [Test]
+
         public void Target_type_explicit_operator_in_action()
         {
             var sExpr = Parameter(typeof(string), "s");
@@ -139,7 +139,7 @@ namespace FastExpressionCompiler.UnitTests
             f("hey");
         }
 
-        [Test]
+
         public void Generic_converter_should_work()
         {
             var expr = GetGenericConverter<int, XEnum>();

@@ -631,7 +631,6 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(0, exampleC);
         }
 
-
         public void RefRefReturnToVoid()
         {
             string SetSmallConstant(ref int a1, ref float a2)

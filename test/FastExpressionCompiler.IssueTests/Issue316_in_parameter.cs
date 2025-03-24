@@ -2,7 +2,7 @@ using System.Linq.Expressions;
 using System.Reflection.Emit;
 using System.Reflection;
 using System;
-using NUnit.Framework;
+
 
 #pragma warning disable CS0162
 
@@ -14,7 +14,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-    [TestFixture]
+
     public class Issue316_in_parameter : ITest
     {
         public int Run()
@@ -54,7 +54,7 @@ namespace FastExpressionCompiler.IssueTests
             public int Position;
         }
 
-        [Test]
+
         public void Test_constructor_in_struct_parameter_constant()
         {
             var position = new TextPosition { Position = 42 };
@@ -73,7 +73,7 @@ namespace FastExpressionCompiler.IssueTests
         }
 
 #if LIGHT_EXPRESSION
-        [Test]
+
         public void Test_constructor_in_struct_parameter_constant_with_NoArgByRef_New()
         {
             var position = new TextPosition { Position = 42 };
@@ -94,7 +94,7 @@ namespace FastExpressionCompiler.IssueTests
 
         public static void ThrowParseException(in TextPosition position) => throw new ParseException("from method", in position);
 
-        [Test]
+
         public void Test_method_in_struct_parameter_constant()
         {
             var position = new TextPosition { Position = 42 };
@@ -112,7 +112,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.Throws<ParseException>(() => fFast());
         }
 
-        [Test]
+
         public void Test_get_parameters()
         {
             var c = typeof(A).GetConstructors()[0];

@@ -1,6 +1,6 @@
 using System;
 using System.Reflection.Emit;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -10,7 +10,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
-[TestFixture]
+
 public class Issue426_Directly_passing_a_method_result_to_another_method_by_ref_fails_with_InvalidProgramException : ITest
 {
     public int Run()
@@ -39,7 +39,7 @@ public class Issue426_Directly_passing_a_method_result_to_another_method_by_ref_
         public string Data;
     }
 
-    [Test]
+
     public void Original_case()
     {
         var getMethod = typeof(Numbers).GetMethod(nameof(Numbers.GetInt));
@@ -67,7 +67,7 @@ public class Issue426_Directly_passing_a_method_result_to_another_method_by_ref_
         Asserts.AreEqual(42, ff());
     }
 
-    [Test]
+
     public void Class_ref_param_case()
     {
         var getMethod = typeof(Numbers).GetMethod(nameof(Numbers.GetMessage));
@@ -95,7 +95,7 @@ public class Issue426_Directly_passing_a_method_result_to_another_method_by_ref_
         Asserts.AreEqual("DuckAck", ff());
     }
 
-    [Test]
+
     public void Two_ref_value_params_case()
     {
         var getMethod = typeof(Numbers).GetMethod(nameof(Numbers.GetInt));

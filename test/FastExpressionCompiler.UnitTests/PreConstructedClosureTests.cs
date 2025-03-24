@@ -1,5 +1,5 @@
 ﻿using System;
-using NUnit.Framework;
+
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -10,7 +10,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
-    [TestFixture]
+
     public class PreConstructedClosureTests : ITest
     {
         public int Run()
@@ -31,7 +31,7 @@ namespace FastExpressionCompiler.UnitTests
             return 11;
         }
 
-        [Test]
+
         public void Can_pass_closure_with_constant_to_TryCompile()
         {
             var x = new X();
@@ -45,7 +45,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreSame(x, result);
         }
 
-        [Test]
+
         public void Can_pass_ANY_class_closure_with_constant_to_TryCompile()
         {
             var x = new X();
@@ -59,7 +59,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreSame(x, result);
         }
 
-        [Test]
+
         public void Can_pass_closure_with_block_to_TryCompile()
         {
             var x = new X();
@@ -73,7 +73,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreSame(x, result);
         }
 
-        [Test]
+
         public void Can_pass_closure_with_variable_block_to_TryCompile()
         {
             var intVariable = Variable(typeof(int));
@@ -92,7 +92,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(2, intDoubler.DoubleValue);
         }
 
-        [Test]
+
         public void Can_pass_closure_with_try_catch_to_TryCompile()
         {
             var x = new X();
@@ -128,7 +128,7 @@ namespace FastExpressionCompiler.UnitTests
             public ClosureIntHolder(IntDoubler value) { Value = value; }
         }
 
-        [Test]
+
         public void Can_use_block_when_compiling_a_static_delegate()
         {
             var expr = Lambda<Func<X>>(Block(New(typeof(X).GetConstructor(Type.EmptyTypes))));
@@ -140,7 +140,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsNotNull(result);
         }
 
-        [Test]
+
         public void Can_use_variable_block_when_compiling_a_static_delegate()
         {
             var intDoublerVariable = Variable(typeof(IntDoubler));
@@ -159,7 +159,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(10, result.DoubleValue);
         }
 
-        [Test]
+
         public void Can_prevent_closure_creation_when_compiling_a_static_delegate()
         {
             System.Linq.Expressions.Expression<Func<X>> sExpr = () => new X();
@@ -172,7 +172,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsNotNull(result);
         }
 
-        [Test]
+
         public void Can_pass_closure_to_hoisted_expr_with_nested_lambda()
         {
             var x = new X();
@@ -187,7 +187,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreSame(y.A, y.B);
         }
 
-        [Test]
+
         public void Can_use_primitive_types_in_hoisted_lambda_closure()
         {
             var i = 3;
@@ -201,7 +201,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(14, fs());
         }
 
-        [Test]
+
         public void Can_Not_use_primitive_types_in_manual_lambda_closure()
         {
             var i = 3;
