@@ -19,9 +19,9 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
 {
     public int Run()
     {
-        TestCollectionAssertAreEqual_3();
-        TestCollectionAssertAreEqual_2();
         TestCollectionAssertAreEqual();
+        TestCollectionAssertAreEqual_2();
+        TestCollectionAssertAreEqual_3();
 
         ConvertChecked_int_to_byte_enum();
         Convert_int_to_byte_enum();

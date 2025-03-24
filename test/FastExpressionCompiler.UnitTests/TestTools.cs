@@ -197,6 +197,8 @@ public static class Asserts
         !Equals(expected, actual) ? true : throw new AssertionException(
             $"Expected `AreNotEqual({expectedName}, {actualName})`, but found `{expected.ToCode()}` is equal to `{actual.ToCode()}`");
 
+    public record struct ItemsCompared<T>(int Index, bool IsEqual, T Expected, T Actual);
+
     /// <summary>Should cover the case with the `expected` to be an array as well.</summary>
     public static bool AreEqual<T>(IEnumerable<T> expected, IEnumerable<T> actual,
 #if NETCOREAPP3_0_OR_GREATER
@@ -230,14 +232,24 @@ public static class Asserts
         // #11 == 53, 53
         // #12 != 55, 53
         //
-        SmallList4<(int Index, bool IsEqual, T expected, T actual)> nonEqualItemsWithEqualContext = default;
-        SmallList4<(int Index, bool IsEqual, T expected, T actual)> equalItemsBeforeNonEqual = default;
-        const int ContextWindowCount = 8; // should be power of 2, with half before and half after the non-equal item
+        const int ContextWindowCount = 8;
         const int HalfContextWindowCount = ContextWindowCount >> 1;
+        const int MaskHalfContextWindowCount = HalfContextWindowCount - 1;
         const int MaxNonEqualItemCount = 64;
+
+        // The equal items in a window from the start of collections of after the previous non-equal item and until the next non-equal item
+        var beforeNonEqualCount = 0;
+
+        // Counter track the number the equal items collected after non-equal, should be between 0 and HalfContextWindowCount, starts from HalfContextWindowCount
+        var afterNonEqualReverseCount = 0;
+
+        // Using those 4 slots directly to represent recent 4 equal items, before the non-equal item.
+        // The slots will be rotated by overriding the `a` again, when the `d` is reached, then the `b`, etc.
+        ItemsCompared<T> a = default, b = default, c = default, d = default;
+        SmallList4<ItemsCompared<T>> collectedItems = default;
+
         var nonEqualItemCount = 0;
         var collectedMaxNonEqualItems = false;
-        var equalItemsAroundNonEqualCount = 0; // the Max value of it is ContextWindowCount
 
         // Traverse until the end of the largest collection
         var hasExpected = true;
@@ -257,52 +269,59 @@ public static class Asserts
                 var act = actualEnumerator.Current;
                 if (!Equals(exp, act))
                 {
-                    // we're done after we found one more non-equal faster than collecting the last non-equal context
+                    // It's done after we found one more non-equal item, faster than collecting the last non-equal context
                     collectedMaxNonEqualItems = nonEqualItemCount > MaxNonEqualItemCount;
                     if (!collectedMaxNonEqualItems)
                     {
-                        // Drop the collected context items before the non-equal item to the whole list of items
-                        if (equalItemsBeforeNonEqual.Count > 0)
+                        // Add the collected context items before the non-equal item to the whole list of items
+                        if (beforeNonEqualCount != 0)
                         {
-                            if (nonEqualItemsWithEqualContext.Count == 0)
-                                nonEqualItemsWithEqualContext = equalItemsBeforeNonEqual;
+                            if (beforeNonEqualCount < HalfContextWindowCount)
+                            {
+                                switch (beforeNonEqualCount)
+                                {
+                                    case 1: collectedItems.Add(in a); break;
+                                    case 2: collectedItems.Add(in a); collectedItems.Add(in b); break;
+                                    case 3: collectedItems.Add(in a); collectedItems.Add(in b); collectedItems.Add(in c); break;
+                                }
+                            }
                             else
-                                nonEqualItemsWithEqualContext.AddList(equalItemsBeforeNonEqual);
-                            equalItemsBeforeNonEqual.Clear(); // reuse the context window for the latter items
+                            {
+                                switch (beforeNonEqualCount & MaskHalfContextWindowCount)
+                                {
+                                    case 0: collectedItems.Add(in a); collectedItems.Add(in b); collectedItems.Add(in c); collectedItems.Add(in d); break;
+                                    case 1: collectedItems.Add(in b); collectedItems.Add(in c); collectedItems.Add(in d); collectedItems.Add(in a); break;
+                                    case 2: collectedItems.Add(in c); collectedItems.Add(in d); collectedItems.Add(in a); collectedItems.Add(in b); break;
+                                    case 3: collectedItems.Add(in d); collectedItems.Add(in a); collectedItems.Add(in b); collectedItems.Add(in c); break;
+                                }
+                            }
+                            beforeNonEqualCount = 0; // reset the count of equal items before the non-equal item
                         }
 
-                        nonEqualItemsWithEqualContext.Add((index, false, exp, act));
                         ++nonEqualItemCount;
-                        equalItemsAroundNonEqualCount = HalfContextWindowCount; // the context window is set to the center
+                        collectedItems.Add(new ItemsCompared<T>(index, false, exp, act));
+                        afterNonEqualReverseCount = HalfContextWindowCount;
                     }
                 }
                 else
                 {
-                    ++equalItemsAroundNonEqualCount;
-
-                    // In the context window before the next non-equal item
-                    if (equalItemsAroundNonEqualCount <= HalfContextWindowCount)
+                    if (afterNonEqualReverseCount > 0)
                     {
-                        if (equalItemsAroundNonEqualCount == HalfContextWindowCount)
-                        {
-                            equalItemsBeforeNonEqual.DropFirst();
-                            --equalItemsAroundNonEqualCount; // prevent it to grow over the half-window size
-                        }
-                        equalItemsBeforeNonEqual.Add((index, true, exp, act));
-                    }
-                    else if (equalItemsAroundNonEqualCount <= ContextWindowCount)
-                    {
-                        // We're done with the context around the last non-equal item, so let's start over
-                        if (equalItemsAroundNonEqualCount == ContextWindowCount)
-                        {
-                            equalItemsAroundNonEqualCount = 0;
-                            // We're done collecting the context around the last non-equal item
+                        collectedItems.Add(new ItemsCompared<T>(index, true, exp, act));
+                        --afterNonEqualReverseCount;
+                        if (afterNonEqualReverseCount == 0) // stop when the full equal context is collected for the last non-equal item
                             collectedMaxNonEqualItems = nonEqualItemCount >= MaxNonEqualItemCount;
+                    }
+                    else
+                    {
+                        // Collecting the equal items for the next non-equal context window
+                        switch (beforeNonEqualCount++ & MaskHalfContextWindowCount)
+                        {
+                            case 0: a = new ItemsCompared<T>(index, true, exp, act); break;
+                            case 1: b = new ItemsCompared<T>(index, true, exp, act); break;
+                            case 2: c = new ItemsCompared<T>(index, true, exp, act); break;
+                            case 3: d = new ItemsCompared<T>(index, true, exp, act); break;
                         }
-
-                        // In the context window after the last non-equal item
-                        if (!collectedMaxNonEqualItems)
-                            nonEqualItemsWithEqualContext.Add((index, true, exp, act));
                     }
                 }
             }
@@ -325,8 +344,8 @@ public static class Asserts
                 else
                     sb.AppendLine($"first {MaxNonEqualItemCount} non equal items (and stopped searching):");
 
-                foreach (var (index, isEqual, expectedItem, actualItem) in nonEqualItemsWithEqualContext.Enumerate())
-                    sb.AppendLine($"{index,-4}{(isEqual ? " == " : " != ")}{expectedItem.ToCode(),16},{actualItem.ToCode(),16}");
+                foreach (var (index, isEqual, expectedItem, actualItem) in collectedItems.Enumerate())
+                    sb.AppendLine($"{index,4}{(isEqual ? "    " : " -> ")}{expectedItem.ToCode(),16},{actualItem.ToCode(),16}");
             }
 
             throw new AssertionException(sb.ToString());

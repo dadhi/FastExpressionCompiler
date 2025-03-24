@@ -507,6 +507,18 @@ public struct SmallList4<TItem>
         _it3 = it3;
     }
 
+    /// <summary>Populate with `count` items</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public void Init(int count, in TItem it0, in TItem it1, in TItem it2, in TItem it3)
+    {
+        Debug.Assert(count >= 0 & count <= 4);
+        _count = count;
+        _it0 = it0;
+        _it1 = it1;
+        _it2 = it2;
+        _it3 = it3;
+    }
+
     /// <summary>Populates the list stack items and owns/uses the provided rest array and its count</summary>
     [MethodImpl((MethodImplOptions)256)]
     public void Embed(TItem it0, TItem it1, TItem it2, TItem it3, TItem[] rest, int restCount)
