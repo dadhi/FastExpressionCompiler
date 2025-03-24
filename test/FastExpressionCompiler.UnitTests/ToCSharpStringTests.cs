@@ -27,7 +27,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var cs = e.ToCSharpString();
 
-            StringAssert.Contains("A<string>", cs);
+            Asserts.Contains("A<string>", cs);
 
             var f = e.CompileFast(true);
             Asserts.AreEqual(typeof(A<string>), f());

@@ -163,13 +163,13 @@ public class Issue196_AutoMapper_tests_are_failing_when_using_FEC : ITest
         fs.PrintIL();
         var ex = Asserts.Throws<ArgumentNullException>(() =>
             fs(new Source { Value = 42 }, null));
-        StringAssert.Contains("meh!", ex.Message);
+        Asserts.Contains("meh!", ex.Message);
 
         var ff = expr.CompileFast(true);
         ff.PrintIL();
         ex = Asserts.Throws<ArgumentNullException>(() =>
             ff(new Source { Value = 42 }, null));
-        StringAssert.Contains("meh!", ex.Message);
+        Asserts.Contains("meh!", ex.Message);
     }
 
     [Test]

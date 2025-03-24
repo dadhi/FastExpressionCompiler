@@ -268,7 +268,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var ses = se.ToExpressionString();
             var les = le.ToExpressionString();
 
-            StringAssert.Contains("MemberInit", ses);
+            Asserts.Contains("MemberInit", ses);
             Asserts.AreEqual(ses, les);
         }
 
@@ -281,7 +281,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var ses = se.ToCSharpString();
             var les = le.ToCSharpString();
 
-            StringAssert.Contains("Prop = new LightExpressionTests.P(new LightExpressionTests.B())", ses);
+            Asserts.Contains("Prop = new LightExpressionTests.P(new LightExpressionTests.B())", ses);
             Asserts.AreEqual(ses, les);
         }
 
@@ -334,7 +334,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var e = Lambda<Action<int>>(Block(Call(sayHi, p, p), Call(sayHi, p, p), Call(sayHi, p, p)), p);
 
             var s = e.ToCSharpString();
-            StringAssert.Contains("SayHi", s);
+            Asserts.Contains("SayHi", s);
         }
 
         public static void SayHi(int i, int j) { }

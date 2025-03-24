@@ -506,6 +506,45 @@ public static class Asserts
         }
         throw new AssertionException($"Expected `Throws<{typeof(E).ToCode()}>({actionName})`, but no exception was thrown");
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool Contains(string expected, string actual,
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(expected))] 
+#endif
+        string expectedName = "expected",
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(actual))]
+#endif
+        string actualName = "actual") =>
+        actual.Contains(expected) ? true : throw new AssertionException(
+            $"Expected string `Contains({expectedName}, {actualName})`, but found expected `{expected.ToCode()}` is not in `{actual.ToCode()}`");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool DoesNotContain(string expected, string actual,
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(expected))] 
+#endif
+        string expectedName = "expected",
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(actual))]
+#endif
+        string actualName = "actual") =>
+        !actual.Contains(expected) ? true : throw new AssertionException(
+            $"Expected string `DoesNotContain({expectedName}, {actualName})`, but found expected `{expected.ToCode()}` is in `{actual.ToCode()}`");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool StartsWith(string expected, string actual,
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(expected))] 
+#endif
+        string expectedName = "expected",
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(actual))]
+#endif
+        string actualName = "actual") =>
+        actual.StartsWith(expected) ? true : throw new AssertionException(
+            $"Expected string `StartsWith({expectedName}, {actualName})`, but found expected `{expected.ToCode()}` is not at start of `{actual.ToCode()}`");
 }
 
 public interface ITest

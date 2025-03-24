@@ -59,10 +59,10 @@ public class Issue274_Failing_Expressions_in_Linq2DB : ITest
     Asserts.IsNotNull(de.Expression);
 
     Asserts.IsNotNull(de.ExpressionString);
-    StringAssert.DoesNotContain("<>", de.ExpressionString);
+    Asserts.DoesNotContain("<>", de.ExpressionString);
 
     Asserts.IsNotNull(de.CSharpString);
-    StringAssert.DoesNotContain("<>", de.CSharpString);
+    Asserts.DoesNotContain("<>", de.CSharpString);
   }
 
   [Test]
@@ -408,7 +408,7 @@ public class Issue274_Failing_Expressions_in_Linq2DB : ITest
 
     expr.PrintCSharp();
     var reExpr = expr.ToExpressionString();
-    StringAssert.Contains(")/*NOTE: Provide the non-default value", reExpr); // contains the constant
+    Asserts.Contains(")/*NOTE: Provide the non-default value", reExpr); // contains the constant
 
     var fs = expr.CompileSys();
     fs.PrintIL();

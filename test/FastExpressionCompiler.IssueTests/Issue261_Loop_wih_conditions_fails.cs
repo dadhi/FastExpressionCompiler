@@ -71,7 +71,7 @@ public class Issue261_Loop_wih_conditions_fails : ITest
 
 
 #if LIGHT_EXPRESSION && NET472
-        return 21;
+    return 21;
 #elif LIGHT_EXPRESSION
     return 20;
 #elif NET472
@@ -1297,7 +1297,7 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
 
     var s = string.Empty;
     expr.PrintCSharp(ref s);
-    StringAssert.DoesNotContain("return index0", s);
+    Asserts.DoesNotContain("return index0", s);
 
     var fs = (ReadMethods<ConstructorTests.Test[], BufferedStream, Settings_827720117>.ReadSealed)expr.CompileSys();
     fs.PrintIL();
@@ -1633,7 +1633,7 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
       )
     );
 
-    StringAssert.StartsWith("The binary operator Equal is not defined for the types", ex.Message);
+    Asserts.StartsWith("The binary operator Equal is not defined for the types", ex.Message);
   }
 #endif
 
@@ -1648,7 +1648,7 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
     );
 
     var s = e.ToExpressionString();
-    StringAssert.Contains("Constant((byte)0)", s);
+    Asserts.Contains("Constant((byte)0)", s);
 
     e.PrintCSharp();
 
@@ -1803,11 +1803,11 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
 
     var ex = Asserts.Throws<InvalidOperationException>(() =>
       Lambda<Action>(Call(Constant(bar), "Nah", new Type[] { typeof(int) }, Constant(5))));
-    StringAssert.StartsWith("More than one", ex.Message);
+    Asserts.StartsWith("More than one", ex.Message);
 
     ex = Asserts.Throws<InvalidOperationException>(() =>
       SysExpr.Lambda<Action>(SysExpr.Call(SysExpr.Constant(bar), "Nah", new Type[] { typeof(int) }, SysExpr.Constant(5))));
-    StringAssert.StartsWith("More than one", ex.Message);
+    Asserts.StartsWith("More than one", ex.Message);
 
     var e = Lambda<Action>(Call(Constant(bar), "Nah", new Type[] { typeof(string) }, Constant("x")));
     e.CompileFast(true)();
@@ -1819,19 +1819,19 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
 
     ex = Asserts.Throws<InvalidOperationException>(() =>
       Lambda<Action>(Call(Constant(bar), "Nah", new Type[] { typeof(double) }, Constant((double)42.3))));
-    StringAssert.StartsWith("More than one", ex.Message);
+    Asserts.StartsWith("More than one", ex.Message);
 
     ex = Asserts.Throws<InvalidOperationException>(() =>
       SysExpr.Lambda<Action>(SysExpr.Call(SysExpr.Constant(bar), "Nah", new Type[] { typeof(double) }, SysExpr.Constant((double)42.3))));
-    StringAssert.StartsWith("More than one", ex.Message);
+    Asserts.StartsWith("More than one", ex.Message);
 
     ex = Asserts.Throws<InvalidOperationException>(() =>
       Lambda<Action>(Call(Constant(bar), "Nah", Type.EmptyTypes, Constant((double)42.3))));
-    StringAssert.StartsWith("More than one", ex.Message);
+    Asserts.StartsWith("More than one", ex.Message);
 
     ex = Asserts.Throws<InvalidOperationException>(() =>
       SysExpr.Lambda<Action>(SysExpr.Call(SysExpr.Constant(bar), "Nah", Type.EmptyTypes, SysExpr.Constant((double)42.3))));
-    StringAssert.StartsWith("More than one", ex.Message);
+    Asserts.StartsWith("More than one", ex.Message);
 
     e = Lambda<Action>(Call(Constant(bar), "Nah", Type.EmptyTypes, Constant(null)));
     e.CompileFast(true)();
