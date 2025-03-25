@@ -573,7 +573,6 @@ public record struct TestFailure(
 
 public record struct TestStats(
     string TestsName,
-    string TestsFile,
     Exception TestStopException,
     int TestCount,
     int FirstFailureIndex,
@@ -591,10 +590,11 @@ public struct TestContext
     public readonly TestRun TestRun;
     public TestContext(TestRun testRun) => TestRun = testRun;
 
+    // A trick to automatically increment the test count when passing the TestRun to the test method expecting TextContext,
+    // so that while wrapping TestRun in Context, it additionally increments the test count without incrementing it manually.
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static implicit operator TestContext(TestRun t)
     {
-        // A trick to automatically increment the test count when passing context to the test method
         t.TotalTestCount += 1;
         return new TestContext(t);
     }
@@ -656,20 +656,19 @@ public struct TestContext
             [CallerLineNumber]
 #endif
         int sourceLineNumber = -1) =>
-    Equals(expected, actual) ||
-        AddFailure(testName, sourceLineNumber, AssertKind.AreEqual,
-            $"Expected `AreEqual({expectedName}, {actualName})`, but found `{expected.ToCode()}` is Not equal to `{actual.ToCode()}`");
+        Equals(expected, actual) ||
+            AddFailure(testName, sourceLineNumber, AssertKind.AreEqual,
+                $"Expected `AreEqual({expectedName}, {actualName})`, but found `{expected.ToCode()}` is Not equal to `{actual.ToCode()}`");
 }
 
 /// <summary>Per-thread context, accumulating the stats and failures in its Run method.</summary>
 public sealed class TestRun
 {
     public int TotalTestCount;
-    // todo: @perf it may use ImTools.SmallList for the stats and failures to more local access to the Count
-    public List<TestStats> Stats = new();
-    public List<TestFailure> Failures = new();
+    public SmallList<TestStats> Stats;
+    public SmallList<TestFailure> Failures;
 
-    public void Run(ITestX test, TestTracking tracking = TestTracking.TrackFailedTestsOnly)
+    public void Run<T>(T test, TestTracking tracking = TestTracking.TrackFailedTestsOnly) where T : ITestX
     {
         var totalTestCount = TotalTestCount;
         var failureCount = Failures.Count;
@@ -688,14 +687,12 @@ public sealed class TestRun
             tracking == TestTracking.TrackAllTests ||
             tracking == TestTracking.TrackFailedTestsOnly & testFailureCount > 0)
         {
-            // todo: @wip is there a more performant way to get the test name and file?
+            // todo: @perf Or may be we can put it under the debug only?
             var testsType = test.GetType();
             var testsName = testsType.Name;
-            var testsFile = new Uri(testsType.Assembly.Location).LocalPath;
-
             var testCount = TotalTestCount - totalTestCount;
 
-            var stats = new TestStats(testsName, testsFile, testStopException, testCount, failureCount, testFailureCount);
+            var stats = new TestStats(testsName, testStopException, testCount, failureCount, testFailureCount);
             Stats.Add(stats);
 
             // todo: @wip better output?
@@ -709,7 +706,7 @@ public sealed class TestRun
                 Console.WriteLine($"Test '{testsName}' failed {testFailureCount} time{(testFailureCount == 1 ? "" : "s")}:");
                 for (var i = 0; i < testFailureCount; ++i)
                 {
-                    var f = Failures[failureCount + i];
+                    ref var f = ref Failures.GetSurePresentItemRef(failureCount + i);
                     Console.WriteLine($"#{i} at line {f.SourceLineNumber}:{Environment.NewLine}'{f.Message}'");
                 }
             }

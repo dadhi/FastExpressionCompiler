@@ -9,7 +9,7 @@ using System.Linq.Expressions;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
-public class Issue455_TypeAs_should_return_null : ITest, ITestX
+public struct Issue455_TypeAs_should_return_null : ITest, ITestX
 {
     public int Run()
     {
