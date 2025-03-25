@@ -41,176 +41,28 @@ public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
         Original_case();
         The_operator_method_is_provided_in_Convert();
 
-        return 12;
+        return 15;
     }
 
-
-#if TRUE // todo: @wip #453 draft of the implementation
-
-    public struct FooBarTests : ITest
+    public struct FooBarTests : ITestX
     {
-        public void Run(TestRunContext t)
+        public void Run(TestRun tr)
         {
-            TestFoo(t);
-            TestBar(t);
+            TestFoo(tr);
+            TestBar(tr);
         }
 
-        public void TestFoo(TestMethodContext t)
+        public void TestFoo(TestContext tx)
         {
-            t.IsTrue(false);
-            t.Fails("Not implemented");
+            tx.IsTrue(false);
+            tx.Fail("Not implemented");
         }
 
-        public void TestBar(TestMethodContext t)
+        public void TestBar(TestContext tx)
         {
-            t.Fails("Not implemented");
-        }
-    }
-
-    public interface ITest
-    {
-        void Run(TestRunContext t);
-    }
-
-    public static class TestRunner
-    {
-        // returns number of the tests
-        public static int Run()
-        {
-            var ctx = new TestRunContext();
-
-            ctx.Run(new FooBarTests());
-
-            return ctx.TotalTestCount;
+            tx.Fail("Not implemented");
         }
     }
-
-    public record struct TestFailure(
-        string TestMethodName,
-        int SourceLineNumber,
-        AssertKind Kind,
-        object actual, string actualName,
-        object optionalExpected, string optionalExpectedName);
-
-    public record struct TestStats(
-        string TestsName,
-        string TestsFile,
-        Exception TestStopException,
-        int TestCount,
-        int FirstFailureIndex,
-        int FailureCount);
-
-    public enum TestRunTracking
-    {
-        TrackFailedTestsOnly = 0,
-        TrackAllTests,
-    }
-
-    /// <summary>Per-thread context, accumulating the stats and failures in its Run method.</summary>
-    public sealed class TestRunContext
-    {
-        public int TotalTestCount;
-        // todo: @perf it may use ImTools.SmallList for the stats and failures to more local access to the Count
-        public List<TestStats> Stats = new();
-        public List<TestFailure> Failures = new();
-
-        public void Run(ITest test, TestRunTracking tracking = TestRunTracking.TrackFailedTestsOnly)
-        {
-            var totalTestCount = TotalTestCount;
-            var failureCount = Failures.Count;
-            Exception testStopException = null;
-            try
-            {
-                test.Run(this);
-            }
-            catch (Exception ex)
-            {
-                testStopException = ex;
-            }
-
-            var testFailureCount = Failures.Count - failureCount;
-            if (testStopException != null ||
-                tracking == TestRunTracking.TrackAllTests ||
-                tracking == TestRunTracking.TrackFailedTestsOnly & testFailureCount > 0)
-            {
-                // todo: @wip is there a more performant way to get the test name and file?
-                var testsType = test.GetType();
-                var testsName = testsType.Name;
-                var testsFile = new Uri(testsType.Assembly.Location).LocalPath;
-
-                var testCount = TotalTestCount - totalTestCount;
-
-                var stats = new TestStats(testsName, testsFile, testStopException, testCount, failureCount, testFailureCount);
-                Stats.Add(stats);
-            }
-        }
-    }
-
-    public enum AssertKind
-    {
-        CommandedToFail,
-        IsTrue,
-        IsFalse,
-        AreEqual,
-        AreNotEqual,
-        Throws,
-    }
-
-    // Wrapper for the context per test method
-    public struct TestMethodContext
-    {
-        public readonly TestRunContext TestRunContext;
-        public TestMethodContext(TestRunContext testRunContext) => TestRunContext = testRunContext;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static implicit operator TestMethodContext(TestRunContext t)
-        {
-            // A trick to automatically increment the test count when passing context to the test method
-            t.TotalTestCount += 1;
-            return new TestMethodContext(t);
-        }
-
-        /// <summary>Always failes with the provided message</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Fails(string message,
-#if NETCOREAPP3_0_OR_GREATER
-            [CallerMemberName]
-#endif
-            string testName = "<test>",
-#if NETCOREAPP3_0_OR_GREATER
-            [CallerLineNumber]
-#endif
-            int sourceLineNumber = -1)
-        {
-            var failure = new TestFailure(testName, sourceLineNumber, AssertKind.CommandedToFail, null, message, null, null);
-            TestRunContext.Failures.Add(failure);
-        }
-
-        /// <summary>Method returns the Assert result to ptentially be used by the User for the latter test logic, e.g. returning early</summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool IsTrue(bool actual,
-#if NETCOREAPP3_0_OR_GREATER
-            [CallerArgumentExpression(nameof(actual))]
-#endif
-            string actualName = "<actual>",
-#if NETCOREAPP3_0_OR_GREATER
-            [CallerMemberName]
-#endif
-            string testName = "<test>",
-#if NETCOREAPP3_0_OR_GREATER
-            [CallerLineNumber]
-#endif
-            int sourceLineNumber = -1)
-        {
-            if (actual)
-                return true;
-
-            var failure = new TestFailure(testName, sourceLineNumber, AssertKind.IsTrue, actual, actualName, null, null);
-            TestRunContext.Failures.Add(failure);
-            return false;
-        }
-    }
-#endif
 
     public void TestCollectionAssertAreEqual()
     {

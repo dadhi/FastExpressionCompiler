@@ -13,7 +13,6 @@ namespace FastExpressionCompiler.UnitTests
             // new LightExpression.UnitTests.ConstantAndConversionTests().Run();
 
             // new LightExpression.IssueTests.Issue451_Operator_implicit_explicit_produces_InvalidProgram().Run();
-            // new LightExpression.IssueTests.Issue455_TypeAs_should_return_null().Run();
             // new LightExpression.IssueTests.Issue55_CompileFast_crash_with_ref_parameter().Run();
 
             // new Issue357_Invalid_program_exception().Run();
@@ -84,6 +83,7 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new ConditionalOperatorsTests().Run);
                 Run(new LightExpression.UnitTests.ConditionalOperatorsTests().Run);
                 Run(new ConstantAndConversionTests().Run);
+                Run(new LightExpression.UnitTests.ConstantAndConversionTests().Run);
                 Run(new ConvertOperatorsTests().Run);
                 Run(new LightExpression.UnitTests.ConvertOperatorsTests().Run);
                 Run(new DefaultTests().Run);
@@ -366,6 +366,9 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue451_Operator_implicit_explicit_produces_InvalidProgram().Run);
                 Run(new LightExpression.IssueTests.Issue451_Operator_implicit_explicit_produces_InvalidProgram().Run);
+
+                Run(new Issue455_TypeAs_should_return_null().Run);
+                Run(new LightExpression.IssueTests.Issue455_TypeAs_should_return_null().Run);
 
                 Console.WriteLine($"{Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });

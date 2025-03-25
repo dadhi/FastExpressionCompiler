@@ -8,7 +8,6 @@ using System.Text;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
-using System.Linq.Expressions;
 using System.Diagnostics;
 using FastExpressionCompiler.ILDecoder;
 using System.IO;
@@ -19,6 +18,7 @@ using FastExpressionCompiler.LightExpression.ImTools;
 #else
 namespace FastExpressionCompiler;
 using FastExpressionCompiler.ImTools;
+using System.Linq.Expressions;
 #endif
 
 public static class TestTools
@@ -49,9 +49,7 @@ public static class TestTools
             ++index;
         }
 
-        // todo: @wip
-        // Asserts.AreEq    ual(expectedCodes, actualCodes, "Unexpected IL OpCodes, actual codes are: " + Environment.NewLine + sb);
-        Asserts.AreEqual<OpCode>(expectedCodes, actualCodes);
+        Asserts.AreEqual(expectedCodes, actualCodes);
     }
 
     [Conditional("DEBUG")]
@@ -550,4 +548,171 @@ public static class Asserts
 public interface ITest
 {
     int Run();
+}
+
+public interface ITestX
+{
+    void Run(TestRun tr);
+}
+
+public enum AssertKind
+{
+    CommandedToFail,
+    IsTrue,
+    IsFalse,
+    AreEqual,
+    AreNotEqual,
+    Throws,
+}
+
+public record struct TestFailure(
+    string TestMethodName,
+    int SourceLineNumber,
+    AssertKind Kind,
+    string Message);
+
+public record struct TestStats(
+    string TestsName,
+    string TestsFile,
+    Exception TestStopException,
+    int TestCount,
+    int FirstFailureIndex,
+    int FailureCount);
+
+public enum TestTracking
+{
+    TrackFailedTestsOnly = 0,
+    TrackAllTests,
+}
+
+// Wrapper for the context per test method
+public struct TestContext
+{
+    public readonly TestRun TestRun;
+    public TestContext(TestRun testRun) => TestRun = testRun;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static implicit operator TestContext(TestRun t)
+    {
+        // A trick to automatically increment the test count when passing context to the test method
+        t.TotalTestCount += 1;
+        return new TestContext(t);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool AddFailure(string testName, int sourceLineNumber, AssertKind assertKind, string message)
+    {
+        TestRun.Failures.Add(new TestFailure(testName, sourceLineNumber, assertKind, message));
+        return false;
+    }
+
+    /// <summary>Always failes with the provided message</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void Fail(string message,
+#if NETCOREAPP3_0_OR_GREATER
+            [CallerMemberName]
+#endif
+        string testName = "<test>",
+#if NETCOREAPP3_0_OR_GREATER
+            [CallerLineNumber]
+#endif
+        int sourceLineNumber = -1) =>
+        AddFailure(testName, sourceLineNumber, AssertKind.CommandedToFail, message);
+
+    /// <summary>Checks if `actual is true`. Method returns `bool` so the latter test logic may depend on it, e.g. to return early</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsTrue(bool actual,
+#if NETCOREAPP3_0_OR_GREATER
+            [CallerArgumentExpression(nameof(actual))]
+#endif
+        string actualName = "<actual>",
+#if NETCOREAPP3_0_OR_GREATER
+            [CallerMemberName]
+#endif
+        string testName = "<test>",
+#if NETCOREAPP3_0_OR_GREATER
+            [CallerLineNumber]
+#endif
+        int sourceLineNumber = -1) =>
+        actual ||
+            AddFailure(testName, sourceLineNumber, AssertKind.IsTrue,
+                $"Expected `IsTrue({actualName})`, but found false");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool AreEqual<T>(T expected, T actual,
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(expected))] 
+#endif
+    string expectedName = "<expected>",
+#if NETCOREAPP3_0_OR_GREATER
+        [CallerArgumentExpression(nameof(actual))]
+#endif
+    string actualName = "<actual>",
+#if NETCOREAPP3_0_OR_GREATER
+            [CallerMemberName]
+#endif
+        string testName = "<test>",
+#if NETCOREAPP3_0_OR_GREATER
+            [CallerLineNumber]
+#endif
+        int sourceLineNumber = -1) =>
+    Equals(expected, actual) ||
+        AddFailure(testName, sourceLineNumber, AssertKind.AreEqual,
+            $"Expected `AreEqual({expectedName}, {actualName})`, but found `{expected.ToCode()}` is Not equal to `{actual.ToCode()}`");
+}
+
+/// <summary>Per-thread context, accumulating the stats and failures in its Run method.</summary>
+public sealed class TestRun
+{
+    public int TotalTestCount;
+    // todo: @perf it may use ImTools.SmallList for the stats and failures to more local access to the Count
+    public List<TestStats> Stats = new();
+    public List<TestFailure> Failures = new();
+
+    public void Run(ITestX test, TestTracking tracking = TestTracking.TrackFailedTestsOnly)
+    {
+        var totalTestCount = TotalTestCount;
+        var failureCount = Failures.Count;
+        Exception testStopException = null;
+        try
+        {
+            test.Run(this);
+        }
+        catch (Exception ex)
+        {
+            testStopException = ex;
+        }
+
+        var testFailureCount = Failures.Count - failureCount;
+        if (testStopException != null ||
+            tracking == TestTracking.TrackAllTests ||
+            tracking == TestTracking.TrackFailedTestsOnly & testFailureCount > 0)
+        {
+            // todo: @wip is there a more performant way to get the test name and file?
+            var testsType = test.GetType();
+            var testsName = testsType.Name;
+            var testsFile = new Uri(testsType.Assembly.Location).LocalPath;
+
+            var testCount = TotalTestCount - totalTestCount;
+
+            var stats = new TestStats(testsName, testsFile, testStopException, testCount, failureCount, testFailureCount);
+            Stats.Add(stats);
+
+            // todo: @wip better output?
+            // Output the failures:
+            if (testStopException != null)
+            {
+                Console.WriteLine($"Unexpected exception in test '{testsName}':{Environment.NewLine}'{testStopException}'");
+            }
+            if (testFailureCount > 0)
+            {
+                Console.WriteLine($"Test '{testsName}' failed {testFailureCount} time{(testFailureCount == 1 ? "" : "s")}:");
+                for (var i = 0; i < testFailureCount; ++i)
+                {
+                    var f = Failures[failureCount + i];
+                    Console.WriteLine($"#{i} at line {f.SourceLineNumber}:{Environment.NewLine}'{f.Message}'");
+                }
+            }
+        }
+    }
 }

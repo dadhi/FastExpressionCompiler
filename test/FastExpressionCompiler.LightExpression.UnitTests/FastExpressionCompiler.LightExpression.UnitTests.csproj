@@ -10,11 +10,9 @@
     <ItemGroup>
         <None Remove="*.ncrunchproject" />
         <Compile Include="..\FastExpressionCompiler.UnitTests\**\*.cs" Exclude="..\FastExpressionCompiler.UnitTests\obj\**\*.*" />
-        <Compile Remove="..\FastExpressionCompiler.UnitTests\ConstantAndConversionTests.cs" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\src\FastExpressionCompiler\FastExpressionCompiler.csproj" />
         <ProjectReference Include="..\..\src\FastExpressionCompiler.LightExpression\FastExpressionCompiler.LightExpression.csproj" />
         <ProjectReference Include="..\FastExpressionCompiler.ILDecoder\FastExpressionCompiler.ILDecoder.csproj" />
     </ItemGroup>

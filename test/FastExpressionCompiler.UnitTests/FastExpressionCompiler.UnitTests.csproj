@@ -9,5 +9,4 @@
         <ProjectReference Include="..\..\src\FastExpressionCompiler\FastExpressionCompiler.csproj" />
         <ProjectReference Include="..\FastExpressionCompiler.ILDecoder\FastExpressionCompiler.ILDecoder.csproj" />
     </ItemGroup>
-
 </Project>

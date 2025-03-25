@@ -2,7 +2,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016-2024 Maksim Volkau
+Copyright (c) 2016-2025 Maksim Volkau
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -2981,6 +2981,7 @@ namespace FastExpressionCompiler
 
                 if (nodeType == ExpressionType.TypeAs)
                 {
+                    il.TryEmitBoxOf(expr.Operand.Type);
                     il.Demit(OpCodes.Isinst, exprType);
                     if (exprType.IsValueType)
                         il.Demit(OpCodes.Unbox_Any, exprType);

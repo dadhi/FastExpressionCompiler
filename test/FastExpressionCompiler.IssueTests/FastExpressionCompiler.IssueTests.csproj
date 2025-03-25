@@ -6,10 +6,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="..\FastExpressionCompiler.UnitTests\TestTools.cs" />
-    </ItemGroup>
-
-    <ItemGroup>
         <PackageReference Include="System.Reflection.Emit" Version="4.7.0"/>
         <PackageReference Include="System.Linq.Dynamic.Core" Version="1.6.1"/>
     </ItemGroup>
@@ -19,8 +15,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\src\FastExpressionCompiler\FastExpressionCompiler.csproj"/>
-        <ProjectReference Include="..\FastExpressionCompiler.ILDecoder\FastExpressionCompiler.ILDecoder.csproj" />
+        <ProjectReference Include="..\FastExpressionCompiler.UnitTests\FastExpressionCompiler.UnitTests.csproj" />
     </ItemGroup>
 
 </Project>

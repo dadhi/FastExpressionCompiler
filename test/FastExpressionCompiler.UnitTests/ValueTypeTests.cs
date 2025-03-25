@@ -89,10 +89,10 @@ namespace FastExpressionCompiler.UnitTests
             System.Linq.Expressions.Expression<Func<string>> sExprSf = () => new StructA { N = 43, M = 34, Sf = "sf", Sp = "sp" }.Sf;
             System.Linq.Expressions.Expression<Func<string>> sExprSp = () => new StructA { N = 43, M = 34, Sf = "sf", Sp = "sp" }.Sp;
 
-            var exprN = sExprN;
-            var exprM = sExprM;
-            var exprSf = sExprSf;
-            var exprSp = sExprSp;
+            var exprN = sExprN.FromSysExpression();
+            var exprM = sExprM.FromSysExpression();
+            var exprSf = sExprSf.FromSysExpression();
+            var exprSp = sExprSp.FromSysExpression();
 
             var n = exprN.CompileFast<Func<int>>(true);
             var m = exprM.CompileFast<Func<int>>(true);

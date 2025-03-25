@@ -265,7 +265,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var se = CreateComplexExpression("p");
             var le = CreateComplexLightExpression("p");
 
-            var ses = se.ToExpressionString();
+            var ses = se.FromSysExpression().ToExpressionString();
             var les = le.ToExpressionString();
 
             Asserts.Contains("MemberInit", ses);
@@ -278,7 +278,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var se = CreateComplexExpression("p");
             var le = CreateComplexLightExpression("p");
 
-            var ses = se.ToCSharpString();
+            var ses = se.FromSysExpression().ToCSharpString();
             var les = le.ToCSharpString();
 
             Asserts.Contains("Prop = new LightExpressionTests.P(new LightExpressionTests.B())", ses);

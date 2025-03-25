@@ -3,10 +3,10 @@ using System.Linq.Expressions;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
-namespace FastExpressionCompiler.LightExpression.IssueTests;
+namespace FastExpressionCompiler.LightExpression.UnitTests;
 #else
 using static System.Linq.Expressions.Expression;
-namespace FastExpressionCompiler.IssueTests;
+namespace FastExpressionCompiler.UnitTests;
 #endif
 
 public class ConstantAndConversionTests : ITest
@@ -37,71 +37,71 @@ public class ConstantAndConversionTests : ITest
     {
         var x = 65535;
         var y = 65535;
-        Asserts.IsTrue(ExpressionCompiler.CompileFast(((Expression<Func<bool>>)(() => x == (long)y)).FromSysExpression(), true)());
+        Asserts.IsTrue(ExpressionCompiler.CompileFast(((System.Linq.Expressions.Expression<Func<bool>>)(() => x == (long)y)).FromSysExpression(), true)());
     }
 
     public void Expressions_with_larger_long_casts_should_not_crash()
     {
         var y = 65536;
         var yn1 = y + 1;
-        Asserts.IsTrue(ExpressionCompiler.CompileFast(((Expression<Func<bool>>)(() => yn1 != (long)y)).FromSysExpression(), true)());
+        Asserts.IsTrue(ExpressionCompiler.CompileFast(((System.Linq.Expressions.Expression<Func<bool>>)(() => yn1 != (long)y)).FromSysExpression(), true)());
     }
 
     public void Expressions_with_long_constants_and_casts()
     {
-        Asserts.IsFalse(ExpressionCompiler.CompileFast(((Expression<Func<bool>>)(() => 0L == (long)"x".Length)).FromSysExpression(), true)());
+        Asserts.IsFalse(ExpressionCompiler.CompileFast(((System.Linq.Expressions.Expression<Func<bool>>)(() => 0L == (long)"x".Length)).FromSysExpression(), true)());
     }
 
     public void Expressions_with_ulong_constants_and_casts()
     {
-        Asserts.IsFalse(ExpressionCompiler.CompileFast(((Expression<Func<bool>>)(() => 0UL == (ulong)"x".Length)).FromSysExpression(), true)());
+        Asserts.IsFalse(ExpressionCompiler.CompileFast(((System.Linq.Expressions.Expression<Func<bool>>)(() => 0UL == (ulong)"x".Length)).FromSysExpression(), true)());
     }
 
     public void Expressions_with_DateTime()
     {
-        Asserts.IsFalse(ExpressionCompiler.CompileFast(((Expression<Func<bool>>)(() => 0 == DateTime.Now.Day)).FromSysExpression(), true)());
+        Asserts.IsFalse(ExpressionCompiler.CompileFast(((System.Linq.Expressions.Expression<Func<bool>>)(() => 0 == DateTime.Now.Day)).FromSysExpression(), true)());
     }
 
     public void Expressions_with_DateTime_and_long_constant()
     {
-        Asserts.IsFalse(ExpressionCompiler.CompileFast(((Expression<Func<bool>>)(() => 0L == (long)DateTime.Now.Day)).FromSysExpression(), true)());
+        Asserts.IsFalse(ExpressionCompiler.CompileFast(((System.Linq.Expressions.Expression<Func<bool>>)(() => 0L == (long)DateTime.Now.Day)).FromSysExpression(), true)());
     }
 
     public void Expressions_with_DateTime_and_ulong_constant()
     {
-        Asserts.IsFalse(ExpressionCompiler.CompileFast(((Expression<Func<bool>>)(() => 0UL == (ulong)DateTime.Now.Day)).FromSysExpression(), true)());
+        Asserts.IsFalse(ExpressionCompiler.CompileFast(((System.Linq.Expressions.Expression<Func<bool>>)(() => 0UL == (ulong)DateTime.Now.Day)).FromSysExpression(), true)());
     }
 
     public void Expressions_with_DateTime_and_uint_constant()
     {
-        Asserts.IsFalse(ExpressionCompiler.CompileFast(((Expression<Func<bool>>)(() => 0u == (uint)DateTime.Now.Day)).FromSysExpression(), true)());
+        Asserts.IsFalse(ExpressionCompiler.CompileFast(((System.Linq.Expressions.Expression<Func<bool>>)(() => 0u == (uint)DateTime.Now.Day)).FromSysExpression(), true)());
     }
 
     public void Expressions_with_max_uint_constant()
     {
         const uint maxuint = UInt32.MaxValue;
         Asserts.IsFalse(maxuint == -1);
-        Asserts.IsFalse(ExpressionCompiler.CompileFast(((Expression<Func<bool>>)(() => maxuint == -1)).FromSysExpression(), true)());
+        Asserts.IsFalse(ExpressionCompiler.CompileFast(((System.Linq.Expressions.Expression<Func<bool>>)(() => maxuint == -1)).FromSysExpression(), true)());
     }
 
     public void Expressions_with_DateTime_and_double_constant()
     {
-        Asserts.IsFalse(ExpressionCompiler.CompileFast(((Expression<Func<bool>>)(() => (double)DateTime.Now.Day == 0d)).FromSysExpression(), true)());
+        Asserts.IsFalse(ExpressionCompiler.CompileFast(((System.Linq.Expressions.Expression<Func<bool>>)(() => (double)DateTime.Now.Day == 0d)).FromSysExpression(), true)());
     }
 
     public void Expressions_with_DateTime_and_float_constant()
     {
-        Asserts.IsFalse(ExpressionCompiler.CompileFast(((Expression<Func<bool>>)(() => 0f == (float)DateTime.Now.Day)).FromSysExpression(), true)());
+        Asserts.IsFalse(ExpressionCompiler.CompileFast(((System.Linq.Expressions.Expression<Func<bool>>)(() => 0f == (float)DateTime.Now.Day)).FromSysExpression(), true)());
     }
 
     public void Expressions_with_char_and_int()
     {
-        Asserts.IsTrue(ExpressionCompiler.CompileFast(((Expression<Func<bool>>)(() => 'z' != 0)).FromSysExpression(), true)());
+        Asserts.IsTrue(ExpressionCompiler.CompileFast(((System.Linq.Expressions.Expression<Func<bool>>)(() => 'z' != 0)).FromSysExpression(), true)());
     }
 
     public void Expressions_with_char_and_short()
     {
-        Asserts.IsTrue(ExpressionCompiler.CompileFast(((Expression<Func<bool>>)(() => 'z' != (ushort)0)).FromSysExpression(), true)());
+        Asserts.IsTrue(ExpressionCompiler.CompileFast(((System.Linq.Expressions.Expression<Func<bool>>)(() => 'z' != (ushort)0)).FromSysExpression(), true)());
     }
 
     public void Can_use_constant_of_byte_Enum_type()
@@ -116,18 +116,18 @@ public class ConstantAndConversionTests : ITest
 
     public void Can_return_constant()
     {
-        Asserts.AreEqual(ExpressionCompiler.CompileFast(((Expression<Func<uint>>)(() => 1u)).FromSysExpression(), true)(), 1u);
-        Asserts.AreEqual(ExpressionCompiler.CompileFast(((Expression<Func<short>>)(() => (short)1)).FromSysExpression(), true)(), (short)1);
-        Asserts.AreEqual(ExpressionCompiler.CompileFast(((Expression<Func<long>>)(() => 1L)).FromSysExpression(), true)(), 1L);
-        Asserts.AreEqual(ExpressionCompiler.CompileFast(((Expression<Func<ulong>>)(() => 1uL)).FromSysExpression(), true)(), 1uL);
-        Asserts.AreEqual(ExpressionCompiler.CompileFast(((Expression<Func<byte>>)(() => (byte)1)).FromSysExpression(), true)(), (byte)1);
-        Asserts.AreEqual(ExpressionCompiler.CompileFast(((Expression<Func<sbyte>>)(() => (sbyte)1)).FromSysExpression(), true)(), (sbyte)1);
-        Asserts.AreEqual(ExpressionCompiler.CompileFast(((Expression<Func<int>>)(() => 1)).FromSysExpression(), true)(), 1);
-        Asserts.AreEqual(ExpressionCompiler.CompileFast(((Expression<Func<float>>)(() => 1.1f)).FromSysExpression(), true)(), 1.1f);
-        Asserts.AreEqual(ExpressionCompiler.CompileFast(((Expression<Func<double>>)(() => 1.1d)).FromSysExpression(), true)(), 1.1d);
-        Asserts.AreEqual(ExpressionCompiler.CompileFast(((Expression<Func<decimal>>)(() => 1.1M)).FromSysExpression(), true)(), 1.1M);
-        Asserts.AreEqual(ExpressionCompiler.CompileFast(((Expression<Func<char>>)(() => 'c')).FromSysExpression(), true)(), 'c');
-        Asserts.AreEqual(ExpressionCompiler.CompileFast(((Expression<Func<bool>>)(() => true)).FromSysExpression(), true)(), true);
+        Asserts.AreEqual(ExpressionCompiler.CompileFast(((System.Linq.Expressions.Expression<Func<uint>>)(() => 1u)).FromSysExpression(), true)(), 1u);
+        Asserts.AreEqual(ExpressionCompiler.CompileFast(((System.Linq.Expressions.Expression<Func<short>>)(() => (short)1)).FromSysExpression(), true)(), (short)1);
+        Asserts.AreEqual(ExpressionCompiler.CompileFast(((System.Linq.Expressions.Expression<Func<long>>)(() => 1L)).FromSysExpression(), true)(), 1L);
+        Asserts.AreEqual(ExpressionCompiler.CompileFast(((System.Linq.Expressions.Expression<Func<ulong>>)(() => 1uL)).FromSysExpression(), true)(), 1uL);
+        Asserts.AreEqual(ExpressionCompiler.CompileFast(((System.Linq.Expressions.Expression<Func<byte>>)(() => (byte)1)).FromSysExpression(), true)(), (byte)1);
+        Asserts.AreEqual(ExpressionCompiler.CompileFast(((System.Linq.Expressions.Expression<Func<sbyte>>)(() => (sbyte)1)).FromSysExpression(), true)(), (sbyte)1);
+        Asserts.AreEqual(ExpressionCompiler.CompileFast(((System.Linq.Expressions.Expression<Func<int>>)(() => 1)).FromSysExpression(), true)(), 1);
+        Asserts.AreEqual(ExpressionCompiler.CompileFast(((System.Linq.Expressions.Expression<Func<float>>)(() => 1.1f)).FromSysExpression(), true)(), 1.1f);
+        Asserts.AreEqual(ExpressionCompiler.CompileFast(((System.Linq.Expressions.Expression<Func<double>>)(() => 1.1d)).FromSysExpression(), true)(), 1.1d);
+        Asserts.AreEqual(ExpressionCompiler.CompileFast(((System.Linq.Expressions.Expression<Func<decimal>>)(() => 1.1M)).FromSysExpression(), true)(), 1.1M);
+        Asserts.AreEqual(ExpressionCompiler.CompileFast(((System.Linq.Expressions.Expression<Func<char>>)(() => 'c')).FromSysExpression(), true)(), 'c');
+        Asserts.AreEqual(ExpressionCompiler.CompileFast(((System.Linq.Expressions.Expression<Func<bool>>)(() => true)).FromSysExpression(), true)(), true);
     }
 
     public void Can_return_constant2()

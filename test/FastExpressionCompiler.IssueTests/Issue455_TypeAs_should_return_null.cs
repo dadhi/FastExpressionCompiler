@@ -2,7 +2,6 @@ using System;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
-using FastExpressionCompiler.LightExpression;
 namespace FastExpressionCompiler.LightExpression.IssueTests;
 #else
 using static System.Linq.Expressions.Expression;
@@ -10,7 +9,7 @@ using System.Linq.Expressions;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
-public class Issue455_TypeAs_should_return_null : ITest
+public class Issue455_TypeAs_should_return_null : ITest, ITestX
 {
     public int Run()
     {
@@ -18,7 +17,12 @@ public class Issue455_TypeAs_should_return_null : ITest
         return 1;
     }
 
-    public void Original_case()
+    public void Run(TestRun tr)
+    {
+        Original_case(tr);
+    }
+
+    public void Original_case(TestContext tx = default)
     {
         var x = Parameter(typeof(int?), "x");
 
@@ -35,12 +39,12 @@ public class Issue455_TypeAs_should_return_null : ITest
         fs.PrintIL();
 
         var sr = fs();
-        Asserts.AreEqual(null, sr);
+        Asserts.IsNull(sr);
 
         var ff = expr.CompileFast(false);
         ff.PrintIL();
 
         var fr = ff();
-        Asserts.AreEqual(null, fr);
+        Asserts.IsNull(fr);
     }
 }
