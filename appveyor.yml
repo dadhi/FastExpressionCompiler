@@ -2,7 +2,7 @@ image:
   - Visual Studio 2022
   - Ubuntu
 
-version: 5.0.2-b{build}
+version: 5.0.3-b{build}
 
 test: off
 
