@@ -13,8 +13,8 @@ public struct Issue458_Support_TryFault : ITest
 {
     public int Run()
     {
+        Original_case2();
         Original_case1();
-        // Original_case2(); // todo: @wip
         return 2;
     }
 
@@ -46,7 +46,7 @@ public struct Issue458_Support_TryFault : ITest
     {
         var x = Parameter(typeof(int), "x");
 
-        var expr = Lambda<Func<bool>>(
+        var expr = Lambda<Func<int>>(
             Block(
                 new[] { x },
                 TryCatch(
@@ -70,12 +70,12 @@ public struct Issue458_Support_TryFault : ITest
         fs.PrintIL();
 
         var sr = fs();
-        Asserts.IsFalse(sr);
+        Asserts.AreEqual(2, sr);
 
         var ff = expr.CompileFast(false);
         ff.PrintIL();
 
         var fr = ff();
-        Asserts.IsFalse(fr);
+        Asserts.AreEqual(2, fr);
     }
 }

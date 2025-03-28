@@ -8124,8 +8124,8 @@ namespace FastExpressionCompiler
                             else
                             {
                                 // avoid additional new line between `try {\n\n while().. }`
-                                if (!part.NodeType.IsBlockLike())
-                                    sb.NewLineIndent(incIndent);
+                                // if (part.NodeType.IsBlockLike()) // todo: @wip add the previous new line checker the same as for the double semiсolon
+                                sb.NewLineIndent(incIndent);
                                 var isReturnable = returnsValue && part.NodeType.IsReturnable();
                                 if (isReturnable)
                                     sb.Append("return ");
