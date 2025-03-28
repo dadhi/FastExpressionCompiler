@@ -64,7 +64,7 @@ public struct Issue458_Support_TryFault : ITest
             )
         );
 
-        expr.PrintCSharp(); // todo: @wip fix the output indentation
+        expr.PrintCSharp(); // todo: @wip fix `return throw new Exception();`
 
         var fs = expr.CompileSys();
         fs.PrintIL();
