@@ -9,6 +9,9 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
+
+            new LightExpression.IssueTests.Issue458_Support_TryFault().Run();
+
             // todo: @wip add to FEC, check the possiblity of the increment compilation and the artefacts reusability
             // new LightExpression.UnitTests.ConstantAndConversionTests().Run();
 

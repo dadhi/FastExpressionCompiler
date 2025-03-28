@@ -432,11 +432,17 @@ public abstract class ExpressionVisitor
             ? Visit(node.Finally)
             : node.Finally;
 
-        if (body == node.Body && ReferenceEquals(handlers, node.Handlers) && @finally == node.Finally)
+        var fault = node.Fault != null
+            ? Visit(node.Fault)
+            : node.Fault;
+
+        if (body == node.Body && ReferenceEquals(handlers, node.Handlers) && @finally == node.Finally && fault == node.Fault)
             return node;
 
         return @finally == null
-            ? new TryExpression(body, handlers.AsArray())
+            ? (fault == null
+                ? new TryExpression(body, handlers.AsArray())
+                : new WithFaultTryExpression(body, fault))
             : new WithFinallyTryExpression(body, handlers.AsArray(), @finally);
     }
 

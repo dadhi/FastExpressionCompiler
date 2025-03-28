@@ -1876,8 +1876,9 @@ namespace FastExpressionCompiler
                     closure.PopBlock();
             }
 
-            if (tryExpr.Finally != null &&
-                (r = TryCollectInfo(ref closure, tryExpr.Finally, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+            var faultOrFinally = tryExpr.Fault ?? tryExpr.Finally;
+            if (faultOrFinally != null &&
+                (r = TryCollectInfo(ref closure, faultOrFinally, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
                 return r;
 
             return r;
@@ -2717,9 +2718,20 @@ namespace FastExpressionCompiler
                         EmitStoreLocalVariable(il, resultVarIndex);
                 }
 
-                var finallyExpr = tryExpr.Finally;
-                if (finallyExpr != null)
+                if (tryExpr.Fault != null)
                 {
+                    var faultExpr = tryExpr.Fault;
+#if DEMIT
+                    Debug.WriteLine("} fault {" + faultExpr);
+#endif
+                    il.BeginFaultBlock();
+                    // it is important to ignore result for the fault block, because it should not return anything
+                    if (!TryEmit(faultExpr, paramExprs, il, ref closure, setup, parent | ParentFlags.IgnoreResult))
+                        return false;
+                }
+                else if (tryExpr.Finally != null)
+                {
+                    var finallyExpr = tryExpr.Finally;
 #if DEMIT
                     Debug.WriteLine("} finally {" + finallyExpr);
 #endif
@@ -7492,7 +7504,13 @@ namespace FastExpressionCompiler
                 case ExpressionType.Try:
                     {
                         var x = (TryExpression)e;
-                        if (x.Finally == null)
+                        if (x.Fault != null)
+                        {
+                            sb.Append("TryFault(");
+                            sb.NewLineIndentExpr(x.Body, paramsExprs, uniqueExprs, lts, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).Append(',');
+                            sb.NewLineIndentExpr(x.Fault, paramsExprs, uniqueExprs, lts, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
+                        }
+                        else if (x.Finally == null)
                         {
                             sb.Append("TryCatch(");
                             sb.NewLineIndentExpr(x.Body, paramsExprs, uniqueExprs, lts, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).Append(',');
@@ -8117,10 +8135,19 @@ namespace FastExpressionCompiler
                             }
                         }
 
+                        var isTryFault = x.Fault != null;
+                        if (isTryFault)
+                        {
+                            sb.Append("var fault = 0; // emulating try-fault");
+                            sb.NewLineIndent(lineIndent);
+                        }
+
                         sb.Append("try");
                         sb.NewLineIndent(lineIndent).Append('{');
                         PrintPart(x.Body, ref named);
                         sb.NewLineIndent(lineIndent).Append('}');
+                        if (isTryFault)
+                            sb.NewLineIndent(lineIndent).Append("catch (Exception _) when (fault++ != 0) {}");
 
                         var handlers = x.Handlers;
                         if (handlers != null && handlers.Count > 0)
@@ -8152,12 +8179,17 @@ namespace FastExpressionCompiler
                             }
                         }
 
-                        if (x.Finally != null)
+                        var faultOrFinally = x.Fault ?? x.Finally;
+                        if (faultOrFinally != null)
                         {
                             sb.NewLineIndent(lineIndent).Append("finally");
                             sb.NewLineIndent(lineIndent).Append('{');
-                            PrintPart(x.Finally, ref named);
+                            if (isTryFault) sb.Append("if (fault != 0) {");
+
+                            PrintPart(faultOrFinally, ref named);
+
                             sb.NewLineIndent(lineIndent).Append('}');
+                            if (isTryFault) sb.Append('}');
                         }
                         return sb;
                     }

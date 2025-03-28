@@ -1688,6 +1688,9 @@ public abstract class Expression
     public static TryExpression TryFinally(Expression body, Expression @finally) =>
         new WithFinallyTryExpression(body, Tools.Empty<CatchBlock>(), @finally);
 
+    public static TryExpression TryFault(Expression body, Expression fault) =>
+        new WithFaultTryExpression(body, fault);
+
     public static TryExpression TryCatchFinally(Expression body, Expression @finally, params CatchBlock[] handlers) =>
         @finally == null
             ? new TryExpression(body, handlers)
@@ -2651,6 +2654,11 @@ public static class FromSysExpressionConverter
                 {
                     var tryExpr = (System.Linq.Expressions.TryExpression)sysExpr;
                     var body = tryExpr.Body.ToLightExpression(ref exprsConverted);
+
+                    var fault = tryExpr.Fault?.ToLightExpression(ref exprsConverted);
+                    if (fault != null)
+                        return Expression.TryFault(body, fault);
+
                     var sysHandlers = tryExpr.Handlers;
                     var handlers = new CatchBlock[sysHandlers.Count];
                     // no need to look for the converted CatchBlock because I hardly imagine that it will be reused
@@ -5136,6 +5144,8 @@ public class TryExpression : Expression
     public IReadOnlyList<CatchBlock> Handlers => _handlers;
     private readonly CatchBlock[] _handlers;
     public virtual Expression Finally => null;
+    /// <summary>The fault is the variant of `finally` in case of exception only, does not exist in C# but exist in IL</summary>
+    public virtual Expression Fault => null;
     internal TryExpression(Expression body, CatchBlock[] handlers)
     {
         Body = body;
@@ -5147,8 +5157,9 @@ public class TryExpression : Expression
 #endif
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
         Finally == null ?
-            SysExpr.TryCatch(Body.ToExpression(ref exprsConverted),
-                ToCatchBlocks(_handlers, ref exprsConverted)) :
+            (Fault == null ?
+                SysExpr.TryCatch(Body.ToExpression(ref exprsConverted), ToCatchBlocks(_handlers, ref exprsConverted)) :
+                SysExpr.TryFault(Body.ToExpression(ref exprsConverted), Fault.ToExpression(ref exprsConverted))) :
         Handlers == null ?
             SysExpr.TryFinally(Body.ToExpression(ref exprsConverted),
                 Finally.ToExpression(ref exprsConverted)) :
@@ -5179,6 +5190,13 @@ public sealed class WithFinallyTryExpression : TryExpression
     public override Expression Finally { get; }
     internal WithFinallyTryExpression(Expression body, CatchBlock[] handlers, Expression @finally) : base(body, handlers) =>
         Finally = @finally;
+}
+
+public sealed class WithFaultTryExpression : TryExpression
+{
+    public override Expression Fault { get; }
+    internal WithFaultTryExpression(Expression body, Expression fault) : base(body, Tools.Empty<CatchBlock>()) =>
+        Fault = fault;
 }
 
 public sealed class CatchBlock
