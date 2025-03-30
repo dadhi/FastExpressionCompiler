@@ -64,7 +64,35 @@ public struct Issue458_Support_TryFault : ITest
             )
         );
 
-        expr.PrintCSharp(); // todo: @wip fix `return throw new Exception();`
+        expr.PrintCSharp();
+        // outputs
+        var @cs = (Func<int>)(() => //int
+        {
+            int x = default;
+            try
+            {
+                var fault = 0; // emulating try-fault
+                try
+                {
+                    x = 1;
+                    throw new Exception();
+                }
+                catch (Exception) when (fault++ != 0) { }
+                finally
+                {
+                    if (fault != 0)
+                    {
+                        x = 2;
+                    }
+                }
+                ;
+            }
+            catch (Exception)
+            {
+                return -1;
+            }
+            return x;
+        });
 
         var fs = expr.CompileSys();
         fs.PrintIL();

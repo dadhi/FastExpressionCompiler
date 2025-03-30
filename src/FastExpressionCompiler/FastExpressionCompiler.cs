@@ -8126,7 +8126,9 @@ namespace FastExpressionCompiler
                                 // avoid additional new line between `try {\n\n while().. }`
                                 // if (part.NodeType.IsBlockLike()) // todo: @wip add the previous new line checker the same as for the double semiсolon
                                 sb.NewLineIndent(incIndent);
-                                var isReturnable = returnsValue && part.NodeType.IsReturnable();
+                                var isReturnable = returnsValue && part.NodeType.IsReturnable() &&
+                                    // todo: @improv right now it is a hackintosh - usually to Assign something means no return
+                                    !part.NodeType.IsAssignNodeType();
                                 if (isReturnable)
                                     sb.Append("return ");
                                 part.ToCSharpString(sb, EnclosedIn.AvoidParens, ref named,
@@ -8147,7 +8149,7 @@ namespace FastExpressionCompiler
                         PrintPart(x.Body, ref named);
                         sb.NewLineIndent(lineIndent).Append('}');
                         if (isTryFault)
-                            sb.NewLineIndent(lineIndent).Append("catch (Exception _) when (fault++ != 0) {}");
+                            sb.NewLineIndent(lineIndent).Append("catch (Exception) when (fault++ != 0) {}");
 
                         var handlers = x.Handlers;
                         if (handlers != null && handlers.Count > 0)
