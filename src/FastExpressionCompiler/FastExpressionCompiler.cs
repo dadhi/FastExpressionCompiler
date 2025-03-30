@@ -8788,9 +8788,11 @@ namespace FastExpressionCompiler
             else if (inTheLastBlock & !containerIgnoresResult &&
                 b.Type != typeof(void) && lastExpr.Type != typeof(void))
             {
-                // todo: @hack if the last expression is the Assignment BinaryExpression,
-                // it is very doubtful that it is supposed to be returned result. I need to find a better indicator later.
-                if (!lastExpr.NodeType.IsAssignNodeType())
+                // A Trow may have the non void type, yes, so this check will avoid `return throw Ex` thingy, see #457, case2
+                if (lastExpr.NodeType != ExpressionType.Throw &&
+                    // todo: @hack if the last expression is the Assignment BinaryExpression,
+                    // it is very doubtful that it is supposed to be returned result. I need to find a better indicator later.
+                    !lastExpr.NodeType.IsAssignNodeType())
                 {
                     enclosedIn = EnclosedIn.Return;
                     sb.Append("return ");
