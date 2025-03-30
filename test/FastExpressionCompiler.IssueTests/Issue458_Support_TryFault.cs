@@ -9,6 +9,8 @@ using System.Linq.Expressions;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
+// Note: Try Fault is not support by the .NET Framework, but it is supported by .NET Core+.
+
 public struct Issue458_Support_TryFault : ITest
 {
     public int Run()

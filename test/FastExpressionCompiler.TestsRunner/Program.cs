@@ -10,7 +10,7 @@ namespace FastExpressionCompiler.UnitTests
         public static void Main()
         {
 
-            new LightExpression.IssueTests.Issue458_Support_TryFault().Run();
+            // new LightExpression.IssueTests.Issue458_Support_TryFault().Run();
 
             // todo: @wip add to FEC, check the possiblity of the increment compilation and the artefacts reusability
             // new LightExpression.UnitTests.ConstantAndConversionTests().Run();
@@ -372,6 +372,9 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue455_TypeAs_should_return_null().Run);
                 Run(new LightExpression.IssueTests.Issue455_TypeAs_should_return_null().Run);
+
+                Run(new Issue458_Support_TryFault().Run);
+                Run(new LightExpression.IssueTests.Issue458_Support_TryFault().Run);
 
                 Console.WriteLine($"{Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
