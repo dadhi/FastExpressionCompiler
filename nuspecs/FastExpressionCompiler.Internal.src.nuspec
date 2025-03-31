@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata minClientVersion="3.3.0">
         <id>FastExpressionCompiler.Internal.src</id>
-        <version>5.0.3</version>
+        <version>5.1.0</version>
         <authors>Maksim Volkau</authors>
         <copyright>Copyright © 2016-2025 Maksim Volkau</copyright>
         <projectUrl>https://github.com/dadhi/FastExpressionCompiler</projectUrl>
@@ -12,6 +12,14 @@
         <description>FastExpressionCompiler is 10-40x times faster than Expression.Compile()</description>
         <tags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</tags>
         <releaseNotes><![CDATA[
+## v5.1.0 Small feature release
+
+- add: #458 Add Support for TryFault
+- fix: #460 ArgumentException when converting from object to type with explicit operator
+
+**Full Changelog**: https://github.com/dadhi/FastExpressionCompiler/compare/v5.0.3...v5.1.0
+
+
 ## v5.0.3 Bug-fix release
 
 - fix: #451 Operator implicit/explicit produces InvalidProgram

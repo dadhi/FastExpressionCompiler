@@ -4,7 +4,7 @@
         <TargetFrameworks Condition=" '$(LatestSupportedNet)' == 'net8.0' ">net472;netstandard2.0;netstandard2.1;net6.0;net8.0</TargetFrameworks>
         <TargetFrameworks Condition=" '$(LatestSupportedNet)' == 'net9.0' ">net472;netstandard2.0;netstandard2.1;net6.0;net8.0;net9.0</TargetFrameworks>
 
-        <VersionPrefix>5.0.3</VersionPrefix>
+        <VersionPrefix>5.1.0</VersionPrefix>
         <VersionSuffix></VersionSuffix>
 
         <Product>FastExpressionCompiler.LightExpression</Product>
@@ -14,6 +14,14 @@
         <Description>FastExpressionCompiler for LightExpression is 10-40x times faster than Expression.Compile()</Description>
         <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
         <PackageReleaseNotes><![CDATA[
+## v5.1.0 Small feature release
+
+- add: #458 Add Support for TryFault
+- fix: #460 ArgumentException when converting from object to type with explicit operator
+
+**Full Changelog**: https://github.com/dadhi/FastExpressionCompiler/compare/v5.0.3...v5.1.0
+
+
 ## v5.0.3 Bug-fix release
 
 - fix: #451 Operator implicit/explicit produces InvalidProgram
