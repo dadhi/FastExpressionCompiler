@@ -7776,7 +7776,8 @@ namespace FastExpressionCompiler
                         lineIndent = sb.GetRealLineIndent(lineIndent);
                         var argIndent = lineIndent + indentSpaces;
 
-                        var methodReturnType = mc.Method.ReturnType;
+                        var method = mc.Method;
+                        var methodReturnType = method.ReturnType;
                         if (methodReturnType.IsByRef)
                             sb.Append("ref ");
 
@@ -7788,25 +7789,35 @@ namespace FastExpressionCompiler
                             mc.Object.ToCSharpString(sb, EnclosedIn.Instance, ref named,
                                 lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                         else // for the static method or the static extension method we need to qualify with the class
-                            sb.Append(mc.Method.DeclaringType.ToCode(stripNamespace, printType));
+                            sb.Append(method.DeclaringType.ToCode(stripNamespace, printType));
 
-                        var name = mc.Method.Name;
+                        var name = method.Name;
                         // check for the special methods, e.g. property access `get_` or `set_` and output them as properties
-                        if (mc.Method.IsSpecialName && (name.StartsWith("get_") || name.StartsWith("set_")))
-                            return sb.Append('.').Append(name.Substring(4));
+                        if (method.IsSpecialName)
+                        {
+                            if (name.StartsWith("get_"))
+                                return sb.Append('.').Append(name.Substring(4));
+                            if (name.StartsWith("set_"))
+                            {
+                                sb.Append('.').Append(name.Substring(4)).Append(" = ");
+                                mc.Arguments[0].ToCSharpExpression(sb, EnclosedIn.AvoidParens, ref named,
+                                    false, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
+                                return sb.AppendSemicolonOnce();
+                            }
+                        }
 
                         sb.Append('.').Append(name);
-                        if (mc.Method.IsGenericMethod)
+                        if (method.IsGenericMethod)
                         {
                             sb.Append('<');
-                            var typeArgs = mc.Method.GetGenericArguments();
+                            var typeArgs = method.GetGenericArguments();
                             for (var i = 0; i < typeArgs.Length; i++)
                                 (i == 0 ? sb : sb.Append(", ")).Append(typeArgs[i].ToCode(stripNamespace, printType));
                             sb.Append('>');
                         }
 
                         sb.Append('(');
-                        var pars = mc.Method.GetParameters();
+                        var pars = method.GetParameters();
                         var args = mc.Arguments;
                         if (args.Count == 1)
                         {
@@ -8127,8 +8138,6 @@ namespace FastExpressionCompiler
                                     incIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode, inTheLastBlock: true);
                             else
                             {
-                                // avoid additional new line between `try {\n\n while().. }`
-                                // if (part.NodeType.IsBlockLike()) // todo: @wip add the previous new line checker the same as for the double semicolon
                                 sb.NewLineIndent(incIndent);
                                 var isReturnable = returnsValue && part.NodeType.IsReturnable() &&
                                     // todo: @improve right now it is a hack - usually to Assign something means no return
@@ -8140,6 +8149,8 @@ namespace FastExpressionCompiler
                                 sb.AppendSemicolonOnce();
                             }
                         }
+
+                        sb.AppendNewLineOnce();
 
                         var isTryFault = x.Fault != null;
                         if (isTryFault)
