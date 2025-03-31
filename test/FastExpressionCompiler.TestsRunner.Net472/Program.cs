@@ -337,6 +337,9 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue455_TypeAs_should_return_null().Run);
                 Run(new LightExpression.IssueTests.Issue455_TypeAs_should_return_null().Run);
 
+                Run(new Issue460_ArgumentException_when_converting_from_object_to_type_with_explicit_operator().Run);
+                Run(new LightExpression.IssueTests.Issue460_ArgumentException_when_converting_from_object_to_type_with_explicit_operator().Run);
+
                 Console.WriteLine($"{Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
 

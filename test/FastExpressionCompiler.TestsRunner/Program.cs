@@ -9,7 +9,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            new LightExpression.IssueTests.Issue460_ArgumentException_when_converting_from_object_to_type_with_explicit_operator().Run();
+            // new LightExpression.IssueTests.Issue460_ArgumentException_when_converting_from_object_to_type_with_explicit_operator().Run();
 
             // todo: @wip add to FEC, check the possibility of the increment compilation and the artifacts reusability
             // new LightExpression.UnitTests.ConstantAndConversionTests().Run();
@@ -375,6 +375,9 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue458_Support_TryFault().Run);
                 Run(new LightExpression.IssueTests.Issue458_Support_TryFault().Run);
+
+                Run(new Issue460_ArgumentException_when_converting_from_object_to_type_with_explicit_operator().Run);
+                Run(new LightExpression.IssueTests.Issue460_ArgumentException_when_converting_from_object_to_type_with_explicit_operator().Run);
 
                 Console.WriteLine($"{Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
