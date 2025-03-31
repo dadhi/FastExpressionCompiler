@@ -17,15 +17,14 @@ public struct Issue460_ArgumentException_when_converting_from_object_to_type_wit
         return 1;
     }
 
-    private sealed class TestClass()
+    private sealed class TestClass
     {
         public TestClass2 ClassProp { get; set; }
     }
 
-    private sealed class TestClass2()
+    private sealed class TestClass2
     {
-        public static explicit operator TestClass2(int value)
-            => new();
+        public static explicit operator TestClass2(int value) => new();
     }
 
     public void Original_case1()
