@@ -11,7 +11,7 @@ namespace FastExpressionCompiler.UnitTests
         {
             new LightExpression.IssueTests.Issue460_ArgumentException_when_converting_from_object_to_type_with_explicit_operator().Run();
 
-            // todo: @wip add to FEC, check the possiblity of the increment compilation and the artefacts reusability
+            // todo: @wip add to FEC, check the possibility of the increment compilation and the artifacts reusability
             // new LightExpression.UnitTests.ConstantAndConversionTests().Run();
 
             // new LightExpression.IssueTests.Issue458_Support_TryFault().Run();
@@ -296,8 +296,8 @@ namespace FastExpressionCompiler.UnitTests
 
                 Run(new Issue366_FEC334_gives_incorrect_results_in_some_linq_operations().Run);
 
-                Run(new Issue374_CompileFast_doesnot_work_with_HasFlag().Run);
-                Run(new LightExpression.IssueTests.Issue374_CompileFast_doesnot_work_with_HasFlag().Run);
+                Run(new Issue374_CompileFast_does_not_work_with_HasFlag().Run);
+                Run(new LightExpression.IssueTests.Issue374_CompileFast_does_not_work_with_HasFlag().Run);
 
                 Run(new Issue380_Comparisons_with_nullable_types().Run);
                 Run(new LightExpression.IssueTests.Issue380_Comparisons_with_nullable_types().Run);

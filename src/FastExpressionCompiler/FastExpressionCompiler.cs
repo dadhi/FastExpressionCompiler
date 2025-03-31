@@ -3153,9 +3153,9 @@ namespace FastExpressionCompiler
                         return il.EmitPopIfIgnoreResult(parent);
                     }
 
-                    // At least just check the assingability of the source to the target type, 
+                    // At least just check the assignability of the source to the target type, 
                     // check only after the checks above for the ValueType or object Type, 
-                    // because their require additiona boxing/unboxing operations
+                    // because their require additional boxing/unboxing operations
                     if (targetType.IsAssignableFrom(sourceType))
                     {
                         if (sourceType.IsValueType && !targetType.IsValueType)
@@ -3204,7 +3204,7 @@ namespace FastExpressionCompiler
 
                             // Method return type should be convertible to target type, 
                             // and therefore it does not check for the method return type of Nullable<targetType>
-                            // because it cannot be coalesed to targetType without loss of information
+                            // because it cannot be coalesced to targetType without loss of information
                             methodReturnType = m.ReturnType;
                             if (methodReturnType != targetType && methodReturnType != underlyingNullableTargetType ||
                                 m.Name != "op_Implicit" && m.Name != "op_Explicit")
@@ -3239,7 +3239,7 @@ namespace FastExpressionCompiler
                 if (convertMethod != null)
                 {
                     Debug.Assert(methodParamType != null & methodReturnType != null,
-                        "Expecting that actual source and return type are set for the found convercion operator method");
+                        "Expecting that actual source and return type are set for the found conversion operator method");
 
                     // For the both nullable source and target types,
                     // first check the source value for null and return null without calling the conversion method, otherwise call the conversion method
@@ -3252,7 +3252,7 @@ namespace FastExpressionCompiler
                         il.Demit(OpCodes.Brtrue_S, labelSourceHasValue); // Jump to this label when the source has a value
 
                         // Otherwise, emit and load the default nullable target without value, e.g. `default(Nullable<TTarget>)`
-                        // then... the conversion is completed, so jumping to the done lable
+                        // then... the conversion is completed, so jumping to the done label
                         EmitLoadLocalVariable(il, InitValueTypeVariable(il, targetType));
                         var labelConversionDone = il.DefineLabel();
                         il.Demit(OpCodes.Br_S, labelConversionDone);
@@ -3264,7 +3264,7 @@ namespace FastExpressionCompiler
 
                         EmitMethodCallOrVirtualCall(il, convertMethod);
 
-                        // Wrap the conversion result into the target type only if the conversion method return the undelying target type,
+                        // Wrap the conversion result into the target type only if the conversion method return the underlying target type,
                         // otherwise we done
                         if (methodReturnType == underlyingNullableTargetType)
                             il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
@@ -3301,7 +3301,7 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Brtrue_S, labelSourceHasValue); // Jump here when the source has a value
 
                     // Otherwise, emit and load the default nullable target without value, e.g. `default(Nullable<TTarget>)`
-                    // and... the conversion is completed, so jumping to the done lable
+                    // and... the conversion is completed, so jumping to the done label
                     EmitLoadLocalVariable(il, InitValueTypeVariable(il, targetType));
                     var labelConversionDone = il.DefineLabel();
                     il.Demit(OpCodes.Br_S, labelConversionDone);
@@ -6544,7 +6544,7 @@ namespace FastExpressionCompiler
             type == typeof(double?) ? NullableReflected<double>.Constructor :
             type.GetConstructors()[0];
 
-        /// <summary>Finds the implicit or explcit conversion operator inType from the sourceType to targetType,
+        /// <summary>Finds the implicit or explicit conversion operator inType from the sourceType to targetType,
         /// otherwise returns null</summary>
         [RequiresUnreferencedCode(Trimming.Message)]
         public static MethodInfo FindConvertOperator(this Type inType, Type sourceType, Type targetType)
@@ -6553,7 +6553,7 @@ namespace FastExpressionCompiler
             Debug.Assert(!inType.IsPrimitive, "Should not be called for the primitive type");
             Debug.Assert(!inType.IsEnum, "Should not be called for the enum type");
 
-            // note: rememeber that if inType.IsPrimitive it does contain the explicit or implicit conversion operators at all
+            // note: remember that if inType.IsPrimitive it does contain the explicit or implicit conversion operators at all
             if (sourceType == typeof(object) | targetType == typeof(object))
                 return null;
 
@@ -8128,10 +8128,10 @@ namespace FastExpressionCompiler
                             else
                             {
                                 // avoid additional new line between `try {\n\n while().. }`
-                                // if (part.NodeType.IsBlockLike()) // todo: @wip add the previous new line checker the same as for the double semiсolon
+                                // if (part.NodeType.IsBlockLike()) // todo: @wip add the previous new line checker the same as for the double semicolon
                                 sb.NewLineIndent(incIndent);
                                 var isReturnable = returnsValue && part.NodeType.IsReturnable() &&
-                                    // todo: @improv right now it is a hackintosh - usually to Assign something means no return
+                                    // todo: @improve right now it is a hack - usually to Assign something means no return
                                     !part.NodeType.IsAssignNodeType();
                                 if (isReturnable)
                                     sb.Append("return ");
