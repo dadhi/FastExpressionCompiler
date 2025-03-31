@@ -3220,13 +3220,17 @@ namespace FastExpressionCompiler
                                 break;
                             }
 
-                            // Check for all variants of the source type which maybe either underlying nullable or nullable of the source type
-                            // Calculate it once because less work is better.
-                            underlyingOrNullableSourceType ??= underlyingNullableSourceType ?? sourceType.GetNullable();
-                            if (methodParamType == underlyingOrNullableSourceType)
+                            // This next check is only valid if the source type is the ValueType, so it can be either a Nullable struct or it can be wrapped in the Nullable
+                            if (sourceType.IsValueType)
                             {
-                                convertMethod = m;
-                                break;
+                                // Check for all variants of the source type which maybe either underlying nullable or nullable of the source type
+                                // Calculate it once because less work is better.
+                                underlyingOrNullableSourceType ??= underlyingNullableSourceType ?? sourceType.GetNullable();
+                                if (methodParamType == underlyingOrNullableSourceType)
+                                {
+                                    convertMethod = m;
+                                    break;
+                                }
                             }
                         }
                     }

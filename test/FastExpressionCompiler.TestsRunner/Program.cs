@@ -9,12 +9,12 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-
-            // new LightExpression.IssueTests.Issue458_Support_TryFault().Run();
+            new LightExpression.IssueTests.Issue460_ArgumentException_when_converting_from_object_to_type_with_explicit_operator().Run();
 
             // todo: @wip add to FEC, check the possiblity of the increment compilation and the artefacts reusability
             // new LightExpression.UnitTests.ConstantAndConversionTests().Run();
 
+            // new LightExpression.IssueTests.Issue458_Support_TryFault().Run();
             // new LightExpression.IssueTests.Issue451_Operator_implicit_explicit_produces_InvalidProgram().Run();
             // new LightExpression.IssueTests.Issue55_CompileFast_crash_with_ref_parameter().Run();
 
