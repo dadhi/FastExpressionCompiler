@@ -5388,15 +5388,17 @@ namespace FastExpressionCompiler
                 var leftIsNullable = leftType.IsNullable();
                 var rightType = right.Type;
 
-                // if one operand is `null` then coalesce the types
+                // If one operand is `null` then the equality comparison can be simplified to `ldnull, ceq`
                 var rightIsNull = IsNullContainingExpression(right);
-                var comparingObjectWithNull = rightIsNull & rightType == typeof(object);
-                if (comparingObjectWithNull)
+                var comparingToRightNull = rightIsNull & rightType.IsClass;
+
+                // Coalesce the right object type to the more specific left type
+                if (comparingToRightNull & rightType == typeof(object))
                     rightType = leftType;
 
                 var leftIsNull = IsNullContainingExpression(left);
-                comparingObjectWithNull = leftIsNull & leftType == typeof(object);
-                if (comparingObjectWithNull)
+                var comparingToLeftNull = leftIsNull & leftType.IsClass;
+                if (!comparingToRightNull && comparingToLeftNull & leftType == typeof(object))
                     leftType = rightType;
 
                 var operandParent = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
@@ -5453,12 +5455,14 @@ namespace FastExpressionCompiler
                 else if (!TryEmit(right, paramExprs, il, ref closure, setup, operandParent))
                     return false;
 
-                if (comparingObjectWithNull ||
+                if (comparingToLeftNull | comparingToRightNull ||
                     (leftType != rightType && leftType.IsClass && rightType.IsClass &&
                     (leftType == typeof(object) | rightType == typeof(object))))
                 {
+                    // If the operation is not Equal or NotEqual then comparison with null is not possible
                     if (!isEqualityOp)
                         return false;
+
                     if (leftIsNull)
                         il.Demit(OpCodes.Ldnull);
                     else if (rightIsComplexExpression)
