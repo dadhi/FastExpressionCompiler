@@ -5412,6 +5412,11 @@ namespace FastExpressionCompiler
                     {
                         if (!TryEmit(left, paramExprs, il, ref closure, setup, operandParent))
                             return false;
+
+                        // This is only required for the special case, check the #341 `Nullable_decimal_parameter_with_decimal_constant_comparison_cases`
+                        if (leftType.GetUnderlyingNullableTypeUnsafe() == typeof(decimal))
+                            EmitStoreAndLoadLocalVariableAddress(il, leftType);
+
                         EmitMethodCall(il, leftType.GetNullableHasValueGetterMethod());
                         if (nodeType == ExpressionType.Equal)
                             EmitEqualToZeroOrNull(il);
@@ -5422,6 +5427,10 @@ namespace FastExpressionCompiler
                     {
                         if (!TryEmit(right, paramExprs, il, ref closure, setup, operandParent))
                             return false;
+
+                        if (rightType.GetUnderlyingNullableTypeUnsafe() == typeof(decimal))
+                            EmitStoreAndLoadLocalVariableAddress(il, rightType);
+
                         EmitMethodCall(il, rightType.GetNullableHasValueGetterMethod());
                         if (nodeType == ExpressionType.Equal)
                             EmitEqualToZeroOrNull(il);
@@ -6381,7 +6390,7 @@ namespace FastExpressionCompiler
 
         [RequiresUnreferencedCode(Trimming.Message)]
         [MethodImpl((MethodImplOptions)256)]
-        public static Type GetNonNullableUnsafe(this Type type) => type.GetGenericArguments()[0];
+        public static Type GetUnderlyingNullableTypeUnsafe(this Type type) => type.GetGenericArguments()[0];
 
         [RequiresUnreferencedCode(Trimming.Message)]
         [MethodImpl((MethodImplOptions)256)]

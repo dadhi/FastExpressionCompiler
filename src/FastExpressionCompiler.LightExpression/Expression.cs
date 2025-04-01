@@ -1937,7 +1937,7 @@ public abstract class Expression
 
         // check for lifted call
         if (lType.IsNullable() && rType.IsNullable() &&
-            ps[0].IsAssignableFrom(lType.GetNonNullableUnsafe()) && ps[1].IsAssignableFrom(rType.GetNonNullableUnsafe()) &&
+            ps[0].IsAssignableFrom(lType.GetUnderlyingNullableTypeUnsafe()) && ps[1].IsAssignableFrom(rType.GetUnderlyingNullableTypeUnsafe()) &&
             type.IsValueType && !type.IsNullable())
         {
             type = type != typeof(bool) || liftToNull ? type.GetNullable() : typeof(bool);
@@ -2089,7 +2089,7 @@ public abstract class Expression
     [RequiresUnreferencedCode(Trimming.Message)]
     private static Type GetCoalesceType(Type left, Type right)
     {
-        var underlyingLeft = left.IsNullable() ? left.GetNonNullableUnsafe() : null;
+        var underlyingLeft = left.IsNullable() ? left.GetUnderlyingNullableTypeUnsafe() : null;
         if (underlyingLeft != null && right.IsImplicitlyConvertibleTo(underlyingLeft))
             return underlyingLeft; // note: For conformity with BCL
 
@@ -2895,7 +2895,7 @@ internal static class TypeTools
 
     [RequiresUnreferencedCode(Trimming.Message)]
     private static bool IsImplicitlyNullableConvertibleTo(Type source, Type target) =>
-        target.IsNullable() && IsImplicitlyConvertibleTo(source.GetNonNullableOrSelf(), target.GetNonNullableUnsafe());
+        target.IsNullable() && IsImplicitlyConvertibleTo(source.GetNonNullableOrSelf(), target.GetUnderlyingNullableTypeUnsafe());
 
     [RequiresUnreferencedCode(Trimming.Message)]
     public static bool IsImplicitlyConvertibleTo(this Type source, Type target) =>

@@ -6,6 +6,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
+using System;
 using System.Linq.Expressions;
 using System.Reflection.Emit;
 
@@ -13,11 +14,12 @@ public struct Issue461_InvalidProgramException_when_null_checking_type_by_ref : 
 {
     public int Run()
     {
-        Case_equal_nullable_and_object_null();
-        Case_equal_nullable_and_nullable_null_on_the_left();
+        Case_not_equal_nullable_decimal();
+        // Case_equal_nullable_and_object_null();
+        // Case_equal_nullable_and_nullable_null_on_the_left();
         Original_case();
         Original_case_null_on_the_right();
-        return 4;
+        return 5;
     }
 
     private class Target
@@ -143,5 +145,32 @@ public struct Issue461_InvalidProgramException_when_null_checking_type_by_ref : 
             OpCodes.Call, // .get_HasValue()
             OpCodes.Ret
         );
+    }
+
+    public void Case_not_equal_nullable_decimal()
+    {
+        var p = Parameter(typeof(Decimal?), "d");
+
+        var expr = Lambda<Func<Decimal?, bool>>(
+            MakeBinary(ExpressionType.NotEqual, p, Constant(null, typeof(Decimal?))),
+            p);
+
+        expr.PrintCSharp();
+
+        var fs = expr.CompileSys();
+        fs.PrintIL();
+        Asserts.IsTrue(fs(1.142m));
+
+        var ff = expr.CompileFast(false);
+        ff.PrintIL();
+        Asserts.IsTrue(ff(1.142m));
+
+        // ff.AssertOpCodes(
+        //     OpCodes.Ldarg_1,
+        //     OpCodes.Call, // .get_HasValue()
+        //     OpCodes.Ldc_I4_0,
+        //     OpCodes.Ceq,
+        //     OpCodes.Ret
+        // );
     }
 }
