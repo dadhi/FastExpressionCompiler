@@ -5411,7 +5411,6 @@ namespace FastExpressionCompiler
                     {
                         if (!TryEmit(left, paramExprs, il, ref closure, setup, operandParent))
                             return false;
-                        EmitStoreAndLoadLocalVariableAddress(il, leftType);
                         EmitMethodCall(il, leftType.GetNullableHasValueGetterMethod());
                         if (nodeType == ExpressionType.Equal)
                             EmitEqualToZeroOrNull(il);
@@ -5422,7 +5421,6 @@ namespace FastExpressionCompiler
                     {
                         if (!TryEmit(right, paramExprs, il, ref closure, setup, operandParent))
                             return false;
-                        EmitStoreAndLoadLocalVariableAddress(il, rightType);
                         EmitMethodCall(il, rightType.GetNullableHasValueGetterMethod());
                         if (nodeType == ExpressionType.Equal)
                             EmitEqualToZeroOrNull(il);
