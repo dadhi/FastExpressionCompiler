@@ -2764,7 +2764,7 @@ namespace FastExpressionCompiler
                 var paramExprCount = paramExprs.GetCount();
                 var paramType = paramExpr.Type;
                 var isValueType = paramType.IsValueType;
-                var isParamOrVarByRef = paramExpr.IsByRef;
+                var isParamOrVarByRef = paramExpr.IsByRef && !paramType.IsNullable(); // for the nullable part check the #461 cases with nullable
                 var isPassedRef = byRefIndex != -1;
 
                 // Parameter may represent a variable, so first look if this is the case,
@@ -2897,6 +2897,7 @@ namespace FastExpressionCompiler
                     // todo: @simplify as it is complex overall and EmitLoadIndirectlyByRef does the Ldind_Ref too
                     if (isParamOrVarByRef)
                     {
+                        // todo: @wip requires a cleanup
                         if (isValueType)
                         {
                             // #248 - skip the cases with `ref param.Field` were we are actually want to load the `Field` address not the `param`
