@@ -14,9 +14,9 @@ public struct Issue461_InvalidProgramException_when_null_checking_type_by_ref : 
 {
     public int Run()
     {
+        Case_equal_nullable_and_object_null();
+        Case_equal_nullable_and_nullable_null_on_the_left();
         Case_not_equal_nullable_decimal();
-        // Case_equal_nullable_and_object_null();
-        // Case_equal_nullable_and_nullable_null_on_the_left();
         Original_case();
         Original_case_null_on_the_right();
         return 5;
@@ -89,7 +89,10 @@ public struct Issue461_InvalidProgramException_when_null_checking_type_by_ref : 
         );
     }
 
-    public struct XX { }
+    public struct XX
+    {
+        public Decimal D;
+    }
 
     public void Case_equal_nullable_and_object_null()
     {
@@ -165,12 +168,12 @@ public struct Issue461_InvalidProgramException_when_null_checking_type_by_ref : 
         ff.PrintIL();
         Asserts.IsTrue(ff(1.142m));
 
-        // ff.AssertOpCodes(
-        //     OpCodes.Ldarg_1,
-        //     OpCodes.Call, // .get_HasValue()
-        //     OpCodes.Ldc_I4_0,
-        //     OpCodes.Ceq,
-        //     OpCodes.Ret
-        // );
+        ff.AssertOpCodes(
+            OpCodes.Ldarg_1,
+            OpCodes.Stloc_0,
+            OpCodes.Ldloca_S,
+            OpCodes.Call, // .get_HasValue()
+            OpCodes.Ret
+        );
     }
 }
