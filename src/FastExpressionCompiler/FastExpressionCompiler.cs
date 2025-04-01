@@ -2912,7 +2912,7 @@ namespace FastExpressionCompiler
                         else
                         {
                             if (!isPassedRef & (
-                                (parent & ParentFlags.Call) != 0) ||
+                                (parent & (ParentFlags.Call | ParentFlags.LambdaCall)) != 0) ||
                                 (parent & (ParentFlags.Coalesce | ParentFlags.MemberAccess | ParentFlags.IndexAccess | ParentFlags.AssignmentRightValue)) != 0)
                                 il.Demit(OpCodes.Ldind_Ref);
                         }
