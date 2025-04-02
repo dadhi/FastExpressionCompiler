@@ -4,7 +4,7 @@
         <TargetFrameworks Condition=" '$(LatestSupportedNet)' == 'net8.0' ">net472;netstandard2.0;netstandard2.1;net6.0;net8.0</TargetFrameworks>
         <TargetFrameworks Condition=" '$(LatestSupportedNet)' == 'net9.0' ">net472;netstandard2.0;netstandard2.1;net6.0;net8.0;net9.0</TargetFrameworks>
 
-        <VersionPrefix>5.1.0</VersionPrefix>
+        <VersionPrefix>5.1.1</VersionPrefix>
         <VersionSuffix></VersionSuffix>
 
         <Product>FastExpressionCompiler.LightExpression</Product>
@@ -14,6 +14,14 @@
         <Description>FastExpressionCompiler for LightExpression is 10-40x times faster than Expression.Compile()</Description>
         <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
         <PackageReleaseNotes><![CDATA[
+## v5.1.1. Bug-fix release
+
+- fix: #461 InvalidProgramException when null checking type by ref
+- fix: #462 Optimize Equality comparison with null
+
+**Full Changelog**: https://github.com/dadhi/FastExpressionCompiler/compare/v5.1.0...v5.1.1
+
+
 ## v5.1.0 Small feature release
 
 - add: #458 Add Support for TryFault
