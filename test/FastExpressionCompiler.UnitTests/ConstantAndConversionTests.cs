@@ -13,7 +13,10 @@ public class ConstantAndConversionTests : ITest
 {
     public int Run()
     {
-        Can_the_closure_be_modified_afterwards();
+#if LIGHT_EXPRESSION
+        Issue465_The_primitive_constant_can_be_configured_to_put_in_closure();
+#endif
+        Issue464_Bound_closure_constants_can_be_modified_afterwards();
         The_constant_changing_in_a_loop();
 
         Expressions_with_small_long_casts_should_not_crash();
@@ -136,7 +139,7 @@ public class ConstantAndConversionTests : ITest
         public T Value;
     }
 
-    public void Can_the_closure_be_modified_afterwards()
+    public void Issue464_Bound_closure_constants_can_be_modified_afterwards()
     {
         var expr = Lambda<Func<int>>(Field(Constant(new Foo<int> { Value = 43 }), nameof(Foo<int>.Value)));
         expr.PrintCSharp();
@@ -153,6 +156,23 @@ public class ConstantAndConversionTests : ITest
             Asserts.AreEqual(45, fs());
         }
     }
+
+#if LIGHT_EXPRESSION
+    public void Issue465_The_primitive_constant_can_be_configured_to_put_in_closure()
+    {
+        var expr = Lambda<Func<int>>(Constant(16, HowToClosureConstant.Always));
+        expr.PrintCSharp();
+
+        var fs = expr.CompileFast(out var closure, true);
+        Asserts.AreEqual(16, fs());
+
+        if (closure.ConstantsAndNestedLambdas[0] is int)
+        {
+            closure.ConstantsAndNestedLambdas[0] = 45;
+            Asserts.AreEqual(45, fs());
+        }
+    }
+#endif
 
     public void The_constant_changing_in_a_loop()
     {

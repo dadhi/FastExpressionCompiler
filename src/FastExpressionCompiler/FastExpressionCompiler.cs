@@ -802,7 +802,7 @@ namespace FastExpressionCompiler
                 {
                     ++ConstantUsageThenVarIndex.GetSurePresentItemRef(constIndex);
                 }
-                return true; // here for fluency, don't delete
+                return true; // here is for fluency, don't delete
             }
 
             [RequiresUnreferencedCode(Trimming.Message)]
@@ -1249,7 +1249,12 @@ namespace FastExpressionCompiler
                 {
                     case ExpressionType.Constant:
 #if LIGHT_EXPRESSION
-                        // todo: @perf @simplify convert to intrinsic
+                        if (((ConstantExpression)expr).HowToClosure == HowToClosureConstant.Always)
+                        {
+                            closure.AddConstantOrIncrementUsageCount(((ConstantExpression)expr).Value);
+                            return Result.OK;
+                        }
+
                         if (expr == NullConstant || expr == FalseConstant || expr == TrueConstant || expr is IntConstantExpression n)
                             return r;
 #endif
@@ -2096,7 +2101,7 @@ namespace FastExpressionCompiler
 
                         case ExpressionType.Constant:
                             return (parent & ParentFlags.IgnoreResult) != 0 ||
-                                TryEmitConstant(expr, il, ref closure, byRefIndex);
+                                TryEmitConstant((ConstantExpression)expr, expr.Type, il, ref closure, byRefIndex);
 
                         case ExpressionType.Call:
                             return TryEmitMethodCall(expr, paramExprs, il, ref closure, setup, parent, byRefIndex);
@@ -3464,12 +3469,20 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            public static bool TryEmitConstant(Expression expr, ILGenerator il, ref ClosureInfo closure, int byRefIndex = -1)
+            public static bool TryEmitConstant(ConstantExpression expr, Type exprType, ILGenerator il, ref ClosureInfo closure, int byRefIndex = -1)
             {
                 var ok = false;
 #if LIGHT_EXPRESSION
-                // todo: @perf @simplify convert to intrinsic?
-                if (expr == NullConstant)
+                if (expr.HowToClosure == HowToClosureConstant.Always)
+                {
+                    Debug.Assert(closure.ContainsConstantsOrNestedLambdas());
+
+                    var val = expr.Value;
+                    var valType = val?.GetType() ?? exprType;
+                    ok = TryEmitConstant(true, exprType, valType, val, il, ref closure, byRefIndex, HowToClosureConstant.Always);
+                    if (!ok) return false;
+                }
+                else if (expr == NullConstant)
                 {
                     il.Demit(OpCodes.Ldnull);
                     ok = true;
@@ -3492,13 +3505,12 @@ namespace FastExpressionCompiler
 #endif
                 if (!ok)
                 {
-                    var constExpr = (ConstantExpression)expr;
-                    var constValue = constExpr.Value;
+                    var constValue = expr.Value;
                     if (constValue != null)
-                        ok = TryEmitConstant(closure.ContainsConstantsOrNestedLambdas(), expr.Type, constValue.GetType(), constValue, il, ref closure, byRefIndex);
-                    else if (expr.Type.IsValueType) // null for a value type
+                        ok = TryEmitConstant(closure.ContainsConstantsOrNestedLambdas(), exprType, constValue.GetType(), constValue, il, ref closure, byRefIndex);
+                    else if (exprType.IsValueType) // null for a value type
                     {
-                        EmitLoadLocalVariable(il, InitValueTypeVariable(il, expr.Type)); // yep, this is a proper way to emit the Nullable null
+                        EmitLoadLocalVariable(il, InitValueTypeVariable(il, exprType)); // yep, this is a proper way to emit the Nullable null
                         ok = true;
                     }
                     else
@@ -3509,7 +3521,7 @@ namespace FastExpressionCompiler
                 }
 
                 if (ok && byRefIndex != -1)
-                    EmitStoreAndLoadLocalVariableAddress(il, expr.Type);
+                    EmitStoreAndLoadLocalVariableAddress(il, exprType); // todo: @wip are we doing it twice inside the TryEmitConstant and here?
                 return ok;
             }
 
@@ -3517,11 +3529,20 @@ namespace FastExpressionCompiler
             public static bool TryEmitNotNullConstant(bool considerClosure, object consValue, ILGenerator il, ref ClosureInfo closure, int byRefIndex = -1) =>
                 TryEmitConstant(considerClosure, null, consValue.GetType(), consValue, il, ref closure, byRefIndex);
 
-            public static bool TryEmitConstant(bool considerClosure, Type exprType, Type constType, object constValue, ILGenerator il, ref ClosureInfo closure, int byRefIndex = -1)
+            public static bool TryEmitConstant(bool considerClosure, Type exprType, Type constType, object constValue, ILGenerator il, ref ClosureInfo closure,
+                int byRefIndex = -1
+#if LIGHT_EXPRESSION
+                , HowToClosureConstant howToClosure = HowToClosureConstant.FECDecides
+#endif
+            )
             {
                 if (exprType == null)
                     exprType = constType;
+#if LIGHT_EXPRESSION
+                if (considerClosure && (howToClosure == HowToClosureConstant.Always || IsClosureBoundConstant(constValue, constType)))
+#else
                 if (considerClosure && IsClosureBoundConstant(constValue, constType))
+#endif
                 {
                     var constIndex = closure.Constants.TryGetIndex(constValue, default(RefEq<object>));
                     if (constIndex == -1)

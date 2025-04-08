@@ -184,6 +184,20 @@ public abstract class Expression
     public static readonly ConstantExpression OneConstant = new IntConstantExpression(1);
     public static readonly ConstantExpression MinusOneConstant = new IntConstantExpression(-1);
 
+    public enum HowToClosureConstant : byte
+    {
+        FECDecides = 0,
+        Always
+    }
+
+    // todo: @wip 465
+    public static ConstantExpression Constant<T>(T value, HowToClosureConstant howToClosure)
+    {
+        return howToClosure == HowToClosureConstant.Always
+            ? new ValueConstantInClosureExpression<T>(value)
+            : ConstantOf(value);
+    }
+
     /// <summary>Avoids the boxing for all (two) bool values</summary>
     public static ConstantExpression Constant(bool value) => value ? TrueConstant : FalseConstant;
 
@@ -3825,6 +3839,10 @@ public abstract class ConstantExpression : Expression
 {
     public sealed override ExpressionType NodeType => ExpressionType.Constant;
     public abstract object Value { get; }
+
+    // todo: @wip #457
+    public virtual HowToClosureConstant HowToClosure => HowToClosureConstant.FECDecides;
+
 #if SUPPORTS_VISITOR
     [RequiresUnreferencedCode(Trimming.Message)]
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitConstant(this);
@@ -3862,6 +3880,14 @@ public sealed class ValueConstantExpression<T> : ConstantExpression
     public override Type Type => typeof(T);
     public override object Value { get; }
     internal ValueConstantExpression(object value) => Value = value;
+}
+
+public sealed class ValueConstantInClosureExpression<T> : ConstantExpression
+{
+    public override HowToClosureConstant HowToClosure => HowToClosureConstant.Always;
+    public override Type Type => typeof(T);
+    public override object Value { get; }
+    internal ValueConstantInClosureExpression(object value) => Value = value;
 }
 
 public sealed class TypedValueConstantExpression : ConstantExpression
