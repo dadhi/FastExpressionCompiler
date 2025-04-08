@@ -166,9 +166,9 @@ public class ConstantAndConversionTests : ITest
         var fs = expr.CompileFast(out var closure, true);
         Asserts.AreEqual(16, fs());
 
-        if (closure.ConstantsAndNestedLambdas[0] is int)
+        if (closure.ConstantsAndNestedLambdas[0] is int) // @wip need better DX
         {
-            closure.ConstantsAndNestedLambdas[0] = 45;
+            closure.ConstantsAndNestedLambdas[0] = 45; // <-- WIN!
             Asserts.AreEqual(45, fs());
         }
     }
