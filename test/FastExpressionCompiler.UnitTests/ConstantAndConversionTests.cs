@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Linq.Expressions;
 
 #if LIGHT_EXPRESSION
@@ -14,6 +15,7 @@ public class ConstantAndConversionTests : ITest
     public int Run()
     {
 #if LIGHT_EXPRESSION
+        Issue457_The_constant_changing_in_a_loop_without_recompilation();
         Issue465_The_primitive_constant_can_be_configured_to_put_in_closure();
 #endif
         Issue464_Bound_closure_constants_can_be_modified_afterwards();
@@ -176,6 +178,7 @@ public class ConstantAndConversionTests : ITest
 
     public void The_constant_changing_in_a_loop()
     {
+        var sw = Stopwatch.StartNew();
         for (int n = -200; n < 200; n++)
         {
             var blockExpr = Block(Constant(n));
@@ -186,7 +189,28 @@ public class ConstantAndConversionTests : ITest
 
             Asserts.AreEqual(n, fastCompiled());
         }
+        Debug.WriteLine($"The_constant_changing_in_a_loop, elapsed: {sw.ElapsedMilliseconds}ms");
+        sw.Stop();
     }
+
+#if LIGHT_EXPRESSION
+    public void Issue457_The_constant_changing_in_a_loop_without_recompilation()
+    {
+        var sw = Stopwatch.StartNew();
+        var blockExpr = Block(Constant(0, HowToClosureConstant.Always));
+        var lambda = Lambda<Func<int>>(blockExpr);
+        var fastCompiled = lambda.CompileFast(out var closure, true);
+
+        for (int n = -200; n < 200; n++)
+        {
+            closure.ConstantsAndNestedLambdas[0] = n;
+            Asserts.AreEqual(n, fastCompiled());
+        }
+
+        Debug.WriteLine($"Issue457_The_constant_changing_in_a_loop_without_recompilation, elapsed: {sw.ElapsedMilliseconds}ms");
+        sw.Stop();
+    }
+#endif
 
     public enum XByte : byte { A }
 }
