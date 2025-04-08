@@ -218,6 +218,17 @@ namespace FastExpressionCompiler
                 _closureAsASingleParamType, typeof(R), flags) ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
+        public static Func<R> CompileFast<R>(this Expression<Func<R>> lambdaExpr, out ArrayClosure closure,
+            bool ifFastFailedReturnNull = false, CompilerFlags flags = CompilerFlags.Default) =>
+            (Func<R>)TryCompileBoundToFirstClosureParam(typeof(Func<R>), lambdaExpr.Body,
+#if LIGHT_EXPRESSION
+                lambdaExpr,
+#else
+                lambdaExpr.Parameters,
+#endif
+                _closureAsASingleParamType, typeof(R), flags, out closure) ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
+
+        /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Func<T1, R> CompileFast<T1, R>(this Expression<Func<T1, R>> lambdaExpr,
             bool ifFastFailedReturnNull = false, CompilerFlags flags = CompilerFlags.Default) =>
             (Func<T1, R>)TryCompileBoundToFirstClosureParam(typeof(Func<T1, R>), lambdaExpr.Body,
@@ -496,6 +507,58 @@ namespace FastExpressionCompiler
                 return null;
 
             ArrayClosure closure;
+            if ((flags & CompilerFlags.EnableDelegateDebugInfo) == 0)
+            {
+                closure = (closureInfo.Status & ClosureStatus.HasClosure) == 0
+                    ? EmptyArrayClosure
+                    : new ArrayClosure(closureInfo.GetArrayOfConstantsAndNestedLambdas());
+            }
+            else
+            {   // todo: @feature add the debug info to the nested lambdas!
+                var debugExpr = Lambda(delegateType, bodyExpr, paramExprs?.ToReadOnlyList() ?? Tools.Empty<PE>());
+                var constantsAndNestedLambdas = (closureInfo.Status & ClosureStatus.HasClosure) == 0
+                    ? null
+                    : closureInfo.GetArrayOfConstantsAndNestedLambdas();
+                closure = new DebugArrayClosure(constantsAndNestedLambdas, debugExpr);
+            }
+
+            var method = new DynamicMethod(string.Empty, returnType, closurePlusParamTypes, typeof(ArrayClosure), true);
+
+            // todo: @perf can we just count the Expressions in the TryCollect phase and use it as N * 4 or something?
+            var il = method.GetILGenerator();
+
+            if (closure.ConstantsAndNestedLambdas != null)
+                EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref closureInfo);
+
+            var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
+            if (returnType.IsByRef)
+                parent |= ParentFlags.ReturnByRef;
+
+            if (!EmittingVisitor.TryEmit(bodyExpr, paramExprs, il, ref closureInfo, flags, parent))
+                return null;
+            il.Demit(OpCodes.Ret);
+
+            return method.CreateDelegate(delegateType, closure);
+        }
+
+#if LIGHT_EXPRESSION
+        internal static object TryCompileBoundToFirstClosureParam(Type delegateType, Expression bodyExpr, IParameterProvider paramExprs,
+            Type[] closurePlusParamTypes, Type returnType, CompilerFlags flags, out ArrayClosure closure)
+        {
+            closure = null;
+            if (bodyExpr is NoArgsNewClassIntrinsicExpression newNoArgs)
+                return CompileNoArgsNew(newNoArgs.Constructor, delegateType, closurePlusParamTypes, returnType);
+#else
+        internal static object TryCompileBoundToFirstClosureParam(Type delegateType, Expression bodyExpr, IReadOnlyList<PE> paramExprs,
+            Type[] closurePlusParamTypes, Type returnType, CompilerFlags flags, out ArrayClosure closure)
+        {
+            closure = null;
+#endif
+            // The method collects the info from the all nested lambdas deep down up-front and de-duplicates the lambdas as well.
+            var closureInfo = new ClosureInfo(ClosureStatus.ToBeCollected);
+            if (!TryCollectBoundConstants(ref closureInfo, bodyExpr, paramExprs, null, ref closureInfo.NestedLambdas, flags))
+                return null;
+
             if ((flags & CompilerFlags.EnableDelegateDebugInfo) == 0)
             {
                 closure = (closureInfo.Status & ClosureStatus.HasClosure) == 0
@@ -914,7 +977,8 @@ namespace FastExpressionCompiler
 
         public class ArrayClosure
         {
-            public readonly object[] ConstantsAndNestedLambdas; // todo: @feature split into two to reduce copying - it mostly need to set up nested lambdas and constants externally without closure collecting phase
+            // todo: @feature split into two to reduce copying
+            public readonly object[] ConstantsAndNestedLambdas;
             public ArrayClosure(object[] constantsAndNestedLambdas) => ConstantsAndNestedLambdas = constantsAndNestedLambdas;
         }
 

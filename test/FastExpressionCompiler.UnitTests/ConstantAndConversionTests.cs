@@ -13,7 +13,8 @@ public class ConstantAndConversionTests : ITest
 {
     public int Run()
     {
-        Can_return_constant2();
+        Can_the_closure_be_modified_afterwards();
+        The_constant_changing_in_a_loop();
 
         Expressions_with_small_long_casts_should_not_crash();
         Expressions_with_larger_long_casts_should_not_crash();
@@ -130,14 +131,34 @@ public class ConstantAndConversionTests : ITest
         Asserts.AreEqual(ExpressionCompiler.CompileFast(((System.Linq.Expressions.Expression<Func<bool>>)(() => true)).FromSysExpression(), true)(), true);
     }
 
-    public void Can_return_constant2()
+    public class Foo<T>
+    {
+        public T Value;
+    }
+
+    public void Can_the_closure_be_modified_afterwards()
+    {
+        var expr = Lambda<Func<int>>(Field(Constant(new Foo<int> { Value = 43 }), nameof(Foo<int>.Value)));
+        expr.PrintCSharp();
+
+        var fs = expr.CompileFast(out var closure, true);
+        Asserts.AreEqual(43, fs());
+
+        if (closure.ConstantsAndNestedLambdas[0] is Foo<int> foo)
+        {
+            foo.Value = 44;
+            Asserts.AreEqual(44, fs());
+
+            closure.ConstantsAndNestedLambdas[0] = new Foo<int> { Value = 45 };
+            Asserts.AreEqual(45, fs());
+        }
+    }
+
+    public void The_constant_changing_in_a_loop()
     {
         for (int n = -200; n < 200; n++)
         {
-            var blockExpr =
-                Block(
-                    Constant(n)
-                );
+            var blockExpr = Block(Constant(n));
 
             var lambda = Lambda<Func<int>>(blockExpr);
 
