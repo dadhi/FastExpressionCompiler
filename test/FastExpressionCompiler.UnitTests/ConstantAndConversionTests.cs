@@ -18,7 +18,7 @@ public class ConstantAndConversionTests : ITest
         // Issue457_The_constant_changing_in_a_loop_without_recompilation();
         // Issue464_Bound_closure_constants_can_be_modified_afterwards();
         // Issue465_The_primitive_constant_can_be_configured_to_put_in_closure();
-        Issue466_The_constant_may_be_referenced_multiple_times();
+        // Issue466_The_constant_may_be_referenced_multiple_times();
         Issue466_The_constant_may_be_loosly_defined_with_runtime_type();
 #endif
         The_constant_changing_in_a_loop();

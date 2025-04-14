@@ -3495,6 +3495,7 @@ namespace FastExpressionCompiler
                             if (refField.FieldType != typeof(object))
                                 return true; // for typed constant we done,
                             // but the object ref field requires the normal constant treatment with unboxing of the ValueType or the cast
+                            constType = ((ConstantExpression)constValue).Value.GetType();
                         }
 #endif
                         if (constType.IsValueType)
@@ -3660,18 +3661,26 @@ namespace FastExpressionCompiler
                     {
                         EmitLoadClosureArrayItem(il, i);
                         var constValue = constItems[i];
-                        var varType = constValue.GetType();
-                        if (varType.IsValueType)
-                            il.Demit(OpCodes.Unbox_Any, varType);
+                        var constType = constValue.GetType();
+                        if (constType.IsValueType)
+                            il.Demit(OpCodes.Unbox_Any, constType);
 #if LIGHT_EXPRESSION
                         else if (constValue is ConstantExpression ce)
                         {
                             var refField = ce.RefField;
                             if (refField != null)
+                            {
                                 il.Demit(OpCodes.Ldfld, refField);
+                                if (refField.FieldType == typeof(object))
+                                {
+                                    var refValueType = ce.Value.GetType();
+                                    if (refValueType.IsValueType)
+                                        il.Demit(OpCodes.Unbox_Any, refValueType);
+                                }
+                            }
                         }
 #endif
-                        varIndex = (short)il.GetNextLocalVarIndex(varType);
+                        varIndex = (short)il.GetNextLocalVarIndex(constType);
                         constUsage = (short)(varIndex + 1); // to distinguish from the default 1
                         EmitStoreLocalVariable(il, varIndex);
                     }
