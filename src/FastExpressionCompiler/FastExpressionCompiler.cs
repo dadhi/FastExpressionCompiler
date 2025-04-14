@@ -737,9 +737,9 @@ namespace FastExpressionCompiler
                 }
                 else
 #if LIGHT_EXPRESSION
-                    // Ensure the ConstantRef is not loaded into the variables and referenced directly so that 
+                    // Ensure the ConstantRef is not loaded into the variables and referenced directly so that
                     // updated value will be reflected on each usage site
-                    if (value is not ConstantRefExpression)
+                    if (value.RefField == null)
 #endif
                 {
                     ++ConstantUsageThenVarIndex.GetSurePresentItemRef(constIndex);
