@@ -172,26 +172,7 @@ public class ConstantAndConversionTests : ITest
         n.ValueRef = 45; // <-- WIN!
         Asserts.AreEqual(45, fs());
     }
-#endif
 
-    public void The_constant_changing_in_a_loop()
-    {
-        var sw = Stopwatch.StartNew();
-        for (int n = -200; n < 200; n++)
-        {
-            var blockExpr = Block(Constant(n));
-
-            var lambda = Lambda<Func<int>>(blockExpr);
-
-            var fastCompiled = lambda.CompileFast(true);
-
-            Asserts.AreEqual(n, fastCompiled());
-        }
-        Debug.WriteLine($"The_constant_changing_in_a_loop, elapsed: {sw.ElapsedMilliseconds}ms");
-        sw.Stop();
-    }
-
-#if LIGHT_EXPRESSION
     public void Issue457_The_constant_changing_in_a_loop_without_recompilation()
     {
         var sw = Stopwatch.StartNew();
@@ -210,6 +191,23 @@ public class ConstantAndConversionTests : ITest
         sw.Stop();
     }
 #endif
+
+    public void The_constant_changing_in_a_loop()
+    {
+        var sw = Stopwatch.StartNew();
+        for (int n = -200; n < 200; n++)
+        {
+            var blockExpr = Block(Constant(n));
+
+            var lambda = Lambda<Func<int>>(blockExpr);
+
+            var fastCompiled = lambda.CompileFast(true);
+
+            Asserts.AreEqual(n, fastCompiled());
+        }
+        Debug.WriteLine($"The_constant_changing_in_a_loop, elapsed: {sw.ElapsedMilliseconds}ms");
+        sw.Stop();
+    }
 
     public enum XByte : byte { A }
 }
