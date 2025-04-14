@@ -184,9 +184,9 @@ public abstract class Expression
     public static readonly ConstantExpression OneConstant = new IntConstantExpression(1);
     public static readonly ConstantExpression MinusOneConstant = new IntConstantExpression(-1);
 
-    public static RefConstantExpression<T> ConstantRef<T>(T value) => new RefConstantExpression<T>(value);
+    public static ConstantRefExpression<T> ConstantRef<T>(T value) => new ConstantRefExpression<T>(value);
 
-    public static RefConstantExpression ConstantRef(object value, Type type) => new RefConstantExpression(value, type);
+    public static ConstantRefExpression ConstantRef(object value, Type type) => new ConstantRefExpression(value, type);
 
     /// <summary>Avoids the boxing for all (two) bool values</summary>
     public static ConstantExpression Constant(bool value) => value ? TrueConstant : FalseConstant;
@@ -3830,6 +3830,10 @@ public abstract class ConstantExpression : Expression
     public sealed override ExpressionType NodeType => ExpressionType.Constant;
     public abstract object Value { get; }
 
+    ///<summary>Constant with this field defined will be always put in Closure as a Constant instance and not its value, 
+    /// and will always be accessed by its mutable Field directly, without putting its value into the local variable</summary> 
+    public virtual FieldInfo RefField => null;
+
 #if SUPPORTS_VISITOR
     [RequiresUnreferencedCode(Trimming.Message)]
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitConstant(this);
@@ -3873,24 +3877,27 @@ public sealed class ValueConstantExpression<T> : ConstantExpression
 
 /// <summary>A special case of Constant entirely stored in Closure,
 /// so that its ValueRef can be updated and the all its Value usage sites will be updated as well, #466.</summary>
-public sealed class RefConstantExpression<T> : ConstantExpression
+public sealed class ConstantRefExpression<T> : ConstantExpression
 {
     public override Type Type => typeof(T);
     public override object Value => ValueRef;
+    private static readonly FieldInfo ValueRefField = typeof(ConstantRefExpression<T>).GetField(nameof(ValueRef));
+    public override FieldInfo RefField => ValueRefField;
     public T ValueRef;
-    public static readonly FieldInfo ValueRefField = typeof(RefConstantExpression<T>).GetField(nameof(ValueRef));
-    internal RefConstantExpression(T value) => ValueRef = value;
+    internal ConstantRefExpression(T value) => ValueRef = value;
 }
 
 /// <summary>
 /// Note: There is no RefConstantExpression which relies on `Value.GetType()`, because the Value may change (by design), so the Type, which may produce unexpected results.
 /// </summary>
-public sealed class RefConstantExpression : ConstantExpression
+public sealed class ConstantRefExpression : ConstantExpression
 {
     public override Type Type { get; }
     public override object Value => ValueRef;
     public object ValueRef;
-    internal RefConstantExpression(object value, Type type)
+    private static readonly FieldInfo ValueRefField = typeof(ConstantRefExpression).GetField(nameof(ValueRef));
+    public override FieldInfo RefField => ValueRefField;
+    internal ConstantRefExpression(object value, Type type)
     {
         Type = type ?? typeof(object); // The type always should be set
         ValueRef = value;

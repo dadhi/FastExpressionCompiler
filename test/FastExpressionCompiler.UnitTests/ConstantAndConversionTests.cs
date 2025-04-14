@@ -15,9 +15,9 @@ public class ConstantAndConversionTests : ITest
     public int Run()
     {
 #if LIGHT_EXPRESSION
-        Issue457_The_constant_changing_in_a_loop_without_recompilation();
         Issue464_Bound_closure_constants_can_be_modified_afterwards();
         Issue465_The_primitive_constant_can_be_configured_to_put_in_closure();
+        Issue457_The_constant_changing_in_a_loop_without_recompilation();
 #endif
         The_constant_changing_in_a_loop();
 
@@ -145,11 +145,13 @@ public class ConstantAndConversionTests : ITest
 
     public void Issue464_Bound_closure_constants_can_be_modified_afterwards()
     {
-        var foo = RefConstant(new Foo<int> { Value = 43 });
+        var foo = ConstantRef(new Foo<int> { Value = 43 });
         var expr = Lambda<Func<int>>(Field(foo, nameof(Foo<int>.Value)));
         expr.PrintCSharp();
 
         var fs = expr.CompileFast(true);
+        fs.PrintIL();
+
         Asserts.AreEqual(43, fs());
 
         foo.ValueRef = new Foo<int> { Value = 45 };
@@ -158,11 +160,13 @@ public class ConstantAndConversionTests : ITest
 
     public void Issue465_The_primitive_constant_can_be_configured_to_put_in_closure()
     {
-        var n = RefConstant(16);
+        var n = ConstantRef(16);
         var expr = Lambda<Func<int>>(n);
         expr.PrintCSharp();
 
         var fs = expr.CompileFast(true);
+        fs.PrintIL();
+
         Asserts.AreEqual(16, fs());
 
         n.ValueRef = 45; // <-- WIN!
@@ -191,7 +195,7 @@ public class ConstantAndConversionTests : ITest
     public void Issue457_The_constant_changing_in_a_loop_without_recompilation()
     {
         var sw = Stopwatch.StartNew();
-        var refConst = RefConstant(0);
+        var refConst = ConstantRef(0);
         var blockExpr = Block(refConst);
         var lambda = Lambda<Func<int>>(blockExpr);
         var fastCompiled = lambda.CompileFast(true);

@@ -737,9 +737,9 @@ namespace FastExpressionCompiler
                 }
                 else
 #if LIGHT_EXPRESSION
-                    // Ensure the ref constant are not loaded into the variables and referenced directly so that 
+                    // Ensure the ConstantRef is not loaded into the variables and referenced directly so that 
                     // updated value will be reflected on each usage site
-                    if (varType != typeof(RefConstantExpression))
+                    if (value is not ConstantRefExpression)
 #endif
                 {
                     ++ConstantUsageThenVarIndex.GetSurePresentItemRef(constIndex);
@@ -1191,9 +1191,10 @@ namespace FastExpressionCompiler
                 {
                     case ExpressionType.Constant:
 #if LIGHT_EXPRESSION
-                        if (expr is RefConstantExpression rc)
+                        if (((ConstantExpression)expr).RefField != null)
                         {
-                            closure.AddConstantOrIncrementUsageCount(rc.ValueRef);
+                            // Register the constant expression itself in the closure
+                            closure.AddConstantOrIncrementUsageCount(expr);
                             return Result.OK;
                         }
 
@@ -3415,10 +3416,11 @@ namespace FastExpressionCompiler
             {
                 var ok = false;
 #if LIGHT_EXPRESSION
-                if (expr is RefConstantExpression rc)
+                var refField = expr.RefField;
+                if (refField != null)
                 {
                     Debug.Assert(closure.ContainsConstantsOrNestedLambdas());
-                    ok = TryEmitConstant(true, exprType, exprType, rc, il, ref closure, byRefIndex);
+                    ok = TryEmitConstant(true, null, null, expr, il, ref closure, byRefIndex, refField);
                     if (!ok) return false;
                 }
                 else if (expr == NullConstant)
@@ -3470,19 +3472,19 @@ namespace FastExpressionCompiler
                 TryEmitConstant(considerClosure, null, consValue.GetType(), consValue, il, ref closure, byRefIndex);
 
             public static bool TryEmitConstant(bool considerClosure, Type exprType, Type constType, object constValue, ILGenerator il, ref ClosureInfo closure,
-                int byRefIndex = -1)
+                int byRefIndex = -1, FieldInfo refField = null)
             {
                 if (exprType == null)
                     exprType = constType;
 #if LIGHT_EXPRESSION
-                if (considerClosure && (constValue is RefConstantExpression || IsClosureBoundConstant(constValue, constType)))
+                if (considerClosure && (refField != null || IsClosureBoundConstant(constValue, constType)))
 #else
                 if (considerClosure && IsClosureBoundConstant(constValue, constType))
 #endif
                 {
                     var constIndex = closure.Constants.TryGetIndex(constValue, default(RefEq<object>));
                     if (constIndex == -1)
-                        return false;
+                        return false; // todo: @check should we throw an exception instead?
 
                     var varIndex = closure.ConstantUsageThenVarIndex[constIndex] - 1;
                     if (varIndex > 0)
@@ -3491,11 +3493,13 @@ namespace FastExpressionCompiler
                     {
                         EmitLoadClosureArrayItem(il, constIndex);
 #if LIGHT_EXPRESSION
-                        // The RefConstant will always be marked with a single usage to always emit the updated field access
-                        if (constValue is RefConstantExpression rc)
+                        // The ConstantRef will always be marked for a single usage to always emit the updated field access
+                        if (refField != null)
                         {
-                            il.Emit(OpCodes.Ldfld, RefConstantExpression.ValueRefField);
-                            return true;
+                            il.Demit(OpCodes.Ldfld, refField);
+                            if (refField.FieldType != typeof(object))
+                                return true; // for typed constant we done,
+                            // but the object ref field requires the normal constant treatment with unboxing of the ValueType or the cast
                         }
 #endif
                         if (constType.IsValueType)
