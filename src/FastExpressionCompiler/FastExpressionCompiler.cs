@@ -723,7 +723,7 @@ namespace FastExpressionCompiler
             [MethodImpl((MethodImplOptions)256)]
             public bool ContainsConstantsOrNestedLambdas() => Constants.Count != 0 | NestedLambdas.Count != 0;
 
-            public bool AddConstantOrIncrementUsageCount(object value)
+            public void AddConstantOrIncrementUsageCount(object value)
             {
                 Status |= ClosureStatus.HasClosure;
                 var constItems = Constants.Items;
@@ -736,15 +736,23 @@ namespace FastExpressionCompiler
                     ConstantUsageThenVarIndex.Add(1);
                 }
                 else
-#if LIGHT_EXPRESSION
-                    // Ensure the ConstantRef is not loaded into the variables and referenced directly so that
-                    // updated value will be reflected on each usage site
-                    if (value.RefField == null)
-#endif
                 {
                     ++ConstantUsageThenVarIndex.GetSurePresentItemRef(constIndex);
                 }
-                return true; // here is for fluency, don't delete
+            }
+
+            public void AddRefConstant(Expression expr)
+            {
+                Status |= ClosureStatus.HasClosure;
+                var constItems = Constants.Items;
+                var constIndex = Constants.Count - 1;
+                while (constIndex != -1 && !ReferenceEquals(constItems[constIndex], expr))
+                    --constIndex;
+                if (constIndex == -1)
+                {
+                    Constants.Add(expr);
+                    ConstantUsageThenVarIndex.Add(1);
+                }
             }
 
             [RequiresUnreferencedCode(Trimming.Message)]
@@ -1194,7 +1202,7 @@ namespace FastExpressionCompiler
                         if (((ConstantExpression)expr).RefField != null)
                         {
                             // Register the constant expression itself in the closure
-                            closure.AddConstantOrIncrementUsageCount(expr);
+                            closure.AddRefConstant(expr);
                             return Result.OK;
                         }
 
