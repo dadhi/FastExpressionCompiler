@@ -3495,7 +3495,7 @@ namespace FastExpressionCompiler
                             if (refField.FieldType != typeof(object))
                                 return true; // for typed constant we done,
                             // but the object ref field requires the normal constant treatment with unboxing of the ValueType or the cast
-                            constType = ((ConstantExpression)constValue).Value.GetType();
+                            exprType = constType = ((ConstantExpression)constValue).Value.GetType();
                         }
 #endif
                         if (constType.IsValueType)

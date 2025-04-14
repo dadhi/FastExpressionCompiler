@@ -15,11 +15,12 @@ public class ConstantAndConversionTests : ITest
     public int Run()
     {
 #if LIGHT_EXPRESSION
-        // Issue457_The_constant_changing_in_a_loop_without_recompilation();
-        // Issue464_Bound_closure_constants_can_be_modified_afterwards();
-        // Issue465_The_primitive_constant_can_be_configured_to_put_in_closure();
-        // Issue466_The_constant_may_be_referenced_multiple_times();
+        Issue457_The_constant_changing_in_a_loop_without_recompilation();
+        Issue464_Bound_closure_constants_can_be_modified_afterwards();
+        Issue465_The_primitive_constant_can_be_configured_to_put_in_closure();
+        Issue466_The_constant_may_be_referenced_multiple_times();
         Issue466_The_constant_may_be_loosly_defined_with_runtime_type();
+        Issue466_The_constant_may_be_loosly_defined_with_runtime_type_and_used_multiple_times();
 #endif
         The_constant_changing_in_a_loop();
 
@@ -186,11 +187,26 @@ public class ConstantAndConversionTests : ITest
 
         Asserts.AreEqual(32, fs());
 
-        n.ValueRef = 45; // <-- WIN!
+        n.ValueRef = 45;
         Asserts.AreEqual(90, fs());
     }
 
     public void Issue466_The_constant_may_be_loosly_defined_with_runtime_type()
+    {
+        var n = ConstantRef(16, typeof(int));
+        var expr = Lambda<Func<int>>(Add(n, Constant(1)));
+        expr.PrintCSharp();
+
+        var fs = expr.CompileFast(true);
+        fs.PrintIL();
+
+        Asserts.AreEqual(17, fs());
+
+        n.ValueRef = 45;
+        Asserts.AreEqual(46, fs());
+    }
+
+    public void Issue466_The_constant_may_be_loosly_defined_with_runtime_type_and_used_multiple_times()
     {
         var n = ConstantRef(16, typeof(int));
         var expr = Lambda<Func<int>>(Add(n, n));
