@@ -741,20 +741,6 @@ namespace FastExpressionCompiler
                 }
             }
 
-            public void AddRefConstant(Expression expr)
-            {
-                Status |= ClosureStatus.HasClosure;
-                var constItems = Constants.Items;
-                var constIndex = Constants.Count - 1;
-                while (constIndex != -1 && !ReferenceEquals(constItems[constIndex], expr))
-                    --constIndex;
-                if (constIndex == -1)
-                {
-                    Constants.Add(expr);
-                    ConstantUsageThenVarIndex.Add(1);
-                }
-            }
-
             [RequiresUnreferencedCode(Trimming.Message)]
             public void AddLabel(LabelTarget labelTarget, short inlinedLambdaInvokeIndex = -1)
             {
@@ -1202,7 +1188,7 @@ namespace FastExpressionCompiler
                         if (((ConstantExpression)expr).RefField != null)
                         {
                             // Register the constant expression itself in the closure
-                            closure.AddRefConstant(expr);
+                            closure.AddConstantOrIncrementUsageCount(expr);
                             return Result.OK;
                         }
 
@@ -3501,7 +3487,8 @@ namespace FastExpressionCompiler
                     {
                         EmitLoadClosureArrayItem(il, constIndex);
 #if LIGHT_EXPRESSION
-                        // The ConstantRef will always be marked for a single usage to always emit the updated field access
+                        // Handle the loading of the ref field if the constant usage is only once,
+                        // for the multiple usages the field was loaded and saved into variable in `EmitLoadConstantsAndNestedLambdasIntoVars`
                         if (refField != null)
                         {
                             il.Demit(OpCodes.Ldfld, refField);
@@ -3672,10 +3659,18 @@ namespace FastExpressionCompiler
                     if (constUsage > 1) // todo: @perf should we proceed to do this or simplify and remove the usages for the closure info?
                     {
                         EmitLoadClosureArrayItem(il, i);
-                        var varType = constItems[i].GetType();
+                        var constValue = constItems[i];
+                        var varType = constValue.GetType();
                         if (varType.IsValueType)
                             il.Demit(OpCodes.Unbox_Any, varType);
-
+#if LIGHT_EXPRESSION
+                        else if (constValue is ConstantExpression ce)
+                        {
+                            var refField = ce.RefField;
+                            if (refField != null)
+                                il.Demit(OpCodes.Ldfld, refField);
+                        }
+#endif
                         varIndex = (short)il.GetNextLocalVarIndex(varType);
                         constUsage = (short)(varIndex + 1); // to distinguish from the default 1
                         EmitStoreLocalVariable(il, varIndex);
