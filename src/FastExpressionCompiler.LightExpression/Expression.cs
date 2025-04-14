@@ -184,19 +184,9 @@ public abstract class Expression
     public static readonly ConstantExpression OneConstant = new IntConstantExpression(1);
     public static readonly ConstantExpression MinusOneConstant = new IntConstantExpression(-1);
 
-    public enum HowToClosureConstant : byte
-    {
-        FECDecides = 0,
-        Always
-    }
+    public static RefConstantExpression<T> ConstantRef<T>(T value) => new RefConstantExpression<T>(value);
 
-    // todo: @wip 465
-    public static ConstantExpression Constant<T>(T value, HowToClosureConstant howToClosure)
-    {
-        return howToClosure == HowToClosureConstant.Always
-            ? new ValueConstantInClosureExpression<T>(value)
-            : ConstantOf(value);
-    }
+    public static RefConstantExpression ConstantRef(object value, Type type) => new RefConstantExpression(value, type);
 
     /// <summary>Avoids the boxing for all (two) bool values</summary>
     public static ConstantExpression Constant(bool value) => value ? TrueConstant : FalseConstant;
@@ -3840,9 +3830,6 @@ public abstract class ConstantExpression : Expression
     public sealed override ExpressionType NodeType => ExpressionType.Constant;
     public abstract object Value { get; }
 
-    // todo: @wip #457
-    public virtual HowToClosureConstant HowToClosure => HowToClosureConstant.FECDecides;
-
 #if SUPPORTS_VISITOR
     [RequiresUnreferencedCode(Trimming.Message)]
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitConstant(this);
@@ -3878,16 +3865,36 @@ public sealed class ValueConstantExpression : ConstantExpression
 public sealed class ValueConstantExpression<T> : ConstantExpression
 {
     public override Type Type => typeof(T);
+    // Note: the Value is specifically an object despite possibility of strongly typed T, because this way it will be a single boxing.
+    // Otherwise even using the typed `T _value`, it will be boxed multiple times through its `object Value` accessor.
     public override object Value { get; }
     internal ValueConstantExpression(object value) => Value = value;
 }
 
-public sealed class ValueConstantInClosureExpression<T> : ConstantExpression
+/// <summary>A special case of Constant entirely stored in Closure,
+/// so that its ValueRef can be updated and the all its Value usage sites will be updated as well, #466.</summary>
+public sealed class RefConstantExpression<T> : ConstantExpression
 {
-    public override HowToClosureConstant HowToClosure => HowToClosureConstant.Always;
     public override Type Type => typeof(T);
-    public override object Value { get; }
-    internal ValueConstantInClosureExpression(object value) => Value = value;
+    public override object Value => ValueRef;
+    public T ValueRef;
+    public static readonly FieldInfo ValueRefField = typeof(RefConstantExpression<T>).GetField(nameof(ValueRef));
+    internal RefConstantExpression(T value) => ValueRef = value;
+}
+
+/// <summary>
+/// Note: There is no RefConstantExpression which relies on `Value.GetType()`, because the Value may change (by design), so the Type, which may produce unexpected results.
+/// </summary>
+public sealed class RefConstantExpression : ConstantExpression
+{
+    public override Type Type { get; }
+    public override object Value => ValueRef;
+    public object ValueRef;
+    internal RefConstantExpression(object value, Type type)
+    {
+        Type = type ?? typeof(object); // The type always should be set
+        ValueRef = value;
+    }
 }
 
 public sealed class TypedValueConstantExpression : ConstantExpression

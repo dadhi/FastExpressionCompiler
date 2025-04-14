@@ -218,17 +218,6 @@ namespace FastExpressionCompiler
                 _closureAsASingleParamType, typeof(R), flags) ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
-        public static Func<R> CompileFast<R>(this Expression<Func<R>> lambdaExpr, out ArrayClosure closure,
-            bool ifFastFailedReturnNull = false, CompilerFlags flags = CompilerFlags.Default) =>
-            (Func<R>)TryCompileBoundToFirstClosureParam(typeof(Func<R>), lambdaExpr.Body,
-#if LIGHT_EXPRESSION
-                lambdaExpr,
-#else
-                lambdaExpr.Parameters,
-#endif
-                _closureAsASingleParamType, typeof(R), flags, out closure) ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
-
-        /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Func<T1, R> CompileFast<T1, R>(this Expression<Func<T1, R>> lambdaExpr,
             bool ifFastFailedReturnNull = false, CompilerFlags flags = CompilerFlags.Default) =>
             (Func<T1, R>)TryCompileBoundToFirstClosureParam(typeof(Func<T1, R>), lambdaExpr.Body,
@@ -541,58 +530,6 @@ namespace FastExpressionCompiler
             return method.CreateDelegate(delegateType, closure);
         }
 
-#if LIGHT_EXPRESSION
-        internal static object TryCompileBoundToFirstClosureParam(Type delegateType, Expression bodyExpr, IParameterProvider paramExprs,
-            Type[] closurePlusParamTypes, Type returnType, CompilerFlags flags, out ArrayClosure closure)
-        {
-            closure = null;
-            if (bodyExpr is NoArgsNewClassIntrinsicExpression newNoArgs)
-                return CompileNoArgsNew(newNoArgs.Constructor, delegateType, closurePlusParamTypes, returnType);
-#else
-        internal static object TryCompileBoundToFirstClosureParam(Type delegateType, Expression bodyExpr, IReadOnlyList<PE> paramExprs,
-            Type[] closurePlusParamTypes, Type returnType, CompilerFlags flags, out ArrayClosure closure)
-        {
-            closure = null;
-#endif
-            // The method collects the info from the all nested lambdas deep down up-front and de-duplicates the lambdas as well.
-            var closureInfo = new ClosureInfo(ClosureStatus.ToBeCollected);
-            if (!TryCollectBoundConstants(ref closureInfo, bodyExpr, paramExprs, null, ref closureInfo.NestedLambdas, flags))
-                return null;
-
-            if ((flags & CompilerFlags.EnableDelegateDebugInfo) == 0)
-            {
-                closure = (closureInfo.Status & ClosureStatus.HasClosure) == 0
-                    ? EmptyArrayClosure
-                    : new ArrayClosure(closureInfo.GetArrayOfConstantsAndNestedLambdas());
-            }
-            else
-            {   // todo: @feature add the debug info to the nested lambdas!
-                var debugExpr = Lambda(delegateType, bodyExpr, paramExprs?.ToReadOnlyList() ?? Tools.Empty<PE>());
-                var constantsAndNestedLambdas = (closureInfo.Status & ClosureStatus.HasClosure) == 0
-                    ? null
-                    : closureInfo.GetArrayOfConstantsAndNestedLambdas();
-                closure = new DebugArrayClosure(constantsAndNestedLambdas, debugExpr);
-            }
-
-            var method = new DynamicMethod(string.Empty, returnType, closurePlusParamTypes, typeof(ArrayClosure), true);
-
-            // todo: @perf can we just count the Expressions in the TryCollect phase and use it as N * 4 or something?
-            var il = method.GetILGenerator();
-
-            if (closure.ConstantsAndNestedLambdas != null)
-                EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref closureInfo);
-
-            var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
-            if (returnType.IsByRef)
-                parent |= ParentFlags.ReturnByRef;
-
-            if (!EmittingVisitor.TryEmit(bodyExpr, paramExprs, il, ref closureInfo, flags, parent))
-                return null;
-            il.Demit(OpCodes.Ret);
-
-            return method.CreateDelegate(delegateType, closure);
-        }
-
         private static readonly Type[] _closureAsASingleParamType = { typeof(ArrayClosure) };
         private static readonly Type[][] _closureTypePlusParamTypesPool = new Type[8][]; // todo: @perf @mem could we use this for other Type arrays?
 
@@ -799,6 +736,11 @@ namespace FastExpressionCompiler
                     ConstantUsageThenVarIndex.Add(1);
                 }
                 else
+#if LIGHT_EXPRESSION
+                    // Ensure the ref constant are not loaded into the variables and referenced directly so that 
+                    // updated value will be reflected on each usage site
+                    if (varType != typeof(RefConstantExpression))
+#endif
                 {
                     ++ConstantUsageThenVarIndex.GetSurePresentItemRef(constIndex);
                 }
@@ -1249,9 +1191,9 @@ namespace FastExpressionCompiler
                 {
                     case ExpressionType.Constant:
 #if LIGHT_EXPRESSION
-                        if (((ConstantExpression)expr).HowToClosure == HowToClosureConstant.Always)
+                        if (expr is RefConstantExpression rc)
                         {
-                            closure.AddConstantOrIncrementUsageCount(((ConstantExpression)expr).Value);
+                            closure.AddConstantOrIncrementUsageCount(rc.ValueRef);
                             return Result.OK;
                         }
 
@@ -3473,13 +3415,10 @@ namespace FastExpressionCompiler
             {
                 var ok = false;
 #if LIGHT_EXPRESSION
-                if (expr.HowToClosure == HowToClosureConstant.Always)
+                if (expr is RefConstantExpression rc)
                 {
                     Debug.Assert(closure.ContainsConstantsOrNestedLambdas());
-
-                    var val = expr.Value;
-                    var valType = val?.GetType() ?? exprType;
-                    ok = TryEmitConstant(true, exprType, valType, val, il, ref closure, byRefIndex, HowToClosureConstant.Always);
+                    ok = TryEmitConstant(true, exprType, exprType, rc, il, ref closure, byRefIndex);
                     if (!ok) return false;
                 }
                 else if (expr == NullConstant)
@@ -3526,20 +3465,17 @@ namespace FastExpressionCompiler
             }
 
             [MethodImpl((MethodImplOptions)256)]
-            public static bool TryEmitNotNullConstant(bool considerClosure, object consValue, ILGenerator il, ref ClosureInfo closure, int byRefIndex = -1) =>
+            public static bool TryEmitNotNullConstant(bool considerClosure, object consValue, ILGenerator il, ref ClosureInfo closure,
+                int byRefIndex = -1) =>
                 TryEmitConstant(considerClosure, null, consValue.GetType(), consValue, il, ref closure, byRefIndex);
 
             public static bool TryEmitConstant(bool considerClosure, Type exprType, Type constType, object constValue, ILGenerator il, ref ClosureInfo closure,
-                int byRefIndex = -1
-#if LIGHT_EXPRESSION
-                , HowToClosureConstant howToClosure = HowToClosureConstant.FECDecides
-#endif
-            )
+                int byRefIndex = -1)
             {
                 if (exprType == null)
                     exprType = constType;
 #if LIGHT_EXPRESSION
-                if (considerClosure && (howToClosure == HowToClosureConstant.Always || IsClosureBoundConstant(constValue, constType)))
+                if (considerClosure && (constValue is RefConstantExpression || IsClosureBoundConstant(constValue, constType)))
 #else
                 if (considerClosure && IsClosureBoundConstant(constValue, constType))
 #endif
@@ -3554,6 +3490,14 @@ namespace FastExpressionCompiler
                     else
                     {
                         EmitLoadClosureArrayItem(il, constIndex);
+#if LIGHT_EXPRESSION
+                        // The RefConstant will always be marked with a single usage to always emit the updated field access
+                        if (constValue is RefConstantExpression rc)
+                        {
+                            il.Emit(OpCodes.Ldfld, RefConstantExpression.ValueRefField);
+                            return true;
+                        }
+#endif
                         if (constType.IsValueType)
                         {
                             il.Demit(OpCodes.Unbox_Any, constType);

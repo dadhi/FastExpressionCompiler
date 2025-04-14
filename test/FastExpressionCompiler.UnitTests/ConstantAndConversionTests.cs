@@ -16,9 +16,9 @@ public class ConstantAndConversionTests : ITest
     {
 #if LIGHT_EXPRESSION
         Issue457_The_constant_changing_in_a_loop_without_recompilation();
+        Issue464_Bound_closure_constants_can_be_modified_afterwards();
         Issue465_The_primitive_constant_can_be_configured_to_put_in_closure();
 #endif
-        Issue464_Bound_closure_constants_can_be_modified_afterwards();
         The_constant_changing_in_a_loop();
 
         Expressions_with_small_long_casts_should_not_crash();
@@ -141,38 +141,32 @@ public class ConstantAndConversionTests : ITest
         public T Value;
     }
 
+#if LIGHT_EXPRESSION
+
     public void Issue464_Bound_closure_constants_can_be_modified_afterwards()
     {
-        var expr = Lambda<Func<int>>(Field(Constant(new Foo<int> { Value = 43 }), nameof(Foo<int>.Value)));
+        var foo = RefConstant(new Foo<int> { Value = 43 });
+        var expr = Lambda<Func<int>>(Field(foo, nameof(Foo<int>.Value)));
         expr.PrintCSharp();
 
-        var fs = expr.CompileFast(out var closure, true);
+        var fs = expr.CompileFast(true);
         Asserts.AreEqual(43, fs());
 
-        if (closure.ConstantsAndNestedLambdas[0] is Foo<int> foo)
-        {
-            foo.Value = 44;
-            Asserts.AreEqual(44, fs());
-
-            closure.ConstantsAndNestedLambdas[0] = new Foo<int> { Value = 45 };
-            Asserts.AreEqual(45, fs());
-        }
+        foo.ValueRef = new Foo<int> { Value = 45 };
+        Asserts.AreEqual(45, fs());
     }
 
-#if LIGHT_EXPRESSION
     public void Issue465_The_primitive_constant_can_be_configured_to_put_in_closure()
     {
-        var expr = Lambda<Func<int>>(Constant(16, HowToClosureConstant.Always));
+        var n = RefConstant(16);
+        var expr = Lambda<Func<int>>(n);
         expr.PrintCSharp();
 
-        var fs = expr.CompileFast(out var closure, true);
+        var fs = expr.CompileFast(true);
         Asserts.AreEqual(16, fs());
 
-        if (closure.ConstantsAndNestedLambdas[0] is int) // @wip need better DX
-        {
-            closure.ConstantsAndNestedLambdas[0] = 45; // <-- WIN!
-            Asserts.AreEqual(45, fs());
-        }
+        n.ValueRef = 45; // <-- WIN!
+        Asserts.AreEqual(45, fs());
     }
 #endif
 
@@ -197,13 +191,14 @@ public class ConstantAndConversionTests : ITest
     public void Issue457_The_constant_changing_in_a_loop_without_recompilation()
     {
         var sw = Stopwatch.StartNew();
-        var blockExpr = Block(Constant(0, HowToClosureConstant.Always));
+        var refConst = RefConstant(0);
+        var blockExpr = Block(refConst);
         var lambda = Lambda<Func<int>>(blockExpr);
-        var fastCompiled = lambda.CompileFast(out var closure, true);
+        var fastCompiled = lambda.CompileFast(true);
 
         for (int n = -200; n < 200; n++)
         {
-            closure.ConstantsAndNestedLambdas[0] = n;
+            refConst.ValueRef = n;
             Asserts.AreEqual(n, fastCompiled());
         }
 
