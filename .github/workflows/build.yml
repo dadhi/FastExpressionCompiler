@@ -1,0 +1,41 @@
+name: Build
+
+on:
+  push:
+    branches: [ master ]
+    paths-ignore:
+    - 'readme.md'
+
+  pull_request:
+    branches: [ master ]
+    paths-ignore:
+    - 'readme.md'
+
+jobs:
+  build:
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-dotnet@v4
+      with:
+        global-json-file: global.json
+
+    - name: Build
+      run: dotnet build -c:Release
+    
+    - name: Tests - Latest TFM
+      run: dotnet run --no-build -c:Release -f:net9.0 --project test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
+
+    - if: matrix.os == 'windows-latest'
+      name: Tests - net472
+      run: dotnet run --no-build -c:Release --project test/FastExpressionCompiler.TestsRunner.Net472
