@@ -198,6 +198,39 @@ public static class SmallList
         }
     }
 
+    /// <summary>Returns a surely present item ref by its index</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public static ref TItem GetSurePresentItemRef<TItem>(this ref Stack4<TItem> source, int index)
+    {
+        Debug.Assert(index < source.Capacity);
+        switch (index)
+        {
+            case 0: return ref source._it0;
+            case 1: return ref source._it1;
+            case 2: return ref source._it2;
+            case 3: return ref source._it3;
+            default: return ref RefTools<TItem>.GetNullRef();
+        }
+    }
+
+
+#if NET7_0_OR_GREATER
+    /// <summary>Returns a surely present item ref by its index</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public static ref TItem
+        GetSurePresentItemRef<TItem, TStack>(this ref SmallList<TItem, TStack> source, int index)
+        where TStack : struct, IStack<TItem>
+    {
+        Debug.Assert(source.Count != 0);
+        Debug.Assert(index < source.Count);
+        var stackCap = source.StackCapacity;
+        if (index < stackCap)
+            return ref source._stack.GetRef(index);
+        Debug.Assert(source._rest != null, $"Expecting deeper items are already existing on stack at index: {index}");
+        return ref source._rest[index - stackCap];
+    }
+#endif
+
     /// <summary>Returns last present item ref, assumes that the list is not empty!</summary>
     [MethodImpl((MethodImplOptions)256)]
     public static ref TItem GetLastSurePresentItem<TItem>(this ref SmallList4<TItem> source) =>
@@ -447,6 +480,141 @@ public static class SmallList
                 AddDefaultAndGetRef(ref source._rest, restCount) = item;
                 return source._count++;
         }
+    }
+}
+
+// todo: @wip
+/// <summary>Abstracts over collection of the items on stack of fixed Count,
+/// to be used as a part of hybrid datastructures which grow from stack to heap</summary>
+public interface IStack<TItem>
+{
+    /// <summary>Count of items holding</summary>
+    int Capacity { get; }
+
+    /// <summary>Indexer</summary>
+    TItem this[int index] { get; set; }
+
+    /// <summary>Set indexed item via value passed by-ref</summary>
+    void Set(int index, in TItem item);
+
+#if NET7_0_OR_GREATER
+    /// <summary>Provides read/write access to the stored item by-ref</summary>
+    [System.Diagnostics.CodeAnalysis.UnscopedRef]
+    ref TItem GetRef(int index);
+#endif
+}
+
+/// <summary>Implementation of `IStack` for 4 items on stack</summary>
+public struct Stack4<TItem> : IStack<TItem>
+{
+    /// <summary>Count of items on stack</summary>
+    public const int StackCapacity = 4;
+    internal TItem _it0, _it1, _it2, _it3;
+    /// <inheritdoc/>
+    public int Capacity => StackCapacity;
+
+#if NET7_0_OR_GREATER
+    /// <inheritdoc/>
+    [System.Diagnostics.CodeAnalysis.UnscopedRef]
+    public ref TItem GetRef(int index)
+    {
+        Debug.Assert(index < StackCapacity);
+        switch (index)
+        {
+            case 0: return ref _it0;
+            case 1: return ref _it1;
+            case 2: return ref _it2;
+            case 3: return ref _it3;
+            default: return ref RefTools<TItem>.GetNullRef();
+        }
+    }
+#endif
+
+    /// <inheritdoc/>
+    public TItem this[int index]
+    {
+        get
+        {
+            Debug.Assert(index < StackCapacity);
+            return index switch
+            {
+                0 => _it0,
+                1 => _it1,
+                2 => _it2,
+                3 => _it3,
+                _ => default,
+            };
+        }
+        set => Set(index, in value);
+    }
+
+    /// <summary>Sets the value by the index</summary>
+    public void Set(int index, in TItem value)
+    {
+        Debug.Assert(index < StackCapacity);
+        switch (index)
+        {
+            case 0: _it0 = value; break;
+            case 1: _it1 = value; break;
+            case 2: _it2 = value; break;
+            case 3: _it3 = value; break;
+            default: break;
+        }
+    }
+}
+
+// todo: @wip
+/// <summary>Generic version of SmallList abstracted for how much items are on stack</summary>
+public struct SmallList<TItem, TStack> where TStack : struct, IStack<TItem>
+{
+    internal int _count;
+    // For this warning it is fine `_stack` is never assigned to, and will always have its default value
+#pragma warning disable CS0649
+    internal TStack _stack;
+#pragma warning restore CS0649
+
+    internal TItem[] _rest;
+
+    /// <inheritdoc />
+    public int StackCapacity
+    {
+        [MethodImpl((MethodImplOptions)256)]
+        get => _stack.Capacity;
+    }
+
+    /// <summary>Gets the number of items in the list</summary>
+    public int Count
+    {
+        [MethodImpl((MethodImplOptions)256)]
+        get => _count;
+    }
+
+    /// <summary>Returns surely present item by its index</summary>
+    public TItem this[int index]
+    {
+        [MethodImpl((MethodImplOptions)256)]
+        get
+        {
+            Debug.Assert(_count != 0);
+            Debug.Assert(index < _count);
+            var stackCap = _stack.Capacity;
+            if (index < stackCap)
+                return _stack[index];
+            Debug.Assert(_rest != null, $"Expecting deeper items are already existing on stack at index: {index}");
+            return _rest[index - stackCap];
+        }
+    }
+
+    /// <summary>Adds the item to the end of the list aka the Stack.Push</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public void Add(in TItem item)
+    {
+        var index = _count++;
+        var stackCap = _stack.Capacity;
+        if (index < stackCap)
+            _stack.Set(index, in item);
+        else
+            SmallList.AddDefaultAndGetRef(ref _rest, index - stackCap) = item;
     }
 }
 
