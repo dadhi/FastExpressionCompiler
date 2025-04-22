@@ -485,7 +485,7 @@ public static class SmallList
 
 // todo: @wip
 /// <summary>Abstracts over collection of the items on stack of fixed Count,
-/// to be used as a part of hybrid datastructures which grow from stack to heap</summary>
+/// to be used as a part of hybrid data structures which grow from stack to heap</summary>
 public interface IStack<TItem>
 {
     /// <summary>Count of items holding</summary>
@@ -841,7 +841,7 @@ public struct SmallList4<TItem>
         }
     }
 
-    /// <summary>Drops the first item out of the list, and shifts the remaining items indeces by -1, so the second item become the first and so on.
+    /// <summary>Drops the first item out of the list, and shifts the remaining items indices by -1, so the second item become the first and so on.
     /// If the list is empty the method does nothing.
     /// The method returns number of the dropped items, e.g. 0 or 1.
     /// The method is similar to JS Array.shift</summary>
@@ -880,7 +880,7 @@ public struct SmallList4<TItem>
         _count = 0;
     }
 
-    /// <summary>Drops the first `n` items out of the list, and shifts the remaining items indeces by -1, so the second item become the first and so on.
+    /// <summary>Drops the first `n` items out of the list, and shifts the remaining items indices by -1, so the second item become the first and so on.
     /// If the list is empty the method does nothing.
     /// The method returns number of the dropped items, e.g. 0 or 1.
     /// The method is similar to JS Array.shift</summary>
@@ -913,7 +913,7 @@ public struct SmallList4<TItem>
             {
                 case 1:
                     _it0 = _it1; _it1 = _it2; _it2 = _it3; _it3 = _rest[0];
-                    Array.Copy(_rest, 1, _rest, 0, last); // don't worry if the `last` is 0 (for the 5 item list), Array.Copy will haandle 0 just fine.
+                    Array.Copy(_rest, 1, _rest, 0, last); // don't worry if the `last` is 0 (for the 5 item list), Array.Copy will handle 0 just fine.
                     _rest[last] = default;
                     break;
                 case 2:
