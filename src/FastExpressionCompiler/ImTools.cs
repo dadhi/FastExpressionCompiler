@@ -214,22 +214,22 @@ public static class SmallList
     }
 
 
-#if NET7_0_OR_GREATER
-    /// <summary>Returns a surely present item ref by its index</summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public static ref TItem
-        GetSurePresentItemRef<TItem, TStack>(this ref SmallList<TItem, TStack> source, int index)
-        where TStack : struct, IStack<TItem>
-    {
-        Debug.Assert(source.Count != 0);
-        Debug.Assert(index < source.Count);
-        var stackCap = source.StackCapacity;
-        if (index < stackCap)
-            return ref source._stack.GetRef(index);
-        Debug.Assert(source._rest != null, $"Expecting deeper items are already existing on stack at index: {index}");
-        return ref source._rest[index - stackCap];
-    }
-#endif
+    // #if NET7_0_OR_GREATER
+    //     /// <summary>Returns a surely present item ref by its index</summary>
+    //     [MethodImpl((MethodImplOptions)256)]
+    //     public static ref TItem
+    //         GetSurePresentItemRef<TItem, TStack>(this ref SmallList<TItem, TStack> source, int index)
+    //         where TStack : struct, IStack<TItem>
+    //     {
+    //         Debug.Assert(source.Count != 0);
+    //         Debug.Assert(index < source.Count);
+    //         var stackCap = source.StackCapacity;
+    //         if (index < stackCap)
+    //             return ref source._stack.GetRef(index);
+    //         Debug.Assert(source._rest != null, $"Expecting deeper items are already existing on stack at index: {index}");
+    //         return ref source._rest[index - stackCap];
+    //     }
+    // #endif
 
     /// <summary>Returns last present item ref, assumes that the list is not empty!</summary>
     [MethodImpl((MethodImplOptions)256)]
@@ -497,11 +497,11 @@ public interface IStack<TItem>
     /// <summary>Set indexed item via value passed by-ref</summary>
     void Set(int index, in TItem item);
 
-#if NET7_0_OR_GREATER
-    /// <summary>Provides read/write access to the stored item by-ref</summary>
-    [System.Diagnostics.CodeAnalysis.UnscopedRef]
-    ref TItem GetRef(int index);
-#endif
+    // #if NET7_0_OR_GREATER
+    //     /// <summary>Provides read/write access to the stored item by-ref</summary>
+    //     [System.Diagnostics.CodeAnalysis.UnscopedRef]
+    //     ref TItem GetRef(int index);
+    // #endif
 }
 
 /// <summary>Implementation of `IStack` for 4 items on stack</summary>
@@ -513,22 +513,23 @@ public struct Stack4<TItem> : IStack<TItem>
     /// <inheritdoc/>
     public int Capacity => StackCapacity;
 
-#if NET7_0_OR_GREATER
-    /// <inheritdoc/>
-    [System.Diagnostics.CodeAnalysis.UnscopedRef]
-    public ref TItem GetRef(int index)
-    {
-        Debug.Assert(index < StackCapacity);
-        switch (index)
-        {
-            case 0: return ref _it0;
-            case 1: return ref _it1;
-            case 2: return ref _it2;
-            case 3: return ref _it3;
-            default: return ref RefTools<TItem>.GetNullRef();
-        }
-    }
-#endif
+    // todo: @wip
+    // #if NET7_0_OR_GREATER
+    //     /// <inheritdoc/>
+    //     [System.Diagnostics.CodeAnalysis.UnscopedRef]
+    //     public ref TItem GetRef(int index)
+    //     {
+    //         Debug.Assert(index < StackCapacity);
+    //         switch (index)
+    //         {
+    //             case 0: return ref _it0;
+    //             case 1: return ref _it1;
+    //             case 2: return ref _it2;
+    //             case 3: return ref _it3;
+    //             default: return ref RefTools<TItem>.GetNullRef();
+    //         }
+    //     }
+    // #endif
 
     /// <inheritdoc/>
     public TItem this[int index]
