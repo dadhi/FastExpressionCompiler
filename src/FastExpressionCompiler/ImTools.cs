@@ -44,6 +44,8 @@ using System.Runtime.InteropServices;
 #endif
 
 using static SmallMap4;
+using System.Reflection.Emit;
+using System.Reflection;
 
 /// <summary>Helpers and polyfills for the missing things in the old .NET versions</summary>
 public static class RefTools<T>
@@ -213,23 +215,19 @@ public static class SmallList
         }
     }
 
-
-    // #if NET7_0_OR_GREATER
-    //     /// <summary>Returns a surely present item ref by its index</summary>
-    //     [MethodImpl((MethodImplOptions)256)]
-    //     public static ref TItem
-    //         GetSurePresentItemRef<TItem, TStack>(this ref SmallList<TItem, TStack> source, int index)
-    //         where TStack : struct, IStack<TItem>
-    //     {
-    //         Debug.Assert(source.Count != 0);
-    //         Debug.Assert(index < source.Count);
-    //         var stackCap = source.StackCapacity;
-    //         if (index < stackCap)
-    //             return ref source._stack.GetRef(index);
-    //         Debug.Assert(source._rest != null, $"Expecting deeper items are already existing on stack at index: {index}");
-    //         return ref source._rest[index - stackCap];
-    //     }
-    // #endif
+    /// <summary>Returns a surely present item ref by its index</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public static ref T GetSurePresentItemRef<T, TStack>(this ref SmallList<T, TStack> source, int index)
+        where TStack : struct, IStack<T, TStack>
+    {
+        Debug.Assert(source.Count != 0);
+        Debug.Assert(index < source.Count);
+        var stackCap = source.StackCapacity;
+        if (index < stackCap)
+            return ref source._stack.GetRefFunc(ref source._stack, index);
+        Debug.Assert(source._rest != null, $"Expecting deeper items are already existing on stack at index: {index}");
+        return ref source._rest[index - stackCap];
+    }
 
     /// <summary>Returns last present item ref, assumes that the list is not empty!</summary>
     [MethodImpl((MethodImplOptions)256)]
@@ -483,56 +481,148 @@ public static class SmallList
     }
 }
 
-// todo: @wip
 /// <summary>Abstracts over collection of the items on stack of fixed Count,
 /// to be used as a part of hybrid data structures which grow from stack to heap</summary>
-public interface IStack<TItem>
+public interface IStack<T>
 {
     /// <summary>Count of items holding</summary>
     int Capacity { get; }
 
     /// <summary>Indexer</summary>
-    TItem this[int index] { get; set; }
+    T this[int index] { get; set; }
 
     /// <summary>Set indexed item via value passed by-ref</summary>
-    void Set(int index, in TItem item);
+    void Set(int index, in T item);
 
-    // #if NET7_0_OR_GREATER
-    //     /// <summary>Provides read/write access to the stored item by-ref</summary>
-    //     [System.Diagnostics.CodeAnalysis.UnscopedRef]
-    //     ref TItem GetRef(int index);
-    // #endif
+#if NET8_0_OR_GREATER
+    /// <summary>Provides read/write access to the stored item by-ref</summary>
+    [System.Diagnostics.CodeAnalysis.UnscopedRef]
+    ref T GetRef(int index);
+#endif
+}
+
+/// <summary></summary>
+public delegate ref T GetRefFunc<T, TStack>(ref TStack stack, int index)
+    where TStack : struct, IStack<T>;
+
+/// <summary></summary>
+public interface IStack<T, TStack> : IStack<T> where TStack : struct, IStack<T>
+{
+    /// <summary></summary>
+    ref T GetSurePresentRef(ref TStack stack, int index);
+
+    /// <summary></summary>
+    GetRefFunc<T, TStack> GetRefFunc { get; }
 }
 
 /// <summary>Implementation of `IStack` for 4 items on stack</summary>
-public struct Stack4<TItem> : IStack<TItem>
+public struct Stack4<T> : IStack<T, Stack4<T>>
 {
     /// <summary>Count of items on stack</summary>
     public const int StackCapacity = 4;
-    internal TItem _it0, _it1, _it2, _it3;
+    internal T _it0, _it1, _it2, _it3;
     /// <inheritdoc/>
     public int Capacity => StackCapacity;
 
     // todo: @wip
-    // #if NET7_0_OR_GREATER
-    //     /// <inheritdoc/>
-    //     [System.Diagnostics.CodeAnalysis.UnscopedRef]
-    //     public ref TItem GetRef(int index)
-    //     {
-    //         Debug.Assert(index < StackCapacity);
-    //         switch (index)
-    //         {
-    //             case 0: return ref _it0;
-    //             case 1: return ref _it1;
-    //             case 2: return ref _it2;
-    //             case 3: return ref _it3;
-    //             default: return ref RefTools<TItem>.GetNullRef();
-    //         }
-    //     }
-    // #endif
+#if NET8_0_OR_GREATER
+    /// <inheritdoc/>
+    [System.Diagnostics.CodeAnalysis.UnscopedRef]
+    public ref T GetRef(int index)
+    {
+        Debug.Assert(index < StackCapacity);
+        switch (index)
+        {
+            case 0: return ref _it0;
+            case 1: return ref _it1;
+            case 2: return ref _it2;
+            default: return ref _it3;
+        }
+    }
+#endif
 
     /// <inheritdoc/>
-    public TItem this[int index]
+    public ref T GetSurePresentRef(ref Stack4<T> stack, int index)
+    {
+        Debug.Assert(index < StackCapacity);
+        switch (index)
+        {
+            case 0: return ref stack._it0;
+            case 1: return ref stack._it1;
+            case 2: return ref stack._it2;
+            default: return ref stack._it3;
+        }
+    }
+
+    // todo: @perf ineffective, but it is hard to achieve, 
+    // so let's pay for the cost only when ref is needed (see https://github.com/Cysharp/ZLinq/blob/main/src/ZLinq/Internal/SegmentedArrayProvider.cs#L117-L306)
+    private static GetRefFunc<T, Stack4<T>> CompileGetRefFunc()
+    {
+        var dynamicMethod = new DynamicMethod(
+            "GetRef_Stack4_" + typeof(T).Name,
+            typeof(T).MakeByRefType(), // Return type: ref TItem
+            new[] { typeof(Stack4<T>).MakeByRefType(), typeof(int) }, // Parameters: ref Stack4<TItem>, int
+            typeof(Stack4<T>).Module, // Associate with the module for access to internals if needed
+            true // Skip visibility checks
+        );
+
+        var il = dynamicMethod.GetILGenerator(64); // the size is supposed to be 58 instructions, we just allocate enough to avoid reallocations
+
+        var fieldIt0 = typeof(Stack4<T>).GetField(nameof(_it0), BindingFlags.NonPublic | BindingFlags.Instance);
+        var fieldIt1 = typeof(Stack4<T>).GetField(nameof(_it1), BindingFlags.NonPublic | BindingFlags.Instance);
+        var fieldIt2 = typeof(Stack4<T>).GetField(nameof(_it2), BindingFlags.NonPublic | BindingFlags.Instance);
+        var fieldIt3 = typeof(Stack4<T>).GetField(nameof(_it3), BindingFlags.NonPublic | BindingFlags.Instance);
+        Debug.Assert(fieldIt0 != null && fieldIt1 != null && fieldIt2 != null && fieldIt3 != null);
+
+        var case0Label = il.DefineLabel();
+        var case1Label = il.DefineLabel();
+        var case2Label = il.DefineLabel();
+        var defltLabel = il.DefineLabel();
+
+        // Load index argument (arg 1)
+        il.Emit(OpCodes.Ldarg_1);
+
+        // Emit switch instruction
+        il.Emit(OpCodes.Switch, new[] { case0Label, case1Label, case2Label });
+
+        // Branch to default if index > 2
+        il.Emit(OpCodes.Br_S, defltLabel);
+
+        // Case 0: return ref _it0;
+        il.MarkLabel(case0Label);
+        il.Emit(OpCodes.Ldarg_0); // Load 'this' (ref stack - arg 0)
+        il.Emit(OpCodes.Ldflda, fieldIt0);
+        il.Emit(OpCodes.Ret);
+
+        // Case 1: return ref _it1;
+        il.MarkLabel(case1Label);
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Ldflda, fieldIt1);
+        il.Emit(OpCodes.Ret);
+
+        // Case 2: return ref _it2;
+        il.MarkLabel(case2Label);
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Ldflda, fieldIt2);
+        il.Emit(OpCodes.Ret);
+
+        // Default Case (index 3): return ref _it3;
+        il.MarkLabel(defltLabel);
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Ldflda, fieldIt3);
+        il.Emit(OpCodes.Ret);
+
+        return (GetRefFunc<T, Stack4<T>>)dynamicMethod.CreateDelegate(typeof(GetRefFunc<T, Stack4<T>>));
+    }
+
+    // Lazy initialization for the compiled delegate
+    private static readonly Lazy<GetRefFunc<T, Stack4<T>>> _lazyCompiledGetRef = new(CompileGetRefFunc);
+
+    /// <inheritdoc/>
+    public GetRefFunc<T, Stack4<T>> GetRefFunc => _lazyCompiledGetRef.Value;
+
+    /// <inheritdoc/>
+    public T this[int index]
     {
         get
         {
@@ -550,7 +640,7 @@ public struct Stack4<TItem> : IStack<TItem>
     }
 
     /// <summary>Sets the value by the index</summary>
-    public void Set(int index, in TItem value)
+    public void Set(int index, in T value)
     {
         Debug.Assert(index < StackCapacity);
         switch (index)
@@ -566,7 +656,8 @@ public struct Stack4<TItem> : IStack<TItem>
 
 // todo: @wip
 /// <summary>Generic version of SmallList abstracted for how much items are on stack</summary>
-public struct SmallList<TItem, TStack> where TStack : struct, IStack<TItem>
+public struct SmallList<TItem, TStack>
+    where TStack : struct, IStack<TItem, TStack>
 {
     internal int _count;
     // For this warning it is fine `_stack` is never assigned to, and will always have its default value
