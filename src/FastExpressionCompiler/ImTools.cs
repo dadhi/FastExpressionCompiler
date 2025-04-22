@@ -225,7 +225,8 @@ public static class SmallList
 
         var stackCap = list.StackCapacity;
         if (index < stackCap)
-            // todo: @dotnext the duplication of `list._stack` as the method holder and parameter required to avoid CS8170 (and friends).The DX my be improved by making the method an abstract static member in interface from the NET7.0, same for _stack.Capacity.
+            // todo: @net the duplication of `list._stack` as the method holder and the parameter required to avoid CS8170 (and friends).
+            // The DX may be improved by making the method an abstract static member in interface from the NET7.0, same for _stack.Capacity.
             return ref list._stack.GetSurePresentRef(ref list._stack, index);
 
         Debug.Assert(list._rest != null);
