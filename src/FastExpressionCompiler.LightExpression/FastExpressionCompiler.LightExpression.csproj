@@ -85,4 +85,8 @@
         <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.7.0"/>
         <PackageReference Include="System.Dynamic.Runtime" Version="4.3.0"/>
     </ItemGroup>
+    <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' OR '$(TargetFramework)' == 'net472' ">
+        <!-- For the Span -->
+        <PackageReference Include="System.Memory" Version="4.6.3"/>
+    </ItemGroup>
 </Project>
