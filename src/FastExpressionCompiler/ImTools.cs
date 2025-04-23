@@ -37,10 +37,13 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
-using System.Reflection.Emit;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+
+#if NETSTANDARD2_0_OR_GREATER || NET472
+using System.Reflection.Emit;
+using System.Reflection;
+#endif
 
 using static SmallMap4;
 
@@ -530,7 +533,7 @@ public struct Stack4<T> : IStack<T, Stack4<T>>
         }
     }
 
-#if NETSTANDARD2_0 || NET472
+#if NETSTANDARD2_0_OR_GREATER || NET472
     private delegate Span<T> AsSpanDelegate(ref Stack4<T> stack, int capacity);
 
     private static AsSpanDelegate CompileAsSpanDelegate()
