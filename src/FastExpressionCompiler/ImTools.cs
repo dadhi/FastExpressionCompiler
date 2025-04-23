@@ -485,7 +485,7 @@ public static class SmallList
     }
 }
 
-
+// todo: @wip generalized Stack is the WIP and may be moved to ImTools repo
 /// <summary>Abstracts over collection of the items on stack of the fixed Capacity,
 /// to be used as a part of the hybrid data structures which grow from stack to heap</summary>
 public interface IStack<T, TStack>
