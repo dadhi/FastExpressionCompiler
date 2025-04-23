@@ -135,62 +135,46 @@ public static class TestTools
     }
 }
 
+public sealed class AssertionException : Exception
+{
+    public AssertionException(string message) : base(message) { }
+}
+
 // todo: @wip @feat #453 replacing the last NUnit bone of Assert
 public static class Asserts
 {
-    public sealed class AssertionException : Exception
-    {
-        public AssertionException(string message) : base(message) { }
-    }
-
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool AreSame<T>(T expected, T actual,
-#if NETCOREAPP3_0_OR_GREATER
-        [CallerArgumentExpression(nameof(expected))] 
-#endif
+        [CallerArgumentExpression(nameof(expected))]
         string expectedName = "expected",
-#if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(actual))]
-#endif
         string actualName = "actual") where T : class =>
         ReferenceEquals(expected, actual) ? true : throw new AssertionException(
             $"Expected `AreSame({expectedName}, {actualName})`, but found `{expected.ToCode()}` is Not the same `{actual.ToCode()}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool AreNotSame<T>(T expected, T actual,
-#if NETCOREAPP3_0_OR_GREATER
-        [CallerArgumentExpression(nameof(expected))] 
-#endif
+        [CallerArgumentExpression(nameof(expected))]
         string expectedName = "expected",
-#if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(actual))]
-#endif
         string actualName = "actual") where T : class =>
         !ReferenceEquals(expected, actual) ? true : throw new AssertionException(
             $"Expected `AreNotSame({expectedName}, {actualName})`, but found `{expected.ToCode()}` is same as `{actual.ToCode()}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool AreEqual<T>(T expected, T actual,
-#if NETCOREAPP3_0_OR_GREATER
-        [CallerArgumentExpression(nameof(expected))] 
-#endif
+        [CallerArgumentExpression(nameof(expected))]
         string expectedName = "expected",
-#if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(actual))]
-#endif
         string actualName = "actual") =>
         Equals(expected, actual) ? true : throw new AssertionException(
             $"Expected `AreEqual({expectedName}, {actualName})`, but found `{expected.ToCode()}` is Not equal to `{actual.ToCode()}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool AreNotEqual<T>(T expected, T actual,
-#if NETCOREAPP3_0_OR_GREATER
-        [CallerArgumentExpression(nameof(expected))] 
-#endif
+        [CallerArgumentExpression(nameof(expected))]
         string expectedName = "expected",
-#if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(actual))]
-#endif
         string actualName = "actual") =>
         !Equals(expected, actual) ? true : throw new AssertionException(
             $"Expected `AreNotEqual({expectedName}, {actualName})`, but found `{expected.ToCode()}` is equal to `{actual.ToCode()}`");
@@ -199,14 +183,8 @@ public static class Asserts
 
     /// <summary>Should cover the case with the `expected` to be an array as well.</summary>
     public static bool AreEqual<T>(IEnumerable<T> expected, IEnumerable<T> actual,
-#if NETCOREAPP3_0_OR_GREATER
-        [CallerArgumentExpression(nameof(expected))] 
-#endif
-        string expectedName = "expected",
-#if NETCOREAPP3_0_OR_GREATER
-        [CallerArgumentExpression(nameof(actual))]
-#endif
-        string actualName = "actual")
+        [CallerArgumentExpression(nameof(expected))] string expectedName = "expected",
+        [CallerArgumentExpression(nameof(actual))] string actualName = "actual")
     {
         var expectedEnumerator = expected.GetEnumerator();
         var actualEnumerator = actual.GetEnumerator();
@@ -353,25 +331,17 @@ public static class Asserts
     }
 
     public static bool AreEqual<T>(T[] expected, T[] actual,
-#if NETCOREAPP3_0_OR_GREATER
-        [CallerArgumentExpression(nameof(expected))] 
-#endif
+        [CallerArgumentExpression(nameof(expected))]
         string expectedName = "expected",
-#if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(actual))]
-#endif
         string actualName = "actual") =>
         AreEqual((IEnumerable<T>)expected, actual, expectedName, actualName);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool GreaterOrEqual<T>(T expected, T actual,
-#if NETCOREAPP3_0_OR_GREATER
-        [CallerArgumentExpression(nameof(expected))] 
-#endif
+        [CallerArgumentExpression(nameof(expected))]
         string expectedName = "expected",
-#if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(actual))]
-#endif
         string actualName = "actual")
         where T : IComparable<T> =>
         expected.CompareTo(actual) >= 0 ? true : throw new AssertionException(
@@ -379,13 +349,9 @@ public static class Asserts
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Less<T>(T expected, T actual,
-#if NETCOREAPP3_0_OR_GREATER
-        [CallerArgumentExpression(nameof(expected))] 
-#endif
+        [CallerArgumentExpression(nameof(expected))]
         string expectedName = "expected",
-#if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(actual))]
-#endif
         string actualName = "actual")
         where T : IComparable<T> =>
         expected.CompareTo(actual) < 0 ? true : throw new AssertionException(
@@ -393,13 +359,9 @@ public static class Asserts
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Greater<T>(T expected, T actual,
-#if NETCOREAPP3_0_OR_GREATER
-        [CallerArgumentExpression(nameof(expected))] 
-#endif
+        [CallerArgumentExpression(nameof(expected))]
         string expectedName = "expected",
-#if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(actual))]
-#endif
         string actualName = "actual")
         where T : IComparable<T> =>
         expected.CompareTo(actual) > 0 ? true : throw new AssertionException(
@@ -407,13 +369,9 @@ public static class Asserts
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool LessOrEqual<T>(T expected, T actual,
-#if NETCOREAPP3_0_OR_GREATER
-        [CallerArgumentExpression(nameof(expected))] 
-#endif
+        [CallerArgumentExpression(nameof(expected))]
         string expectedName = "expected",
-#if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(actual))]
-#endif
         string actualName = "actual")
         where T : IComparable<T> =>
         expected.CompareTo(actual) <= 0 ? true : throw new AssertionException(
@@ -421,71 +379,55 @@ public static class Asserts
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsNull<T>(T actual,
-#if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(actual))]
-#endif
         string actualName = "actual") where T : class =>
         actual is null ? true : throw new AssertionException(
             $"Expected `IsNull({actualName})`, but found not null `{actual.ToCode()}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsNull<T>(T? actual,
-#if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(actual))]
-#endif
         string actualName = "actual") where T : struct =>
         !actual.HasValue ? true : throw new AssertionException(
             $"Expected the nullable `IsNull({actualName})`, but found it has a value `{actual.Value}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsNotNull<T>(T actual,
-#if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(actual))]
-#endif
         string actualName = "actual") where T : class =>
         actual is not null ? true : throw new AssertionException(
             $"Expected `IsNotNull({actualName})`, but found null");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsNotNull<T>(T? actual,
-#if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(actual))]
-#endif
         string actualName = "actual") where T : struct =>
         actual.HasValue ? true : throw new AssertionException(
             $"Expected the nullable `IsNotNull({actualName})`, but found null");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsTrue(bool actual,
-#if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(actual))]
-#endif
         string actualName = "actual") =>
         actual ? true : throw new AssertionException(
             $"Expected `IsTrue({actualName})`, but found false");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsFalse(bool actual,
-#if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(actual))]
-#endif
         string actualName = "actual") =>
         !actual ? true : throw new AssertionException(
             $"Expected `IsFalse({actualName})`, but found true");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsInstanceOf<T>(object actual,
-#if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(actual))]
-#endif
         string actualName = "actual") =>
         actual is T ? true : throw new AssertionException(
             $"Expected `IsInstanceOf<{typeof(T).ToCode()}>({actualName})`, but found `IsInstanceOf<{actual?.GetType().ToCode() ?? "_"}>({actual.ToCode()})`");
 
     public static E Throws<E>(Action action,
-#if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(action))]
-#endif
         string actionName = "<action to throw>")
         where E : Exception
     {
@@ -507,39 +449,27 @@ public static class Asserts
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Contains(string expected, string actual,
-#if NETCOREAPP3_0_OR_GREATER
-        [CallerArgumentExpression(nameof(expected))] 
-#endif
+        [CallerArgumentExpression(nameof(expected))]
         string expectedName = "expected",
-#if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(actual))]
-#endif
         string actualName = "actual") =>
         actual.Contains(expected) ? true : throw new AssertionException(
             $"Expected string `Contains({expectedName}, {actualName})`, but found expected `{expected.ToCode()}` is not in `{actual.ToCode()}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool DoesNotContain(string expected, string actual,
-#if NETCOREAPP3_0_OR_GREATER
-        [CallerArgumentExpression(nameof(expected))] 
-#endif
+        [CallerArgumentExpression(nameof(expected))]
         string expectedName = "expected",
-#if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(actual))]
-#endif
         string actualName = "actual") =>
         !actual.Contains(expected) ? true : throw new AssertionException(
             $"Expected string `DoesNotContain({expectedName}, {actualName})`, but found expected `{expected.ToCode()}` is in `{actual.ToCode()}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool StartsWith(string expected, string actual,
-#if NETCOREAPP3_0_OR_GREATER
-        [CallerArgumentExpression(nameof(expected))] 
-#endif
+        [CallerArgumentExpression(nameof(expected))]
         string expectedName = "expected",
-#if NETCOREAPP3_0_OR_GREATER
         [CallerArgumentExpression(nameof(actual))]
-#endif
         string actualName = "actual") =>
         actual.StartsWith(expected) ? true : throw new AssertionException(
             $"Expected string `StartsWith({expectedName}, {actualName})`, but found expected `{expected.ToCode()}` is not at start of `{actual.ToCode()}`");
@@ -560,6 +490,8 @@ public enum AssertKind
     CommandedToFail,
     IsTrue,
     IsFalse,
+    IsNull,
+    IsNullableNull,
     AreEqual,
     AreNotEqual,
     Throws,
@@ -643,6 +575,337 @@ public struct TestContext
         Equals(expected, actual) ||
             AddFailure(testName, sourceLineNumber, AssertKind.AreEqual,
                 $"Expected `AreEqual({expectedName}, {actualName})`, but found `{expected.ToCode()}` is Not equal to `{actual.ToCode()}`");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool AreSame<T>(T expected, T actual,
+        [CallerArgumentExpression(nameof(expected))]
+        string expectedName = "expected",
+        [CallerArgumentExpression(nameof(actual))]
+        string actualName = "actual") where T : class =>
+        ReferenceEquals(expected, actual) ? true : throw new AssertionException(
+            $"Expected `AreSame({expectedName}, {actualName})`, but found `{expected.ToCode()}` is Not the same `{actual.ToCode()}`");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool AreNotSame<T>(T expected, T actual,
+        [CallerArgumentExpression(nameof(expected))]
+        string expectedName = "expected",
+        [CallerArgumentExpression(nameof(actual))]
+        string actualName = "actual") where T : class =>
+        !ReferenceEquals(expected, actual) ? true : throw new AssertionException(
+            $"Expected `AreNotSame({expectedName}, {actualName})`, but found `{expected.ToCode()}` is same as `{actual.ToCode()}`");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool AreEqual<T>(T expected, T actual,
+        [CallerArgumentExpression(nameof(expected))]
+        string expectedName = "expected",
+        [CallerArgumentExpression(nameof(actual))]
+        string actualName = "actual") =>
+        Equals(expected, actual) ? true : throw new AssertionException(
+            $"Expected `AreEqual({expectedName}, {actualName})`, but found `{expected.ToCode()}` is Not equal to `{actual.ToCode()}`");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool AreNotEqual<T>(T expected, T actual,
+        [CallerArgumentExpression(nameof(expected))]
+        string expectedName = "expected",
+        [CallerArgumentExpression(nameof(actual))]
+        string actualName = "actual") =>
+        !Equals(expected, actual) ? true : throw new AssertionException(
+            $"Expected `AreNotEqual({expectedName}, {actualName})`, but found `{expected.ToCode()}` is equal to `{actual.ToCode()}`");
+
+    public record struct ItemsCompared<T>(int Index, bool IsEqual, T Expected, T Actual);
+
+    /// <summary>Should cover the case with the `expected` to be an array as well.</summary>
+    public static bool AreEqual<T>(IEnumerable<T> expected, IEnumerable<T> actual,
+        [CallerArgumentExpression(nameof(expected))] string expectedName = "expected",
+        [CallerArgumentExpression(nameof(actual))] string actualName = "actual")
+    {
+        var expectedEnumerator = expected.GetEnumerator();
+        var actualEnumerator = actual.GetEnumerator();
+        var expectedCount = 0;
+        var actualCount = 0;
+
+        // Collecting the context around the non-equal items, lets call it a window,
+        // If the window size is 8 it means: 
+        // - it will be 4 or less equal items before the first non-equal,
+        // - 8 or less equal items between the non-equal items (if there more than 8 equal items inbetween, then it will be 4 after and 4 before the next non-equal item)
+        // - 4 or less equal items after the last non-equal item
+
+        // Example output with window size 2:
+        // #0  == 1, 1
+        // #1  == 3, 3
+        // #2  != 3, 4
+        // #3  == 7, 7
+        // #4  == 9, 9
+        // ...
+        // #10 == 51, 51
+        // #11 == 53, 53
+        // #12 != 55, 53
+        //
+        const int ContextWindowCount = 8;
+        const int HalfContextWindowCount = ContextWindowCount >> 1;
+        const int MaskHalfContextWindowCount = HalfContextWindowCount - 1;
+        const int MaxNonEqualItemCount = 64;
+
+        // The equal items in a window from the start of collections of after the previous non-equal item and until the next non-equal item
+        var beforeNonEqualCount = 0;
+
+        // Counter track the number the equal items collected after non-equal, should be between 0 and HalfContextWindowCount, starts from HalfContextWindowCount
+        var afterNonEqualReverseCount = 0;
+
+        // Using those 4 slots directly to represent recent 4 equal items, before the non-equal item.
+        // The slots will be rotated by overriding the `a` again, when the `d` is reached, then the `b`, etc.
+        ItemsCompared<T> a = default, b = default, c = default, d = default;
+        SmallList4<ItemsCompared<T>> collectedItems = default;
+
+        var nonEqualItemCount = 0;
+        var collectedMaxNonEqualItems = false;
+
+        // Traverse until the end of the largest collection
+        var hasExpected = true;
+        var hasActual = true;
+        for (var index = 0; hasExpected | hasActual; ++index)
+        {
+            hasExpected = hasExpected && expectedEnumerator.MoveNext();
+            if (hasExpected) ++expectedCount;
+
+            hasActual = hasActual && actualEnumerator.MoveNext();
+            if (hasActual) ++actualCount;
+
+            // todo: @wip if the one collection is completed, it still be good to add the item to context from the other collection
+            if (!collectedMaxNonEqualItems & hasExpected & hasActual)
+            {
+                var exp = expectedEnumerator.Current;
+                var act = actualEnumerator.Current;
+                if (!Equals(exp, act))
+                {
+                    // It's done after we found one more non-equal item, faster than collecting the last non-equal context
+                    collectedMaxNonEqualItems = nonEqualItemCount > MaxNonEqualItemCount;
+                    if (!collectedMaxNonEqualItems)
+                    {
+                        // Add the collected context items before the non-equal item to the whole list of items
+                        if (beforeNonEqualCount != 0)
+                        {
+                            if (beforeNonEqualCount < HalfContextWindowCount)
+                            {
+                                switch (beforeNonEqualCount)
+                                {
+                                    case 1: collectedItems.Add(in a); break;
+                                    case 2: collectedItems.Add(in a); collectedItems.Add(in b); break;
+                                    case 3: collectedItems.Add(in a); collectedItems.Add(in b); collectedItems.Add(in c); break;
+                                }
+                            }
+                            else
+                            {
+                                switch (beforeNonEqualCount & MaskHalfContextWindowCount)
+                                {
+                                    case 0: collectedItems.Add(in a); collectedItems.Add(in b); collectedItems.Add(in c); collectedItems.Add(in d); break;
+                                    case 1: collectedItems.Add(in b); collectedItems.Add(in c); collectedItems.Add(in d); collectedItems.Add(in a); break;
+                                    case 2: collectedItems.Add(in c); collectedItems.Add(in d); collectedItems.Add(in a); collectedItems.Add(in b); break;
+                                    case 3: collectedItems.Add(in d); collectedItems.Add(in a); collectedItems.Add(in b); collectedItems.Add(in c); break;
+                                }
+                            }
+                            beforeNonEqualCount = 0; // reset the count of equal items before the non-equal item
+                        }
+
+                        ++nonEqualItemCount;
+                        collectedItems.Add(new ItemsCompared<T>(index, false, exp, act));
+                        afterNonEqualReverseCount = HalfContextWindowCount;
+                    }
+                }
+                else
+                {
+                    if (afterNonEqualReverseCount > 0)
+                    {
+                        collectedItems.Add(new ItemsCompared<T>(index, true, exp, act));
+                        --afterNonEqualReverseCount;
+                        if (afterNonEqualReverseCount == 0) // stop when the full equal context is collected for the last non-equal item
+                            collectedMaxNonEqualItems = nonEqualItemCount >= MaxNonEqualItemCount;
+                    }
+                    else
+                    {
+                        // Collecting the equal items for the next non-equal context window
+                        switch (beforeNonEqualCount++ & MaskHalfContextWindowCount)
+                        {
+                            case 0: a = new ItemsCompared<T>(index, true, exp, act); break;
+                            case 1: b = new ItemsCompared<T>(index, true, exp, act); break;
+                            case 2: c = new ItemsCompared<T>(index, true, exp, act); break;
+                            case 3: d = new ItemsCompared<T>(index, true, exp, act); break;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (nonEqualItemCount != 0 | expectedCount != actualCount)
+        {
+            var sb = new StringBuilder();
+
+            sb.Append($"Expected collections `AreEqual({expectedName}, {actualName})`, but found ");
+            if (expectedCount != actualCount)
+                sb.Append($"the different counts {expectedCount} != {actualCount}");
+
+            if (nonEqualItemCount != 0)
+            {
+                if (expectedCount != actualCount)
+                    sb.Append(" and ");
+                if (nonEqualItemCount < MaxNonEqualItemCount)
+                    sb.AppendLine($"{nonEqualItemCount} non equal items:");
+                else
+                    sb.AppendLine($"first {MaxNonEqualItemCount} non equal items (and stopped searching):");
+
+                foreach (var (index, isEqual, expectedItem, actualItem) in collectedItems.Enumerate())
+                    sb.AppendLine($"{index,4}{(isEqual ? "    " : " -> ")}{expectedItem.ToCode(),16},{actualItem.ToCode(),16}");
+            }
+
+            throw new AssertionException(sb.ToString());
+        }
+
+        return true;
+    }
+
+    public static bool AreEqual<T>(T[] expected, T[] actual,
+        [CallerArgumentExpression(nameof(expected))]
+        string expectedName = "expected",
+        [CallerArgumentExpression(nameof(actual))]
+        string actualName = "actual") =>
+        AreEqual((IEnumerable<T>)expected, actual, expectedName, actualName);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool GreaterOrEqual<T>(T expected, T actual,
+        [CallerArgumentExpression(nameof(expected))]
+        string expectedName = "expected",
+        [CallerArgumentExpression(nameof(actual))]
+        string actualName = "actual")
+        where T : IComparable<T> =>
+        expected.CompareTo(actual) >= 0 ? true : throw new AssertionException(
+            $"Expected `GreaterOrEqual({expectedName}, {actualName})`, but found `{expected.ToCode()} < {actual.ToCode()}`");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool Less<T>(T expected, T actual,
+        [CallerArgumentExpression(nameof(expected))]
+        string expectedName = "expected",
+        [CallerArgumentExpression(nameof(actual))]
+        string actualName = "actual")
+        where T : IComparable<T> =>
+        expected.CompareTo(actual) < 0 ? true : throw new AssertionException(
+            $"Expected `Less({expectedName}, {actualName})`, but found `{expected.ToCode()} >= {actual.ToCode()}`");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool Greater<T>(T expected, T actual,
+        [CallerArgumentExpression(nameof(expected))]
+        string expectedName = "expected",
+        [CallerArgumentExpression(nameof(actual))]
+        string actualName = "actual")
+        where T : IComparable<T> =>
+        expected.CompareTo(actual) > 0 ? true : throw new AssertionException(
+            $"Expected `Greater({expectedName}, {actualName})`, but found `{expected.ToCode()} <= {actual.ToCode()}`");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool LessOrEqual<T>(T expected, T actual,
+        [CallerArgumentExpression(nameof(expected))]
+        string expectedName = "expected",
+        [CallerArgumentExpression(nameof(actual))]
+        string actualName = "actual")
+        where T : IComparable<T> =>
+        expected.CompareTo(actual) <= 0 ? true : throw new AssertionException(
+            $"Expected `LessOrEqual({expectedName}, {actualName})`, but found `{expected.ToCode()} > {actual.ToCode()}`");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsNull<T>(T actual,
+        [CallerArgumentExpression(nameof(actual))] string actualName = "actual",
+        [CallerMemberName] string testName = "<test>", [CallerLineNumber] int sourceLineNumber = -1) where T : class =>
+        actual is null || AddFailure(testName, sourceLineNumber, AssertKind.IsNull,
+            $"Expected `IsNull({actualName})`, but found not null `{actual.ToCode()}`");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool IsNull<T>(T? actual,
+        [CallerArgumentExpression(nameof(actual))] string actualName = "actual",
+        [CallerMemberName] string testName = "<test>", [CallerLineNumber] int sourceLineNumber = -1) where T : struct =>
+        !actual.HasValue || AddFailure(testName, sourceLineNumber, AssertKind.IsNullableNull,
+            $"Expected the nullable `IsNull({actualName})`, but found it has a value `{actual.Value}`");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsNotNull<T>(T actual,
+        [CallerArgumentExpression(nameof(actual))]
+        string actualName = "actual") where T : class =>
+        actual is not null ? true : throw new AssertionException(
+            $"Expected `IsNotNull({actualName})`, but found null");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsNotNull<T>(T? actual,
+        [CallerArgumentExpression(nameof(actual))]
+        string actualName = "actual") where T : struct =>
+        actual.HasValue ? true : throw new AssertionException(
+            $"Expected the nullable `IsNotNull({actualName})`, but found null");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsTrue(bool actual,
+        [CallerArgumentExpression(nameof(actual))]
+        string actualName = "actual") =>
+        actual ? true : throw new AssertionException(
+            $"Expected `IsTrue({actualName})`, but found false");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsFalse(bool actual,
+        [CallerArgumentExpression(nameof(actual))]
+        string actualName = "actual") =>
+        !actual ? true : throw new AssertionException(
+            $"Expected `IsFalse({actualName})`, but found true");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool IsInstanceOf<T>(object actual,
+        [CallerArgumentExpression(nameof(actual))]
+        string actualName = "actual") =>
+        actual is T ? true : throw new AssertionException(
+            $"Expected `IsInstanceOf<{typeof(T).ToCode()}>({actualName})`, but found `IsInstanceOf<{actual?.GetType().ToCode() ?? "_"}>({actual.ToCode()})`");
+
+    public static E Throws<E>(Action action,
+        [CallerArgumentExpression(nameof(action))]
+        string actionName = "<action to throw>")
+        where E : Exception
+    {
+        try
+        {
+            action();
+        }
+        catch (E ex)
+        {
+            return ex;
+        }
+        catch (Exception ex)
+        {
+            throw new AssertionException(
+                $"Expected `Throws<{typeof(E).ToCode()}>({actionName})`, but found it throws `{ex.GetType().ToCode()}` with message '{ex.Message}'");
+        }
+        throw new AssertionException($"Expected `Throws<{typeof(E).ToCode()}>({actionName})`, but no exception was thrown");
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool Contains(string expected, string actual,
+        [CallerArgumentExpression(nameof(expected))]
+        string expectedName = "expected",
+        [CallerArgumentExpression(nameof(actual))]
+        string actualName = "actual") =>
+        actual.Contains(expected) ? true : throw new AssertionException(
+            $"Expected string `Contains({expectedName}, {actualName})`, but found expected `{expected.ToCode()}` is not in `{actual.ToCode()}`");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool DoesNotContain(string expected, string actual,
+        [CallerArgumentExpression(nameof(expected))]
+        string expectedName = "expected",
+        [CallerArgumentExpression(nameof(actual))]
+        string actualName = "actual") =>
+        !actual.Contains(expected) ? true : throw new AssertionException(
+            $"Expected string `DoesNotContain({expectedName}, {actualName})`, but found expected `{expected.ToCode()}` is in `{actual.ToCode()}`");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool StartsWith(string expected, string actual,
+        [CallerArgumentExpression(nameof(expected))]
+        string expectedName = "expected",
+        [CallerArgumentExpression(nameof(actual))]
+        string actualName = "actual") =>
+        actual.StartsWith(expected) ? true : throw new AssertionException(
+            $"Expected string `StartsWith({expectedName}, {actualName})`, but found expected `{expected.ToCode()}` is not at start of `{actual.ToCode()}`");
 }
 
 /// <summary>Per-thread context, accumulating the stats and failures in its Run method.</summary>
