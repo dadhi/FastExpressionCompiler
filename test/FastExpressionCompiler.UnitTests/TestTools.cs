@@ -584,6 +584,20 @@ public enum TestTracking
     TrackAllTests,
 }
 
+#if !NETCOREAPP3_0_OR_GREATER
+    [AttributeUsage(AttributeTargets.Parameter, Inherited = false)]
+    class CallerMemberNameAttribute : Attribute {}
+
+    [AttributeUsage(AttributeTargets.Parameter, Inherited = false)]
+    class CallerLineNumberAttribute : Attribute {}
+
+    [AttributeUsage(AttributeTargets.Parameter, Inherited = false)]
+    class CallerArgumentExpression : Attribute
+    {
+        public CallerArgumentExpression(string parameterName) { }
+    }
+#endif
+
 // Wrapper for the context per test method
 public struct TestContext
 {
@@ -609,53 +623,23 @@ public struct TestContext
     /// <summary>Always failes with the provided message</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Fail(string message,
-#if NETCOREAPP3_0_OR_GREATER
-            [CallerMemberName]
-#endif
-        string testName = "<test>",
-#if NETCOREAPP3_0_OR_GREATER
-            [CallerLineNumber]
-#endif
-        int sourceLineNumber = -1) =>
+        [CallerMemberName] string testName = "<test>", [CallerLineNumber] int sourceLineNumber = -1) =>
         AddFailure(testName, sourceLineNumber, AssertKind.CommandedToFail, message);
 
     /// <summary>Checks if `actual is true`. Method returns `bool` so the latter test logic may depend on it, e.g. to return early</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsTrue(bool actual,
-#if NETCOREAPP3_0_OR_GREATER
-            [CallerArgumentExpression(nameof(actual))]
-#endif
-        string actualName = "<actual>",
-#if NETCOREAPP3_0_OR_GREATER
-            [CallerMemberName]
-#endif
-        string testName = "<test>",
-#if NETCOREAPP3_0_OR_GREATER
-            [CallerLineNumber]
-#endif
-        int sourceLineNumber = -1) =>
+        [CallerArgumentExpression(nameof(actual))] string actualName = "<actual>", [CallerMemberName] string testName = "<test>",
+        [CallerLineNumber] int sourceLineNumber = -1) =>
         actual ||
             AddFailure(testName, sourceLineNumber, AssertKind.IsTrue,
                 $"Expected `IsTrue({actualName})`, but found false");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool AreEqual<T>(T expected, T actual,
-#if NETCOREAPP3_0_OR_GREATER
-        [CallerArgumentExpression(nameof(expected))] 
-#endif
-    string expectedName = "<expected>",
-#if NETCOREAPP3_0_OR_GREATER
-        [CallerArgumentExpression(nameof(actual))]
-#endif
-    string actualName = "<actual>",
-#if NETCOREAPP3_0_OR_GREATER
-            [CallerMemberName]
-#endif
-        string testName = "<test>",
-#if NETCOREAPP3_0_OR_GREATER
-            [CallerLineNumber]
-#endif
-        int sourceLineNumber = -1) =>
+        [CallerArgumentExpression(nameof(expected))] string expectedName = "<expected>",
+        [CallerArgumentExpression(nameof(actual))] string actualName = "<actual>",
+        [CallerMemberName] string testName = "<test>", [CallerLineNumber] int sourceLineNumber = -1) =>
         Equals(expected, actual) ||
             AddFailure(testName, sourceLineNumber, AssertKind.AreEqual,
                 $"Expected `AreEqual({expectedName}, {actualName})`, but found `{expected.ToCode()}` is Not equal to `{actual.ToCode()}`");
