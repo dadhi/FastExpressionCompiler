@@ -491,7 +491,9 @@ public enum AssertKind
     IsTrue,
     IsFalse,
     IsNull,
-    IsNullableNull,
+    IsNullNullable,
+    IsNotNull,
+    IsNotNullNullable,
     AreEqual,
     AreNotEqual,
     Throws,
@@ -546,7 +548,7 @@ public struct TestContext
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool AddFailure(string testName, int sourceLineNumber, AssertKind assertKind, string message)
+    public bool Fail(string testName, int sourceLineNumber, AssertKind assertKind, string message)
     {
         TestRun.Failures.Add(new TestFailure(testName, sourceLineNumber, assertKind, message));
         return false;
@@ -556,7 +558,7 @@ public struct TestContext
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Fail(string message,
         [CallerMemberName] string testName = "<test>", [CallerLineNumber] int sourceLineNumber = -1) =>
-        AddFailure(testName, sourceLineNumber, AssertKind.CommandedToFail, message);
+        Fail(testName, sourceLineNumber, AssertKind.CommandedToFail, message);
 
     /// <summary>Checks if `actual is true`. Method returns `bool` so the latter test logic may depend on it, e.g. to return early</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -564,7 +566,7 @@ public struct TestContext
         [CallerArgumentExpression(nameof(actual))] string actualName = "<actual>", [CallerMemberName] string testName = "<test>",
         [CallerLineNumber] int sourceLineNumber = -1) =>
         actual ||
-            AddFailure(testName, sourceLineNumber, AssertKind.IsTrue,
+            Fail(testName, sourceLineNumber, AssertKind.IsTrue,
                 $"Expected `IsTrue({actualName})`, but found false");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -572,9 +574,8 @@ public struct TestContext
         [CallerArgumentExpression(nameof(expected))] string expectedName = "<expected>",
         [CallerArgumentExpression(nameof(actual))] string actualName = "<actual>",
         [CallerMemberName] string testName = "<test>", [CallerLineNumber] int sourceLineNumber = -1) =>
-        Equals(expected, actual) ||
-            AddFailure(testName, sourceLineNumber, AssertKind.AreEqual,
-                $"Expected `AreEqual({expectedName}, {actualName})`, but found `{expected.ToCode()}` is Not equal to `{actual.ToCode()}`");
+        Equals(expected, actual) || Fail(testName, sourceLineNumber, AssertKind.AreEqual,
+            $"Expected `AreEqual({expectedName}, {actualName})`, but found `{expected.ToCode()}` is Not equal to `{actual.ToCode()}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool AreSame<T>(T expected, T actual,
@@ -605,9 +606,7 @@ public struct TestContext
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool AreNotEqual<T>(T expected, T actual,
-        [CallerArgumentExpression(nameof(expected))]
-        string expectedName = "expected",
-        [CallerArgumentExpression(nameof(actual))]
+        [CallerArgumentExpression(nameof(expected))] string expectedName = "expected", [CallerArgumentExpression(nameof(actual))]
         string actualName = "actual") =>
         !Equals(expected, actual) ? true : throw new AssertionException(
             $"Expected `AreNotEqual({expectedName}, {actualName})`, but found `{expected.ToCode()}` is equal to `{actual.ToCode()}`");
@@ -814,28 +813,28 @@ public struct TestContext
     public bool IsNull<T>(T actual,
         [CallerArgumentExpression(nameof(actual))] string actualName = "actual",
         [CallerMemberName] string testName = "<test>", [CallerLineNumber] int sourceLineNumber = -1) where T : class =>
-        actual is null || AddFailure(testName, sourceLineNumber, AssertKind.IsNull,
+        actual is null || Fail(testName, sourceLineNumber, AssertKind.IsNull,
             $"Expected `IsNull({actualName})`, but found not null `{actual.ToCode()}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsNull<T>(T? actual,
         [CallerArgumentExpression(nameof(actual))] string actualName = "actual",
         [CallerMemberName] string testName = "<test>", [CallerLineNumber] int sourceLineNumber = -1) where T : struct =>
-        !actual.HasValue || AddFailure(testName, sourceLineNumber, AssertKind.IsNullableNull,
+        !actual.HasValue || Fail(testName, sourceLineNumber, AssertKind.IsNullNullable,
             $"Expected the nullable `IsNull({actualName})`, but found it has a value `{actual.Value}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsNotNull<T>(T actual,
-        [CallerArgumentExpression(nameof(actual))]
-        string actualName = "actual") where T : class =>
-        actual is not null ? true : throw new AssertionException(
+    public bool IsNotNull<T>(T actual,
+        [CallerArgumentExpression(nameof(actual))] string actualName = "actual",
+        [CallerMemberName] string testName = "<test>", [CallerLineNumber] int sourceLineNumber = -1) where T : class =>
+        actual is not null || Fail(testName, sourceLineNumber, AssertKind.IsNotNull,
             $"Expected `IsNotNull({actualName})`, but found null");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsNotNull<T>(T? actual,
-        [CallerArgumentExpression(nameof(actual))]
-        string actualName = "actual") where T : struct =>
-        actual.HasValue ? true : throw new AssertionException(
+    public bool IsNotNull<T>(T? actual,
+        [CallerArgumentExpression(nameof(actual))] string actualName = "actual",
+        [CallerMemberName] string testName = "<test>", [CallerLineNumber] int sourceLineNumber = -1) where T : struct =>
+        actual.HasValue || Fail(testName, sourceLineNumber, AssertKind.IsNotNullNullable,
             $"Expected the nullable `IsNotNull({actualName})`, but found null");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -846,10 +845,10 @@ public struct TestContext
             $"Expected `IsTrue({actualName})`, but found false");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsFalse(bool actual,
-        [CallerArgumentExpression(nameof(actual))]
-        string actualName = "actual") =>
-        !actual ? true : throw new AssertionException(
+    public bool IsFalse(bool actual,
+        [CallerArgumentExpression(nameof(actual))] string actualName = "actual",
+        [CallerMemberName] string testName = "<test>", [CallerLineNumber] int sourceLineNumber = -1) =>
+        !actual || Fail(testName, sourceLineNumber, AssertKind.IsFalse,
             $"Expected `IsFalse({actualName})`, but found true");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -911,7 +910,12 @@ public struct TestContext
 /// <summary>Per-thread context, accumulating the stats and failures in its Run method.</summary>
 public sealed class TestRun
 {
+    /// <summary>Total number of tests, including both succeeded and failed</summary>
     public int TotalTestCount;
+
+    /// <summary>Number of the failed tests, note that each failed test may have multiple failures (assertions + exception)</summary>
+    public int FailedTestCount;
+
     public SmallList<TestStats> Stats;
     public SmallList<TestFailure> Failures;
 
@@ -934,6 +938,8 @@ public sealed class TestRun
             tracking == TestTracking.TrackAllTests ||
             tracking == TestTracking.TrackFailedTestsOnly & testFailureCount > 0)
         {
+            ++FailedTestCount;
+
             // todo: @perf Or may be we can put it under the debug only?
             var testsType = test.GetType();
             var testsName = testsType.Name;

@@ -11,7 +11,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
-public class Issue183_NullableDecimal : ITestX
+public struct Issue183_NullableDecimal : ITestX
 {
     public void Run(TestRun t)
     {
@@ -29,8 +29,8 @@ public class Issue183_NullableDecimal : ITestX
         var f = Lambda<Func<decimal, decimal?>>(Convert(param, typeof(decimal?)), param).CompileFast(true);
         var x = f(42);
 
-        Asserts.IsNotNull(x);
-        Asserts.AreEqual(42, x.Value);
+        t.IsNotNull(x);
+        t.AreEqual(42, x.Value);
     }
 
     public void ConvertNullNullableParamToNullableDecimal_CheckAgainstTheSystemExprCompile(TestContext t)
@@ -61,10 +61,9 @@ public class Issue183_NullableDecimal : ITestX
 
         var x = f(new DecimalContainer { Decimal = 42 });
 
-        Asserts.IsNotNull(x);
-        Asserts.AreEqual(42, x.Value);
+        t.IsNotNull(x);
+        t.AreEqual(42, x.Value);
     }
-
 
     public void ConvertNullableBytePropertyToNullableDecimal(TestContext t)
     {
@@ -77,10 +76,9 @@ public class Issue183_NullableDecimal : ITestX
 
         var x = f(new DecimalContainer { NullableByte = 42 });
 
-        Asserts.IsNotNull(x);
-        Asserts.AreEqual(42, x.Value);
+        t.IsNotNull(x);
+        t.AreEqual(42, x.Value);
     }
-
 
     public void NullableDecimalIssue(TestContext t)
     {
@@ -93,7 +91,7 @@ public class Issue183_NullableDecimal : ITestX
         var f = Lambda<Func<DecimalContainer, bool>>(body, param).CompileFast(true);
 
         var x = f(new DecimalContainer { Decimal = 1 });
-        Asserts.IsFalse(x); // cause byte? to decimal? would be `null`
+        t.IsFalse(x); // cause byte? to decimal? would be `null`
     }
 }
 

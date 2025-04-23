@@ -12,7 +12,41 @@ namespace FastExpressionCompiler.UnitTests
             // new Issue414_Incorrect_il_when_passing_by_ref_value().Run();
             // new Issue55_CompileFast_crash_with_ref_parameter().Run();
 
-            RunAllTests();
+            RunTestsX();
+
+            // RunAllTests();
+        }
+
+        public static void RunTestsX()
+        {
+            var issueTests = new TestRun();
+
+            Console.WriteLine("""
+
+            ### TestX runs .NET Framework 4.72 UnitTests and IssueTests in ||
+            """);
+
+            var sw = Stopwatch.StartNew();
+            var issueTestsTask = Task.Run(() =>
+            {
+                // yeahh
+                issueTests.Run(new Issue183_NullableDecimal());
+                // issueTests.Run(new LightExpression.IssueTests.Issue183_NullableDecimal());
+
+                Console.WriteLine($"{Environment.NewLine}IssueTests X are passing in {sw.ElapsedMilliseconds} ms.");
+            });
+
+            Task.WaitAll(issueTestsTask);
+            Console.WriteLine();
+            if (issueTests.FailedTestCount > 0)
+            {
+                Console.WriteLine("ERROR: Some tests X are FAILED!");
+                Environment.Exit(1); // exit with error
+                return;
+            }
+
+            var totalTestCount = issueTests.TotalTestCount;
+            Console.WriteLine($"ALL {totalTestCount,-4} tests are passing in {sw.ElapsedMilliseconds} ms.");
         }
 
         public static void RunAllTests()
