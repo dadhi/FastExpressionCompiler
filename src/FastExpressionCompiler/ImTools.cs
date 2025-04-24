@@ -39,6 +39,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Diagnostics.CodeAnalysis;
 
 #if NETSTANDARD2_0_OR_GREATER || NET472
 using System.Reflection.Emit;
@@ -225,9 +226,7 @@ public static class SmallList
 
         var stackCap = list.StackCapacity;
         if (index < stackCap)
-            // todo: @net the duplication of `list._stack` as the method holder and the parameter required to avoid CS8170 (and friends).
-            // The DX may be improved by making the method an abstract static member in interface from the NET7.0, same for _stack.Capacity.
-            return ref list._stack.GetSurePresentRef(ref list._stack, index);
+            return ref list._stack.GetSurePresentRef(index);
 
         Debug.Assert(list._rest != null);
         return ref list._rest[index - stackCap];
@@ -501,10 +500,30 @@ public interface IStack<T, TStack>
     void Set(int index, in T item);
 
     /// <summary>Gets the ref to the struct T field/item by index. Does not not check the index boundaries - do it externally!</summary>
-    ref T GetSurePresentRef(ref TStack stack, int index);
+    [UnscopedRef]
+    ref T GetSurePresentRef(int index);
 
     /// <summary>Creates a span from the struct items</summary>
-    Span<T> AsSpan(ref TStack stack);
+    [UnscopedRef]
+    Span<T> AsSpan();
+}
+
+internal struct Stack2<T>
+{
+    public const int StackCapacity = 2;
+    internal T _it0, _it1;
+
+    [UnscopedRef]
+    [MethodImpl((MethodImplOptions)256)]
+    public ref T GetSurePresentRef(int index)
+    {
+        Debug.Assert(index < StackCapacity);
+        switch (index)
+        {
+            case 0: return ref _it0;
+            default: return ref _it1;
+        }
+    }
 }
 
 /// <summary>Implementation of `IStack` for 4 items on stack</summary>
@@ -520,16 +539,17 @@ public struct Stack4<T> : IStack<T, Stack4<T>>
     public int Capacity => StackCapacity;
 
     /// <inheritdoc/>
+    [UnscopedRef]
     [MethodImpl((MethodImplOptions)256)]
-    public ref T GetSurePresentRef(ref Stack4<T> stack, int index)
+    public ref T GetSurePresentRef(int index)
     {
         Debug.Assert(index < StackCapacity);
         switch (index)
         {
-            case 0: return ref stack._it0;
-            case 1: return ref stack._it1;
-            case 2: return ref stack._it2;
-            default: return ref stack._it3;
+            case 0: return ref _it0;
+            case 1: return ref _it1;
+            case 2: return ref _it2;
+            default: return ref _it3;
         }
     }
 
@@ -565,12 +585,14 @@ public struct Stack4<T> : IStack<T, Stack4<T>>
     private static readonly Lazy<AsSpanDelegate> _lazyCompiledAsSpanDelegate = new(CompileAsSpanDelegate);
 
     /// <inheritdoc/>
+    [UnscopedRef]
     [MethodImpl((MethodImplOptions)256)]
-    public Span<T> AsSpan(ref Stack4<T> stack) => _lazyCompiledAsSpanDelegate.Value(ref stack, StackCapacity);
+    public Span<T> AsSpan() => _lazyCompiledAsSpanDelegate.Value(ref this, StackCapacity);
 #else
     /// <inheritdoc/>
+    [UnscopedRef]
     [MethodImpl((MethodImplOptions)256)]
-    public Span<T> AsSpan(ref Stack4<T> stack) => MemoryMarshal.CreateSpan(ref Unsafe.As<Stack4<T>, T>(ref stack), StackCapacity);
+    public Span<T> AsSpan() => MemoryMarshal.CreateSpan(ref Unsafe.As<Stack4<T>, T>(ref this), StackCapacity);
 #endif
 
     /// <inheritdoc/>
