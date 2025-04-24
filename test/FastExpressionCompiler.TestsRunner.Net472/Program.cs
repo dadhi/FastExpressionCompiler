@@ -14,7 +14,7 @@ namespace FastExpressionCompiler.UnitTests
 
             RunTestsX();
 
-            // RunAllTests();
+            RunAllTests();
         }
 
         public static void RunTestsX()
@@ -27,16 +27,13 @@ namespace FastExpressionCompiler.UnitTests
             """);
 
             var sw = Stopwatch.StartNew();
-            var issueTestsTask = Task.Run(() =>
-            {
-                // yeahh
-                issueTests.Run(new Issue183_NullableDecimal());
-                // issueTests.Run(new LightExpression.IssueTests.Issue183_NullableDecimal());
 
-                Console.WriteLine($"{Environment.NewLine}IssueTests X are passing in {sw.ElapsedMilliseconds} ms.");
-            });
+            // yeahh
+            issueTests.Run(new Issue183_NullableDecimal());
+            // issueTests.Run(new LightExpression.IssueTests.Issue183_NullableDecimal());
 
-            Task.WaitAll(issueTestsTask);
+            Console.WriteLine($"{Environment.NewLine}IssueTests X are passing in {sw.ElapsedMilliseconds} ms.");
+
             Console.WriteLine();
             if (issueTests.FailedTestCount > 0)
             {
@@ -46,7 +43,7 @@ namespace FastExpressionCompiler.UnitTests
             }
 
             var totalTestCount = issueTests.TotalTestCount;
-            Console.WriteLine($"ALL {totalTestCount,-4} tests are passing in {sw.ElapsedMilliseconds} ms.");
+            Console.WriteLine($"All {totalTestCount,-4} tests are passing in {sw.ElapsedMilliseconds} ms.");
         }
 
         public static void RunAllTests()

@@ -63,8 +63,7 @@ public static class TestTools
 
     [Conditional("DEBUG")]
     public static void PrintCSharp(this Expression expr, bool completeTypeNames = false,
-        [CallerMemberName] string caller = "",
-        [CallerFilePath] string filePath = "")
+        [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "")
     {
 #if PRINTCS
         Console.WriteLine();
@@ -84,8 +83,7 @@ public static class TestTools
 
     [Conditional("DEBUG")]
     public static void PrintCSharp(this Expression expr, Func<string, string> transform,
-        [CallerMemberName] string caller = "",
-        [CallerFilePath] string filePath = "")
+        [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "")
     {
 #if PRINTCS
         Console.WriteLine();
@@ -96,8 +94,7 @@ public static class TestTools
 
     [Conditional("DEBUG")]
     public static void PrintCSharp(this Expression expr, CodePrinter.ObjectToCode objectToCode,
-        [CallerMemberName] string caller = "",
-        [CallerFilePath] string filePath = "")
+        [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "")
     {
 #if PRINTCS
         Console.WriteLine();
@@ -938,8 +935,6 @@ public sealed class TestRun
             tracking == TestTracking.TrackAllTests ||
             tracking == TestTracking.TrackFailedTestsOnly & testFailureCount > 0)
         {
-            ++FailedTestCount;
-
             // todo: @perf Or may be we can put it under the debug only?
             var testsType = test.GetType();
             var testsName = testsType.Name;
@@ -948,19 +943,21 @@ public sealed class TestRun
             var stats = new TestStats(testsName, testStopException, testCount, failureCount, testFailureCount);
             Stats.Add(stats);
 
-            // todo: @wip better output?
-            // Output the failures:
-            if (testStopException != null)
+            if (testStopException != null | testFailureCount > 0)
             {
-                Console.WriteLine($"Unexpected exception in test '{testsName}':{Environment.NewLine}'{testStopException}'");
-            }
-            if (testFailureCount > 0)
-            {
-                Console.WriteLine($"Test '{testsName}' failed {testFailureCount} time{(testFailureCount == 1 ? "" : "s")}:");
-                for (var i = 0; i < testFailureCount; ++i)
+                ++FailedTestCount;
+
+                if (testStopException != null)
+                    Console.WriteLine($"Unexpected exception in test '{testsName}':{Environment.NewLine}'{testStopException}'");
+
+                if (testFailureCount > 0)
                 {
-                    ref var f = ref Failures.GetSurePresentItemRef(failureCount + i);
-                    Console.WriteLine($"#{i} at line {f.SourceLineNumber}:{Environment.NewLine}'{f.Message}'");
+                    Console.WriteLine($"Test '{testsName}' failed {testFailureCount} time{(testFailureCount == 1 ? "" : "s")}:");
+                    for (var i = 0; i < testFailureCount; ++i)
+                    {
+                        ref var f = ref Failures.GetSurePresentItemRef(failureCount + i);
+                        Console.WriteLine($"#{i} at line {f.SourceLineNumber}:{Environment.NewLine}'{f.Message}'");
+                    }
                 }
             }
         }
