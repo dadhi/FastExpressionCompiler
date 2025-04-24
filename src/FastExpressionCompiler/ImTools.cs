@@ -484,7 +484,7 @@ public static class SmallList
     }
 }
 
-#pragma warning disable CS0436 // UnscopedRef goes wrong on Ubuntu
+#pragma warning disable CS9101 // UnscopedRef goes wrong on Ubuntu
 
 // todo: @wip generalized Stack is the WIP and may be moved to ImTools repo
 /// <summary>Abstracts over collection of the items on stack of the fixed Capacity,
