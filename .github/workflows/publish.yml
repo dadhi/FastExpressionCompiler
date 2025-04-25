@@ -21,7 +21,7 @@ jobs:
         global-json-file: global.json
     
     - name: Build
-      run: dotnet build --configuration Release
+      run: dotnet build -c:Release
 
     - name: Make Internal
       shell: pwsh
