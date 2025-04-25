@@ -2,18 +2,17 @@ name: Build
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
     paths-ignore:
-    - 'readme.md'
+      - "readme.md"
 
   pull_request:
-    branches: [ master ]
+    branches: [master]
     paths-ignore:
-    - 'readme.md'
+      - "readme.md"
 
 jobs:
   build:
-
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -25,17 +24,23 @@ jobs:
       DOTNET_CLI_TELEMETRY_OPTOUT: true
 
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-dotnet@v4
-      with:
-        global-json-file: global.json
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
 
-    - name: Build
-      run: dotnet build -c:Release
-    
-    - name: Tests - Latest TFM
-      run: dotnet run --no-build -c:Release -f:net9.0 --project test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
+      - name: Build
+        run: dotnet build -c:Release
 
-    - if: matrix.os == 'windows-latest'
-      name: Tests - net472
-      run: dotnet run --no-build -c:Release --project test/FastExpressionCompiler.TestsRunner.Net472
+      - name: Tests - net9.0 (Latest)
+        run: dotnet run --no-build -c:Release -f:net9.0 --project test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
+
+      - name: Tests - net8.0 (Latest LTS)
+        run: dotnet run --no-build -c:Release -f:net8.0 --project test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
+
+      - name: Tests - net6.0 (Previous LTS)
+        run: dotnet run --no-build -c:Release -f:net6.0 --project test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
+
+      - if: matrix.os == 'windows-latest'
+        name: Tests - net472 (Windows only)
+        run: dotnet run --no-build -c:Release --project test/FastExpressionCompiler.TestsRunner.Net472
