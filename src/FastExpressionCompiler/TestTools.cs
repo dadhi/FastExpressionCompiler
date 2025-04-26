@@ -1,7 +1,9 @@
-﻿#if DEBUG
+﻿// Control
+#if DEBUG
 #define PRINTIL
 #define PRINTCS
 #endif
+
 using System;
 using System.Linq;
 using System.Text;
@@ -9,9 +11,11 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
-using FastExpressionCompiler.ILDecoder;
 using System.IO;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using FastExpressionCompiler.ILDecoder;
+
 #if LIGHT_EXPRESSION
 namespace FastExpressionCompiler.LightExpression;
 using FastExpressionCompiler.LightExpression.ImTools;
@@ -20,6 +24,8 @@ namespace FastExpressionCompiler;
 using FastExpressionCompiler.ImTools;
 using System.Linq.Expressions;
 #endif
+
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 public static class TestTools
 {
@@ -53,6 +59,8 @@ public static class TestTools
     }
 
     [Conditional("DEBUG")]
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     public static void PrintExpression(this Expression expr, bool completeTypeNames = false) =>
         Console.WriteLine(
             expr.ToExpressionString(out var _, out var _, out var _,
@@ -140,16 +148,18 @@ public sealed class AssertionException : Exception
 // todo: @wip @feat #453 replacing the last NUnit bone of Assert
 public static class Asserts
 {
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool AreSame<T>(T expected, T actual,
-        [CallerArgumentExpression(nameof(expected))]
-        string expectedName = "expected",
-        [CallerArgumentExpression(nameof(actual))]
-        string actualName = "actual") where T : class =>
-        ReferenceEquals(expected, actual) ? true : throw new AssertionException(
-            $"Expected `AreSame({expectedName}, {actualName})`, but found `{expected.ToCode()}` is Not the same `{actual.ToCode()}`");
+        [CallerArgumentExpression(nameof(expected))] string expectedName = "expected",
+        [CallerArgumentExpression(nameof(actual))] string actualName = "actual") where T : class =>
+            ReferenceEquals(expected, actual) ? true : throw new AssertionException(
+                $"Expected `AreSame({expectedName}, {actualName})`, but found `{expected.ToCode()}` is Not the same `{actual.ToCode()}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     public static bool AreNotSame<T>(T expected, T actual,
         [CallerArgumentExpression(nameof(expected))]
         string expectedName = "expected",
@@ -158,6 +168,8 @@ public static class Asserts
         !ReferenceEquals(expected, actual) ? true : throw new AssertionException(
             $"Expected `AreNotSame({expectedName}, {actualName})`, but found `{expected.ToCode()}` is same as `{actual.ToCode()}`");
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool AreEqual<T>(T expected, T actual,
         [CallerArgumentExpression(nameof(expected))]
@@ -167,6 +179,8 @@ public static class Asserts
         Equals(expected, actual) ? true : throw new AssertionException(
             $"Expected `AreEqual({expectedName}, {actualName})`, but found `{expected.ToCode()}` is Not equal to `{actual.ToCode()}`");
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool AreNotEqual<T>(T expected, T actual,
         [CallerArgumentExpression(nameof(expected))]
@@ -179,6 +193,8 @@ public static class Asserts
     public record struct ItemsCompared<T>(int Index, bool IsEqual, T Expected, T Actual);
 
     /// <summary>Should cover the case with the `expected` to be an array as well.</summary>
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     public static bool AreEqual<T>(IEnumerable<T> expected, IEnumerable<T> actual,
         [CallerArgumentExpression(nameof(expected))] string expectedName = "expected",
         [CallerArgumentExpression(nameof(actual))] string actualName = "actual")
@@ -191,7 +207,7 @@ public static class Asserts
         // Collecting the context around the non-equal items, lets call it a window,
         // If the window size is 8 it means: 
         // - it will be 4 or less equal items before the first non-equal,
-        // - 8 or less equal items between the non-equal items (if there more than 8 equal items inbetween, then it will be 4 after and 4 before the next non-equal item)
+        // - 8 or less equal items between the non-equal items (if there more than 8 equal items in between, then it will be 4 after and 4 before the next non-equal item)
         // - 4 or less equal items after the last non-equal item
 
         // Example output with window size 2:
@@ -334,6 +350,8 @@ public static class Asserts
         string actualName = "actual") =>
         AreEqual((IEnumerable<T>)expected, actual, expectedName, actualName);
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool GreaterOrEqual<T>(T expected, T actual,
         [CallerArgumentExpression(nameof(expected))]
@@ -344,6 +362,8 @@ public static class Asserts
         expected.CompareTo(actual) >= 0 ? true : throw new AssertionException(
             $"Expected `GreaterOrEqual({expectedName}, {actualName})`, but found `{expected.ToCode()} < {actual.ToCode()}`");
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Less<T>(T expected, T actual,
         [CallerArgumentExpression(nameof(expected))]
@@ -354,6 +374,8 @@ public static class Asserts
         expected.CompareTo(actual) < 0 ? true : throw new AssertionException(
             $"Expected `Less({expectedName}, {actualName})`, but found `{expected.ToCode()} >= {actual.ToCode()}`");
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Greater<T>(T expected, T actual,
         [CallerArgumentExpression(nameof(expected))]
@@ -364,6 +386,8 @@ public static class Asserts
         expected.CompareTo(actual) > 0 ? true : throw new AssertionException(
             $"Expected `Greater({expectedName}, {actualName})`, but found `{expected.ToCode()} <= {actual.ToCode()}`");
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool LessOrEqual<T>(T expected, T actual,
         [CallerArgumentExpression(nameof(expected))]
@@ -374,6 +398,8 @@ public static class Asserts
         expected.CompareTo(actual) <= 0 ? true : throw new AssertionException(
             $"Expected `LessOrEqual({expectedName}, {actualName})`, but found `{expected.ToCode()} > {actual.ToCode()}`");
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsNull<T>(T actual,
         [CallerArgumentExpression(nameof(actual))]
@@ -417,12 +443,16 @@ public static class Asserts
             $"Expected `IsFalse({actualName})`, but found true");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     public static bool IsInstanceOf<T>(object actual,
         [CallerArgumentExpression(nameof(actual))]
         string actualName = "actual") =>
         actual is T ? true : throw new AssertionException(
             $"Expected `IsInstanceOf<{typeof(T).ToCode()}>({actualName})`, but found `IsInstanceOf<{actual?.GetType().ToCode() ?? "_"}>({actual.ToCode()})`");
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     public static E Throws<E>(Action action,
         [CallerArgumentExpression(nameof(action))]
         string actionName = "<action to throw>")
@@ -444,6 +474,8 @@ public static class Asserts
         throw new AssertionException($"Expected `Throws<{typeof(E).ToCode()}>({actionName})`, but no exception was thrown");
     }
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Contains(string expected, string actual,
         [CallerArgumentExpression(nameof(expected))]
@@ -453,6 +485,8 @@ public static class Asserts
         actual.Contains(expected) ? true : throw new AssertionException(
             $"Expected string `Contains({expectedName}, {actualName})`, but found expected `{expected.ToCode()}` is not in `{actual.ToCode()}`");
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool DoesNotContain(string expected, string actual,
         [CallerArgumentExpression(nameof(expected))]
@@ -462,6 +496,8 @@ public static class Asserts
         !actual.Contains(expected) ? true : throw new AssertionException(
             $"Expected string `DoesNotContain({expectedName}, {actualName})`, but found expected `{expected.ToCode()}` is in `{actual.ToCode()}`");
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool StartsWith(string expected, string actual,
         [CallerArgumentExpression(nameof(expected))]
@@ -516,20 +552,20 @@ public enum TestTracking
 }
 
 #if !NETCOREAPP3_0_OR_GREATER
-    [AttributeUsage(AttributeTargets.Parameter, Inherited = false)]
-    class CallerMemberNameAttribute : Attribute {}
+[AttributeUsage(AttributeTargets.Parameter, Inherited = false)]
+class CallerMemberNameAttribute : Attribute { }
 
-    [AttributeUsage(AttributeTargets.Parameter, Inherited = false)]
-    class CallerLineNumberAttribute : Attribute {}
+[AttributeUsage(AttributeTargets.Parameter, Inherited = false)]
+class CallerLineNumberAttribute : Attribute { }
 
-    [AttributeUsage(AttributeTargets.Parameter, Inherited = false)]
-    class CallerArgumentExpression : Attribute
-    {
-        public CallerArgumentExpression(string parameterName) { }
-    }
+[AttributeUsage(AttributeTargets.Parameter, Inherited = false)]
+class CallerArgumentExpression : Attribute
+{
+    public CallerArgumentExpression(string parameterName) { }
+}
 #endif
 
-// Wrapper for the context per test method
+/// <summary>Wrapper for the context per test method</summary>
 public struct TestContext
 {
     public readonly TestRun TestRun;
@@ -551,7 +587,7 @@ public struct TestContext
         return false;
     }
 
-    /// <summary>Always failes with the provided message</summary>
+    /// <summary>Always fails with the provided message</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Fail(string message,
         [CallerMemberName] string testName = "<test>", [CallerLineNumber] int sourceLineNumber = -1) =>
@@ -566,6 +602,8 @@ public struct TestContext
             Fail(testName, sourceLineNumber, AssertKind.IsTrue,
                 $"Expected `IsTrue({actualName})`, but found false");
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool AreEqual<T>(T expected, T actual,
         [CallerArgumentExpression(nameof(expected))] string expectedName = "<expected>",
@@ -574,6 +612,8 @@ public struct TestContext
         Equals(expected, actual) || Fail(testName, sourceLineNumber, AssertKind.AreEqual,
             $"Expected `AreEqual({expectedName}, {actualName})`, but found `{expected.ToCode()}` is Not equal to `{actual.ToCode()}`");
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool AreSame<T>(T expected, T actual,
         [CallerArgumentExpression(nameof(expected))]
@@ -583,6 +623,8 @@ public struct TestContext
         ReferenceEquals(expected, actual) ? true : throw new AssertionException(
             $"Expected `AreSame({expectedName}, {actualName})`, but found `{expected.ToCode()}` is Not the same `{actual.ToCode()}`");
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool AreNotSame<T>(T expected, T actual,
         [CallerArgumentExpression(nameof(expected))]
@@ -592,6 +634,8 @@ public struct TestContext
         !ReferenceEquals(expected, actual) ? true : throw new AssertionException(
             $"Expected `AreNotSame({expectedName}, {actualName})`, but found `{expected.ToCode()}` is same as `{actual.ToCode()}`");
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool AreEqual<T>(T expected, T actual,
         [CallerArgumentExpression(nameof(expected))]
@@ -601,6 +645,8 @@ public struct TestContext
         Equals(expected, actual) ? true : throw new AssertionException(
             $"Expected `AreEqual({expectedName}, {actualName})`, but found `{expected.ToCode()}` is Not equal to `{actual.ToCode()}`");
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool AreNotEqual<T>(T expected, T actual,
         [CallerArgumentExpression(nameof(expected))] string expectedName = "expected", [CallerArgumentExpression(nameof(actual))]
@@ -611,6 +657,8 @@ public struct TestContext
     public record struct ItemsCompared<T>(int Index, bool IsEqual, T Expected, T Actual);
 
     /// <summary>Should cover the case with the `expected` to be an array as well.</summary>
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     public static bool AreEqual<T>(IEnumerable<T> expected, IEnumerable<T> actual,
         [CallerArgumentExpression(nameof(expected))] string expectedName = "expected",
         [CallerArgumentExpression(nameof(actual))] string actualName = "actual")
@@ -623,7 +671,7 @@ public struct TestContext
         // Collecting the context around the non-equal items, lets call it a window,
         // If the window size is 8 it means: 
         // - it will be 4 or less equal items before the first non-equal,
-        // - 8 or less equal items between the non-equal items (if there more than 8 equal items inbetween, then it will be 4 after and 4 before the next non-equal item)
+        // - 8 or less equal items between the non-equal items (if there more than 8 equal items in between, then it will be 4 after and 4 before the next non-equal item)
         // - 4 or less equal items after the last non-equal item
 
         // Example output with window size 2:
@@ -766,6 +814,8 @@ public struct TestContext
         string actualName = "actual") =>
         AreEqual((IEnumerable<T>)expected, actual, expectedName, actualName);
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool GreaterOrEqual<T>(T expected, T actual,
         [CallerArgumentExpression(nameof(expected))]
@@ -776,6 +826,8 @@ public struct TestContext
         expected.CompareTo(actual) >= 0 ? true : throw new AssertionException(
             $"Expected `GreaterOrEqual({expectedName}, {actualName})`, but found `{expected.ToCode()} < {actual.ToCode()}`");
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Less<T>(T expected, T actual,
         [CallerArgumentExpression(nameof(expected))]
@@ -786,6 +838,8 @@ public struct TestContext
         expected.CompareTo(actual) < 0 ? true : throw new AssertionException(
             $"Expected `Less({expectedName}, {actualName})`, but found `{expected.ToCode()} >= {actual.ToCode()}`");
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Greater<T>(T expected, T actual,
         [CallerArgumentExpression(nameof(expected))]
@@ -796,6 +850,8 @@ public struct TestContext
         expected.CompareTo(actual) > 0 ? true : throw new AssertionException(
             $"Expected `Greater({expectedName}, {actualName})`, but found `{expected.ToCode()} <= {actual.ToCode()}`");
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool LessOrEqual<T>(T expected, T actual,
         [CallerArgumentExpression(nameof(expected))]
@@ -806,6 +862,8 @@ public struct TestContext
         expected.CompareTo(actual) <= 0 ? true : throw new AssertionException(
             $"Expected `LessOrEqual({expectedName}, {actualName})`, but found `{expected.ToCode()} > {actual.ToCode()}`");
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsNull<T>(T actual,
         [CallerArgumentExpression(nameof(actual))] string actualName = "actual",
@@ -848,6 +906,8 @@ public struct TestContext
         !actual || Fail(testName, sourceLineNumber, AssertKind.IsFalse,
             $"Expected `IsFalse({actualName})`, but found true");
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool IsInstanceOf<T>(object actual,
         [CallerArgumentExpression(nameof(actual))]
@@ -855,6 +915,8 @@ public struct TestContext
         actual is T ? true : throw new AssertionException(
             $"Expected `IsInstanceOf<{typeof(T).ToCode()}>({actualName})`, but found `IsInstanceOf<{actual?.GetType().ToCode() ?? "_"}>({actual.ToCode()})`");
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     public static E Throws<E>(Action action,
         [CallerArgumentExpression(nameof(action))]
         string actionName = "<action to throw>")
@@ -876,6 +938,8 @@ public struct TestContext
         throw new AssertionException($"Expected `Throws<{typeof(E).ToCode()}>({actionName})`, but no exception was thrown");
     }
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool Contains(string expected, string actual,
         [CallerArgumentExpression(nameof(expected))]
@@ -885,6 +949,8 @@ public struct TestContext
         actual.Contains(expected) ? true : throw new AssertionException(
             $"Expected string `Contains({expectedName}, {actualName})`, but found expected `{expected.ToCode()}` is not in `{actual.ToCode()}`");
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool DoesNotContain(string expected, string actual,
         [CallerArgumentExpression(nameof(expected))]
@@ -894,6 +960,8 @@ public struct TestContext
         !actual.Contains(expected) ? true : throw new AssertionException(
             $"Expected string `DoesNotContain({expectedName}, {actualName})`, but found expected `{expected.ToCode()}` is in `{actual.ToCode()}`");
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool StartsWith(string expected, string actual,
         [CallerArgumentExpression(nameof(expected))]
@@ -963,3 +1031,5 @@ public sealed class TestRun
         }
     }
 }
+
+#pragma warning restore CS1591

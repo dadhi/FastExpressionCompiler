@@ -12,7 +12,6 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\src\FastExpressionCompiler.LightExpression\FastExpressionCompiler.LightExpression.csproj" />
-        <ProjectReference Include="..\FastExpressionCompiler.ILDecoder\FastExpressionCompiler.ILDecoder.csproj" />
     </ItemGroup>
 
 </Project>

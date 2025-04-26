@@ -4,8 +4,8 @@
         <TargetFrameworks Condition=" '$(LatestSupportedNet)' == 'net8.0' ">net472;netstandard2.0;netstandard2.1;net6.0;net8.0</TargetFrameworks>
         <TargetFrameworks Condition=" '$(LatestSupportedNet)' == 'net9.0' ">net472;netstandard2.0;netstandard2.1;net6.0;net8.0;net9.0</TargetFrameworks>
 
-        <VersionPrefix>5.1.1</VersionPrefix>
-        <VersionSuffix></VersionSuffix>
+        <VersionPrefix>5.2.0</VersionPrefix>
+        <VersionSuffix>preview-01</VersionSuffix>
 
         <Product>FastExpressionCompiler.LightExpression</Product>
 
@@ -14,6 +14,11 @@
         <Description>FastExpressionCompiler for LightExpression is 10-40x times faster than Expression.Compile()</Description>
         <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
         <PackageReleaseNotes><![CDATA[
+## v5.2.0-preview-01
+
+- add: TestTools, FastExpressionCompiler.ILDecoder
+
+
 ## v5.1.1. Bug-fix release
 
 - fix: #461 InvalidProgramException when null checking type by ref
@@ -80,7 +85,13 @@
     <ItemGroup>
         <Compile Include="..\FastExpressionCompiler\FastExpressionCompiler.cs"/>
         <Compile Include="..\FastExpressionCompiler\ImTools.cs"/>
+        <Compile Include="..\FastExpressionCompiler\TestTools.cs"/>
     </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\FastExpressionCompiler.ILDecoder\FastExpressionCompiler.ILDecoder.csproj" />
+    </ItemGroup>
+
     <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
         <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.7.0"/>
         <PackageReference Include="System.Dynamic.Runtime" Version="4.3.0"/>
@@ -89,4 +100,5 @@
         <!-- For the Span -->
         <PackageReference Include="System.Memory" Version="4.6.3"/>
     </ItemGroup>
+
 </Project>
