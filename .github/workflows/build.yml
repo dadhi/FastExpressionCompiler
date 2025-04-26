@@ -38,8 +38,9 @@ jobs:
       - name: Tests - net8.0 (Latest LTS)
         run: dotnet run --no-build -c:Release -f:net8.0 --project test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
 
-      # - name: Tests - net6.0 (Previous LTS)
-      #   run: dotnet run --no-build -c:Release -f:net6.0 --project test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
+      - if: matrix.os == 'windows-latest'
+        name: Tests - net6.0 (Previous LTS)
+        run: dotnet run --no-build -c:Release -f:net6.0 --project test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
 
       - if: matrix.os == 'windows-latest'
         name: Tests - net472 (Windows only)
