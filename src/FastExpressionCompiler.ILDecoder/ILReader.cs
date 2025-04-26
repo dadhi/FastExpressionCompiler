@@ -35,11 +35,8 @@ public sealed class ILReader : IEnumerable<ILInstruction>
 
     public ILReader(IILProvider ilProvider, ITokenResolver tokenResolver)
     {
-        if (ilProvider == null)
-            throw new ArgumentNullException(nameof(ilProvider));
-
         _resolver = tokenResolver;
-        _byteArray = ilProvider.GetByteArray();
+        _byteArray = ilProvider?.GetByteArray() ?? throw new ArgumentNullException(nameof(ilProvider));
     }
 
     public IEnumerator<ILInstruction> GetEnumerator()
@@ -181,20 +178,6 @@ public sealed class ILReader : IEnumerable<ILInstruction>
     {
         var value = BitConverter.ToUInt16(_byteArray, position);
         position += 2;
-        return value;
-    }
-
-    private uint ReadUInt32(ref int position)
-    {
-        var value = BitConverter.ToUInt32(_byteArray, position);
-        position += 4;
-        return value;
-    }
-
-    private ulong ReadUInt64(ref int position)
-    {
-        var value = BitConverter.ToUInt64(_byteArray, position);
-        position += 8;
         return value;
     }
 

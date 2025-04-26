@@ -2,6 +2,7 @@
 #if DEBUG
 #define PRINTIL
 #define PRINTCS
+#define PRINTEXPR
 #endif
 
 using System;
@@ -60,18 +61,20 @@ public static class TestTools
 
     [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
         Justification = "The method is used for the testing purposes only.")]
-    [Conditional("DEBUG")]
-    public static void PrintExpression(this Expression expr, bool completeTypeNames = false) =>
+    public static void PrintExpression(this Expression expr, bool completeTypeNames = false)
+    {
+#if PRINTEXPR
         Console.WriteLine(
             expr.ToExpressionString(out var _, out var _, out var _,
             stripNamespace: true,
             printType: completeTypeNames ? null : CodePrinter.PrintTypeStripOuterClasses,
             indentSpaces: 4)
         );
+#endif
+    }
 
     [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
         Justification = "The method is used for the testing purposes only.")]
-    [Conditional("DEBUG")]
     public static void PrintCSharp(this Expression expr, bool completeTypeNames = false,
         [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "")
     {
@@ -93,7 +96,6 @@ public static class TestTools
 
     [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
         Justification = "The method is used for the testing purposes only.")]
-    [Conditional("DEBUG")]
     public static void PrintCSharp(this Expression expr, Func<string, string> transform,
         [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "")
     {
@@ -106,7 +108,6 @@ public static class TestTools
 
     [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
         Justification = "The method is used for the testing purposes only.")]
-    [Conditional("DEBUG")]
     public static void PrintCSharp(this Expression expr, CodePrinter.ObjectToCode objectToCode,
         [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "")
     {
@@ -119,7 +120,6 @@ public static class TestTools
 
     [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
         Justification = "The method is used for the testing purposes only.")]
-    [Conditional("DEBUG")]
     public static void PrintCSharp(this Expression expr, ref string result)
     {
 #if PRINTCS
@@ -127,7 +127,6 @@ public static class TestTools
 #endif
     }
 
-    [Conditional("DEBUG")]
     public static void PrintIL(this Delegate @delegate, [CallerMemberName] string tag = null)
     {
 #if PRINTIL
@@ -135,7 +134,6 @@ public static class TestTools
 #endif
     }
 
-    [Conditional("DEBUG")]
     public static void PrintIL(this MethodInfo method, string tag = null)
     {
 #if PRINTIL

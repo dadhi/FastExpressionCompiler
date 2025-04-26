@@ -7,8 +7,6 @@ namespace FastExpressionCompiler.ILDecoder;
 
 internal class DynamicScopeTokenResolver : ITokenResolver
 {
-    #region Static stuff
-
     private static readonly PropertyInfo s_indexer;
     private static readonly FieldInfo s_scopeFi;
 
@@ -43,21 +41,16 @@ internal class DynamicScopeTokenResolver : ITokenResolver
         s_genfieldFi2 = s_genFieldInfoType?.GetField("m_context", flags);
     }
 
-    #endregion
-
     private readonly object m_scope;
 
-    private object this[int token] => s_indexer.GetValue(m_scope, new object[] {token});
+    private object this[int token] => s_indexer.GetValue(m_scope, new object[] { token });
 
     public DynamicScopeTokenResolver(DynamicMethod dm)
     {
         m_scope = s_scopeFi.GetValue(dm.GetILGenerator());
     }
 
-    public string AsString(int token)
-    {
-        return this[token] as string;
-    }
+    public string AsString(int token) => this[token] as string;
 
     public FieldInfo AsField(int token)
     {
@@ -114,8 +107,5 @@ internal class DynamicScopeTokenResolver : ITokenResolver
         return null;
     }
 
-    public byte[] AsSignature(int token)
-    {
-        return this[token] as byte[];
-    }
+    public byte[] AsSignature(int token) => this[token] as byte[];
 }
