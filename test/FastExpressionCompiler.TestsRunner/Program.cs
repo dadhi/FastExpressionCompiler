@@ -289,9 +289,7 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue355_Error_with_converting_to_from_signed_unsigned_integers().Run);
                 Run(new LightExpression.IssueTests.Issue355_Error_with_converting_to_from_signed_unsigned_integers().Run);
 
-#if NET8_0_OR_GREATER && !LIGHT_EXPRESSION
                 Run(new Issue357_Invalid_program_exception().Run);
-#endif
 
                 Run(new LightExpression.IssueTests.Issue363_ActionFunc16Generics().Run);
 

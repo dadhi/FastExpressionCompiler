@@ -1,10 +1,14 @@
-#if NET8_0_OR_GREATER && !LIGHT_EXPRESSION
-// NET Core only because the lambda expression may not apply the implicit conversion to Nullable
 using System;
 using System.Linq;
-using System.Linq.Expressions;
 
+#if LIGHT_EXPRESSION
+using static FastExpressionCompiler.LightExpression.Expression;
+namespace FastExpressionCompiler.LightExpression.IssueTests
+#else
+using System.Linq.Expressions;
+using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
+#endif
 {
     public class Issue357_Invalid_program_exception : ITest
     {
@@ -14,12 +18,13 @@ namespace FastExpressionCompiler.IssueTests
             return 1;
         }
 
-        static Expression<Func<ActionItem, bool>> Predicate(Id<AccountManager>? value) =>
+        static System.Linq.Expressions.Expression<Func<ActionItem, bool>> Predicate(Id<AccountManager>? value) =>
             x => x.AccountManagerId == value;
 
         public void Test1()
         {
-            var e = Predicate(null);
+            var e = Predicate(null).FromSysExpression();
+
             e.PrintCSharp();
             // var @cs = (Func<ActionItem, bool>)((ActionItem x) =>
             //      x.AccountManagerId == ((Int64?)default(c__DisplayClass1_0)/*Please provide the non-default value for the constant!*/.value));
@@ -81,4 +86,3 @@ namespace FastExpressionCompiler.IssueTests
         }
     }
 }
-#endif

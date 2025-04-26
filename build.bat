@@ -28,7 +28,9 @@ echo:
 echo:## Starting: TESTS...
 echo:
 
-dotnet run --no-build %LatestSupportedNetProp% %FrameworkParam% -c:Release --project test/FastExpressionCompiler.TestsRunner
+dotnet run --no-build net9.0 %FrameworkParam% -c:Release --project test/FastExpressionCompiler.TestsRunner
+dotnet run --no-build net8.0 %FrameworkParam% -c:Release --project test/FastExpressionCompiler.TestsRunner
+dotnet run --no-build net6.0 %FrameworkParam% -c:Release --project test/FastExpressionCompiler.TestsRunner
 if %ERRORLEVEL% neq 0 goto :error
 
 dotnet run --no-build -c:Release --project test/FastExpressionCompiler.TestsRunner.Net472
