@@ -58,9 +58,9 @@ public static class TestTools
         Asserts.AreEqual(expectedCodes, actualCodes);
     }
 
-    [Conditional("DEBUG")]
     [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
         Justification = "The method is used for the testing purposes only.")]
+    [Conditional("DEBUG")]
     public static void PrintExpression(this Expression expr, bool completeTypeNames = false) =>
         Console.WriteLine(
             expr.ToExpressionString(out var _, out var _, out var _,
@@ -69,6 +69,8 @@ public static class TestTools
             indentSpaces: 4)
         );
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     [Conditional("DEBUG")]
     public static void PrintCSharp(this Expression expr, bool completeTypeNames = false,
         [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "")
@@ -89,6 +91,8 @@ public static class TestTools
 #endif
     }
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     [Conditional("DEBUG")]
     public static void PrintCSharp(this Expression expr, Func<string, string> transform,
         [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "")
@@ -100,6 +104,8 @@ public static class TestTools
 #endif
     }
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     [Conditional("DEBUG")]
     public static void PrintCSharp(this Expression expr, CodePrinter.ObjectToCode objectToCode,
         [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "")
@@ -111,6 +117,8 @@ public static class TestTools
 #endif
     }
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
+        Justification = "The method is used for the testing purposes only.")]
     [Conditional("DEBUG")]
     public static void PrintCSharp(this Expression expr, ref string result)
     {
