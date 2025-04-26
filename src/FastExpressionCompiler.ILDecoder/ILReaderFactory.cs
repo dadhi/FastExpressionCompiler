@@ -293,3 +293,4 @@ public static class ILReaderFactory
         return printType?.Invoke(arrayType ?? type, s.ToString()) ?? s.ToString();
     }
 }
+

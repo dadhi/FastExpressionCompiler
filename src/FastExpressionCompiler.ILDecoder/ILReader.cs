@@ -77,92 +77,77 @@ public sealed class ILReader : IEnumerable<ILInstruction>
             case OperandType.ShortInlineBrTarget:
                 {
                     // 8-bit integer branch target
-                    var shortDelta = ReadSByte(ref position);
-                    return new ShortInlineBrTargetInstruction(offset, opCode, shortDelta);
+                    return new ShortInlineBrTargetInstruction(offset, opCode, ReadSByte(ref position));
                 }
             case OperandType.InlineBrTarget:
                 {
                     // 32-bit integer branch target
-                    var delta = ReadInt32(ref position);
-                    return new InlineBrTargetInstruction(offset, opCode, delta);
+                    return new InlineBrTargetInstruction(offset, opCode, ReadInt32(ref position));
                 }
             case OperandType.ShortInlineI:
                 {
                     // 8-bit integer: 001F  ldc.i4.s, FE12  unaligned.
-                    var int8 = ReadByte(ref position);
-                    return new ShortInlineIInstruction(offset, opCode, int8);
+                    return new ShortInlineIInstruction(offset, opCode, ReadByte(ref position));
                 }
             case OperandType.InlineI:
                 {
                     // 32-bit integer
-                    var int32 = ReadInt32(ref position);
-                    return new InlineIInstruction(offset, opCode, int32);
+                    return new InlineIInstruction(offset, opCode, ReadInt32(ref position));
                 }
             case OperandType.InlineI8:
                 {
                     // 64-bit integer
-                    var int64 = ReadInt64(ref position);
-                    return new InlineI8Instruction(offset, opCode, int64);
+                    return new InlineI8Instruction(offset, opCode, ReadInt64(ref position));
                 }
             case OperandType.ShortInlineR:
                 {
                     // 32-bit IEEE floating point number
-                    var float32 = ReadSingle(ref position);
-                    return new ShortInlineRInstruction(offset, opCode, float32);
+                    return new ShortInlineRInstruction(offset, opCode, ReadSingle(ref position));
                 }
             case OperandType.InlineR:
                 {
                     // 64-bit IEEE floating point number
-                    var float64 = ReadDouble(ref position);
-                    return new InlineRInstruction(offset, opCode, float64);
+                    return new InlineRInstruction(offset, opCode, ReadDouble(ref position));
                 }
             case OperandType.ShortInlineVar:
                 {
                     // 8-bit integer containing the ordinal of a local variable or an argument
-                    var index8 = ReadByte(ref position);
-                    return new ShortInlineVarInstruction(offset, opCode, index8);
+                    return new ShortInlineVarInstruction(offset, opCode, ReadByte(ref position));
                 }
             case OperandType.InlineVar:
                 {
                     // 16-bit integer containing the ordinal of a local variable or an argument
-                    var index16 = ReadUInt16(ref position);
-                    return new InlineVarInstruction(offset, opCode, index16);
+                    return new InlineVarInstruction(offset, opCode, ReadUInt16(ref position));
                 }
             case OperandType.InlineString:
                 {
                     // 32-bit metadata string token
-                    var token = ReadInt32(ref position);
-                    return new InlineStringInstruction(offset, opCode, token, _resolver);
+                    return new InlineStringInstruction(offset, opCode, ReadInt32(ref position), _resolver);
                 }
             case OperandType.InlineSig:
                 {
                     // 32-bit metadata signature token
-                    var token = ReadInt32(ref position);
-                    return new InlineSigInstruction(offset, opCode, token, _resolver);
+                    return new InlineSigInstruction(offset, opCode, ReadInt32(ref position), _resolver);
                 }
             case OperandType.InlineMethod:
                 {
                     // 32-bit metadata token
-                    var token = ReadInt32(ref position);
-                    return new InlineMethodInstruction(offset, opCode, token, _resolver);
+                    return new InlineMethodInstruction(offset, opCode, ReadInt32(ref position), _resolver);
                 }
             case OperandType.InlineField:
                 {
                     // 32-bit metadata token
-                    var token = ReadInt32(ref position);
-                    return new InlineFieldInstruction(_resolver, offset, opCode, token);
+                    return new InlineFieldInstruction(_resolver, offset, opCode, ReadInt32(ref position));
                 }
             case OperandType.InlineType:
                 {
                     // 32-bit metadata token
-                    var token = ReadInt32(ref position);
-                    return new InlineTypeInstruction(offset, opCode, token, _resolver);
+                    return new InlineTypeInstruction(offset, opCode, ReadInt32(ref position), _resolver);
                 }
             case OperandType.InlineTok:
                 {
                     // FieldRef, MethodRef, or TypeRef token
-                    var token = ReadInt32(ref position);
-                    return new InlineTokInstruction(offset, opCode, token, _resolver);
+                    return new InlineTokInstruction(offset, opCode, ReadInt32(ref position), _resolver);
                 }
             case OperandType.InlineSwitch:
                 {

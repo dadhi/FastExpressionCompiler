@@ -9083,6 +9083,28 @@ namespace FastExpressionCompiler
         internal static StringBuilder AppendLabelName(this StringBuilder sb, LabelTarget target, ref SmallList4<NamedWithIndex> named) =>
             sb.AppendName(target, target.Name, target.Type.ToCode(stripNamespace: true), ref named);
 
+        /// <summary>Returns the standard name (alias) for the well-known primitive type, e.g. Int16 -> short</summary>
+        public static string GetPrimitiveTypeNameAliasOrNull(this Type type) =>
+            Type.GetTypeCode(type) switch
+            {
+                TypeCode.Byte => "byte",
+                TypeCode.SByte => "sbyte",
+                TypeCode.Int16 => "short",
+                TypeCode.Int32 => "int",
+                TypeCode.Int64 => "long",
+                TypeCode.UInt16 => "ushort",
+                TypeCode.UInt32 => "uint",
+                TypeCode.UInt64 => "ulong",
+                TypeCode.Single => "float",
+                TypeCode.Double => "double",
+                TypeCode.Boolean => "bool",
+                TypeCode.Char => "char",
+                TypeCode.String => "string",
+                _ => type == typeof(void) ? "void" :
+                    type == typeof(object) ? "object" :
+                    null
+            };
+
         // todo: @simplify add `addTypeof = false` or use `AppendTypeOf` generally
         /// <summary>Converts the <paramref name="type"/> into the proper C# representation.</summary>
         public static string ToCode(this Type type,
@@ -9108,29 +9130,7 @@ namespace FastExpressionCompiler
                 type = type.GetElementType();
             }
 
-            // the default handling of the built-in types
-            string buildInTypeString = null;
-            if (type == typeof(void))
-                buildInTypeString = "void";
-            else if (type == typeof(object))
-                buildInTypeString = "object";
-            else if (type == typeof(bool))
-                buildInTypeString = "bool";
-            else if (type == typeof(int))
-                buildInTypeString = "int";
-            else if (type == typeof(short))
-                buildInTypeString = "short";
-            else if (type == typeof(byte))
-                buildInTypeString = "byte";
-            else if (type == typeof(double))
-                buildInTypeString = "double";
-            else if (type == typeof(float))
-                buildInTypeString = "float";
-            else if (type == typeof(char))
-                buildInTypeString = "char";
-            else if (type == typeof(string))
-                buildInTypeString = "string";
-
+            var buildInTypeString = type.GetPrimitiveTypeNameAliasOrNull();
             if (buildInTypeString != null)
             {
                 if (arrayType != null)
