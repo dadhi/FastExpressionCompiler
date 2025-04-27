@@ -1,11 +1,4 @@
-﻿// Control
-#if DEBUG
-#define PRINTIL
-#define PRINTCS
-#define PRINTEXPR
-#endif
-
-using System;
+﻿using System;
 using System.Linq;
 using System.Text;
 using System.Reflection;
@@ -32,6 +25,19 @@ using System.Linq.Expressions;
 [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode", Justification = "This is used for the testing purposes only.")]
 public static class TestTools
 {
+    public static bool AllowPrintIL = false;
+    public static bool AllowPrintCS = false;
+    public static bool AllowPrintExpression = false;
+
+    static TestTools()
+    {
+#if DEBUG
+        AllowPrintIL = true;
+        AllowPrintCS = true;
+        AllowPrintExpression = true;
+#endif
+    }
+
     public static void AssertOpCodes(this Delegate @delegate, params OpCode[] expectedCodes) =>
         AssertOpCodes(@delegate.Method, expectedCodes);
 
@@ -63,20 +69,19 @@ public static class TestTools
 
     public static void PrintExpression(this Expression expr, bool completeTypeNames = false)
     {
-#if PRINTEXPR
+        if (!AllowPrintExpression) return;
         Console.WriteLine(
             expr.ToExpressionString(out var _, out var _, out var _,
             stripNamespace: true,
             printType: completeTypeNames ? null : CodePrinter.PrintTypeStripOuterClasses,
             indentSpaces: 4)
         );
-#endif
     }
 
     public static void PrintCSharp(this Expression expr, bool completeTypeNames = false,
         [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "")
     {
-#if PRINTCS
+        if (!AllowPrintIL) return;
         Console.WriteLine();
         Console.WriteLine($"//{Path.GetFileNameWithoutExtension(filePath)}.{caller}");
 
@@ -89,52 +94,47 @@ public static class TestTools
             indentSpaces: 4);
         sb.Append(';');
         Console.WriteLine(sb.ToString());
-#endif
     }
 
     public static void PrintCSharp(this Expression expr, Func<string, string> transform,
         [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "")
     {
-#if PRINTCS
+        if (!AllowPrintCS) return;
         Console.WriteLine();
         Console.WriteLine($"//{Path.GetFileNameWithoutExtension(filePath)}.{caller}");
         Console.WriteLine(transform(expr.ToCSharpString()));
-#endif
     }
 
     public static void PrintCSharp(this Expression expr, CodePrinter.ObjectToCode objectToCode,
         [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "")
     {
-#if PRINTCS
+        if (!AllowPrintCS) return;
+
         Console.WriteLine();
         Console.WriteLine($"//{Path.GetFileNameWithoutExtension(filePath)}.{caller}");
         Console.WriteLine(expr.ToCSharpString(objectToCode));
-#endif
     }
 
     public static void PrintCSharp(this Expression expr, ref string result)
     {
-#if PRINTCS
+        if (!AllowPrintCS) return;
         Console.WriteLine(result = expr.ToCSharpString());
-#endif
     }
 
     public static void PrintIL(this Delegate @delegate, [CallerMemberName] string tag = null)
     {
-#if PRINTIL
+        if (!AllowPrintIL) return;
         @delegate.Method.PrintIL(tag);
-#endif
     }
 
     public static void PrintIL(this MethodInfo method, string tag = null)
     {
-#if PRINTIL
+        if (!AllowPrintIL) return;
         var s = new StringBuilder();
         s.Append(tag == null ? "<il>" : "<" + tag + ">").AppendLine();
         method.ToILString(s);
         s.AppendLine().Append(tag == null ? "</il>" : "</" + tag + ">");
         Console.WriteLine(s);
-#endif
     }
 }
 

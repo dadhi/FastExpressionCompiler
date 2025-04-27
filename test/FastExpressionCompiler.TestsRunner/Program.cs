@@ -9,7 +9,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            // new Issue55_CompileFast_crash_with_ref_parameter().Run();
+            new Issue55_CompileFast_crash_with_ref_parameter().Run();
 
             // todo: @wip add to FEC, check the possibility of the increment compilation and the artifacts reusability
             // new LightExpression.UnitTests.ConstantAndConversionTests().Run();
