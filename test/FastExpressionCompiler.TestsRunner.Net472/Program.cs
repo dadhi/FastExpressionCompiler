@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using FastExpressionCompiler.IssueTests;
 
@@ -19,31 +20,52 @@ namespace FastExpressionCompiler.UnitTests
 
         public static void RunTestsX()
         {
-            var issueTests = new TestRun();
+            var totalStopwatch = Stopwatch.StartNew();
 
             Console.WriteLine("""
 
-            ### TestX runs .NET Framework 4.72 UnitTests and IssueTests in ||
+            ### TestX runs on FEC tests (UnitTests and IssueTests) and FEC.LightExpression tests in ||
             """);
 
-            var sw = Stopwatch.StartNew();
+            var lightTestsStopwatch = Stopwatch.StartNew();
+            var lightTestsThread = new Thread(RunLightExpressionTests) { IsBackground = false, Name = "Tests - FEC.LightExpression" };
+            static void RunLightExpressionTests(object state)
+            {
+                var justLightTestsStopwatch = Stopwatch.StartNew();
 
-            // yeahh
-            issueTests.Run(new Issue183_NullableDecimal());
-            // issueTests.Run(new LightExpression.IssueTests.Issue183_NullableDecimal());
+                var t = (LightExpression.TestRun)state;
+                t.Run(new LightExpression.IssueTests.Issue183_NullableDecimal());
 
-            Console.WriteLine($"{Environment.NewLine}IssueTests X are passing in {sw.ElapsedMilliseconds} ms.");
+                Console.WriteLine($"Just LightExpression tests are passing in {justLightTestsStopwatch.ElapsedMilliseconds} ms.");
+            }
+            var lightTests = new LightExpression.TestRun();
+            lightTestsThread.Start(lightTests);
+
+
+            var fecTestsStopwatch = Stopwatch.StartNew();
+
+            var fecTests = new TestRun();
+            fecTests.Run(new Issue183_NullableDecimal());
+
+            Console.WriteLine($"FEC tests are passing in {fecTestsStopwatch.ElapsedMilliseconds} ms.");
+
+
+            var waitForLightStopwatch = Stopwatch.StartNew();
+            lightTestsThread.Join(); // wait for the light tests to finish
+            Console.WriteLine($"LightExpression tests + Thread New, Start, Join: {lightTestsStopwatch.ElapsedMilliseconds} ms.");
+            Console.WriteLine($"--> waited for the LightExpression tests to finish after FEC tests complete for {waitForLightStopwatch.ElapsedMilliseconds} ms.");
 
             Console.WriteLine();
-            if (issueTests.FailedTestCount > 0)
+            if (fecTests.FailedTestCount > 0 || lightTests.FailedTestCount > 0)
             {
-                Console.WriteLine("ERROR: Some tests X are FAILED!");
+                // todo: @wip output the failed tests
+                Console.WriteLine("ERROR: Some tests are FAILED!");
                 Environment.Exit(1); // exit with error
                 return;
             }
 
-            var totalTestCount = issueTests.TotalTestCount;
-            Console.WriteLine($"All {totalTestCount,-4} tests are passing in {sw.ElapsedMilliseconds} ms.");
+            var totalTestCount = fecTests.TotalTestCount + lightTests.TotalTestCount;
+            Console.WriteLine($"All {totalTestCount,-4} tests are passing in {totalStopwatch.ElapsedMilliseconds} ms.");
         }
 
         public static void RunAllTests()
