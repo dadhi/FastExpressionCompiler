@@ -194,108 +194,65 @@ public sealed class ILReader : IEnumerable<ILInstruction>
     private ILInstruction Next(ref int position)
     {
         var offset = position;
-        OpCode opCode;
 
         // read first 1 or 2 bytes as opCode
         var code = ReadByte(ref position);
-        if (code != 0xFE)
-        {
-            opCode = _oneByteOpCodes[code];
-        }
-        else
-        {
-            code = ReadByte(ref position);
-            opCode = _twoByteOpCodes[code];
-        }
+        var opCode = code != 0xFE
+            ? _oneByteOpCodes[code]
+            : _twoByteOpCodes[ReadByte(ref position)];
 
         switch (opCode.OperandType)
         {
             case OperandType.InlineNone:
-                {
-                    return new InlineNoneInstruction(offset, opCode);
-                }
+                return new InlineNoneInstruction(offset, opCode);
+            // 8-bit integer branch target
             case OperandType.ShortInlineBrTarget:
-                {
-                    // 8-bit integer branch target
-                    return new ShortInlineBrTargetInstruction(offset, opCode, ReadSByte(ref position));
-                }
+                return new ShortInlineBrTargetInstruction(offset, opCode, ReadSByte(ref position));
+            // 32-bit integer branch target
             case OperandType.InlineBrTarget:
-                {
-                    // 32-bit integer branch target
-                    return new InlineBrTargetInstruction(offset, opCode, ReadInt32(ref position));
-                }
+                return new InlineBrTargetInstruction(offset, opCode, ReadInt32(ref position));
+            // 8-bit integer: 001F  ldc.i4.s, FE12  unaligned.
             case OperandType.ShortInlineI:
-                {
-                    // 8-bit integer: 001F  ldc.i4.s, FE12  unaligned.
-                    return new ShortInlineIInstruction(offset, opCode, ReadByte(ref position));
-                }
+                return new ShortInlineIInstruction(offset, opCode, ReadByte(ref position));
+            // 32-bit integer
             case OperandType.InlineI:
-                {
-                    // 32-bit integer
-                    return new InlineIInstruction(offset, opCode, ReadInt32(ref position));
-                }
+                return new InlineIInstruction(offset, opCode, ReadInt32(ref position));
+            // 64-bit integer
             case OperandType.InlineI8:
-                {
-                    // 64-bit integer
-                    return new InlineI8Instruction(offset, opCode, ReadInt64(ref position));
-                }
+                return new InlineI8Instruction(offset, opCode, ReadInt64(ref position));
+            // 32-bit IEEE floating point number
             case OperandType.ShortInlineR:
-                {
-                    // 32-bit IEEE floating point number
-                    return new ShortInlineRInstruction(offset, opCode, ReadSingle(ref position));
-                }
+                return new ShortInlineRInstruction(offset, opCode, ReadSingle(ref position));
+            // 64-bit IEEE floating point number
             case OperandType.InlineR:
-                {
-                    // 64-bit IEEE floating point number
-                    return new InlineRInstruction(offset, opCode, ReadDouble(ref position));
-                }
+                return new InlineRInstruction(offset, opCode, ReadDouble(ref position));
+            // 8-bit integer containing the ordinal of a local variable or an argument
             case OperandType.ShortInlineVar:
-                {
-                    // 8-bit integer containing the ordinal of a local variable or an argument
-                    return new ShortInlineVarInstruction(offset, opCode, ReadByte(ref position));
-                }
+                return new ShortInlineVarInstruction(offset, opCode, ReadByte(ref position));
+            // 16-bit integer containing the ordinal of a local variable or an argument
             case OperandType.InlineVar:
-                {
-                    // 16-bit integer containing the ordinal of a local variable or an argument
-                    return new InlineVarInstruction(offset, opCode, ReadUInt16(ref position));
-                }
+                return new InlineVarInstruction(offset, opCode, ReadUInt16(ref position));
+            // 32-bit metadata string token
             case OperandType.InlineString:
-                {
-                    // 32-bit metadata string token
-                    return new InlineStringInstruction(offset, opCode, ReadInt32(ref position), _resolver);
-                }
+                return new InlineStringInstruction(offset, opCode, ReadInt32(ref position), _resolver);
+            // 32-bit metadata signature token
             case OperandType.InlineSig:
-                {
-                    // 32-bit metadata signature token
-                    return new InlineSigInstruction(offset, opCode, ReadInt32(ref position), _resolver);
-                }
+                return new InlineSigInstruction(offset, opCode, ReadInt32(ref position), _resolver);
+            // 32-bit metadata token
             case OperandType.InlineMethod:
-                {
-                    // 32-bit metadata token
-                    return new InlineMethodInstruction(offset, opCode, ReadInt32(ref position), _resolver);
-                }
+                return new InlineMethodInstruction(offset, opCode, ReadInt32(ref position), _resolver);
+            // 32-bit metadata token
             case OperandType.InlineField:
-                {
-                    // 32-bit metadata token
-                    return new InlineFieldInstruction(_resolver, offset, opCode, ReadInt32(ref position));
-                }
+                return new InlineFieldInstruction(_resolver, offset, opCode, ReadInt32(ref position));
+            // 32-bit metadata token
             case OperandType.InlineType:
-                {
-                    // 32-bit metadata token
-                    return new InlineTypeInstruction(offset, opCode, ReadInt32(ref position), _resolver);
-                }
+                return new InlineTypeInstruction(offset, opCode, ReadInt32(ref position), _resolver);
+            // FieldRef, MethodRef, or TypeRef token
             case OperandType.InlineTok:
-                {
-                    // FieldRef, MethodRef, or TypeRef token
-                    return new InlineTokInstruction(offset, opCode, ReadInt32(ref position), _resolver);
-                }
+                return new InlineTokInstruction(offset, opCode, ReadInt32(ref position), _resolver);
+            // 32-bit integer argument to a switch instruction
             case OperandType.InlineSwitch:
-                {
-                    // 32-bit integer argument to a switch instruction
-                    int[] deltas = ReadDeltas(ref position);
-                    return new InlineSwitchInstruction(offset, opCode, deltas);
-                }
-
+                return new InlineSwitchInstruction(offset, opCode, ReadDeltas(ref position));
             default:
                 throw new NotSupportedException($"Unsupported operand type: {opCode.OperandType}");
         }
@@ -314,7 +271,6 @@ public sealed class ILReader : IEnumerable<ILInstruction>
     {
         if (visitor == null)
             throw new ArgumentNullException(nameof(visitor));
-
         foreach (var instruction in this)
             instruction.Accept(visitor);
     }
@@ -385,27 +341,22 @@ public class InlineNoneInstruction : ILInstruction
 
 public class InlineBrTargetInstruction : ILInstruction
 {
+    public int Delta { get; }
+    public int TargetOffset => Offset + Delta + 1 + 4;
+
     internal InlineBrTargetInstruction(int offset, OpCode opCode, int delta)
         : base(offset, opCode) => Delta = delta;
-
-    public int Delta { get; }
-
-    public int TargetOffset => Offset + Delta + 1 + 4;
 
     public override void Accept(ILInstructionVisitor visitor) => visitor.VisitInlineBrTargetInstruction(this);
 }
 
 public class ShortInlineBrTargetInstruction : ILInstruction
 {
-    internal ShortInlineBrTargetInstruction(int offset, OpCode opCode, sbyte delta)
-        : base(offset, opCode)
-    {
-        Delta = delta;
-    }
-
     public sbyte Delta { get; }
-
     public int TargetOffset => Offset + Delta + 1 + 1;
+
+    internal ShortInlineBrTargetInstruction(int offset, OpCode opCode, sbyte delta)
+        : base(offset, opCode) => Delta = delta;
 
     public override void Accept(ILInstructionVisitor visitor) => visitor.VisitShortInlineBrTargetInstruction(this);
 }
@@ -441,50 +392,50 @@ public class InlineSwitchInstruction : ILInstruction
 
 public class InlineIInstruction : ILInstruction
 {
+    public int Int32 { get; }
+
     internal InlineIInstruction(int offset, OpCode opCode, int value)
         : base(offset, opCode) => Int32 = value;
-
-    public int Int32 { get; }
 
     public override void Accept(ILInstructionVisitor visitor) => visitor.VisitInlineIInstruction(this);
 }
 
 public class InlineI8Instruction : ILInstruction
 {
+    public long Int64 { get; }
+
     internal InlineI8Instruction(int offset, OpCode opCode, long value)
         : base(offset, opCode) => Int64 = value;
-
-    public long Int64 { get; }
 
     public override void Accept(ILInstructionVisitor visitor) => visitor.VisitInlineI8Instruction(this);
 }
 
 public class ShortInlineIInstruction : ILInstruction
 {
+    public byte Byte { get; }
+
     internal ShortInlineIInstruction(int offset, OpCode opCode, byte value)
         : base(offset, opCode) => Byte = value;
-
-    public byte Byte { get; }
 
     public override void Accept(ILInstructionVisitor visitor) => visitor.VisitShortInlineIInstruction(this);
 }
 
 public class InlineRInstruction : ILInstruction
 {
+    public double Double { get; }
+
     internal InlineRInstruction(int offset, OpCode opCode, double value)
         : base(offset, opCode) => Double = value;
-
-    public double Double { get; }
 
     public override void Accept(ILInstructionVisitor visitor) => visitor.VisitInlineRInstruction(this);
 }
 
 public class ShortInlineRInstruction : ILInstruction
 {
+    public float Single { get; }
+
     internal ShortInlineRInstruction(int offset, OpCode opCode, float value)
         : base(offset, opCode) => Single = value;
-
-    public float Single { get; }
 
     public override void Accept(ILInstructionVisitor visitor) => visitor.VisitShortInlineRInstruction(this);
 }
@@ -492,7 +443,10 @@ public class ShortInlineRInstruction : ILInstruction
 public class InlineFieldInstruction : ILInstruction
 {
     private readonly ITokenResolver _resolver;
+    public int Token { get; }
+
     private FieldInfo _field;
+    public FieldInfo Field => _field ??= _resolver.AsField(Token);
 
     internal InlineFieldInstruction(ITokenResolver resolver, int offset, OpCode opCode, int token)
         : base(offset, opCode)
@@ -501,17 +455,15 @@ public class InlineFieldInstruction : ILInstruction
         Token = token;
     }
 
-    public FieldInfo Field => _field ?? (_field = _resolver.AsField(Token));
-
-    public int Token { get; }
-
     public override void Accept(ILInstructionVisitor visitor) => visitor.VisitInlineFieldInstruction(this);
 }
 
 public class InlineMethodInstruction : ILInstruction
 {
     private readonly ITokenResolver _resolver;
+    public int Token { get; }
     private MethodBase _method;
+    public MethodBase Method => _method ??= _resolver.AsMethod(Token);
 
     internal InlineMethodInstruction(int offset, OpCode opCode, int token, ITokenResolver resolver)
         : base(offset, opCode)
@@ -520,17 +472,15 @@ public class InlineMethodInstruction : ILInstruction
         Token = token;
     }
 
-    public MethodBase Method => _method ?? (_method = _resolver.AsMethod(Token));
-
-    public int Token { get; }
-
     public override void Accept(ILInstructionVisitor visitor) => visitor.VisitInlineMethodInstruction(this);
 }
 
 public class InlineTypeInstruction : ILInstruction
 {
     private readonly ITokenResolver _resolver;
+    public int Token { get; }
     private Type _type;
+    public Type Type => _type ??= _resolver.AsType(Token);
 
     internal InlineTypeInstruction(int offset, OpCode opCode, int token, ITokenResolver resolver)
         : base(offset, opCode)
@@ -539,17 +489,15 @@ public class InlineTypeInstruction : ILInstruction
         Token = token;
     }
 
-    public Type Type => _type ??= _resolver.AsType(Token);
-
-    public int Token { get; }
-
     public override void Accept(ILInstructionVisitor visitor) => visitor.VisitInlineTypeInstruction(this);
 }
 
 public class InlineSigInstruction : ILInstruction
 {
     private readonly ITokenResolver _resolver;
+    public int Token { get; }
     private byte[] _signature;
+    public byte[] Signature => _signature ??= _resolver.AsSignature(Token);
 
     internal InlineSigInstruction(int offset, OpCode opCode, int token, ITokenResolver resolver)
         : base(offset, opCode)
@@ -558,17 +506,15 @@ public class InlineSigInstruction : ILInstruction
         Token = token;
     }
 
-    public byte[] Signature => _signature ??= _resolver.AsSignature(Token);
-
-    public int Token { get; }
-
     public override void Accept(ILInstructionVisitor visitor) => visitor.VisitInlineSigInstruction(this);
 }
 
 public class InlineTokInstruction : ILInstruction
 {
     private readonly ITokenResolver _resolver;
+    public int Token { get; }
     private MemberInfo _member;
+    public MemberInfo Member => _member ??= _resolver.AsMember(Token);
 
     internal InlineTokInstruction(int offset, OpCode opCode, int token, ITokenResolver resolver)
         : base(offset, opCode)
@@ -577,17 +523,15 @@ public class InlineTokInstruction : ILInstruction
         Token = token;
     }
 
-    public MemberInfo Member => _member ?? (_member = _resolver.AsMember(Token));
-
-    public int Token { get; }
-
     public override void Accept(ILInstructionVisitor visitor) => visitor.VisitInlineTokInstruction(this);
 }
 
 public class InlineStringInstruction : ILInstruction
 {
     private readonly ITokenResolver _resolver;
+    public int Token { get; }
     private string _string;
+    public string String => _string ??= _resolver.AsString(Token);
 
     internal InlineStringInstruction(int offset, OpCode opCode, int token, ITokenResolver resolver)
         : base(offset, opCode)
@@ -596,29 +540,25 @@ public class InlineStringInstruction : ILInstruction
         Token = token;
     }
 
-    public string String => _string ?? (_string = _resolver.AsString(Token));
-
-    public int Token { get; }
-
     public override void Accept(ILInstructionVisitor visitor) => visitor.VisitInlineStringInstruction(this);
 }
 
 public class InlineVarInstruction : ILInstruction
 {
+    public ushort Ordinal { get; }
+
     internal InlineVarInstruction(int offset, OpCode opCode, ushort ordinal)
         : base(offset, opCode) => Ordinal = ordinal;
-
-    public ushort Ordinal { get; }
 
     public override void Accept(ILInstructionVisitor visitor) => visitor.VisitInlineVarInstruction(this);
 }
 
 public class ShortInlineVarInstruction : ILInstruction
 {
+    public byte Ordinal { get; }
+
     internal ShortInlineVarInstruction(int offset, OpCode opCode, byte ordinal)
         : base(offset, opCode) => Ordinal = ordinal;
-
-    public byte Ordinal { get; }
 
     public override void Accept(ILInstructionVisitor visitor) => visitor.VisitShortInlineVarInstruction(this);
 }
@@ -652,7 +592,7 @@ public class MethodBaseILProvider : IILProvider
 
     public byte[] GetByteArray()
     {
-        return _byteArray ?? (_byteArray = _method.GetMethodBody()?.GetILAsByteArray() ?? new byte[0]);
+        return _byteArray ??= _method.GetMethodBody()?.GetILAsByteArray() ?? [];
     }
 }
 
@@ -681,10 +621,7 @@ public class DynamicMethodILProvider : IILProvider
     private readonly DynamicMethod _method;
     private byte[] _byteArray;
 
-    public DynamicMethodILProvider(DynamicMethod method)
-    {
-        _method = method;
-    }
+    public DynamicMethodILProvider(DynamicMethod method) => _method = method;
 
     public byte[] GetByteArray()
     {
@@ -693,7 +630,7 @@ public class DynamicMethodILProvider : IILProvider
             var ilgen = _method.GetILGenerator();
             try
             {
-                _byteArray = (byte[])_miBakeByteArray.Invoke(ilgen, null) ?? new byte[0];
+                _byteArray = (byte[])_miBakeByteArray.Invoke(ilgen, null) ?? [];
             }
             catch (TargetInvocationException)
             {
@@ -720,11 +657,9 @@ public interface IFormatProvider
 
 public class DefaultFormatProvider : IFormatProvider
 {
-    private DefaultFormatProvider()
-    {
-    }
+    private DefaultFormatProvider() { }
 
-    public static DefaultFormatProvider Instance { get; } = new DefaultFormatProvider();
+    public static readonly DefaultFormatProvider Instance = new();
 
     public virtual string Int32ToHex(int int32) => int32.ToString("X8");
     public virtual string Int16ToHex(int int16) => int16.ToString("X4");
@@ -795,16 +730,13 @@ public interface IILStringCollector
 
 public class ReadableILStringToTextWriter : IILStringCollector
 {
-    protected TextWriter writer;
+    protected TextWriter _writer;
 
-    public ReadableILStringToTextWriter(TextWriter writer)
-    {
-        this.writer = writer;
-    }
+    public ReadableILStringToTextWriter(TextWriter writer) => _writer = writer;
 
     public virtual void Process(ILInstruction ilInstruction, string operandString)
     {
-        writer.WriteLine("IL_{0:x4}: {1,-10} {2}",
+        _writer.WriteLine("IL_{0:x4}: {1,-10} {2}",
             ilInstruction.Offset,
             ilInstruction.OpCode.Name,
             operandString);
@@ -813,14 +745,11 @@ public class ReadableILStringToTextWriter : IILStringCollector
 
 public class RawILStringToTextWriter : ReadableILStringToTextWriter
 {
-    public RawILStringToTextWriter(TextWriter writer)
-        : base(writer)
-    {
-    }
+    public RawILStringToTextWriter(TextWriter writer) : base(writer) { }
 
     public override void Process(ILInstruction ilInstruction, string operandString)
     {
-        writer.WriteLine("IL_{0:x4}: {1,-4:x2}| {2, -8}",
+        _writer.WriteLine("IL_{0:x4}: {1,-4:x2}| {2, -8}",
             ilInstruction.Offset,
             ilInstruction.OpCode.Value,
             operandString);
@@ -829,94 +758,58 @@ public class RawILStringToTextWriter : ReadableILStringToTextWriter
 
 public abstract class ILInstructionVisitor
 {
-    public virtual void VisitInlineBrTargetInstruction(InlineBrTargetInstruction inlineBrTargetInstruction)
-    {
-    }
+    public virtual void VisitInlineBrTargetInstruction(InlineBrTargetInstruction inlineBrTargetInstruction) { }
 
-    public virtual void VisitInlineFieldInstruction(InlineFieldInstruction inlineFieldInstruction)
-    {
-    }
+    public virtual void VisitInlineFieldInstruction(InlineFieldInstruction inlineFieldInstruction) { }
 
-    public virtual void VisitInlineIInstruction(InlineIInstruction inlineIInstruction)
-    {
-    }
+    public virtual void VisitInlineIInstruction(InlineIInstruction inlineIInstruction) { }
 
-    public virtual void VisitInlineI8Instruction(InlineI8Instruction inlineI8Instruction)
-    {
-    }
+    public virtual void VisitInlineI8Instruction(InlineI8Instruction inlineI8Instruction) { }
 
-    public virtual void VisitInlineMethodInstruction(InlineMethodInstruction inlineMethodInstruction)
-    {
-    }
+    public virtual void VisitInlineMethodInstruction(InlineMethodInstruction inlineMethodInstruction) { }
 
-    public virtual void VisitInlineNoneInstruction(InlineNoneInstruction inlineNoneInstruction)
-    {
-    }
+    public virtual void VisitInlineNoneInstruction(InlineNoneInstruction inlineNoneInstruction) { }
 
-    public virtual void VisitInlineRInstruction(InlineRInstruction inlineRInstruction)
-    {
-    }
+    public virtual void VisitInlineRInstruction(InlineRInstruction inlineRInstruction) { }
 
-    public virtual void VisitInlineSigInstruction(InlineSigInstruction inlineSigInstruction)
-    {
-    }
+    public virtual void VisitInlineSigInstruction(InlineSigInstruction inlineSigInstruction) { }
 
-    public virtual void VisitInlineStringInstruction(InlineStringInstruction inlineStringInstruction)
-    {
-    }
+    public virtual void VisitInlineStringInstruction(InlineStringInstruction inlineStringInstruction) { }
 
-    public virtual void VisitInlineSwitchInstruction(InlineSwitchInstruction inlineSwitchInstruction)
-    {
-    }
+    public virtual void VisitInlineSwitchInstruction(InlineSwitchInstruction inlineSwitchInstruction) { }
 
-    public virtual void VisitInlineTokInstruction(InlineTokInstruction inlineTokInstruction)
-    {
-    }
+    public virtual void VisitInlineTokInstruction(InlineTokInstruction inlineTokInstruction) { }
 
-    public virtual void VisitInlineTypeInstruction(InlineTypeInstruction inlineTypeInstruction)
-    {
-    }
+    public virtual void VisitInlineTypeInstruction(InlineTypeInstruction inlineTypeInstruction) { }
 
-    public virtual void VisitInlineVarInstruction(InlineVarInstruction inlineVarInstruction)
-    {
-    }
+    public virtual void VisitInlineVarInstruction(InlineVarInstruction inlineVarInstruction) { }
 
-    public virtual void VisitShortInlineBrTargetInstruction(ShortInlineBrTargetInstruction shortInlineBrTargetInstruction)
-    {
-    }
+    public virtual void VisitShortInlineBrTargetInstruction(ShortInlineBrTargetInstruction shortInlineBrTargetInstruction) { }
 
-    public virtual void VisitShortInlineIInstruction(ShortInlineIInstruction shortInlineIInstruction)
-    {
-    }
+    public virtual void VisitShortInlineIInstruction(ShortInlineIInstruction shortInlineIInstruction) { }
 
-    public virtual void VisitShortInlineRInstruction(ShortInlineRInstruction shortInlineRInstruction)
-    {
-    }
+    public virtual void VisitShortInlineRInstruction(ShortInlineRInstruction shortInlineRInstruction) { }
 
-    public virtual void VisitShortInlineVarInstruction(ShortInlineVarInstruction shortInlineVarInstruction)
-    {
-    }
+    public virtual void VisitShortInlineVarInstruction(ShortInlineVarInstruction shortInlineVarInstruction) { }
 }
 
 public class ReadableILStringVisitor : ILInstructionVisitor
 {
-    protected IFormatProvider formatProvider;
-    protected IILStringCollector collector;
+    protected IFormatProvider _formatProvider;
+    protected IILStringCollector _collector;
 
     public ReadableILStringVisitor(IILStringCollector collector)
-        : this(collector, DefaultFormatProvider.Instance)
-    {
-    }
+        : this(collector, DefaultFormatProvider.Instance) { }
 
     public ReadableILStringVisitor(IILStringCollector collector, IFormatProvider formatProvider)
     {
-        this.formatProvider = formatProvider;
-        this.collector = collector;
+        _formatProvider = formatProvider;
+        _collector = collector;
     }
 
     public override void VisitInlineBrTargetInstruction(InlineBrTargetInstruction inlineBrTargetInstruction)
     {
-        collector.Process(inlineBrTargetInstruction, formatProvider.Label(inlineBrTargetInstruction.TargetOffset));
+        _collector.Process(inlineBrTargetInstruction, _formatProvider.Label(inlineBrTargetInstruction.TargetOffset));
     }
 
     public override void VisitInlineFieldInstruction(InlineFieldInstruction inlineFieldInstruction)
@@ -930,17 +823,17 @@ public class ReadableILStringVisitor : ILInstructionVisitor
         {
             field = "!" + ex.Message + "!";
         }
-        collector.Process(inlineFieldInstruction, field);
+        _collector.Process(inlineFieldInstruction, field);
     }
 
     public override void VisitInlineIInstruction(InlineIInstruction inlineIInstruction)
     {
-        collector.Process(inlineIInstruction, inlineIInstruction.Int32.ToString());
+        _collector.Process(inlineIInstruction, inlineIInstruction.Int32.ToString());
     }
 
     public override void VisitInlineI8Instruction(InlineI8Instruction inlineI8Instruction)
     {
-        collector.Process(inlineI8Instruction, inlineI8Instruction.Int64.ToString());
+        _collector.Process(inlineI8Instruction, inlineI8Instruction.Int64.ToString());
     }
 
     public override void VisitInlineMethodInstruction(InlineMethodInstruction inlineMethodInstruction)
@@ -954,32 +847,32 @@ public class ReadableILStringVisitor : ILInstructionVisitor
         {
             method = "!" + ex.Message + "!";
         }
-        collector.Process(inlineMethodInstruction, method);
+        _collector.Process(inlineMethodInstruction, method);
     }
 
     public override void VisitInlineNoneInstruction(InlineNoneInstruction inlineNoneInstruction)
     {
-        collector.Process(inlineNoneInstruction, string.Empty);
+        _collector.Process(inlineNoneInstruction, string.Empty);
     }
 
     public override void VisitInlineRInstruction(InlineRInstruction inlineRInstruction)
     {
-        collector.Process(inlineRInstruction, inlineRInstruction.Double.ToString());
+        _collector.Process(inlineRInstruction, inlineRInstruction.Double.ToString());
     }
 
     public override void VisitInlineSigInstruction(InlineSigInstruction inlineSigInstruction)
     {
-        collector.Process(inlineSigInstruction, formatProvider.SigByteArrayToString(inlineSigInstruction.Signature));
+        _collector.Process(inlineSigInstruction, _formatProvider.SigByteArrayToString(inlineSigInstruction.Signature));
     }
 
     public override void VisitInlineStringInstruction(InlineStringInstruction inlineStringInstruction)
     {
-        collector.Process(inlineStringInstruction, formatProvider.EscapedString(inlineStringInstruction.String));
+        _collector.Process(inlineStringInstruction, _formatProvider.EscapedString(inlineStringInstruction.String));
     }
 
     public override void VisitInlineSwitchInstruction(InlineSwitchInstruction inlineSwitchInstruction)
     {
-        collector.Process(inlineSwitchInstruction, formatProvider.MultipleLabels(inlineSwitchInstruction.TargetOffsets));
+        _collector.Process(inlineSwitchInstruction, _formatProvider.MultipleLabels(inlineSwitchInstruction.TargetOffsets));
     }
 
     public override void VisitInlineTokInstruction(InlineTokInstruction inlineTokInstruction)
@@ -993,7 +886,7 @@ public class ReadableILStringVisitor : ILInstructionVisitor
         {
             member = "!" + ex.Message + "!";
         }
-        collector.Process(inlineTokInstruction, member);
+        _collector.Process(inlineTokInstruction, member);
     }
 
     public override void VisitInlineTypeInstruction(InlineTypeInstruction inlineTypeInstruction)
@@ -1007,100 +900,96 @@ public class ReadableILStringVisitor : ILInstructionVisitor
         {
             type = "!" + ex.Message + "!";
         }
-        collector.Process(inlineTypeInstruction, type);
+        _collector.Process(inlineTypeInstruction, type);
     }
 
     public override void VisitInlineVarInstruction(InlineVarInstruction inlineVarInstruction)
     {
-        collector.Process(inlineVarInstruction, formatProvider.Argument(inlineVarInstruction.Ordinal));
+        _collector.Process(inlineVarInstruction, _formatProvider.Argument(inlineVarInstruction.Ordinal));
     }
 
     public override void VisitShortInlineBrTargetInstruction(ShortInlineBrTargetInstruction shortInlineBrTargetInstruction)
     {
-        collector.Process(shortInlineBrTargetInstruction, formatProvider.Label(shortInlineBrTargetInstruction.TargetOffset));
+        _collector.Process(shortInlineBrTargetInstruction, _formatProvider.Label(shortInlineBrTargetInstruction.TargetOffset));
     }
 
     public override void VisitShortInlineIInstruction(ShortInlineIInstruction shortInlineIInstruction)
     {
-        collector.Process(shortInlineIInstruction, shortInlineIInstruction.Byte.ToString());
+        _collector.Process(shortInlineIInstruction, shortInlineIInstruction.Byte.ToString());
     }
 
     public override void VisitShortInlineRInstruction(ShortInlineRInstruction shortInlineRInstruction)
     {
-        collector.Process(shortInlineRInstruction, shortInlineRInstruction.Single.ToString());
+        _collector.Process(shortInlineRInstruction, shortInlineRInstruction.Single.ToString());
     }
 
     public override void VisitShortInlineVarInstruction(ShortInlineVarInstruction shortInlineVarInstruction)
     {
-        collector.Process(shortInlineVarInstruction, formatProvider.Argument(shortInlineVarInstruction.Ordinal));
+        _collector.Process(shortInlineVarInstruction, _formatProvider.Argument(shortInlineVarInstruction.Ordinal));
     }
 }
 
 public class RawILStringVisitor : ReadableILStringVisitor
 {
     public RawILStringVisitor(IILStringCollector collector)
-        : this(collector, DefaultFormatProvider.Instance)
-    {
-    }
+        : this(collector, DefaultFormatProvider.Instance) { }
 
     public RawILStringVisitor(IILStringCollector collector, IFormatProvider formatProvider)
-        : base(collector, formatProvider)
-    {
-    }
+        : base(collector, formatProvider) { }
 
     public override void VisitInlineBrTargetInstruction(InlineBrTargetInstruction inlineBrTargetInstruction)
     {
-        collector.Process(inlineBrTargetInstruction, formatProvider.Int32ToHex(inlineBrTargetInstruction.Delta));
+        _collector.Process(inlineBrTargetInstruction, _formatProvider.Int32ToHex(inlineBrTargetInstruction.Delta));
     }
 
     public override void VisitInlineFieldInstruction(InlineFieldInstruction inlineFieldInstruction)
     {
-        collector.Process(inlineFieldInstruction, formatProvider.Int32ToHex(inlineFieldInstruction.Token));
+        _collector.Process(inlineFieldInstruction, _formatProvider.Int32ToHex(inlineFieldInstruction.Token));
     }
 
     public override void VisitInlineMethodInstruction(InlineMethodInstruction inlineMethodInstruction)
     {
-        collector.Process(inlineMethodInstruction, formatProvider.Int32ToHex(inlineMethodInstruction.Token));
+        _collector.Process(inlineMethodInstruction, _formatProvider.Int32ToHex(inlineMethodInstruction.Token));
     }
 
     public override void VisitInlineSigInstruction(InlineSigInstruction inlineSigInstruction)
     {
-        collector.Process(inlineSigInstruction, formatProvider.Int32ToHex(inlineSigInstruction.Token));
+        _collector.Process(inlineSigInstruction, _formatProvider.Int32ToHex(inlineSigInstruction.Token));
     }
 
     public override void VisitInlineStringInstruction(InlineStringInstruction inlineStringInstruction)
     {
-        collector.Process(inlineStringInstruction, formatProvider.Int32ToHex(inlineStringInstruction.Token));
+        _collector.Process(inlineStringInstruction, _formatProvider.Int32ToHex(inlineStringInstruction.Token));
     }
 
     public override void VisitInlineSwitchInstruction(InlineSwitchInstruction inlineSwitchInstruction)
     {
-        collector.Process(inlineSwitchInstruction, "...");
+        _collector.Process(inlineSwitchInstruction, "...");
     }
 
     public override void VisitInlineTokInstruction(InlineTokInstruction inlineTokInstruction)
     {
-        collector.Process(inlineTokInstruction, formatProvider.Int32ToHex(inlineTokInstruction.Token));
+        _collector.Process(inlineTokInstruction, _formatProvider.Int32ToHex(inlineTokInstruction.Token));
     }
 
     public override void VisitInlineTypeInstruction(InlineTypeInstruction inlineTypeInstruction)
     {
-        collector.Process(inlineTypeInstruction, formatProvider.Int32ToHex(inlineTypeInstruction.Token));
+        _collector.Process(inlineTypeInstruction, _formatProvider.Int32ToHex(inlineTypeInstruction.Token));
     }
 
     public override void VisitInlineVarInstruction(InlineVarInstruction inlineVarInstruction)
     {
-        collector.Process(inlineVarInstruction, formatProvider.Int16ToHex(inlineVarInstruction.Ordinal));
+        _collector.Process(inlineVarInstruction, _formatProvider.Int16ToHex(inlineVarInstruction.Ordinal));
     }
 
     public override void VisitShortInlineBrTargetInstruction(ShortInlineBrTargetInstruction shortInlineBrTargetInstruction)
     {
-        collector.Process(shortInlineBrTargetInstruction, formatProvider.Int8ToHex(shortInlineBrTargetInstruction.Delta));
+        _collector.Process(shortInlineBrTargetInstruction, _formatProvider.Int8ToHex(shortInlineBrTargetInstruction.Delta));
     }
 
     public override void VisitShortInlineVarInstruction(ShortInlineVarInstruction shortInlineVarInstruction)
     {
-        collector.Process(shortInlineVarInstruction, formatProvider.Int8ToHex(shortInlineVarInstruction.Ordinal));
+        _collector.Process(shortInlineVarInstruction, _formatProvider.Int8ToHex(shortInlineVarInstruction.Ordinal));
     }
 }
 
@@ -1125,7 +1014,7 @@ public class ModuleScopeTokenResolver : ITokenResolver
     {
         _module = method.Module;
         _methodContext = method is ConstructorInfo ? null : method.GetGenericArguments();
-        _typeContext = method.DeclaringType == null ? null : method.DeclaringType.GetGenericArguments();
+        _typeContext = method.DeclaringType?.GetGenericArguments();
     }
 
     public MethodBase AsMethod(int token) => _module.ResolveMethod(token, _typeContext, _methodContext);
@@ -1179,7 +1068,7 @@ internal class DynamicScopeTokenResolver : ITokenResolver
 
     private readonly object _scope;
 
-    private object this[int token] => _indexer.GetValue(_scope, new object[] { token });
+    private object this[int token] => _indexer.GetValue(_scope, [token]);
 
     public DynamicScopeTokenResolver(DynamicMethod dm)
     {
