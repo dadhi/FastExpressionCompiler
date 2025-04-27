@@ -79,10 +79,6 @@
         <IsTrimmable>true</IsTrimmable>
     </PropertyGroup>
 
-    <ItemGroup>
-        <ProjectReference Include="..\FastExpressionCompiler.ILDecoder\FastExpressionCompiler.ILDecoder.csproj" />
-    </ItemGroup>
-
     <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
         <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.7.0"/>
     </ItemGroup>

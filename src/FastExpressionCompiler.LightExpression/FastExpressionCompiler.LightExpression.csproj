@@ -85,11 +85,8 @@
     <ItemGroup>
         <Compile Include="..\FastExpressionCompiler\FastExpressionCompiler.cs"/>
         <Compile Include="..\FastExpressionCompiler\ImTools.cs"/>
+        <Compile Include="..\FastExpressionCompiler\ILReader.cs"/>
         <Compile Include="..\FastExpressionCompiler\TestTools.cs"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <ProjectReference Include="..\FastExpressionCompiler.ILDecoder\FastExpressionCompiler.ILDecoder.csproj" />
     </ItemGroup>
 
     <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">

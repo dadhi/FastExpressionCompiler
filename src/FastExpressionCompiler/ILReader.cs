@@ -8,9 +8,17 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
+using System.Diagnostics.CodeAnalysis;
 
+#if LIGHT_EXPRESSION
+namespace FastExpressionCompiler.LightExpression.ILDecoder;
+#else
 namespace FastExpressionCompiler.ILDecoder;
+#endif
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
+[UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Uses reflection on internal types and is not trim-compatible.")]
 public static class ILReaderFactory
 {
     private static readonly Type _runtimeMethodInfoType = Type.GetType("System.Reflection.RuntimeMethodInfo");
@@ -31,14 +39,14 @@ public static class ILReaderFactory
 #if DEBUG_INTERNALS
         Console.WriteLine($"sourceType: {sourceType}");
         Console.WriteLine($"dynamicMethod >= NET8: {(dynamicMethod?.ToString() ?? "null")}");
-        Console.WriteLine($"_runtimeMethodInfoType: {_runtimeMethodInfoType},\n_runtimeConstructorInfoType: {_runtimeConstructorInfoType} ");
+        Console.WriteLine($"m_runtimeMethodInfoType: {_runtimeMethodInfoType},\n_runtimeConstructorInfoType: {_runtimeConstructorInfoType} ");
 #endif
 
 #if !NET8_0_OR_GREATER
         if (dynamicMethod == null && sourceType == _rtDynamicMethodType)
             dynamicMethod = (DynamicMethod)_fiOwner.GetValue(source);
 #if DEBUG_INTERNALS
-        Console.WriteLine($"_rtDynamicMethodType: {_rtDynamicMethodType}, _fiOwner: {_fiOwner}");
+        Console.WriteLine($"m_rtDynamicMethodType: {_rtDynamicMethodType}, _fiOwner: {_fiOwner}");
         Console.WriteLine($"dynamicMethod < NET8: {(dynamicMethod?.ToString() ?? "null")}");
 #endif
 #endif
@@ -58,7 +66,7 @@ public static class ILReaderFactory
     {
         if (method is null) throw new ArgumentNullException(nameof(method));
 
-        s = s ?? new StringBuilder();
+        s ??= new StringBuilder();
 
         var ilReader = Create(method);
 
@@ -137,166 +145,10 @@ public static class ILReaderFactory
     }
 
     public static StringBuilder AppendTypeName(this StringBuilder sb, Type type) =>
-        type == null ? sb : sb.Append(type.TypeToCode(true));
-
-    public static string TypeToCode(this Type type,
-        bool stripNamespace = false, Func<Type, string, string> printType = null, bool printGenericTypeArgs = true)
-    {
-        if (type.IsGenericParameter)
-            return !printGenericTypeArgs ? string.Empty : (printType?.Invoke(type, type.Name) ?? type.Name);
-
-        if (Nullable.GetUnderlyingType(type) is Type nullableElementType && !type.IsGenericTypeDefinition)
-        {
-            var result = nullableElementType.TypeToCode(stripNamespace, printType, printGenericTypeArgs) + "?";
-            return printType?.Invoke(type, result) ?? result;
-        }
-
-        Type arrayType = null;
-        if (type.IsArray)
-        {
-            // store the original type for the later and process its element type further here
-            arrayType = type;
-            type = type.GetElementType();
-        }
-
-        // the default handling of the built-in types
-        string buildInTypeString = null;
-        if (type == typeof(void))
-            buildInTypeString = "void";
-        else if (type == typeof(object))
-            buildInTypeString = "object";
-        else if (type == typeof(bool))
-            buildInTypeString = "bool";
-        else if (type == typeof(int))
-            buildInTypeString = "int";
-        else if (type == typeof(short))
-            buildInTypeString = "short";
-        else if (type == typeof(byte))
-            buildInTypeString = "byte";
-        else if (type == typeof(double))
-            buildInTypeString = "double";
-        else if (type == typeof(float))
-            buildInTypeString = "float";
-        else if (type == typeof(char))
-            buildInTypeString = "char";
-        else if (type == typeof(string))
-            buildInTypeString = "string";
-
-        if (buildInTypeString != null)
-        {
-            if (arrayType != null)
-                buildInTypeString += "[]";
-            return printType?.Invoke(arrayType ?? type, buildInTypeString) ?? buildInTypeString;
-        }
-
-        var parentCount = 0;
-        for (var ti = type.GetTypeInfo(); ti.IsNested; ti = ti.DeclaringType.GetTypeInfo())
-            ++parentCount;
-
-        Type[] parentTypes = null;
-        if (parentCount > 0)
-        {
-            parentTypes = new Type[parentCount];
-            var pt = type.DeclaringType;
-            for (var i = 0; i < parentTypes.Length; i++, pt = pt.DeclaringType)
-                parentTypes[i] = pt;
-        }
-
-        var typeInfo = type.GetTypeInfo();
-        Type[] typeArgs = null;
-        var isTypeClosedGeneric = false;
-        if (type.IsGenericType)
-        {
-            isTypeClosedGeneric = !typeInfo.IsGenericTypeDefinition;
-            typeArgs = isTypeClosedGeneric ? typeInfo.GenericTypeArguments : typeInfo.GenericTypeParameters;
-        }
-
-        var typeArgsConsumedByParentsCount = 0;
-        var s = new StringBuilder();
-        if (!stripNamespace && !string.IsNullOrEmpty(type.Namespace)) // for the auto-generated classes Namespace may be empty and in general it may be empty
-            s.Append(type.Namespace).Append('.');
-
-        if (parentTypes != null)
-        {
-            for (var p = parentTypes.Length - 1; p >= 0; --p)
-            {
-                var parentType = parentTypes[p];
-                if (!parentType.IsGenericType)
-                {
-                    s.Append(parentType.Name).Append('.');
-                }
-                else
-                {
-                    var parentTypeInfo = parentType.GetTypeInfo();
-                    Type[] parentTypeArgs = null;
-                    if (parentTypeInfo.IsGenericTypeDefinition)
-                    {
-                        parentTypeArgs = parentTypeInfo.GenericTypeParameters;
-
-                        // replace the open parent args with the closed child args,
-                        // and close the parent
-                        if (isTypeClosedGeneric)
-                            for (var t = 0; t < parentTypeArgs.Length; ++t)
-                                parentTypeArgs[t] = typeArgs[t];
-
-                        var parentTypeArgCount = parentTypeArgs.Length;
-                        if (typeArgsConsumedByParentsCount > 0)
-                        {
-                            int ownArgCount = parentTypeArgCount - typeArgsConsumedByParentsCount;
-                            if (ownArgCount == 0)
-                                parentTypeArgs = null;
-                            else
-                            {
-                                var ownArgs = new Type[ownArgCount];
-                                for (var a = 0; a < ownArgs.Length; ++a)
-                                    ownArgs[a] = parentTypeArgs[a + typeArgsConsumedByParentsCount];
-                                parentTypeArgs = ownArgs;
-                            }
-                        }
-                        typeArgsConsumedByParentsCount = parentTypeArgCount;
-                    }
-                    else
-                    {
-                        parentTypeArgs = parentTypeInfo.GenericTypeArguments;
-                    }
-
-                    var parentTickIndex = parentType.Name.IndexOf('`');
-                    s.Append(parentType.Name.Substring(0, parentTickIndex));
-
-                    // The owned parentTypeArgs maybe empty because all args are defined in the parent's parents
-                    if (parentTypeArgs?.Length > 0)
-                    {
-                        s.Append('<');
-                        for (var t = 0; t < parentTypeArgs.Length; ++t)
-                            (t == 0 ? s : s.Append(", ")).Append(parentTypeArgs[t].TypeToCode(stripNamespace, printType, printGenericTypeArgs));
-                        s.Append('>');
-                    }
-                    s.Append('.');
-                }
-            }
-        }
-        var name = type.Name.TrimStart('<', '>').TrimEnd('&');
-
-        if (typeArgs != null && typeArgsConsumedByParentsCount < typeArgs.Length)
-        {
-            var tickIndex = name.IndexOf('`');
-            s.Append(name.Substring(0, tickIndex)).Append('<');
-            for (var i = 0; i < typeArgs.Length - typeArgsConsumedByParentsCount; ++i)
-                (i == 0 ? s : s.Append(", ")).Append(typeArgs[i + typeArgsConsumedByParentsCount].TypeToCode(stripNamespace, printType, printGenericTypeArgs));
-            s.Append('>');
-        }
-        else
-        {
-            s.Append(name);
-        }
-
-        if (arrayType != null)
-            s.Append("[]");
-
-        return printType?.Invoke(arrayType ?? type, s.ToString()) ?? s.ToString();
-    }
+        sb.Append(type.ToCode(stripNamespace: true));
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Uses reflection on internal types and is not trim-compatible.")]
 public sealed class ILReader : IEnumerable<ILInstruction>
 {
     private static readonly OpCode[] _oneByteOpCodes = new OpCode[0x100];
@@ -560,27 +412,27 @@ public class ShortInlineBrTargetInstruction : ILInstruction
 
 public class InlineSwitchInstruction : ILInstruction
 {
-    private readonly int[] m_deltas;
-    private int[] m_targetOffsets;
+    private readonly int[] _deltas;
+    private int[] _targetOffsets;
 
     internal InlineSwitchInstruction(int offset, OpCode opCode, int[] deltas)
-        : base(offset, opCode) => m_deltas = deltas;
+        : base(offset, opCode) => _deltas = deltas;
 
-    public int[] Deltas => (int[])m_deltas.Clone();
+    public int[] Deltas => (int[])_deltas.Clone();
 
     public int[] TargetOffsets
     {
         get
         {
-            if (m_targetOffsets == null)
+            if (_targetOffsets == null)
             {
-                var cases = m_deltas.Length;
+                var cases = _deltas.Length;
                 var itself = 1 + 4 + 4 * cases;
-                m_targetOffsets = new int[cases];
+                _targetOffsets = new int[cases];
                 for (var i = 0; i < cases; i++)
-                    m_targetOffsets[i] = Offset + m_deltas[i] + itself;
+                    _targetOffsets[i] = Offset + _deltas[i] + itself;
             }
-            return m_targetOffsets;
+            return _targetOffsets;
         }
     }
 
@@ -639,17 +491,17 @@ public class ShortInlineRInstruction : ILInstruction
 
 public class InlineFieldInstruction : ILInstruction
 {
-    private readonly ITokenResolver m_resolver;
-    private FieldInfo m_field;
+    private readonly ITokenResolver _resolver;
+    private FieldInfo _field;
 
     internal InlineFieldInstruction(ITokenResolver resolver, int offset, OpCode opCode, int token)
         : base(offset, opCode)
     {
-        m_resolver = resolver;
+        _resolver = resolver;
         Token = token;
     }
 
-    public FieldInfo Field => m_field ?? (m_field = m_resolver.AsField(Token));
+    public FieldInfo Field => _field ?? (_field = _resolver.AsField(Token));
 
     public int Token { get; }
 
@@ -658,17 +510,17 @@ public class InlineFieldInstruction : ILInstruction
 
 public class InlineMethodInstruction : ILInstruction
 {
-    private readonly ITokenResolver m_resolver;
-    private MethodBase m_method;
+    private readonly ITokenResolver _resolver;
+    private MethodBase _method;
 
     internal InlineMethodInstruction(int offset, OpCode opCode, int token, ITokenResolver resolver)
         : base(offset, opCode)
     {
-        m_resolver = resolver;
+        _resolver = resolver;
         Token = token;
     }
 
-    public MethodBase Method => m_method ?? (m_method = m_resolver.AsMethod(Token));
+    public MethodBase Method => _method ?? (_method = _resolver.AsMethod(Token));
 
     public int Token { get; }
 
@@ -677,17 +529,17 @@ public class InlineMethodInstruction : ILInstruction
 
 public class InlineTypeInstruction : ILInstruction
 {
-    private readonly ITokenResolver m_resolver;
-    private Type m_type;
+    private readonly ITokenResolver _resolver;
+    private Type _type;
 
     internal InlineTypeInstruction(int offset, OpCode opCode, int token, ITokenResolver resolver)
         : base(offset, opCode)
     {
-        m_resolver = resolver;
+        _resolver = resolver;
         Token = token;
     }
 
-    public Type Type => m_type ?? (m_type = m_resolver.AsType(Token));
+    public Type Type => _type ??= _resolver.AsType(Token);
 
     public int Token { get; }
 
@@ -696,17 +548,17 @@ public class InlineTypeInstruction : ILInstruction
 
 public class InlineSigInstruction : ILInstruction
 {
-    private readonly ITokenResolver m_resolver;
-    private byte[] m_signature;
+    private readonly ITokenResolver _resolver;
+    private byte[] _signature;
 
     internal InlineSigInstruction(int offset, OpCode opCode, int token, ITokenResolver resolver)
         : base(offset, opCode)
     {
-        m_resolver = resolver;
+        _resolver = resolver;
         Token = token;
     }
 
-    public byte[] Signature => m_signature ?? (m_signature = m_resolver.AsSignature(Token));
+    public byte[] Signature => _signature ??= _resolver.AsSignature(Token);
 
     public int Token { get; }
 
@@ -715,17 +567,17 @@ public class InlineSigInstruction : ILInstruction
 
 public class InlineTokInstruction : ILInstruction
 {
-    private readonly ITokenResolver m_resolver;
-    private MemberInfo m_member;
+    private readonly ITokenResolver _resolver;
+    private MemberInfo _member;
 
     internal InlineTokInstruction(int offset, OpCode opCode, int token, ITokenResolver resolver)
         : base(offset, opCode)
     {
-        m_resolver = resolver;
+        _resolver = resolver;
         Token = token;
     }
 
-    public MemberInfo Member => m_member ?? (m_member = m_resolver.AsMember(Token));
+    public MemberInfo Member => _member ?? (_member = _resolver.AsMember(Token));
 
     public int Token { get; }
 
@@ -734,17 +586,17 @@ public class InlineTokInstruction : ILInstruction
 
 public class InlineStringInstruction : ILInstruction
 {
-    private readonly ITokenResolver m_resolver;
-    private string m_string;
+    private readonly ITokenResolver _resolver;
+    private string _string;
 
     internal InlineStringInstruction(int offset, OpCode opCode, int token, ITokenResolver resolver)
         : base(offset, opCode)
     {
-        m_resolver = resolver;
+        _resolver = resolver;
         Token = token;
     }
 
-    public string String => m_string ?? (m_string = m_resolver.AsString(Token));
+    public string String => _string ?? (_string = _resolver.AsString(Token));
 
     public int Token { get; }
 
@@ -776,13 +628,14 @@ public interface IILProvider
     byte[] GetByteArray();
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Uses reflection on internal types and is not trim-compatible.")]
 public class MethodBaseILProvider : IILProvider
 {
-    private static readonly Type s_runtimeMethodInfoType = Type.GetType("System.Reflection.RuntimeMethodInfo");
-    private static readonly Type s_runtimeConstructorInfoType = Type.GetType("System.Reflection.RuntimeConstructorInfo");
+    private static readonly Type _runtimeMethodInfoType = Type.GetType("System.Reflection.RuntimeMethodInfo");
+    private static readonly Type _runtimeConstructorInfoType = Type.GetType("System.Reflection.RuntimeConstructorInfo");
 
-    private readonly MethodBase m_method;
-    private byte[] m_byteArray;
+    private readonly MethodBase _method;
+    private byte[] _byteArray;
 
     public MethodBaseILProvider(MethodBase method)
     {
@@ -791,18 +644,23 @@ public class MethodBaseILProvider : IILProvider
 
         var methodType = method.GetType();
 
-        if (methodType != s_runtimeMethodInfoType && methodType != s_runtimeConstructorInfoType)
+        if (methodType != _runtimeMethodInfoType && methodType != _runtimeConstructorInfoType)
             throw new ArgumentException("Must have type RuntimeMethodInfo or RuntimeConstructorInfo.", nameof(method));
 
-        m_method = method;
+        _method = method;
     }
 
     public byte[] GetByteArray()
     {
-        return m_byteArray ?? (m_byteArray = m_method.GetMethodBody()?.GetILAsByteArray() ?? new byte[0]);
+        return _byteArray ?? (_byteArray = _method.GetMethodBody()?.GetILAsByteArray() ?? new byte[0]);
     }
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Uses reflection on internal types and is not trim-compatible.")]
+[UnconditionalSuppressMessage("Trimming", "IL2070:Method expects parameter 'type' to be dynamically accessible. The type obtained via 'Type.GetType' is not known statically.", Justification = "Uses reflection on internal types and is not trim-compatible.")]
+[UnconditionalSuppressMessage("Trimming", "IL2080:'this' argument does not satisfy 'DynamicallyAccessedMemberTypes' in call to 'target method'. The field/type does not have matching annotations.", Justification = "Uses reflection on internal types and is not trim-compatible.")]
+[UnconditionalSuppressMessage("Trimming", "IL2067:Target parameter argument does not satisfy 'DynamicallyAccessedMembersAttribute' requirements.", Justification = "Uses reflection on internal types and is not trim-compatible.")]
+[UnconditionalSuppressMessage("Trimming", "IL2069:Target parameter argument does not satisfy 'DynamicallyAccessedMembersAttribute' requirements.", Justification = "Uses reflection on internal types and is not trim-compatible.")]
 public class DynamicMethodILProvider : IILProvider
 {
 #if !NET8_0_OR_GREATER
@@ -813,36 +671,38 @@ public class DynamicMethodILProvider : IILProvider
 
     private static readonly FieldInfo _fiLen =
         _runtimeILGeneratorType.GetField("m_length", BindingFlags.NonPublic | BindingFlags.Instance);
+
     private static readonly FieldInfo _fiStream =
         _runtimeILGeneratorType.GetField("m_ILStream", BindingFlags.NonPublic | BindingFlags.Instance);
+
     private static readonly MethodInfo _miBakeByteArray =
         _runtimeILGeneratorType.GetMethod("BakeByteArray", BindingFlags.NonPublic | BindingFlags.Instance);
 
-    private readonly DynamicMethod m_method;
-    private byte[] m_byteArray;
+    private readonly DynamicMethod _method;
+    private byte[] _byteArray;
 
     public DynamicMethodILProvider(DynamicMethod method)
     {
-        m_method = method;
+        _method = method;
     }
 
     public byte[] GetByteArray()
     {
-        if (m_byteArray == null)
+        if (_byteArray == null)
         {
-            var ilgen = m_method.GetILGenerator();
+            var ilgen = _method.GetILGenerator();
             try
             {
-                m_byteArray = (byte[])_miBakeByteArray.Invoke(ilgen, null) ?? new byte[0];
+                _byteArray = (byte[])_miBakeByteArray.Invoke(ilgen, null) ?? new byte[0];
             }
             catch (TargetInvocationException)
             {
                 var length = (int)_fiLen.GetValue(ilgen);
-                m_byteArray = new byte[length];
-                Array.Copy((byte[])_fiStream.GetValue(ilgen), m_byteArray, length);
+                _byteArray = new byte[length];
+                Array.Copy((byte[])_fiStream.GetValue(ilgen), _byteArray, length);
             }
         }
-        return m_byteArray;
+        return _byteArray;
     }
 }
 
@@ -1254,70 +1114,76 @@ public interface ITokenResolver
     byte[] AsSignature(int token);
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Uses reflection on internal types and is not trim-compatible.")]
 public class ModuleScopeTokenResolver : ITokenResolver
 {
-    private readonly Module m_module;
-    private readonly Type[] m_methodContext;
-    private readonly Type[] m_typeContext;
+    private readonly Module _module;
+    private readonly Type[] _methodContext;
+    private readonly Type[] _typeContext;
 
     public ModuleScopeTokenResolver(MethodBase method)
     {
-        m_module = method.Module;
-        m_methodContext = method is ConstructorInfo ? null : method.GetGenericArguments();
-        m_typeContext = method.DeclaringType == null ? null : method.DeclaringType.GetGenericArguments();
+        _module = method.Module;
+        _methodContext = method is ConstructorInfo ? null : method.GetGenericArguments();
+        _typeContext = method.DeclaringType == null ? null : method.DeclaringType.GetGenericArguments();
     }
 
-    public MethodBase AsMethod(int token) => m_module.ResolveMethod(token, m_typeContext, m_methodContext);
-    public FieldInfo AsField(int token) => m_module.ResolveField(token, m_typeContext, m_methodContext);
-    public Type AsType(int token) => m_module.ResolveType(token, m_typeContext, m_methodContext);
-    public MemberInfo AsMember(int token) => m_module.ResolveMember(token, m_typeContext, m_methodContext);
-    public string AsString(int token) => m_module.ResolveString(token);
-    public byte[] AsSignature(int token) => m_module.ResolveSignature(token);
+    public MethodBase AsMethod(int token) => _module.ResolveMethod(token, _typeContext, _methodContext);
+    public FieldInfo AsField(int token) => _module.ResolveField(token, _typeContext, _methodContext);
+    public Type AsType(int token) => _module.ResolveType(token, _typeContext, _methodContext);
+    public MemberInfo AsMember(int token) => _module.ResolveMember(token, _typeContext, _methodContext);
+    public string AsString(int token) => _module.ResolveString(token);
+    public byte[] AsSignature(int token) => _module.ResolveSignature(token);
 }
 
+[UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Uses reflection on internal types and is not trim-compatible.")]
+[UnconditionalSuppressMessage("Trimming", "IL2080:'this' argument does not satisfy 'DynamicallyAccessedMemberTypes' in call to 'target method'. The field/type does not have matching annotations.", Justification = "Uses reflection on internal types and is not trim-compatible.")]
 internal class DynamicScopeTokenResolver : ITokenResolver
 {
-    private static readonly PropertyInfo s_indexer;
-    private static readonly FieldInfo s_scopeFi;
+    private static readonly PropertyInfo _indexer;
+    private static readonly FieldInfo _scopeFi;
 
-    private static readonly Type s_genMethodInfoType;
-    private static readonly FieldInfo s_genmethFi1;
-    private static readonly FieldInfo s_genmethFi2;
+    private static readonly Type _genMethodInfoType;
+    private static readonly FieldInfo _genmethFi1;
+    private static readonly FieldInfo _genmethFi2;
 
-    private static readonly Type s_varArgMethodType;
-    private static readonly FieldInfo s_varargFi1;
+    private static readonly Type _varArgMethodType;
+    private static readonly FieldInfo _varargFi1;
 
-    private static readonly Type s_genFieldInfoType;
-    private static readonly FieldInfo s_genfieldFi1;
-    private static readonly FieldInfo s_genfieldFi2;
+    private static readonly Type _genFieldInfoType;
+    private static readonly FieldInfo _genfieldFi1;
+    private static readonly FieldInfo _genfieldFi2;
 
     static DynamicScopeTokenResolver()
     {
-        const BindingFlags flags = BindingFlags.NonPublic | BindingFlags.Instance;
+        const BindingFlags memberFlags = BindingFlags.NonPublic | BindingFlags.Instance;
 
-        s_indexer = Type.GetType("System.Reflection.Emit.DynamicScope").GetProperty("Item", flags);
-        s_scopeFi = Type.GetType("System.Reflection.Emit.DynamicILGenerator").GetField("m_scope", flags);
+        var dynamicScopeType = Type.GetType("System.Reflection.Emit.DynamicScope") ?? throw new InvalidOperationException("DynamicScope type is not found");
+        _indexer = dynamicScopeType.GetProperty("Item", memberFlags) ?? throw new InvalidOperationException("DynamicScope.Item property is not found");
 
-        s_varArgMethodType = Type.GetType("System.Reflection.Emit.VarArgMethod");
-        s_varargFi1 = s_varArgMethodType.GetField("m_method", flags);
+        var dynamicIlGeneratorType = Type.GetType("System.Reflection.Emit.DynamicILGenerator") ?? throw new InvalidOperationException("DynamicILGenerator type is not found");
+        _scopeFi = dynamicIlGeneratorType.GetField("m_scope", memberFlags) ?? throw new InvalidOperationException("DynamicILGenerator._scope field is not found");
 
-        s_genMethodInfoType = Type.GetType("System.Reflection.Emit.GenericMethodInfo");
-        s_genmethFi1 = s_genMethodInfoType.GetField("m_methodHandle", flags);
-        s_genmethFi2 = s_genMethodInfoType.GetField("m_context", flags);
+        _varArgMethodType = Type.GetType("System.Reflection.Emit.VarArgMethod");
+        _varargFi1 = _varArgMethodType.GetField("m_method", memberFlags);
 
-        s_genFieldInfoType = Type.GetType("System.Reflection.Emit.GenericFieldInfo", throwOnError: false);
+        _genMethodInfoType = Type.GetType("System.Reflection.Emit.GenericMethodInfo");
+        _genmethFi1 = _genMethodInfoType.GetField("m_methodHandle", memberFlags);
+        _genmethFi2 = _genMethodInfoType.GetField("m_context", memberFlags);
 
-        s_genfieldFi1 = s_genFieldInfoType?.GetField("m_fieldHandle", flags);
-        s_genfieldFi2 = s_genFieldInfoType?.GetField("m_context", flags);
+        _genFieldInfoType = Type.GetType("System.Reflection.Emit.GenericFieldInfo", throwOnError: false);
+
+        _genfieldFi1 = _genFieldInfoType?.GetField("m_fieldHandle", memberFlags);
+        _genfieldFi2 = _genFieldInfoType?.GetField("m_context", memberFlags);
     }
 
-    private readonly object m_scope;
+    private readonly object _scope;
 
-    private object this[int token] => s_indexer.GetValue(m_scope, new object[] { token });
+    private object this[int token] => _indexer.GetValue(_scope, new object[] { token });
 
     public DynamicScopeTokenResolver(DynamicMethod dm)
     {
-        m_scope = s_scopeFi.GetValue(dm.GetILGenerator());
+        _scope = _scopeFi.GetValue(dm.GetILGenerator());
     }
 
     public string AsString(int token) => this[token] as string;
@@ -1327,11 +1193,11 @@ internal class DynamicScopeTokenResolver : ITokenResolver
         if (this[token] is RuntimeFieldHandle)
             return FieldInfo.GetFieldFromHandle((RuntimeFieldHandle)this[token]);
 
-        if (this[token].GetType() == s_genFieldInfoType)
+        if (this[token].GetType() == _genFieldInfoType)
         {
             return FieldInfo.GetFieldFromHandle(
-                (RuntimeFieldHandle)s_genfieldFi1.GetValue(this[token]),
-                (RuntimeTypeHandle)s_genfieldFi2.GetValue(this[token]));
+                (RuntimeFieldHandle)_genfieldFi1.GetValue(this[token]),
+                (RuntimeTypeHandle)_genfieldFi2.GetValue(this[token]));
         }
 
         Debug.Assert(false, $"unexpected type: {this[token].GetType()}");
@@ -1352,13 +1218,13 @@ internal class DynamicScopeTokenResolver : ITokenResolver
         if (this[token] is RuntimeMethodHandle)
             return MethodBase.GetMethodFromHandle((RuntimeMethodHandle)this[token]);
 
-        if (this[token].GetType() == s_genMethodInfoType)
+        if (this[token].GetType() == _genMethodInfoType)
             return MethodBase.GetMethodFromHandle(
-                (RuntimeMethodHandle)s_genmethFi1.GetValue(this[token]),
-                (RuntimeTypeHandle)s_genmethFi2.GetValue(this[token]));
+                (RuntimeMethodHandle)_genmethFi1.GetValue(this[token]),
+                (RuntimeTypeHandle)_genmethFi2.GetValue(this[token]));
 
-        if (this[token].GetType() == s_varArgMethodType)
-            return (MethodInfo)s_varargFi1.GetValue(this[token]);
+        if (this[token].GetType() == _varArgMethodType)
+            return (MethodInfo)_varargFi1.GetValue(this[token]);
 
         Debug.Assert(false, $"unexpected type: {this[token].GetType()}");
         return null;
@@ -1379,3 +1245,5 @@ internal class DynamicScopeTokenResolver : ITokenResolver
 
     public byte[] AsSignature(int token) => this[token] as byte[];
 }
+
+#pragma warning restore CS1591
