@@ -182,6 +182,7 @@ public sealed class ILReader : IEnumerable<ILInstruction>
         _byteArray = ilProvider?.GetByteArray() ?? throw new ArgumentNullException(nameof(ilProvider));
     }
 
+    // todo: @perf implement optimized IEnumerator<OpCode> which does not need to allocate ILInstruction objects
     public IEnumerator<ILInstruction> GetEnumerator()
     {
         var position = 0;

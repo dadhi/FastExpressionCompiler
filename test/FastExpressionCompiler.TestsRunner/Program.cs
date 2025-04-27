@@ -9,8 +9,10 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
+            // new Issue55_CompileFast_crash_with_ref_parameter().Run();
+
             // todo: @wip add to FEC, check the possibility of the increment compilation and the artifacts reusability
-            new LightExpression.UnitTests.ConstantAndConversionTests().Run();
+            // new LightExpression.UnitTests.ConstantAndConversionTests().Run();
 
             // new LightExpression.IssueTests.Issue461_InvalidProgramException_when_null_checking_type_by_ref().Run();
             // new Issue341_Equality_comparison_between_nullable_and_null_inside_Any_produces_incorrect_compiled_expression().Run();
