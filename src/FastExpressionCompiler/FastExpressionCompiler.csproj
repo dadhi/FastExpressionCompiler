@@ -5,16 +5,16 @@
         <TargetFrameworks Condition=" '$(LatestSupportedNet)' == 'net9.0' ">net472;netstandard2.0;netstandard2.1;net6.0;net8.0;net9.0</TargetFrameworks>
 
         <VersionPrefix>5.2.0</VersionPrefix>
-        <VersionSuffix>preview-01</VersionSuffix>
+        <VersionSuffix>preview-02</VersionSuffix>
         <Product>FastExpressionCompiler</Product>
         <PackageId>$(Product)</PackageId>
         <Title>$(Product)</Title>
         <Description>FastExpressionCompiler is 10-40x times faster than Expression.Compile()</Description>
         <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</PackageTags>
         <PackageReleaseNotes><![CDATA[
-## v5.2.0-preview-01
+## v5.2.0
 
-- add: TestTools, FastExpressionCompiler.ILDecoder
+- add: Expose TestTools and FastExpressionCompiler.ILDecoder to enable testing and diagnostic in the consumer projects
 
 
 ## v5.1.1. Bug-fix release
