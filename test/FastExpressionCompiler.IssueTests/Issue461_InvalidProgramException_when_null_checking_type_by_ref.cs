@@ -14,12 +14,13 @@ public struct Issue461_InvalidProgramException_when_null_checking_type_by_ref : 
 {
     public int Run()
     {
+        Case_equal_nullable_and_object_null_without_in_paramater();
         Case_equal_nullable_and_object_null();
         Case_equal_nullable_and_nullable_null_on_the_left();
         Case_not_equal_nullable_decimal();
         Original_case();
         Original_case_null_on_the_right();
-        return 5;
+        return 6;
     }
 
     private class Target
@@ -121,6 +122,27 @@ public struct Issue461_InvalidProgramException_when_null_checking_type_by_ref : 
             OpCodes.Ceq,
             OpCodes.Ret
         );
+    }
+
+    public void Case_equal_nullable_and_object_null_without_in_paramater()
+    {
+        var p = Parameter(typeof(XX?), "xx");
+
+        var expr = Lambda<Func<XX?, bool>>(
+            MakeBinary(ExpressionType.Equal, p, Constant(null)),
+            p);
+
+        expr.PrintCSharp();
+
+        var fs = expr.CompileSys();
+        fs.PrintIL();
+        Asserts.IsTrue(fs(null));
+        Asserts.IsFalse(fs(new XX()));
+
+        var ff = expr.CompileFast(false);
+        ff.PrintIL();
+        Asserts.IsTrue(ff(null));
+        Asserts.IsFalse(ff(new XX()));
     }
 
     public void Case_equal_nullable_and_nullable_null_on_the_left()

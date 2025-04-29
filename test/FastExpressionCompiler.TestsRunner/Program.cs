@@ -9,8 +9,10 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            var t = new TestRun();
-            t.Run(new Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET());
+            // var t = new LightExpression.TestRun();
+            // t.Run(new LightExpression.IssueTests.Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET());
+
+            // new LightExpression.IssueTests.Issue363_ActionFunc16Generics().Run();
 
             // new Issue55_CompileFast_crash_with_ref_parameter().Run();
 
@@ -35,7 +37,7 @@ namespace FastExpressionCompiler.UnitTests
             // new LightExpression.IssueTests.Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_values().Run();
             // new LightExpression.IssueTests.Issue353_NullReferenceException_when_calling_CompileFast_results().Run();
 
-            // RunAllTests();
+            RunAllTests();
         }
 
         public static void RunAllTests()

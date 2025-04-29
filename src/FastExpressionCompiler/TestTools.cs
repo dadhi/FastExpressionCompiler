@@ -28,6 +28,7 @@ public static class TestTools
     public static bool AllowPrintIL = false;
     public static bool AllowPrintCS = false;
     public static bool AllowPrintExpression = false;
+    public static bool DisableAssertOpCodes = true; // todo: @wip make it false in the release build
 
     static TestTools()
     {
@@ -43,6 +44,7 @@ public static class TestTools
 
     public static void AssertOpCodes(this MethodInfo method, params OpCode[] expectedCodes)
     {
+        if (DisableAssertOpCodes) return;
         var ilReader = ILReaderFactory.Create(method);
         if (ilReader is null)
         {

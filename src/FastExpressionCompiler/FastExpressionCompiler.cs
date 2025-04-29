@@ -516,9 +516,12 @@ namespace FastExpressionCompiler
                 ? RentOrNewClosureTypeToParamTypes(paramExprs)
                 : RentOrNewParamTypes(paramExprs);
 
-            var method = //closure != null
-                         //? new DynamicMethod(string.Empty, returnType, paramTypes, typeof(ArrayClosure), true)
-                new DynamicMethod(string.Empty, returnType, paramTypes, true);
+#if NET6_0_OR_GREATER
+            var method = new DynamicMethod(string.Empty, returnType, paramTypes, true);
+#else
+            // NET472 requires the owner type, otherwise it produce `System.Security.VerificationException: Operation could destabilize the runtime.`
+            var method = new DynamicMethod(string.Empty, returnType, paramTypes, typeof(ArrayClosure), true);
+#endif
 
             // todo: @perf can we just count the Expressions in the TryCollect phase and use it as N * 4 or something?
             var il = method.GetILGenerator();
@@ -3060,7 +3063,8 @@ namespace FastExpressionCompiler
                     --paramIndex;
                 if (paramIndex != -1)
                 {
-                    ++paramIndex; // shift parameter index by one, because the first one will be closure
+                    if ((closure.Status & ClosureStatus.ShouldBeStaticMethod) == 0)
+                        ++paramIndex; // shift parameter index by one, because the first one will be closure
                     if (closure.LastEmitIsAddress)
                         EmitLoadArgAddress(il, paramIndex);
                     else
@@ -4667,9 +4671,8 @@ namespace FastExpressionCompiler
                 while (paramIndex != -1 && !ReferenceEquals(paramExprs.GetParameter(paramIndex), left)) --paramIndex;
                 if (paramIndex != -1)
                 {
-                    // shift parameter index by one, because the first one will be closure
                     if ((closure.Status & ClosureStatus.ShouldBeStaticMethod) == 0)
-                        ++paramIndex;
+                        ++paramIndex; // shift parameter index by one, because the first one will be closure
 
                     var isLeftByRef = left.IsByRef;
                     if (isLeftByRef)
