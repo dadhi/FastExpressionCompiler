@@ -898,7 +898,7 @@ namespace FastExpressionCompiler
         public static readonly ArrayClosure EmptyArrayClosure = new ArrayClosure(null);
 
         public static FieldInfo ArrayClosureArrayField =
-            typeof(ArrayClosure).GetField((nameof(ArrayClosure.ConstantsAndNestedLambdas));
+            typeof(ArrayClosure).GetField(nameof(ArrayClosure.ConstantsAndNestedLambdas));
 
         public static FieldInfo ArrayClosureWithNonPassedParamsField =
             typeof(ArrayClosureWithNonPassedParams).GetField(nameof(ArrayClosureWithNonPassedParams.NonPassedParams));
