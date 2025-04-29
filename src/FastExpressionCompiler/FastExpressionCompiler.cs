@@ -898,7 +898,7 @@ namespace FastExpressionCompiler
         public static readonly ArrayClosure EmptyArrayClosure = new ArrayClosure(null);
 
         public static FieldInfo ArrayClosureArrayField =
-            typeof(ArrayClosure).GetField(nameof(ArrayClosure.ConstantsAndNestedLambdas));
+            typeof(ArrayClosure).GetField((nameof(ArrayClosure.ConstantsAndNestedLambdas));
 
         public static FieldInfo ArrayClosureWithNonPassedParamsField =
             typeof(ArrayClosureWithNonPassedParams).GetField(nameof(ArrayClosureWithNonPassedParams.NonPassedParams));
@@ -8983,7 +8983,7 @@ namespace FastExpressionCompiler
         internal static StringBuilder AppendProperty(this StringBuilder sb, PropertyInfo property,
             bool stripNamespace = false, Func<Type, string, string> printType = null) =>
             sb.AppendTypeOf(property.DeclaringType, stripNamespace, printType)
-              .Append(".GetField(\"").Append(property.Name).Append("\", BindingFlags.DeclaredOnly)");
+              .Append(".GetProperty(\"").Append(property.Name).Append("\", BindingFlags.DeclaredOnly)");
 
         internal static StringBuilder AppendEnum<TEnum>(this StringBuilder sb, TEnum value,
             bool stripNamespace = false, Func<Type, string, string> printType = null) =>
