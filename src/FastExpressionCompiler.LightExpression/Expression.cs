@@ -2912,23 +2912,23 @@ internal static class TypeTools
     [RequiresUnreferencedCode(Trimming.Message)]
     internal static PropertyInfo FindProperty(this Type type, string propertyName)
     {
-        var properties = type.GetTypeInfo().DeclaredProperties.AsArray();
+        var properties = type.GetProperties(BindingFlags.DeclaredOnly);
         for (var i = 0; i < properties.Length; i++)
             if (properties[i].Name == propertyName)
                 return properties[i];
 
-        return type.GetTypeInfo().BaseType?.FindProperty(propertyName);
+        return type.BaseType?.FindProperty(propertyName);
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]
     internal static FieldInfo FindField(this Type type, string fieldName)
     {
-        var fields = type.GetTypeInfo().DeclaredFields.AsArray();
+        var fields = type.GetFields(BindingFlags.DeclaredOnly);
         for (var i = 0; i < fields.Length; i++)
             if (fields[i].Name == fieldName)
                 return fields[i];
 
-        return type.GetTypeInfo().BaseType?.FindField(fieldName);
+        return type.BaseType?.FindField(fieldName);
     }
 
     internal const BindingFlags InstanceMethods = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;

@@ -2630,7 +2630,7 @@ namespace FastExpressionCompiler
 
             private static void EmitDefault(Type type, ILGenerator il)
             {
-                if (!type.GetTypeInfo().IsValueType)
+                if (!type.IsValueType)
                 {
                     il.Demit(OpCodes.Ldnull);
                 }
@@ -3761,7 +3761,7 @@ namespace FastExpressionCompiler
 
             private static readonly Lazy<ConstructorInfo> _decimalCtor = new Lazy<ConstructorInfo>(() =>
             {
-                foreach (var ctor in typeof(decimal).GetTypeInfo().DeclaredConstructors)
+                foreach (var ctor in typeof(decimal).GetConstructors(BindingFlags.DeclaredOnly))
                     if (ctor.GetParameters().Length == 5)
                         return ctor;
                 return null;
@@ -3807,7 +3807,7 @@ namespace FastExpressionCompiler
                     for (var i = 0; i < boundCount; i++)
                         if (!TryEmit(bounds.GetArgument(i), paramExprs, il, ref closure, setup, parent))
                             return false;
-                    il.Demit(OpCodes.Newobj, expr.Type.GetTypeInfo().DeclaredConstructors.GetFirst());
+                    il.Demit(OpCodes.Newobj, expr.Type.GetConstructors(BindingFlags.DeclaredOnly).GetFirst());
                 }
                 return true;
             }
@@ -7010,18 +7010,19 @@ namespace FastExpressionCompiler
             _getNextLocalVarIndex = (i, t) => i.DeclareLocal(t).LocalIndex;
 
             // now let's try to acquire the more efficient less allocating method
-            var ilGenTypeInfo = typeof(ILGenerator).GetTypeInfo();
-            var localSignatureField = ilGenTypeInfo.GetDeclaredField("m_localSignature");
+            var ilGenType = typeof(ILGenerator);
+            var localSignatureField = ilGenType.GetField("m_localSignature", BindingFlags.DeclaredOnly);
             if (localSignatureField == null)
                 return;
 
-            var localCountField = ilGenTypeInfo.GetDeclaredField("m_localCount");
+            var localCountField = ilGenType.GetField("m_localCount", BindingFlags.DeclaredOnly);
             if (localCountField == null)
                 return;
 
             // looking for the `SignatureHelper.AddArgument(Type argument, bool pinned)`
             MethodInfo addArgumentMethod = null;
-            foreach (var m in typeof(SignatureHelper).GetTypeInfo().GetDeclaredMethods("AddArgument"))
+            foreach (var m in typeof(SignatureHelper).GetMethods(BindingFlags.DeclaredOnly)
+                .Where(_ => _.Name.Equals("AddArgument", StringComparison.OrdinalIgnoreCase)))
             {
                 var ps = m.GetParameters();
                 if (ps.Length == 2 && ps[0].ParameterType == typeof(Type) && ps[1].ParameterType == typeof(bool))
@@ -7035,7 +7036,7 @@ namespace FastExpressionCompiler
                 return;
 
             // our own helper - always available
-            var postIncMethod = typeof(ILGeneratorHacks).GetTypeInfo().GetDeclaredMethod(nameof(PostInc));
+            var postIncMethod = typeof(ILGeneratorHacks).GetMethod(nameof(PostInc), BindingFlags.DeclaredOnly);
 
             var efficientMethod = new DynamicMethod(string.Empty,
                 typeof(int), new[] { typeof(ExpressionCompiler.ArrayClosure), typeof(ILGenerator), typeof(Type) },
@@ -7421,9 +7422,9 @@ namespace FastExpressionCompiler
                             return sb.Append("New(").AppendTypeOf(e.Type, stripNamespace, printType).Append(')');
 
                         sb.Append("New( // ").Append(args.Count).Append(" args");
-                        var ctorIndex = x.Constructor.DeclaringType.GetTypeInfo().DeclaredConstructors.AsArray().GetFirstIndex(x.Constructor, default(RefEq<ConstructorInfo>));
+                        var ctorIndex = x.Constructor.DeclaringType.GetConstructors(BindingFlags.DeclaredOnly).GetFirstIndex(x.Constructor, default(RefEq<ConstructorInfo>));
                         sb.NewLineIndent(lineIndent).AppendTypeOf(x.Type, stripNamespace, printType)
-                            .Append(".GetTypeInfo().DeclaredConstructors.AsArray()[").Append(ctorIndex).Append("],");
+                            .Append(".GetConstructors(BindingFlags.DeclaredOnly)[").Append(ctorIndex).Append("],");
                         sb.NewLineIndentArgumentExprs(args, paramsExprs, uniqueExprs, lts, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                         return sb.Append(')');
                     }
@@ -8977,12 +8978,12 @@ namespace FastExpressionCompiler
         internal static StringBuilder AppendField(this StringBuilder sb, FieldInfo field,
             bool stripNamespace = false, Func<Type, string, string> printType = null) =>
             sb.AppendTypeOf(field.DeclaringType, stripNamespace, printType)
-              .Append(".GetTypeInfo().GetDeclaredField(\"").Append(field.Name).Append("\")");
+              .Append(".GetField(\"").Append(field.Name).Append("\", BindingFlags.DeclaredOnly)");
 
         internal static StringBuilder AppendProperty(this StringBuilder sb, PropertyInfo property,
             bool stripNamespace = false, Func<Type, string, string> printType = null) =>
             sb.AppendTypeOf(property.DeclaringType, stripNamespace, printType)
-              .Append(".GetTypeInfo().GetDeclaredProperty(\"").Append(property.Name).Append("\")");
+              .Append(".GetField(\"").Append(property.Name).Append("\", BindingFlags.DeclaredOnly)");
 
         internal static StringBuilder AppendEnum<TEnum>(this StringBuilder sb, TEnum value,
             bool stripNamespace = false, Func<Type, string, string> printType = null) =>
@@ -9139,7 +9140,7 @@ namespace FastExpressionCompiler
             }
 
             var parentCount = 0;
-            for (var ti = type.GetTypeInfo(); ti.IsNested; ti = ti.DeclaringType.GetTypeInfo())
+            for (var ti = type; ti.IsNested; ti = ti.DeclaringType)
                 ++parentCount;
 
             Type[] parentTypes = null;
@@ -9151,13 +9152,13 @@ namespace FastExpressionCompiler
                     parentTypes[i] = pt;
             }
 
-            var typeInfo = type.GetTypeInfo();
             Type[] typeArgs = null;
             var isTypeClosedGeneric = false;
+
             if (type.IsGenericType)
             {
-                isTypeClosedGeneric = !typeInfo.IsGenericTypeDefinition;
-                typeArgs = isTypeClosedGeneric ? typeInfo.GenericTypeArguments : typeInfo.GenericTypeParameters;
+                isTypeClosedGeneric = !type.IsGenericTypeDefinition;
+                typeArgs = isTypeClosedGeneric ? type.GenericTypeArguments : type.GetGenericArguments();
             }
 
             var typeArgsConsumedByParentsCount = 0;
@@ -9176,11 +9177,10 @@ namespace FastExpressionCompiler
                     }
                     else
                     {
-                        var parentTypeInfo = parentType.GetTypeInfo();
                         Type[] parentTypeArgs = null;
-                        if (parentTypeInfo.IsGenericTypeDefinition)
+                        if (parentType.IsGenericTypeDefinition)
                         {
-                            parentTypeArgs = parentTypeInfo.GenericTypeParameters;
+                            parentTypeArgs = parentType.GetGenericArguments();
 
                             // replace the open parent args with the closed child args,
                             // and close the parent
@@ -9206,7 +9206,7 @@ namespace FastExpressionCompiler
                         }
                         else
                         {
-                            parentTypeArgs = parentTypeInfo.GenericTypeArguments;
+                            parentTypeArgs = parentType.GenericTypeArguments;
                         }
 
                         var parentTickIndex = parentType.Name.IndexOf('`');
@@ -9272,8 +9272,8 @@ namespace FastExpressionCompiler
             return typeStr + "." + string.Join(orTypeDot, flags);
         }
 
-        private static Type[] GetGenericTypeParametersOrArguments(this TypeInfo typeInfo) =>
-            typeInfo.IsGenericTypeDefinition ? typeInfo.GenericTypeParameters : typeInfo.GenericTypeArguments;
+        private static Type[] GetGenericTypeParametersOrArguments(this Type type) =>
+            type.IsGenericTypeDefinition ? type.GetGenericArguments() : type.GenericTypeArguments;
 
         /// <summary>Custom handler for output the object in valid C#. 
         /// Note, the `printGenericTypeArgs` is excluded because it cannot be a open-generic object.
@@ -9319,7 +9319,7 @@ namespace FastExpressionCompiler
         }
 
         private static readonly Type[] TypesImplementedByArray =
-            typeof(object[]).GetInterfaces().Where(t => t.GetTypeInfo().IsGenericType).Select(t => t.GetGenericTypeDefinition()).ToArray();
+            typeof(object[]).GetInterfaces().Where(t => t.IsGenericType).Select(t => t.GetGenericTypeDefinition()).ToArray();
 
         // todo: @simplify convert to using StringBuilder and simplify usage call-sites, or ADD the method
         // todo: @simplify add `addTypeof = false`
@@ -9365,31 +9365,27 @@ namespace FastExpressionCompiler
                 return "TimeSpan.Parse(" + time.ToString().ToCode() + ")";
 
             var xType = x.GetType();
-            var xTypeInfo = xType.GetTypeInfo();
 
             // check if item is implemented by array and then use the array initializer only for these types, 
             // otherwise we may produce the array initializer but it will be incompatible with e.g. `List<T>`
-            if (xTypeInfo.IsArray ||
-                xTypeInfo.IsGenericType && TypesImplementedByArray.Contains(xType.GetGenericTypeDefinition()))
+            if (xType.IsArray ||
+                xType.IsGenericType && TypesImplementedByArray.Contains(xType.GetGenericTypeDefinition()))
             {
-                var elemType = xTypeInfo.IsArray
-                    ? xTypeInfo.GetElementType()
-                    : xTypeInfo.GetGenericTypeParametersOrArguments().GetFirst();
+                var elemType = xType.IsArray
+                    ? xType.GetElementType()
+                    : xType.GetGenericTypeParametersOrArguments().GetFirst();
                 if (elemType != null && elemType != xType) // avoid self recurring types e.g. `class A : IEnumerable<A>`
                     return ((IEnumerable)x).ToArrayInitializerCode(elemType, notRecognizedToCode, stripNamespace, printType);
             }
 
             // unwrap the Nullable struct
-            if (xTypeInfo.IsGenericType && xTypeInfo.GetGenericTypeDefinition() == typeof(Nullable<>))
-            {
-                xType = xTypeInfo.GetElementType();
-                xTypeInfo = xType.GetTypeInfo();
-            }
+            if (xType.IsGenericType && xType.GetGenericTypeDefinition() == typeof(Nullable<>))
+                xType = xType.GetElementType();
 
-            if (xTypeInfo.IsEnum)
+            if (xType.IsEnum)
                 return x.GetType().ToEnumValueCode(x, stripNamespace, printType);
 
-            if (xTypeInfo.IsPrimitive) // output the primitive casted to the type
+            if (xType.IsPrimitive) // output the primitive casted to the type
                 return "(" + x.GetType().ToCode(true, null) + ")" + x.ToString();
 
             return notRecognizedToCode?.Invoke(x, stripNamespace, printType) ?? x.ToString();
