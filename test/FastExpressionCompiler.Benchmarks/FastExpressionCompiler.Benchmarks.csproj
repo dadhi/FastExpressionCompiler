@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFrameworks>$(LatestSupportedNet)</TargetFrameworks>
+        <TargetFrameworks>$(LatestSupportedNet);net8.0</TargetFrameworks>
 
         <OutputType>Exe</OutputType>
         <IsTestProject>false</IsTestProject>
