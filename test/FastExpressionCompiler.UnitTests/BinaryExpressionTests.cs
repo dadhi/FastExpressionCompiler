@@ -1,6 +1,5 @@
 ﻿using System;
 
-
 #if LIGHT_EXPRESSION
 using ExpressionType = System.Linq.Expressions.ExpressionType;
 using static FastExpressionCompiler.LightExpression.Expression;
