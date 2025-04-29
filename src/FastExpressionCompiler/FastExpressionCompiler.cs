@@ -8656,10 +8656,6 @@ namespace FastExpressionCompiler
                                     false, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                             }
 
-                            // remove the parens from the simple comparisons and ops between params, variables and constants
-                            if (b.Left.IsParamOrConstantOrDefault() && b.Right.IsParamOrConstantOrDefault())
-                                avoidParens = true;
-
                             sb = !avoidParens ? sb.Append('(') : sb;
                             b.Left.ToCSharpExpression(sb, EnclosedIn.ParensByDefault, ref named,
                                 false, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
