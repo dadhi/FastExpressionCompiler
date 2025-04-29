@@ -499,6 +499,9 @@ namespace FastExpressionCompiler
             {
                 if ((closureInfo.Status & ClosureStatus.HasClosure) != 0)
                     closure = new ArrayClosure(closureInfo.GetArrayOfConstantsAndNestedLambdas());
+                else
+                    // Marking it so, that the Emit will load the arguments by the proper index, not by +1 when the delegate has a closure as the 0 one
+                    closureInfo.Status |= ClosureStatus.ShouldBeStaticMethod;
             }
             else
             {   // todo: @feature add the debug info to the nested lambdas!
@@ -513,9 +516,9 @@ namespace FastExpressionCompiler
                 ? RentOrNewClosureTypeToParamTypes(paramExprs)
                 : RentOrNewParamTypes(paramExprs);
 
-            var method = closure != null
-                ? new DynamicMethod(string.Empty, returnType, paramTypes, typeof(ArrayClosure), true)
-                : new DynamicMethod(string.Empty, returnType, paramTypes, true);
+            var method = //closure != null
+                         //? new DynamicMethod(string.Empty, returnType, paramTypes, typeof(ArrayClosure), true)
+                new DynamicMethod(string.Empty, returnType, paramTypes, true);
 
             // todo: @perf can we just count the Expressions in the TryCollect phase and use it as N * 4 or something?
             var il = method.GetILGenerator();
