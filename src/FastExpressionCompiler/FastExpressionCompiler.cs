@@ -2963,7 +2963,8 @@ namespace FastExpressionCompiler
                     --paramIndex;
                 if (paramIndex != -1)
                 {
-                    ++paramIndex; // shift parameter index by one, because the first one will be closure
+                    if ((closure.Status & ClosureStatus.ShouldBeStaticMethod) == 0)
+                        ++paramIndex; // shift parameter index by one, because the first one will be closure
                     if (closure.LastEmitIsAddress)
                         EmitLoadArgAddress(il, paramIndex);
                     else
@@ -4570,9 +4571,8 @@ namespace FastExpressionCompiler
                 while (paramIndex != -1 && !ReferenceEquals(paramExprs.GetParameter(paramIndex), left)) --paramIndex;
                 if (paramIndex != -1)
                 {
-                    // shift parameter index by one, because the first one will be closure
                     if ((closure.Status & ClosureStatus.ShouldBeStaticMethod) == 0)
-                        ++paramIndex;
+                        ++paramIndex; // shift parameter index by one, because the first one will be closure
 
                     var isLeftByRef = left.IsByRef;
                     if (isLeftByRef)
@@ -8555,10 +8555,6 @@ namespace FastExpressionCompiler
                                 return b.Right.ToCSharpExpression(sb, EnclosedIn.AvoidParens, ref named,
                                     false, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                             }
-
-                            // remove the parens from the simple comparisons and ops between params, variables and constants
-                            if (b.Left.IsParamOrConstantOrDefault() && b.Right.IsParamOrConstantOrDefault())
-                                avoidParens = true;
 
                             sb = !avoidParens ? sb.Append('(') : sb;
                             b.Left.ToCSharpExpression(sb, EnclosedIn.ParensByDefault, ref named,
