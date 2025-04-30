@@ -28,6 +28,7 @@ public struct Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_th
         var e = new Expression[11]; // the unique expressions
         var expr = Lambda<Func<bool>>(
         e[0] = MakeBinary(ExpressionType.Equal,
+
             e[1] = MakeBinary(ExpressionType.Equal,
                 e[2] = MakeBinary(ExpressionType.Add,
                     e[3] = Constant(1),
@@ -35,6 +36,7 @@ public struct Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_th
                 e[5] = MakeBinary(ExpressionType.Add,
                     e[6] = Constant(5),
                     e[7] = Constant(-2))),
+
             e[8] = MakeBinary(ExpressionType.Equal,
                 e[9] = Constant(42),
 #if LIGHT_EXPRESSION
@@ -51,7 +53,9 @@ public struct Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_th
         var expr = CreateExpression();
 
         expr.PrintCSharp();
-
+        // var @cs = (Func<bool>)(() => //bool
+        //     (1 + 2 == 5 + -2) == 42 == 42);
+            
         var fs = expr.CompileSys();
         fs.PrintIL();
         t.IsTrue(fs());
@@ -82,14 +86,6 @@ public struct Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_th
         var ff = expr.CompileFast(false);
         ff.PrintIL();
         t.IsTrue(ff());
-
-        // ff.AssertOpCodes(
-        //     OpCodes.Ldarg_1,
-        //     OpCodes.Ldind_Ref,
-        //     OpCodes.Ldnull,
-        //     OpCodes.Ceq,
-        //     OpCodes.Ret
-        // );
 #endif
     }
 }
