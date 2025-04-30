@@ -3761,7 +3761,7 @@ namespace FastExpressionCompiler
 
             private static readonly Lazy<ConstructorInfo> _decimalCtor = new Lazy<ConstructorInfo>(() =>
             {
-                foreach (var ctor in typeof(decimal).GetConstructors(BindingFlags.DeclaredOnly))
+                foreach (var ctor in typeof(decimal).GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly))
                     if (ctor.GetParameters().Length == 5)
                         return ctor;
                 return null;
@@ -3807,7 +3807,7 @@ namespace FastExpressionCompiler
                     for (var i = 0; i < boundCount; i++)
                         if (!TryEmit(bounds.GetArgument(i), paramExprs, il, ref closure, setup, parent))
                             return false;
-                    il.Demit(OpCodes.Newobj, expr.Type.GetConstructors(BindingFlags.DeclaredOnly).GetFirst());
+                    il.Demit(OpCodes.Newobj, expr.Type.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly).GetFirst());
                 }
                 return true;
             }
@@ -7011,18 +7011,18 @@ namespace FastExpressionCompiler
 
             // now let's try to acquire the more efficient less allocating method
             var ilGenType = typeof(ILGenerator);
-            var localSignatureField = ilGenType.GetField("m_localSignature", BindingFlags.DeclaredOnly);
+            var localSignatureField = ilGenType.GetField("m_localSignature", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
             if (localSignatureField == null)
                 return;
 
-            var localCountField = ilGenType.GetField("m_localCount", BindingFlags.DeclaredOnly);
+            var localCountField = ilGenType.GetField("m_localCount", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
             if (localCountField == null)
                 return;
 
             // looking for the `SignatureHelper.AddArgument(Type argument, bool pinned)`
             MethodInfo addArgumentMethod = null;
-            foreach (var m in typeof(SignatureHelper).GetMethods(BindingFlags.DeclaredOnly)
-                .Where(_ => _.Name.Equals("AddArgument", StringComparison.OrdinalIgnoreCase)))
+            foreach (var m in typeof(SignatureHelper).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+                .Where(_ => _.Name == "AddArgument"))
             {
                 var ps = m.GetParameters();
                 if (ps.Length == 2 && ps[0].ParameterType == typeof(Type) && ps[1].ParameterType == typeof(bool))
@@ -7036,7 +7036,7 @@ namespace FastExpressionCompiler
                 return;
 
             // our own helper - always available
-            var postIncMethod = typeof(ILGeneratorHacks).GetMethod(nameof(PostInc), BindingFlags.DeclaredOnly);
+            var postIncMethod = typeof(ILGeneratorHacks).GetMethod(nameof(PostInc), BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.DeclaredOnly);
 
             var efficientMethod = new DynamicMethod(string.Empty,
                 typeof(int), new[] { typeof(ExpressionCompiler.ArrayClosure), typeof(ILGenerator), typeof(Type) },
@@ -7422,9 +7422,9 @@ namespace FastExpressionCompiler
                             return sb.Append("New(").AppendTypeOf(e.Type, stripNamespace, printType).Append(')');
 
                         sb.Append("New( // ").Append(args.Count).Append(" args");
-                        var ctorIndex = x.Constructor.DeclaringType.GetConstructors(BindingFlags.DeclaredOnly).GetFirstIndex(x.Constructor, default(RefEq<ConstructorInfo>));
+                        var ctorIndex = x.Constructor.DeclaringType.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly).GetFirstIndex(x.Constructor, default(RefEq<ConstructorInfo>));
                         sb.NewLineIndent(lineIndent).AppendTypeOf(x.Type, stripNamespace, printType)
-                            .Append(".GetConstructors(BindingFlags.DeclaredOnly)[").Append(ctorIndex).Append("],");
+                            .Append(".GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly)[").Append(ctorIndex).Append("],");
                         sb.NewLineIndentArgumentExprs(args, paramsExprs, uniqueExprs, lts, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                         return sb.Append(')');
                     }
@@ -8976,14 +8976,28 @@ namespace FastExpressionCompiler
                 : sb.AppendProperty((PropertyInfo)member, stripNamespace, printType);
 
         internal static StringBuilder AppendField(this StringBuilder sb, FieldInfo field,
-            bool stripNamespace = false, Func<Type, string, string> printType = null) =>
+            bool stripNamespace = false, Func<Type, string, string> printType = null)
+        {
             sb.AppendTypeOf(field.DeclaringType, stripNamespace, printType)
-              .Append(".GetField(\"").Append(field.Name).Append("\", BindingFlags.DeclaredOnly)");
+              .Append(".GetField(\"").Append(field.Name);
+
+            if (field.IsPublic)
+                return sb.Append("\", BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly)");
+
+            return sb.Append("\", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly)");
+        }
 
         internal static StringBuilder AppendProperty(this StringBuilder sb, PropertyInfo property,
-            bool stripNamespace = false, Func<Type, string, string> printType = null) =>
+            bool stripNamespace = false, Func<Type, string, string> printType = null)
+        {
             sb.AppendTypeOf(property.DeclaringType, stripNamespace, printType)
-              .Append(".GetProperty(\"").Append(property.Name).Append("\", BindingFlags.DeclaredOnly)");
+                .Append(".GetProperty(\"").Append(property.Name);
+
+            if (property.PropertyType.IsPublic)
+                return sb.Append("\", BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly)");
+
+            return sb.Append("\", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly)");
+        }
 
         internal static StringBuilder AppendEnum<TEnum>(this StringBuilder sb, TEnum value,
             bool stripNamespace = false, Func<Type, string, string> printType = null) =>

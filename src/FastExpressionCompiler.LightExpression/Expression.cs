@@ -2912,7 +2912,7 @@ internal static class TypeTools
     [RequiresUnreferencedCode(Trimming.Message)]
     internal static PropertyInfo FindProperty(this Type type, string propertyName)
     {
-        var properties = type.GetProperties(BindingFlags.DeclaredOnly);
+        var properties = type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly);
         for (var i = 0; i < properties.Length; i++)
             if (properties[i].Name == propertyName)
                 return properties[i];
@@ -2923,7 +2923,7 @@ internal static class TypeTools
     [RequiresUnreferencedCode(Trimming.Message)]
     internal static FieldInfo FindField(this Type type, string fieldName)
     {
-        var fields = type.GetFields(BindingFlags.DeclaredOnly);
+        var fields = type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly);
         for (var i = 0; i < fields.Length; i++)
             if (fields[i].Name == fieldName)
                 return fields[i];
