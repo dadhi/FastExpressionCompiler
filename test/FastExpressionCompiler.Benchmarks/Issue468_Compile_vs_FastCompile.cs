@@ -55,6 +55,17 @@ public class Issue468_InvokeCompiled_vs_InvokeCompiledFast
     }
 }
 
+/*
+## Baseline. Does not look good. There is actually a regression I need to find and fix.
+
+| Method       | Job      | Runtime  | Mean     | Error    | StdDev   | Ratio | RatioSD | Rank | Gen0   | Gen1   | Allocated | Alloc Ratio |
+|------------- |--------- |--------- |---------:|---------:|---------:|------:|--------:|-----:|-------:|-------:|----------:|------------:|
+| Compiled     | .NET 8.0 | .NET 8.0 | 23.51 us | 0.468 us | 0.715 us |  1.00 |    0.04 |    2 | 0.6714 | 0.6409 |   4.13 KB |        1.00 |
+| CompiledFast | .NET 8.0 | .NET 8.0 | 17.63 us | 0.156 us | 0.146 us |  0.75 |    0.02 |    1 | 0.1831 | 0.1526 |   1.16 KB |        0.28 |
+|              |          |          |          |          |          |       |         |      |        |        |           |             |
+| Compiled     | .NET 9.0 | .NET 9.0 | 21.27 us | 0.114 us | 0.106 us |  1.00 |    0.01 |    2 | 0.6714 | 0.6409 |   4.13 KB |        1.00 |
+| CompiledFast | .NET 9.0 | .NET 9.0 | 16.82 us | 0.199 us | 0.186 us |  0.79 |    0.01 |    1 | 0.1831 | 0.1526 |   1.16 KB |        0.28 |
+*/
 [MemoryDiagnoser, RankColumn]
 [SimpleJob(RuntimeMoniker.Net90)]
 [SimpleJob(RuntimeMoniker.Net80)]
