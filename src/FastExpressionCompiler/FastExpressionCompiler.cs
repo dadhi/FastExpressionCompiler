@@ -500,8 +500,7 @@ namespace FastExpressionCompiler
                 if ((closureInfo.Status & ClosureStatus.HasClosure) != 0)
                     closure = new ArrayClosure(closureInfo.GetArrayOfConstantsAndNestedLambdas());
                 else
-                    // Marking it so, that the Emit will load the arguments by the proper index, not by +1 when the delegate has a closure as the 0 one
-                    closureInfo.Status |= ClosureStatus.ShouldBeStaticMethod;
+                    closure = EmptyArrayClosure;
             }
             else
             {   // todo: @feature add the debug info to the nested lambdas!
@@ -512,21 +511,14 @@ namespace FastExpressionCompiler
                 closure = new DebugArrayClosure(constantsAndNestedLambdas, debugExpr);
             }
 
-            var paramTypes = closure != null
-                ? RentOrNewClosureTypeToParamTypes(paramExprs)
-                : RentOrNewParamTypes(paramExprs);
+            var paramTypes = RentOrNewClosureTypeToParamTypes(paramExprs);
 
-#if NET6_0_OR_GREATER
-            var method = new DynamicMethod(string.Empty, returnType, paramTypes, true);
-#else
-            // NET472 requires the owner type, otherwise it produce `System.Security.VerificationException: Operation could destabilize the runtime.`
             var method = new DynamicMethod(string.Empty, returnType, paramTypes, typeof(ArrayClosure), true);
-#endif
 
             // todo: @perf can we just count the Expressions in the TryCollect phase and use it as N * 4 or something?
             var il = method.GetILGenerator();
 
-            if (closure?.ConstantsAndNestedLambdas != null)
+            if (closure.ConstantsAndNestedLambdas != null)
                 EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref closureInfo);
 
             var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
@@ -539,11 +531,7 @@ namespace FastExpressionCompiler
 
             var result = method.CreateDelegate(delegateType, closure);
 
-            if (closure != null)
-                ReturnClosureTypeToParamTypesToPool(paramTypes);
-            else
-                ReturnParamTypesToPool(paramTypes);
-
+            ReturnClosureTypeToParamTypesToPool(paramTypes);
             return result;
         }
 
@@ -643,42 +631,8 @@ namespace FastExpressionCompiler
         private static void ReturnClosureTypeToParamTypesToPool(Type[] closurePlusParamTypes)
         {
             var paramCount = closurePlusParamTypes.Length - 1;
-            if (paramCount != 0 && paramCount < 8)
-                Interlocked.Exchange(ref _closureTypePlusParamTypesPool[paramCount], closurePlusParamTypes); // todo: @perf we don't need the Interlocked here
-        }
-
-        private static readonly Type[][] _paramTypesPool = new Type[8][];
-
-#if LIGHT_EXPRESSION
-        private static Type[] RentOrNewParamTypes(IParameterProvider paramExprs)
-        {
-            var count = paramExprs.ParameterCount;
-#else
-        private static Type[] RentOrNewParamTypes(IReadOnlyList<PE> paramExprs)
-        {
-            var count = paramExprs.Count;
-#endif
-            if (count == 0)
-                return Tools.Empty<Type>();
-
-            var paramTypes = count < 8 ? (Interlocked.Exchange(ref _paramTypesPool[count - 1], null) ?? new Type[count]) : new Type[count];
-            for (var i = 0; i < count; ++i)
-            {
-                var parameterExpr = paramExprs.GetParameter(i);
-                paramTypes[i] = parameterExpr.IsByRef ? parameterExpr.Type.MakeByRefType() : parameterExpr.Type;
-            }
-            return paramTypes;
-        }
-
-        [MethodImpl((MethodImplOptions)256)]
-        private static void ReturnParamTypesToPool(Type[] paramTypes)
-        {
-            if (paramTypes.Length == 0)
-                return;
-
-            var paramCount = paramTypes.Length - 1;
             if (paramCount != 0 & paramCount < 8)
-                Interlocked.Exchange(ref _paramTypesPool[paramCount], paramTypes);
+                Interlocked.Exchange(ref _closureTypePlusParamTypesPool[paramCount], closurePlusParamTypes); // todo: @perf we don't need the Interlocked here
         }
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member

@@ -80,14 +80,14 @@ public class Issue468_Compile_vs_FastCompile
     }
 
     [Benchmark(Baseline = true)]
-    public object Compiled()
-    {
-        return _expr.Compile();
-    }
-
-    [Benchmark]
     public object CompiledFast()
     {
         return _expr.CompileFast();
+    }
+
+    [Benchmark]
+    public object Compiled()
+    {
+        return _expr.Compile();
     }
 }
