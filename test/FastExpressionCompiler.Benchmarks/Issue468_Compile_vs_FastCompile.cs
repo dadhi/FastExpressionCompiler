@@ -25,6 +25,24 @@ Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical
 | InvokeCompiled     | .NET 9.0 | .NET 9.0 | 0.5547 ns | 0.0447 ns | 0.0871 ns |  1.02 |    0.22 |    1 |                     1 |             -0 |                      -0 |         - |          NA |
 | InvokeCompiledFast | .NET 9.0 | .NET 9.0 | 1.1920 ns | 0.0508 ns | 0.0450 ns |  2.20 |    0.34 |    2 |                     2 |              0 |                      -0 |         - |          NA |
 
+
+# Sealing the closure type, hmm
+
+BenchmarkDotNet v0.14.0, Windows 11 (10.0.26100.3775)
+Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
+.NET SDK 9.0.203
+  [Host]   : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+  .NET 8.0 : .NET 8.0.15 (8.0.1525.16413), X64 RyuJIT AVX2
+  .NET 9.0 : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+
+| Method             | Job      | Runtime  | Mean      | Error     | StdDev    | Ratio | RatioSD | Rank | BranchInstructions/Op | BranchMispredictions/Op | CacheMisses/Op | Allocated | Alloc Ratio |
+|------------------- |--------- |--------- |----------:|----------:|----------:|------:|--------:|-----:|----------------------:|------------------------:|---------------:|----------:|------------:|
+| InvokeCompiledFast | .NET 8.0 | .NET 8.0 | 1.0253 ns | 0.0194 ns | 0.0152 ns |  1.00 |    0.02 |    2 |                     2 |                      -0 |              0 |         - |          NA |
+| InvokeCompiled     | .NET 8.0 | .NET 8.0 | 0.5906 ns | 0.0457 ns | 0.0526 ns |  0.58 |    0.05 |    1 |                     1 |                      -0 |             -0 |         - |          NA |
+|                    |          |          |           |           |           |       |         |      |                       |                         |                |           |             |
+| InvokeCompiledFast | .NET 9.0 | .NET 9.0 | 0.5509 ns | 0.0077 ns | 0.0064 ns |  1.00 |    0.02 |    1 |                     2 |                      -0 |              0 |         - |          NA |
+| InvokeCompiled     | .NET 9.0 | .NET 9.0 | 0.5891 ns | 0.0206 ns | 0.0182 ns |  1.07 |    0.03 |    2 |                     1 |                      -0 |             -0 |         - |          NA |
+
 */
 [MemoryDiagnoser, RankColumn]
 [HardwareCounters(HardwareCounter.CacheMisses, HardwareCounter.BranchMispredictions, HardwareCounter.BranchInstructions)]
@@ -43,15 +61,15 @@ public class Issue468_InvokeCompiled_vs_InvokeCompiledFast
     }
 
     [Benchmark(Baseline = true)]
-    public bool InvokeCompiled()
-    {
-        return _compiled();
-    }
-
-    [Benchmark]
     public bool InvokeCompiledFast()
     {
         return _compiledFast();
+    }
+
+    [Benchmark]
+    public bool InvokeCompiled()
+    {
+        return _compiled();
     }
 }
 

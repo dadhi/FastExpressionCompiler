@@ -408,12 +408,11 @@ namespace FastExpressionCompiler
             this LambdaExpression lambdaExpr, ref ClosureInfo closureInfo, CompilerFlags flags) where TDelegate : class
         {
 #if LIGHT_EXPRESSION
-            var closurePlusParamTypes = RentOrNewClosureTypeToParamTypes(lambdaExpr);
+            var closurePlusParamTypes = RentOrNewClosureTypePlusParamTypes(typeof(ArrayClosure), lambdaExpr);
 #else
-            var closurePlusParamTypes = RentOrNewClosureTypeToParamTypes(lambdaExpr.Parameters);
+            var closurePlusParamTypes = RentOrNewClosureTypePlusParamTypes(typeof(ArrayClosure), lambdaExpr.Parameters);
 #endif
-            var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, closurePlusParamTypes,
-                typeof(ExpressionCompiler), skipVisibility: true);
+            var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, closurePlusParamTypes, typeof(ArrayClosure), true);
 
             var il = method.GetILGenerator();
             EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref closureInfo);
@@ -432,7 +431,7 @@ namespace FastExpressionCompiler
 
             var delegateType = typeof(TDelegate) != typeof(Delegate) ? typeof(TDelegate) : lambdaExpr.Type;
             var @delegate = (TDelegate)(object)method.CreateDelegate(delegateType, new ArrayClosure(closureInfo.Constants.Items));
-            ReturnClosureTypeToParamTypesToPool(closurePlusParamTypes);
+            ReturnTypeArrayToPool(closurePlusParamTypes);
             return @delegate;
         }
 
@@ -442,12 +441,11 @@ namespace FastExpressionCompiler
         {
             var closureInfo = new ClosureInfo(ClosureStatus.UserProvided);
 #if LIGHT_EXPRESSION
-            var closurePlusParamTypes = RentOrNewClosureTypeToParamTypes(lambdaExpr);
+            var closurePlusParamTypes = RentOrNewClosureTypePlusParamTypes(typeof(ArrayClosure), lambdaExpr);
 #else
-            var closurePlusParamTypes = RentOrNewClosureTypeToParamTypes(lambdaExpr.Parameters);
+            var closurePlusParamTypes = RentOrNewClosureTypePlusParamTypes(typeof(ArrayClosure), lambdaExpr.Parameters);
 #endif
-            var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, closurePlusParamTypes, typeof(ArrayClosure),
-                skipVisibility: true);
+            var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, closurePlusParamTypes, typeof(ArrayClosure), true);
 
             var il = method.GetILGenerator();
             if (!EmittingVisitor.TryEmit(lambdaExpr.Body,
@@ -463,7 +461,7 @@ namespace FastExpressionCompiler
 
             var delegateType = typeof(TDelegate) != typeof(Delegate) ? typeof(TDelegate) : lambdaExpr.Type;
             var @delegate = (TDelegate)(object)method.CreateDelegate(delegateType, EmptyArrayClosure);
-            ReturnClosureTypeToParamTypesToPool(closurePlusParamTypes);
+            ReturnTypeArrayToPool(closurePlusParamTypes);
             return @delegate;
         }
 
@@ -493,32 +491,32 @@ namespace FastExpressionCompiler
             var closureInfo = new ClosureInfo(ClosureStatus.ToBeCollected);
             if (!TryCollectBoundConstants(ref closureInfo, bodyExpr, paramExprs, null, ref closureInfo.NestedLambdas, flags))
                 return null;
-            // todo: @perf split globally for null and not null closure.
-            ArrayClosure closure = null;
+
+            var constantsAndNestedLambdas = (closureInfo.Status & ClosureStatus.HasClosure) == 0 ? null
+                : closureInfo.GetArrayOfConstantsAndNestedLambdas();
+
+            object closure = null;
             if ((flags & CompilerFlags.EnableDelegateDebugInfo) == 0)
             {
-                if ((closureInfo.Status & ClosureStatus.HasClosure) != 0)
-                    closure = new ArrayClosure(closureInfo.GetArrayOfConstantsAndNestedLambdas());
-                else
-                    closure = EmptyArrayClosure;
+                closure = constantsAndNestedLambdas == null
+                    ? EmptyArrayClosure
+                    : new ArrayClosure(constantsAndNestedLambdas);
             }
             else
-            {   // todo: @feature add the debug info to the nested lambdas!
+            {   // todo: @feature add the debug info into the nested lambdas!
                 var debugExpr = Lambda(delegateType, bodyExpr, paramExprs?.ToReadOnlyList() ?? Tools.Empty<PE>());
-                var constantsAndNestedLambdas = (closureInfo.Status & ClosureStatus.HasClosure) == 0
-                    ? null
-                    : closureInfo.GetArrayOfConstantsAndNestedLambdas();
                 closure = new DebugArrayClosure(constantsAndNestedLambdas, debugExpr);
             }
 
-            var paramTypes = RentOrNewClosureTypeToParamTypes(paramExprs);
+            var clsoureType = closure.GetType();
+            var paramTypes = RentOrNewClosureTypePlusParamTypes(clsoureType, paramExprs);
 
-            var method = new DynamicMethod(string.Empty, returnType, paramTypes, typeof(ArrayClosure), true);
+            var method = new DynamicMethod(string.Empty, returnType, paramTypes, clsoureType, true);
 
             // todo: @perf can we just count the Expressions in the TryCollect phase and use it as N * 4 or something?
             var il = method.GetILGenerator();
 
-            if (closure.ConstantsAndNestedLambdas != null)
+            if (constantsAndNestedLambdas != null)
                 EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref closureInfo);
 
             var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
@@ -531,108 +529,42 @@ namespace FastExpressionCompiler
 
             var result = method.CreateDelegate(delegateType, closure);
 
-            ReturnClosureTypeToParamTypesToPool(paramTypes);
+            ReturnTypeArrayToPool(paramTypes);
             return result;
         }
 
-        // todo: @wip @remove
-#if LIGHT_EXPRESSION
-        internal static object TryCompileBoundToFirstClosureParam_OLD(Type delegateType, Expression bodyExpr, IParameterProvider paramExprs,
-            Type[] closurePlusParamTypes, Type returnType, CompilerFlags flags)
-        {
-            if (bodyExpr is NoArgsNewClassIntrinsicExpression newNoArgs)
-                return CompileNoArgsNew(newNoArgs.Constructor, delegateType, returnType);
-#else
-        internal static object TryCompileBoundToFirstClosureParam_OLD(Type delegateType, Expression bodyExpr, IReadOnlyList<PE> paramExprs,
-            Type[] closurePlusParamTypes, Type returnType, CompilerFlags flags)
-        {
-#endif
-            // The method collects the info from the all nested lambdas deep down up-front and de-duplicates the lambdas as well.
-            var closureInfo = new ClosureInfo(ClosureStatus.ToBeCollected);
-            if (!TryCollectBoundConstants(ref closureInfo, bodyExpr, paramExprs, null, ref closureInfo.NestedLambdas, flags))
-                return null;
-
-            ArrayClosure closure;
-            if ((flags & CompilerFlags.EnableDelegateDebugInfo) == 0)
-            {
-                closure = (closureInfo.Status & ClosureStatus.HasClosure) == 0
-                    ? EmptyArrayClosure
-                    : new ArrayClosure(closureInfo.GetArrayOfConstantsAndNestedLambdas());
-            }
-            else
-            {   // todo: @feature add the debug info to the nested lambdas!
-                var debugExpr = Lambda(delegateType, bodyExpr, paramExprs?.ToReadOnlyList() ?? Tools.Empty<PE>());
-                var constantsAndNestedLambdas = (closureInfo.Status & ClosureStatus.HasClosure) == 0
-                    ? null
-                    : closureInfo.GetArrayOfConstantsAndNestedLambdas();
-                closure = new DebugArrayClosure(constantsAndNestedLambdas, debugExpr);
-            }
-
-            var method = new DynamicMethod(string.Empty, returnType, closurePlusParamTypes, typeof(ArrayClosure), true);
-
-            // todo: @perf can we just count the Expressions in the TryCollect phase and use it as N * 4 or something?
-            var il = method.GetILGenerator();
-
-            if (closure.ConstantsAndNestedLambdas != null)
-                EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref closureInfo);
-
-            var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
-            if (returnType.IsByRef)
-                parent |= ParentFlags.ReturnByRef;
-
-            if (!EmittingVisitor.TryEmit(bodyExpr, paramExprs, il, ref closureInfo, flags, parent))
-                return null;
-            il.Demit(OpCodes.Ret);
-
-            return method.CreateDelegate(delegateType, closure);
-        }
-
-        private static readonly Type[] _closureAsASingleParamType = { typeof(ArrayClosure) };
-        private static readonly Type[][] _closureTypePlusParamTypesPool = new Type[8][]; // todo: @perf @mem could we use this for other Type arrays?
+        private static readonly Type[][] _typeArrayPool = new Type[8][]; // todo: @perf @mem could we use this for other Type arrays?
 
 #if LIGHT_EXPRESSION
-        private static Type[] RentOrNewClosureTypeToParamTypes(IParameterProvider paramExprs)
+        private static Type[] RentOrNewClosureTypePlusParamTypes(Type closureType, IParameterProvider paramExprs)
         {
-            var count = paramExprs.ParameterCount;
+            var paramCount = paramExprs.ParameterCount;
 #else
-        private static Type[] RentOrNewClosureTypeToParamTypes(IReadOnlyList<PE> paramExprs)
+        private static Type[] RentOrNewClosureTypePlusParamTypes(Type closureType, IReadOnlyList<PE> paramExprs)
         {
-            var count = paramExprs.Count;
+            var paramCount = paramExprs.Count;
 #endif
-            if (count == 0)
-                return _closureAsASingleParamType;
+            var closurePlusParamTypes = paramCount < 8
+                ? Interlocked.Exchange(ref _typeArrayPool[paramCount], null) ?? new Type[paramCount + 1]
+                : new Type[paramCount + 1];
+            Debug.Assert(closurePlusParamTypes.Length >= 1);
 
-            if (count < 8)
+            closurePlusParamTypes[0] = closureType;
+            for (var i = 1; i < (uint)closurePlusParamTypes.Length; ++i)
             {
-                var pooledClosureAndParamTypes = Interlocked.Exchange(ref _closureTypePlusParamTypesPool[count], null);
-                if (pooledClosureAndParamTypes != null)
-                {
-                    for (var i = 0; i < count; i++)
-                    {
-                        var parameterExpr = paramExprs.GetParameter(i); // todo: @perf can we avoid calling virtual GetParameter() and maybe use intrinsic with NoByRef?
-                        pooledClosureAndParamTypes[i + 1] = parameterExpr.IsByRef ? parameterExpr.Type.MakeByRefType() : parameterExpr.Type;
-                    }
-                    return pooledClosureAndParamTypes;
-                }
+                // todo: @perf can we avoid calling virtual GetParameter() and maybe use intrinsic with NoByRef?
+                var paramExpr = paramExprs.GetParameter(i - 1);
+                closurePlusParamTypes[i] = paramExpr.IsByRef ? paramExpr.Type.MakeByRefType() : paramExpr.Type;
             }
-
-            // todo: @perf the code maybe simplified and then will be the candidate for the inlining
-            var closureAndParamTypes = new Type[count + 1];
-            closureAndParamTypes[0] = typeof(ArrayClosure);
-            for (var i = 0; i < count; i++)
-            {
-                var parameterExpr = paramExprs.GetParameter(i);
-                closureAndParamTypes[i + 1] = parameterExpr.IsByRef ? parameterExpr.Type.MakeByRefType() : parameterExpr.Type;
-            }
-            return closureAndParamTypes;
+            return closurePlusParamTypes;
         }
 
         [MethodImpl((MethodImplOptions)256)]
-        private static void ReturnClosureTypeToParamTypesToPool(Type[] closurePlusParamTypes)
+        private static void ReturnTypeArrayToPool(Type[] paramTypes)
         {
-            var paramCount = closurePlusParamTypes.Length - 1;
-            if (paramCount != 0 & paramCount < 8)
-                Interlocked.Exchange(ref _closureTypePlusParamTypesPool[paramCount], closurePlusParamTypes); // todo: @perf we don't need the Interlocked here
+            var paramCount = paramTypes.Length - 1;
+            if (paramCount < 8)
+                Interlocked.Exchange(ref _typeArrayPool[paramCount], paramTypes); // todo: @perf we don't need the Interlocked here
         }
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
@@ -968,7 +900,7 @@ namespace FastExpressionCompiler
 
         public static Result NotSupported_RuntimeVariables { get; private set; }
 
-        public class ArrayClosure
+        public sealed class ArrayClosure
         {
             // todo: @feature split into two to reduce copying
             public readonly object[] ConstantsAndNestedLambdas;
@@ -976,8 +908,10 @@ namespace FastExpressionCompiler
         }
 
         [RequiresUnreferencedCode(Trimming.Message)]
-        public sealed class DebugArrayClosure : ArrayClosure, IDelegateDebugInfo
+        public sealed class DebugArrayClosure : IDelegateDebugInfo
         {
+            public readonly object[] ConstantsAndNestedLambdas;
+
             public LambdaExpression Expression { get; internal set; }
 
             private readonly Lazy<string> _expressionString;
@@ -986,8 +920,8 @@ namespace FastExpressionCompiler
             private readonly Lazy<string> _csharpString;
             public string CSharpString => _csharpString.Value;
             public DebugArrayClosure(object[] constantsAndNestedLambdas, LambdaExpression expr)
-                : base(constantsAndNestedLambdas)
             {
+                ConstantsAndNestedLambdas = constantsAndNestedLambdas;
                 Expression = expr;
                 _expressionString = new Lazy<string>(() => Expression?.ToExpressionString() ?? "<expression is not available>");
                 _csharpString = new Lazy<string>(() => Expression?.ToCSharpString() ?? "<expression is not available>");
@@ -1041,13 +975,17 @@ namespace FastExpressionCompiler
         }
 
         // todo: @perf better to move the case with no constants to another class OR we can reuse ArrayClosure but now ConstantsAndNestedLambdas will hold NonPassedParams
-        public sealed class ArrayClosureWithNonPassedParams : ArrayClosure
+        public sealed class ArrayClosureWithNonPassedParams
         {
+            public readonly object[] ConstantsAndNestedLambdas;
             public readonly object[] NonPassedParams;
-            public ArrayClosureWithNonPassedParams(object[] nonPassedParams, object[] constantsAndNestedLambdas) : base(constantsAndNestedLambdas) =>
+            public ArrayClosureWithNonPassedParams(object[] nonPassedParams, object[] constantsAndNestedLambdas)
+            {
+                ConstantsAndNestedLambdas = constantsAndNestedLambdas;
                 NonPassedParams = nonPassedParams;
-            // todo: @perf optimize for this case
-            public ArrayClosureWithNonPassedParams(object[] nonPassedParams) : base(null) =>
+            }
+            // todo: @perf optimize for this case, or may be just reuse the ArrayClosure because those are just an objects
+            public ArrayClosureWithNonPassedParams(object[] nonPassedParams) =>
                 NonPassedParams = nonPassedParams;
         }
 
@@ -1804,15 +1742,18 @@ namespace FastExpressionCompiler
             var nestedConstsAndLambdas = nestedClosureInfo.GetArrayOfConstantsAndNestedLambdas();
 
             ArrayClosure nestedLambdaClosure = null;
+            var closureType = typeof(ArrayClosure);
             var hasNonPassedParameters = nestedLambdaInfo.NonPassedParameters.Count != 0;
             if (!hasNonPassedParameters)
                 nestedLambdaClosure = (nestedClosureInfo.Status & ClosureStatus.HasClosure) == 0
                     ? EmptyArrayClosure
                     : new ArrayClosure(nestedConstsAndLambdas);
+            else
+                closureType = typeof(ArrayClosureWithNonPassedParams);
 
-            var closurePlusParamTypes = RentOrNewClosureTypeToParamTypes(nestedLambdaParamExprs);
+            var closurePlusParamTypes = RentOrNewClosureTypePlusParamTypes(closureType, nestedLambdaParamExprs);
 
-            var method = new DynamicMethod(string.Empty, nestedReturnType, closurePlusParamTypes, typeof(ArrayClosure), true);
+            var method = new DynamicMethod(string.Empty, nestedReturnType, closurePlusParamTypes, closureType, true);
             var il = method.GetILGenerator();
 
             if (nestedConstsAndLambdas != null)
@@ -1836,7 +1777,7 @@ namespace FastExpressionCompiler
                 : nestedConstsAndLambdas == null ? new NestedLambdaForNonPassedParams(nestedLambda)
                 : new NestedLambdaForNonPassedParamsWithConstants(nestedLambda, nestedConstsAndLambdas);
 
-            ReturnClosureTypeToParamTypesToPool(closurePlusParamTypes);
+            ReturnTypeArrayToPool(closurePlusParamTypes);
             return true;
         }
 
