@@ -5421,22 +5421,153 @@ namespace FastExpressionCompiler
                 return null;
             }
 
+            /// <summary>Operation accepting IComparable inputs and producing bool output</summary>
+            private static bool IsComparison(ExpressionType nodeType) =>
+                nodeType == ExpressionType.Equal |
+                nodeType == ExpressionType.NotEqual |
+                nodeType == ExpressionType.GreaterThan |
+                nodeType == ExpressionType.GreaterThanOrEqual |
+                nodeType == ExpressionType.LessThan |
+                nodeType == ExpressionType.LessThanOrEqual;
+
+            /// <summary>Operation accepting bool inputs and producing bool output</summary>
+            private static bool IsLogical(ExpressionType nodeType) =>
+                nodeType == ExpressionType.AndAlso |
+                nodeType == ExpressionType.OrElse |
+                nodeType == ExpressionType.Not;
+
+            /// <summary>Operation accepting the same primitive type inputs (or of the coalescing types) and producing the "same" primitive type output</summary>
+            private static bool IsArithmetic(ExpressionType nodeType) =>
+                nodeType == ExpressionType.Add |
+                nodeType == ExpressionType.Subtract |
+                nodeType == ExpressionType.Multiply |
+                nodeType == ExpressionType.Divide |
+                nodeType == ExpressionType.Modulo |
+                nodeType == ExpressionType.Negate;
+
+            /// <summary>Eval negate</summary>
+            public static object EvalNegateOrNull(object operand)
+            {
+                return Type.GetTypeCode(operand.GetType()) switch
+                {
+                    TypeCode.SByte => -(sbyte)operand,
+                    TypeCode.Byte => -(byte)operand,
+                    TypeCode.Int16 => -(short)operand,
+                    TypeCode.UInt16 => -(ushort)operand,
+                    TypeCode.Int32 => -(int)operand,
+                    TypeCode.UInt32 => -(uint)operand,
+                    TypeCode.Int64 => -(long)operand,
+                    TypeCode.Single => -(float)operand,
+                    TypeCode.Double => -(double)operand,
+                    TypeCode.Decimal => -(decimal)operand,
+                    TypeCode.UInt64 => null,
+                    _ => null,
+                };
+            }
+
+            /// <summary>Eval arithmetic</summary>
+            public static object EvalArithmeticOrNull(object left, object right, ExpressionType nodeType)
+            {
+                return nodeType switch
+                {
+                    ExpressionType.Add => Type.GetTypeCode(left.GetType()) switch
+                    {
+                        TypeCode.SByte => (sbyte)left + (sbyte)right,
+                        TypeCode.Byte => (byte)left + (byte)right,
+                        TypeCode.Int16 => (short)left + (short)right,
+                        TypeCode.UInt16 => (ushort)left + (ushort)right,
+                        TypeCode.Int32 => (int)left + (int)right,
+                        TypeCode.UInt32 => (uint)left + (uint)right,
+                        TypeCode.Int64 => (long)left + (long)right,
+                        TypeCode.UInt64 => (ulong)left + (ulong)right,
+                        TypeCode.Single => (float)left + (float)right,
+                        TypeCode.Double => (double)left + (double)right,
+                        TypeCode.Decimal => (decimal)left + (decimal)right,
+                        _ => null,
+                    },
+                    ExpressionType.Subtract => Type.GetTypeCode(left.GetType()) switch
+                    {
+                        TypeCode.SByte => (sbyte)left - (sbyte)right,
+                        TypeCode.Byte => (byte)left - (byte)right,
+                        TypeCode.Int16 => (short)left - (short)right,
+                        TypeCode.UInt16 => (ushort)left - (ushort)right,
+                        TypeCode.Int32 => (int)left - (int)right,
+                        TypeCode.UInt32 => (uint)left - (uint)right,
+                        TypeCode.Int64 => (long)left - (long)right,
+                        TypeCode.UInt64 => (ulong)left - (ulong)right,
+                        TypeCode.Single => (float)left - (float)right,
+                        TypeCode.Double => (double)left - (double)right,
+                        TypeCode.Decimal => (decimal)left - (decimal)right,
+                        _ => null,
+                    },
+                    ExpressionType.Multiply => Type.GetTypeCode(left.GetType()) switch
+                    {
+                        TypeCode.SByte => (sbyte)left * (sbyte)right,
+                        TypeCode.Byte => (byte)left * (byte)right,
+                        TypeCode.Int16 => (short)left * (short)right,
+                        TypeCode.UInt16 => (ushort)left * (ushort)right,
+                        TypeCode.Int32 => (int)left * (int)right,
+                        TypeCode.UInt32 => (uint)left * (uint)right,
+                        TypeCode.Int64 => (long)left * (long)right,
+                        TypeCode.UInt64 => (ulong)left * (ulong)right,
+                        TypeCode.Single => (float)left * (float)right,
+                        TypeCode.Double => (double)left * (double)right,
+                        TypeCode.Decimal => (decimal)left * (decimal)right,
+                        _ => null,
+                    },
+                    ExpressionType.Divide => Type.GetTypeCode(left.GetType()) switch
+                    {
+                        TypeCode.SByte => (sbyte)left / (sbyte)right,
+                        TypeCode.Byte => (byte)left / (byte)right,
+                        TypeCode.Int16 => (short)left / (short)right,
+                        TypeCode.UInt16 => (ushort)left / (ushort)right,
+                        TypeCode.Int32 => (int)left / (int)right,
+                        TypeCode.UInt32 => (uint)left / (uint)right,
+                        TypeCode.Int64 => (long)left / (long)right,
+                        TypeCode.UInt64 => (ulong)left / (ulong)right,
+                        TypeCode.Single => (float)left / (float)right,
+                        TypeCode.Double => (double)left / (double)right,
+                        TypeCode.Decimal => (decimal)left / (decimal)right,
+                        _ => null,
+                    },
+                    ExpressionType.Modulo => Type.GetTypeCode(left.GetType()) switch
+                    {
+                        TypeCode.SByte => (sbyte)left % (sbyte)right,
+                        TypeCode.Byte => (byte)left % (byte)right,
+                        TypeCode.Int16 => (short)left % (short)right,
+                        TypeCode.UInt16 => (ushort)left % (ushort)right,
+                        TypeCode.Int32 => (int)left % (int)right,
+                        TypeCode.UInt32 => (uint)left % (uint)right,
+                        TypeCode.Int64 => (long)left % (long)right,
+                        TypeCode.UInt64 => (ulong)left % (ulong)right,
+                        TypeCode.Single => (float)left % (float)right,
+                        TypeCode.Double => (double)left % (double)right,
+                        TypeCode.Decimal => (decimal)left % (decimal)right,
+                        _ => null,
+                    },
+                    _ => null,
+                };
+            }
 
             // todo: @wip #468
-            internal static bool TryReduceComparisonByEvalConstantsAndArithmetics(out bool result, Expression left, Expression right, bool isEquality)
+            internal static bool TryReduceLogicalExpression(out bool result,
+                ExpressionType nodeType, Expression left, Expression right)
             {
-                if (left is ConstantExpression lc && lc.Type.IsPrimitive &&
-                    right is ConstantExpression rc && rc.Type.IsPrimitive
-#if LIGHT_EXPRESSION
-                    // exclude the ref 
-                    && lc is not ConstantRefExpression && rc is not ConstantRefExpression
-#endif
-                    )
+                result = false;
+                if (left is BinaryExpression lb && IsLogical(lb.NodeType))
                 {
+                    var ll = lb.Left;
+                    var lr = lb.Right;
+                    if (right is ConstantExpression rc
+#if LIGHT_EXPRESSION
+                        && right is not ConstantRefExpression
+#endif
+                        )
+                    {
 
-                    result = lc.Value.Equals(rc.Value) && !isEquality;
-                    return true;
+                    }
                 }
+
 
                 result = false;
                 return false;
@@ -5474,9 +5605,8 @@ namespace FastExpressionCompiler
                 var isEqualityOp = nodeType == ExpressionType.Equal | nodeType == ExpressionType.NotEqual;
                 if (isEqualityOp)
                 {
-                    
                     // if (leftType.IsPrimitive &&
-                    //     TryReduceComparisonByEvalConstantsAndArithmetics(out bool result, left, right, nodeType == ExpressionType.Equal))
+                    //     TryReduceArithmeticsOrComparisonOrLogical(out bool result, nodeType, left, right))
                     // {
                     //     il.Demit((bool)result ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
                     //     return il.EmitPopIfIgnoreResult(parent);
@@ -6074,12 +6204,13 @@ namespace FastExpressionCompiler
                 {
                     // simplify the not `==` -> `!=`, `!=` -> `==`
                     var op = TryReduceCondition(((UnaryExpression)testExpr).Operand);
-                    if (op.NodeType == ExpressionType.Equal) // ensures that it is a BinaryExpression
+                    var nodeType = op.NodeType;
+                    if (nodeType == ExpressionType.Equal) // ensures that it is a BinaryExpression
                     {
                         var binOp = (BinaryExpression)op;
                         return NotEqual(binOp.Left, binOp.Right);
                     }
-                    else if (op.NodeType == ExpressionType.NotEqual) // ensures that it is a BinaryExpression
+                    else if (nodeType == ExpressionType.NotEqual) // ensures that it is a BinaryExpression
                     {
                         var binOp = (BinaryExpression)op;
                         return Equal(binOp.Left, binOp.Right);
@@ -6087,7 +6218,8 @@ namespace FastExpressionCompiler
                 }
                 else if (testExpr is BinaryExpression b)
                 {
-                    if (b.NodeType == ExpressionType.OrElse || b.NodeType == ExpressionType.Or)
+                    var nodeType = b.NodeType;
+                    if (nodeType == ExpressionType.OrElse | nodeType == ExpressionType.Or)
                     {
                         if (b.Left is ConstantExpression lc && lc.Value is bool lcb)
                             return lcb ? lc : TryReduceCondition(b.Right);
@@ -6095,7 +6227,7 @@ namespace FastExpressionCompiler
                         if (b.Right is ConstantExpression rc && rc.Value is bool rcb && !rcb)
                             return TryReduceCondition(b.Left);
                     }
-                    else if (b.NodeType == ExpressionType.AndAlso || b.NodeType == ExpressionType.And)
+                    else if (nodeType == ExpressionType.AndAlso | nodeType == ExpressionType.And)
                     {
                         if (b.Left is ConstantExpression lc && lc.Value is bool lcb)
                             return !lcb ? lc : TryReduceCondition(b.Right);
