@@ -42,7 +42,7 @@ namespace FastExpressionCompiler.IssueTests
         private static Func<ILGenerator, IList<object>> GetScopeTokens()
         {
             var dynMethod = new DynamicMethod(string.Empty,
-                typeof(IList<object>), new[] { typeof(ExpressionCompiler.ArrayClosure), typeof(ILGenerator) },
+                typeof(IList<object>), new[] { typeof(ExpressionCompiler.EmptyClosure), typeof(ILGenerator) },
                 typeof(ExpressionCompiler), skipVisibility: true);
             var il = dynMethod.GetILGenerator();
 
@@ -51,7 +51,7 @@ namespace FastExpressionCompiler.IssueTests
             il.Emit(OpCodes.Ldfld, mTokensField);
             il.Emit(OpCodes.Ret);
 
-            return (Func<ILGenerator, IList<object>>)dynMethod.CreateDelegate(typeof(Func<ILGenerator, IList<object>>), ExpressionCompiler.EmptyArrayClosure);
+            return (Func<ILGenerator, IList<object>>)dynMethod.CreateDelegate(typeof(Func<ILGenerator, IList<object>>), ExpressionCompiler.EmptyClosure.Instance);
         }
         static readonly Func<ILGenerator, IList<object>> getScopeTokens = GetScopeTokens();
 
@@ -60,7 +60,7 @@ namespace FastExpressionCompiler.IssueTests
         private static GetFieldRefDelegate<TFieldHolder, TField> CreateFieldAccessor<TFieldHolder, TField>(FieldInfo field)
         {
             var dynMethod = new DynamicMethod(string.Empty,
-                typeof(TField).MakeByRefType(), new[] { typeof(ExpressionCompiler.ArrayClosure), typeof(TFieldHolder) },
+                typeof(TField).MakeByRefType(), new[] { typeof(ExpressionCompiler.EmptyClosure), typeof(TFieldHolder) },
                 typeof(TFieldHolder), skipVisibility: true);
 
             var il = dynMethod.GetILGenerator();
@@ -83,7 +83,7 @@ namespace FastExpressionCompiler.IssueTests
             var paramCount = 1;
 
             var dynMethod = new DynamicMethod(string.Empty,
-                typeof(int), new[] { typeof(ExpressionCompiler.ArrayClosure), typeof(int) },
+                typeof(int), new[] { typeof(ExpressionCompiler.EmptyClosure), typeof(int) },
                 typeof(ExpressionCompiler),
                 skipVisibility: true);
 
@@ -127,7 +127,7 @@ namespace FastExpressionCompiler.IssueTests
             mILStream[mLength++] = (byte)OpCodes.Ret.Value;
             updateStackSizeDelegate(il, OpCodes.Ret, 0);
 
-            return (Func<int, int>)dynMethod.CreateDelegate(typeof(Func<int, int>), ExpressionCompiler.EmptyArrayClosure);
+            return (Func<int, int>)dynMethod.CreateDelegate(typeof(Func<int, int>), ExpressionCompiler.EmptyClosure.Instance);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -153,7 +153,7 @@ namespace FastExpressionCompiler.IssueTests
         public static Func<int, int> Get_DynamicMethod_Emit_OpCodes_Call()
         {
             var dynMethod = new DynamicMethod(string.Empty,
-                typeof(int), new[] { typeof(ExpressionCompiler.ArrayClosure), typeof(int) },
+                typeof(int), new[] { typeof(ExpressionCompiler.EmptyClosure), typeof(int) },
                 typeof(ExpressionCompiler), skipVisibility: true);
 
             var il = dynMethod.GetILGenerator();
@@ -164,7 +164,7 @@ namespace FastExpressionCompiler.IssueTests
             // il.Emit(OpCodes.Call, MethodStaticNoArgs);
             il.Emit(OpCodes.Ret);
 
-            return (Func<int, int>)dynMethod.CreateDelegate(typeof(Func<int, int>), ExpressionCompiler.EmptyArrayClosure);
+            return (Func<int, int>)dynMethod.CreateDelegate(typeof(Func<int, int>), ExpressionCompiler.EmptyClosure.Instance);
         }
 
         
@@ -186,7 +186,7 @@ namespace FastExpressionCompiler.IssueTests
         public static Func<A> Get_DynamicMethod_Emit_Newobj()
         {
             var dynMethod = new DynamicMethod(string.Empty,
-                typeof(A), new[] { typeof(ExpressionCompiler.ArrayClosure) },
+                typeof(A), new[] { typeof(ExpressionCompiler.EmptyClosure) },
                 typeof(ExpressionCompiler), skipVisibility: true);
 
             var il = dynMethod.GetILGenerator();
@@ -194,14 +194,14 @@ namespace FastExpressionCompiler.IssueTests
             il.Emit(OpCodes.Newobj, _ctor);
             il.Emit(OpCodes.Ret);
 
-            return (Func<A>)dynMethod.CreateDelegate(typeof(Func<A>), ExpressionCompiler.EmptyArrayClosure);
+            return (Func<A>)dynMethod.CreateDelegate(typeof(Func<A>), ExpressionCompiler.EmptyClosure.Instance);
         }
 
         public static Func<A> Get_DynamicMethod_Hack_Emit_Newobj()
         {
             var dynMethod = new DynamicMethod(string.Empty,
-                typeof(A), new[] { typeof(ExpressionCompiler.ArrayClosure) },
-                typeof(ExpressionCompiler), skipVisibility: true);
+                typeof(A), new[] { typeof(ExpressionCompiler.EmptyClosure) },
+                typeof(ExpressionCompiler.EmptyClosure), true);
 
             var il = dynMethod.GetILGenerator();
             var ilType = il.GetType();
@@ -228,7 +228,7 @@ namespace FastExpressionCompiler.IssueTests
 
             il.Emit(OpCodes.Ret);
 
-            return (Func<A>)dynMethod.CreateDelegate(typeof(Func<A>), ExpressionCompiler.EmptyArrayClosure);
+            return (Func<A>)dynMethod.CreateDelegate(typeof(Func<A>), ExpressionCompiler.EmptyClosure.Instance);
         }
 
         public class A

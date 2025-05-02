@@ -407,13 +407,15 @@ namespace FastExpressionCompiler
         internal static TDelegate TryCompileWithPreCreatedClosure<TDelegate>(
             this LambdaExpression lambdaExpr, ref ClosureInfo closureInfo, CompilerFlags flags) where TDelegate : class
         {
+            var closureType = typeof(ArrayClosure);
 #if LIGHT_EXPRESSION
-            var closurePlusParamTypes = RentOrNewClosureTypePlusParamTypes(typeof(ArrayClosure), lambdaExpr);
+            var closurePlusParamTypes = RentOrNewClosureTypePlusParamTypes(closureType, lambdaExpr);
 #else
-            var closurePlusParamTypes = RentOrNewClosureTypePlusParamTypes(typeof(ArrayClosure), lambdaExpr.Parameters);
+            var closurePlusParamTypes = RentOrNewClosureTypePlusParamTypes(closureType, lambdaExpr.Parameters);
 #endif
-            var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, closurePlusParamTypes, typeof(ArrayClosure), true);
+            var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, closurePlusParamTypes, closureType, true);
 
+            closureInfo.ConstantsAndNestedLambdasField = ArrayClosure.ConstantsAndNestedLambdasField;
             var il = method.GetILGenerator();
             EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref closureInfo);
 
@@ -440,12 +442,13 @@ namespace FastExpressionCompiler
             CompilerFlags flags = CompilerFlags.Default) where TDelegate : class
         {
             var closureInfo = new ClosureInfo(ClosureStatus.UserProvided);
+            var closureType = typeof(EmptyClosure);
 #if LIGHT_EXPRESSION
-            var closurePlusParamTypes = RentOrNewClosureTypePlusParamTypes(typeof(ArrayClosure), lambdaExpr);
+            var closurePlusParamTypes = RentOrNewClosureTypePlusParamTypes(closureType, lambdaExpr);
 #else
-            var closurePlusParamTypes = RentOrNewClosureTypePlusParamTypes(typeof(ArrayClosure), lambdaExpr.Parameters);
+            var closurePlusParamTypes = RentOrNewClosureTypePlusParamTypes(closureType, lambdaExpr.Parameters);
 #endif
-            var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, closurePlusParamTypes, typeof(ArrayClosure), true);
+            var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, closurePlusParamTypes, closureType, true);
 
             var il = method.GetILGenerator();
             if (!EmittingVisitor.TryEmit(lambdaExpr.Body,
@@ -460,7 +463,7 @@ namespace FastExpressionCompiler
             il.Demit(OpCodes.Ret);
 
             var delegateType = typeof(TDelegate) != typeof(Delegate) ? typeof(TDelegate) : lambdaExpr.Type;
-            var @delegate = (TDelegate)(object)method.CreateDelegate(delegateType, EmptyArrayClosure);
+            var @delegate = (TDelegate)(object)method.CreateDelegate(delegateType, EmptyClosure.Instance);
             ReturnTypeArrayToPool(closurePlusParamTypes);
             return @delegate;
         }
@@ -496,26 +499,38 @@ namespace FastExpressionCompiler
                 : closureInfo.GetArrayOfConstantsAndNestedLambdas();
 
             object closure = null;
+            Type closureType = null;
+            FieldInfo constantsField = null;
             if ((flags & CompilerFlags.EnableDelegateDebugInfo) == 0)
             {
-                closure = constantsAndNestedLambdas == null
-                    ? EmptyArrayClosure
-                    : new ArrayClosure(constantsAndNestedLambdas);
+                if (constantsAndNestedLambdas == null)
+                {
+                    closure = EmptyClosure.Instance;
+                    closureType = typeof(EmptyClosure);
+                }
+                else
+                {
+                    closure = new ArrayClosure(constantsAndNestedLambdas);
+                    closureType = typeof(ArrayClosure);
+                    constantsField = ArrayClosure.ConstantsAndNestedLambdasField;
+                }
             }
             else
             {   // todo: @feature add the debug info into the nested lambdas!
                 var debugExpr = Lambda(delegateType, bodyExpr, paramExprs?.ToReadOnlyList() ?? Tools.Empty<PE>());
                 closure = new DebugArrayClosure(constantsAndNestedLambdas, debugExpr);
+                closureType = typeof(DebugArrayClosure);
+                constantsField = DebugArrayClosure.ConstantsAndNestedLambdasField;
             }
 
-            var clsoureType = closure.GetType();
-            var paramTypes = RentOrNewClosureTypePlusParamTypes(clsoureType, paramExprs);
+            var paramTypes = RentOrNewClosureTypePlusParamTypes(closureType, paramExprs);
 
-            var method = new DynamicMethod(string.Empty, returnType, paramTypes, clsoureType, true);
+            var method = new DynamicMethod(string.Empty, returnType, paramTypes, closureType, true);
 
             // todo: @perf can we just count the Expressions in the TryCollect phase and use it as N * 4 or something?
             var il = method.GetILGenerator();
 
+            closureInfo.ConstantsAndNestedLambdasField = constantsField;
             if (constantsAndNestedLambdas != null)
                 EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref closureInfo);
 
@@ -686,6 +701,9 @@ namespace FastExpressionCompiler
 
             /// <summary>The nested lambdas and their info</summary>
             public SmallList<NestedLambdaInfo> NestedLambdas;
+
+            /// <summary>The constant array field</summary>
+            public FieldInfo ConstantsAndNestedLambdasField;
 
             /// <summary>Populates the info</summary>
             public ClosureInfo(ClosureStatus status)
@@ -884,24 +902,23 @@ namespace FastExpressionCompiler
             return label.Label;
         }
 
-        public static readonly ArrayClosure EmptyArrayClosure = new ArrayClosure(null);
-
-        public static FieldInfo ArrayClosureArrayField =
-            typeof(ArrayClosure).GetField(nameof(ArrayClosure.ConstantsAndNestedLambdas));
-
-        public static FieldInfo ArrayClosureWithNonPassedParamsField =
-            typeof(ArrayClosureWithNonPassedParams).GetField(nameof(ArrayClosureWithNonPassedParams.NonPassedParams));
-
         private static ConstructorInfo[] _nonPassedParamsArrayClosureCtors = typeof(ArrayClosureWithNonPassedParams).GetConstructors();
 
         public static ConstructorInfo ArrayClosureWithNonPassedParamsAndConstantsCtor = _nonPassedParamsArrayClosureCtors[0];
 
-        public static ConstructorInfo ArrayClosureWithNonPassedParamsCtor = _nonPassedParamsArrayClosureCtors[1];
+        public static ConstructorInfo ArrayClosureWithNonPassedParamsCtor = _nonPassedParamsArrayClosureCtors[1]; public static Result NotSupported_RuntimeVariables { get; private set; }
 
-        public static Result NotSupported_RuntimeVariables { get; private set; }
+        public sealed class EmptyClosure
+        {
+            public static readonly EmptyClosure Instance = new EmptyClosure();
+            private EmptyClosure() { }
+        }
 
         public sealed class ArrayClosure
         {
+            public static FieldInfo ConstantsAndNestedLambdasField =
+                typeof(ArrayClosure).GetField(nameof(ConstantsAndNestedLambdas));
+
             // todo: @feature split into two to reduce copying
             public readonly object[] ConstantsAndNestedLambdas;
             public ArrayClosure(object[] constantsAndNestedLambdas) => ConstantsAndNestedLambdas = constantsAndNestedLambdas;
@@ -910,6 +927,9 @@ namespace FastExpressionCompiler
         [RequiresUnreferencedCode(Trimming.Message)]
         public sealed class DebugArrayClosure : IDelegateDebugInfo
         {
+            public static FieldInfo ConstantsAndNestedLambdasField =
+                typeof(ArrayClosure).GetField(nameof(ConstantsAndNestedLambdas));
+
             public readonly object[] ConstantsAndNestedLambdas;
 
             public LambdaExpression Expression { get; internal set; }
@@ -977,6 +997,11 @@ namespace FastExpressionCompiler
         // todo: @perf better to move the case with no constants to another class OR we can reuse ArrayClosure but now ConstantsAndNestedLambdas will hold NonPassedParams
         public sealed class ArrayClosureWithNonPassedParams
         {
+            public static FieldInfo ConstantsAndNestedLambdasField =
+                typeof(ArrayClosureWithNonPassedParams).GetField(nameof(ConstantsAndNestedLambdas));
+            public static FieldInfo NonPassedParamsField =
+                typeof(ArrayClosureWithNonPassedParams).GetField(nameof(NonPassedParams));
+
             public readonly object[] ConstantsAndNestedLambdas;
             public readonly object[] NonPassedParams;
             public ArrayClosureWithNonPassedParams(object[] nonPassedParams, object[] constantsAndNestedLambdas)
@@ -1741,21 +1766,36 @@ namespace FastExpressionCompiler
 
             var nestedConstsAndLambdas = nestedClosureInfo.GetArrayOfConstantsAndNestedLambdas();
 
-            ArrayClosure nestedLambdaClosure = null;
-            var closureType = typeof(ArrayClosure);
+            object nestedLambdaClosure = null;
+            Type closureType = null;
+            FieldInfo closureConstantField = null;
             var hasNonPassedParameters = nestedLambdaInfo.NonPassedParameters.Count != 0;
-            if (!hasNonPassedParameters)
-                nestedLambdaClosure = (nestedClosureInfo.Status & ClosureStatus.HasClosure) == 0
-                    ? EmptyArrayClosure
-                    : new ArrayClosure(nestedConstsAndLambdas);
-            else
+            if (hasNonPassedParameters)
+            {
                 closureType = typeof(ArrayClosureWithNonPassedParams);
+                closureConstantField = ArrayClosureWithNonPassedParams.ConstantsAndNestedLambdasField;
+            }
+            else
+            {
+                if (nestedConstsAndLambdas != null)
+                {
+                    nestedLambdaClosure = new ArrayClosure(nestedConstsAndLambdas);
+                    closureType = typeof(ArrayClosure);
+                    closureConstantField = ArrayClosure.ConstantsAndNestedLambdasField;
+                }
+                else
+                {
+                    closureType = typeof(EmptyClosure);
+                    nestedLambdaClosure = EmptyClosure.Instance;
+                }
+            }
 
             var closurePlusParamTypes = RentOrNewClosureTypePlusParamTypes(closureType, nestedLambdaParamExprs);
 
             var method = new DynamicMethod(string.Empty, nestedReturnType, closurePlusParamTypes, closureType, true);
             var il = method.GetILGenerator();
 
+            nestedClosureInfo.ConstantsAndNestedLambdasField = closureConstantField;
             if (nestedConstsAndLambdas != null)
                 EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref nestedClosureInfo);
 
@@ -2937,7 +2977,7 @@ namespace FastExpressionCompiler
 
                 // Load non-passed argument from Closure - closure object is always a first argument
                 il.Demit(OpCodes.Ldarg_0);
-                il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
+                il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParams.NonPassedParamsField);
                 EmitLoadConstantInt(il, nonPassedParamIndex);
                 il.Demit(OpCodes.Ldelem_Ref);
                 return il.TryEmitUnboxOf(paramType);
@@ -2976,7 +3016,7 @@ namespace FastExpressionCompiler
 
                 // Load non-passed argument from Closure - closure object is always a first argument
                 il.Demit(OpCodes.Ldarg_0);
-                il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
+                il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParams.NonPassedParamsField);
                 EmitLoadConstantInt(il, nonPassedParamIndex);
                 il.Demit(OpCodes.Ldelem_Ref);
                 return true;
@@ -3642,7 +3682,7 @@ namespace FastExpressionCompiler
                 // todo: @perf load the field to `var` only if the constants are more than 1
                 // Load constants array field from Closure and store it into the variable
                 il.Demit(OpCodes.Ldarg_0);
-                il.Demit(OpCodes.Ldfld, ArrayClosureArrayField);
+                il.Demit(OpCodes.Ldfld, closure.ConstantsAndNestedLambdasField);
                 EmitStoreLocalVariable(il, il.GetNextLocalVarIndex(typeof(object[]))); // always does Stloc_0, because it is done at start of the lambda emit
 
                 // important that the constant will contain the nested lambdas as well in the same array after the actual constants, 
@@ -4611,7 +4651,7 @@ namespace FastExpressionCompiler
 
                     // load array field and param item index
                     il.Demit(OpCodes.Ldarg_0); // load closure as it is always an argument zero
-                    il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
+                    il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParams.NonPassedParamsField);
                     EmitLoadConstantInt(il, nonPassedParamIndex);
 
                     EmitLoadLocalVariable(il, rightVar);
@@ -4632,7 +4672,7 @@ namespace FastExpressionCompiler
                 if (resultVar != -1 & isPost)
                 {
                     il.Demit(OpCodes.Ldarg_0); // load closure as it is always an argument zero
-                    il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
+                    il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParams.NonPassedParamsField);
                     EmitLoadConstantInt(il, nonPassedParamIndex);
                     il.Demit(OpCodes.Ldelem_Ref); // load the variable from array
                     if (exprType.IsValueType)
@@ -4652,7 +4692,7 @@ namespace FastExpressionCompiler
                 EmitStoreLocalVariable(il, arithmeticResultVar);
 
                 il.Demit(OpCodes.Ldarg_0); // load closure as it is always an argument zero
-                il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
+                il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParams.NonPassedParamsField);
                 EmitLoadConstantInt(il, nonPassedParamIndex);
 
                 EmitLoadLocalVariable(il, arithmeticResultVar);
@@ -5100,7 +5140,7 @@ namespace FastExpressionCompiler
 
                             // Load the parameter from outer closure `Items` array
                             il.Demit(OpCodes.Ldarg_0); // closure is always a first argument
-                            il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
+                            il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParams.NonPassedParamsField);
                             EmitLoadConstantInt(il, outerNonPassedParamIndex);
                             il.Demit(OpCodes.Ldelem_Ref);
                         }
@@ -7061,8 +7101,8 @@ namespace FastExpressionCompiler
             var postIncMethod = typeof(ILGeneratorHacks).GetTypeInfo().GetDeclaredMethod(nameof(PostInc));
 
             var efficientMethod = new DynamicMethod(string.Empty,
-                typeof(int), new[] { typeof(ExpressionCompiler.ArrayClosure), typeof(ILGenerator), typeof(Type) },
-                typeof(ExpressionCompiler.ArrayClosure), skipVisibility: true);
+                typeof(int), new[] { typeof(ExpressionCompiler.EmptyClosure), typeof(ILGenerator), typeof(Type) },
+                typeof(ExpressionCompiler.EmptyClosure), skipVisibility: true);
             var il = efficientMethod.GetILGenerator();
 
             // emitting `il.m_localSignature.AddArgument(type);`
@@ -7080,7 +7120,7 @@ namespace FastExpressionCompiler
             il.Emit(OpCodes.Ret);
 
             _getNextLocalVarIndex = (Func<ILGenerator, Type, int>)efficientMethod.CreateDelegate(
-                typeof(Func<ILGenerator, Type, int>), ExpressionCompiler.EmptyArrayClosure);
+                typeof(Func<ILGenerator, Type, int>), ExpressionCompiler.EmptyClosure.Instance);
 
             // todo: @perf do batch Emit by manually calling `EnsureCapacity` once then `InternalEmit` multiple times
             // todo: @perf Replace the `Emit(opcode, int)` with the more specialized `Emit(opcode)`, `Emit(opcode, byte)` or `Emit(opcode, short)` 
