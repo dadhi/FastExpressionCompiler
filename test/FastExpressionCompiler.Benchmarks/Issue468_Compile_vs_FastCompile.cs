@@ -16,7 +16,6 @@ Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical
   .NET 8.0 : .NET 8.0.15 (8.0.1525.16413), X64 RyuJIT AVX2
   .NET 9.0 : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
 
-
 | Method             | Job      | Runtime  | Mean      | Error     | StdDev    | Ratio | RatioSD | Rank | BranchInstructions/Op | CacheMisses/Op | BranchMispredictions/Op | Allocated | Alloc Ratio |
 |------------------- |--------- |--------- |----------:|----------:|----------:|------:|--------:|-----:|----------------------:|---------------:|------------------------:|----------:|------------:|
 | InvokeCompiled     | .NET 8.0 | .NET 8.0 | 0.4365 ns | 0.0246 ns | 0.0192 ns |  1.00 |    0.06 |    1 |                     1 |             -0 |                      -0 |         - |          NA |
@@ -26,28 +25,22 @@ Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical
 | InvokeCompiledFast | .NET 9.0 | .NET 9.0 | 1.1920 ns | 0.0508 ns | 0.0450 ns |  2.20 |    0.34 |    2 |                     2 |              0 |                      -0 |         - |          NA |
 
 
-# Sealing the closure type, hmm
+## Sealing the closure type does not help
 
-BenchmarkDotNet v0.14.0, Windows 11 (10.0.26100.3775)
-Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
-.NET SDK 9.0.203
-  [Host]   : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
-  .NET 8.0 : .NET 8.0.15 (8.0.1525.16413), X64 RyuJIT AVX2
-  .NET 9.0 : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
-
-| Method             | Job      | Runtime  | Mean      | Error     | StdDev    | Ratio | RatioSD | Rank | BranchInstructions/Op | BranchMispredictions/Op | CacheMisses/Op | Allocated | Alloc Ratio |
-|------------------- |--------- |--------- |----------:|----------:|----------:|------:|--------:|-----:|----------------------:|------------------------:|---------------:|----------:|------------:|
-| InvokeCompiledFast | .NET 8.0 | .NET 8.0 | 1.0253 ns | 0.0194 ns | 0.0152 ns |  1.00 |    0.02 |    2 |                     2 |                      -0 |              0 |         - |          NA |
-| InvokeCompiled     | .NET 8.0 | .NET 8.0 | 0.5906 ns | 0.0457 ns | 0.0526 ns |  0.58 |    0.05 |    1 |                     1 |                      -0 |             -0 |         - |          NA |
-|                    |          |          |           |           |           |       |         |      |                       |                         |                |           |             |
-| InvokeCompiledFast | .NET 9.0 | .NET 9.0 | 0.5509 ns | 0.0077 ns | 0.0064 ns |  1.00 |    0.02 |    1 |                     2 |                      -0 |              0 |         - |          NA |
-| InvokeCompiled     | .NET 9.0 | .NET 9.0 | 0.5891 ns | 0.0206 ns | 0.0182 ns |  1.07 |    0.03 |    2 |                     1 |                      -0 |             -0 |         - |          NA |
+| Method             | Job      | Runtime  | Mean      | Error     | StdDev    | Median    | Ratio | RatioSD | Rank | BranchInstructions/Op | BranchMispredictions/Op | CacheMisses/Op | Allocated | Alloc Ratio |
+|------------------- |--------- |--------- |----------:|----------:|----------:|----------:|------:|--------:|-----:|----------------------:|------------------------:|---------------:|----------:|------------:|
+| InvokeCompiledFast | .NET 8.0 | .NET 8.0 | 1.0066 ns | 0.0209 ns | 0.0233 ns | 0.9973 ns |  1.00 |    0.03 |    2 |                     2 |                       0 |              0 |         - |          NA |
+| InvokeCompiled     | .NET 8.0 | .NET 8.0 | 0.5040 ns | 0.0217 ns | 0.0169 ns | 0.5016 ns |  0.50 |    0.02 |    1 |                     1 |                      -0 |             -0 |         - |          NA |
+|                    |          |          |           |           |           |           |       |         |      |                       |                         |                |           |             |
+| InvokeCompiledFast | .NET 9.0 | .NET 9.0 | 1.0640 ns | 0.0539 ns | 0.0929 ns | 1.0106 ns |  1.01 |    0.12 |    2 |                     2 |                       0 |              0 |         - |          NA |
+| InvokeCompiled     | .NET 9.0 | .NET 9.0 | 0.5897 ns | 0.0451 ns | 0.0858 ns | 0.6156 ns |  0.56 |    0.09 |    1 |                     1 |                      -0 |             -0 |         - |          NA |
 
 */
 [MemoryDiagnoser, RankColumn]
 [HardwareCounters(HardwareCounter.CacheMisses, HardwareCounter.BranchMispredictions, HardwareCounter.BranchInstructions)]
+[DisassemblyDiagnoser(printSource: true, maxDepth: 4)] // for some reason it cannot see inside the method whatever depth I specify
 [SimpleJob(RuntimeMoniker.Net90)]
-[SimpleJob(RuntimeMoniker.Net80)]
+// [SimpleJob(RuntimeMoniker.Net80)]
 public class Issue468_InvokeCompiled_vs_InvokeCompiledFast
 {
     Func<bool> _compiled, _compiledFast;
