@@ -25,6 +25,17 @@ Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical
 | InvokeCompiled     | .NET 9.0 | .NET 9.0 | 0.5547 ns | 0.0447 ns | 0.0871 ns |  1.02 |    0.22 |    1 |                     1 |             -0 |                      -0 |         - |          NA |
 | InvokeCompiledFast | .NET 9.0 | .NET 9.0 | 1.1920 ns | 0.0508 ns | 0.0450 ns |  2.20 |    0.34 |    2 |                     2 |              0 |                      -0 |         - |          NA |
 
+
+## Sealing the closure type does not help
+
+| Method             | Job      | Runtime  | Mean      | Error     | StdDev    | Median    | Ratio | RatioSD | Rank | BranchInstructions/Op | BranchMispredictions/Op | CacheMisses/Op | Allocated | Alloc Ratio |
+|------------------- |--------- |--------- |----------:|----------:|----------:|----------:|------:|--------:|-----:|----------------------:|------------------------:|---------------:|----------:|------------:|
+| InvokeCompiledFast | .NET 8.0 | .NET 8.0 | 1.0066 ns | 0.0209 ns | 0.0233 ns | 0.9973 ns |  1.00 |    0.03 |    2 |                     2 |                       0 |              0 |         - |          NA |
+| InvokeCompiled     | .NET 8.0 | .NET 8.0 | 0.5040 ns | 0.0217 ns | 0.0169 ns | 0.5016 ns |  0.50 |    0.02 |    1 |                     1 |                      -0 |             -0 |         - |          NA |
+|                    |          |          |           |           |           |           |       |         |      |                       |                         |                |           |             |
+| InvokeCompiledFast | .NET 9.0 | .NET 9.0 | 1.0640 ns | 0.0539 ns | 0.0929 ns | 1.0106 ns |  1.01 |    0.12 |    2 |                     2 |                       0 |              0 |         - |          NA |
+| InvokeCompiled     | .NET 9.0 | .NET 9.0 | 0.5897 ns | 0.0451 ns | 0.0858 ns | 0.6156 ns |  0.56 |    0.09 |    1 |                     1 |                      -0 |             -0 |         - |          NA |
+
 */
 [MemoryDiagnoser, RankColumn]
 [HardwareCounters(HardwareCounter.CacheMisses, HardwareCounter.BranchMispredictions, HardwareCounter.BranchInstructions)]
@@ -67,7 +78,7 @@ public class Issue468_InvokeCompiled_vs_InvokeCompiledFast
 | CompiledFast | .NET 9.0 | .NET 9.0 | 16.82 us | 0.199 us | 0.186 us |  0.79 |    0.01 |    1 | 0.1831 | 0.1526 |   1.16 KB |        0.28 |
 
 
-## After reverting the regression
+## After reverting the regression 
 
 
 

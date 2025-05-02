@@ -5421,6 +5421,27 @@ namespace FastExpressionCompiler
                 return null;
             }
 
+
+            // todo: @wip #468
+            internal static bool TryReduceComparisonByEvalConstantsAndArithmetics(out bool result, Expression left, Expression right, bool isEquality)
+            {
+                if (left is ConstantExpression lc && lc.Type.IsPrimitive &&
+                    right is ConstantExpression rc && rc.Type.IsPrimitive
+#if LIGHT_EXPRESSION
+                    // exclude the ref 
+                    && lc is not ConstantRefExpression && rc is not ConstantRefExpression
+#endif
+                    )
+                {
+
+                    result = lc.Value.Equals(rc.Value) && !isEquality;
+                    return true;
+                }
+
+                result = false;
+                return false;
+            }
+
             private static bool TryEmitComparison(
                 Expression left, Expression right, Type exprType, ExpressionType nodeType,
 #if LIGHT_EXPRESSION
@@ -5453,6 +5474,14 @@ namespace FastExpressionCompiler
                 var isEqualityOp = nodeType == ExpressionType.Equal | nodeType == ExpressionType.NotEqual;
                 if (isEqualityOp)
                 {
+                    
+                    // if (leftType.IsPrimitive &&
+                    //     TryReduceComparisonByEvalConstantsAndArithmetics(out bool result, left, right, nodeType == ExpressionType.Equal))
+                    // {
+                    //     il.Demit((bool)result ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
+                    //     return il.EmitPopIfIgnoreResult(parent);
+                    // }
+
                     if (leftIsNullable & rightIsNull)
                     {
                         if (!TryEmit(left, paramExprs, il, ref closure, setup, operandParent))
