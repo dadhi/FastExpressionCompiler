@@ -36,10 +36,19 @@ Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical
 | InvokeCompiledFast | .NET 9.0 | .NET 9.0 | 1.0640 ns | 0.0539 ns | 0.0929 ns | 1.0106 ns |  1.01 |    0.12 |    2 |                     2 |                       0 |              0 |         - |          NA |
 | InvokeCompiled     | .NET 9.0 | .NET 9.0 | 0.5897 ns | 0.0451 ns | 0.0858 ns | 0.6156 ns |  0.56 |    0.09 |    1 |                     1 |                      -0 |             -0 |         - |          NA |
 
+## Steal the same speed with the minimal IL of 2 instructions
+
+Job=.NET 8.0  Runtime=.NET 8.0  
+
+| Method             | Mean      | Error     | StdDev    | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
+|------------------- |----------:|----------:|----------:|------:|--------:|-----:|----------:|------------:|
+| InvokeCompiled     | 0.4647 ns | 0.0321 ns | 0.0268 ns |  1.00 |    0.08 |    1 |         - |          NA |
+| InvokeCompiledFast | 0.9739 ns | 0.0433 ns | 0.0481 ns |  2.10 |    0.15 |    2 |         - |          NA |
+
 */
 [MemoryDiagnoser, RankColumn]
-[HardwareCounters(HardwareCounter.CacheMisses, HardwareCounter.BranchMispredictions, HardwareCounter.BranchInstructions)]
-[SimpleJob(RuntimeMoniker.Net90)]
+// [HardwareCounters(HardwareCounter.CacheMisses, HardwareCounter.BranchMispredictions, HardwareCounter.BranchInstructions)]
+// [SimpleJob(RuntimeMoniker.Net90)]
 [SimpleJob(RuntimeMoniker.Net80)]
 public class Issue468_InvokeCompiled_vs_InvokeCompiledFast
 {
@@ -50,7 +59,7 @@ public class Issue468_InvokeCompiled_vs_InvokeCompiledFast
     {
         var expr = IssueTests.Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET.CreateExpression();
         _compiled = expr.CompileSys();
-        _compiledFast = expr.CompileFast();
+        _compiledFast = expr.CompileFast(flags: CompilerFlags.EvaluateExpressionIfPossible);
     }
 
     [Benchmark(Baseline = true)]
