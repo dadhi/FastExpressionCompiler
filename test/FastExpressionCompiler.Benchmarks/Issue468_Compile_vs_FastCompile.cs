@@ -36,7 +36,8 @@ Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical
 | InvokeCompiledFast | .NET 9.0 | .NET 9.0 | 1.0640 ns | 0.0539 ns | 0.0929 ns | 1.0106 ns |  1.01 |    0.12 |    2 |                     2 |                       0 |              0 |         - |          NA |
 | InvokeCompiled     | .NET 9.0 | .NET 9.0 | 0.5897 ns | 0.0451 ns | 0.0858 ns | 0.6156 ns |  0.56 |    0.09 |    1 |                     1 |                      -0 |             -0 |         - |          NA |
 
-## Steal the same speed with the minimal IL of 2 instructions
+
+## Steel the same speed with the minimal IL of 2 instructions
 
 Job=.NET 8.0  Runtime=.NET 8.0  
 
@@ -45,6 +46,16 @@ Job=.NET 8.0  Runtime=.NET 8.0
 | InvokeCompiled     | 0.4647 ns | 0.0321 ns | 0.0268 ns |  1.00 |    0.08 |    1 |         - |          NA |
 | InvokeCompiledFast | 0.9739 ns | 0.0433 ns | 0.0481 ns |  2.10 |    0.15 |    2 |         - |          NA |
 
+
+## But the Func speed is faster, hmm
+
+Job=.NET 8.0  Runtime=.NET 8.0
+
+| Method         | Mean      | Error     | StdDev    | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
+|--------------- |----------:|----------:|----------:|------:|--------:|-----:|----------:|------------:|
+| InvokeCompiled | 0.2685 ns | 0.0210 ns | 0.0186 ns |  1.00 |    0.09 |    2 |         - |          NA |
+| JustFunc       | 0.1711 ns | 0.0310 ns | 0.0305 ns |  0.64 |    0.12 |    1 |         - |          NA |
+
 */
 [MemoryDiagnoser, RankColumn]
 // [HardwareCounters(HardwareCounter.CacheMisses, HardwareCounter.BranchMispredictions, HardwareCounter.BranchInstructions)]
@@ -52,7 +63,7 @@ Job=.NET 8.0  Runtime=.NET 8.0
 [SimpleJob(RuntimeMoniker.Net80)]
 public class Issue468_InvokeCompiled_vs_InvokeCompiledFast
 {
-    Func<bool> _compiled, _compiledFast;
+    Func<bool> _compiled, _compiledFast, _justFunc = static () => true;
 
     [GlobalSetup]
     public void Setup()
@@ -68,10 +79,16 @@ public class Issue468_InvokeCompiled_vs_InvokeCompiledFast
         return _compiled();
     }
 
-    [Benchmark]
+    // [Benchmark]
     public bool InvokeCompiledFast()
     {
         return _compiledFast();
+    }
+
+    [Benchmark]
+    public bool JustFunc()
+    {
+        return _justFunc();
     }
 }
 
