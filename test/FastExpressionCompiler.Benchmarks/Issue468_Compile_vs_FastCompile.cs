@@ -88,7 +88,7 @@ public class Issue468_InvokeCompiled_vs_InvokeCompiledFast
     {
         var expr = IssueTests.Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET.CreateExpression();
         _compiled = expr.CompileSys();
-        _compiledFast = expr.CompileFast(flags: CompilerFlags.EvaluateExpressionIfPossible);
+        _compiledFast = expr.CompileFast(flags: CompilerFlags.TryEvalPureArithmeticAndLogic);
     }
 
     [Benchmark(Baseline = true)]
@@ -163,6 +163,6 @@ public class Issue468_Compile_vs_FastCompile
     [Benchmark]
     public object CompiledFast_WithEvalFlag()
     {
-        return _expr.CompileFast(flags: CompilerFlags.EvaluateExpressionIfPossible);
+        return _expr.CompileFast(flags: CompilerFlags.TryEvalPureArithmeticAndLogic);
     }
 }
