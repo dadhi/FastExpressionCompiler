@@ -76,7 +76,10 @@ namespace FastExpressionCompiler
         /// <summary>Adds the Expression, ExpressionString, and CSharpString to the delegate closure for the debugging inspection</summary>
         EnableDelegateDebugInfo = 1 << 1,
         /// <summary>When the flag is set then instead of the returning `null` the specific exception is thrown*346</summary>
-        ThrowOnNotSupportedExpression = 1 << 2
+        ThrowOnNotSupportedExpression = 1 << 2,
+        /// <summary>Will try to evalaute constant, arithmetic, logical, comparison expressions consisting of the former expression types,
+        /// and emit the result only to the IL instead the whole computation. Minimizes IL and moves optimization to the compilation phase if possible.</summary>
+        EvaluateExpressionIfPossible = 1 << 4
     }
 
     /// <summary>FEC Not Supported exception</summary>
@@ -2073,6 +2076,13 @@ namespace FastExpressionCompiler
                         case ExpressionType.LessThanOrEqual:
                         case ExpressionType.Equal:
                         case ExpressionType.NotEqual:
+                            if ((setup & CompilerFlags.EvaluateExpressionIfPossible) != 0 && expr.Type.IsPrimitive &&
+                                TryEvalExpressionAndCatchExceptions(out var evalResult, expr))
+                            {
+                                if ((parent & ParentFlags.IgnoreResult) == 0)
+                                    il.Demit((bool)evalResult ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
+                                return true;
+                            }
                             var binaryExpr = (BinaryExpression)expr;
                             return TryEmitComparison(binaryExpr.Left, binaryExpr.Right, expr.Type, nodeType, paramExprs, il, ref closure, setup, parent);
 
@@ -5559,12 +5569,25 @@ namespace FastExpressionCompiler
                 };
             }
 
-            // todo: @wip #468
+            /// <summary>In case of exception FEC will emit the whole computation to throw expection in the invocation phase</summary>
+            internal static bool TryEvalExpressionAndCatchExceptions(out object result, Expression expr)
+            {
+                try
+                {
+                    return TryEvalExpression(out result, expr);
+                }
+                catch
+                {
+                    result = null;
+                    return false;
+                }
+            }
+
             internal static bool TryEvalExpression(out object result, Expression expr)
             {
                 Debug.Assert(expr.Type.IsPrimitive);
-
                 result = false;
+
                 var nodeType = expr.NodeType;
                 if (nodeType == ExpressionType.Constant)
                 {
@@ -5576,34 +5599,46 @@ namespace FastExpressionCompiler
                     return true;
                 }
 
-                var isLogical = IsLogical(nodeType);
-                var isComparison = IsComparison(nodeType);
-                var isArithmetic = IsArithmetic(nodeType);
-                if (!isLogical && !isComparison && !isArithmetic)
-                    return false;
-
-                if (isLogical)
+                var exprType = expr.Type;
+                if (nodeType == ExpressionType.Convert)
                 {
-                    if (nodeType == ExpressionType.Not)
-                    {
-                        var unaryExpr = (UnaryExpression)expr;
-                        if (!TryEvalExpression(out var boolVal, unaryExpr.Operand))
-                            return false;
-                        result = !(bool)boolVal;
-                        return true;
-                    }
-
-                    var binaryExpr = (BinaryExpression)expr;
-                    if (!TryEvalExpression(out var leftVal, binaryExpr.Left) ||
-                        !TryEvalExpression(out var rightVal, binaryExpr.Right))
+                    var unaryExpr = (UnaryExpression)expr;
+                    var operand = unaryExpr.Operand;
+                    if (!TryEvalExpression(out var val, operand))
                         return false;
-                    result = nodeType == ExpressionType.AndAlso
-                        ? (bool)leftVal && (bool)rightVal
-                        : (bool)leftVal || (bool)rightVal;
+                    result = (operand.Type == exprType || exprType.IsAssignableFrom(operand.Type)
+                        ? val
+                        : System.Convert.ChangeType(val, exprType));
                     return true;
                 }
 
-                if (isComparison)
+                if (nodeType == ExpressionType.Not)
+                {
+                    var unaryExpr = (UnaryExpression)expr;
+                    if (!TryEvalExpression(out var boolVal, unaryExpr.Operand))
+                        return false;
+                    result = !(bool)boolVal;
+                    return true;
+                }
+
+                if (IsLogical(nodeType))
+                {
+                    var binaryExpr = (BinaryExpression)expr;
+                    if (!TryEvalExpression(out var leftVal, binaryExpr.Left))
+                        return false;
+
+                    // Short circuit the evalution, because this is an actual logic of these logical operations
+                    if ((bool)leftVal)
+                        return nodeType == ExpressionType.OrElse
+                            || TryEvalExpression(out result, binaryExpr.Right);
+                    // left is false
+                    if (nodeType == ExpressionType.AndAlso)
+                        result = leftVal; // return the false result
+                    // otherwise for || evaluate the right result 
+                    return TryEvalExpression(out result, binaryExpr.Right);
+                }
+
+                if (IsComparison(nodeType))
                 {
                     var binaryExpr = (BinaryExpression)expr;
                     if (!TryEvalExpression(out var left, binaryExpr.Left) ||
@@ -5616,6 +5651,7 @@ namespace FastExpressionCompiler
                         result = !left.Equals(right);
                     else
                     {
+                        // Assuming that the both sides are of the same type, we can use only the left one for comparison 
                         var cmp = left as IComparable;
                         if (cmp == null)
                             return false;
@@ -5630,6 +5666,26 @@ namespace FastExpressionCompiler
                         };
                     }
                     return true;
+                }
+
+                if (nodeType == ExpressionType.Negate)
+                {
+                    var unaryExpr = (UnaryExpression)expr;
+                    if (!TryEvalExpression(out var val, unaryExpr.Operand))
+                        return false;
+                    result = EvalNegateOrNull(val);
+                    return result != null;
+                }
+
+                if (IsArithmetic(nodeType))
+                {
+                    var binaryExpr = (BinaryExpression)expr;
+                    if (!TryEvalExpression(out var leftVal, binaryExpr.Left) ||
+                        !TryEvalExpression(out var rightVal, binaryExpr.Right))
+                        return false;
+
+                    result = EvalArithmeticOrNull(leftVal, rightVal, nodeType);
+                    return result != null;
                 }
 
                 result = false;
@@ -5668,13 +5724,6 @@ namespace FastExpressionCompiler
                 var isEqualityOp = nodeType == ExpressionType.Equal | nodeType == ExpressionType.NotEqual;
                 if (isEqualityOp)
                 {
-                    // if (leftType.IsPrimitive &&
-                    //     TryReduceArithmeticsOrComparisonOrLogical(out bool result, nodeType, left, right))
-                    // {
-                    //     il.Demit((bool)result ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
-                    //     return il.EmitPopIfIgnoreResult(parent);
-                    // }
-
                     if (leftIsNullable & rightIsNull)
                     {
                         if (!TryEmit(left, paramExprs, il, ref closure, setup, operandParent))

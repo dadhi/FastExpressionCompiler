@@ -64,6 +64,10 @@ public struct Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_th
         var ff = expr.CompileFast(false);
         ff.PrintIL();
         t.IsTrue(ff());
+
+        var ffe = expr.CompileFast(false, CompilerFlags.EvaluateExpressionIfPossible);
+        ffe.PrintIL();
+        t.IsTrue(ffe());
     }
 
     public void Original_expression_with_closure(TestContext t)
