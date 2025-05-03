@@ -5421,7 +5421,15 @@ namespace FastExpressionCompiler
                 return null;
             }
 
+            /// <summary>Operation accepting bool inputs and producing bool output</summary>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private static bool IsLogical(ExpressionType nodeType) =>
+                nodeType == ExpressionType.AndAlso |
+                nodeType == ExpressionType.OrElse |
+                nodeType == ExpressionType.Not;
+
             /// <summary>Operation accepting IComparable inputs and producing bool output</summary>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             private static bool IsComparison(ExpressionType nodeType) =>
                 nodeType == ExpressionType.Equal |
                 nodeType == ExpressionType.NotEqual |
@@ -5430,13 +5438,8 @@ namespace FastExpressionCompiler
                 nodeType == ExpressionType.LessThan |
                 nodeType == ExpressionType.LessThanOrEqual;
 
-            /// <summary>Operation accepting bool inputs and producing bool output</summary>
-            private static bool IsLogical(ExpressionType nodeType) =>
-                nodeType == ExpressionType.AndAlso |
-                nodeType == ExpressionType.OrElse |
-                nodeType == ExpressionType.Not;
-
             /// <summary>Operation accepting the same primitive type inputs (or of the coalescing types) and producing the "same" primitive type output</summary>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             private static bool IsArithmetic(ExpressionType nodeType) =>
                 nodeType == ExpressionType.Add |
                 nodeType == ExpressionType.Subtract |
@@ -5465,15 +5468,22 @@ namespace FastExpressionCompiler
                 };
             }
 
-            /// <summary>Eval arithmetic</summary>
+            /// <summary>Eval arithmetic. The types of the left and the right operands assumed to be the same.
+            /// The Expression.Add, Divide, etc, expects the operands to be of the same type </summary>
             public static object EvalArithmeticOrNull(object left, object right, ExpressionType nodeType)
             {
+                Debug.Assert(left != null && right != null, "left and right should not be null");
+                Debug.Assert(left.GetType() == right.GetType(), "left and right should be of the same type");
+
+                var leftCode = Type.GetTypeCode(left.GetType());
                 return nodeType switch
                 {
-                    ExpressionType.Add => Type.GetTypeCode(left.GetType()) switch
+                    ExpressionType.Add => leftCode switch
                     {
+                        // Systems expression does not define the Add for sbyte and byte, but let's keep it here because it is allowed in C# and LightExpression
                         TypeCode.SByte => (sbyte)left + (sbyte)right,
                         TypeCode.Byte => (byte)left + (byte)right,
+                        // the rest
                         TypeCode.Int16 => (short)left + (short)right,
                         TypeCode.UInt16 => (ushort)left + (ushort)right,
                         TypeCode.Int32 => (int)left + (int)right,
@@ -5485,7 +5495,7 @@ namespace FastExpressionCompiler
                         TypeCode.Decimal => (decimal)left + (decimal)right,
                         _ => null,
                     },
-                    ExpressionType.Subtract => Type.GetTypeCode(left.GetType()) switch
+                    ExpressionType.Subtract => leftCode switch
                     {
                         TypeCode.SByte => (sbyte)left - (sbyte)right,
                         TypeCode.Byte => (byte)left - (byte)right,
@@ -5500,7 +5510,7 @@ namespace FastExpressionCompiler
                         TypeCode.Decimal => (decimal)left - (decimal)right,
                         _ => null,
                     },
-                    ExpressionType.Multiply => Type.GetTypeCode(left.GetType()) switch
+                    ExpressionType.Multiply => leftCode switch
                     {
                         TypeCode.SByte => (sbyte)left * (sbyte)right,
                         TypeCode.Byte => (byte)left * (byte)right,
@@ -5515,7 +5525,7 @@ namespace FastExpressionCompiler
                         TypeCode.Decimal => (decimal)left * (decimal)right,
                         _ => null,
                     },
-                    ExpressionType.Divide => Type.GetTypeCode(left.GetType()) switch
+                    ExpressionType.Divide => leftCode switch
                     {
                         TypeCode.SByte => (sbyte)left / (sbyte)right,
                         TypeCode.Byte => (byte)left / (byte)right,
@@ -5530,7 +5540,7 @@ namespace FastExpressionCompiler
                         TypeCode.Decimal => (decimal)left / (decimal)right,
                         _ => null,
                     },
-                    ExpressionType.Modulo => Type.GetTypeCode(left.GetType()) switch
+                    ExpressionType.Modulo => leftCode switch
                     {
                         TypeCode.SByte => (sbyte)left % (sbyte)right,
                         TypeCode.Byte => (byte)left % (byte)right,
@@ -5550,24 +5560,77 @@ namespace FastExpressionCompiler
             }
 
             // todo: @wip #468
-            internal static bool TryReduceLogicalExpression(out bool result,
-                ExpressionType nodeType, Expression left, Expression right)
+            internal static bool TryEvalExpression(out object result, Expression expr)
             {
-                result = false;
-                if (left is BinaryExpression lb && IsLogical(lb.NodeType))
-                {
-                    var ll = lb.Left;
-                    var lr = lb.Right;
-                    if (right is ConstantExpression rc
-#if LIGHT_EXPRESSION
-                        && right is not ConstantRefExpression
-#endif
-                        )
-                    {
+                Debug.Assert(expr.Type.IsPrimitive);
 
-                    }
+                result = false;
+                var nodeType = expr.NodeType;
+                if (nodeType == ExpressionType.Constant)
+                {
+#if LIGHT_EXPRESSION
+                    if (expr is ConstantRefExpression)
+                        return false;
+#endif
+                    result = ((ConstantExpression)expr).Value;
+                    return true;
                 }
 
+                var isLogical = IsLogical(nodeType);
+                var isComparison = IsComparison(nodeType);
+                var isArithmetic = IsArithmetic(nodeType);
+                if (!isLogical && !isComparison && !isArithmetic)
+                    return false;
+
+                if (isLogical)
+                {
+                    if (nodeType == ExpressionType.Not)
+                    {
+                        var unaryExpr = (UnaryExpression)expr;
+                        if (!TryEvalExpression(out var boolVal, unaryExpr.Operand))
+                            return false;
+                        result = !(bool)boolVal;
+                        return true;
+                    }
+
+                    var binaryExpr = (BinaryExpression)expr;
+                    if (!TryEvalExpression(out var leftVal, binaryExpr.Left) ||
+                        !TryEvalExpression(out var rightVal, binaryExpr.Right))
+                        return false;
+                    result = nodeType == ExpressionType.AndAlso
+                        ? (bool)leftVal && (bool)rightVal
+                        : (bool)leftVal || (bool)rightVal;
+                    return true;
+                }
+
+                if (isComparison)
+                {
+                    var binaryExpr = (BinaryExpression)expr;
+                    if (!TryEvalExpression(out var left, binaryExpr.Left) ||
+                        !TryEvalExpression(out var right, binaryExpr.Right))
+                        return false;
+
+                    if (nodeType == ExpressionType.Equal)
+                        result = left.Equals(right);
+                    else if (nodeType == ExpressionType.NotEqual)
+                        result = !left.Equals(right);
+                    else
+                    {
+                        var cmp = left as IComparable;
+                        if (cmp == null)
+                            return false;
+                        var res = cmp.CompareTo(right);
+                        result = nodeType switch
+                        {
+                            ExpressionType.GreaterThan => res > 0,
+                            ExpressionType.GreaterThanOrEqual => res >= 0,
+                            ExpressionType.LessThan => res < 0,
+                            ExpressionType.LessThanOrEqual => res <= 0,
+                            _ => null,
+                        };
+                    }
+                    return true;
+                }
 
                 result = false;
                 return false;
