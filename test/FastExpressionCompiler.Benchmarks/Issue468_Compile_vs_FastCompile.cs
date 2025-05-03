@@ -74,6 +74,16 @@ Job=.NET 8.0  Runtime=.NET 8.0
 | InvokeCompiled     | 0.5075 ns | 0.0153 ns | 0.0143 ns |  1.00 |    0.04 |    1 |                     1 |         - |          NA |
 | InvokeCompiledFast | 0.5814 ns | 0.0433 ns | 0.0699 ns |  1.15 |    0.14 |    1 |                     1 |         - |          NA |
 
+## Not with full eval before Compile the results are funny in the good way
+
+
+Job=.NET 8.0  Runtime=.NET 8.0
+
+| Method                         | Mean      | Error     | StdDev    | Ratio | RatioSD | Rank | BranchInstructions/Op | Allocated | Alloc Ratio |
+|------------------------------- |----------:|----------:|----------:|------:|--------:|-----:|----------------------:|----------:|------------:|
+| InvokeCompiled                 | 0.5071 ns | 0.0289 ns | 0.0242 ns |  1.00 |    0.06 |    2 |                     1 |         - |          NA |
+| InvokeCompiledFastWithEvalFlag | 0.0804 ns | 0.0341 ns | 0.0351 ns |  0.16 |    0.07 |    1 |                     1 |         - |          NA |
+
 */
 [MemoryDiagnoser, RankColumn]
 [HardwareCounters(HardwareCounter.BranchInstructions)]
@@ -81,14 +91,15 @@ Job=.NET 8.0  Runtime=.NET 8.0
 [SimpleJob(RuntimeMoniker.Net80)]
 public class Issue468_InvokeCompiled_vs_InvokeCompiledFast
 {
-    Func<bool> _compiled, _compiledFast, _justFunc = static () => true;
+    Func<bool> _compiled, _compiledFast, _compiledFastWithEvalFlag, _justFunc = static () => true;
 
     [GlobalSetup]
     public void Setup()
     {
         var expr = IssueTests.Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET.CreateExpression();
         _compiled = expr.CompileSys();
-        _compiledFast = expr.CompileFast(flags: CompilerFlags.TryEvalPureArithmeticAndLogic);
+        _compiledFast = expr.CompileFast();
+        _compiledFastWithEvalFlag = expr.CompileFast(flags: CompilerFlags.TryEvalPureArithmeticAndLogic);
     }
 
     [Benchmark(Baseline = true)]
@@ -97,10 +108,16 @@ public class Issue468_InvokeCompiled_vs_InvokeCompiledFast
         return _compiled();
     }
 
-    [Benchmark]
+    // [Benchmark]
     public bool InvokeCompiledFast()
     {
         return _compiledFast();
+    }
+
+    [Benchmark]
+    public bool InvokeCompiledFastWithEvalFlag()
+    {
+        return _compiledFastWithEvalFlag();
     }
 
     // [Benchmark]
@@ -134,9 +151,20 @@ public class Issue468_InvokeCompiled_vs_InvokeCompiledFast
 | CompiledFast              | .NET 9.0 | .NET 9.0 |  3.337 us | 0.0634 us | 0.0593 us |  0.13 |    0.00 |    1 | 0.1793 | 0.1755 |   1.12 KB |        0.27 |
 | CompiledFast_WithEvalFlag | .NET 9.0 | .NET 9.0 |  3.198 us | 0.0628 us | 0.0588 us |  0.13 |    0.00 |    1 | 0.2365 | 0.2289 |   1.48 KB |        0.36 |
 
+
+## Funny results after adding eval before compile
+
+Job=.NET 8.0  Runtime=.NET 8.0
+
+| Method                    | Mean        | Error     | StdDev    | Median      | Ratio  | RatioSD | Rank | Gen0   | Gen1   | Allocated | Alloc Ratio |
+|-------------------------- |------------:|----------:|----------:|------------:|-------:|--------:|-----:|-------:|-------:|----------:|------------:|
+| Compiled                  | 22,507.0 ns | 435.99 ns | 652.57 ns | 22,519.1 ns | 131.40 |    8.03 |    3 | 0.6714 | 0.6409 |    4232 B |       11.02 |
+| CompiledFast              |  3,051.9 ns |  59.71 ns |  55.86 ns |  3,036.6 ns |  17.82 |    1.01 |    2 | 0.1755 | 0.1678 |    1143 B |        2.98 |
+| CompiledFast_WithEvalFlag |    171.8 ns |   3.49 ns |   9.44 ns |    167.6 ns |   1.00 |    0.08 |    1 | 0.0610 |      - |     384 B |        1.00 |
+
 */
 [MemoryDiagnoser, RankColumn]
-[SimpleJob(RuntimeMoniker.Net90)]
+// [SimpleJob(RuntimeMoniker.Net90)]
 [SimpleJob(RuntimeMoniker.Net80)]
 public class Issue468_Compile_vs_FastCompile
 {
@@ -148,7 +176,7 @@ public class Issue468_Compile_vs_FastCompile
         _expr = IssueTests.Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET.CreateExpression();
     }
 
-    [Benchmark(Baseline = true)]
+    [Benchmark]
     public object Compiled()
     {
         return _expr.Compile();
@@ -160,7 +188,7 @@ public class Issue468_Compile_vs_FastCompile
         return _expr.CompileFast();
     }
 
-    [Benchmark]
+    [Benchmark(Baseline = true)]
     public object CompiledFast_WithEvalFlag()
     {
         return _expr.CompileFast(flags: CompilerFlags.TryEvalPureArithmeticAndLogic);
