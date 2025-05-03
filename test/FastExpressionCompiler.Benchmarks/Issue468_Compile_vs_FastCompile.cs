@@ -80,7 +80,15 @@ public class Issue468_InvokeCompiled_vs_InvokeCompiledFast
 
 ## After reverting the regression 
 
-
+| Method                    | Job      | Runtime  | Mean      | Error     | StdDev    | Ratio | RatioSD | Rank | Gen0   | Gen1   | Allocated | Alloc Ratio |
+|-------------------------- |--------- |--------- |----------:|----------:|----------:|------:|--------:|-----:|-------:|-------:|----------:|------------:|
+| Compiled                  | .NET 8.0 | .NET 8.0 | 25.093 us | 0.4979 us | 1.1034 us |  1.00 |    0.06 |    2 | 0.6714 | 0.6104 |   4.13 KB |        1.00 |
+| CompiledFast              | .NET 8.0 | .NET 8.0 |  3.433 us | 0.0680 us | 0.0603 us |  0.14 |    0.01 |    1 | 0.1678 | 0.1526 |   1.12 KB |        0.27 |
+| CompiledFast_WithEvalFlag | .NET 8.0 | .NET 8.0 |  3.419 us | 0.0675 us | 0.1409 us |  0.14 |    0.01 |    1 | 0.2365 | 0.2289 |   1.48 KB |        0.36 |
+|                           |          |          |           |           |           |       |         |      |        |        |           |             |
+| Compiled                  | .NET 9.0 | .NET 9.0 | 25.491 us | 0.4667 us | 0.4137 us |  1.00 |    0.02 |    2 | 0.6714 | 0.6104 |   4.13 KB |        1.00 |
+| CompiledFast              | .NET 9.0 | .NET 9.0 |  3.337 us | 0.0634 us | 0.0593 us |  0.13 |    0.00 |    1 | 0.1793 | 0.1755 |   1.12 KB |        0.27 |
+| CompiledFast_WithEvalFlag | .NET 9.0 | .NET 9.0 |  3.198 us | 0.0628 us | 0.0588 us |  0.13 |    0.00 |    1 | 0.2365 | 0.2289 |   1.48 KB |        0.36 |
 
 */
 [MemoryDiagnoser, RankColumn]
@@ -106,5 +114,11 @@ public class Issue468_Compile_vs_FastCompile
     public object CompiledFast()
     {
         return _expr.CompileFast();
+    }
+
+    [Benchmark]
+    public object CompiledFast_WithEvalFlag()
+    {
+        return _expr.CompileFast(flags: CompilerFlags.EvaluateExpressionIfPossible);
     }
 }

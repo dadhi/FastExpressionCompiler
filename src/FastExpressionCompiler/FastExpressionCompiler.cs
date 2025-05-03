@@ -5599,13 +5599,13 @@ namespace FastExpressionCompiler
                     return true;
                 }
 
-                var exprType = expr.Type;
                 if (nodeType == ExpressionType.Convert)
                 {
                     var unaryExpr = (UnaryExpression)expr;
                     var operand = unaryExpr.Operand;
                     if (!TryEvalExpression(out var val, operand))
                         return false;
+                    var exprType = expr.Type;
                     result = (operand.Type == exprType || exprType.IsAssignableFrom(operand.Type)
                         ? val
                         : System.Convert.ChangeType(val, exprType));
