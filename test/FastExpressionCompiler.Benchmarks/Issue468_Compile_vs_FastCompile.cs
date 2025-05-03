@@ -56,9 +56,27 @@ Job=.NET 8.0  Runtime=.NET 8.0
 | InvokeCompiled | 0.2685 ns | 0.0210 ns | 0.0186 ns |  1.00 |    0.09 |    2 |         - |          NA |
 | JustFunc       | 0.1711 ns | 0.0310 ns | 0.0305 ns |  0.64 |    0.12 |    1 |         - |          NA |
 
+## HERE IS THE REASON: 
+
+FEC creates the DynamicMethod with `owner` param, but System compile uses the different overload without owner and internally with `transparentMethod: true`.
+Using this latter (System) overload drastically slows down the compilation but removes the additional branch instruction in the invocation, making a super simple delegates faster.
+But for the delegates doing actual/more work, having additional branch instruction is neglegible and usually does not show in the invocation performance.  
+
+2x slowleness: `var method = new DynamicMethod(string.Empty, returnType, closurePlusParamTypes, typeof(ArrayClosure), true);`
+                                                                                               ^^^^^^^^^^^^^^^^^^^^
+parity:        `var method = new DynamicMethod(string.Empty, returnType, closurePlusParamTypes, true);`
+
+
+Job=.NET 8.0  Runtime=.NET 8.0
+
+| Method             | Mean      | Error     | StdDev    | Ratio | RatioSD | Rank | BranchInstructions/Op | Allocated | Alloc Ratio |
+|------------------- |----------:|----------:|----------:|------:|--------:|-----:|----------------------:|----------:|------------:|
+| InvokeCompiled     | 0.5075 ns | 0.0153 ns | 0.0143 ns |  1.00 |    0.04 |    1 |                     1 |         - |          NA |
+| InvokeCompiledFast | 0.5814 ns | 0.0433 ns | 0.0699 ns |  1.15 |    0.14 |    1 |                     1 |         - |          NA |
+
 */
 [MemoryDiagnoser, RankColumn]
-// [HardwareCounters(HardwareCounter.CacheMisses, HardwareCounter.BranchMispredictions, HardwareCounter.BranchInstructions)]
+[HardwareCounters(HardwareCounter.BranchInstructions)]
 // [SimpleJob(RuntimeMoniker.Net90)]
 [SimpleJob(RuntimeMoniker.Net80)]
 public class Issue468_InvokeCompiled_vs_InvokeCompiledFast
@@ -79,13 +97,13 @@ public class Issue468_InvokeCompiled_vs_InvokeCompiledFast
         return _compiled();
     }
 
-    // [Benchmark]
+    [Benchmark]
     public bool InvokeCompiledFast()
     {
         return _compiledFast();
     }
 
-    [Benchmark]
+    // [Benchmark]
     public bool JustFunc()
     {
         return _justFunc();

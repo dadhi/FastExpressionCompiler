@@ -240,7 +240,7 @@ namespace FastExpressionCompiler
 #else
                 lambdaExpr.Parameters,
 #endif
-                new[] { typeof(ArrayClosure), typeof(T1), typeof(T2) },
+                new[] { typeof(ArrayClosure), typeof(T1), typeof(T2) }, // todo: @perf rent and return the array of types to pool
                 typeof(R), flags) ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
@@ -514,6 +514,9 @@ namespace FastExpressionCompiler
                 closure = new DebugArrayClosure(constantsAndNestedLambdas, debugExpr);
             }
 
+            // todo: @slow this is what System.Compiles does and which makes the compilation significally slower 10x, but the invocation become faster by a single branch instruction
+            // var method = new DynamicMethod(string.Empty, returnType, closurePlusParamTypes, true);
+            // this is FEC way, significantly faster compilation, but +1 branch instruction in the invocation
             var method = new DynamicMethod(string.Empty, returnType, closurePlusParamTypes, typeof(ArrayClosure), true);
 
             // todo: @perf can we just count the Expressions in the TryCollect phase and use it as N * 4 or something?
@@ -536,6 +539,7 @@ namespace FastExpressionCompiler
         private static readonly Type[] _closureAsASingleParamType = { typeof(ArrayClosure) };
         private static readonly Type[][] _closureTypePlusParamTypesPool = new Type[8][]; // todo: @perf @mem could we use this for other Type arrays?
 
+        // todo: @perf optimize
 #if LIGHT_EXPRESSION
         private static Type[] RentOrNewClosureTypeToParamTypes(IParameterProvider paramExprs)
         {
