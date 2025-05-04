@@ -79,7 +79,7 @@ namespace FastExpressionCompiler
         ThrowOnNotSupportedExpression = 1 << 2,
         /// <summary>Will try to evalaute constant, arithmetic, logical, comparison expressions consisting of the former expression types,
         /// and emit the result only to the IL instead the whole computation. Minimizes IL and moves optimization to the compilation phase if possible.</summary>
-        TryEvalPureArithmeticAndLogic = 1 << 4
+        DisableInterpreter = 1 << 4
     }
 
     /// <summary>FEC Not Supported exception</summary>
@@ -493,12 +493,12 @@ namespace FastExpressionCompiler
             Type[] closurePlusParamTypes, Type returnType, CompilerFlags flags)
         {
 #endif
-            if ((flags & CompilerFlags.TryEvalPureArithmeticAndLogic) != 0 &
-                returnType == typeof(bool) & closurePlusParamTypes.Length == 1)
-            {
-                if (Interpreter.TryEvalPureArithmeticAndLogic(out var result, bodyExpr))
-                    return (bool)result ? Interpreter.TrueFunc : Interpreter.FalseFunc;
-            }
+            // Try to avoid complilation altogether for Func<bool> delegates via Interpreter, see #468
+            if ((flags & CompilerFlags.DisableInterpreter) == 0 &
+                returnType == typeof(bool) & closurePlusParamTypes.Length == 1
+                && Interpreter.IsCandidateForInterpretation(bodyExpr)
+                && Interpreter.TryInterpretBoolean(out var result, bodyExpr))
+                return result ? Interpreter.TrueFunc : Interpreter.FalseFunc;
 
             // The method collects the info from the all nested lambdas deep down up-front and de-duplicates the lambdas as well.
             var closureInfo = new ClosureInfo(ClosureStatus.ToBeCollected);
@@ -1199,14 +1199,14 @@ namespace FastExpressionCompiler
                 {
                     case ExpressionType.Constant:
 #if LIGHT_EXPRESSION
-                        if (((ConstantExpression)expr).RefField != null)
+                        if (expr is ConstantRefExpression)
                         {
                             // Register the constant expression itself in the closure
                             closure.AddConstantOrIncrementUsageCount(expr);
                             return Result.OK;
                         }
 
-                        if (expr == NullConstant || expr == FalseConstant || expr == TrueConstant || expr is IntConstantExpression n)
+                        if (expr == NullConstant | expr == FalseConstant | expr == TrueConstant || expr is IntConstantExpression)
                             return r;
 #endif
                         var constantExpr = (ConstantExpression)expr;
@@ -2087,11 +2087,11 @@ namespace FastExpressionCompiler
                         case ExpressionType.LessThanOrEqual:
                         case ExpressionType.Equal:
                         case ExpressionType.NotEqual:
-                            if ((setup & CompilerFlags.TryEvalPureArithmeticAndLogic) != 0 && expr.Type.IsPrimitive &&
-                                Interpreter.TryEvalPureArithmeticAndLogic(out var evalResult, expr))
+                            if ((setup & CompilerFlags.DisableInterpreter) == 0 && expr.Type.IsPrimitive &&
+                                Interpreter.TryInterpretBoolean(out var boolResult, expr))
                             {
                                 if ((parent & ParentFlags.IgnoreResult) == 0)
-                                    il.Demit((bool)evalResult ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
+                                    il.Demit(boolResult ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
                                 return true;
                             }
                             var binaryExpr = (BinaryExpression)expr;
@@ -2111,10 +2111,12 @@ namespace FastExpressionCompiler
                         case ExpressionType.ExclusiveOr:
                         case ExpressionType.LeftShift:
                         case ExpressionType.RightShift:
+                            // todo: @wip interpreter
                             return TryEmitArithmetic(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, nodeType, expr.Type, paramExprs, il, ref closure, setup, parent);
 
                         case ExpressionType.AndAlso:
                         case ExpressionType.OrElse:
+                            // todo: @wip interpreter
                             return TryEmitLogicalOperator((BinaryExpression)expr, nodeType, paramExprs, il, ref closure, setup, parent);
 
                         case ExpressionType.Coalesce:
@@ -3432,11 +3434,10 @@ namespace FastExpressionCompiler
             {
                 var ok = false;
 #if LIGHT_EXPRESSION
-                var refField = expr.RefField;
-                if (refField != null)
+                if (expr is ConstantRefExpression cref)
                 {
                     Debug.Assert(closure.ContainsConstantsOrNestedLambdas());
-                    ok = TryEmitConstant(true, null, null, expr, il, ref closure, byRefIndex, refField);
+                    ok = TryEmitConstant(true, null, null, expr, il, ref closure, byRefIndex, cref.RefField);
                     if (!ok) return false;
                 }
                 else if (expr == NullConstant)
@@ -3444,19 +3445,19 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Ldnull);
                     ok = true;
                 }
-                else if (expr == FalseConstant)
+                else if (expr == FalseConstant | expr == ZeroConstant)
                 {
                     il.Demit(OpCodes.Ldc_I4_0);
                     ok = true;
                 }
-                else if (expr == TrueConstant)
+                else if (expr == TrueConstant | expr == OneConstant)
                 {
                     il.Demit(OpCodes.Ldc_I4_1);
                     ok = true;
                 }
                 else if (expr is IntConstantExpression n)
                 {
-                    EmitLoadConstantInt(il, n.IntValue);
+                    EmitLoadConstantInt(il, (int)n.Value);
                     ok = true;
                 }
 #endif
@@ -6402,6 +6403,7 @@ namespace FastExpressionCompiler
             /// <summary>Single instance of false object</summary>
             public static readonly object FalseObject = false;
 
+            [MethodImpl(MethodImplOptions.NoInlining)]
             private static T UnreachableCase<T>()
             {
                 throw new InvalidCastException("Unreachable switch case reached");
@@ -6435,7 +6437,7 @@ namespace FastExpressionCompiler
                 nodeType == ExpressionType.Negate;
 
             /// <summary>Eval negate</summary>
-            public static object EvalNegateOrNull(object operand)
+            public static object DoNegateOrNull(object operand)
             {
                 return Type.GetTypeCode(operand.GetType()) switch
                 {
@@ -6454,9 +6456,9 @@ namespace FastExpressionCompiler
                 };
             }
 
-            /// <summary>Eval arithmetic. The types of the left and the right operands assumed to be the same.
+            /// <summary>Interpret arithmetic. The types of the left and the right operands assumed to be the same.
             /// The Expression.Add, Divide, etc, expects the operands to be of the same type </summary>
-            public static object EvalArithmeticOrNull(object left, object right, ExpressionType nodeType)
+            public static object DoArithmeticOrNull(object left, object right, ExpressionType nodeType)
             {
                 Debug.Assert(left != null && right != null, "left and right should not be null");
                 Debug.Assert(left.GetType() == right.GetType(), "left and right should be of the same type");
@@ -6545,22 +6547,67 @@ namespace FastExpressionCompiler
                 };
             }
 
+            public static class ZeroDefault<T>
+            {
+                public static readonly object Instance = default(T);
+            }
+
+            public static object GetZeroDefaultObject(TypeCode typeCode)
+            {
+                return typeCode switch
+                {
+                    TypeCode.Boolean => FalseObject,
+                    TypeCode.SByte => ZeroDefault<sbyte>.Instance,
+                    TypeCode.Byte => ZeroDefault<byte>.Instance,
+                    TypeCode.Int16 => ZeroDefault<short>.Instance,
+                    TypeCode.UInt16 => ZeroDefault<ushort>.Instance,
+                    TypeCode.Int32 => ZeroDefault<int>.Instance,
+                    TypeCode.UInt32 => ZeroDefault<uint>.Instance,
+                    TypeCode.Int64 => ZeroDefault<long>.Instance,
+                    TypeCode.UInt64 => ZeroDefault<ulong>.Instance,
+                    TypeCode.Single => ZeroDefault<float>.Instance,
+                    TypeCode.Double => ZeroDefault<double>.Instance,
+                    TypeCode.Decimal => ZeroDefault<decimal>.Instance,
+                    _ => null,
+                };
+            }
+
+            /// <summary>Fast, mostly negative check to skip or proceed with interpretation.
+            /// Depending on the context you may avoid calling it because you know the interpeted expression beforehand,</summary>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static bool IsCandidateForInterpretation(Expression expr)
+            {
+                var nodeType = expr.NodeType;
+                return
+                    nodeType == ExpressionType.Constant |
+                    nodeType == ExpressionType.Default |
+                    nodeType == ExpressionType.Convert |
+                    nodeType == ExpressionType.Not |
+                    nodeType == ExpressionType.Negate |
+                    expr is BinaryExpression;
+            }
+
             /// <summary>In case of exception FEC will emit the whole computation to throw expection in the invocation phase</summary>
-            public static bool TryEvalPureArithmeticAndLogic(out object result, Expression expr)
+            public static bool TryInterpretBoolean(out bool result, Expression expr)
             {
                 try
                 {
-                    return TryEvalPrimitive(out result, expr);
+                    if (TryInterpretPrimitive(out var resultObj, expr))
+                    {
+                        result = resultObj == TrueObject;
+                        return true;
+                    }
                 }
                 catch
                 {
-                    result = null;
-                    return false;
+                    // eat up the expression this time
                 }
+                result = false;
+                return false;
             }
 
-            /// <summary>Tries to eval the expression of the Primitive type of Constant, Convert, Logical, Comparison, Arithmetic</summary>
-            public static bool TryEvalPrimitive(out object result, Expression expr)
+            /// <summary>Tries to interpret the expression of the Primitive type of Constant, Convert, Logical, Comparison, Arithmetic</summary>
+            public static bool TryInterpretPrimitive(out object result, Expression expr)
             {
                 Debug.Assert(expr.Type.IsPrimitive);
                 result = null;
@@ -6571,30 +6618,39 @@ namespace FastExpressionCompiler
 #if LIGHT_EXPRESSION
                     if (expr is ConstantRefExpression)
                         return false;
+                    // todo: @perf check for LightExpression TrueConstant, FalseConstant, etc. and process them specially
 #endif
                     result = ((ConstantExpression)expr).Value;
+                    if (expr.Type == typeof(bool))
+                        result = (bool)result ? TrueObject : FalseObject;
                     return true;
                 }
 
-                // todo: @wip handle the DefaultExpression
+                if (nodeType == ExpressionType.Default)
+                {
+                    result = GetZeroDefaultObject(Type.GetTypeCode(expr.Type));
+                    return true;
+                }
 
                 if (nodeType == ExpressionType.Convert)
                 {
                     var unaryExpr = (UnaryExpression)expr;
                     var operand = unaryExpr.Operand;
-                    if (!TryEvalPrimitive(out var val, operand))
+                    if (!TryInterpretPrimitive(out result, operand))
                         return false;
                     var exprType = expr.Type;
-                    result = (operand.Type == exprType || exprType.IsAssignableFrom(operand.Type)
-                        ? val
-                        : System.Convert.ChangeType(val, exprType));
+                    if (operand.Type != exprType && !exprType.IsAssignableFrom(operand.Type))
+                    {
+                        var converted = System.Convert.ChangeType(result, exprType);
+                        result = exprType != typeof(bool) ? converted : (bool)converted ? TrueObject : FalseObject;
+                    }
                     return true;
                 }
 
                 if (nodeType == ExpressionType.Not)
                 {
                     var unaryExpr = (UnaryExpression)expr;
-                    if (!TryEvalPrimitive(out var boolVal, unaryExpr.Operand))
+                    if (!TryInterpretPrimitive(out var boolVal, unaryExpr.Operand))
                         return false;
                     result = boolVal == TrueObject ? FalseObject : TrueObject;
                     return true;
@@ -6603,7 +6659,7 @@ namespace FastExpressionCompiler
                 if (IsLogical(nodeType))
                 {
                     var binaryExpr = (BinaryExpression)expr;
-                    if (!TryEvalPrimitive(out var leftVal, binaryExpr.Left))
+                    if (!TryInterpretPrimitive(out var leftVal, binaryExpr.Left))
                         return false;
 
                     // Short circuit the evalution, because this is an actual logic of these logical operations
@@ -6613,14 +6669,14 @@ namespace FastExpressionCompiler
                         result = leftVal;
                         return true;
                     }
-                    return TryEvalPrimitive(out result, binaryExpr.Right);
+                    return TryInterpretPrimitive(out result, binaryExpr.Right);
                 }
 
                 if (IsComparison(nodeType))
                 {
                     var binaryExpr = (BinaryExpression)expr;
-                    if (!TryEvalPrimitive(out var leftVal, binaryExpr.Left) ||
-                        !TryEvalPrimitive(out var rightVal, binaryExpr.Right))
+                    if (!TryInterpretPrimitive(out var leftVal, binaryExpr.Left) ||
+                        !TryInterpretPrimitive(out var rightVal, binaryExpr.Right))
                         return false;
 
                     if (nodeType == ExpressionType.Equal | nodeType == ExpressionType.NotEqual)
@@ -6653,20 +6709,20 @@ namespace FastExpressionCompiler
                 if (nodeType == ExpressionType.Negate)
                 {
                     var unaryExpr = (UnaryExpression)expr;
-                    if (!TryEvalPrimitive(out var val, unaryExpr.Operand))
+                    if (!TryInterpretPrimitive(out var val, unaryExpr.Operand))
                         return false;
-                    result = EvalNegateOrNull(val);
+                    result = DoNegateOrNull(val);
                     return result != null;
                 }
 
                 if (IsArithmetic(nodeType))
                 {
                     var binaryExpr = (BinaryExpression)expr;
-                    if (!TryEvalPrimitive(out var leftVal, binaryExpr.Left) ||
-                        !TryEvalPrimitive(out var rightVal, binaryExpr.Right))
+                    if (!TryInterpretPrimitive(out var leftVal, binaryExpr.Left) ||
+                        !TryInterpretPrimitive(out var rightVal, binaryExpr.Right))
                         return false;
 
-                    result = EvalArithmeticOrNull(leftVal, rightVal, nodeType);
+                    result = DoArithmeticOrNull(leftVal, rightVal, nodeType);
                     return result != null;
                 }
 

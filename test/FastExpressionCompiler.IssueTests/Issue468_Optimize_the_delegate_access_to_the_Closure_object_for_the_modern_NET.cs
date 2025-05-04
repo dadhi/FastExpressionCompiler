@@ -65,7 +65,7 @@ public struct Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_th
         ff.PrintIL();
         t.IsTrue(ff());
 
-        var ffe = expr.CompileFast(false, CompilerFlags.TryEvalPureArithmeticAndLogic);
+        var ffe = expr.CompileFast(false, CompilerFlags.DisableInterpreter);
         ffe.PrintIL();
         t.IsTrue(ffe());
     }

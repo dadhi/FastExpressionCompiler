@@ -99,7 +99,7 @@ public class Issue468_InvokeCompiled_vs_InvokeCompiledFast
         var expr = IssueTests.Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET.CreateExpression();
         _compiled = expr.CompileSys();
         _compiledFast = expr.CompileFast();
-        _compiledFastWithEvalFlag = expr.CompileFast(flags: CompilerFlags.TryEvalPureArithmeticAndLogic);
+        _compiledFastWithEvalFlag = expr.CompileFast(flags: CompilerFlags.DisableInterpreter);
     }
 
     [Benchmark(Baseline = true)]
@@ -191,7 +191,7 @@ public class Issue468_Compile_vs_FastCompile
     [Benchmark(Baseline = true)]
     public object CompiledFast_WithEvalFlag()
     {
-        return _expr.CompileFast(flags: CompilerFlags.TryEvalPureArithmeticAndLogic);
+        return _expr.CompileFast(flags: CompilerFlags.DisableInterpreter);
     }
 }
 
@@ -217,6 +217,6 @@ public class Issue468_Eval_Optimization
     [Benchmark]
     public object Optimized()
     {
-        return ExpressionCompiler.Interpreter.TryEvalPrimitive(out var result, _expr) ? result : null;
+        return ExpressionCompiler.Interpreter.TryInterpretPrimitive(out var result, _expr) ? result : null;
     }
 }

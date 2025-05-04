@@ -221,9 +221,6 @@ public abstract class Expression
     public static ConstantExpression ConstantOf<T>(T value) =>
         value == null ? ConstantNull<T>() : new ValueConstantExpression<T>(value);
 
-    [MethodImpl((MethodImplOptions)256)]
-    public static int TryGetIntConstantValue(Expression e) => ((IntConstantExpression)e).IntValue;
-
     [RequiresUnreferencedCode(Trimming.Message)]
     public static NewExpression New(Type type)
     {
@@ -3914,9 +3911,8 @@ public sealed class TypedValueConstantExpression : ConstantExpression
 public sealed class IntConstantExpression : ConstantExpression
 {
     public override Type Type => typeof(int);
-    public override object Value => IntValue;
-    public readonly int IntValue;
-    internal IntConstantExpression(int value) => IntValue = value;
+    public override object Value { get; }
+    internal IntConstantExpression(int value) => Value = value;
 }
 
 public class NewExpression : Expression, IArgumentProvider
