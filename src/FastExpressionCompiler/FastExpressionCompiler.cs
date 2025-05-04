@@ -77,8 +77,8 @@ namespace FastExpressionCompiler
         EnableDelegateDebugInfo = 1 << 1,
         /// <summary>When the flag is set then instead of the returning `null` the specific exception is thrown*346</summary>
         ThrowOnNotSupportedExpression = 1 << 2,
-        /// <summary>Will try to evalaute constant, arithmetic, logical, comparison expressions consisting of the former expression types,
-        /// and emit the result only to the IL instead the whole computation. Minimizes IL and moves optimization to the compilation phase if possible.</summary>
+        /// <summary>Will try to Interpret arithmetic, logical, comparison expressions for the primitive types,
+        /// and emit the IL the result only instead of the whole computation.</summary>
         DisableInterpreter = 1 << 4
     }
 
@@ -493,7 +493,7 @@ namespace FastExpressionCompiler
             Type[] closurePlusParamTypes, Type returnType, CompilerFlags flags)
         {
 #endif
-            // Try to avoid complilation altogether for Func<bool> delegates via Interpreter, see #468
+            // Try to avoid compilation altogether for Func<bool> delegates via Interpreter, see #468
             if ((flags & CompilerFlags.DisableInterpreter) == 0 &
                 returnType == typeof(bool) & closurePlusParamTypes.Length == 1
                 && Interpreter.IsCandidateForInterpretation(bodyExpr)
@@ -521,7 +521,7 @@ namespace FastExpressionCompiler
                 closure = new DebugArrayClosure(constantsAndNestedLambdas, debugExpr);
             }
 
-            // note: @slow this is what System.Compiles does and which makes the compilation significally slower 10x, but the invocation become faster by a single branch instruction
+            // note: @slow this is what System.Compiles does and which makes the compilation 10x slower, but the invocation become faster by a single branch instruction
             // var method = new DynamicMethod(string.Empty, returnType, closurePlusParamTypes, true);
             // this is FEC way, significantly faster compilation, but +1 branch instruction in the invocation
             var method = new DynamicMethod(string.Empty, returnType, closurePlusParamTypes, typeof(ArrayClosure), true);
@@ -6391,7 +6391,7 @@ namespace FastExpressionCompiler
             }
         }
 
-        /// <summary>Interprter</summary>
+        /// <summary>Interpreter</summary>
         public static class Interpreter
         {
             /// <summary>Always returns true</summary>
@@ -6574,7 +6574,7 @@ namespace FastExpressionCompiler
             }
 
             /// <summary>Fast, mostly negative check to skip or proceed with interpretation.
-            /// Depending on the context you may avoid calling it because you know the interpeted expression beforehand,</summary>
+            /// Depending on the context you may avoid calling it because you know the interpreted expression beforehand,</summary>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static bool IsCandidateForInterpretation(Expression expr)
             {
@@ -6588,7 +6588,7 @@ namespace FastExpressionCompiler
                     expr is BinaryExpression;
             }
 
-            /// <summary>In case of exception FEC will emit the whole computation to throw expection in the invocation phase</summary>
+            /// <summary>In case of exception FEC will emit the whole computation to throw exception in the invocation phase</summary>
             public static bool TryInterpretBoolean(out bool result, Expression expr)
             {
                 try
@@ -6607,20 +6607,160 @@ namespace FastExpressionCompiler
                 return false;
             }
 
-            /// <summary>Tries to interpret the expression of the Primitive type of Constant, Convert, Logical, Comparison, Arithmetic</summary>
+            /// <summary>Tries to interpret the expression of the Primitive type of Constant, Convert, Logical, Comparison, Arithmetic.</summary>
             public static bool TryInterpretPrimitive(out object result, Expression expr)
             {
                 Debug.Assert(expr.Type.IsPrimitive);
                 result = null;
 
+                // The order of the checks for the type of the expression is deliberate, 
+                // because we are starting with complex expressions first. 
+                // And for the simplest ones like a Constant? the method may not be even called.
+                // Instead, the Constant check and interpretation may be done inline.
+
                 var nodeType = expr.NodeType;
-                if (nodeType == ExpressionType.Constant)
+                if (nodeType == ExpressionType.Not)
+                {
+                    var unaryExpr = (UnaryExpression)expr;
+                    var operandExpr = unaryExpr.Operand;
+                    if (operandExpr is ConstantExpression co)
+                    {
+#if LIGHT_EXPRESSION
+                        if (co.RefField != null) return false;
+#endif
+                        result = (bool)co.Value ? FalseObject : TrueObject;
+                        return true;
+                    }
+                    if (!TryInterpretPrimitive(out var boolVal, operandExpr))
+                        return false;
+                    result = boolVal == TrueObject ? FalseObject : TrueObject;
+                    return true;
+                }
+
+                if (IsLogical(nodeType))
+                {
+                    var binaryExpr = (BinaryExpression)expr;
+
+                    // Interpreting the left part as the first candidate for the result
+                    var left = binaryExpr.Left;
+                    if (left is ConstantExpression lc)
+                    {
+#if LIGHT_EXPRESSION
+                        if (lc.RefField != null) return false;
+#endif
+                        result = (bool)lc.Value ? TrueObject : FalseObject;
+                    }
+                    else if (!TryInterpretPrimitive(out result, left))
+                        return false;
+
+                    // Short circuit the interpretation, because this is an actual logic of these logical operations
+                    if (result == TrueObject & nodeType == ExpressionType.OrElse ||
+                        result == FalseObject & nodeType == ExpressionType.AndAlso)
+                        return true;
+
+                    // If the first part is not enough to decide of the expression result, go right
+                    var right = binaryExpr.Right;
+                    if (right is ConstantExpression rc)
+                    {
+#if LIGHT_EXPRESSION
+                        if (rc.RefField != null) return false;
+#endif
+                        result = (bool)rc.Value ? TrueObject : FalseObject;
+                        return true;
+                    }
+                    return TryInterpretPrimitive(out result, right);
+                }
+
+                var isComparison = IsComparison(nodeType);
+                if (isComparison || IsArithmetic(nodeType))
+                {
+                    var binaryExpr = (BinaryExpression)expr;
+
+                    // Interpreting left part
+                    var left = binaryExpr.Left;
+                    object leftVal = null;
+                    if (left is ConstantExpression lc)
+                    {
+#if LIGHT_EXPRESSION
+                        if (lc.RefField != null) return false;
+#endif
+                        leftVal = lc.Value;
+                    }
+                    else if (!TryInterpretPrimitive(out leftVal, left))
+                        return false;
+
+                    // Interpreting right part
+                    var right = binaryExpr.Right;
+                    object rightVal = null;
+                    if (right is ConstantExpression rc)
+                    {
+#if LIGHT_EXPRESSION
+                        if (rc.RefField != null) return false;
+#endif
+                        rightVal = rc.Value;
+                    }
+                    else if (!TryInterpretPrimitive(out rightVal, right))
+                        return false;
+
+                    // Now do the operation on the left and right
+                    if (isComparison)
+                    {
+                        if (nodeType == ExpressionType.Equal | nodeType == ExpressionType.NotEqual)
+                        {
+                            var boolVal = leftVal.Equals(rightVal);
+                            result = nodeType == ExpressionType.Equal
+                                ? (boolVal ? TrueObject : FalseObject)
+                                : (boolVal ? FalseObject : TrueObject);
+                        }
+                        else
+                        {
+                            // Assuming that the both sides are of the same type, we can use only the left one for comparison 
+                            var cmp = leftVal as IComparable;
+                            if (cmp == null)
+                                return false;
+                            var res = cmp.CompareTo(rightVal);
+                            var boolVal = nodeType switch
+                            {
+                                ExpressionType.GreaterThan => res > 0,
+                                ExpressionType.GreaterThanOrEqual => res >= 0,
+                                ExpressionType.LessThan => res < 0,
+                                ExpressionType.LessThanOrEqual => res <= 0,
+                                _ => UnreachableCase<bool>(),
+                            };
+                            result = boolVal ? TrueObject : FalseObject;
+                        }
+                        return true;
+                    }
+
+                    // For Arithmetic
+                    result = DoArithmeticOrNull(leftVal, rightVal, nodeType);
+                    return result != null;
+                }
+
+                if (nodeType == ExpressionType.Negate)
+                {
+                    var unaryExpr = (UnaryExpression)expr;
+                    var operandExpr = unaryExpr.Operand;
+                    object val = null;
+                    if (operandExpr is ConstantExpression co)
+                    {
+#if LIGHT_EXPRESSION
+                        if (co.RefField != null) return false;
+#endif
+                        val = co.Value;
+                    }
+                    if (!TryInterpretPrimitive(out val, operandExpr))
+                        return false;
+                    result = DoNegateOrNull(val);
+                    return result != null;
+                }
+
+                if (expr is ConstantExpression constExpr)
                 {
 #if LIGHT_EXPRESSION
-                    if (((ConstantExpression)expr).RefField != null)
-                        return false;
+                    if (constExpr.RefField != null) return false;
 #endif
-                    result = ((ConstantExpression)expr).Value;
+                    result = constExpr.Value;
                     if (expr.Type == typeof(bool))
                         result = (bool)result ? TrueObject : FalseObject;
                     return true;
@@ -6635,95 +6775,17 @@ namespace FastExpressionCompiler
                 if (nodeType == ExpressionType.Convert)
                 {
                     var unaryExpr = (UnaryExpression)expr;
-                    var operand = unaryExpr.Operand;
-                    if (!TryInterpretPrimitive(out result, operand))
+                    var operandExpr = unaryExpr.Operand;
+
+                    if (!TryInterpretPrimitive(out result, operandExpr))
                         return false;
                     var exprType = expr.Type;
-                    if (operand.Type != exprType && !exprType.IsAssignableFrom(operand.Type))
+                    if (operandExpr.Type != exprType && !exprType.IsAssignableFrom(operandExpr.Type))
                     {
                         var converted = System.Convert.ChangeType(result, exprType);
                         result = exprType != typeof(bool) ? converted : (bool)converted ? TrueObject : FalseObject;
                     }
                     return true;
-                }
-
-                if (nodeType == ExpressionType.Not)
-                {
-                    var unaryExpr = (UnaryExpression)expr;
-                    if (!TryInterpretPrimitive(out var boolVal, unaryExpr.Operand))
-                        return false;
-                    result = boolVal == TrueObject ? FalseObject : TrueObject;
-                    return true;
-                }
-
-                if (IsLogical(nodeType))
-                {
-                    var binaryExpr = (BinaryExpression)expr;
-                    if (!TryInterpretPrimitive(out var leftVal, binaryExpr.Left))
-                        return false;
-
-                    // Short circuit the evalution, because this is an actual logic of these logical operations
-                    if (leftVal == TrueObject & nodeType == ExpressionType.OrElse ||
-                        leftVal == FalseObject & nodeType == ExpressionType.AndAlso)
-                    {
-                        result = leftVal;
-                        return true;
-                    }
-                    return TryInterpretPrimitive(out result, binaryExpr.Right);
-                }
-
-                if (IsComparison(nodeType))
-                {
-                    var binaryExpr = (BinaryExpression)expr;
-                    if (!TryInterpretPrimitive(out var leftVal, binaryExpr.Left) ||
-                        !TryInterpretPrimitive(out var rightVal, binaryExpr.Right))
-                        return false;
-
-                    if (nodeType == ExpressionType.Equal | nodeType == ExpressionType.NotEqual)
-                    {
-                        var boolVal = leftVal.Equals(rightVal);
-                        result = nodeType == ExpressionType.Equal
-                            ? (boolVal ? TrueObject : FalseObject)
-                            : (boolVal ? FalseObject : TrueObject);
-                    }
-                    else
-                    {
-                        // Assuming that the both sides are of the same type, we can use only the left one for comparison 
-                        var cmp = leftVal as IComparable;
-                        if (cmp == null)
-                            return false;
-                        var res = cmp.CompareTo(rightVal);
-                        var boolVal = nodeType switch
-                        {
-                            ExpressionType.GreaterThan => res > 0,
-                            ExpressionType.GreaterThanOrEqual => res >= 0,
-                            ExpressionType.LessThan => res < 0,
-                            ExpressionType.LessThanOrEqual => res <= 0,
-                            _ => UnreachableCase<bool>(),
-                        };
-                        result = boolVal ? TrueObject : FalseObject;
-                    }
-                    return true;
-                }
-
-                if (nodeType == ExpressionType.Negate)
-                {
-                    var unaryExpr = (UnaryExpression)expr;
-                    if (!TryInterpretPrimitive(out var val, unaryExpr.Operand))
-                        return false;
-                    result = DoNegateOrNull(val);
-                    return result != null;
-                }
-
-                if (IsArithmetic(nodeType))
-                {
-                    var binaryExpr = (BinaryExpression)expr;
-                    if (!TryInterpretPrimitive(out var leftVal, binaryExpr.Left) ||
-                        !TryInterpretPrimitive(out var rightVal, binaryExpr.Right))
-                        return false;
-
-                    result = DoArithmeticOrNull(leftVal, rightVal, nodeType);
-                    return result != null;
                 }
 
                 result = null;

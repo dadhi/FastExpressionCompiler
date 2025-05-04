@@ -56,16 +56,16 @@ Job=.NET 8.0  Runtime=.NET 8.0
 | InvokeCompiled | 0.2685 ns | 0.0210 ns | 0.0186 ns |  1.00 |    0.09 |    2 |         - |          NA |
 | JustFunc       | 0.1711 ns | 0.0310 ns | 0.0305 ns |  0.64 |    0.12 |    1 |         - |          NA |
 
+
 ## HERE IS THE REASON: 
 
 FEC creates the DynamicMethod with `owner` param, but System compile uses the different overload without owner and internally with `transparentMethod: true`.
 Using this latter (System) overload drastically slows down the compilation but removes the additional branch instruction in the invocation, making a super simple delegates faster.
-But for the delegates doing actual/more work, having additional branch instruction is neglegible and usually does not show in the invocation performance.  
+But for the delegates doing actual/more work, having additional branch instruction is negligible and usually does not show in the invocation performance.  
 
-2x slowleness: `var method = new DynamicMethod(string.Empty, returnType, closurePlusParamTypes, typeof(ArrayClosure), true);`
+2x slow: `var method = new DynamicMethod(string.Empty, returnType, closurePlusParamTypes, typeof(ArrayClosure), true);`
                                                                                                ^^^^^^^^^^^^^^^^^^^^
 parity:        `var method = new DynamicMethod(string.Empty, returnType, closurePlusParamTypes, true);`
-
 
 Job=.NET 8.0  Runtime=.NET 8.0
 
@@ -74,8 +74,8 @@ Job=.NET 8.0  Runtime=.NET 8.0
 | InvokeCompiled     | 0.5075 ns | 0.0153 ns | 0.0143 ns |  1.00 |    0.04 |    1 |                     1 |         - |          NA |
 | InvokeCompiledFast | 0.5814 ns | 0.0433 ns | 0.0699 ns |  1.15 |    0.14 |    1 |                     1 |         - |          NA |
 
-## Not with full eval before Compile the results are funny in the good way
 
+## Not with full eval before Compile the results are funny in the good way
 
 Job=.NET 8.0  Runtime=.NET 8.0
 
@@ -84,14 +84,25 @@ Job=.NET 8.0  Runtime=.NET 8.0
 | InvokeCompiled                 | 0.5071 ns | 0.0289 ns | 0.0242 ns |  1.00 |    0.06 |    2 |                     1 |         - |          NA |
 | InvokeCompiledFastWithEvalFlag | 0.0804 ns | 0.0341 ns | 0.0351 ns |  0.16 |    0.07 |    1 |                     1 |         - |          NA |
 
+
+## Fastest so far
+
+DefaultJob : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+
+| Method                                | Mean      | Error     | StdDev    | Median    | Ratio | RatioSD | Rank | BranchInstructions/Op | Allocated | Alloc Ratio |
+|-------------------------------------- |----------:|----------:|----------:|----------:|------:|--------:|-----:|----------------------:|----------:|------------:|
+| InvokeCompiled                        | 0.5088 ns | 0.0399 ns | 0.0842 ns | 0.4707 ns |  1.02 |    0.22 |    2 |                     1 |         - |          NA |
+| InvokeCompiledFast                    | 0.1105 ns | 0.0360 ns | 0.0799 ns | 0.0689 ns |  0.22 |    0.16 |    1 |                     1 |         - |          NA |
+| InvokeCompiledFast_DisableInterpreter | 1.0607 ns | 0.0540 ns | 0.0887 ns | 1.0301 ns |  2.13 |    0.34 |    3 |                     2 |         - |          NA |
+
 */
 [MemoryDiagnoser, RankColumn]
 [HardwareCounters(HardwareCounter.BranchInstructions)]
 // [SimpleJob(RuntimeMoniker.Net90)]
-[SimpleJob(RuntimeMoniker.Net80)]
+// [SimpleJob(RuntimeMoniker.Net80)]
 public class Issue468_InvokeCompiled_vs_InvokeCompiledFast
 {
-    Func<bool> _compiled, _compiledFast, _compiledFastWithEvalFlag, _justFunc = static () => true;
+    Func<bool> _compiled, _compiledFast, _compiledFast_DisableInterpreter, _justFunc = static () => true;
 
     [GlobalSetup]
     public void Setup()
@@ -99,7 +110,7 @@ public class Issue468_InvokeCompiled_vs_InvokeCompiledFast
         var expr = IssueTests.Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET.CreateExpression();
         _compiled = expr.CompileSys();
         _compiledFast = expr.CompileFast();
-        _compiledFastWithEvalFlag = expr.CompileFast(flags: CompilerFlags.DisableInterpreter);
+        _compiledFast_DisableInterpreter = expr.CompileFast(flags: CompilerFlags.DisableInterpreter);
     }
 
     [Benchmark(Baseline = true)]
@@ -108,16 +119,16 @@ public class Issue468_InvokeCompiled_vs_InvokeCompiledFast
         return _compiled();
     }
 
-    // [Benchmark]
+    [Benchmark]
     public bool InvokeCompiledFast()
     {
         return _compiledFast();
     }
 
     [Benchmark]
-    public bool InvokeCompiledFastWithEvalFlag()
+    public bool InvokeCompiledFast_DisableInterpreter()
     {
-        return _compiledFastWithEvalFlag();
+        return _compiledFast_DisableInterpreter();
     }
 
     // [Benchmark]
@@ -162,10 +173,20 @@ Job=.NET 8.0  Runtime=.NET 8.0
 | CompiledFast              |  3,051.9 ns |  59.71 ns |  55.86 ns |  3,036.6 ns |  17.82 |    1.01 |    2 | 0.1755 | 0.1678 |    1143 B |        2.98 |
 | CompiledFast_WithEvalFlag |    171.8 ns |   3.49 ns |   9.44 ns |    167.6 ns |   1.00 |    0.08 |    1 | 0.0610 |      - |     384 B |        1.00 |
 
+
+## Now we're talking (after small interpretator optimizations)
+
+DefaultJob : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+
+| Method                          | Mean         | Error      | StdDev     | Median       | Ratio  | RatioSD | Rank | Gen0   | Gen1   | Allocated | Alloc Ratio |
+|-------------------------------- |-------------:|-----------:|-----------:|-------------:|-------:|--------:|-----:|-------:|-------:|----------:|------------:|
+| Compiled                        | 22,937.50 ns | 447.883 ns | 784.432 ns | 22,947.67 ns | 230.86 |   14.14 |    3 | 0.6714 | 0.6409 |    4232 B |       88.17 |
+| CompiledFast                    |     99.62 ns |   2.044 ns |   5.275 ns |     97.03 ns |   1.00 |    0.07 |    1 | 0.0076 |      - |      48 B |        1.00 |
+| CompiledFast_DisableInterpreter |  3,010.37 ns |  60.174 ns |  91.893 ns |  3,010.03 ns |  30.30 |    1.80 |    2 | 0.1755 | 0.1678 |    1143 B |       23.81 |
 */
 [MemoryDiagnoser, RankColumn]
 // [SimpleJob(RuntimeMoniker.Net90)]
-[SimpleJob(RuntimeMoniker.Net80)]
+// [SimpleJob(RuntimeMoniker.Net80)]
 public class Issue468_Compile_vs_FastCompile
 {
     Expression<Func<bool>> _expr;
@@ -182,14 +203,14 @@ public class Issue468_Compile_vs_FastCompile
         return _expr.Compile();
     }
 
-    [Benchmark]
+    [Benchmark(Baseline = true)]
     public object CompiledFast()
     {
         return _expr.CompileFast();
     }
 
-    [Benchmark(Baseline = true)]
-    public object CompiledFast_WithEvalFlag()
+    [Benchmark]
+    public object CompiledFast_DisableInterpreter()
     {
         return _expr.CompileFast(flags: CompilerFlags.DisableInterpreter);
     }
