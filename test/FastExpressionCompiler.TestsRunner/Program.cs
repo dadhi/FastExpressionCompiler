@@ -9,7 +9,10 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            new Issue55_CompileFast_crash_with_ref_parameter().Run();
+            var t = new LightExpression.TestRun();
+            t.Run(new LightExpression.IssueTests.Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET());
+
+            // new Issue55_CompileFast_crash_with_ref_parameter().Run();
 
             // todo: @wip add to FEC, check the possibility of the increment compilation and the artifacts reusability
             // new LightExpression.UnitTests.ConstantAndConversionTests().Run();

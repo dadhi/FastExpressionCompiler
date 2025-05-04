@@ -28,6 +28,7 @@ public static class TestTools
     public static bool AllowPrintIL = false;
     public static bool AllowPrintCS = false;
     public static bool AllowPrintExpression = false;
+    public static bool DisableAssertOpCodes = false;
 
     static TestTools()
     {
@@ -43,6 +44,8 @@ public static class TestTools
 
     public static void AssertOpCodes(this MethodInfo method, params OpCode[] expectedCodes)
     {
+        if (DisableAssertOpCodes) return;
+
         var ilReader = ILReaderFactory.Create(method);
         if (ilReader is null)
         {
@@ -952,6 +955,8 @@ public sealed class TestRun
     public SmallList<TestStats> Stats;
     public SmallList<TestFailure> Failures;
 
+    // todo: @wip put the output under the feature flag
+    /// <summary>Will output the failures while running</summary>
     public void Run<T>(T test, TestTracking tracking = TestTracking.TrackFailedTestsOnly) where T : ITestX
     {
         var totalTestCount = TotalTestCount;
