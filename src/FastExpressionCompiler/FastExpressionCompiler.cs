@@ -1199,7 +1199,7 @@ namespace FastExpressionCompiler
                 {
                     case ExpressionType.Constant:
 #if LIGHT_EXPRESSION
-                        if (expr is ConstantRefExpression)
+                        if (((ConstantExpression)expr).RefField != null)
                         {
                             // Register the constant expression itself in the closure
                             closure.AddConstantOrIncrementUsageCount(expr);
@@ -3434,10 +3434,11 @@ namespace FastExpressionCompiler
             {
                 var ok = false;
 #if LIGHT_EXPRESSION
-                if (expr is ConstantRefExpression cref)
+                var refField = expr.RefField;
+                if (refField != null)
                 {
                     Debug.Assert(closure.ContainsConstantsOrNestedLambdas());
-                    ok = TryEmitConstant(true, null, null, expr, il, ref closure, byRefIndex, cref.RefField);
+                    ok = TryEmitConstant(true, null, null, expr, il, ref closure, byRefIndex, refField);
                     if (!ok) return false;
                 }
                 else if (expr == NullConstant)
@@ -6616,9 +6617,8 @@ namespace FastExpressionCompiler
                 if (nodeType == ExpressionType.Constant)
                 {
 #if LIGHT_EXPRESSION
-                    if (expr is ConstantRefExpression)
+                    if (((ConstantExpression)expr).RefField != null)
                         return false;
-                    // todo: @perf check for LightExpression TrueConstant, FalseConstant, etc. and process them specially
 #endif
                     result = ((ConstantExpression)expr).Value;
                     if (expr.Type == typeof(bool))
