@@ -6397,6 +6397,16 @@ namespace FastExpressionCompiler
             /// <summary>Always returns false</summary>
             public static readonly Func<bool> FalseFunc = static () => false;
 
+            /// <summary>Single instance of true object</summary>
+            public static readonly object TrueObject = true;
+            /// <summary>Single instance of false object</summary>
+            public static readonly object FalseObject = false;
+
+            private static T UnreachableCase<T>()
+            {
+                throw new InvalidCastException("Unreachable switch case reached");
+            }
+
             /// <summary>Operation accepting bool inputs and producing bool output</summary>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static bool IsLogical(ExpressionType nodeType) =>
@@ -6553,7 +6563,7 @@ namespace FastExpressionCompiler
             public static bool TryEvalPrimitive(out object result, Expression expr)
             {
                 Debug.Assert(expr.Type.IsPrimitive);
-                result = false;
+                result = null;
 
                 var nodeType = expr.NodeType;
                 if (nodeType == ExpressionType.Constant)
@@ -6565,6 +6575,8 @@ namespace FastExpressionCompiler
                     result = ((ConstantExpression)expr).Value;
                     return true;
                 }
+
+                // todo: @wip handle the DefaultExpression
 
                 if (nodeType == ExpressionType.Convert)
                 {
@@ -6584,7 +6596,7 @@ namespace FastExpressionCompiler
                     var unaryExpr = (UnaryExpression)expr;
                     if (!TryEvalPrimitive(out var boolVal, unaryExpr.Operand))
                         return false;
-                    result = !(bool)boolVal;
+                    result = boolVal == TrueObject ? FalseObject : TrueObject;
                     return true;
                 }
 
@@ -6595,42 +6607,45 @@ namespace FastExpressionCompiler
                         return false;
 
                     // Short circuit the evalution, because this is an actual logic of these logical operations
-                    if ((bool)leftVal)
-                        return nodeType == ExpressionType.OrElse
-                            || TryEvalPrimitive(out result, binaryExpr.Right);
-                    // left is false
-                    if (nodeType == ExpressionType.AndAlso)
-                        result = leftVal; // return the false result
-                    // otherwise for || evaluate the right result 
+                    if (leftVal == TrueObject & nodeType == ExpressionType.OrElse ||
+                        leftVal == FalseObject & nodeType == ExpressionType.AndAlso)
+                    {
+                        result = leftVal;
+                        return true;
+                    }
                     return TryEvalPrimitive(out result, binaryExpr.Right);
                 }
 
                 if (IsComparison(nodeType))
                 {
                     var binaryExpr = (BinaryExpression)expr;
-                    if (!TryEvalPrimitive(out var left, binaryExpr.Left) ||
-                        !TryEvalPrimitive(out var right, binaryExpr.Right))
+                    if (!TryEvalPrimitive(out var leftVal, binaryExpr.Left) ||
+                        !TryEvalPrimitive(out var rightVal, binaryExpr.Right))
                         return false;
 
-                    if (nodeType == ExpressionType.Equal)
-                        result = left.Equals(right);
-                    else if (nodeType == ExpressionType.NotEqual)
-                        result = !left.Equals(right);
+                    if (nodeType == ExpressionType.Equal | nodeType == ExpressionType.NotEqual)
+                    {
+                        var boolVal = leftVal.Equals(rightVal);
+                        result = nodeType == ExpressionType.Equal
+                            ? (boolVal ? TrueObject : FalseObject)
+                            : (boolVal ? FalseObject : TrueObject);
+                    }
                     else
                     {
                         // Assuming that the both sides are of the same type, we can use only the left one for comparison 
-                        var cmp = left as IComparable;
+                        var cmp = leftVal as IComparable;
                         if (cmp == null)
                             return false;
-                        var res = cmp.CompareTo(right);
-                        result = nodeType switch
+                        var res = cmp.CompareTo(rightVal);
+                        var boolVal = nodeType switch
                         {
                             ExpressionType.GreaterThan => res > 0,
                             ExpressionType.GreaterThanOrEqual => res >= 0,
                             ExpressionType.LessThan => res < 0,
                             ExpressionType.LessThanOrEqual => res <= 0,
-                            _ => null,
+                            _ => UnreachableCase<bool>(),
                         };
+                        result = boolVal ? TrueObject : FalseObject;
                     }
                     return true;
                 }
@@ -6655,14 +6670,16 @@ namespace FastExpressionCompiler
                     return result != null;
                 }
 
-                result = false;
+                result = null;
                 return false;
             }
         }
     }
 
-    // Helpers targeting the performance. Extensions method names may be a bit funny (non standard), 
-    // in order to prevent conflicts with YOUR helpers with standard names
+    /// <summary>
+    /// Helpers targeting the performance. Extensions method names may be a bit funny (non standard), 
+    /// in order to prevent conflicts with YOUR helpers with standard names
+    /// </summary>
     public static class Tools
     {
         public static Expression AsExpr(this object obj) => obj as Expression ?? Constant(obj);

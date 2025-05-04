@@ -194,3 +194,29 @@ public class Issue468_Compile_vs_FastCompile
         return _expr.CompileFast(flags: CompilerFlags.TryEvalPureArithmeticAndLogic);
     }
 }
+
+[MemoryDiagnoser, RankColumn]
+// [SimpleJob(RuntimeMoniker.Net90)]
+// [SimpleJob(RuntimeMoniker.Net80)]
+public class Issue468_Eval_Optimization
+{
+    Expression<Func<bool>> _expr;
+
+    [GlobalSetup]
+    public void Setup()
+    {
+        _expr = IssueTests.Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET.CreateExpression();
+    }
+
+    // [Benchmark(Baseline = true)]
+    // public object Baseline()
+    // {
+    //     return ExpressionCompiler.Interpreter.TryEvalPrimitive_OLD(out var result, _expr) ? result : null;
+    // }
+
+    [Benchmark]
+    public object Optimized()
+    {
+        return ExpressionCompiler.Interpreter.TryEvalPrimitive(out var result, _expr) ? result : null;
+    }
+}
