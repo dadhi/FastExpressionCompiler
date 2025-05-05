@@ -27,9 +27,16 @@ echo:## Finished: RESTORE and BUILD
 echo: 
 echo:## Starting: TESTS...
 echo:
-
+echo: running on .NET 9.0 (Latest)
+echo:
 dotnet run --no-build net9.0 %FrameworkParam% -c:Release --project test/FastExpressionCompiler.TestsRunner
+
+echo: running on .NET 8.0 (LTS)
+echo:
 dotnet run --no-build net8.0 %FrameworkParam% -c:Release --project test/FastExpressionCompiler.TestsRunner
+
+echo: running on .NET 6.0 (LTS)
+echo:
 dotnet run --no-build net6.0 %FrameworkParam% -c:Release --project test/FastExpressionCompiler.TestsRunner
 if %ERRORLEVEL% neq 0 goto :error
 
