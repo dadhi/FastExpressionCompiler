@@ -2031,9 +2031,6 @@ namespace FastExpressionCompiler
                         case ExpressionType.TypeEqual:
                             return TryEmitTypeIsOrEqual((TypeBinaryExpression)expr, paramExprs, il, ref closure, setup, parent);
 
-                        case ExpressionType.Not:
-                            return TryEmitNot((UnaryExpression)expr, paramExprs, il, ref closure, setup, parent);
-
                         case ExpressionType.Convert:
                         case ExpressionType.ConvertChecked:
                             return TryEmitConvert((UnaryExpression)expr, paramExprs, il, ref closure, setup, parent);
@@ -2088,16 +2085,17 @@ namespace FastExpressionCompiler
                         case ExpressionType.LessThanOrEqual:
                         case ExpressionType.Equal:
                         case ExpressionType.NotEqual:
-                            if ((setup & CompilerFlags.DisableInterpreter) == 0 && exprType.IsPrimitive &&
-                                Interpreter.TryInterpretBoolean(out var boolResult, expr))
                             {
-                                if ((parent & ParentFlags.IgnoreResult) == 0)
-                                    il.Demit(boolResult ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
-                                return true;
+                                if ((setup & CompilerFlags.DisableInterpreter) == 0 && exprType.IsPrimitive &&
+                                    Interpreter.TryInterpretBoolean(out var boolResult, expr))
+                                {
+                                    if ((parent & ParentFlags.IgnoreResult) == 0)
+                                        il.Demit(boolResult ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
+                                    return true;
+                                }
+                                return TryEmitComparison(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, exprType, nodeType, paramExprs, il,
+                                    ref closure, setup, parent);
                             }
-                            return TryEmitComparison(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, exprType, nodeType, paramExprs, il,
-                                ref closure, setup, parent);
-
                         case ExpressionType.Add:
                         case ExpressionType.AddChecked:
                         case ExpressionType.Subtract:
@@ -2106,32 +2104,50 @@ namespace FastExpressionCompiler
                         case ExpressionType.MultiplyChecked:
                         case ExpressionType.Divide:
                         case ExpressionType.Modulo:
-                            if ((setup & CompilerFlags.DisableInterpreter) == 0 && exprType.IsPrimitive &&
-                                Interpreter.TryInterpret(out var resultObj, expr))
                             {
-                                if ((parent & ParentFlags.IgnoreResult) == 0)
-                                    TryEmitPrimitiveOrEnumOrDecimalConstant(il, resultObj, exprType);
-                                return true;
+                                if ((setup & CompilerFlags.DisableInterpreter) == 0 && exprType.IsPrimitive &&
+                                    Interpreter.TryInterpret(out var resultObj, expr))
+                                {
+                                    if ((parent & ParentFlags.IgnoreResult) == 0)
+                                        TryEmitPrimitiveOrEnumOrDecimalConstant(il, resultObj, exprType);
+                                    return true;
+                                }
+                                return TryEmitArithmetic(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, nodeType, exprType, paramExprs, il,
+                                    ref closure, setup, parent);
                             }
-                            return TryEmitArithmetic(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, nodeType, exprType, paramExprs, il,
-                                ref closure, setup, parent);
-
                         case ExpressionType.Power:
                         case ExpressionType.And:
                         case ExpressionType.Or:
                         case ExpressionType.ExclusiveOr:
                         case ExpressionType.LeftShift:
                         case ExpressionType.RightShift:
-                            // todo: @wip #472 add interpretation when those node types are supported
+                            // todo: @wip @feature #472 add interpretation when those node types are supported
                             return TryEmitArithmetic(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, nodeType, exprType, paramExprs, il,
                                 ref closure, setup, parent);
 
                         case ExpressionType.AndAlso:
                         case ExpressionType.OrElse:
-                            // todo: @wip but where is `.Not` ?
-                            // todo: @wip interpreter
-                            return TryEmitLogicalOperator((BinaryExpression)expr, nodeType, paramExprs, il, ref closure, setup, parent);
-
+                            {
+                                if ((setup & CompilerFlags.DisableInterpreter) == 0 && exprType.IsPrimitive &&
+                                    Interpreter.TryInterpretBoolean(out var boolResult, expr))
+                                {
+                                    if ((parent & ParentFlags.IgnoreResult) == 0)
+                                        il.Demit(boolResult ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
+                                    return true;
+                                }
+                                return TryEmitLogicalOperator((BinaryExpression)expr, nodeType, paramExprs, il, ref closure, setup, parent);
+                            }
+                        case ExpressionType.Not:
+                            {
+                                if ((setup & CompilerFlags.DisableInterpreter) == 0 && exprType.IsPrimitive &&
+                                    Interpreter.TryInterpretBoolean(out var boolResult, expr))
+                                {
+                                    if ((parent & ParentFlags.IgnoreResult) == 0)
+                                        il.Demit(boolResult ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
+                                    return true;
+                                }
+                                return TryEmitNot((UnaryExpression)expr, paramExprs, il, ref closure, setup, parent);
+                            }
                         case ExpressionType.Coalesce:
                             return TryEmitCoalesceOperator((BinaryExpression)expr, paramExprs, il, ref closure, setup, parent);
 

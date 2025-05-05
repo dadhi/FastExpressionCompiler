@@ -10,6 +10,7 @@ namespace FastExpressionCompiler.UnitTests
         public static void Main()
         {
             var t = new LightExpression.TestRun();
+            t.Run(new LightExpression.IssueTests.Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_expressions_during_the_compilation());
             t.Run(new LightExpression.IssueTests.Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET());
 
             // new Issue55_CompileFast_crash_with_ref_parameter().Run();
