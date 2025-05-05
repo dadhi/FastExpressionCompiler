@@ -2000,6 +2000,7 @@ namespace FastExpressionCompiler
 #endif
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent, int byRefIndex = -1)
             {
+                var exprType = expr.Type;
                 while (true)
                 {
                     closure.LastEmitIsAddress = false;
@@ -2041,7 +2042,7 @@ namespace FastExpressionCompiler
                             var arrIndexExpr = (BinaryExpression)expr;
                             return TryEmit(arrIndexExpr.Left, paramExprs, il, ref closure, setup, parent | ParentFlags.IndexAccess)
                                 && TryEmit(arrIndexExpr.Right, paramExprs, il, ref closure, setup, parent | ParentFlags.IndexAccess) // #265
-                                && TryEmitArrayIndexGet(il, expr.Type, ref closure, parent);
+                                && TryEmitArrayIndexGet(il, exprType, ref closure, parent);
 
                         case ExpressionType.ArrayLength:
                             if (!TryEmit(((UnaryExpression)expr).Operand, paramExprs, il, ref closure, setup, parent))
@@ -2052,7 +2053,7 @@ namespace FastExpressionCompiler
 
                         case ExpressionType.Constant:
                             return (parent & ParentFlags.IgnoreResult) != 0 ||
-                                TryEmitConstant((ConstantExpression)expr, expr.Type, il, ref closure, byRefIndex);
+                                TryEmitConstant((ConstantExpression)expr, exprType, il, ref closure, byRefIndex);
 
                         case ExpressionType.Call:
                             return TryEmitMethodCall(expr, paramExprs, il, ref closure, setup, parent, byRefIndex);
@@ -2087,15 +2088,15 @@ namespace FastExpressionCompiler
                         case ExpressionType.LessThanOrEqual:
                         case ExpressionType.Equal:
                         case ExpressionType.NotEqual:
-                            if ((setup & CompilerFlags.DisableInterpreter) == 0 && expr.Type.IsPrimitive &&
+                            if ((setup & CompilerFlags.DisableInterpreter) == 0 && exprType.IsPrimitive &&
                                 Interpreter.TryInterpretBoolean(out var boolResult, expr))
                             {
                                 if ((parent & ParentFlags.IgnoreResult) == 0)
                                     il.Demit(boolResult ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
                                 return true;
                             }
-                            var binaryExpr = (BinaryExpression)expr;
-                            return TryEmitComparison(binaryExpr.Left, binaryExpr.Right, expr.Type, nodeType, paramExprs, il, ref closure, setup, parent);
+                            return TryEmitComparison(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, exprType, nodeType, paramExprs, il,
+                                ref closure, setup, parent);
 
                         case ExpressionType.Add:
                         case ExpressionType.AddChecked:
@@ -2105,14 +2106,25 @@ namespace FastExpressionCompiler
                         case ExpressionType.MultiplyChecked:
                         case ExpressionType.Divide:
                         case ExpressionType.Modulo:
+                            if ((setup & CompilerFlags.DisableInterpreter) == 0 && exprType.IsPrimitive &&
+                                Interpreter.TryInterpret(out var resultObj, expr))
+                            {
+                                if ((parent & ParentFlags.IgnoreResult) == 0)
+                                    TryEmitPrimitiveOrEnumOrDecimalConstant(il, resultObj, exprType);
+                                return true;
+                            }
+                            return TryEmitArithmetic(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, nodeType, exprType, paramExprs, il,
+                                ref closure, setup, parent);
+
                         case ExpressionType.Power:
                         case ExpressionType.And:
                         case ExpressionType.Or:
                         case ExpressionType.ExclusiveOr:
                         case ExpressionType.LeftShift:
                         case ExpressionType.RightShift:
-                            // todo: @wip interpreter
-                            return TryEmitArithmetic(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, nodeType, expr.Type, paramExprs, il, ref closure, setup, parent);
+                            // todo: @wip #468 add interpretation when those node types are supported
+                            return TryEmitArithmetic(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, nodeType, exprType, paramExprs, il,
+                                ref closure, setup, parent);
 
                         case ExpressionType.AndAlso:
                         case ExpressionType.OrElse:
@@ -2128,12 +2140,12 @@ namespace FastExpressionCompiler
 
                         case ExpressionType.PostIncrementAssign:
                         case ExpressionType.PreIncrementAssign:
-                            return TryEmitArithmeticAndOrAssign(((UnaryExpression)expr).Operand, null, expr.Type, ExpressionType.Add,
+                            return TryEmitArithmeticAndOrAssign(((UnaryExpression)expr).Operand, null, exprType, ExpressionType.Add,
                                 nodeType == ExpressionType.PostIncrementAssign, paramExprs, il, ref closure, setup, parent);
 
                         case ExpressionType.PostDecrementAssign:
                         case ExpressionType.PreDecrementAssign:
-                            return TryEmitArithmeticAndOrAssign(((UnaryExpression)expr).Operand, null, expr.Type, ExpressionType.Subtract,
+                            return TryEmitArithmeticAndOrAssign(((UnaryExpression)expr).Operand, null, exprType, ExpressionType.Subtract,
                                 nodeType == ExpressionType.PostDecrementAssign, paramExprs, il, ref closure, setup, parent);
 
                         case ExpressionType.AddAssign:
@@ -2152,7 +2164,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.RightShiftAssign:
                         case ExpressionType.Assign:
                             var ba = (BinaryExpression)expr;
-                            return TryEmitArithmeticAndOrAssign(ba.Left, ba.Right, expr.Type,
+                            return TryEmitArithmeticAndOrAssign(ba.Left, ba.Right, exprType,
                                 AssignToArithmeticOrSelf(nodeType), false, paramExprs, il, ref closure, setup, parent);
 
                         case ExpressionType.Block:
@@ -2293,8 +2305,8 @@ namespace FastExpressionCompiler
                             }
 
                         case ExpressionType.Default:
-                            if (expr.Type != typeof(void) && (parent & ParentFlags.IgnoreResult) == 0)
-                                EmitDefault(expr.Type, il);
+                            if (exprType != typeof(void) && (parent & ParentFlags.IgnoreResult) == 0)
+                                EmitDefault(exprType, il);
                             return true;
 
                         case ExpressionType.Index:
@@ -3565,7 +3577,8 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitPrimitiveOrEnumOrDecimalConstant(ILGenerator il, object constValue, Type constType)
+            /// <summary>Emit the IL for the value of the primitive type.</summary>
+            public static bool TryEmitPrimitiveOrEnumOrDecimalConstant(ILGenerator il, object constValue, Type constType)
             {
                 if (constType.IsEnum)
                     constType = Enum.GetUnderlyingType(constType);
@@ -6588,9 +6601,28 @@ namespace FastExpressionCompiler
                     expr is BinaryExpression;
             }
 
+            /// <summary>Wraps `TryInterpretPrimitive` in the try catch block.
+            /// In case of exception FEC will emit the whole computation to throw exception in the invocation phase</summary>
+            public static bool TryInterpret(out object result, Expression expr)
+            {
+                Debug.Assert(expr.Type.IsPrimitive);
+                try
+                {
+                    if (TryInterpretPrimitive(out result, expr))
+                        return true;
+                }
+                catch
+                {
+                    // eat up the expression this time
+                }
+                result = false;
+                return false;
+            }
+
             /// <summary>In case of exception FEC will emit the whole computation to throw exception in the invocation phase</summary>
             public static bool TryInterpretBoolean(out bool result, Expression expr)
             {
+                Debug.Assert(expr.Type.IsPrimitive);
                 try
                 {
                     if (TryInterpretPrimitive(out var resultObj, expr))
@@ -6610,7 +6642,6 @@ namespace FastExpressionCompiler
             /// <summary>Tries to interpret the expression of the Primitive type of Constant, Convert, Logical, Comparison, Arithmetic.</summary>
             public static bool TryInterpretPrimitive(out object result, Expression expr)
             {
-                Debug.Assert(expr.Type.IsPrimitive);
                 result = null;
 
                 // The order of the checks for the type of the expression is deliberate, 
