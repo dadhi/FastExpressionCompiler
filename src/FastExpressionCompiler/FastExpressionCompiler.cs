@@ -2122,12 +2122,13 @@ namespace FastExpressionCompiler
                         case ExpressionType.ExclusiveOr:
                         case ExpressionType.LeftShift:
                         case ExpressionType.RightShift:
-                            // todo: @wip #468 add interpretation when those node types are supported
+                            // todo: @wip #472 add interpretation when those node types are supported
                             return TryEmitArithmetic(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, nodeType, exprType, paramExprs, il,
                                 ref closure, setup, parent);
 
                         case ExpressionType.AndAlso:
                         case ExpressionType.OrElse:
+                            // todo: @wip but where is `.Not` ?
                             // todo: @wip interpreter
                             return TryEmitLogicalOperator((BinaryExpression)expr, nodeType, paramExprs, il, ref closure, setup, parent);
 
