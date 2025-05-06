@@ -6528,7 +6528,8 @@ namespace FastExpressionCompiler
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             internal static void ToValue(ref UValue value, object boxedValue)
             {
-                switch (Type.GetTypeCode(boxedValue.GetType()))
+                value.Code = Type.GetTypeCode(boxedValue.GetType());
+                switch (value.Code)
                 {
                     case TypeCode.SByte: value.SByteValue = (sbyte)boxedValue; break;
                     case TypeCode.Byte: value.ByteValue = (byte)boxedValue; break;

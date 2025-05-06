@@ -11,13 +11,13 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            // var t = new LightExpression.TestRun();
-            // t.Run(new LightExpression.IssueTests.Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET());
-            // t.Run(new LightExpression.IssueTests.Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_expressions_during_the_compilation());
+            var t = new LightExpression.TestRun();
+            t.Run(new LightExpression.IssueTests.Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET());
+            t.Run(new LightExpression.IssueTests.Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_expressions_during_the_compilation());
 
             // new Issue55_CompileFast_crash_with_ref_parameter().Run();
 
-            new LightExpression.UnitTests.ConstantAndConversionTests().Run();
+            // new LightExpression.UnitTests.ConstantAndConversionTests().Run();
 
             // new LightExpression.IssueTests.Issue461_InvalidProgramException_when_null_checking_type_by_ref().Run();
             // new Issue341_Equality_comparison_between_nullable_and_null_inside_Any_produces_incorrect_compiled_expression().Run();
