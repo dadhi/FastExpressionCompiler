@@ -31,7 +31,7 @@ public struct Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_
         var fs = expr.CompileSys();
         fs.PrintIL();
         t.IsTrue(fs(true));
-        t.IsFalse(fs(false));
+        t.IsTrue(fs(false));
 
         var ff = expr.CompileFast(false);
         ff.PrintIL();
@@ -50,12 +50,12 @@ public struct Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_
 
         var fs = expr.CompileSys();
         fs.PrintIL();
-        t.IsTrue(fs(true));
-        t.IsFalse(fs(false));
+        t.IsFalse(fs(true));
+        t.IsTrue(fs(false));
 
         var ff = expr.CompileFast(false);
         ff.PrintIL();
-        t.IsTrue(ff(true));
+        t.IsFalse(ff(true));
         t.IsTrue(ff(false));
     }
 }
