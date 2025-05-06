@@ -35,6 +35,7 @@ THE SOFTWARE.
 #if LIGHT_EXPRESSION
 #define SUPPORTS_ARGUMENT_PROVIDER
 #endif
+#define INTERPRETATION_DIAGNOSTICS
 #if LIGHT_EXPRESSION
 namespace FastExpressionCompiler.LightExpression
 {
@@ -497,7 +498,7 @@ namespace FastExpressionCompiler
             if ((flags & CompilerFlags.DisableInterpreter) == 0 &
                 returnType == typeof(bool) & closurePlusParamTypes.Length == 1
                 && Interpreter.IsCandidateForInterpretation(bodyExpr)
-                && Interpreter.TryInterpretBoolean(out var result, bodyExpr))
+                && Interpreter.TryInterpretBool(out var result, bodyExpr))
                 return result ? Interpreter.TrueFunc : Interpreter.FalseFunc;
 
             // The method collects the info from the all nested lambdas deep down up-front and de-duplicates the lambdas as well.
@@ -2087,7 +2088,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.NotEqual:
                             {
                                 if ((setup & CompilerFlags.DisableInterpreter) == 0 && exprType.IsPrimitive &&
-                                    Interpreter.TryInterpretBoolean(out var boolResult, expr))
+                                    Interpreter.TryInterpretBool(out var boolResult, expr))
                                 {
                                     if ((parent & ParentFlags.IgnoreResult) == 0)
                                         il.Demit(boolResult ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
@@ -2129,7 +2130,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.OrElse:
                             {
                                 if ((setup & CompilerFlags.DisableInterpreter) == 0 && exprType.IsPrimitive &&
-                                    Interpreter.TryInterpretBoolean(out var boolResult, expr))
+                                    Interpreter.TryInterpretBool(out var boolResult, expr))
                                 {
                                     if ((parent & ParentFlags.IgnoreResult) == 0)
                                         il.Demit(boolResult ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
@@ -2140,7 +2141,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.Not:
                             {
                                 if ((setup & CompilerFlags.DisableInterpreter) == 0 && exprType.IsPrimitive &&
-                                    Interpreter.TryInterpretBoolean(out var boolResult, expr))
+                                    Interpreter.TryInterpretBool(out var boolResult, expr))
                                 {
                                     if ((parent & ParentFlags.IgnoreResult) == 0)
                                         il.Demit(boolResult ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
@@ -6611,6 +6612,46 @@ namespace FastExpressionCompiler
                     expr is BinaryExpression;
             }
 
+#if INTERPRETATION_DIAGNOSTICS
+            public static readonly System.Collections.Concurrent.ConcurrentStack<string> UsedInTests = new();
+
+            [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Used in diagnostics only")]
+            [UnconditionalSuppressMessage("Trimming", "IL2075:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Used in diagnostics only")]
+            private static void CollectCallingTestName()
+            {
+                var stackTrace = new StackTrace();
+                var frames = stackTrace.GetFrames();
+                foreach (var frame in frames)
+                {
+                    var method = frame.GetMethod();
+                    var type = method?.DeclaringType;
+                    if (type == null)
+                        continue;
+
+                    var ifaces = type.GetInterfaces();
+                    if (ifaces.Length == 0)
+                        continue;
+
+                    var firstFound = false;
+                    foreach (var iface in ifaces)
+                    {
+                        if (iface.Name == nameof(ITest) ||
+                            iface.Name == nameof(ITestX))
+                        {
+                            firstFound = true;
+                            break;
+                        }
+                    }
+
+                    if (firstFound)
+                    {
+                        UsedInTests.Push($"{type.Name}.{method.Name}");
+                        break; // collect the first found thing in stack trace
+                    }
+                }
+            }
+#endif
+
             /// <summary>Wraps `TryInterpretPrimitive` in the try catch block.
             /// In case of exception FEC will emit the whole computation to throw exception in the invocation phase</summary>
             public static bool TryInterpret(out object result, Expression expr)
@@ -6619,31 +6660,40 @@ namespace FastExpressionCompiler
                 try
                 {
                     if (TryInterpretPrimitive(out result, expr))
+                    {
+#if INTERPRETATION_DIAGNOSTICS
+                        CollectCallingTestName();
+#endif
                         return true;
+                    }
                 }
                 catch
                 {
-                    // eat up the expression this time
+                    // ignore exception and return the false and rethrow the exception in the invocation time
                 }
                 result = false;
                 return false;
             }
 
-            /// <summary>In case of exception FEC will emit the whole computation to throw exception in the invocation phase</summary>
-            public static bool TryInterpretBoolean(out bool result, Expression expr)
+            /// <summary>Wraps `TryInterpretPrimitive` in the try catch block.
+            /// In case of exception FEC will emit the whole computation to throw exception in the invocation phase</summary>
+            public static bool TryInterpretBool(out bool result, Expression expr)
             {
                 Debug.Assert(expr.Type.IsPrimitive);
                 try
                 {
                     if (TryInterpretPrimitive(out var resultObj, expr))
                     {
+#if INTERPRETATION_DIAGNOSTICS
+                        CollectCallingTestName();
+#endif
                         result = resultObj == TrueObject;
                         return true;
                     }
                 }
                 catch
                 {
-                    // eat up the expression this time
+                    // ignore exception and return the false and rethrow the exception in the invocation time
                 }
                 result = false;
                 return false;

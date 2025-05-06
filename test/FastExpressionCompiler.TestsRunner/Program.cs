@@ -1,4 +1,6 @@
-﻿using System;
+﻿#define INTERPRETATION_DIAGNOSTICS
+
+using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using FastExpressionCompiler.IssueTests;
@@ -401,6 +403,17 @@ namespace FastExpressionCompiler.UnitTests
                 return;
             }
 
+#if INTERPRETATION_DIAGNOSTICS
+            var tests = ExpressionCompiler.Interpreter.UsedInTests;
+            Console.WriteLine($"INTERPRETATION_DIAGNOSTICS {tests.Count} tests used the interpretation:");
+            Console.WriteLine();
+            var i = tests.Count;
+            foreach (var test in tests)
+            {
+                Console.WriteLine($"{i--}. {test}");
+            }
+            Console.WriteLine();
+#endif
             Console.WriteLine($"ALL {totalTestsPassed,-4} tests are passing in {sw.ElapsedMilliseconds} ms.");
         }
     }
