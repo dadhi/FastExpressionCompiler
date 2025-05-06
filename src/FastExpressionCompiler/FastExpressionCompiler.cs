@@ -6440,13 +6440,6 @@ namespace FastExpressionCompiler
                 throw new InvalidCastException("Unreachable switch case reached");
             }
 
-            /// <summary>Operation accepting bool inputs and producing bool output</summary>
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static bool IsLogical(ExpressionType nodeType) =>
-                nodeType == ExpressionType.AndAlso |
-                nodeType == ExpressionType.OrElse |
-                nodeType == ExpressionType.Not;
-
             /// <summary>Operation accepting IComparable inputs and producing bool output</summary>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static bool IsComparison(ExpressionType nodeType) =>
@@ -6685,7 +6678,8 @@ namespace FastExpressionCompiler
                     return true;
                 }
 
-                if (IsLogical(nodeType))
+                if (nodeType == ExpressionType.AndAlso |
+                    nodeType == ExpressionType.OrElse)
                 {
                     var binaryExpr = (BinaryExpression)expr;
 
