@@ -6635,8 +6635,8 @@ namespace FastExpressionCompiler
                     var firstFound = false;
                     foreach (var iface in ifaces)
                     {
-                        if (iface.Name == nameof(ITest) ||
-                            iface.Name == nameof(ITestX))
+                        // more generic approach
+                        if (iface.Name.Contains("Test"))
                         {
                             firstFound = true;
                             break;
