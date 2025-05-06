@@ -6439,7 +6439,8 @@ namespace FastExpressionCompiler
             [MethodImpl(MethodImplOptions.NoInlining)]
             private static T UnreachableCase<T>()
             {
-                throw new InvalidCastException("Unreachable switch case reached");
+                Debug.Assert(false, $"Unreachable switch case reached for type `{typeof(T).Name}`");
+                throw new InvalidCastException($"Unreachable switch case reached for type `{typeof(T).Name}`");
             }
 
             /// <summary>Operation accepting IComparable inputs and producing bool output</summary>
@@ -6481,12 +6482,13 @@ namespace FastExpressionCompiler
                     _ => null,
                 };
             }
+
             // todo: @wip @perf use to avoid boxing of the arithmetics
             [StructLayout(LayoutKind.Explicit)]
-            private struct ArithmeticResult
+            internal struct UValue
             {
                 [FieldOffset(0)]
-                public TypeCode ResultTypeCode;
+                public TypeCode Code;
 
                 [FieldOffset(4)]
                 public sbyte SByteValue;
@@ -6510,109 +6512,223 @@ namespace FastExpressionCompiler
                 public double DoubleValue;
                 [FieldOffset(4)]
                 public decimal DecimalValue;
-
-                public ArithmeticResult(sbyte value) { SByteValue = value; ResultTypeCode = TypeCode.SByte; }
-                public ArithmeticResult(byte value) { ByteValue = value; ResultTypeCode = TypeCode.Byte; }
-                public ArithmeticResult(short value) { Int16Value = value; ResultTypeCode = TypeCode.Int16; }
-                public ArithmeticResult(ushort value) { UInt16Value = value; ResultTypeCode = TypeCode.UInt16; }
-                public ArithmeticResult(int value) { Int32Value = value; ResultTypeCode = TypeCode.Int32; }
-                public ArithmeticResult(uint value) { UInt32Value = value; ResultTypeCode = TypeCode.UInt32; }
-                public ArithmeticResult(long value) { Int64Value = value; ResultTypeCode = TypeCode.Int64; }
-                public ArithmeticResult(ulong value) { UInt64Value = value; ResultTypeCode = TypeCode.UInt64; }
-                public ArithmeticResult(float value) { SingleValue = value; ResultTypeCode = TypeCode.Single; }
-                public ArithmeticResult(double value) { DoubleValue = value; ResultTypeCode = TypeCode.Double; }
-                public ArithmeticResult(decimal value) { DecimalValue = value; ResultTypeCode = TypeCode.Decimal; }
+                public UValue(sbyte value) { SByteValue = value; Code = TypeCode.SByte; }
+                public UValue(byte value) { ByteValue = value; Code = TypeCode.Byte; }
+                public UValue(short value) { Int16Value = value; Code = TypeCode.Int16; }
+                public UValue(ushort value) { UInt16Value = value; Code = TypeCode.UInt16; }
+                public UValue(int value) { Int32Value = value; Code = TypeCode.Int32; }
+                public UValue(uint value) { UInt32Value = value; Code = TypeCode.UInt32; }
+                public UValue(long value) { Int64Value = value; Code = TypeCode.Int64; }
+                public UValue(ulong value) { UInt64Value = value; Code = TypeCode.UInt64; }
+                public UValue(float value) { SingleValue = value; Code = TypeCode.Single; }
+                public UValue(double value) { DoubleValue = value; Code = TypeCode.Double; }
+                public UValue(decimal value) { DecimalValue = value; Code = TypeCode.Decimal; }
             }
 
-            /// <summary>Interpret arithmetic. The types of the left and the right operands assumed to be the same.
-            /// The Expression.Add, Divide, etc, expects the operands to be of the same type </summary>
-            public static object DoArithmeticOrNull(object left, object right, ExpressionType nodeType)
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            internal static void ToValue(ref UValue value, object boxedValue)
             {
-                Debug.Assert(left != null && right != null, "left and right should not be null");
-                Debug.Assert(left.GetType() == right.GetType(), "left and right should be of the same type");
-
-                var leftCode = Type.GetTypeCode(left.GetType());
-                return nodeType switch
+                switch (Type.GetTypeCode(boxedValue.GetType()))
                 {
-                    ExpressionType.Add => leftCode switch
-                    {
-                        // Systems expression does not define the Add for sbyte and byte, but let's keep it here because it is allowed in C# and LightExpression
-                        TypeCode.SByte => (sbyte)left + (sbyte)right,
-                        TypeCode.Byte => (byte)left + (byte)right,
-                        // the rest
-                        TypeCode.Int16 => (short)left + (short)right,
-                        TypeCode.UInt16 => (ushort)left + (ushort)right,
-                        TypeCode.Int32 => (int)left + (int)right,
-                        TypeCode.UInt32 => (uint)left + (uint)right,
-                        TypeCode.Int64 => (long)left + (long)right,
-                        TypeCode.UInt64 => (ulong)left + (ulong)right,
-                        TypeCode.Single => (float)left + (float)right,
-                        TypeCode.Double => (double)left + (double)right,
-                        TypeCode.Decimal => (decimal)left + (decimal)right,
-                        _ => null,
-                    },
-                    ExpressionType.Subtract => leftCode switch
-                    {
-                        TypeCode.SByte => (sbyte)left - (sbyte)right,
-                        TypeCode.Byte => (byte)left - (byte)right,
-                        TypeCode.Int16 => (short)left - (short)right,
-                        TypeCode.UInt16 => (ushort)left - (ushort)right,
-                        TypeCode.Int32 => (int)left - (int)right,
-                        TypeCode.UInt32 => (uint)left - (uint)right,
-                        TypeCode.Int64 => (long)left - (long)right,
-                        TypeCode.UInt64 => (ulong)left - (ulong)right,
-                        TypeCode.Single => (float)left - (float)right,
-                        TypeCode.Double => (double)left - (double)right,
-                        TypeCode.Decimal => (decimal)left - (decimal)right,
-                        _ => null,
-                    },
-                    ExpressionType.Multiply => leftCode switch
-                    {
-                        TypeCode.SByte => (sbyte)left * (sbyte)right,
-                        TypeCode.Byte => (byte)left * (byte)right,
-                        TypeCode.Int16 => (short)left * (short)right,
-                        TypeCode.UInt16 => (ushort)left * (ushort)right,
-                        TypeCode.Int32 => (int)left * (int)right,
-                        TypeCode.UInt32 => (uint)left * (uint)right,
-                        TypeCode.Int64 => (long)left * (long)right,
-                        TypeCode.UInt64 => (ulong)left * (ulong)right,
-                        TypeCode.Single => (float)left * (float)right,
-                        TypeCode.Double => (double)left * (double)right,
-                        TypeCode.Decimal => (decimal)left * (decimal)right,
-                        _ => null,
-                    },
-                    ExpressionType.Divide => leftCode switch
-                    {
-                        TypeCode.SByte => (sbyte)left / (sbyte)right,
-                        TypeCode.Byte => (byte)left / (byte)right,
-                        TypeCode.Int16 => (short)left / (short)right,
-                        TypeCode.UInt16 => (ushort)left / (ushort)right,
-                        TypeCode.Int32 => (int)left / (int)right,
-                        TypeCode.UInt32 => (uint)left / (uint)right,
-                        TypeCode.Int64 => (long)left / (long)right,
-                        TypeCode.UInt64 => (ulong)left / (ulong)right,
-                        TypeCode.Single => (float)left / (float)right,
-                        TypeCode.Double => (double)left / (double)right,
-                        TypeCode.Decimal => (decimal)left / (decimal)right,
-                        _ => null,
-                    },
-                    ExpressionType.Modulo => leftCode switch
-                    {
-                        TypeCode.SByte => (sbyte)left % (sbyte)right,
-                        TypeCode.Byte => (byte)left % (byte)right,
-                        TypeCode.Int16 => (short)left % (short)right,
-                        TypeCode.UInt16 => (ushort)left % (ushort)right,
-                        TypeCode.Int32 => (int)left % (int)right,
-                        TypeCode.UInt32 => (uint)left % (uint)right,
-                        TypeCode.Int64 => (long)left % (long)right,
-                        TypeCode.UInt64 => (ulong)left % (ulong)right,
-                        TypeCode.Single => (float)left % (float)right,
-                        TypeCode.Double => (double)left % (double)right,
-                        TypeCode.Decimal => (decimal)left % (decimal)right,
-                        _ => null,
-                    },
-                    _ => null,
-                };
+                    case TypeCode.SByte: value.SByteValue = (sbyte)boxedValue; break;
+                    case TypeCode.Byte: value.ByteValue = (byte)boxedValue; break;
+                    case TypeCode.Int16: value.Int16Value = (short)boxedValue; break;
+                    case TypeCode.UInt16: value.UInt16Value = (ushort)boxedValue; break;
+                    case TypeCode.Int32: value.Int32Value = (int)boxedValue; break;
+                    case TypeCode.UInt32: value.UInt32Value = (uint)boxedValue; break;
+                    case TypeCode.Int64: value.Int64Value = (long)boxedValue; break;
+                    case TypeCode.UInt64: value.UInt64Value = (ulong)boxedValue; break;
+                    case TypeCode.Single: value.SingleValue = (float)boxedValue; break;
+                    case TypeCode.Double: value.DoubleValue = (double)boxedValue; break;
+                    case TypeCode.Decimal: value.DecimalValue = (decimal)boxedValue; break;
+                    default: UnreachableCase<object>(); break;
+                }
+            }
+
+            internal static object ToBoxed(ref UValue value)
+            {
+                switch (value.Code)
+                {
+                    case TypeCode.SByte: return value.SByteValue;
+                    case TypeCode.Byte: return value.ByteValue;
+                    case TypeCode.Int16: return value.Int16Value;
+                    case TypeCode.UInt16: return value.UInt16Value;
+                    case TypeCode.Int32: return value.Int32Value;
+                    case TypeCode.UInt32: return value.UInt32Value;
+                    case TypeCode.Int64: return value.Int64Value;
+                    case TypeCode.UInt64: return value.UInt64Value;
+                    case TypeCode.Single: return value.SingleValue;
+                    case TypeCode.Double: return value.DoubleValue;
+                    case TypeCode.Decimal: return value.DecimalValue;
+                    default: return UnreachableCase<object>();
+                }
+            }
+
+            // left will contain the result of the operation after the operation
+            internal static void DoArithmeticOrNull(ref UValue left, ref UValue right, ExpressionType nodeType)
+            {
+                Debug.Assert(left.Code == right.Code, "left and right should be of the same type");
+                switch (nodeType)
+                {
+                    case ExpressionType.Add:
+                        switch (left.Code)
+                        {
+                            // System Expression does not define the Add for sbyte and byte, but let's keep it here because it is allowed in C# and LightExpression
+                            case TypeCode.SByte: left.SByteValue += right.SByteValue; break;
+                            case TypeCode.Byte: left.ByteValue += right.ByteValue; break;
+                            // the rest
+                            case TypeCode.Int16: left.Int16Value += right.Int16Value; break;
+                            case TypeCode.UInt16: left.UInt16Value += right.UInt16Value; break;
+                            case TypeCode.Int32: left.Int32Value += right.Int32Value; break;
+                            case TypeCode.UInt32: left.UInt32Value += right.UInt32Value; break;
+                            case TypeCode.Int64: left.Int64Value += right.Int64Value; break;
+                            case TypeCode.UInt64: left.UInt64Value += right.UInt64Value; break;
+                            case TypeCode.Single: left.SingleValue += right.SingleValue; break;
+                            case TypeCode.Double: left.DoubleValue += right.DoubleValue; break;
+                            case TypeCode.Decimal: left.DecimalValue += right.DecimalValue; break;
+                            default: UnreachableCase<object>(); break;
+                        }
+                        break;
+                    case ExpressionType.Subtract:
+                        switch (left.Code)
+                        {
+                            case TypeCode.SByte: left.SByteValue -= right.SByteValue; break;
+                            case TypeCode.Byte: left.ByteValue -= right.ByteValue; break;
+                            case TypeCode.Int16: left.Int16Value -= right.Int16Value; break;
+                            case TypeCode.UInt16: left.UInt16Value -= right.UInt16Value; break;
+                            case TypeCode.Int32: left.Int32Value -= right.Int32Value; break;
+                            case TypeCode.UInt32: left.UInt32Value -= right.UInt32Value; break;
+                            case TypeCode.Int64: left.Int64Value -= right.Int64Value; break;
+                            case TypeCode.UInt64: left.UInt64Value -= right.UInt64Value; break;
+                            case TypeCode.Single: left.SingleValue -= right.SingleValue; break;
+                            case TypeCode.Double: left.DoubleValue -= right.DoubleValue; break;
+                            case TypeCode.Decimal: left.DecimalValue -= right.DecimalValue; break;
+                            default: UnreachableCase<object>(); break;
+                        }
+                        break;
+                    case ExpressionType.Multiply:
+                        switch (left.Code)
+                        {
+                            case TypeCode.SByte: left.SByteValue *= right.SByteValue; break;
+                            case TypeCode.Byte: left.ByteValue *= right.ByteValue; break;
+                            case TypeCode.Int16: left.Int16Value *= right.Int16Value; break;
+                            case TypeCode.UInt16: left.UInt16Value *= right.UInt16Value; break;
+                            case TypeCode.Int32: left.Int32Value *= right.Int32Value; break;
+                            case TypeCode.UInt32: left.UInt32Value *= right.UInt32Value; break;
+                            case TypeCode.Int64: left.Int64Value *= right.Int64Value; break;
+                            case TypeCode.UInt64: left.UInt64Value *= right.UInt64Value; break;
+                            case TypeCode.Single: left.SingleValue *= right.SingleValue; break;
+                            case TypeCode.Double: left.DoubleValue *= right.DoubleValue; break;
+                            case TypeCode.Decimal: left.DecimalValue *= right.DecimalValue; break;
+                            default: UnreachableCase<object>(); break;
+                        }
+                        break;
+                    case ExpressionType.Divide:
+                        switch (left.Code)
+                        {
+                            case TypeCode.SByte: left.SByteValue /= right.SByteValue; break;
+                            case TypeCode.Byte: left.ByteValue /= right.ByteValue; break;
+                            case TypeCode.Int16: left.Int16Value /= right.Int16Value; break;
+                            case TypeCode.UInt16: left.UInt16Value /= right.UInt16Value; break;
+                            case TypeCode.Int32: left.Int32Value /= right.Int32Value; break;
+                            case TypeCode.UInt32: left.UInt32Value /= right.UInt32Value; break;
+                            case TypeCode.Int64: left.Int64Value /= right.Int64Value; break;
+                            case TypeCode.UInt64: left.UInt64Value /= right.UInt64Value; break;
+                            case TypeCode.Single: left.SingleValue /= right.SingleValue; break;
+                            case TypeCode.Double: left.DoubleValue /= right.DoubleValue; break;
+                            case TypeCode.Decimal: left.DecimalValue /= right.DecimalValue; break;
+                            default: UnreachableCase<object>(); break;
+                        }
+                        break;
+                    case ExpressionType.Modulo:
+                        switch (left.Code)
+                        {
+                            case TypeCode.SByte: left.SByteValue %= right.SByteValue; break;
+                            case TypeCode.Byte: left.ByteValue %= right.ByteValue; break;
+                            case TypeCode.Int16: left.Int16Value %= right.Int16Value; break;
+                            case TypeCode.UInt16: left.UInt16Value %= right.UInt16Value; break;
+                            case TypeCode.Int32: left.Int32Value %= right.Int32Value; break;
+                            case TypeCode.UInt32: left.UInt32Value %= right.UInt32Value; break;
+                            case TypeCode.Int64: left.Int64Value %= right.Int64Value; break;
+                            case TypeCode.UInt64: left.UInt64Value %= right.UInt64Value; break;
+                            case TypeCode.Single: left.SingleValue %= right.SingleValue; break;
+                            case TypeCode.Double: left.DoubleValue %= right.DoubleValue; break;
+                            case TypeCode.Decimal: left.DecimalValue %= right.DecimalValue; break;
+                            default: UnreachableCase<object>(); break;
+                        }
+                        break;
+                    case ExpressionType.And:
+                        switch (left.Code)
+                        {
+                            case TypeCode.SByte: left.SByteValue &= right.SByteValue; break;
+                            case TypeCode.Byte: left.ByteValue &= right.ByteValue; break;
+                            case TypeCode.Int16: left.Int16Value &= right.Int16Value; break;
+                            case TypeCode.UInt16: left.UInt16Value &= right.UInt16Value; break;
+                            case TypeCode.Int32: left.Int32Value &= right.Int32Value; break;
+                            case TypeCode.UInt32: left.UInt32Value &= right.UInt32Value; break;
+                            case TypeCode.Int64: left.Int64Value &= right.Int64Value; break;
+                            case TypeCode.UInt64: left.UInt64Value &= right.UInt64Value; break;
+                            default: UnreachableCase<object>(); break;
+                        }
+                        break;
+                    case ExpressionType.Or:
+                        switch (left.Code)
+                        {
+                            case TypeCode.SByte: left.SByteValue |= right.SByteValue; break;
+                            case TypeCode.Byte: left.ByteValue |= right.ByteValue; break;
+                            case TypeCode.Int16: left.Int16Value |= right.Int16Value; break;
+                            case TypeCode.UInt16: left.UInt16Value |= right.UInt16Value; break;
+                            case TypeCode.Int32: left.Int32Value |= right.Int32Value; break;
+                            case TypeCode.UInt32: left.UInt32Value |= right.UInt32Value; break;
+                            case TypeCode.Int64: left.Int64Value |= right.Int64Value; break;
+                            case TypeCode.UInt64: left.UInt64Value |= right.UInt64Value; break;
+                            default: UnreachableCase<object>(); break;
+                        }
+                        break;
+                    case ExpressionType.ExclusiveOr:
+                        switch (left.Code)
+                        {
+                            case TypeCode.SByte: left.SByteValue ^= right.SByteValue; break;
+                            case TypeCode.Byte: left.ByteValue ^= right.ByteValue; break;
+                            case TypeCode.Int16: left.Int16Value ^= right.Int16Value; break;
+                            case TypeCode.UInt16: left.UInt16Value ^= right.UInt16Value; break;
+                            case TypeCode.Int32: left.Int32Value ^= right.Int32Value; break;
+                            case TypeCode.UInt32: left.UInt32Value ^= right.UInt32Value; break;
+                            case TypeCode.Int64: left.Int64Value ^= right.Int64Value; break;
+                            case TypeCode.UInt64: left.UInt64Value ^= right.UInt64Value; break;
+                            default: UnreachableCase<object>(); break;
+                        }
+                        break;
+                    case ExpressionType.LeftShift:
+                        switch (left.Code)
+                        {
+                            case TypeCode.SByte: left.SByteValue <<= right.SByteValue; break;
+                            case TypeCode.Byte: left.ByteValue <<= right.ByteValue; break;
+                            case TypeCode.Int16: left.Int16Value <<= right.Int16Value; break;
+                            case TypeCode.UInt16: left.UInt16Value <<= right.UInt16Value; break;
+                            case TypeCode.Int32: left.Int32Value <<= right.Int32Value; break;
+                            case TypeCode.UInt32: left.UInt32Value <<= (int)right.UInt32Value; break;
+                            case TypeCode.Int64: left.Int64Value <<= (int)right.Int64Value; break;
+                            case TypeCode.UInt64: left.UInt64Value <<= (int)right.UInt64Value; break;
+                            default: UnreachableCase<object>(); break;
+                        }
+                        break;
+                    case ExpressionType.RightShift:
+                        switch (left.Code)
+                        {
+                            case TypeCode.SByte: left.SByteValue >>= right.SByteValue; break;
+                            case TypeCode.Byte: left.ByteValue >>= right.ByteValue; break;
+                            case TypeCode.Int16: left.Int16Value >>= right.Int16Value; break;
+                            case TypeCode.UInt16: left.UInt16Value >>= right.UInt16Value; break;
+                            case TypeCode.Int32: left.Int32Value >>= right.Int32Value; break;
+                            case TypeCode.UInt32: left.UInt32Value >>= (int)right.UInt32Value; break;
+                            case TypeCode.Int64: left.Int64Value >>= (int)right.Int64Value; break;
+                            case TypeCode.UInt64: left.UInt64Value >>= (int)right.UInt64Value; break;
+                            default: UnreachableCase<object>(); break;
+                        }
+                        break;
+                    default: UnreachableCase<object>(); break;
+                }
             }
 
             public static class ZeroDefault<T>
@@ -6869,9 +6985,14 @@ namespace FastExpressionCompiler
                         return true;
                     }
 
-                    // For Arithmetic
-                    result = DoArithmeticOrNull(leftVal, rightVal, nodeType);
-                    return result != null;
+                    // For the Arithmetic
+                    UValue leftU = default;
+                    UValue rightU = default;
+                    ToValue(ref leftU, leftVal);
+                    ToValue(ref rightU, rightVal);
+                    DoArithmeticOrNull(ref leftU, ref rightU, nodeType);
+                    result = ToBoxed(ref leftU);
+                    return true;
                 }
 
                 if (nodeType == ExpressionType.Negate)
