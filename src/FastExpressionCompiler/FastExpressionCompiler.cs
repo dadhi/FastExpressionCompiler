@@ -35,7 +35,7 @@ THE SOFTWARE.
 #if LIGHT_EXPRESSION
 #define SUPPORTS_ARGUMENT_PROVIDER
 #endif
-#define INTERPRETATION_DIAGNOSTICS
+// #define INTERPRETATION_DIAGNOSTICS
 #if LIGHT_EXPRESSION
 namespace FastExpressionCompiler.LightExpression
 {
@@ -61,6 +61,7 @@ namespace FastExpressionCompiler
     using System.Threading;
     using System.Text;
     using System.Runtime.CompilerServices;
+    using System.Runtime.InteropServices;
     using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using static System.Environment;
@@ -6480,6 +6481,48 @@ namespace FastExpressionCompiler
                     _ => null,
                 };
             }
+            // todo: @wip @perf use to avoid boxing of the arithmetics
+            [StructLayout(LayoutKind.Explicit)]
+            private struct ArithmeticResult
+            {
+                [FieldOffset(0)]
+                public TypeCode ResultTypeCode;
+
+                [FieldOffset(4)]
+                public sbyte SByteValue;
+                [FieldOffset(4)]
+                public byte ByteValue;
+                [FieldOffset(4)]
+                public short Int16Value;
+                [FieldOffset(4)]
+                public ushort UInt16Value;
+                [FieldOffset(4)]
+                public int Int32Value;
+                [FieldOffset(4)]
+                public uint UInt32Value;
+                [FieldOffset(4)]
+                public long Int64Value;
+                [FieldOffset(4)]
+                public ulong UInt64Value;
+                [FieldOffset(4)]
+                public float SingleValue;
+                [FieldOffset(4)]
+                public double DoubleValue;
+                [FieldOffset(4)]
+                public decimal DecimalValue;
+
+                public ArithmeticResult(sbyte value) { SByteValue = value; ResultTypeCode = TypeCode.SByte; }
+                public ArithmeticResult(byte value) { ByteValue = value; ResultTypeCode = TypeCode.Byte; }
+                public ArithmeticResult(short value) { Int16Value = value; ResultTypeCode = TypeCode.Int16; }
+                public ArithmeticResult(ushort value) { UInt16Value = value; ResultTypeCode = TypeCode.UInt16; }
+                public ArithmeticResult(int value) { Int32Value = value; ResultTypeCode = TypeCode.Int32; }
+                public ArithmeticResult(uint value) { UInt32Value = value; ResultTypeCode = TypeCode.UInt32; }
+                public ArithmeticResult(long value) { Int64Value = value; ResultTypeCode = TypeCode.Int64; }
+                public ArithmeticResult(ulong value) { UInt64Value = value; ResultTypeCode = TypeCode.UInt64; }
+                public ArithmeticResult(float value) { SingleValue = value; ResultTypeCode = TypeCode.Single; }
+                public ArithmeticResult(double value) { DoubleValue = value; ResultTypeCode = TypeCode.Double; }
+                public ArithmeticResult(decimal value) { DecimalValue = value; ResultTypeCode = TypeCode.Decimal; }
+            }
 
             /// <summary>Interpret arithmetic. The types of the left and the right operands assumed to be the same.
             /// The Expression.Add, Divide, etc, expects the operands to be of the same type </summary>
@@ -6621,8 +6664,11 @@ namespace FastExpressionCompiler
             {
                 var stackTrace = new StackTrace();
                 var frames = stackTrace.GetFrames();
-                foreach (var frame in frames)
+
+                // Skip this method and its immediate caller, and start from the outer callers
+                for (int i = 2; i < frames.Length; i++)
                 {
+                    StackFrame frame = frames[i];
                     var method = frame.GetMethod();
                     var type = method?.DeclaringType;
                     if (type == null)
@@ -6635,7 +6681,6 @@ namespace FastExpressionCompiler
                     var firstFound = false;
                     foreach (var iface in ifaces)
                     {
-                        // more generic approach
                         if (iface.Name.Contains("Test"))
                         {
                             firstFound = true;

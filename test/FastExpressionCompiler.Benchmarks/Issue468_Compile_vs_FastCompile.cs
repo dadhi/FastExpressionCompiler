@@ -95,13 +95,24 @@ DefaultJob : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
 | InvokeCompiledFast                    | 0.1105 ns | 0.0360 ns | 0.0799 ns | 0.0689 ns |  0.22 |    0.16 |    1 |                     1 |         - |          NA |
 | InvokeCompiledFast_DisableInterpreter | 1.0607 ns | 0.0540 ns | 0.0887 ns | 1.0301 ns |  2.13 |    0.34 |    3 |                     2 |         - |          NA |
 
+## Comparing to the direct interpretation
+
+| Method                                | Mean       | Error     | StdDev    | Median     | Ratio  | RatioSD | Rank | Gen0   | Allocated | Alloc Ratio |
+|-------------------------------------- |-----------:|----------:|----------:|-----------:|-------:|--------:|-----:|-------:|----------:|------------:|
+| InvokeCompiled                        |  0.3347 ns | 0.0313 ns | 0.0373 ns |  0.3241 ns |   1.01 |    0.15 |    3 |      - |         - |          NA |
+| InvokeCompiledFast                    |  0.0269 ns | 0.0214 ns | 0.0229 ns |  0.0198 ns |   0.08 |    0.07 |    1 |      - |         - |          NA |
+| InvokeCompiledFast_DisableInterpreter |  0.9317 ns | 0.0485 ns | 0.0558 ns |  0.9097 ns |   2.81 |    0.31 |    4 |      - |         - |          NA |
+| Interpret                             | 81.7969 ns | 0.6588 ns | 0.5501 ns | 81.7534 ns | 246.89 |   23.21 |    5 | 0.0076 |      48 B |          NA |
+| JustFunc                              |  0.0335 ns | 0.0219 ns | 0.0499 ns |  0.0000 ns |   0.10 |    0.15 |    2 |      - |         - |          NA |
+
 */
 [MemoryDiagnoser, RankColumn]
-[HardwareCounters(HardwareCounter.BranchInstructions)]
+// [HardwareCounters(HardwareCounter.BranchInstructions)]
 // [SimpleJob(RuntimeMoniker.Net90)]
 // [SimpleJob(RuntimeMoniker.Net80)]
 public class Issue468_InvokeCompiled_vs_InvokeCompiledFast
 {
+    Expression<Func<bool>> _expr;
     Func<bool> _compiled, _compiledFast, _compiledFast_DisableInterpreter, _justFunc = static () => true;
 
     [GlobalSetup]
@@ -111,6 +122,7 @@ public class Issue468_InvokeCompiled_vs_InvokeCompiledFast
         _compiled = expr.CompileSys();
         _compiledFast = expr.CompileFast();
         _compiledFast_DisableInterpreter = expr.CompileFast(flags: CompilerFlags.DisableInterpreter);
+        _expr = expr;
     }
 
     [Benchmark(Baseline = true)]
@@ -131,7 +143,13 @@ public class Issue468_InvokeCompiled_vs_InvokeCompiledFast
         return _compiledFast_DisableInterpreter();
     }
 
-    // [Benchmark]
+    [Benchmark]
+    public bool Interpret()
+    {
+        return ExpressionCompiler.Interpreter.TryInterpretBool(out var result, _expr.Body) ? result : false;
+    }
+
+    [Benchmark]
     public bool JustFunc()
     {
         return _justFunc();

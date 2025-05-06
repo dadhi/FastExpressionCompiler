@@ -65,7 +65,7 @@ namespace FastExpressionCompiler.UnitTests
             }
 
             var totalTestCount = fecTests.TotalTestCount + lightTests.TotalTestCount;
-            Console.WriteLine($"All {totalTestCount,-4} tests are passing in {totalStopwatch.ElapsedMilliseconds} ms.");
+            Console.WriteLine($"TestX {totalTestCount,-4} tests are passing in {totalStopwatch.ElapsedMilliseconds} ms.");
         }
 
         public static void RunAllTests()
