@@ -6802,6 +6802,8 @@ namespace FastExpressionCompiler
                     case ExpressionType.NotEqual:
                         result = left.Code switch
                         {
+                            TypeCode.Boolean => left.BooleanValue == right.BooleanValue,
+                            TypeCode.Char => left.CharValue == right.CharValue,
                             TypeCode.SByte => left.SByteValue == right.SByteValue,
                             TypeCode.Byte => left.ByteValue == right.ByteValue,
                             TypeCode.Int16 => left.Int16Value == right.Int16Value,
@@ -6818,9 +6820,10 @@ namespace FastExpressionCompiler
                         if (nodeType == ExpressionType.NotEqual)
                             result = !result;
                         break;
-                    case ExpressionType.GreaterThan:
+                    case ExpressionType.GreaterThan: // todo: @wip simplify combine together whith LessThanOrEqual 
                         result = left.Code switch
                         {
+                            TypeCode.Char => left.CharValue > right.CharValue,
                             TypeCode.SByte => left.SByteValue > right.SByteValue,
                             TypeCode.Byte => left.ByteValue > right.ByteValue,
                             TypeCode.Int16 => left.Int16Value > right.Int16Value,
@@ -6838,6 +6841,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.GreaterThanOrEqual:
                         result = left.Code switch
                         {
+                            TypeCode.Char => left.CharValue >= right.CharValue,
                             TypeCode.SByte => left.SByteValue >= right.SByteValue,
                             TypeCode.Byte => left.ByteValue >= right.ByteValue,
                             TypeCode.Int16 => left.Int16Value >= right.Int16Value,
@@ -6855,6 +6859,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.LessThan:
                         result = left.Code switch
                         {
+                            TypeCode.Char => left.CharValue < right.CharValue,
                             TypeCode.SByte => left.SByteValue < right.SByteValue,
                             TypeCode.Byte => left.ByteValue < right.ByteValue,
                             TypeCode.Int16 => left.Int16Value < right.Int16Value,
@@ -6872,6 +6877,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.LessThanOrEqual:
                         result = left.Code switch
                         {
+                            TypeCode.Char => left.CharValue <= right.CharValue,
                             TypeCode.SByte => left.SByteValue <= right.SByteValue,
                             TypeCode.Byte => left.ByteValue <= right.ByteValue,
                             TypeCode.Int16 => left.Int16Value <= right.Int16Value,
