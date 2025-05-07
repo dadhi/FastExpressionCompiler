@@ -131,25 +131,31 @@ public class Issue468_InvokeCompiled_vs_InvokeCompiledFast
         return _compiled();
     }
 
-    [Benchmark]
+    // [Benchmark]
     public bool InvokeCompiledFast()
     {
         return _compiledFast();
     }
 
-    [Benchmark]
+    // [Benchmark]
     public bool InvokeCompiledFast_DisableInterpreter()
     {
         return _compiledFast_DisableInterpreter();
     }
 
-    [Benchmark]
+    [Benchmark(Baseline = true)]
     public bool Interpret()
     {
         return ExpressionCompiler.Interpreter.TryInterpretBool(out var result, _expr.Body) ? result : false;
     }
 
     [Benchmark]
+    public bool Interpret_new()
+    {
+        return ExpressionCompiler.Interpreter.TryInterpretBool_new(out var result, _expr.Body) ? result : false;
+    }
+
+    // [Benchmark]
     public bool JustFunc()
     {
         return _justFunc();
@@ -227,7 +233,7 @@ public class Issue468_Compile_vs_FastCompile
         return _expr.CompileFast();
     }
 
-    [Benchmark]
+    // [Benchmark]
     public object CompiledFast_DisableInterpreter()
     {
         return _expr.CompileFast(flags: CompilerFlags.DisableInterpreter);
