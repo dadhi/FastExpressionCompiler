@@ -7754,6 +7754,8 @@ namespace FastExpressionCompiler
             {
                 var type = expr.Type;
                 Debug.Assert(type.IsPrimitive);
+
+                result = null;
                 try
                 {
                     if (type == typeof(bool))
@@ -7789,9 +7791,8 @@ namespace FastExpressionCompiler
                 catch
                 {
                     // ignore exception and return the false and rethrow the exception in the invocation time
+                    return false;
                 }
-                result = null;
-                return false;
             }
 
             /// <summary>Wraps `TryInterpretPrimitive` in the try catch block.
@@ -7825,23 +7826,20 @@ namespace FastExpressionCompiler
             public static bool TryInterpretBool_new(out bool result, Expression expr)
             {
                 Debug.Assert(expr.Type.IsPrimitive);
+                result = false;
                 try
                 {
-                    result = false;
-                    if (TryInterpretBool(ref result, expr, expr.NodeType))
-                    {
+                    var ok = TryInterpretBool(ref result, expr, expr.NodeType);
 #if INTERPRETATION_DIAGNOSTICS
-                        CollectCallingTestName();
+                    CollectCallingTestName();
 #endif
-                        return true;
-                    }
+                    return ok;
                 }
                 catch
                 {
                     // ignore exception and return the false and rethrow the exception in the invocation time
+                    return false;
                 }
-                result = false;
-                return false;
             }
 
             /// <summary>Tries to interpret the expression of the Primitive type of Constant, Convert, Logical, Comparison, Arithmetic.</summary>

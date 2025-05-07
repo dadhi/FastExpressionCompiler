@@ -105,6 +105,15 @@ DefaultJob : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
 | Interpret                             | 81.7969 ns | 0.6588 ns | 0.5501 ns | 81.7534 ns | 246.89 |   23.21 |    5 | 0.0076 |      48 B |          NA |
 | JustFunc                              |  0.0335 ns | 0.0219 ns | 0.0499 ns |  0.0000 ns |   0.10 |    0.15 |    2 |      - |         - |          NA |
 
+## Comparing basic interpretation without boxing all-in-one and new one split by types: bool, decimal, the rest
+
+DefaultJob : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+
+| Method        | Mean     | Error    | StdDev   | Median   | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
+|-------------- |---------:|---------:|---------:|---------:|------:|--------:|-----:|----------:|------------:|
+| Interpret     | 93.63 ns | 1.819 ns | 3.838 ns | 92.05 ns |  1.00 |    0.06 |    2 |         - |          NA |
+| Interpret_new | 68.28 ns | 1.350 ns | 1.554 ns | 68.08 ns |  0.73 |    0.03 |    1 |         - |          NA |
+
 */
 [MemoryDiagnoser, RankColumn]
 // [HardwareCounters(HardwareCounter.BranchInstructions)]
@@ -125,7 +134,7 @@ public class Issue468_InvokeCompiled_vs_InvokeCompiledFast
         _expr = expr;
     }
 
-    [Benchmark(Baseline = true)]
+    // [Benchmark(Baseline = true)]
     public bool InvokeCompiled()
     {
         return _compiled();
@@ -146,13 +155,13 @@ public class Issue468_InvokeCompiled_vs_InvokeCompiledFast
     [Benchmark(Baseline = true)]
     public bool Interpret()
     {
-        return ExpressionCompiler.Interpreter.TryInterpretBool(out var result, _expr.Body) ? result : false;
+        return ExpressionCompiler.Interpreter.TryInterpretBool(out var result, _expr.Body) && result;
     }
 
     [Benchmark]
     public bool Interpret_new()
     {
-        return ExpressionCompiler.Interpreter.TryInterpretBool_new(out var result, _expr.Body) ? result : false;
+        return ExpressionCompiler.Interpreter.TryInterpretBool_new(out var result, _expr.Body) && result;
     }
 
     // [Benchmark]
