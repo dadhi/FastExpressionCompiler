@@ -6431,11 +6431,6 @@ namespace FastExpressionCompiler
             /// <summary>Always returns false</summary>
             public static readonly Func<bool> FalseFunc = static () => false;
 
-            /// <summary>Single instance of true object</summary>
-            public static readonly object TrueObject = true;
-            /// <summary>Single instance of false object</summary>
-            public static readonly object FalseObject = false;
-
             [MethodImpl(MethodImplOptions.NoInlining)]
             private static T UnreachableCase<T>()
             {

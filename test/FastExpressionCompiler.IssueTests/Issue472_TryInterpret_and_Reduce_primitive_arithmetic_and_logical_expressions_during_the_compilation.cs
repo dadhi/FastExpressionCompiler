@@ -14,8 +14,8 @@ public struct Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_
 {
     public void Run(TestRun t)
     {
-        Logical_expression_started_with_not(t);
         Logical_expression_started_with_not_Without_Interpreter_due_param_use(t);
+        Logical_expression_started_with_not(t);
     }
 
     public void Logical_expression_started_with_not(TestContext t)

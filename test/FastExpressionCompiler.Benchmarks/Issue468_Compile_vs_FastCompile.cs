@@ -256,6 +256,6 @@ public class Issue468_Eval_Optimization
     [Benchmark]
     public object Optimized()
     {
-        return ExpressionCompiler.Interpreter.TryInterpretPrimitive(out var result, _expr) ? result : null;
+        return ExpressionCompiler.Interpreter.TryInterpret(out var result, _expr) ? result : null;
     }
 }
