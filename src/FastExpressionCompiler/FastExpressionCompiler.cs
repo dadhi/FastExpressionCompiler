@@ -499,7 +499,7 @@ namespace FastExpressionCompiler
             if ((flags & CompilerFlags.DisableInterpreter) == 0 &
                 returnType == typeof(bool) & closurePlusParamTypes.Length == 1
                 && Interpreter.IsCandidateForInterpretation(bodyExpr)
-                && Interpreter.TryInterpretBool(out var result, bodyExpr))
+                && Interpreter.TryInterpretBool_new(out var result, bodyExpr))
                 return result ? Interpreter.TrueFunc : Interpreter.FalseFunc;
 
             // The method collects the info from the all nested lambdas deep down up-front and de-duplicates the lambdas as well.
@@ -2089,7 +2089,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.NotEqual:
                             {
                                 if ((setup & CompilerFlags.DisableInterpreter) == 0 && exprType.IsPrimitive &&
-                                    Interpreter.TryInterpretBool(out var boolResult, expr))
+                                    Interpreter.TryInterpretBool_new(out var boolResult, expr))
                                 {
                                     if ((parent & ParentFlags.IgnoreResult) == 0)
                                         il.Demit(boolResult ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
@@ -2099,16 +2099,18 @@ namespace FastExpressionCompiler
                                     ref closure, setup, parent);
                             }
                         case ExpressionType.Add:
-                        case ExpressionType.AddChecked:
                         case ExpressionType.Subtract:
-                        case ExpressionType.SubtractChecked:
                         case ExpressionType.Multiply:
-                        case ExpressionType.MultiplyChecked:
                         case ExpressionType.Divide:
                         case ExpressionType.Modulo:
+                        case ExpressionType.And:
+                        case ExpressionType.Or:
+                        case ExpressionType.ExclusiveOr:
+                        case ExpressionType.LeftShift:
+                        case ExpressionType.RightShift:
                             {
                                 if ((setup & CompilerFlags.DisableInterpreter) == 0 && exprType.IsPrimitive &&
-                                    Interpreter.TryInterpret(out var resultObj, expr))
+                                    Interpreter.TryInterpret_new(out var resultObj, expr)) // todo: @wip @perf remove boxing #472
                                 {
                                     if ((parent & ParentFlags.IgnoreResult) == 0)
                                         TryEmitPrimitiveOrEnumOrDecimalConstant(il, resultObj, exprType);
@@ -2117,13 +2119,11 @@ namespace FastExpressionCompiler
                                 return TryEmitArithmetic(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, nodeType, exprType, paramExprs, il,
                                     ref closure, setup, parent);
                             }
+                        // todo: @wip @feature #472 add interpretation when those node types are supported
+                        case ExpressionType.AddChecked:
+                        case ExpressionType.SubtractChecked:
+                        case ExpressionType.MultiplyChecked:
                         case ExpressionType.Power:
-                        case ExpressionType.And:
-                        case ExpressionType.Or:
-                        case ExpressionType.ExclusiveOr:
-                        case ExpressionType.LeftShift:
-                        case ExpressionType.RightShift:
-                            // todo: @wip @feature #472 add interpretation when those node types are supported
                             return TryEmitArithmetic(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, nodeType, exprType, paramExprs, il,
                                 ref closure, setup, parent);
 
@@ -2131,7 +2131,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.OrElse:
                             {
                                 if ((setup & CompilerFlags.DisableInterpreter) == 0 && exprType.IsPrimitive &&
-                                    Interpreter.TryInterpretBool(out var boolResult, expr))
+                                    Interpreter.TryInterpretBool_new(out var boolResult, expr))
                                 {
                                     if ((parent & ParentFlags.IgnoreResult) == 0)
                                         il.Demit(boolResult ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
@@ -2142,7 +2142,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.Not:
                             {
                                 if ((setup & CompilerFlags.DisableInterpreter) == 0 && exprType.IsPrimitive &&
-                                    Interpreter.TryInterpretBool(out var boolResult, expr))
+                                    Interpreter.TryInterpretBool_new(out var boolResult, expr))
                                 {
                                     if ((parent & ParentFlags.IgnoreResult) == 0)
                                         il.Demit(boolResult ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
@@ -6450,13 +6450,18 @@ namespace FastExpressionCompiler
 
             /// <summary>Operation accepting the same primitive type inputs (or of the coalescing types) and producing the "same" primitive type output</summary>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static bool IsArithmetic(ExpressionType nodeType) =>
+            public static bool IsArithmeticBinary(ExpressionType nodeType) =>
                 nodeType == ExpressionType.Add |
                 nodeType == ExpressionType.Subtract |
                 nodeType == ExpressionType.Multiply |
                 nodeType == ExpressionType.Divide |
                 nodeType == ExpressionType.Modulo |
-                nodeType == ExpressionType.Negate;
+                nodeType == ExpressionType.Power |
+                nodeType == ExpressionType.LeftShift |
+                nodeType == ExpressionType.RightShift |
+                nodeType == ExpressionType.And |
+                nodeType == ExpressionType.Or |
+                nodeType == ExpressionType.ExclusiveOr;
 
             internal static void DoNegate(ref UValue value)
             {
@@ -7026,6 +7031,7 @@ namespace FastExpressionCompiler
             {
                 switch (value.Code)
                 {
+                    case TypeCode.Char: return value.CharValue;
                     case TypeCode.SByte: return value.SByteValue;
                     case TypeCode.Byte: return value.ByteValue;
                     case TypeCode.Int16: return value.Int16Value;
@@ -7055,10 +7061,10 @@ namespace FastExpressionCompiler
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal static void SetInt16_new(ref PValue value, short newValue)
+            internal static void SetInt16_new(ref PValue result, short value)
             {
-                value.Code = TypeCode.Int16;
-                value.Int32Value = newValue;
+                result.Code = TypeCode.Int16;
+                result.Int32Value = value;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -7069,10 +7075,10 @@ namespace FastExpressionCompiler
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal static void SetInt32_new(ref PValue value, int newValue)
+            internal static void SetInt32_new(ref PValue result, int value)
             {
-                value.Code = TypeCode.Int32;
-                value.Int32Value = newValue;
+                result.Code = TypeCode.Int32;
+                result.Int32Value = value;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -7083,10 +7089,10 @@ namespace FastExpressionCompiler
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal static void SetInt64_new(ref PValue value, long newValue)
+            internal static void SetInt64_new(ref PValue result, long value)
             {
-                value.Code = TypeCode.Int64;
-                value.Int64Value = newValue;
+                result.Code = TypeCode.Int64;
+                result.Int64Value = value;
             }
 
             internal static void DoComparison(ref UValue left, ref UValue right, ExpressionType nodeType)
@@ -7752,32 +7758,32 @@ namespace FastExpressionCompiler
                 {
                     if (type == typeof(bool))
                     {
-                        var boolVal = false;
-                        var ok = TryInterpretBool(ref boolVal, expr, expr.NodeType);
+                        var boolResult = false;
+                        var ok = TryInterpretBool(ref boolResult, expr, expr.NodeType);
 #if INTERPRETATION_DIAGNOSTICS
                         if (ok) CollectCallingTestName();
 #endif
-                        result = boolVal;
+                        result = boolResult;
                         return ok;
                     }
                     if (type == typeof(decimal))
                     {
-                        decimal dValue = default;
-                        var ok = TryInterpretDecimal(ref dValue, expr, expr.NodeType);
+                        decimal decimalResult = default;
+                        var ok = TryInterpretDecimal(ref decimalResult, expr, expr.NodeType);
 #if INTERPRETATION_DIAGNOSTICS
                         if (ok) CollectCallingTestName();
 #endif
-                        result = ok ? dValue : null; // boxing
-                        return true;
+                        result = ok ? decimalResult : null; // boxing
+                        return ok;
                     }
                     {
-                        PValue value = default;
-                        var ok = TryInterpretPrimitiveValue(ref value, expr, expr.NodeType);
+                        PValue pResult = default;
+                        var ok = TryInterpretPrimitiveValue(ref pResult, expr, expr.NodeType);
 #if INTERPRETATION_DIAGNOSTICS
                         if (ok) CollectCallingTestName();
 #endif
-                        result = ok ? BoxToObject_new(ref value) : null;
-                        return true;
+                        result = ok ? BoxToObject_new(ref pResult) : null;
+                        return ok;
                     }
                 }
                 catch
@@ -7901,7 +7907,7 @@ namespace FastExpressionCompiler
                 }
 
                 var isComparison = IsComparison(nodeType);
-                if (isComparison || IsArithmetic(nodeType))
+                if (isComparison || IsArithmeticBinary(nodeType))
                 {
                     var binaryExpr = (BinaryExpression)expr;
 
@@ -8179,7 +8185,7 @@ namespace FastExpressionCompiler
                 // yes: arithmetic, negate, default, convert
                 // not: not, logical, comparison
 
-                if (IsArithmetic(nodeType))
+                if (IsArithmeticBinary(nodeType))
                 {
                     var binaryExpr = (BinaryExpression)expr;
                     var left = binaryExpr.Left;
@@ -8292,7 +8298,7 @@ namespace FastExpressionCompiler
                 // yes: arithmetic, convert, default
                 // not: not, logical, comparison
 
-                if (IsArithmetic(nodeType))
+                if (IsArithmeticBinary(nodeType))
                 {
                     var binaryExpr = (BinaryExpression)expr;
                     var left = binaryExpr.Left;
