@@ -6463,33 +6463,230 @@ namespace FastExpressionCompiler
                 nodeType == ExpressionType.Modulo |
                 nodeType == ExpressionType.Negate;
 
-            /// <summary>Eval negate</summary>
-            public static object DoNegateOrNull(object operand)
+            internal static void DoNegate(ref UValue value)
             {
-                return Type.GetTypeCode(operand.GetType()) switch
+                switch (value.Code)
                 {
-                    TypeCode.SByte => -(sbyte)operand,
-                    TypeCode.Byte => -(byte)operand,
-                    TypeCode.Int16 => -(short)operand,
-                    TypeCode.UInt16 => -(ushort)operand,
-                    TypeCode.Int32 => -(int)operand,
-                    TypeCode.UInt32 => -(uint)operand,
-                    TypeCode.Int64 => -(long)operand,
-                    TypeCode.Single => -(float)operand,
-                    TypeCode.Double => -(double)operand,
-                    TypeCode.Decimal => -(decimal)operand,
-                    TypeCode.UInt64 => null,
-                    _ => null,
-                };
+                    case TypeCode.SByte: value.SByteValue = (sbyte)-value.SByteValue; break;
+                    case TypeCode.Byte: SetInt16(ref value, (short)-value.ByteValue); break;
+                    case TypeCode.Int16: value.Int16Value = (short)-value.Int16Value; break;
+                    case TypeCode.UInt16: SetInt32(ref value, (int)-value.UInt16Value); break;
+                    case TypeCode.Int32: value.Int32Value = -value.Int32Value; break;
+                    // Negate can not be applied to the UInt32
+                    case TypeCode.UInt32: UnreachableCase<ulong>(); break;
+                    case TypeCode.Single: value.SingleValue = -value.SingleValue; break;
+                    case TypeCode.Double: value.DoubleValue = -value.DoubleValue; break;
+                    case TypeCode.Decimal: value.DecimalValue = -value.DecimalValue; break;
+                    default: UnreachableCase<object>(); break;
+                }
             }
 
-            // todo: @wip @perf use to avoid boxing of the arithmetics
+            internal static void DoConvert(ref UValue value, TypeCode toCode)
+            {
+                switch (toCode)
+                {
+                    case TypeCode.SByte:
+                        switch (value.Code)
+                        {
+                            case TypeCode.SByte: break;
+                            case TypeCode.Byte: value.SByteValue = (sbyte)value.ByteValue; break;
+                            case TypeCode.Int16: value.SByteValue = (sbyte)value.Int16Value; break;
+                            case TypeCode.UInt16: value.SByteValue = (sbyte)value.UInt16Value; break;
+                            case TypeCode.Int32: value.SByteValue = (sbyte)value.Int32Value; break;
+                            case TypeCode.UInt32: value.SByteValue = (sbyte)value.UInt32Value; break;
+                            case TypeCode.Int64: value.SByteValue = (sbyte)value.Int64Value; break;
+                            case TypeCode.UInt64: value.SByteValue = (sbyte)value.UInt64Value; break;
+                            case TypeCode.Single: value.SByteValue = (sbyte)value.SingleValue; break;
+                            case TypeCode.Double: value.SByteValue = (sbyte)value.DoubleValue; break;
+                            case TypeCode.Decimal: value.SByteValue = (sbyte)value.DecimalValue; break;
+                            default: UnreachableCase<object>(); break;
+                        }
+                        break;
+                    case TypeCode.Byte:
+                        switch (value.Code)
+                        {
+                            case TypeCode.SByte: value.ByteValue = (byte)value.SByteValue; break;
+                            case TypeCode.Byte: break;
+                            case TypeCode.Int16: value.ByteValue = (byte)value.Int16Value; break;
+                            case TypeCode.UInt16: value.ByteValue = (byte)value.UInt16Value; break;
+                            case TypeCode.Int32: value.ByteValue = (byte)value.Int32Value; break;
+                            case TypeCode.UInt32: value.ByteValue = (byte)value.UInt32Value; break;
+                            case TypeCode.Int64: value.ByteValue = (byte)value.Int64Value; break;
+                            case TypeCode.UInt64: value.ByteValue = (byte)value.UInt64Value; break;
+                            case TypeCode.Single: value.ByteValue = (byte)value.SingleValue; break;
+                            case TypeCode.Double: value.ByteValue = (byte)value.DoubleValue; break;
+                            case TypeCode.Decimal: value.ByteValue = (byte)value.DecimalValue; break;
+                            default: UnreachableCase<object>(); break;
+                        }
+                        break;
+                    case TypeCode.Int16:
+                        switch (value.Code)
+                        {
+                            case TypeCode.SByte: value.Int16Value = (short)value.SByteValue; break;
+                            case TypeCode.Byte: value.Int16Value = (short)value.ByteValue; break;
+                            case TypeCode.Int16: break;
+                            case TypeCode.UInt16: value.Int16Value = (short)value.UInt16Value; break;
+                            case TypeCode.Int32: value.Int16Value = (short)value.Int32Value; break;
+                            case TypeCode.UInt32: value.Int16Value = (short)value.UInt32Value; break;
+                            case TypeCode.Int64: value.Int16Value = (short)value.Int64Value; break;
+                            case TypeCode.UInt64: value.Int16Value = (short)value.UInt64Value; break;
+                            case TypeCode.Single: value.Int16Value = (short)value.SingleValue; break;
+                            case TypeCode.Double: value.Int16Value = (short)value.DoubleValue; break;
+                            case TypeCode.Decimal: value.Int16Value = (short)value.DecimalValue; break;
+                            default: UnreachableCase<object>(); break;
+                        }
+                        break;
+                    case TypeCode.UInt16:
+                        switch (value.Code)
+                        {
+                            case TypeCode.SByte: value.UInt16Value = (ushort)value.SByteValue; break;
+                            case TypeCode.Byte: value.UInt16Value = (ushort)value.ByteValue; break;
+                            case TypeCode.Int16: value.UInt16Value = (ushort)value.Int16Value; break;
+                            case TypeCode.UInt16: break;
+                            case TypeCode.Int32: value.UInt16Value = (ushort)value.Int32Value; break;
+                            case TypeCode.UInt32: value.UInt16Value = (ushort)value.UInt32Value; break;
+                            case TypeCode.Int64: value.UInt16Value = (ushort)value.Int64Value; break;
+                            case TypeCode.UInt64: value.UInt16Value = (ushort)value.UInt64Value; break;
+                            case TypeCode.Single: value.UInt16Value = (ushort)value.SingleValue; break;
+                            case TypeCode.Double: value.UInt16Value = (ushort)value.DoubleValue; break;
+                            case TypeCode.Decimal: value.UInt16Value = (ushort)value.DecimalValue; break;
+                            default: UnreachableCase<object>(); break;
+                        }
+                        break;
+                    case TypeCode.Int32:
+                        switch (value.Code)
+                        {
+                            case TypeCode.SByte: value.Int32Value = (int)value.SByteValue; break;
+                            case TypeCode.Byte: value.Int32Value = (int)value.ByteValue; break;
+                            case TypeCode.Int16: value.Int32Value = (int)value.Int16Value; break;
+                            case TypeCode.UInt16: value.Int32Value = (int)value.UInt16Value; break;
+                            case TypeCode.Int32: break;
+                            case TypeCode.UInt32: value.Int32Value = (int)value.UInt32Value; break;
+                            case TypeCode.Int64: value.Int32Value = (int)value.Int64Value; break;
+                            case TypeCode.UInt64: value.Int32Value = (int)value.UInt64Value; break;
+                            case TypeCode.Single: value.Int32Value = (int)value.SingleValue; break;
+                            case TypeCode.Double: value.Int32Value = (int)value.DoubleValue; break;
+                            case TypeCode.Decimal: value.Int32Value = (int)value.DecimalValue; break;
+                            default: UnreachableCase<object>(); break;
+                        }
+                        break;
+                    case TypeCode.UInt32:
+                        switch (value.Code)
+                        {
+                            case TypeCode.SByte: value.UInt32Value = (uint)value.SByteValue; break;
+                            case TypeCode.Byte: value.UInt32Value = (uint)value.ByteValue; break;
+                            case TypeCode.Int16: value.UInt32Value = (uint)value.Int16Value; break;
+                            case TypeCode.UInt16: value.UInt32Value = (uint)value.UInt16Value; break;
+                            case TypeCode.Int32: value.UInt32Value = (uint)value.Int32Value; break;
+                            case TypeCode.UInt32: break;
+                            case TypeCode.Int64: value.UInt32Value = (uint)value.Int64Value; break;
+                            case TypeCode.UInt64: value.UInt32Value = (uint)value.UInt64Value; break;
+                            case TypeCode.Single: value.UInt32Value = (uint)value.SingleValue; break;
+                            case TypeCode.Double: value.UInt32Value = (uint)value.DoubleValue; break;
+                            case TypeCode.Decimal: value.UInt32Value = (uint)value.DecimalValue; break;
+                            default: UnreachableCase<object>(); break;
+                        }
+                        break;
+                    case TypeCode.Int64:
+                        switch (value.Code)
+                        {
+                            case TypeCode.SByte: value.Int64Value = (long)value.SByteValue; break;
+                            case TypeCode.Byte: value.Int64Value = (long)value.ByteValue; break;
+                            case TypeCode.Int16: value.Int64Value = (long)value.Int16Value; break;
+                            case TypeCode.UInt16: value.Int64Value = (long)value.UInt16Value; break;
+                            case TypeCode.Int32: value.Int64Value = (long)value.Int32Value; break;
+                            case TypeCode.UInt32: value.Int64Value = (long)value.UInt32Value; break;
+                            case TypeCode.Int64: break;
+                            case TypeCode.UInt64: value.Int64Value = (long)value.UInt64Value; break;
+                            case TypeCode.Single: value.Int64Value = (long)value.SingleValue; break;
+                            case TypeCode.Double: value.Int64Value = (long)value.DoubleValue; break;
+                            case TypeCode.Decimal: value.Int64Value = (long)value.DecimalValue; break;
+                            default: UnreachableCase<object>(); break;
+                        }
+                        break;
+                    case TypeCode.UInt64:
+                        switch (value.Code)
+                        {
+                            case TypeCode.SByte: value.UInt64Value = (ulong)value.SByteValue; break;
+                            case TypeCode.Byte: value.UInt64Value = (ulong)value.ByteValue; break;
+                            case TypeCode.Int16: value.UInt64Value = (ulong)value.Int16Value; break;
+                            case TypeCode.UInt16: value.UInt64Value = (ulong)value.UInt16Value; break;
+                            case TypeCode.Int32: value.UInt64Value = (ulong)value.Int32Value; break;
+                            case TypeCode.UInt32: value.UInt64Value = (ulong)value.UInt32Value; break;
+                            case TypeCode.Int64: value.UInt64Value = (ulong)value.Int64Value; break;
+                            case TypeCode.UInt64: break;
+                            case TypeCode.Single: value.UInt64Value = (ulong)value.SingleValue; break;
+                            case TypeCode.Double: value.UInt64Value = (ulong)value.DoubleValue; break;
+                            case TypeCode.Decimal: value.UInt64Value = (ulong)value.DecimalValue; break;
+                            default: UnreachableCase<object>(); break;
+                        }
+                        break;
+                    case TypeCode.Single:
+                        switch (value.Code)
+                        {
+                            case TypeCode.SByte: value.SingleValue = (float)value.SByteValue; break;
+                            case TypeCode.Byte: value.SingleValue = (float)value.ByteValue; break;
+                            case TypeCode.Int16: value.SingleValue = (float)value.Int16Value; break;
+                            case TypeCode.UInt16: value.SingleValue = (float)value.UInt16Value; break;
+                            case TypeCode.Int32: value.SingleValue = (float)value.Int32Value; break;
+                            case TypeCode.UInt32: value.SingleValue = (float)value.UInt32Value; break;
+                            case TypeCode.Int64: value.SingleValue = (float)value.Int64Value; break;
+                            case TypeCode.UInt64: value.SingleValue = (float)value.UInt64Value; break;
+                            case TypeCode.Single: break;
+                            case TypeCode.Double: value.SingleValue = (float)value.DoubleValue; break;
+                            case TypeCode.Decimal: value.SingleValue = (float)value.DecimalValue; break;
+                            default: UnreachableCase<object>(); break;
+                        }
+                        break;
+                    case TypeCode.Double:
+                        switch (value.Code)
+                        {
+                            case TypeCode.SByte: value.DoubleValue = (double)value.SByteValue; break;
+                            case TypeCode.Byte: value.DoubleValue = (double)value.ByteValue; break;
+                            case TypeCode.Int16: value.DoubleValue = (double)value.Int16Value; break;
+                            case TypeCode.UInt16: value.DoubleValue = (double)value.UInt16Value; break;
+                            case TypeCode.Int32: value.DoubleValue = (double)value.Int32Value; break;
+                            case TypeCode.UInt32: value.DoubleValue = (double)value.UInt32Value; break;
+                            case TypeCode.Int64: value.DoubleValue = (double)value.Int64Value; break;
+                            case TypeCode.UInt64: value.DoubleValue = (double)value.UInt64Value; break;
+                            case TypeCode.Single: value.DoubleValue = (double)value.SingleValue; break;
+                            case TypeCode.Double: break;
+                            case TypeCode.Decimal: value.DoubleValue = (double)value.DecimalValue; break;
+                            default: UnreachableCase<object>(); break;
+                        }
+                        break;
+                    case TypeCode.Decimal:
+                        switch (value.Code)
+                        {
+                            case TypeCode.SByte: value.DecimalValue = (decimal)value.SByteValue; break;
+                            case TypeCode.Byte: value.DecimalValue = (decimal)value.ByteValue; break;
+                            case TypeCode.Int16: value.DecimalValue = (decimal)value.Int16Value; break;
+                            case TypeCode.UInt16: value.DecimalValue = (decimal)value.UInt16Value; break;
+                            case TypeCode.Int32: value.DecimalValue = (decimal)value.Int32Value; break;
+                            case TypeCode.UInt32: value.DecimalValue = (decimal)value.UInt32Value; break;
+                            case TypeCode.Int64: value.DecimalValue = (decimal)value.Int64Value; break;
+                            case TypeCode.UInt64: value.DecimalValue = (decimal)value.UInt64Value; break;
+                            case TypeCode.Single: value.DecimalValue = (decimal)value.SingleValue; break;
+                            case TypeCode.Double: value.DecimalValue = (decimal)value.DoubleValue; break;
+                            case TypeCode.Decimal: break;
+                            default: UnreachableCase<object>(); break;
+                        }
+                        break;
+                }
+                value.Code = toCode;
+            }
+
             [StructLayout(LayoutKind.Explicit)]
             internal struct UValue
             {
                 [FieldOffset(0)]
                 public TypeCode Code;
 
+                //todo: @wip DateTime, sizeof == 8 bytes
+                [FieldOffset(4)]
+                public bool BooleanValue;
+                [FieldOffset(4)]
+                public char CharValue;
                 [FieldOffset(4)]
                 public sbyte SByteValue;
                 [FieldOffset(4)]
@@ -6512,6 +6709,8 @@ namespace FastExpressionCompiler
                 public double DoubleValue;
                 [FieldOffset(4)]
                 public decimal DecimalValue;
+                public UValue(bool value) { BooleanValue = value; Code = TypeCode.Boolean; }
+                public UValue(char value) { CharValue = value; Code = TypeCode.Char; }
                 public UValue(sbyte value) { SByteValue = value; Code = TypeCode.SByte; }
                 public UValue(byte value) { ByteValue = value; Code = TypeCode.Byte; }
                 public UValue(short value) { Int16Value = value; Code = TypeCode.Int16; }
@@ -6526,7 +6725,7 @@ namespace FastExpressionCompiler
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal static void ToValue(ref UValue value, object boxedValue)
+            internal static void UnboxToValue(ref UValue value, object boxedValue)
             {
                 value.Code = Type.GetTypeCode(boxedValue.GetType());
                 switch (value.Code)
@@ -6546,7 +6745,8 @@ namespace FastExpressionCompiler
                 }
             }
 
-            internal static object ToBoxed(ref UValue value)
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            internal static object BoxToObject(ref UValue value)
             {
                 switch (value.Code)
                 {
@@ -6565,8 +6765,134 @@ namespace FastExpressionCompiler
                 }
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            internal static void SetBoolean(ref UValue value, bool newValue)
+            {
+                value.Code = TypeCode.Boolean;
+                value.BooleanValue = newValue;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            internal static void SetInt16(ref UValue value, short newValue)
+            {
+                value.Code = TypeCode.Int16;
+                value.Int32Value = newValue;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            internal static void SetInt32(ref UValue value, int newValue)
+            {
+                value.Code = TypeCode.Int32;
+                value.Int32Value = newValue;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            internal static void SetInt64(ref UValue value, long newValue)
+            {
+                value.Code = TypeCode.Int64;
+                value.Int64Value = newValue;
+            }
+
+            internal static void DoComparison(ref UValue left, ref UValue right, ExpressionType nodeType)
+            {
+                var result = false;
+                switch (nodeType)
+                {
+                    case ExpressionType.Equal:
+                    case ExpressionType.NotEqual:
+                        result = left.Code switch
+                        {
+                            TypeCode.SByte => left.SByteValue == right.SByteValue,
+                            TypeCode.Byte => left.ByteValue == right.ByteValue,
+                            TypeCode.Int16 => left.Int16Value == right.Int16Value,
+                            TypeCode.UInt16 => left.UInt16Value == right.UInt16Value,
+                            TypeCode.Int32 => left.Int32Value == right.Int32Value,
+                            TypeCode.UInt32 => left.UInt32Value == right.UInt32Value,
+                            TypeCode.Int64 => left.Int64Value == right.Int64Value,
+                            TypeCode.UInt64 => left.UInt64Value == right.UInt64Value,
+                            TypeCode.Single => left.SingleValue == right.SingleValue,
+                            TypeCode.Double => left.DoubleValue == right.DoubleValue,
+                            TypeCode.Decimal => left.DecimalValue == right.DecimalValue,
+                            _ => UnreachableCase<bool>()
+                        };
+                        if (nodeType == ExpressionType.NotEqual)
+                            result = !result;
+                        break;
+                    case ExpressionType.GreaterThan:
+                        result = left.Code switch
+                        {
+                            TypeCode.SByte => left.SByteValue > right.SByteValue,
+                            TypeCode.Byte => left.ByteValue > right.ByteValue,
+                            TypeCode.Int16 => left.Int16Value > right.Int16Value,
+                            TypeCode.UInt16 => left.UInt16Value > right.UInt16Value,
+                            TypeCode.Int32 => left.Int32Value > right.Int32Value,
+                            TypeCode.UInt32 => left.UInt32Value > right.UInt32Value,
+                            TypeCode.Int64 => left.Int64Value > right.Int64Value,
+                            TypeCode.UInt64 => left.UInt64Value > right.UInt64Value,
+                            TypeCode.Single => left.SingleValue > right.SingleValue,
+                            TypeCode.Double => left.DoubleValue > right.DoubleValue,
+                            TypeCode.Decimal => left.DecimalValue > right.DecimalValue,
+                            _ => UnreachableCase<bool>()
+                        };
+                        break;
+                    case ExpressionType.GreaterThanOrEqual:
+                        result = left.Code switch
+                        {
+                            TypeCode.SByte => left.SByteValue >= right.SByteValue,
+                            TypeCode.Byte => left.ByteValue >= right.ByteValue,
+                            TypeCode.Int16 => left.Int16Value >= right.Int16Value,
+                            TypeCode.UInt16 => left.UInt16Value >= right.UInt16Value,
+                            TypeCode.Int32 => left.Int32Value >= right.Int32Value,
+                            TypeCode.UInt32 => left.UInt32Value >= right.UInt32Value,
+                            TypeCode.Int64 => left.Int64Value >= right.Int64Value,
+                            TypeCode.UInt64 => left.UInt64Value >= right.UInt64Value,
+                            TypeCode.Single => left.SingleValue >= right.SingleValue,
+                            TypeCode.Double => left.DoubleValue >= right.DoubleValue,
+                            TypeCode.Decimal => left.DecimalValue >= right.DecimalValue,
+                            _ => UnreachableCase<bool>()
+                        };
+                        break;
+                    case ExpressionType.LessThan:
+                        result = left.Code switch
+                        {
+                            TypeCode.SByte => left.SByteValue < right.SByteValue,
+                            TypeCode.Byte => left.ByteValue < right.ByteValue,
+                            TypeCode.Int16 => left.Int16Value < right.Int16Value,
+                            TypeCode.UInt16 => left.UInt16Value < right.UInt16Value,
+                            TypeCode.Int32 => left.Int32Value < right.Int32Value,
+                            TypeCode.UInt32 => left.UInt32Value < right.UInt32Value,
+                            TypeCode.Int64 => left.Int64Value < right.Int64Value,
+                            TypeCode.UInt64 => left.UInt64Value < right.UInt64Value,
+                            TypeCode.Single => left.SingleValue < right.SingleValue,
+                            TypeCode.Double => left.DoubleValue < right.DoubleValue,
+                            TypeCode.Decimal => left.DecimalValue < right.DecimalValue,
+                            _ => UnreachableCase<bool>()
+                        };
+                        break;
+                    case ExpressionType.LessThanOrEqual:
+                        result = left.Code switch
+                        {
+                            TypeCode.SByte => left.SByteValue <= right.SByteValue,
+                            TypeCode.Byte => left.ByteValue <= right.ByteValue,
+                            TypeCode.Int16 => left.Int16Value <= right.Int16Value,
+                            TypeCode.UInt16 => left.UInt16Value <= right.UInt16Value,
+                            TypeCode.Int32 => left.Int32Value <= right.Int32Value,
+                            TypeCode.UInt32 => left.UInt32Value <= right.UInt32Value,
+                            TypeCode.Int64 => left.Int64Value <= right.Int64Value,
+                            TypeCode.UInt64 => left.UInt64Value <= right.UInt64Value,
+                            TypeCode.Single => left.SingleValue <= right.SingleValue,
+                            TypeCode.Double => left.DoubleValue <= right.DoubleValue,
+                            TypeCode.Decimal => left.DecimalValue <= right.DecimalValue,
+                            _ => UnreachableCase<bool>()
+                        };
+                        break;
+                    default: UnreachableCase<bool>(); break;
+                }
+                SetBoolean(ref left, result);
+            }
+
             // left will contain the result of the operation after the operation
-            internal static void DoArithmeticOrNull(ref UValue left, ref UValue right, ExpressionType nodeType)
+            internal static void DoArithmetic(ref UValue left, ref UValue right, ExpressionType nodeType)
             {
                 Debug.Assert(left.Code == right.Code, "left and right should be of the same type");
                 switch (nodeType)
@@ -6732,29 +7058,23 @@ namespace FastExpressionCompiler
                 }
             }
 
-            public static class ZeroDefault<T>
+            internal static void SetToZero(ref UValue value, TypeCode code)
             {
-                public static readonly object Instance = default(T);
-            }
-
-            public static object GetZeroDefaultObject(TypeCode typeCode)
-            {
-                return typeCode switch
+                switch (code)
                 {
-                    TypeCode.Boolean => FalseObject,
-                    TypeCode.SByte => ZeroDefault<sbyte>.Instance,
-                    TypeCode.Byte => ZeroDefault<byte>.Instance,
-                    TypeCode.Int16 => ZeroDefault<short>.Instance,
-                    TypeCode.UInt16 => ZeroDefault<ushort>.Instance,
-                    TypeCode.Int32 => ZeroDefault<int>.Instance,
-                    TypeCode.UInt32 => ZeroDefault<uint>.Instance,
-                    TypeCode.Int64 => ZeroDefault<long>.Instance,
-                    TypeCode.UInt64 => ZeroDefault<ulong>.Instance,
-                    TypeCode.Single => ZeroDefault<float>.Instance,
-                    TypeCode.Double => ZeroDefault<double>.Instance,
-                    TypeCode.Decimal => ZeroDefault<decimal>.Instance,
-                    _ => null,
-                };
+                    case TypeCode.SByte: value.SByteValue = 0; break;
+                    case TypeCode.Byte: value.ByteValue = 0; break;
+                    case TypeCode.Int16: value.Int16Value = 0; break;
+                    case TypeCode.UInt16: value.UInt16Value = 0; break;
+                    case TypeCode.Int32: value.Int32Value = 0; break;
+                    case TypeCode.UInt32: value.UInt32Value = 0; break;
+                    case TypeCode.Int64: value.Int64Value = 0; break;
+                    case TypeCode.UInt64: value.UInt64Value = 0; break;
+                    case TypeCode.Single: value.SingleValue = 0; break;
+                    case TypeCode.Double: value.DoubleValue = 0; break;
+                    case TypeCode.Decimal: value.DecimalValue = 0; break;
+                    default: UnreachableCase<object>(); break;
+                }
             }
 
             /// <summary>Fast, mostly negative check to skip or proceed with interpretation.
@@ -6821,11 +7141,13 @@ namespace FastExpressionCompiler
                 Debug.Assert(expr.Type.IsPrimitive);
                 try
                 {
-                    if (TryInterpretPrimitive(out result, expr))
+                    UValue value = default;
+                    if (TryInterpretPrimitive(ref value, expr))
                     {
 #if INTERPRETATION_DIAGNOSTICS
                         CollectCallingTestName();
 #endif
+                        result = BoxToObject(ref value);
                         return true;
                     }
                 }
@@ -6833,7 +7155,7 @@ namespace FastExpressionCompiler
                 {
                     // ignore exception and return the false and rethrow the exception in the invocation time
                 }
-                result = false;
+                result = null;
                 return false;
             }
 
@@ -6844,12 +7166,14 @@ namespace FastExpressionCompiler
                 Debug.Assert(expr.Type.IsPrimitive);
                 try
                 {
-                    if (TryInterpretPrimitive(out var resultObj, expr))
+                    UValue value = default;
+                    if (TryInterpretPrimitive(ref value, expr))
                     {
 #if INTERPRETATION_DIAGNOSTICS
                         CollectCallingTestName();
 #endif
-                        result = resultObj == TrueObject;
+                        Debug.Assert(value.Code == TypeCode.Boolean);
+                        result = value.BooleanValue;
                         return true;
                     }
                 }
@@ -6862,11 +7186,9 @@ namespace FastExpressionCompiler
             }
 
             /// <summary>Tries to interpret the expression of the Primitive type of Constant, Convert, Logical, Comparison, Arithmetic.</summary>
-            public static bool TryInterpretPrimitive(out object result, Expression expr)
+            internal static bool TryInterpretPrimitive(ref UValue value, Expression expr)
             {
-                result = null;
-
-                // The order of the checks for the type of the expression is deliberate, 
+                // The order of the checks for the type of the expression is deliberate,
                 // because we are starting with complex expressions first. 
                 // And for the simplest ones like a Constant? the method may not be even called.
                 // Instead, the Constant check and interpretation may be done inline.
@@ -6881,13 +7203,10 @@ namespace FastExpressionCompiler
 #if LIGHT_EXPRESSION
                         if (co.RefField != null) return false;
 #endif
-                        result = (bool)co.Value ? FalseObject : TrueObject;
+                        SetBoolean(ref value, (bool)co.Value);
                         return true;
                     }
-                    if (!TryInterpretPrimitive(out var boolVal, operandExpr))
-                        return false;
-                    result = boolVal == TrueObject ? FalseObject : TrueObject;
-                    return true;
+                    return TryInterpretPrimitive(ref value, operandExpr);
                 }
 
                 if (nodeType == ExpressionType.AndAlso |
@@ -6902,14 +7221,15 @@ namespace FastExpressionCompiler
 #if LIGHT_EXPRESSION
                         if (lc.RefField != null) return false;
 #endif
-                        result = (bool)lc.Value ? TrueObject : FalseObject;
+                        SetBoolean(ref value, (bool)lc.Value);
                     }
-                    else if (!TryInterpretPrimitive(out result, left))
+                    else if (!TryInterpretPrimitive(ref value, left))
                         return false;
+                    Debug.Assert(value.Code == TypeCode.Boolean);
 
                     // Short circuit the interpretation, because this is an actual logic of these logical operations
-                    if (result == TrueObject & nodeType == ExpressionType.OrElse ||
-                        result == FalseObject & nodeType == ExpressionType.AndAlso)
+                    if (value.BooleanValue & nodeType == ExpressionType.OrElse ||
+                        value.BooleanValue & nodeType == ExpressionType.AndAlso)
                         return true;
 
                     // If the first part is not enough to decide of the expression result, go right
@@ -6919,10 +7239,10 @@ namespace FastExpressionCompiler
 #if LIGHT_EXPRESSION
                         if (rc.RefField != null) return false;
 #endif
-                        result = (bool)rc.Value ? TrueObject : FalseObject;
+                        SetBoolean(ref value, (bool)rc.Value);
                         return true;
                     }
-                    return TryInterpretPrimitive(out result, right);
+                    return TryInterpretPrimitive(ref value, right);
                 }
 
                 var isComparison = IsComparison(nodeType);
@@ -6932,86 +7252,51 @@ namespace FastExpressionCompiler
 
                     // Interpreting left part
                     var left = binaryExpr.Left;
-                    object leftVal = null;
                     if (left is ConstantExpression lc)
                     {
 #if LIGHT_EXPRESSION
                         if (lc.RefField != null) return false;
 #endif
-                        leftVal = lc.Value;
+                        UnboxToValue(ref value, lc.Value);
                     }
-                    else if (!TryInterpretPrimitive(out leftVal, left))
+                    else if (!TryInterpretPrimitive(ref value, left))
                         return false;
 
                     // Interpreting right part
                     var right = binaryExpr.Right;
-                    object rightVal = null;
+                    UValue rightVal = default;
                     if (right is ConstantExpression rc)
                     {
 #if LIGHT_EXPRESSION
                         if (rc.RefField != null) return false;
 #endif
-                        rightVal = rc.Value;
+                        UnboxToValue(ref rightVal, rc.Value);
                     }
-                    else if (!TryInterpretPrimitive(out rightVal, right))
+                    else if (!TryInterpretPrimitive(ref rightVal, right))
                         return false;
 
-                    // Now do the operation on the left and right
                     if (isComparison)
-                    {
-                        if (nodeType == ExpressionType.Equal | nodeType == ExpressionType.NotEqual)
-                        {
-                            var boolVal = leftVal.Equals(rightVal);
-                            result = nodeType == ExpressionType.Equal
-                                ? (boolVal ? TrueObject : FalseObject)
-                                : (boolVal ? FalseObject : TrueObject);
-                        }
-                        else
-                        {
-                            // Assuming that the both sides are of the same type, we can use only the left one for comparison 
-                            var cmp = leftVal as IComparable;
-                            if (cmp == null)
-                                return false;
-                            var res = cmp.CompareTo(rightVal);
-                            var boolVal = nodeType switch
-                            {
-                                ExpressionType.GreaterThan => res > 0,
-                                ExpressionType.GreaterThanOrEqual => res >= 0,
-                                ExpressionType.LessThan => res < 0,
-                                ExpressionType.LessThanOrEqual => res <= 0,
-                                _ => UnreachableCase<bool>(),
-                            };
-                            result = boolVal ? TrueObject : FalseObject;
-                        }
-                        return true;
-                    }
-
-                    // For the Arithmetic
-                    UValue leftU = default;
-                    UValue rightU = default;
-                    ToValue(ref leftU, leftVal);
-                    ToValue(ref rightU, rightVal);
-                    DoArithmeticOrNull(ref leftU, ref rightU, nodeType);
-                    result = ToBoxed(ref leftU);
+                        DoComparison(ref value, ref rightVal, nodeType);
+                    else
+                        DoArithmetic(ref value, ref rightVal, nodeType);
                     return true;
                 }
 
                 if (nodeType == ExpressionType.Negate)
                 {
-                    var unaryExpr = (UnaryExpression)expr;
-                    var operandExpr = unaryExpr.Operand;
-                    object val = null;
+                    var operandExpr = ((UnaryExpression)expr).Operand;
                     if (operandExpr is ConstantExpression co)
                     {
 #if LIGHT_EXPRESSION
                         if (co.RefField != null) return false;
 #endif
-                        val = co.Value;
+                        UnboxToValue(ref value, co.Value);
                     }
-                    if (!TryInterpretPrimitive(out val, operandExpr))
+                    else if (!TryInterpretPrimitive(ref value, operandExpr))
                         return false;
-                    result = DoNegateOrNull(val);
-                    return result != null;
+
+                    DoNegate(ref value);
+                    return true;
                 }
 
                 if (expr is ConstantExpression constExpr)
@@ -7019,35 +7304,34 @@ namespace FastExpressionCompiler
 #if LIGHT_EXPRESSION
                     if (constExpr.RefField != null) return false;
 #endif
-                    result = constExpr.Value;
-                    if (expr.Type == typeof(bool))
-                        result = (bool)result ? TrueObject : FalseObject;
+                    UnboxToValue(ref value, constExpr.Value);
                     return true;
                 }
 
                 if (nodeType == ExpressionType.Default)
                 {
-                    result = GetZeroDefaultObject(Type.GetTypeCode(expr.Type));
+                    SetToZero(ref value, Type.GetTypeCode(expr.Type));
                     return true;
                 }
 
                 if (nodeType == ExpressionType.Convert)
                 {
-                    var unaryExpr = (UnaryExpression)expr;
-                    var operandExpr = unaryExpr.Operand;
-
-                    if (!TryInterpretPrimitive(out result, operandExpr))
-                        return false;
-                    var exprType = expr.Type;
-                    if (operandExpr.Type != exprType && !exprType.IsAssignableFrom(operandExpr.Type))
+                    var operandExpr = ((UnaryExpression)expr).Operand;
+                    if (operandExpr is ConstantExpression co)
                     {
-                        var converted = System.Convert.ChangeType(result, exprType);
-                        result = exprType != typeof(bool) ? converted : (bool)converted ? TrueObject : FalseObject;
+#if LIGHT_EXPRESSION
+                        if (co.RefField != null) return false;
+#endif
+                        UnboxToValue(ref value, co.Value);
                     }
+                    else if (!TryInterpretPrimitive(ref value, operandExpr))
+                        return false;
+
+                    var exprType = expr.Type;
+                    if (operandExpr.Type != exprType)
+                        DoConvert(ref value, Type.GetTypeCode(exprType));
                     return true;
                 }
-
-                result = null;
                 return false;
             }
         }
