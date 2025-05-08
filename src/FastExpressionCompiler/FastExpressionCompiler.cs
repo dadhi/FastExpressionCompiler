@@ -8549,7 +8549,7 @@ namespace FastExpressionCompiler
             }
 
             /// <summary>Tries to interpret the expression of the Primitive type of Constant, Convert, Logical, Comparison, Arithmetic.
-            /// Returns `false` if it failed to do so.</summary>
+            /// Returns `false` if it is failed to do so.</summary>
             internal static bool TryInterpretPrimitiveValue(ref PValue result, Expression expr, TypeCode exprCode, ExpressionType nodeType)
             {
                 // What is supported for the non-boolean, non-decimal result
@@ -8560,92 +8560,35 @@ namespace FastExpressionCompiler
                     var binaryExpr = (BinaryExpression)expr;
                     var left = binaryExpr.Left;
                     var leftCode = Type.GetTypeCode(left.Type);
-
-                    // Optimizing for the 80% of the cases, hopefully it is a your case too
-                    if (leftCode == TypeCode.Int32)
+                    if (left is ConstantExpression lc)
                     {
-                        var leftVal = 0;
-                        if (left is ConstantExpression lc)
-                        {
 #if LIGHT_EXPRESSION
-                            if (lc.RefField != null) return false;
+                        if (lc.RefField != null) return false;
 #endif
-                            leftVal = (int)lc.Value;
-                        }
-                        else
-                        {
-                            if (!TryInterpretInt(ref leftVal, left, left.NodeType))
-                                return false;
-                            leftVal = result.Int32Value;
-                        }
-
-                        var right = binaryExpr.Right;
-                        int rightVal = 0;
-                        if (right is ConstantExpression rc)
-                        {
-#if LIGHT_EXPRESSION
-                            if (rc.RefField != null) return false;
-#endif
-                            rightVal = (int)rc.Value;
-                        }
-                        else
-                        {
-                            // using the leftCode to interpret the right part of the binary expression, 
-                            // because for supported operations left and right types are the same
-                            if (!TryInterpretInt(ref rightVal, right, right.NodeType))
-                                return false;
-                        }
-
-                        leftVal = nodeType switch
-                        {
-                            ExpressionType.Add => leftVal + rightVal,
-                            ExpressionType.Subtract => leftVal - rightVal,
-                            ExpressionType.Multiply => leftVal * rightVal,
-                            ExpressionType.Divide => leftVal / rightVal,
-                            ExpressionType.Modulo => leftVal % rightVal,
-                            ExpressionType.LeftShift => leftVal << rightVal,
-                            ExpressionType.RightShift => leftVal >> rightVal,
-                            ExpressionType.And => leftVal & rightVal,
-                            ExpressionType.Or => leftVal | rightVal,
-                            ExpressionType.ExclusiveOr => leftVal ^ rightVal,
-                            ExpressionType.Power => (int)Math.Pow(leftVal, rightVal),
-                            _ => UnreachableCase(nodeType, 0),
-                        };
-                        result.Int32Value = leftVal;
-                        return true;
+                        UnboxToPrimitiveValue(ref result, lc.Value, leftCode);
                     }
-                    // the rest of the types
+                    else if (!TryInterpretPrimitiveValue(ref result, left, leftCode, left.NodeType))
+                        return false;
+
+                    var right = binaryExpr.Right;
+                    PValue rightVal = default;
+                    if (right is ConstantExpression rc)
                     {
-                        if (left is ConstantExpression lc)
-                        {
 #if LIGHT_EXPRESSION
-                            if (lc.RefField != null) return false;
+                        if (rc.RefField != null) return false;
 #endif
-                            UnboxToPrimitiveValue(ref result, lc.Value, leftCode);
-                        }
-                        else if (!TryInterpretPrimitiveValue(ref result, left, leftCode, left.NodeType))
+                        UnboxToPrimitiveValue(ref rightVal, rc.Value, leftCode);
+                    }
+                    else
+                    {
+                        // using the leftCode to interpret the right part of the binary expression, 
+                        // because for supported operations left and right types are the same
+                        if (!TryInterpretPrimitiveValue(ref rightVal, right, leftCode, right.NodeType))
                             return false;
-
-                        var right = binaryExpr.Right;
-                        PValue rightVal = default;
-                        if (right is ConstantExpression rc)
-                        {
-#if LIGHT_EXPRESSION
-                            if (rc.RefField != null) return false;
-#endif
-                            UnboxToPrimitiveValue(ref rightVal, rc.Value, leftCode);
-                        }
-                        else
-                        {
-                            // using the leftCode to interpret the right part of the binary expression, 
-                            // because for supported operations left and right types are the same
-                            if (!TryInterpretPrimitiveValue(ref rightVal, right, leftCode, right.NodeType))
-                                return false;
-                        }
-
-                        DoArithmeticForPrimitiveValues(ref result, ref rightVal, leftCode, nodeType);
-                        return true;
                     }
+
+                    DoArithmeticForPrimitiveValues(ref result, ref rightVal, leftCode, nodeType);
+                    return true;
                 }
 
                 if (nodeType == ExpressionType.Negate)
