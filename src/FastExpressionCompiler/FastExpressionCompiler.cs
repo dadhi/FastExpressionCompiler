@@ -7715,7 +7715,7 @@ namespace FastExpressionCompiler
                 var found = false;
                 for (int i = 3; i < frames.Length; ++i)
                 {
-                    StackFrame frame = frames[i];
+                    var frame = frames[i];
                     var method = frame.GetMethod();
                     var type = method?.DeclaringType;
                     if (type == null)
@@ -7735,6 +7735,7 @@ namespace FastExpressionCompiler
                     if (found)
                     {
                         found = true;
+                        Console.WriteLine($"Used in test: {type.Name}.{method.Name}");
                         UsedInTests.Push($"{type.Name}.{method.Name}");
                         break; // collect the first found thing in stack trace
                     }
@@ -7743,6 +7744,7 @@ namespace FastExpressionCompiler
                 if (!found)
                 {
                     var methodTrace = string.Join("; ", frames.Skip(3).Select(f => f.GetMethod().Name).ToArray());
+                    Console.WriteLine($"Not found in stack trace: {methodTrace}");
                     UsedInTests.Push($"Not found in stack trace: {methodTrace}");
                 }
             }
