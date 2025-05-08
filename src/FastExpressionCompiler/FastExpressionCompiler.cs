@@ -7735,7 +7735,7 @@ namespace FastExpressionCompiler
                     if (found)
                     {
                         found = true;
-                        Console.WriteLine($"Used in test: {type.Name}.{method.Name}");
+                        Console.WriteLine($"Interpretation in: {type.Name}.{method.Name}");
                         UsedInTests.Push($"{type.Name}.{method.Name}");
                         break; // collect the first found thing in stack trace
                     }
@@ -7744,8 +7744,8 @@ namespace FastExpressionCompiler
                 if (!found)
                 {
                     var methodTrace = string.Join("; ", frames.Skip(3).Select(f => f.GetMethod().Name).ToArray());
-                    Console.WriteLine($"Not found in stack trace: {methodTrace}");
-                    UsedInTests.Push($"Not found in stack trace: {methodTrace}");
+                    Console.WriteLine($"Interpretation in: not found in stack trace: {methodTrace}");
+                    UsedInTests.Push($"Interpretation in: not found in stack trace: {methodTrace}");
                 }
             }
 #endif
