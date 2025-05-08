@@ -35,7 +35,7 @@ THE SOFTWARE.
 #if LIGHT_EXPRESSION
 #define SUPPORTS_ARGUMENT_PROVIDER
 #endif
-// #define INTERPRETATION_DIAGNOSTICS
+#define INTERPRETATION_DIAGNOSTICS
 #if LIGHT_EXPRESSION
 namespace FastExpressionCompiler.LightExpression
 {
@@ -6431,11 +6431,28 @@ namespace FastExpressionCompiler
             /// <summary>Always returns false</summary>
             public static readonly Func<bool> FalseFunc = static () => false;
 
+            /// <summary>Return value shoul be ignored</summary>
             [MethodImpl(MethodImplOptions.NoInlining)]
-            private static T UnreachableCase<T>()
+            private static void UnreachableCase<T>(T @case,
+                [CallerMemberName] string caller = "", [CallerLineNumber] int line = -1)
             {
-                Debug.Assert(false, $"Unreachable switch case reached for type `{typeof(T).Name}`");
-                throw new InvalidCastException($"Unreachable switch case reached for type `{typeof(T).Name}`");
+#if INTERPRETATION_DIAGNOSTICS
+                Console.WriteLine($"Unreachable switch case detected `{@case}` at `{caller}`:{line}");
+                Debugger.Break();
+#endif
+                throw new InvalidCastException($"Unreachable switch case detected `{@case}` at `{caller}`:{line}");
+            }
+
+            /// <summary>Return value shoul be ignored</summary>
+            [MethodImpl(MethodImplOptions.NoInlining)]
+            private static R UnreachableCase<T, R>(T @case, R result,
+                [CallerMemberName] string caller = "", [CallerLineNumber] int line = -1)
+            {
+#if INTERPRETATION_DIAGNOSTICS
+                Console.WriteLine($"Unreachable switch case detected `{@case}` at `{caller}`:{line}");
+                Debugger.Break();
+#endif
+                throw new InvalidCastException($"Unreachable switch case detected `{@case}` at `{caller}`:{line}");
             }
 
             /// <summary>Operation accepting IComparable inputs and producing bool output</summary>
@@ -6473,11 +6490,11 @@ namespace FastExpressionCompiler
                     case TypeCode.UInt16: SetInt32(ref value, (int)-value.UInt16Value); break;
                     case TypeCode.Int32: value.Int32Value = -value.Int32Value; break;
                     // Negate can not be applied to the UInt32
-                    case TypeCode.UInt32: UnreachableCase<ulong>(); break;
+                    case TypeCode.UInt32: UnreachableCase(value.Code); break;
                     case TypeCode.Single: value.SingleValue = -value.SingleValue; break;
                     case TypeCode.Double: value.DoubleValue = -value.DoubleValue; break;
                     case TypeCode.Decimal: value.DecimalValue = -value.DecimalValue; break;
-                    default: UnreachableCase<object>(); break;
+                    default: UnreachableCase(value.Code); break;
                 }
             }
 
@@ -6492,10 +6509,10 @@ namespace FastExpressionCompiler
                     case TypeCode.UInt16: SetInt32_new(ref value, (int)-value.UInt16Value); break;
                     case TypeCode.Int32: value.Int32Value = -value.Int32Value; break;
                     // Negate can not be applied to the UInt32
-                    case TypeCode.UInt32: UnreachableCase<ulong>(); break;
+                    case TypeCode.UInt32: UnreachableCase(value.Code); break;
                     case TypeCode.Single: value.SingleValue = -value.SingleValue; break;
                     case TypeCode.Double: value.DoubleValue = -value.DoubleValue; break;
-                    default: UnreachableCase<object>(); break;
+                    default: UnreachableCase(value.Code); break;
                 }
             }
 
@@ -6517,7 +6534,7 @@ namespace FastExpressionCompiler
                             case TypeCode.Single: value.SByteValue = (sbyte)value.SingleValue; break;
                             case TypeCode.Double: value.SByteValue = (sbyte)value.DoubleValue; break;
                             case TypeCode.Decimal: value.SByteValue = (sbyte)value.DecimalValue; break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(value.Code); break;
                         }
                         break;
                     case TypeCode.Byte:
@@ -6534,7 +6551,7 @@ namespace FastExpressionCompiler
                             case TypeCode.Single: value.ByteValue = (byte)value.SingleValue; break;
                             case TypeCode.Double: value.ByteValue = (byte)value.DoubleValue; break;
                             case TypeCode.Decimal: value.ByteValue = (byte)value.DecimalValue; break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(value.Code); break;
                         }
                         break;
                     case TypeCode.Int16:
@@ -6551,7 +6568,7 @@ namespace FastExpressionCompiler
                             case TypeCode.Single: value.Int16Value = (short)value.SingleValue; break;
                             case TypeCode.Double: value.Int16Value = (short)value.DoubleValue; break;
                             case TypeCode.Decimal: value.Int16Value = (short)value.DecimalValue; break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(value.Code); break;
                         }
                         break;
                     case TypeCode.UInt16:
@@ -6568,7 +6585,7 @@ namespace FastExpressionCompiler
                             case TypeCode.Single: value.UInt16Value = (ushort)value.SingleValue; break;
                             case TypeCode.Double: value.UInt16Value = (ushort)value.DoubleValue; break;
                             case TypeCode.Decimal: value.UInt16Value = (ushort)value.DecimalValue; break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(value.Code); break;
                         }
                         break;
                     case TypeCode.Int32:
@@ -6585,7 +6602,7 @@ namespace FastExpressionCompiler
                             case TypeCode.Single: value.Int32Value = (int)value.SingleValue; break;
                             case TypeCode.Double: value.Int32Value = (int)value.DoubleValue; break;
                             case TypeCode.Decimal: value.Int32Value = (int)value.DecimalValue; break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(value.Code); break;
                         }
                         break;
                     case TypeCode.UInt32:
@@ -6602,7 +6619,7 @@ namespace FastExpressionCompiler
                             case TypeCode.Single: value.UInt32Value = (uint)value.SingleValue; break;
                             case TypeCode.Double: value.UInt32Value = (uint)value.DoubleValue; break;
                             case TypeCode.Decimal: value.UInt32Value = (uint)value.DecimalValue; break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(value.Code); break;
                         }
                         break;
                     case TypeCode.Int64:
@@ -6619,7 +6636,7 @@ namespace FastExpressionCompiler
                             case TypeCode.Single: value.Int64Value = (long)value.SingleValue; break;
                             case TypeCode.Double: value.Int64Value = (long)value.DoubleValue; break;
                             case TypeCode.Decimal: value.Int64Value = (long)value.DecimalValue; break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(value.Code); break;
                         }
                         break;
                     case TypeCode.UInt64:
@@ -6636,7 +6653,7 @@ namespace FastExpressionCompiler
                             case TypeCode.Single: value.UInt64Value = (ulong)value.SingleValue; break;
                             case TypeCode.Double: value.UInt64Value = (ulong)value.DoubleValue; break;
                             case TypeCode.Decimal: value.UInt64Value = (ulong)value.DecimalValue; break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(value.Code); break;
                         }
                         break;
                     case TypeCode.Single:
@@ -6653,7 +6670,7 @@ namespace FastExpressionCompiler
                             case TypeCode.Single: break;
                             case TypeCode.Double: value.SingleValue = (float)value.DoubleValue; break;
                             case TypeCode.Decimal: value.SingleValue = (float)value.DecimalValue; break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(value.Code); break;
                         }
                         break;
                     case TypeCode.Double:
@@ -6670,7 +6687,7 @@ namespace FastExpressionCompiler
                             case TypeCode.Single: value.DoubleValue = (double)value.SingleValue; break;
                             case TypeCode.Double: break;
                             case TypeCode.Decimal: value.DoubleValue = (double)value.DecimalValue; break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(value.Code); break;
                         }
                         break;
                     case TypeCode.Decimal:
@@ -6687,7 +6704,7 @@ namespace FastExpressionCompiler
                             case TypeCode.Single: value.DecimalValue = (decimal)value.SingleValue; break;
                             case TypeCode.Double: value.DecimalValue = (decimal)value.DoubleValue; break;
                             case TypeCode.Decimal: break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(value.Code); break;
                         }
                         break;
                 }
@@ -6712,7 +6729,7 @@ namespace FastExpressionCompiler
                             case TypeCode.UInt64: value.SByteValue = (sbyte)value.UInt64Value; break;
                             case TypeCode.Single: value.SByteValue = (sbyte)value.SingleValue; break;
                             case TypeCode.Double: value.SByteValue = (sbyte)value.DoubleValue; break;
-                            default: UnreachableCase<sbyte>(); break;
+                            default: UnreachableCase(value.Code); break;
                         }
                         break;
                     case TypeCode.Byte:
@@ -6729,7 +6746,7 @@ namespace FastExpressionCompiler
                             case TypeCode.UInt64: value.ByteValue = (byte)value.UInt64Value; break;
                             case TypeCode.Single: value.ByteValue = (byte)value.SingleValue; break;
                             case TypeCode.Double: value.ByteValue = (byte)value.DoubleValue; break;
-                            default: UnreachableCase<byte>(); break;
+                            default: UnreachableCase(value.Code); break;
                         }
                         break;
                     case TypeCode.Int16:
@@ -6746,7 +6763,7 @@ namespace FastExpressionCompiler
                             case TypeCode.UInt64: value.Int16Value = (short)value.UInt64Value; break;
                             case TypeCode.Single: value.Int16Value = (short)value.SingleValue; break;
                             case TypeCode.Double: value.Int16Value = (short)value.DoubleValue; break;
-                            default: UnreachableCase<short>(); break;
+                            default: UnreachableCase(value.Code); break;
                         }
                         break;
                     case TypeCode.UInt16:
@@ -6763,7 +6780,7 @@ namespace FastExpressionCompiler
                             case TypeCode.UInt64: value.UInt16Value = (ushort)value.UInt64Value; break;
                             case TypeCode.Single: value.UInt16Value = (ushort)value.SingleValue; break;
                             case TypeCode.Double: value.UInt16Value = (ushort)value.DoubleValue; break;
-                            default: UnreachableCase<ushort>(); break;
+                            default: UnreachableCase(value.Code); break;
                         }
                         break;
                     case TypeCode.Int32:
@@ -6780,7 +6797,7 @@ namespace FastExpressionCompiler
                             case TypeCode.UInt64: value.Int32Value = (int)value.UInt64Value; break;
                             case TypeCode.Single: value.Int32Value = (int)value.SingleValue; break;
                             case TypeCode.Double: value.Int32Value = (int)value.DoubleValue; break;
-                            default: UnreachableCase<int>(); break;
+                            default: UnreachableCase(value.Code); break;
                         }
                         break;
                     case TypeCode.UInt32:
@@ -6797,7 +6814,7 @@ namespace FastExpressionCompiler
                             case TypeCode.UInt64: value.UInt32Value = (uint)value.UInt64Value; break;
                             case TypeCode.Single: value.UInt32Value = (uint)value.SingleValue; break;
                             case TypeCode.Double: value.UInt32Value = (uint)value.DoubleValue; break;
-                            default: UnreachableCase<uint>(); break;
+                            default: UnreachableCase(value.Code); break;
                         }
                         break;
                     case TypeCode.Int64:
@@ -6814,7 +6831,7 @@ namespace FastExpressionCompiler
                             case TypeCode.UInt64: value.Int64Value = (long)value.UInt64Value; break;
                             case TypeCode.Single: value.Int64Value = (long)value.SingleValue; break;
                             case TypeCode.Double: value.Int64Value = (long)value.DoubleValue; break;
-                            default: UnreachableCase<long>(); break;
+                            default: UnreachableCase(value.Code); break;
                         }
                         break;
                     case TypeCode.UInt64:
@@ -6831,7 +6848,7 @@ namespace FastExpressionCompiler
                             case TypeCode.UInt64: break;
                             case TypeCode.Single: value.UInt64Value = (ulong)value.SingleValue; break;
                             case TypeCode.Double: value.UInt64Value = (ulong)value.DoubleValue; break;
-                            default: UnreachableCase<ulong>(); break;
+                            default: UnreachableCase(value.Code); break;
                         }
                         break;
                     case TypeCode.Single:
@@ -6848,7 +6865,7 @@ namespace FastExpressionCompiler
                             case TypeCode.UInt64: value.SingleValue = (float)value.UInt64Value; break;
                             case TypeCode.Single: break;
                             case TypeCode.Double: value.SingleValue = (float)value.DoubleValue; break;
-                            default: UnreachableCase<float>(); break;
+                            default: UnreachableCase(value.Code); break;
                         }
                         break;
                     case TypeCode.Double:
@@ -6865,7 +6882,7 @@ namespace FastExpressionCompiler
                             case TypeCode.UInt64: value.DoubleValue = (double)value.UInt64Value; break;
                             case TypeCode.Single: value.DoubleValue = (double)value.SingleValue; break;
                             case TypeCode.Double: break;
-                            default: UnreachableCase<double>(); break;
+                            default: UnreachableCase(value.Code); break;
                         }
                         break;
                 }
@@ -6979,7 +6996,7 @@ namespace FastExpressionCompiler
                     case TypeCode.Single: value.SingleValue = (float)boxedValue; break;
                     case TypeCode.Double: value.DoubleValue = (double)boxedValue; break;
                     case TypeCode.Decimal: value.DecimalValue = (decimal)boxedValue; break;
-                    default: UnreachableCase<object>(); break;
+                    default: UnreachableCase(value.Code); break;
                 }
             }
 
@@ -7000,7 +7017,7 @@ namespace FastExpressionCompiler
                     case TypeCode.UInt64: value.UInt64Value = (ulong)boxedValue; break;
                     case TypeCode.Single: value.SingleValue = (float)boxedValue; break;
                     case TypeCode.Double: value.DoubleValue = (double)boxedValue; break;
-                    default: UnreachableCase<object>(); break;
+                    default: UnreachableCase(code); break;
                 }
             }
 
@@ -7022,28 +7039,29 @@ namespace FastExpressionCompiler
                     case TypeCode.Single: return value.SingleValue;
                     case TypeCode.Double: return value.DoubleValue;
                     case TypeCode.Decimal: return value.DecimalValue;
-                    default: return UnreachableCase<object>();
+                    default: return UnreachableCase(value.Code, (object)null);
                 }
             }
 
+            // todo: @perf think how to avoid this bosing thing altogether, maybe do not expose it at all to force client to handle the union values 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             internal static object BoxToObject_new(ref PValue value)
             {
-                switch (value.Code)
+                return value.Code switch
                 {
-                    case TypeCode.Char: return value.CharValue;
-                    case TypeCode.SByte: return value.SByteValue;
-                    case TypeCode.Byte: return value.ByteValue;
-                    case TypeCode.Int16: return value.Int16Value;
-                    case TypeCode.UInt16: return value.UInt16Value;
-                    case TypeCode.Int32: return value.Int32Value;
-                    case TypeCode.UInt32: return value.UInt32Value;
-                    case TypeCode.Int64: return value.Int64Value;
-                    case TypeCode.UInt64: return value.UInt64Value;
-                    case TypeCode.Single: return value.SingleValue;
-                    case TypeCode.Double: return value.DoubleValue;
-                    default: return UnreachableCase<object>();
-                }
+                    TypeCode.Char => value.CharValue,
+                    TypeCode.SByte => value.SByteValue,
+                    TypeCode.Byte => value.ByteValue,
+                    TypeCode.Int16 => value.Int16Value,
+                    TypeCode.UInt16 => value.UInt16Value,
+                    TypeCode.Int32 => value.Int32Value,
+                    TypeCode.UInt32 => value.UInt32Value,
+                    TypeCode.Int64 => value.Int64Value,
+                    TypeCode.UInt64 => value.UInt64Value,
+                    TypeCode.Single => value.SingleValue,
+                    TypeCode.Double => value.DoubleValue,
+                    _ => UnreachableCase(value.Code, (object)null)
+                };
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -7117,7 +7135,7 @@ namespace FastExpressionCompiler
                             TypeCode.Single => left.SingleValue == right.SingleValue,
                             TypeCode.Double => left.DoubleValue == right.DoubleValue,
                             TypeCode.Decimal => left.DecimalValue == right.DecimalValue,
-                            _ => UnreachableCase<bool>()
+                            _ => UnreachableCase(left.Code, false)
                         };
                         if (nodeType == ExpressionType.NotEqual)
                             result = !result;
@@ -7137,7 +7155,7 @@ namespace FastExpressionCompiler
                             TypeCode.Single => left.SingleValue > right.SingleValue,
                             TypeCode.Double => left.DoubleValue > right.DoubleValue,
                             TypeCode.Decimal => left.DecimalValue > right.DecimalValue,
-                            _ => UnreachableCase<bool>()
+                            _ => UnreachableCase(left.Code, false)
                         };
                         break;
                     case ExpressionType.GreaterThanOrEqual:
@@ -7155,7 +7173,7 @@ namespace FastExpressionCompiler
                             TypeCode.Single => left.SingleValue >= right.SingleValue,
                             TypeCode.Double => left.DoubleValue >= right.DoubleValue,
                             TypeCode.Decimal => left.DecimalValue >= right.DecimalValue,
-                            _ => UnreachableCase<bool>()
+                            _ => UnreachableCase(left.Code, false)
                         };
                         break;
                     case ExpressionType.LessThan:
@@ -7173,7 +7191,7 @@ namespace FastExpressionCompiler
                             TypeCode.Single => left.SingleValue < right.SingleValue,
                             TypeCode.Double => left.DoubleValue < right.DoubleValue,
                             TypeCode.Decimal => left.DecimalValue < right.DecimalValue,
-                            _ => UnreachableCase<bool>()
+                            _ => UnreachableCase(left.Code, false)
                         };
                         break;
                     case ExpressionType.LessThanOrEqual:
@@ -7191,10 +7209,12 @@ namespace FastExpressionCompiler
                             TypeCode.Single => left.SingleValue <= right.SingleValue,
                             TypeCode.Double => left.DoubleValue <= right.DoubleValue,
                             TypeCode.Decimal => left.DecimalValue <= right.DecimalValue,
-                            _ => UnreachableCase<bool>()
+                            _ => UnreachableCase(left.Code, false)
                         };
                         break;
-                    default: UnreachableCase<bool>(); break;
+                    default:
+                        UnreachableCase(nodeType);
+                        break;
                 }
                 SetBoolean(ref left, result);
             }
@@ -7218,7 +7238,7 @@ namespace FastExpressionCompiler
                             TypeCode.UInt64 => left.UInt64Value == right.UInt64Value,
                             TypeCode.Single => left.SingleValue == right.SingleValue,
                             TypeCode.Double => left.DoubleValue == right.DoubleValue,
-                            _ => UnreachableCase<bool>()
+                            _ => UnreachableCase(left.Code, false)
                         };
                         return nodeType == ExpressionType.Equal ? result : !result;
                     case ExpressionType.GreaterThan:
@@ -7235,7 +7255,7 @@ namespace FastExpressionCompiler
                             TypeCode.UInt64 => left.UInt64Value > right.UInt64Value,
                             TypeCode.Single => left.SingleValue > right.SingleValue,
                             TypeCode.Double => left.DoubleValue > right.DoubleValue,
-                            _ => UnreachableCase<bool>()
+                            _ => UnreachableCase(left.Code, false)
                         };
                     case ExpressionType.GreaterThanOrEqual:
                         return left.Code switch
@@ -7251,7 +7271,7 @@ namespace FastExpressionCompiler
                             TypeCode.UInt64 => left.UInt64Value >= right.UInt64Value,
                             TypeCode.Single => left.SingleValue >= right.SingleValue,
                             TypeCode.Double => left.DoubleValue >= right.DoubleValue,
-                            _ => UnreachableCase<bool>()
+                            _ => UnreachableCase(left.Code, false)
                         };
                     case ExpressionType.LessThan:
                         return left.Code switch
@@ -7267,7 +7287,7 @@ namespace FastExpressionCompiler
                             TypeCode.UInt64 => left.UInt64Value < right.UInt64Value,
                             TypeCode.Single => left.SingleValue < right.SingleValue,
                             TypeCode.Double => left.DoubleValue < right.DoubleValue,
-                            _ => UnreachableCase<bool>()
+                            _ => UnreachableCase(left.Code, false)
                         };
                     case ExpressionType.LessThanOrEqual:
                         return left.Code switch
@@ -7283,9 +7303,9 @@ namespace FastExpressionCompiler
                             TypeCode.UInt64 => left.UInt64Value <= right.UInt64Value,
                             TypeCode.Single => left.SingleValue <= right.SingleValue,
                             TypeCode.Double => left.DoubleValue <= right.DoubleValue,
-                            _ => UnreachableCase<bool>()
+                            _ => UnreachableCase(left.Code, false)
                         };
-                    default: return UnreachableCase<bool>();
+                    default: return UnreachableCase(nodeType, false);
                 }
             }
 
@@ -7311,7 +7331,7 @@ namespace FastExpressionCompiler
                             case TypeCode.Single: left.SingleValue += right.SingleValue; break;
                             case TypeCode.Double: left.DoubleValue += right.DoubleValue; break;
                             case TypeCode.Decimal: left.DecimalValue += right.DecimalValue; break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(left.Code); break;
                         }
                         break;
                     case ExpressionType.Subtract:
@@ -7328,7 +7348,7 @@ namespace FastExpressionCompiler
                             case TypeCode.Single: left.SingleValue -= right.SingleValue; break;
                             case TypeCode.Double: left.DoubleValue -= right.DoubleValue; break;
                             case TypeCode.Decimal: left.DecimalValue -= right.DecimalValue; break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(left.Code); break;
                         }
                         break;
                     case ExpressionType.Multiply:
@@ -7345,7 +7365,7 @@ namespace FastExpressionCompiler
                             case TypeCode.Single: left.SingleValue *= right.SingleValue; break;
                             case TypeCode.Double: left.DoubleValue *= right.DoubleValue; break;
                             case TypeCode.Decimal: left.DecimalValue *= right.DecimalValue; break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(left.Code); break;
                         }
                         break;
                     case ExpressionType.Divide:
@@ -7362,7 +7382,7 @@ namespace FastExpressionCompiler
                             case TypeCode.Single: left.SingleValue /= right.SingleValue; break;
                             case TypeCode.Double: left.DoubleValue /= right.DoubleValue; break;
                             case TypeCode.Decimal: left.DecimalValue /= right.DecimalValue; break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(left.Code); break;
                         }
                         break;
                     case ExpressionType.Modulo:
@@ -7379,7 +7399,7 @@ namespace FastExpressionCompiler
                             case TypeCode.Single: left.SingleValue %= right.SingleValue; break;
                             case TypeCode.Double: left.DoubleValue %= right.DoubleValue; break;
                             case TypeCode.Decimal: left.DecimalValue %= right.DecimalValue; break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(left.Code); break;
                         }
                         break;
                     case ExpressionType.And:
@@ -7393,7 +7413,7 @@ namespace FastExpressionCompiler
                             case TypeCode.UInt32: left.UInt32Value &= right.UInt32Value; break;
                             case TypeCode.Int64: left.Int64Value &= right.Int64Value; break;
                             case TypeCode.UInt64: left.UInt64Value &= right.UInt64Value; break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(left.Code); break;
                         }
                         break;
                     case ExpressionType.Or:
@@ -7407,7 +7427,7 @@ namespace FastExpressionCompiler
                             case TypeCode.UInt32: left.UInt32Value |= right.UInt32Value; break;
                             case TypeCode.Int64: left.Int64Value |= right.Int64Value; break;
                             case TypeCode.UInt64: left.UInt64Value |= right.UInt64Value; break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(left.Code); break;
                         }
                         break;
                     case ExpressionType.ExclusiveOr:
@@ -7421,7 +7441,7 @@ namespace FastExpressionCompiler
                             case TypeCode.UInt32: left.UInt32Value ^= right.UInt32Value; break;
                             case TypeCode.Int64: left.Int64Value ^= right.Int64Value; break;
                             case TypeCode.UInt64: left.UInt64Value ^= right.UInt64Value; break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(left.Code); break;
                         }
                         break;
                     case ExpressionType.LeftShift:
@@ -7435,7 +7455,7 @@ namespace FastExpressionCompiler
                             case TypeCode.UInt32: left.UInt32Value <<= (int)right.UInt32Value; break;
                             case TypeCode.Int64: left.Int64Value <<= (int)right.Int64Value; break;
                             case TypeCode.UInt64: left.UInt64Value <<= (int)right.UInt64Value; break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(left.Code); break;
                         }
                         break;
                     case ExpressionType.RightShift:
@@ -7449,10 +7469,10 @@ namespace FastExpressionCompiler
                             case TypeCode.UInt32: left.UInt32Value >>= (int)right.UInt32Value; break;
                             case TypeCode.Int64: left.Int64Value >>= (int)right.Int64Value; break;
                             case TypeCode.UInt64: left.UInt64Value >>= (int)right.UInt64Value; break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(left.Code); break;
                         }
                         break;
-                    default: UnreachableCase<object>(); break;
+                    default: UnreachableCase(nodeType); break;
                 }
             }
 
@@ -7478,7 +7498,7 @@ namespace FastExpressionCompiler
                             case TypeCode.UInt64: left.UInt64Value += right.UInt64Value; break;
                             case TypeCode.Single: left.SingleValue += right.SingleValue; break;
                             case TypeCode.Double: left.DoubleValue += right.DoubleValue; break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(left.Code); break;
                         }
                         break;
                     case ExpressionType.Subtract:
@@ -7495,7 +7515,7 @@ namespace FastExpressionCompiler
                             case TypeCode.UInt64: left.UInt64Value -= right.UInt64Value; break;
                             case TypeCode.Single: left.SingleValue -= right.SingleValue; break;
                             case TypeCode.Double: left.DoubleValue -= right.DoubleValue; break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(left.Code); break;
                         }
                         break;
                     case ExpressionType.Multiply:
@@ -7512,7 +7532,7 @@ namespace FastExpressionCompiler
                             case TypeCode.UInt64: left.UInt64Value *= right.UInt64Value; break;
                             case TypeCode.Single: left.SingleValue *= right.SingleValue; break;
                             case TypeCode.Double: left.DoubleValue *= right.DoubleValue; break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(left.Code); break;
                         }
                         break;
                     case ExpressionType.Divide:
@@ -7529,7 +7549,7 @@ namespace FastExpressionCompiler
                             case TypeCode.UInt64: left.UInt64Value /= right.UInt64Value; break;
                             case TypeCode.Single: left.SingleValue /= right.SingleValue; break;
                             case TypeCode.Double: left.DoubleValue /= right.DoubleValue; break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(left.Code); break;
                         }
                         break;
                     case ExpressionType.Modulo:
@@ -7546,7 +7566,7 @@ namespace FastExpressionCompiler
                             case TypeCode.UInt64: left.UInt64Value %= right.UInt64Value; break;
                             case TypeCode.Single: left.SingleValue %= right.SingleValue; break;
                             case TypeCode.Double: left.DoubleValue %= right.DoubleValue; break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(left.Code); break;
                         }
                         break;
                     case ExpressionType.And:
@@ -7561,7 +7581,7 @@ namespace FastExpressionCompiler
                             case TypeCode.UInt32: left.UInt32Value &= right.UInt32Value; break;
                             case TypeCode.Int64: left.Int64Value &= right.Int64Value; break;
                             case TypeCode.UInt64: left.UInt64Value &= right.UInt64Value; break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(left.Code); break;
                         }
                         break;
                     case ExpressionType.Or:
@@ -7576,7 +7596,7 @@ namespace FastExpressionCompiler
                             case TypeCode.UInt32: left.UInt32Value |= right.UInt32Value; break;
                             case TypeCode.Int64: left.Int64Value |= right.Int64Value; break;
                             case TypeCode.UInt64: left.UInt64Value |= right.UInt64Value; break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(left.Code); break;
                         }
                         break;
                     case ExpressionType.ExclusiveOr:
@@ -7591,7 +7611,7 @@ namespace FastExpressionCompiler
                             case TypeCode.UInt32: left.UInt32Value ^= right.UInt32Value; break;
                             case TypeCode.Int64: left.Int64Value ^= right.Int64Value; break;
                             case TypeCode.UInt64: left.UInt64Value ^= right.UInt64Value; break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(left.Code); break;
                         }
                         break;
                     case ExpressionType.LeftShift:
@@ -7606,7 +7626,7 @@ namespace FastExpressionCompiler
                             case TypeCode.UInt32: left.UInt32Value <<= (int)right.UInt32Value; break;
                             case TypeCode.Int64: left.Int64Value <<= (int)right.Int64Value; break;
                             case TypeCode.UInt64: left.UInt64Value <<= (int)right.UInt64Value; break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(left.Code); break;
                         }
                         break;
                     case ExpressionType.RightShift:
@@ -7621,10 +7641,10 @@ namespace FastExpressionCompiler
                             case TypeCode.UInt32: left.UInt32Value >>= (int)right.UInt32Value; break;
                             case TypeCode.Int64: left.Int64Value >>= (int)right.Int64Value; break;
                             case TypeCode.UInt64: left.UInt64Value >>= (int)right.UInt64Value; break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(left.Code); break;
                         }
                         break;
-                    default: UnreachableCase<object>(); break;
+                    default: UnreachableCase(nodeType); break;
                 }
             }
 
@@ -7643,7 +7663,7 @@ namespace FastExpressionCompiler
                     case TypeCode.Single: value.SingleValue = 0; break;
                     case TypeCode.Double: value.DoubleValue = 0; break;
                     case TypeCode.Decimal: value.DecimalValue = 0; break;
-                    default: UnreachableCase<object>(); break;
+                    default: UnreachableCase(code); break;
                 }
             }
 
@@ -7662,7 +7682,7 @@ namespace FastExpressionCompiler
                     case TypeCode.UInt64: value.UInt64Value = 0; break;
                     case TypeCode.Single: value.SingleValue = 0; break;
                     case TypeCode.Double: value.DoubleValue = 0; break;
-                    default: UnreachableCase<object>(); break;
+                    default: UnreachableCase(code); break;
                 }
             }
 
@@ -7692,7 +7712,8 @@ namespace FastExpressionCompiler
                 var frames = stackTrace.GetFrames();
 
                 // Skip this method and its immediate caller, and start from the outer callers
-                for (int i = 2; i < frames.Length; i++)
+                var found = false;
+                for (int i = 3; i < frames.Length; ++i)
                 {
                     StackFrame frame = frames[i];
                     var method = frame.GetMethod();
@@ -7704,21 +7725,25 @@ namespace FastExpressionCompiler
                     if (ifaces.Length == 0)
                         continue;
 
-                    var firstFound = false;
                     foreach (var iface in ifaces)
-                    {
                         if (iface.Name.Contains("Test"))
                         {
-                            firstFound = true;
+                            found = true;
                             break;
                         }
-                    }
 
-                    if (firstFound)
+                    if (found)
                     {
+                        found = true;
                         UsedInTests.Push($"{type.Name}.{method.Name}");
                         break; // collect the first found thing in stack trace
                     }
+                }
+
+                if (!found)
+                {
+                    var methodTrace = string.Join("; ", frames.Skip(3).Select(f => f.GetMethod().Name).ToArray());
+                    UsedInTests.Push($"Not found in stack trace: {methodTrace}");
                 }
             }
 #endif
@@ -7831,7 +7856,7 @@ namespace FastExpressionCompiler
                 {
                     var ok = TryInterpretBool(ref result, expr, expr.NodeType);
 #if INTERPRETATION_DIAGNOSTICS
-                    CollectCallingTestName();
+                    if (ok) CollectCallingTestName();
 #endif
                     return ok;
                 }
@@ -8086,7 +8111,7 @@ namespace FastExpressionCompiler
                         {
                             ExpressionType.Equal => boolLeft == boolRight,
                             ExpressionType.NotEqual => boolLeft != boolRight,
-                            _ => UnreachableCase<bool>(), // todo: we can split IsComparison to check only ExpressionType.Equal and ExpressionType.NotEqual for bool
+                            _ => UnreachableCase(nodeType, false), // todo: @wip we can split IsComparison to check only ExpressionType.Equal and ExpressionType.NotEqual for bool
                         };
                         return true;
                     }
@@ -8124,7 +8149,7 @@ namespace FastExpressionCompiler
                             ExpressionType.GreaterThanOrEqual => decimalLeft >= decimalRight,
                             ExpressionType.LessThan => decimalLeft < decimalRight,
                             ExpressionType.LessThanOrEqual => decimalLeft <= decimalRight,
-                            _ => UnreachableCase<bool>(),
+                            _ => UnreachableCase(nodeType, false),
                         };
                         return true;
                     }
@@ -8216,7 +8241,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.Multiply: decimalResult *= decimalRight; break;
                         case ExpressionType.Divide: decimalResult /= decimalRight; break;
                         case ExpressionType.Modulo: decimalResult %= decimalRight; break;
-                        default: UnreachableCase<decimal>(); break;
+                        default: UnreachableCase(nodeType); break;
                     }
                     return true;
                 }
@@ -8281,7 +8306,7 @@ namespace FastExpressionCompiler
                         TypeCode.UInt32 => operandResult.UInt32Value,
                         TypeCode.Int64 => operandResult.Int64Value,
                         TypeCode.UInt64 => operandResult.UInt64Value,
-                        _ => UnreachableCase<decimal>(),
+                        _ => UnreachableCase(operandCode, default(decimal)),
                     };
                     return true;
                 }
@@ -8410,7 +8435,7 @@ namespace FastExpressionCompiler
                             case TypeCode.UInt64: result.UInt64Value = (ulong)decimalResult; break;
                             case TypeCode.Single: result.SingleValue = (float)decimalResult; break;
                             case TypeCode.Double: result.DoubleValue = (double)decimalResult; break;
-                            default: UnreachableCase<object>(); break;
+                            default: UnreachableCase(toCode); break;
                         }
                         result.Code = toCode;
                         return true;

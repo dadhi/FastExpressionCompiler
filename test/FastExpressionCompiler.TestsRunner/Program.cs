@@ -1,4 +1,4 @@
-﻿// #define INTERPRETATION_DIAGNOSTICS
+﻿#define INTERPRETATION_DIAGNOSTICS
 
 using System;
 using System.Diagnostics;
