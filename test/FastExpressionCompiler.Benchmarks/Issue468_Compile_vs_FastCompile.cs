@@ -114,6 +114,22 @@ DefaultJob : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
 | Interpret     | 93.63 ns | 1.819 ns | 3.838 ns | 92.05 ns |  1.00 |    0.06 |    2 |         - |          NA |
 | Interpret_new | 68.28 ns | 1.350 ns | 1.554 ns | 68.08 ns |  0.73 |    0.03 |    1 |         - |          NA |
 
+## Removing the type code from the PValue struct, no changes
+
+DefaultJob : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+
+| Method        | Mean     | Error    | StdDev   | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
+|-------------- |---------:|---------:|---------:|------:|--------:|-----:|----------:|------------:|
+| Interpret     | 86.94 ns | 1.015 ns | 0.847 ns |  1.00 |    0.01 |    2 |         - |          NA |
+| Interpret_new | 64.04 ns | 0.838 ns | 1.446 ns |  0.74 |    0.02 |    1 |         - |          NA |
+
+## Specializing for int does it job
+
+| Method        | Mean     | Error    | StdDev   | Median   | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
+|-------------- |---------:|---------:|---------:|---------:|------:|--------:|-----:|----------:|------------:|
+| Interpret     | 94.70 ns | 1.923 ns | 2.936 ns | 95.38 ns |  1.00 |    0.04 |    2 |         - |          NA |
+| Interpret_new | 57.18 ns | 1.175 ns | 3.075 ns | 55.78 ns |  0.60 |    0.04 |    1 |         - |          NA |
+
 */
 [MemoryDiagnoser, RankColumn]
 // [HardwareCounters(HardwareCounter.BranchInstructions)]
@@ -207,7 +223,7 @@ Job=.NET 8.0  Runtime=.NET 8.0
 | CompiledFast_WithEvalFlag |    171.8 ns |   3.49 ns |   9.44 ns |    167.6 ns |   1.00 |    0.08 |    1 | 0.0610 |      - |     384 B |        1.00 |
 
 
-## Now we're talking (after small interpretator optimizations)
+## Now we're talking (after small interpreter optimizations)
 
 DefaultJob : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
 
