@@ -130,6 +130,13 @@ DefaultJob : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
 | Interpret     | 94.70 ns | 1.923 ns | 2.936 ns | 95.38 ns |  1.00 |    0.04 |    2 |         - |          NA |
 | Interpret_new | 57.18 ns | 1.175 ns | 3.075 ns | 55.78 ns |  0.60 |    0.04 |    1 |         - |          NA |
 
+## More int specialization
+
+| Method        | Mean     | Error    | StdDev   | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
+|-------------- |---------:|---------:|---------:|------:|--------:|-----:|----------:|------------:|
+| Interpret     | 88.66 ns | 1.701 ns | 1.747 ns |  1.00 |    0.03 |    2 |         - |          NA |
+| Interpret_new | 48.80 ns | 0.671 ns | 0.595 ns |  0.55 |    0.01 |    1 |         - |          NA |
+
 */
 [MemoryDiagnoser, RankColumn]
 // [HardwareCounters(HardwareCounter.BranchInstructions)]

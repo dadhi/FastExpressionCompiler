@@ -7735,39 +7735,38 @@ namespace FastExpressionCompiler
                 var type = expr.Type;
                 Debug.Assert(type.IsPrimitive);
 
+                var typeCode = Type.GetTypeCode(type);
                 result = null;
                 try
                 {
-                    if (type == typeof(bool))
+                    var ok = false;
+                    switch (typeCode)
                     {
-                        var boolResult = false;
-                        var ok = TryInterpretBool(ref boolResult, expr, expr.NodeType);
-#if INTERPRETATION_DIAGNOSTICS
-                        if (ok) CollectCallingTestName();
-#endif
-                        result = boolResult;
-                        return ok;
+                        case TypeCode.Boolean:
+                            var boolResult = false;
+                            ok = TryInterpretBool(ref boolResult, expr, expr.NodeType);
+                            result = boolResult;
+                            break;
+                        case TypeCode.Int32:
+                            int intResult = 0;
+                            ok = TryInterpretInt(ref intResult, expr, expr.NodeType);
+                            result = ok ? intResult : null; // boxing
+                            break;
+                        case TypeCode.Decimal:
+                            decimal decimalResult = default;
+                            ok = TryInterpretDecimal(ref decimalResult, expr, expr.NodeType);
+                            result = ok ? decimalResult : null; // boxing
+                            break;
+                        default:
+                            PValue pResult = default;
+                            ok = TryInterpretPrimitiveValue(ref pResult, expr, typeCode, expr.NodeType);
+                            result = ok ? BoxPrimitiveValue(ref pResult, typeCode) : null;
+                            break;
                     }
-                    if (type == typeof(decimal))
-                    {
-                        decimal decimalResult = default;
-                        var ok = TryInterpretDecimal(ref decimalResult, expr, expr.NodeType);
 #if INTERPRETATION_DIAGNOSTICS
-                        if (ok) CollectCallingTestName();
+                    if (ok) CollectCallingTestName();
 #endif
-                        result = ok ? decimalResult : null; // boxing
-                        return ok;
-                    }
-                    {
-                        var exprCode = Type.GetTypeCode(expr.Type);
-                        PValue pResult = default;
-                        var ok = TryInterpretPrimitiveValue(ref pResult, expr, exprCode, expr.NodeType);
-#if INTERPRETATION_DIAGNOSTICS
-                        if (ok) CollectCallingTestName();
-#endif
-                        result = ok ? BoxPrimitiveValue(ref pResult, exprCode) : null;
-                        return ok;
-                    }
+                    return ok;
                 }
                 catch
                 {
@@ -8067,7 +8066,34 @@ namespace FastExpressionCompiler
                         boolResult = nodeType == ExpressionType.Equal ? boolLeft == boolRight : boolLeft != boolRight;
                         return true;
                     }
+                    if (leftCode == TypeCode.Int32)
+                    {
+                        var intLeft = 0;
+                        if (left is ConstantExpression lc)
+                        {
+#if LIGHT_EXPRESSION
+                            if (lc.RefField != null) return false;
+#endif
+                            intLeft = (int)lc.Value;
+                        }
+                        else if (!TryInterpretInt(ref intLeft, left, left.NodeType))
+                            return false;
 
+                        var right = binaryExpr.Right;
+                        var intRight = 0;
+                        if (right is ConstantExpression rc)
+                        {
+#if LIGHT_EXPRESSION
+                            if (rc.RefField != null) return false;
+#endif
+                            intRight = (int)rc.Value;
+                        }
+                        else if (!TryInterpretInt(ref intRight, right, right.NodeType))
+                            return false;
+
+                        boolResult = nodeType == ExpressionType.Equal ? intLeft == intRight : intLeft != intRight;
+                        return true;
+                    }
                     if (leftCode == TypeCode.Decimal)
                     {
                         decimal decimalLeft = default;
@@ -8096,7 +8122,7 @@ namespace FastExpressionCompiler
                         boolResult = nodeType == ExpressionType.Equal ? decimalLeft == decimalRight : decimalLeft != decimalRight;
                         return true;
                     }
-                    // not a bool or decimal
+                    // not a bool, int, or decimal
                     {
                         PValue leftVal = default;
                         if (left is ConstantExpression lc)
@@ -8150,7 +8176,41 @@ namespace FastExpressionCompiler
                     var left = binaryExpr.Left;
                     var leftCode = Type.GetTypeCode(left.Type);
                     Debug.Assert(leftCode != TypeCode.Boolean, "Boolean values are not comparable by less or greater");
+                    if (leftCode == TypeCode.Int32)
+                    {
+                        int intLeft = 0;
+                        if (left is ConstantExpression lc)
+                        {
+#if LIGHT_EXPRESSION
+                            if (lc.RefField != null) return false;
+#endif
+                            intLeft = (int)lc.Value;
+                        }
+                        else if (!TryInterpretInt(ref intLeft, left, left.NodeType))
+                            return false;
 
+                        var right = binaryExpr.Right;
+                        int intRight = 0;
+                        if (right is ConstantExpression rc)
+                        {
+#if LIGHT_EXPRESSION
+                            if (rc.RefField != null) return false;
+#endif
+                            intRight = (int)rc.Value;
+                        }
+                        else if (!TryInterpretInt(ref intRight, right, right.NodeType))
+                            return false;
+
+                        boolResult = nodeType switch
+                        {
+                            ExpressionType.GreaterThan => intLeft > intRight,
+                            ExpressionType.GreaterThanOrEqual => intLeft >= intRight,
+                            ExpressionType.LessThan => intLeft < intRight,
+                            ExpressionType.LessThanOrEqual => intLeft <= intRight,
+                            _ => UnreachableCase(nodeType, false),
+                        };
+                        return true;
+                    }
                     if (leftCode == TypeCode.Decimal)
                     {
                         decimal decimalLeft = default;
@@ -8186,7 +8246,7 @@ namespace FastExpressionCompiler
                         };
                         return true;
                     }
-                    // not a bool or decimal
+                    // not a bool, int, or decimal
                     {
                         PValue leftVal = default;
                         if (left is ConstantExpression lc)
@@ -8315,7 +8375,8 @@ namespace FastExpressionCompiler
                 {
                     var operandExpr = ((UnaryExpression)expr).Operand;
                     var operandCode = Type.GetTypeCode(operandExpr.Type);
-                    Debug.Assert(operandCode != TypeCode.Boolean, " operand may be a decimal but cannot be bool, because there is no conversation from bool to the types in UValue");
+                    Debug.Assert(operandCode != TypeCode.Boolean,
+                        "Operand may be a decimal but cannot be bool, because there is no conversation from bool to the types in UValue");
 
                     PValue operandResult = default;
                     if (operandExpr is ConstantExpression co)
@@ -8349,6 +8410,146 @@ namespace FastExpressionCompiler
 
             /// <summary>Tries to interpret the expression of the Primitive type of Constant, Convert, Logical, Comparison, Arithmetic.
             /// Returns `false` if it failed to do so.</summary>
+            internal static bool TryInterpretInt(ref int intResult, Expression expr, ExpressionType nodeType)
+            {
+                // What is supported for the int result
+                // yes: arithmetic, convert, default
+                // no: not, logical, comparison
+                if (IsArithmeticBinary(nodeType))
+                {
+                    var binaryExpr = (BinaryExpression)expr;
+                    var left = binaryExpr.Left;
+                    if (left is ConstantExpression lc)
+                    {
+#if LIGHT_EXPRESSION
+                        if (lc.RefField != null) return false;
+#endif
+                        intResult = (int)lc.Value;
+                    }
+                    else if (!TryInterpretInt(ref intResult, left, left.NodeType))
+                        return false;
+
+                    int rightVal = 0;
+                    var right = binaryExpr.Right;
+                    if (right is ConstantExpression rc)
+                    {
+#if LIGHT_EXPRESSION
+                        if (rc.RefField != null) return false;
+#endif
+                        rightVal = (int)rc.Value;
+                    }
+                    else if (!TryInterpretInt(ref rightVal, right, right.NodeType))
+                        return false;
+
+                    intResult = nodeType switch
+                    {
+                        ExpressionType.Add => intResult + rightVal,
+                        ExpressionType.Subtract => intResult - rightVal,
+                        ExpressionType.Multiply => intResult * rightVal,
+                        ExpressionType.Divide => intResult / rightVal,
+                        ExpressionType.Modulo => intResult % rightVal,
+                        ExpressionType.LeftShift => intResult << rightVal,
+                        ExpressionType.RightShift => intResult >> rightVal,
+                        ExpressionType.And => intResult & rightVal,
+                        ExpressionType.Or => intResult | rightVal,
+                        ExpressionType.ExclusiveOr => intResult ^ rightVal,
+                        ExpressionType.Power => (int)Math.Pow(intResult, rightVal),
+                        _ => UnreachableCase(nodeType, 0),
+                    };
+                    return true;
+                }
+
+                if (nodeType == ExpressionType.Negate)
+                {
+                    var operandExpr = ((UnaryExpression)expr).Operand;
+                    if (operandExpr is ConstantExpression co)
+                    {
+#if LIGHT_EXPRESSION
+                        if (co.RefField != null) return false;
+#endif
+                        intResult = (int)co.Value;
+                    }
+                    else if (!TryInterpretInt(ref intResult, operandExpr, operandExpr.NodeType))
+                        return false;
+
+                    intResult = -intResult;
+                    return true;
+                }
+
+                if (expr is ConstantExpression constExpr)
+                {
+#if LIGHT_EXPRESSION
+                    if (constExpr.RefField != null) return false;
+#endif
+                    intResult = (int)constExpr.Value;
+                    return true;
+                }
+
+                if (nodeType == ExpressionType.Default)
+                {
+                    intResult = 0;
+                    return true;
+                }
+
+                if (nodeType == ExpressionType.Convert)
+                {
+                    var operandExpr = ((UnaryExpression)expr).Operand;
+                    var operandCode = Type.GetTypeCode(operandExpr.Type);
+                    Debug.Assert(operandCode != TypeCode.Boolean,
+                        "Operand may be a decimal but cannot be bool, because there is no conversation from bool to the types in PValue");
+
+                    if (operandCode != TypeCode.Decimal)
+                    {
+                        PValue operandVal = default;
+                        if (operandExpr is ConstantExpression co)
+                        {
+#if LIGHT_EXPRESSION
+                            if (co.RefField != null) return false;
+#endif
+                            UnboxToPrimitiveValue(ref operandVal, co.Value, operandCode);
+                        }
+                        else if (!TryInterpretPrimitiveValue(ref operandVal, operandExpr, operandCode, operandExpr.NodeType))
+                            return false;
+
+                        intResult = operandCode switch
+                        {
+                            TypeCode.Char => operandVal.CharValue,
+                            TypeCode.SByte => operandVal.SByteValue,
+                            TypeCode.Byte => operandVal.ByteValue,
+                            TypeCode.Int16 => operandVal.Int16Value,
+                            TypeCode.UInt16 => operandVal.UInt16Value,
+                            TypeCode.Int32 => operandVal.Int32Value,
+                            TypeCode.UInt32 => (int)operandVal.UInt32Value,
+                            TypeCode.Int64 => (int)operandVal.Int64Value,
+                            TypeCode.UInt64 => (int)operandVal.UInt64Value,
+                            TypeCode.Single => (int)operandVal.SingleValue,
+                            TypeCode.Double => (int)operandVal.DoubleValue,
+                            _ => UnreachableCase(operandCode, 0),
+                        };
+                        return true;
+                    }
+                    // then for the decimal
+                    {
+                        decimal decimalResult = default;
+                        if (operandExpr is ConstantExpression co)
+                        {
+#if LIGHT_EXPRESSION
+                            if (co.RefField != null) return false;
+#endif
+                            decimalResult = (decimal)co.Value;
+                        }
+                        else if (!TryInterpretDecimal(ref decimalResult, operandExpr, operandExpr.NodeType))
+                            return false;
+
+                        intResult = (int)decimalResult;
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            /// <summary>Tries to interpret the expression of the Primitive type of Constant, Convert, Logical, Comparison, Arithmetic.
+            /// Returns `false` if it failed to do so.</summary>
             internal static bool TryInterpretPrimitiveValue(ref PValue result, Expression expr, TypeCode exprCode, ExpressionType nodeType)
             {
                 // What is supported for the non-boolean, non-decimal result
@@ -8360,7 +8561,7 @@ namespace FastExpressionCompiler
                     var left = binaryExpr.Left;
                     var leftCode = Type.GetTypeCode(left.Type);
 
-                    // Optimizing for 80% of the cases, hopefully it is a your case too
+                    // Optimizing for the 80% of the cases, hopefully it is a your case too
                     if (leftCode == TypeCode.Int32)
                     {
                         var leftVal = 0;
@@ -8373,7 +8574,7 @@ namespace FastExpressionCompiler
                         }
                         else
                         {
-                            if (!TryInterpretPrimitiveValue(ref result, left, leftCode, left.NodeType))
+                            if (!TryInterpretInt(ref leftVal, left, left.NodeType))
                                 return false;
                             leftVal = result.Int32Value;
                         }
@@ -8391,10 +8592,8 @@ namespace FastExpressionCompiler
                         {
                             // using the leftCode to interpret the right part of the binary expression, 
                             // because for supported operations left and right types are the same
-                            PValue rightPVal = default;
-                            if (!TryInterpretPrimitiveValue(ref rightPVal, right, leftCode, right.NodeType))
+                            if (!TryInterpretInt(ref rightVal, right, right.NodeType))
                                 return false;
-                            rightVal = rightPVal.Int32Value;
                         }
 
                         leftVal = nodeType switch
