@@ -2110,12 +2110,8 @@ namespace FastExpressionCompiler
                         case ExpressionType.RightShift:
                             {
                                 if ((setup & CompilerFlags.DisableInterpreter) == 0 && exprType.IsPrimitive &&
-                                    Interpreter.TryInterpret_new(out var resultObj, expr)) // todo: @wip @perf remove boxing #472
-                                {
-                                    if ((parent & ParentFlags.IgnoreResult) == 0)
-                                        TryEmitPrimitiveOrEnumOrDecimalConstant(il, resultObj, exprType);
+                                    TryInterpretAndEmitResult(expr, il, parent))
                                     return true;
-                                }
                                 return TryEmitArithmetic(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, nodeType, exprType, paramExprs, il,
                                     ref closure, setup, parent);
                             }
@@ -2131,10 +2127,10 @@ namespace FastExpressionCompiler
                         case ExpressionType.OrElse:
                             {
                                 if ((setup & CompilerFlags.DisableInterpreter) == 0 && exprType.IsPrimitive &&
-                                    Interpreter.TryInterpretBool_new(out var boolResult, expr))
+                                    Interpreter.TryInterpretBool_new(out var resultBool, expr))
                                 {
                                     if ((parent & ParentFlags.IgnoreResult) == 0)
-                                        il.Demit(boolResult ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
+                                        il.Demit(resultBool ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
                                     return true;
                                 }
                                 return TryEmitLogicalOperator((BinaryExpression)expr, nodeType, paramExprs, il, ref closure, setup, parent);
@@ -2142,10 +2138,10 @@ namespace FastExpressionCompiler
                         case ExpressionType.Not:
                             {
                                 if ((setup & CompilerFlags.DisableInterpreter) == 0 && exprType.IsPrimitive &&
-                                    Interpreter.TryInterpretBool_new(out var boolResult, expr))
+                                    Interpreter.TryInterpretBool_new(out var resultBool, expr))
                                 {
                                     if ((parent & ParentFlags.IgnoreResult) == 0)
-                                        il.Demit(boolResult ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
+                                        il.Demit(resultBool ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
                                     return true;
                                 }
                                 return TryEmitNot((UnaryExpression)expr, paramExprs, il, ref closure, setup, parent);
@@ -3619,20 +3615,11 @@ namespace FastExpressionCompiler
                     case TypeCode.Int16:
                         EmitLoadConstantInt(il, (short)constValue);
                         break;
-                    case TypeCode.Int32:
-                        EmitLoadConstantInt(il, (int)constValue);
-                        break;
-                    case TypeCode.Int64:
-                        il.Demit(OpCodes.Ldc_I8, (long)constValue);
-                        break;
-                    case TypeCode.Double:
-                        il.Demit(OpCodes.Ldc_R8, (double)constValue);
-                        break;
-                    case TypeCode.Single:
-                        il.Demit(OpCodes.Ldc_R4, (float)constValue);
-                        break;
                     case TypeCode.UInt16:
                         EmitLoadConstantInt(il, (ushort)constValue);
+                        break;
+                    case TypeCode.Int32:
+                        EmitLoadConstantInt(il, (int)constValue);
                         break;
                     case TypeCode.UInt32:
                         unchecked
@@ -3640,11 +3627,20 @@ namespace FastExpressionCompiler
                             EmitLoadConstantInt(il, (int)(uint)constValue);
                         }
                         break;
+                    case TypeCode.Int64:
+                        il.Demit(OpCodes.Ldc_I8, (long)constValue);
+                        break;
                     case TypeCode.UInt64:
                         unchecked
                         {
                             il.Demit(OpCodes.Ldc_I8, (long)(ulong)constValue);
                         }
+                        break;
+                    case TypeCode.Double:
+                        il.Demit(OpCodes.Ldc_R8, (double)constValue);
+                        break;
+                    case TypeCode.Single:
+                        il.Demit(OpCodes.Ldc_R4, (float)constValue);
                         break;
                     case TypeCode.Decimal:
                         EmitDecimalConstant((decimal)constValue, il);
@@ -6421,6 +6417,98 @@ namespace FastExpressionCompiler
                 else
                     il.Demit(OpCodes.Ldarga, (short)paramIndex);
             }
+
+            /// <summary>Tries to interpret and emit the result IL
+            /// In case of exception return false, to allow FEC emit normally and throw in the invocation phase</summary>
+            public static bool TryInterpretAndEmitResult(Expression expr, ILGenerator il, ParentFlags parent)
+            {
+                var type = expr.Type;
+                Debug.Assert(type.IsPrimitive);
+
+                var typeCode = Type.GetTypeCode(type);
+                try
+                {
+                    switch (typeCode)
+                    {
+                        case TypeCode.Boolean:
+                            var resultBool = false;
+                            if (!Interpreter.TryInterpretBool(ref resultBool, expr, expr.NodeType))
+                                return false;
+                            il.Demit(resultBool ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
+                            break;
+
+                        case TypeCode.Int32:
+                            int resultInt = 0;
+                            if (!Interpreter.TryInterpretInt(ref resultInt, expr, expr.NodeType))
+                                return false;
+                            if ((parent & ParentFlags.IgnoreResult) == 0)
+                                EmitLoadConstantInt(il, resultInt);
+                            break;
+                        case TypeCode.Decimal:
+                            decimal resultDec = default;
+                            if (!Interpreter.TryInterpretDecimal(ref resultDec, expr, expr.NodeType))
+                                return false;
+                            if ((parent & ParentFlags.IgnoreResult) == 0)
+                                EmitDecimalConstant(resultDec, il);
+                            break;
+                        default:
+                            Interpreter.PValue resultVal = default;
+                            if (!Interpreter.TryInterpretPrimitiveValue(ref resultVal, expr, typeCode, expr.NodeType))
+                                return false;
+                            if ((parent & ParentFlags.IgnoreResult) == 0)
+                                switch (typeCode)
+                                {
+                                    case TypeCode.Char:
+                                        EmitLoadConstantInt(il, resultVal.CharValue);
+                                        break;
+                                    case TypeCode.SByte:
+                                        EmitLoadConstantInt(il, resultVal.SByteValue);
+                                        break;
+                                    case TypeCode.Byte:
+                                        EmitLoadConstantInt(il, resultVal.ByteValue);
+                                        break;
+                                    case TypeCode.Int16:
+                                        EmitLoadConstantInt(il, resultVal.Int16Value);
+                                        break;
+                                    case TypeCode.UInt16:
+                                        EmitLoadConstantInt(il, resultVal.UInt16Value);
+                                        break;
+                                    case TypeCode.Int32:
+                                        EmitLoadConstantInt(il, resultVal.Int32Value);
+                                        break;
+                                    case TypeCode.UInt32:
+                                        unchecked
+                                        {
+                                            EmitLoadConstantInt(il, (int)resultVal.UInt32Value);
+                                        }
+                                        break;
+                                    case TypeCode.Int64:
+                                        il.Demit(OpCodes.Ldc_I8, resultVal.Int64Value);
+                                        break;
+                                    case TypeCode.UInt64:
+                                        unchecked
+                                        {
+                                            il.Demit(OpCodes.Ldc_I8, (long)resultVal.UInt64Value);
+                                        }
+                                        break;
+                                    case TypeCode.Single:
+                                        il.Demit(OpCodes.Ldc_R4, resultVal.SingleValue);
+                                        break;
+                                    case TypeCode.Double:
+                                        il.Demit(OpCodes.Ldc_R8, resultVal.DoubleValue);
+                                        break;
+                                    default: Interpreter.UnreachableCase(typeCode); break;
+                                }
+                            break;
+                    }
+                    return true;
+                }
+                catch
+                {
+                    // ignore exception and return the false and rethrow the exception in the invocation time
+                    return false;
+                }
+            }
         }
 
         /// <summary>Interpreter</summary>
@@ -6433,7 +6521,7 @@ namespace FastExpressionCompiler
 
             /// <summary>Return value should be ignored</summary>
             [MethodImpl(MethodImplOptions.NoInlining)]
-            private static void UnreachableCase<T>(T @case,
+            internal static void UnreachableCase<T>(T @case,
                 [CallerMemberName] string caller = "", [CallerLineNumber] int line = -1)
             {
 #if INTERPRETATION_DIAGNOSTICS
@@ -7726,53 +7814,6 @@ namespace FastExpressionCompiler
                 }
                 result = null;
                 return false;
-            }
-
-            /// <summary>Wraps `TryInterpretPrimitive` in the try catch block.
-            /// In case of exception FEC will emit the whole computation to throw exception in the invocation phase</summary>
-            public static bool TryInterpret_new(out object result, Expression expr)
-            {
-                var type = expr.Type;
-                Debug.Assert(type.IsPrimitive);
-
-                var typeCode = Type.GetTypeCode(type);
-                result = null;
-                try
-                {
-                    var ok = false;
-                    switch (typeCode)
-                    {
-                        case TypeCode.Boolean:
-                            var resultBool = false;
-                            ok = TryInterpretBool(ref resultBool, expr, expr.NodeType);
-                            result = resultBool;
-                            break;
-                        case TypeCode.Int32:
-                            int resultInt = 0;
-                            ok = TryInterpretInt(ref resultInt, expr, expr.NodeType);
-                            result = ok ? resultInt : null; // boxing
-                            break;
-                        case TypeCode.Decimal:
-                            decimal resultDec = default;
-                            ok = TryInterpretDecimal(ref resultDec, expr, expr.NodeType);
-                            result = ok ? resultDec : null; // boxing
-                            break;
-                        default:
-                            PValue resultVal = default;
-                            ok = TryInterpretPrimitiveValue(ref resultVal, expr, typeCode, expr.NodeType);
-                            result = ok ? BoxPrimitiveValue(ref resultVal, typeCode) : null;
-                            break;
-                    }
-#if INTERPRETATION_DIAGNOSTICS
-                    if (ok) CollectCallingTestName();
-#endif
-                    return ok;
-                }
-                catch
-                {
-                    // ignore exception and return the false and rethrow the exception in the invocation time
-                    return false;
-                }
             }
 
             /// <summary>Wraps `TryInterpretPrimitive` in the try catch block.
