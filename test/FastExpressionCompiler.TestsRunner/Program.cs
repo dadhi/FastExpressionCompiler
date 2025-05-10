@@ -12,8 +12,10 @@ namespace FastExpressionCompiler.UnitTests
         public static void Main()
         {
             var t = new LightExpression.TestRun();
-            t.Run(new LightExpression.IssueTests.Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_expressions_during_the_compilation());
+
             t.Run(new LightExpression.IssueTests.Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET());
+
+            t.Run(new LightExpression.IssueTests.Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_expressions_during_the_compilation());
 
             // new Issue55_CompileFast_crash_with_ref_parameter().Run();
 
@@ -402,17 +404,6 @@ namespace FastExpressionCompiler.UnitTests
                 return;
             }
 
-#if INTERPRETATION_DIAGNOSTICS
-            var tests = ExpressionCompiler.Interpreter.UsedInTests;
-            Console.WriteLine($"INTERPRETATION_DIAGNOSTICS {tests.Count} tests used the interpretation:");
-            Console.WriteLine();
-            var i = tests.Count;
-            foreach (var test in tests)
-            {
-                Console.WriteLine($"{i--}. {test}");
-            }
-            Console.WriteLine();
-#endif
             Console.WriteLine($"ALL {totalTestsPassed,-4} tests are passing in {sw.ElapsedMilliseconds} ms.");
         }
     }

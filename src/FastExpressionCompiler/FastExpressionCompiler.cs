@@ -1201,13 +1201,6 @@ namespace FastExpressionCompiler
                 {
                     case ExpressionType.Constant:
 #if LIGHT_EXPRESSION
-                        if (((ConstantExpression)expr).RefField != null)
-                        {
-                            // Register the constant expression itself in the closure
-                            closure.AddConstantOrIncrementUsageCount(expr);
-                            return Result.OK;
-                        }
-
                         if (expr == NullConstant | expr == FalseConstant | expr == TrueConstant || expr is IntConstantExpression)
                             return r;
 #endif
@@ -3461,14 +3454,7 @@ namespace FastExpressionCompiler
             {
                 var ok = false;
 #if LIGHT_EXPRESSION
-                var refField = expr.RefField;
-                if (refField != null)
-                {
-                    Debug.Assert(closure.ContainsConstantsOrNestedLambdas());
-                    ok = TryEmitConstant(true, null, null, expr, il, ref closure, byRefIndex, refField);
-                    if (!ok) return false;
-                }
-                else if (expr == NullConstant)
+                if (expr == NullConstant)
                 {
                     il.Demit(OpCodes.Ldnull);
                     ok = true;
@@ -3716,22 +3702,7 @@ namespace FastExpressionCompiler
                         var constType = constValue.GetType();
                         if (constType.IsValueType)
                             il.Demit(OpCodes.Unbox_Any, constType);
-#if LIGHT_EXPRESSION
-                        else if (constValue is ConstantExpression ce)
-                        {
-                            var refField = ce.RefField;
-                            if (refField != null)
-                            {
-                                il.Demit(OpCodes.Ldfld, refField);
-                                if (refField.FieldType == typeof(object))
-                                {
-                                    var refValueType = ce.Value.GetType();
-                                    if (refValueType.IsValueType)
-                                        il.Demit(OpCodes.Unbox_Any, refValueType);
-                                }
-                            }
-                        }
-#endif
+
                         varIndex = (short)il.GetNextLocalVarIndex(constType);
                         constUsage = (short)(varIndex + 1); // to distinguish from the default 1
                         EmitStoreLocalVariable(il, varIndex);
@@ -7743,7 +7714,6 @@ namespace FastExpressionCompiler
             }
 
 #if INTERPRETATION_DIAGNOSTICS
-            public static readonly System.Collections.Concurrent.ConcurrentStack<string> UsedInTests = new();
 
             [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Used in diagnostics only")]
             [UnconditionalSuppressMessage("Trimming", "IL2075:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Used in diagnostics only")]
@@ -7777,7 +7747,6 @@ namespace FastExpressionCompiler
                     {
                         found = true;
                         Console.WriteLine($"Interpretation in: {type.Name}.{method.Name}");
-                        UsedInTests.Push($"{type.Name}.{method.Name}");
                         break; // collect the first found thing in stack trace
                     }
                 }
@@ -7786,7 +7755,6 @@ namespace FastExpressionCompiler
                 {
                     var methodTrace = string.Join("; ", frames.Skip(3).Select(f => f.GetMethod().Name).ToArray());
                     Console.WriteLine($"Interpretation in: not found in stack trace: {methodTrace}");
-                    UsedInTests.Push($"Interpretation in: not found in stack trace: {methodTrace}");
                 }
             }
 #endif
@@ -7877,9 +7845,6 @@ namespace FastExpressionCompiler
                     var operandExpr = ((UnaryExpression)expr).Operand;
                     if (operandExpr is ConstantExpression co)
                     {
-#if LIGHT_EXPRESSION
-                        if (co.RefField != null) return false;
-#endif
                         SetBoolean(ref value, (bool)co.Value);
                     }
                     else if (!TryInterpretPrimitive(ref value, operandExpr))
@@ -7898,9 +7863,6 @@ namespace FastExpressionCompiler
                     var left = binaryExpr.Left;
                     if (left is ConstantExpression lc)
                     {
-#if LIGHT_EXPRESSION
-                        if (lc.RefField != null) return false;
-#endif
                         SetBoolean(ref value, (bool)lc.Value);
                     }
                     else if (!TryInterpretPrimitive(ref value, left))
@@ -7916,9 +7878,6 @@ namespace FastExpressionCompiler
                     var right = binaryExpr.Right;
                     if (right is ConstantExpression rc)
                     {
-#if LIGHT_EXPRESSION
-                        if (rc.RefField != null) return false;
-#endif
                         value.BooleanValue = (bool)rc.Value;
                         return true;
                     }
@@ -7934,9 +7893,6 @@ namespace FastExpressionCompiler
                     var left = binaryExpr.Left;
                     if (left is ConstantExpression lc)
                     {
-#if LIGHT_EXPRESSION
-                        if (lc.RefField != null) return false;
-#endif
                         UnboxToValue(ref value, lc.Value);
                     }
                     else if (!TryInterpretPrimitive(ref value, left))
@@ -7947,9 +7903,6 @@ namespace FastExpressionCompiler
                     UValue rightVal = default;
                     if (right is ConstantExpression rc)
                     {
-#if LIGHT_EXPRESSION
-                        if (rc.RefField != null) return false;
-#endif
                         UnboxToValue(ref rightVal, rc.Value);
                     }
                     else if (!TryInterpretPrimitive(ref rightVal, right))
@@ -7967,9 +7920,6 @@ namespace FastExpressionCompiler
                     var operandExpr = ((UnaryExpression)expr).Operand;
                     if (operandExpr is ConstantExpression co)
                     {
-#if LIGHT_EXPRESSION
-                        if (co.RefField != null) return false;
-#endif
                         UnboxToValue(ref value, co.Value);
                     }
                     else if (!TryInterpretPrimitive(ref value, operandExpr))
@@ -7981,9 +7931,6 @@ namespace FastExpressionCompiler
 
                 if (expr is ConstantExpression constExpr)
                 {
-#if LIGHT_EXPRESSION
-                    if (constExpr.RefField != null) return false;
-#endif
                     UnboxToValue(ref value, constExpr.Value);
                     return true;
                 }
@@ -7999,9 +7946,6 @@ namespace FastExpressionCompiler
                     var operandExpr = ((UnaryExpression)expr).Operand;
                     if (operandExpr is ConstantExpression co)
                     {
-#if LIGHT_EXPRESSION
-                        if (co.RefField != null) return false;
-#endif
                         UnboxToValue(ref value, co.Value);
                     }
                     else if (!TryInterpretPrimitive(ref value, operandExpr))
@@ -8025,12 +7969,7 @@ namespace FastExpressionCompiler
                 {
                     var operandExpr = ((UnaryExpression)expr).Operand;
                     if (operandExpr is ConstantExpression co)
-                    {
-#if LIGHT_EXPRESSION
-                        if (co.RefField != null) return false;
-#endif
                         resultBool = (bool)co.Value;
-                    }
                     else if (!TryInterpretBool(ref resultBool, operandExpr, operandExpr.NodeType))
                         return false;
 
@@ -8046,12 +7985,7 @@ namespace FastExpressionCompiler
                     // Interpreting the left part as the first candidate for the result
                     var left = binaryExpr.Left;
                     if (left is ConstantExpression lc)
-                    {
-#if LIGHT_EXPRESSION
-                        if (lc.RefField != null) return false;
-#endif
                         resultBool = (bool)lc.Value;
-                    }
                     else if (!TryInterpretBool(ref resultBool, left, left.NodeType))
                         return false;
 
@@ -8064,9 +7998,6 @@ namespace FastExpressionCompiler
                     var right = binaryExpr.Right;
                     if (right is ConstantExpression rc)
                     {
-#if LIGHT_EXPRESSION
-                        if (rc.RefField != null) return false;
-#endif
                         resultBool = (bool)rc.Value;
                         return true;
                     }
@@ -8084,23 +8015,13 @@ namespace FastExpressionCompiler
                     {
                         var leftBool = false;
                         if (left is ConstantExpression lc)
-                        {
-#if LIGHT_EXPRESSION
-                            if (lc.RefField != null) return false;
-#endif
                             leftBool = (bool)lc.Value;
-                        }
                         else if (!TryInterpretBool(ref leftBool, left, left.NodeType))
                             return false;
 
                         var rightBool = false;
                         if (right is ConstantExpression rc)
-                        {
-#if LIGHT_EXPRESSION
-                            if (rc.RefField != null) return false;
-#endif
                             rightBool = (bool)rc.Value;
-                        }
                         else if (!TryInterpretBool(ref rightBool, right, right.NodeType))
                             return false;
 
@@ -8111,23 +8032,13 @@ namespace FastExpressionCompiler
                     {
                         var leftInt = 0;
                         if (left is ConstantExpression lc)
-                        {
-#if LIGHT_EXPRESSION
-                            if (lc.RefField != null) return false;
-#endif
                             leftInt = (int)lc.Value;
-                        }
                         else if (!TryInterpretInt(ref leftInt, left, left.NodeType))
                             return false;
 
                         var rightInt = 0;
                         if (right is ConstantExpression rc)
-                        {
-#if LIGHT_EXPRESSION
-                            if (rc.RefField != null) return false;
-#endif
                             rightInt = (int)rc.Value;
-                        }
                         else if (!TryInterpretInt(ref rightInt, right, right.NodeType))
                             return false;
 
@@ -8138,23 +8049,13 @@ namespace FastExpressionCompiler
                     {
                         decimal decimalLeft = default;
                         if (left is ConstantExpression lc)
-                        {
-#if LIGHT_EXPRESSION
-                            if (lc.RefField != null) return false;
-#endif
                             decimalLeft = (decimal)lc.Value;
-                        }
                         else if (!TryInterpretDecimal(ref decimalLeft, left, left.NodeType))
                             return false;
 
                         decimal rightDec = default;
                         if (right is ConstantExpression rc)
-                        {
-#if LIGHT_EXPRESSION
-                            if (rc.RefField != null) return false;
-#endif
                             rightDec = (decimal)rc.Value;
-                        }
                         else if (!TryInterpretDecimal(ref rightDec, right, right.NodeType))
                             return false;
 
@@ -8165,23 +8066,13 @@ namespace FastExpressionCompiler
                     {
                         PValue leftVal = default;
                         if (left is ConstantExpression lc)
-                        {
-#if LIGHT_EXPRESSION
-                            if (lc.RefField != null) return false;
-#endif
                             UnboxToPrimitiveValue(ref leftVal, lc.Value, leftCode);
-                        }
                         else if (!TryInterpretPrimitiveValue(ref leftVal, left, leftCode, left.NodeType))
                             return false;
 
                         PValue rightVal = default;
                         if (right is ConstantExpression rc)
-                        {
-#if LIGHT_EXPRESSION
-                            if (rc.RefField != null) return false;
-#endif
                             UnboxToPrimitiveValue(ref rightVal, rc.Value, leftCode);
-                        }
                         else if (!TryInterpretPrimitiveValue(ref rightVal, right, leftCode, right.NodeType))
                             return false;
 
@@ -8220,23 +8111,13 @@ namespace FastExpressionCompiler
                     {
                         int intLeft = 0;
                         if (left is ConstantExpression lc)
-                        {
-#if LIGHT_EXPRESSION
-                            if (lc.RefField != null) return false;
-#endif
                             intLeft = (int)lc.Value;
-                        }
                         else if (!TryInterpretInt(ref intLeft, left, left.NodeType))
                             return false;
 
                         int rightInt = 0;
                         if (right is ConstantExpression rc)
-                        {
-#if LIGHT_EXPRESSION
-                            if (rc.RefField != null) return false;
-#endif
                             rightInt = (int)rc.Value;
-                        }
                         else if (!TryInterpretInt(ref rightInt, right, right.NodeType))
                             return false;
 
@@ -8254,23 +8135,13 @@ namespace FastExpressionCompiler
                     {
                         decimal leftDec = default;
                         if (left is ConstantExpression lc)
-                        {
-#if LIGHT_EXPRESSION
-                            if (lc.RefField != null) return false;
-#endif
                             leftDec = (decimal)lc.Value;
-                        }
                         else if (!TryInterpretDecimal(ref leftDec, left, left.NodeType))
                             return false;
 
                         decimal rightDec = default;
                         if (right is ConstantExpression rc)
-                        {
-#if LIGHT_EXPRESSION
-                            if (rc.RefField != null) return false;
-#endif
                             rightDec = (decimal)rc.Value;
-                        }
                         else if (!TryInterpretDecimal(ref rightDec, right, right.NodeType))
                             return false;
 
@@ -8288,23 +8159,13 @@ namespace FastExpressionCompiler
                     {
                         PValue leftVal = default;
                         if (left is ConstantExpression lc)
-                        {
-#if LIGHT_EXPRESSION
-                            if (lc.RefField != null) return false;
-#endif
                             UnboxToPrimitiveValue(ref leftVal, lc.Value, leftCode);
-                        }
                         else if (!TryInterpretPrimitiveValue(ref leftVal, left, leftCode, left.NodeType))
                             return false;
 
                         PValue rightVal = default;
                         if (right is ConstantExpression rc)
-                        {
-#if LIGHT_EXPRESSION
-                            if (rc.RefField != null) return false;
-#endif
                             UnboxToPrimitiveValue(ref rightVal, rc.Value, leftCode);
-                        }
                         else if (!TryInterpretPrimitiveValue(ref rightVal, right, leftCode, right.NodeType))
                             return false;
 
@@ -8315,9 +8176,6 @@ namespace FastExpressionCompiler
 
                 if (expr is ConstantExpression constExpr)
                 {
-#if LIGHT_EXPRESSION
-                    if (constExpr.RefField != null) return false;
-#endif
                     resultBool = (bool)constExpr.Value;
                     return true;
                 }
@@ -8343,24 +8201,14 @@ namespace FastExpressionCompiler
                     var binaryExpr = (BinaryExpression)expr;
                     var left = binaryExpr.Left;
                     if (left is ConstantExpression lc)
-                    {
-#if LIGHT_EXPRESSION
-                        if (lc.RefField != null) return false;
-#endif
                         resultDec = (decimal)lc.Value;
-                    }
                     else if (!TryInterpretDecimal(ref resultDec, left, left.NodeType))
                         return false;
 
                     decimal rightDec = default;
                     var right = binaryExpr.Right;
                     if (right is ConstantExpression rc)
-                    {
-#if LIGHT_EXPRESSION
-                        if (rc.RefField != null) return false;
-#endif
                         rightDec = (decimal)rc.Value;
-                    }
                     else if (!TryInterpretDecimal(ref rightDec, right, right.NodeType))
                         return false;
 
@@ -8380,12 +8228,7 @@ namespace FastExpressionCompiler
                 {
                     var operandExpr = ((UnaryExpression)expr).Operand;
                     if (operandExpr is ConstantExpression co)
-                    {
-#if LIGHT_EXPRESSION
-                        if (co.RefField != null) return false;
-#endif
                         resultDec = (decimal)co.Value;
-                    }
                     else if (!TryInterpretDecimal(ref resultDec, operandExpr, operandExpr.NodeType))
                         return false;
 
@@ -8395,9 +8238,6 @@ namespace FastExpressionCompiler
 
                 if (expr is ConstantExpression constExpr)
                 {
-#if LIGHT_EXPRESSION
-                    if (constExpr.RefField != null) return false;
-#endif
                     resultDec = (decimal)constExpr.Value;
                     return true;
                 }
@@ -8417,12 +8257,7 @@ namespace FastExpressionCompiler
 
                     PValue operandVal = default;
                     if (operandExpr is ConstantExpression co)
-                    {
-#if LIGHT_EXPRESSION
-                        if (co.RefField != null) return false;
-#endif
                         UnboxToPrimitiveValue(ref operandVal, co.Value, operandCode);
-                    }
                     else if (!TryInterpretPrimitiveValue(ref operandVal, operandExpr, operandCode, operandExpr.NodeType))
                         return false;
 
@@ -8457,24 +8292,14 @@ namespace FastExpressionCompiler
                     var binaryExpr = (BinaryExpression)expr;
                     var left = binaryExpr.Left;
                     if (left is ConstantExpression lc)
-                    {
-#if LIGHT_EXPRESSION
-                        if (lc.RefField != null) return false;
-#endif
                         resultInt = (int)lc.Value;
-                    }
                     else if (!TryInterpretInt(ref resultInt, left, left.NodeType))
                         return false;
 
                     int rightVal = 0;
                     var right = binaryExpr.Right;
                     if (right is ConstantExpression rc)
-                    {
-#if LIGHT_EXPRESSION
-                        if (rc.RefField != null) return false;
-#endif
                         rightVal = (int)rc.Value;
-                    }
                     else if (!TryInterpretInt(ref rightVal, right, right.NodeType))
                         return false;
 
@@ -8500,12 +8325,7 @@ namespace FastExpressionCompiler
                 {
                     var operandExpr = ((UnaryExpression)expr).Operand;
                     if (operandExpr is ConstantExpression co)
-                    {
-#if LIGHT_EXPRESSION
-                        if (co.RefField != null) return false;
-#endif
                         resultInt = (int)co.Value;
-                    }
                     else if (!TryInterpretInt(ref resultInt, operandExpr, operandExpr.NodeType))
                         return false;
 
@@ -8515,9 +8335,6 @@ namespace FastExpressionCompiler
 
                 if (expr is ConstantExpression constExpr)
                 {
-#if LIGHT_EXPRESSION
-                    if (constExpr.RefField != null) return false;
-#endif
                     resultInt = (int)constExpr.Value;
                     return true;
                 }
@@ -8539,12 +8356,7 @@ namespace FastExpressionCompiler
                     {
                         PValue operandVal = default;
                         if (operandExpr is ConstantExpression co)
-                        {
-#if LIGHT_EXPRESSION
-                            if (co.RefField != null) return false;
-#endif
                             UnboxToPrimitiveValue(ref operandVal, co.Value, operandCode);
-                        }
                         else if (!TryInterpretPrimitiveValue(ref operandVal, operandExpr, operandCode, operandExpr.NodeType))
                             return false;
 
@@ -8569,12 +8381,7 @@ namespace FastExpressionCompiler
                     {
                         decimal resultDec = default;
                         if (operandExpr is ConstantExpression co)
-                        {
-#if LIGHT_EXPRESSION
-                            if (co.RefField != null) return false;
-#endif
                             resultDec = (decimal)co.Value;
-                        }
                         else if (!TryInterpretDecimal(ref resultDec, operandExpr, operandExpr.NodeType))
                             return false;
 
@@ -8598,24 +8405,14 @@ namespace FastExpressionCompiler
                     var left = binaryExpr.Left;
                     var leftCode = Type.GetTypeCode(left.Type);
                     if (left is ConstantExpression lc)
-                    {
-#if LIGHT_EXPRESSION
-                        if (lc.RefField != null) return false;
-#endif
                         UnboxToPrimitiveValue(ref result, lc.Value, leftCode);
-                    }
                     else if (!TryInterpretPrimitiveValue(ref result, left, leftCode, left.NodeType))
                         return false;
 
                     PValue rightVal = default;
                     var right = binaryExpr.Right;
                     if (right is ConstantExpression rc)
-                    {
-#if LIGHT_EXPRESSION
-                        if (rc.RefField != null) return false;
-#endif
                         UnboxToPrimitiveValue(ref rightVal, rc.Value, leftCode);
-                    }
                     else
                     {
                         // using the leftCode to interpret the right part of the binary expression, 
@@ -8633,12 +8430,7 @@ namespace FastExpressionCompiler
                     var operandExpr = ((UnaryExpression)expr).Operand;
                     var operandCode = Type.GetTypeCode(operandExpr.Type);
                     if (operandExpr is ConstantExpression co)
-                    {
-#if LIGHT_EXPRESSION
-                        if (co.RefField != null) return false;
-#endif
                         UnboxToPrimitiveValue(ref result, co.Value, operandCode);
-                    }
                     else if (!TryInterpretPrimitiveValue(ref result, operandExpr, operandCode, operandExpr.NodeType))
                         return false;
 
@@ -8648,9 +8440,6 @@ namespace FastExpressionCompiler
 
                 if (expr is ConstantExpression constExpr)
                 {
-#if LIGHT_EXPRESSION
-                    if (constExpr.RefField != null) return false;
-#endif
                     UnboxToPrimitiveValue(ref result, constExpr.Value, exprCode);
                     return true;
                 }
@@ -8671,12 +8460,7 @@ namespace FastExpressionCompiler
                     if (operandCode != TypeCode.Decimal)
                     {
                         if (operandExpr is ConstantExpression co)
-                        {
-#if LIGHT_EXPRESSION
-                            if (co.RefField != null) return false;
-#endif
                             UnboxToPrimitiveValue(ref result, co.Value, operandCode);
-                        }
                         else if (!TryInterpretPrimitiveValue(ref result, operandExpr, operandCode, operandExpr.NodeType))
                             return false;
 
@@ -8688,12 +8472,7 @@ namespace FastExpressionCompiler
                     {
                         decimal operandDec = default;
                         if (operandExpr is ConstantExpression co)
-                        {
-#if LIGHT_EXPRESSION
-                            if (co.RefField != null) return false;
-#endif
                             operandDec = (decimal)co.Value;
-                        }
                         else if (!TryInterpretDecimal(ref operandDec, operandExpr, operandExpr.NodeType))
                             return false;
 
