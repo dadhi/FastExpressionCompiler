@@ -199,7 +199,9 @@ public abstract class Expression
     public static Expression ConstantRef<T>(T value, out ValueRef<T> valueRef)
     {
         valueRef = new ValueRef<T>(value);
-        return new InstanceFieldExpression(new ValueConstantExpression<T>(valueRef), ValueRef<T>.ValueField);
+
+        // todo: @perf try the intrinsic?
+        return new InstanceFieldExpression(new ValueConstantExpression<ValueRef<T>>(valueRef), ValueRef<T>.ValueField);
     }
 
     /// <summary>Avoids the boxing for all (two) bool values</summary>
@@ -3879,7 +3881,7 @@ public sealed class ValueConstantExpression<T> : ConstantExpression
     // Note: the Value is specifically an object despite possibility of strongly typed T, because this way it will be a single boxing.
     // Otherwise even using the typed `T _value`, it will be boxed multiple times through its `object Value` accessor.
     public override object Value { get; }
-    internal ValueConstantExpression(object value) => Value = value;
+    internal ValueConstantExpression(T value) => Value = value;
 }
 
 public sealed class TypedValueConstantExpression : ConstantExpression

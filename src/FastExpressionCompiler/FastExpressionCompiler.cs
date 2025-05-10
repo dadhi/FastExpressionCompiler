@@ -4102,7 +4102,7 @@ namespace FastExpressionCompiler
                         var paramIndex = -1;
                         var localVarIndex = closure.GetDefinedLocalVarOrDefault(p);
                         if (localVarIndex != -1)
-                            EmitLoadLocalVariable(il, localVarIndex); // todo: @wip #346
+                            EmitLoadLocalVariable(il, localVarIndex);
                         else
                         {
                             paramIndex = paramExprCount - 1;
