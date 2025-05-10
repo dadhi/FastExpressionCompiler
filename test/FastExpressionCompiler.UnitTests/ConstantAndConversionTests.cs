@@ -19,11 +19,8 @@ public class ConstantAndConversionTests : ITest
         Issue464_Bound_closure_constants_can_be_modified_afterwards();
         Issue465_The_primitive_constant_can_be_configured_to_put_in_closure();
         Issue466_The_constant_may_be_referenced_multiple_times();
-        Issue466_The_constant_may_be_loosely_defined_with_runtime_type();
-        Issue466_The_constant_may_be_loosely_defined_with_runtime_type_and_used_multiple_times();
 #endif
         The_constant_changing_in_a_loop();
-
         Expressions_with_small_long_casts_should_not_crash();
         Expressions_with_larger_long_casts_should_not_crash();
         Expressions_with_long_constants_and_casts();
@@ -39,7 +36,7 @@ public class ConstantAndConversionTests : ITest
         Expressions_with_char_and_short();
         Can_use_constant_of_byte_Enum_type();
         Can_return_constant();
-        return 16;
+        return 18;
     }
 
     public void Expressions_with_small_long_casts_should_not_crash()
@@ -148,8 +145,8 @@ public class ConstantAndConversionTests : ITest
 
     public void Issue464_Bound_closure_constants_can_be_modified_afterwards()
     {
-        var foo = ConstantRef(new Foo<int> { Value = 43 });
-        var expr = Lambda<Func<int>>(Field(foo, nameof(Foo<int>.Value)));
+        var foo = new Foo<int> { Value = 43 };
+        var expr = Lambda<Func<int>>(Field(Constant(foo), nameof(Foo<int>.Value)));
         expr.PrintCSharp();
 
         var fs = expr.CompileFast(true);
@@ -157,14 +154,13 @@ public class ConstantAndConversionTests : ITest
 
         Asserts.AreEqual(43, fs());
 
-        foo.ValueRef = new Foo<int> { Value = 45 };
+        foo.Value = 45;
         Asserts.AreEqual(45, fs());
     }
 
     public void Issue465_The_primitive_constant_can_be_configured_to_put_in_closure()
     {
-        var n = ConstantRef(16);
-        var expr = Lambda<Func<int>>(n);
+        var expr = Lambda<Func<int>>(ConstantRef(16, out var n));
         expr.PrintCSharp();
 
         var fs = expr.CompileFast(true);
@@ -172,14 +168,14 @@ public class ConstantAndConversionTests : ITest
 
         Asserts.AreEqual(16, fs());
 
-        n.ValueRef = 45; // <-- WIN!
+        n.Value = 45; // <-- WIN!
         Asserts.AreEqual(45, fs());
     }
 
     public void Issue466_The_constant_may_be_referenced_multiple_times()
     {
-        var n = ConstantRef(16);
-        var expr = Lambda<Func<int>>(Add(n, n));
+        var nExpr = ConstantRef(16, out var n);
+        var expr = Lambda<Func<int>>(Add(nExpr, nExpr));
         expr.PrintCSharp();
 
         var fs = expr.CompileFast(true);
@@ -187,51 +183,21 @@ public class ConstantAndConversionTests : ITest
 
         Asserts.AreEqual(32, fs());
 
-        n.ValueRef = 45;
-        Asserts.AreEqual(90, fs());
-    }
-
-    public void Issue466_The_constant_may_be_loosely_defined_with_runtime_type()
-    {
-        var n = ConstantRef(16, typeof(int));
-        var expr = Lambda<Func<int>>(Add(n, Constant(1)));
-        expr.PrintCSharp();
-
-        var fs = expr.CompileFast(true);
-        fs.PrintIL();
-
-        Asserts.AreEqual(17, fs());
-
-        n.ValueRef = 45;
-        Asserts.AreEqual(46, fs());
-    }
-
-    public void Issue466_The_constant_may_be_loosely_defined_with_runtime_type_and_used_multiple_times()
-    {
-        var n = ConstantRef(16, typeof(int));
-        var expr = Lambda<Func<int>>(Add(n, n));
-        expr.PrintCSharp();
-
-        var fs = expr.CompileFast(true);
-        fs.PrintIL();
-
-        Asserts.AreEqual(32, fs());
-
-        n.ValueRef = 45; // <-- WIN!
+        n.Value = 45;
         Asserts.AreEqual(90, fs());
     }
 
     public void Issue457_The_constant_changing_in_a_loop_without_recompilation()
     {
         var sw = Stopwatch.StartNew();
-        var refConst = ConstantRef(0);
+        var refConst = ConstantRef(0, out var val);
         var blockExpr = Block(refConst);
         var lambda = Lambda<Func<int>>(blockExpr);
         var fastCompiled = lambda.CompileFast(true);
 
         for (int n = -200; n < 200; n++)
         {
-            refConst.ValueRef = n;
+            val.Value = n;
             Asserts.AreEqual(n, fastCompiled());
         }
 

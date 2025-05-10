@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFrameworks Condition=" '$(LatestSupportedNet)' == 'net9.0' ">net472;net9.0;net8.0;net6.0</TargetFrameworks>
+        <TargetFrameworks Condition="'$(DevMode)' != 'true'">net472;net6.0;net8.0;net9.0</TargetFrameworks>
+        <TargetFrameworks Condition="'$(DevMode)' == 'true'">net472;net9.0</TargetFrameworks>
 
         <DefineConstants>LIGHT_EXPRESSION</DefineConstants>
     </PropertyGroup>
@@ -19,7 +20,7 @@
         <ProjectReference Include="..\FastExpressionCompiler.LightExpression.UnitTests\FastExpressionCompiler.LightExpression.UnitTests.csproj" />
     </ItemGroup>
 
-    <ItemGroup Condition="'$(TargetFramework)' == '$(LatestNet)' ">
+    <ItemGroup Condition="'$(TargetFramework)' == 'net9.0' ">
         <PackageReference Include="Mapster" Version="7.4.1-pre01" />
     </ItemGroup>
 

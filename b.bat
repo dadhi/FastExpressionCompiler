@@ -1,13 +1,19 @@
 @echo off
 
-echo: 
-echo:## Starting: TESTS...
 echo:
-
-dotnet run -c:Release -f:net9.0 --project test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
+echo:## Starting BUILD...
+echo: 
+dotnet build -p:DevMode=true -v:m -c:Release
 if %ERRORLEVEL% neq 0 goto :error
 
-dotnet run -c:Release --project test/FastExpressionCompiler.TestsRunner.Net472
+echo: 
+echo:## Starting TESTS...
+echo:
+
+dotnet run --no-build -p:DevMode=true -f:net9.0 -c:Release --project test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
+if %ERRORLEVEL% neq 0 goto :error
+
+dotnet run --no-build -p:DevMode=true -c:Release --project test/FastExpressionCompiler.TestsRunner.Net472
 if %ERRORLEVEL% neq 0 goto :error
 
 echo:

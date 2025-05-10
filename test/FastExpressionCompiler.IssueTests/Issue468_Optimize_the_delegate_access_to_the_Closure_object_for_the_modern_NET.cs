@@ -14,8 +14,8 @@ public struct Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_th
 {
     public void Run(TestRun t)
     {
-        Original_expression(t);
         Original_expression_with_closure(t);
+        Original_expression(t);
     }
 
     // Exposing for the benchmarking
@@ -40,7 +40,7 @@ public struct Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_th
             e[8] = MakeBinary(ExpressionType.Equal,
                 e[9] = Constant(42),
 #if LIGHT_EXPRESSION
-                e[10] = !addClosure ? Constant(42) : ConstantRef(42)
+                e[10] = !addClosure ? Constant(42) : ConstantRef(42, out _)
 #else
                 e[10] = Constant(42)
 #endif
