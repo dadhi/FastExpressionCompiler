@@ -496,10 +496,9 @@ namespace FastExpressionCompiler
         {
 #endif
             // Try to avoid compilation altogether for Func<bool> delegates via Interpreter, see #468
-            if ((flags & CompilerFlags.DisableInterpreter) == 0 &
-                returnType == typeof(bool) & closurePlusParamTypes.Length == 1
+            if (returnType == typeof(bool) & closurePlusParamTypes.Length == 1
                 && Interpreter.IsCandidateForInterpretation(bodyExpr)
-                && Interpreter.TryInterpretBool_new(out var result, bodyExpr))
+                && Interpreter.TryInterpretBool_new(out var result, bodyExpr, flags))
                 return result ? Interpreter.TrueFunc : Interpreter.FalseFunc;
 
             // The method collects the info from the all nested lambdas deep down up-front and de-duplicates the lambdas as well.
@@ -2081,8 +2080,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.Equal:
                         case ExpressionType.NotEqual:
                             {
-                                if ((setup & CompilerFlags.DisableInterpreter) == 0 && exprType.IsPrimitive &&
-                                    Interpreter.TryInterpretBool_new(out var boolResult, expr))
+                                if (exprType.IsPrimitive && Interpreter.TryInterpretBool_new(out var boolResult, expr, setup))
                                 {
                                     if ((parent & ParentFlags.IgnoreResult) == 0)
                                         il.Demit(boolResult ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
@@ -2102,8 +2100,8 @@ namespace FastExpressionCompiler
                         case ExpressionType.LeftShift:
                         case ExpressionType.RightShift:
                             {
-                                return (setup & CompilerFlags.DisableInterpreter) == 0 && exprType.IsPrimitive
-                                    && TryInterpretAndEmitResult(expr, il, parent)
+                                return exprType.IsPrimitive
+                                    && TryInterpretAndEmitResult(expr, il, parent, setup)
                                     || TryEmitArithmetic(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, nodeType, exprType, paramExprs, il,
                                         ref closure, setup, parent);
                             }
@@ -2118,8 +2116,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.AndAlso:
                         case ExpressionType.OrElse:
                             {
-                                if ((setup & CompilerFlags.DisableInterpreter) == 0 && exprType.IsPrimitive &&
-                                    Interpreter.TryInterpretBool_new(out var resultBool, expr))
+                                if (exprType.IsPrimitive && Interpreter.TryInterpretBool_new(out var resultBool, expr, setup))
                                 {
                                     if ((parent & ParentFlags.IgnoreResult) == 0)
                                         il.Demit(resultBool ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
@@ -2129,8 +2126,7 @@ namespace FastExpressionCompiler
                             }
                         case ExpressionType.Not:
                             {
-                                if ((setup & CompilerFlags.DisableInterpreter) == 0 && exprType.IsPrimitive &&
-                                    Interpreter.TryInterpretBool_new(out var resultBool, expr))
+                                if (exprType.IsPrimitive && Interpreter.TryInterpretBool_new(out var resultBool, expr, setup))
                                 {
                                     if ((parent & ParentFlags.IgnoreResult) == 0)
                                         il.Demit(resultBool ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
@@ -5955,7 +5951,7 @@ namespace FastExpressionCompiler
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
                 // Try emit a single side of the condition based on the interpreted condition value
-                if (Interpreter.TryInterpretBool_new(out var testIsTrue, testExpr))
+                if (Interpreter.TryInterpretBool_new(out var testIsTrue, testExpr, setup))
                     return testIsTrue
                         ? TryEmit(ifTrueExpr, paramExprs, il, ref closure, setup, parent)
                         : TryEmit(ifFalseExpr, paramExprs, il, ref closure, setup, parent);
@@ -6396,10 +6392,12 @@ namespace FastExpressionCompiler
 
             /// <summary>Tries to interpret and emit the result IL
             /// In case of exception return false, to allow FEC emit normally and throw in the invocation phase</summary>
-            public static bool TryInterpretAndEmitResult(Expression expr, ILGenerator il, ParentFlags parent)
+            public static bool TryInterpretAndEmitResult(Expression expr, ILGenerator il, ParentFlags parent, CompilerFlags flags)
             {
                 var type = expr.Type;
                 Debug.Assert(type.IsPrimitive);
+                if ((flags & CompilerFlags.DisableInterpreter) != 0)
+                    return false;
 
                 var typeCode = Type.GetTypeCode(type);
                 try
@@ -7819,10 +7817,12 @@ namespace FastExpressionCompiler
 
             /// <summary>Wraps `TryInterpretPrimitive` in the try catch block.
             /// In case of exception FEC will emit the whole computation to throw exception in the invocation phase</summary>
-            public static bool TryInterpretBool_new(out bool result, Expression expr)
+            public static bool TryInterpretBool_new(out bool result, Expression expr, CompilerFlags flags)
             {
                 Debug.Assert(expr.Type.IsPrimitive);
                 result = false;
+                if ((flags & CompilerFlags.DisableInterpreter) != 0)
+                    return false;
                 try
                 {
                     var ok = TryInterpretBool(ref result, expr, expr.NodeType);
