@@ -34,8 +34,12 @@ public struct Issue473_InvalidProgramException_when_using_Expression_Condition_w
         fs.PrintIL();
         t.AreEqual(3, fs());
 
-        var ff = expr.CompileFast(false);
+        var ff = expr.CompileFast(false, CompilerFlags.DisableInterpreter);
         ff.PrintIL();
         t.AreEqual(3, ff());
+
+        var ffi = expr.CompileFast(false);
+        ff.PrintIL();
+        t.AreEqual(3, ffi());
     }
 }

@@ -6007,7 +6007,8 @@ namespace FastExpressionCompiler
                         {
                             oppositeTestExpr = sideDefaultExpr == testLeftExpr ? testRightExpr : testLeftExpr;
                             var testSideType = sideDefaultExpr.Type;
-                            if (testSideType.IsPrimitiveOrDecimalWithZeroDefault())
+                            // except decimal, because its 0 is Decimal.Zero a struct and is not working with Brtrue/Brfalse
+                            if (testSideType.IsPrimitiveWithZeroDefaultExceptDecimal())
                                 useBrFalseOrTrue = 0;
                             else if (testSideType.IsClass || testSideType.IsNullable())
                             {
@@ -8523,7 +8524,7 @@ namespace FastExpressionCompiler
             type == typeof(float) ||
             type == typeof(double);
 
-        internal static bool IsPrimitiveOrDecimalWithZeroDefault(this Type type)
+        internal static bool IsPrimitiveWithZeroDefaultExceptDecimal(this Type type)
         {
             switch (Type.GetTypeCode(type))
             {
@@ -8539,10 +8540,7 @@ namespace FastExpressionCompiler
                 case TypeCode.UInt64:
                 case TypeCode.Single:
                 case TypeCode.Double:
-                case TypeCode.Decimal:
                     return true;
-                // case TypeCode.DateTime:
-                // case TypeCode.String:
                 default:
                     return false;
             }
