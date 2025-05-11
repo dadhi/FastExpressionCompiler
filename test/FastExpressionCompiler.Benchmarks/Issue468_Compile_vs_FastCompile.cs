@@ -184,7 +184,7 @@ public class Issue468_InvokeCompiled_vs_InvokeCompiledFast
     [Benchmark]
     public bool Interpret_new()
     {
-        return ExpressionCompiler.Interpreter.TryInterpretBool_new(out var result, _expr.Body) && result;
+        return ExpressionCompiler.Interpreter.TryInterpretBool_new(out var result, _expr.Body, CompilerFlags.Default) && result;
     }
 
     // [Benchmark]
