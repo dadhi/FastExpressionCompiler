@@ -2102,11 +2102,10 @@ namespace FastExpressionCompiler
                         case ExpressionType.LeftShift:
                         case ExpressionType.RightShift:
                             {
-                                if ((setup & CompilerFlags.DisableInterpreter) == 0 && exprType.IsPrimitive &&
-                                    TryInterpretAndEmitResult(expr, il, parent))
-                                    return true;
-                                return TryEmitArithmetic(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, nodeType, exprType, paramExprs, il,
-                                    ref closure, setup, parent);
+                                return (setup & CompilerFlags.DisableInterpreter) == 0 && exprType.IsPrimitive
+                                    && TryInterpretAndEmitResult(expr, il, parent)
+                                    || TryEmitArithmetic(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, nodeType, exprType, paramExprs, il,
+                                        ref closure, setup, parent);
                             }
                         // todo: @wip @feature #472 add interpretation when those node types are supported
                         case ExpressionType.AddChecked:
@@ -5955,6 +5954,12 @@ namespace FastExpressionCompiler
 #endif
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
+                // Try emit a single side of the condition based on the interpreted condition value
+                if (Interpreter.TryInterpretBool_new(out var testIsTrue, testExpr))
+                    return testIsTrue
+                        ? TryEmit(ifTrueExpr, paramExprs, il, ref closure, setup, parent)
+                        : TryEmit(ifFalseExpr, paramExprs, il, ref closure, setup, parent);
+
                 testExpr = TryReduceCondition(testExpr);
                 var testNodeType = testExpr.NodeType;
 
@@ -7057,7 +7062,7 @@ namespace FastExpressionCompiler
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal static void UnboxToPrimitiveValue(ref PValue value, object boxedValue, TypeCode code)
+            internal static bool TryUnboxToPrimitiveValue(ref PValue value, object boxedValue, TypeCode code)
             {
                 switch (code)
                 {
@@ -7072,8 +7077,9 @@ namespace FastExpressionCompiler
                     case TypeCode.UInt64: value.UInt64Value = (ulong)boxedValue; break;
                     case TypeCode.Single: value.SingleValue = (float)boxedValue; break;
                     case TypeCode.Double: value.DoubleValue = (double)boxedValue; break;
-                    default: UnreachableCase(code); break;
+                    default: return false;
                 }
+                return true;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -7679,7 +7685,7 @@ namespace FastExpressionCompiler
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal static void SetPrimitiveValueToDefault(ref PValue value, TypeCode code)
+            internal static bool TrySetPrimitiveValueToDefault(ref PValue value, TypeCode code)
             {
                 switch (code)
                 {
@@ -7694,8 +7700,9 @@ namespace FastExpressionCompiler
                     case TypeCode.UInt64: value.UInt64Value = default; break;
                     case TypeCode.Single: value.SingleValue = default; break;
                     case TypeCode.Double: value.DoubleValue = default; break;
-                    default: UnreachableCase(code); break;
+                    default: return false;
                 }
+                return true;
             }
 
             /// <summary>Fast, mostly negative check to skip or proceed with interpretation.
@@ -8065,15 +8072,13 @@ namespace FastExpressionCompiler
                     // not a bool, int, or decimal
                     {
                         PValue leftVal = default;
-                        if (left is ConstantExpression lc)
-                            UnboxToPrimitiveValue(ref leftVal, lc.Value, leftCode);
-                        else if (!TryInterpretPrimitiveValue(ref leftVal, left, leftCode, left.NodeType))
+                        if (left is ConstantExpression lc && !TryUnboxToPrimitiveValue(ref leftVal, lc.Value, leftCode) ||
+                            !TryInterpretPrimitiveValue(ref leftVal, left, leftCode, left.NodeType))
                             return false;
 
                         PValue rightVal = default;
-                        if (right is ConstantExpression rc)
-                            UnboxToPrimitiveValue(ref rightVal, rc.Value, leftCode);
-                        else if (!TryInterpretPrimitiveValue(ref rightVal, right, leftCode, right.NodeType))
+                        if (right is ConstantExpression rc && !TryUnboxToPrimitiveValue(ref rightVal, rc.Value, leftCode) ||
+                            !TryInterpretPrimitiveValue(ref rightVal, right, leftCode, right.NodeType))
                             return false;
 
                         resultBool = leftCode switch
@@ -8158,15 +8163,13 @@ namespace FastExpressionCompiler
                     // not a bool, int, or decimal
                     {
                         PValue leftVal = default;
-                        if (left is ConstantExpression lc)
-                            UnboxToPrimitiveValue(ref leftVal, lc.Value, leftCode);
-                        else if (!TryInterpretPrimitiveValue(ref leftVal, left, leftCode, left.NodeType))
+                        if (left is ConstantExpression lc && !TryUnboxToPrimitiveValue(ref leftVal, lc.Value, leftCode) ||
+                            !TryInterpretPrimitiveValue(ref leftVal, left, leftCode, left.NodeType))
                             return false;
 
                         PValue rightVal = default;
-                        if (right is ConstantExpression rc)
-                            UnboxToPrimitiveValue(ref rightVal, rc.Value, leftCode);
-                        else if (!TryInterpretPrimitiveValue(ref rightVal, right, leftCode, right.NodeType))
+                        if (right is ConstantExpression rc && !TryUnboxToPrimitiveValue(ref rightVal, rc.Value, leftCode) ||
+                            !TryInterpretPrimitiveValue(ref rightVal, right, leftCode, right.NodeType))
                             return false;
 
                         resultBool = ComparePrimitiveValues(ref leftVal, ref rightVal, leftCode, nodeType);
@@ -8256,9 +8259,8 @@ namespace FastExpressionCompiler
                         "Operand may be a decimal but cannot be bool, because there is no conversation from bool to the types in UValue");
 
                     PValue operandVal = default;
-                    if (operandExpr is ConstantExpression co)
-                        UnboxToPrimitiveValue(ref operandVal, co.Value, operandCode);
-                    else if (!TryInterpretPrimitiveValue(ref operandVal, operandExpr, operandCode, operandExpr.NodeType))
+                    if (operandExpr is ConstantExpression co && !TryUnboxToPrimitiveValue(ref operandVal, co.Value, operandCode) ||
+                        !TryInterpretPrimitiveValue(ref operandVal, operandExpr, operandCode, operandExpr.NodeType))
                         return false;
 
                     resultDec = operandCode switch
@@ -8355,9 +8357,8 @@ namespace FastExpressionCompiler
                     if (operandCode != TypeCode.Decimal)
                     {
                         PValue operandVal = default;
-                        if (operandExpr is ConstantExpression co)
-                            UnboxToPrimitiveValue(ref operandVal, co.Value, operandCode);
-                        else if (!TryInterpretPrimitiveValue(ref operandVal, operandExpr, operandCode, operandExpr.NodeType))
+                        if (operandExpr is ConstantExpression co && !TryUnboxToPrimitiveValue(ref operandVal, co.Value, operandCode) ||
+                            !TryInterpretPrimitiveValue(ref operandVal, operandExpr, operandCode, operandExpr.NodeType))
                             return false;
 
                         resultInt = operandCode switch
@@ -8404,22 +8405,17 @@ namespace FastExpressionCompiler
                     var binaryExpr = (BinaryExpression)expr;
                     var left = binaryExpr.Left;
                     var leftCode = Type.GetTypeCode(left.Type);
-                    if (left is ConstantExpression lc)
-                        UnboxToPrimitiveValue(ref result, lc.Value, leftCode);
-                    else if (!TryInterpretPrimitiveValue(ref result, left, leftCode, left.NodeType))
+                    if (left is ConstantExpression lc && !TryUnboxToPrimitiveValue(ref result, lc.Value, leftCode) ||
+                        !TryInterpretPrimitiveValue(ref result, left, leftCode, left.NodeType))
                         return false;
 
                     PValue rightVal = default;
                     var right = binaryExpr.Right;
-                    if (right is ConstantExpression rc)
-                        UnboxToPrimitiveValue(ref rightVal, rc.Value, leftCode);
-                    else
-                    {
-                        // using the leftCode to interpret the right part of the binary expression, 
-                        // because for supported operations left and right types are the same
-                        if (!TryInterpretPrimitiveValue(ref rightVal, right, leftCode, right.NodeType))
-                            return false;
-                    }
+                    // Using the leftCode to interpret the right part of the binary expression, 
+                    // because for supported operations left and right types are the same
+                    if (right is ConstantExpression rc && !TryUnboxToPrimitiveValue(ref rightVal, rc.Value, leftCode) ||
+                        !TryInterpretPrimitiveValue(ref rightVal, right, leftCode, right.NodeType))
+                        return false;
 
                     DoArithmeticForPrimitiveValues(ref result, ref rightVal, leftCode, nodeType);
                     return true;
@@ -8429,9 +8425,8 @@ namespace FastExpressionCompiler
                 {
                     var operandExpr = ((UnaryExpression)expr).Operand;
                     var operandCode = Type.GetTypeCode(operandExpr.Type);
-                    if (operandExpr is ConstantExpression co)
-                        UnboxToPrimitiveValue(ref result, co.Value, operandCode);
-                    else if (!TryInterpretPrimitiveValue(ref result, operandExpr, operandCode, operandExpr.NodeType))
+                    if (operandExpr is ConstantExpression co && !TryUnboxToPrimitiveValue(ref result, co.Value, operandCode) ||
+                        !TryInterpretPrimitiveValue(ref result, operandExpr, operandCode, operandExpr.NodeType))
                         return false;
 
                     NegatePrimitiveValue(ref result, operandCode);
@@ -8439,16 +8434,10 @@ namespace FastExpressionCompiler
                 }
 
                 if (expr is ConstantExpression constExpr)
-                {
-                    UnboxToPrimitiveValue(ref result, constExpr.Value, exprCode);
-                    return true;
-                }
+                    return TryUnboxToPrimitiveValue(ref result, constExpr.Value, exprCode);
 
                 if (nodeType == ExpressionType.Default)
-                {
-                    SetPrimitiveValueToDefault(ref result, exprCode);
-                    return true;
-                }
+                    return TrySetPrimitiveValueToDefault(ref result, exprCode);
 
                 if (nodeType == ExpressionType.Convert)
                 {
@@ -8459,9 +8448,8 @@ namespace FastExpressionCompiler
 
                     if (operandCode != TypeCode.Decimal)
                     {
-                        if (operandExpr is ConstantExpression co)
-                            UnboxToPrimitiveValue(ref result, co.Value, operandCode);
-                        else if (!TryInterpretPrimitiveValue(ref result, operandExpr, operandCode, operandExpr.NodeType))
+                        if (operandExpr is ConstantExpression co && !TryUnboxToPrimitiveValue(ref result, co.Value, operandCode) ||
+                            !TryInterpretPrimitiveValue(ref result, operandExpr, operandCode, operandExpr.NodeType))
                             return false;
 
                         if (exprCode != operandCode)
@@ -8489,7 +8477,8 @@ namespace FastExpressionCompiler
                             case TypeCode.UInt64: result.UInt64Value = (ulong)operandDec; break;
                             case TypeCode.Single: result.SingleValue = (float)operandDec; break;
                             case TypeCode.Double: result.DoubleValue = (double)operandDec; break;
-                            default: UnreachableCase(exprCode); break;
+                            // todo: @wip #472 check if it is converted to the nullable or object
+                            default: UnreachableCase(expr.Type); break;
                         }
                         return true;
                     }

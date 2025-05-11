@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using static System.Environment;
 
 #if LIGHT_EXPRESSION
 namespace FastExpressionCompiler.LightExpression;
@@ -591,7 +592,7 @@ public struct TestContext
     {
 #if DEBUG
         // When debugging raise the fail immediately as excpetion to avoid false sense of security
-        throw new AssertionException($"`{testName}` failed at line {sourceLineNumber}:{Environment.NewLine}{message}{Environment.NewLine}");
+        throw new AssertionException($"`{testName}` failed at line {sourceLineNumber}:{NewLine}{message}{NewLine}");
 #else
         TestRun.Failures.Add(new TestFailure(testName, sourceLineNumber, assertKind, message));
         return false;
@@ -618,7 +619,7 @@ public struct TestContext
         [CallerArgumentExpression(nameof(actual))] string actualName = "<actual>",
         [CallerMemberName] string testName = "<test>", [CallerLineNumber] int sourceLineNumber = -1) =>
         Equals(expected, actual) || Fail(testName, sourceLineNumber, AssertKind.AreEqual,
-            $"Expected `AreEqual({expectedName}, {actualName})`, but found `{expected.ToCode()}` is Not equal to `{actual.ToCode()}`");
+            $"Expected `AreEqual(expected: {expectedName}, actual: {actualName})`,{NewLine} but found expected: `{expected.ToCode()}` and actual: `{actual.ToCode()}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool AreSame<T>(T expected, T actual,
@@ -979,7 +980,7 @@ public sealed class TestRun
                 ++FailedTestCount;
 
                 if (testStopException != null)
-                    Console.WriteLine($"Unexpected exception in test '{testsName}':{Environment.NewLine}'{testStopException}'");
+                    Console.WriteLine($"Unexpected exception in test '{testsName}':{NewLine}'{testStopException}'");
 
                 if (testFailureCount > 0)
                 {
@@ -987,7 +988,7 @@ public sealed class TestRun
                     for (var i = 0; i < testFailureCount; ++i)
                     {
                         ref var f = ref Failures.GetSurePresentItemRef(failureCount + i);
-                        Console.WriteLine($"{i}. `{f.TestMethodName}` failed at line {f.SourceLineNumber}:{Environment.NewLine}{f.Message}{Environment.NewLine}");
+                        Console.WriteLine($"{i}. `{f.TestMethodName}` failed at line {f.SourceLineNumber}:{NewLine}{f.Message}{NewLine}");
                     }
                 }
             }
