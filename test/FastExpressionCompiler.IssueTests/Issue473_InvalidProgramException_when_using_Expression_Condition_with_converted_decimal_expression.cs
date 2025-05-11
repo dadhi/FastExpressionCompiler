@@ -14,7 +14,7 @@ public struct Issue473_InvalidProgramException_when_using_Expression_Condition_w
 {
     public void Run(TestRun t)
     {
-        // Original_case(t);
+        Original_case(t);
     }
 
     public void Original_case(TestContext t)
