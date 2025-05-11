@@ -8274,6 +8274,8 @@ namespace FastExpressionCompiler
                         TypeCode.UInt32 => operandVal.UInt32Value,
                         TypeCode.Int64 => operandVal.Int64Value,
                         TypeCode.UInt64 => operandVal.UInt64Value,
+                        TypeCode.Single => (decimal)operandVal.SingleValue,
+                        TypeCode.Double => (decimal)operandVal.DoubleValue,
                         _ => UnreachableCase(operandCode, default(decimal)),
                     };
                     return true;
