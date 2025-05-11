@@ -8480,8 +8480,9 @@ namespace FastExpressionCompiler
                             case TypeCode.UInt64: result.UInt64Value = (ulong)operandDec; break;
                             case TypeCode.Single: result.SingleValue = (float)operandDec; break;
                             case TypeCode.Double: result.DoubleValue = (double)operandDec; break;
-                            // todo: @wip #472 check if it is converted to the nullable or object
-                            default: UnreachableCase(expr.Type); break;
+                            default:
+                                // todo: @feature #472 support conversion to nullable, put nullable marker into PValue or something
+                                return false;
                         }
                         return true;
                     }
