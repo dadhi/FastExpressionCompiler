@@ -1,4 +1,6 @@
-﻿using System;
+﻿//#define INTERPRETATION_DIAGNOSTICS
+
+using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using FastExpressionCompiler.IssueTests;
@@ -10,12 +12,13 @@ namespace FastExpressionCompiler.UnitTests
         public static void Main()
         {
             var t = new LightExpression.TestRun();
-            t.Run(new LightExpression.IssueTests.Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_expressions_during_the_compilation());
+
             t.Run(new LightExpression.IssueTests.Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET());
+            t.Run(new LightExpression.IssueTests.Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_expressions_during_the_compilation());
+            t.Run(new LightExpression.IssueTests.Issue473_InvalidProgramException_when_using_Expression_Condition_with_converted_decimal_expression());
 
             // new Issue55_CompileFast_crash_with_ref_parameter().Run();
 
-            // todo: @wip add to FEC, check the possibility of the increment compilation and the artifacts reusability
             // new LightExpression.UnitTests.ConstantAndConversionTests().Run();
 
             // new LightExpression.IssueTests.Issue461_InvalidProgramException_when_null_checking_type_by_ref().Run();

@@ -35,6 +35,9 @@ namespace FastExpressionCompiler.UnitTests
 
                 var t = (LightExpression.TestRun)state;
                 t.Run(new LightExpression.IssueTests.Issue183_NullableDecimal());
+                t.Run(new LightExpression.IssueTests.Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET());
+                t.Run(new LightExpression.IssueTests.Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_expressions_during_the_compilation());
+                t.Run(new LightExpression.IssueTests.Issue473_InvalidProgramException_when_using_Expression_Condition_with_converted_decimal_expression());
 
                 Console.WriteLine($"Just LightExpression tests are passing in {justLightTestsStopwatch.ElapsedMilliseconds} ms.");
             }
@@ -46,6 +49,10 @@ namespace FastExpressionCompiler.UnitTests
 
             var fecTests = new TestRun();
             fecTests.Run(new Issue183_NullableDecimal());
+            fecTests.Run(new Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET());
+            fecTests.Run(new Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_expressions_during_the_compilation());
+            fecTests.Run(new Issue473_InvalidProgramException_when_using_Expression_Condition_with_converted_decimal_expression());
+
 
             Console.WriteLine($"FEC tests are passing in {fecTestsStopwatch.ElapsedMilliseconds} ms.");
 
@@ -65,7 +72,7 @@ namespace FastExpressionCompiler.UnitTests
             }
 
             var totalTestCount = fecTests.TotalTestCount + lightTests.TotalTestCount;
-            Console.WriteLine($"All {totalTestCount,-4} tests are passing in {totalStopwatch.ElapsedMilliseconds} ms.");
+            Console.WriteLine($"TestX: {totalTestCount,-4} tests are passing in {totalStopwatch.ElapsedMilliseconds} ms.");
         }
 
         public static void RunAllTests()

@@ -95,13 +95,56 @@ DefaultJob : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
 | InvokeCompiledFast                    | 0.1105 ns | 0.0360 ns | 0.0799 ns | 0.0689 ns |  0.22 |    0.16 |    1 |                     1 |         - |          NA |
 | InvokeCompiledFast_DisableInterpreter | 1.0607 ns | 0.0540 ns | 0.0887 ns | 1.0301 ns |  2.13 |    0.34 |    3 |                     2 |         - |          NA |
 
+## Comparing to the direct interpretation
+
+| Method                                | Mean       | Error     | StdDev    | Median     | Ratio  | RatioSD | Rank | Gen0   | Allocated | Alloc Ratio |
+|-------------------------------------- |-----------:|----------:|----------:|-----------:|-------:|--------:|-----:|-------:|----------:|------------:|
+| InvokeCompiled                        |  0.3347 ns | 0.0313 ns | 0.0373 ns |  0.3241 ns |   1.01 |    0.15 |    3 |      - |         - |          NA |
+| InvokeCompiledFast                    |  0.0269 ns | 0.0214 ns | 0.0229 ns |  0.0198 ns |   0.08 |    0.07 |    1 |      - |         - |          NA |
+| InvokeCompiledFast_DisableInterpreter |  0.9317 ns | 0.0485 ns | 0.0558 ns |  0.9097 ns |   2.81 |    0.31 |    4 |      - |         - |          NA |
+| Interpret                             | 81.7969 ns | 0.6588 ns | 0.5501 ns | 81.7534 ns | 246.89 |   23.21 |    5 | 0.0076 |      48 B |          NA |
+| JustFunc                              |  0.0335 ns | 0.0219 ns | 0.0499 ns |  0.0000 ns |   0.10 |    0.15 |    2 |      - |         - |          NA |
+
+## Comparing basic interpretation without boxing all-in-one and new one split by types: bool, decimal, the rest
+
+DefaultJob : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+
+| Method        | Mean     | Error    | StdDev   | Median   | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
+|-------------- |---------:|---------:|---------:|---------:|------:|--------:|-----:|----------:|------------:|
+| Interpret     | 93.63 ns | 1.819 ns | 3.838 ns | 92.05 ns |  1.00 |    0.06 |    2 |         - |          NA |
+| Interpret_new | 68.28 ns | 1.350 ns | 1.554 ns | 68.08 ns |  0.73 |    0.03 |    1 |         - |          NA |
+
+## Removing the type code from the PValue struct, no changes
+
+DefaultJob : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+
+| Method        | Mean     | Error    | StdDev   | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
+|-------------- |---------:|---------:|---------:|------:|--------:|-----:|----------:|------------:|
+| Interpret     | 86.94 ns | 1.015 ns | 0.847 ns |  1.00 |    0.01 |    2 |         - |          NA |
+| Interpret_new | 64.04 ns | 0.838 ns | 1.446 ns |  0.74 |    0.02 |    1 |         - |          NA |
+
+## Specializing for int does it job
+
+| Method        | Mean     | Error    | StdDev   | Median   | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
+|-------------- |---------:|---------:|---------:|---------:|------:|--------:|-----:|----------:|------------:|
+| Interpret     | 94.70 ns | 1.923 ns | 2.936 ns | 95.38 ns |  1.00 |    0.04 |    2 |         - |          NA |
+| Interpret_new | 57.18 ns | 1.175 ns | 3.075 ns | 55.78 ns |  0.60 |    0.04 |    1 |         - |          NA |
+
+## More int specialization
+
+| Method        | Mean     | Error    | StdDev   | Ratio | RatioSD | Rank | Allocated | Alloc Ratio |
+|-------------- |---------:|---------:|---------:|------:|--------:|-----:|----------:|------------:|
+| Interpret     | 88.66 ns | 1.701 ns | 1.747 ns |  1.00 |    0.03 |    2 |         - |          NA |
+| Interpret_new | 48.80 ns | 0.671 ns | 0.595 ns |  0.55 |    0.01 |    1 |         - |          NA |
+
 */
 [MemoryDiagnoser, RankColumn]
-[HardwareCounters(HardwareCounter.BranchInstructions)]
+// [HardwareCounters(HardwareCounter.BranchInstructions)]
 // [SimpleJob(RuntimeMoniker.Net90)]
 // [SimpleJob(RuntimeMoniker.Net80)]
 public class Issue468_InvokeCompiled_vs_InvokeCompiledFast
 {
+    Expression<Func<bool>> _expr;
     Func<bool> _compiled, _compiledFast, _compiledFast_DisableInterpreter, _justFunc = static () => true;
 
     [GlobalSetup]
@@ -111,24 +154,37 @@ public class Issue468_InvokeCompiled_vs_InvokeCompiledFast
         _compiled = expr.CompileSys();
         _compiledFast = expr.CompileFast();
         _compiledFast_DisableInterpreter = expr.CompileFast(flags: CompilerFlags.DisableInterpreter);
+        _expr = expr;
     }
 
-    [Benchmark(Baseline = true)]
+    // [Benchmark(Baseline = true)]
     public bool InvokeCompiled()
     {
         return _compiled();
     }
 
-    [Benchmark]
+    // [Benchmark]
     public bool InvokeCompiledFast()
     {
         return _compiledFast();
     }
 
-    [Benchmark]
+    // [Benchmark]
     public bool InvokeCompiledFast_DisableInterpreter()
     {
         return _compiledFast_DisableInterpreter();
+    }
+
+    // [Benchmark(Baseline = true)]
+    // public bool Interpret()
+    // {
+    //     return ExpressionCompiler.Interpreter.TryInterpretBool(out var result, _expr.Body) && result;
+    // }
+
+    [Benchmark]
+    public bool Interpret_new()
+    {
+        return ExpressionCompiler.Interpreter.TryInterpretBool(out var result, _expr.Body, CompilerFlags.Default) && result;
     }
 
     // [Benchmark]
@@ -174,7 +230,7 @@ Job=.NET 8.0  Runtime=.NET 8.0
 | CompiledFast_WithEvalFlag |    171.8 ns |   3.49 ns |   9.44 ns |    167.6 ns |   1.00 |    0.08 |    1 | 0.0610 |      - |     384 B |        1.00 |
 
 
-## Now we're talking (after small interpretator optimizations)
+## Now we're talking (after small interpreter optimizations)
 
 DefaultJob : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
 
@@ -183,6 +239,16 @@ DefaultJob : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
 | Compiled                        | 22,937.50 ns | 447.883 ns | 784.432 ns | 22,947.67 ns | 230.86 |   14.14 |    3 | 0.6714 | 0.6409 |    4232 B |       88.17 |
 | CompiledFast                    |     99.62 ns |   2.044 ns |   5.275 ns |     97.03 ns |   1.00 |    0.07 |    1 | 0.0076 |      - |      48 B |        1.00 |
 | CompiledFast_DisableInterpreter |  3,010.37 ns |  60.174 ns |  91.893 ns |  3,010.03 ns |  30.30 |    1.80 |    2 | 0.1755 | 0.1678 |    1143 B |       23.81 |
+
+
+## New results after cleanup
+
+| Method                          | Mean         | Error      | StdDev     | Ratio  | RatioSD | Rank | Gen0   | Gen1   | Allocated | Alloc Ratio |
+|-------------------------------- |-------------:|-----------:|-----------:|-------:|--------:|-----:|-------:|-------:|----------:|------------:|
+| Compiled                        | 22,844.78 ns | 327.497 ns | 290.317 ns | 351.80 |    6.40 |    3 | 0.6714 | 0.6409 |    4232 B |          NA |
+| CompiledFast_DisableInterpreter |  3,089.13 ns |  54.757 ns |  48.541 ns |  47.57 |    0.96 |    2 | 0.1793 | 0.1755 |    1144 B |          NA |
+| CompiledFast                    |     64.95 ns |   1.082 ns |   0.903 ns |   1.00 |    0.02 |    1 |      - |      - |         - |          NA |
+
 */
 [MemoryDiagnoser, RankColumn]
 // [SimpleJob(RuntimeMoniker.Net90)]
@@ -203,41 +269,15 @@ public class Issue468_Compile_vs_FastCompile
         return _expr.Compile();
     }
 
-    [Benchmark(Baseline = true)]
-    public object CompiledFast()
-    {
-        return _expr.CompileFast();
-    }
-
     [Benchmark]
     public object CompiledFast_DisableInterpreter()
     {
         return _expr.CompileFast(flags: CompilerFlags.DisableInterpreter);
     }
-}
 
-[MemoryDiagnoser, RankColumn]
-// [SimpleJob(RuntimeMoniker.Net90)]
-// [SimpleJob(RuntimeMoniker.Net80)]
-public class Issue468_Eval_Optimization
-{
-    Expression<Func<bool>> _expr;
-
-    [GlobalSetup]
-    public void Setup()
+    [Benchmark(Baseline = true)]
+    public object CompiledFast()
     {
-        _expr = IssueTests.Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET.CreateExpression();
-    }
-
-    // [Benchmark(Baseline = true)]
-    // public object Baseline()
-    // {
-    //     return ExpressionCompiler.Interpreter.TryEvalPrimitive_OLD(out var result, _expr) ? result : null;
-    // }
-
-    [Benchmark]
-    public object Optimized()
-    {
-        return ExpressionCompiler.Interpreter.TryInterpretPrimitive(out var result, _expr) ? result : null;
+        return _expr.CompileFast();
     }
 }

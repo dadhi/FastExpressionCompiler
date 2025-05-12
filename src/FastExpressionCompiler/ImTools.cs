@@ -573,7 +573,7 @@ public struct Stack4<T> : IStack<T, Stack4<T>>
         var spanConstructor = typeof(Span<T>).GetConstructor(new[] { typeof(void*), typeof(int) });
         Debug.Assert(spanConstructor != null);
 
-        // Set capcity to estimated size = 1 + 1 + 1 + 5 + 1 = 9 bytes + a small buffer
+        // Set capacity to estimated size = 1 + 1 + 1 + 5 + 1 = 9 bytes + a small buffer
         var il = dynamicMethod.GetILGenerator(16);
 
         // IL to replicate: return new Span<T>(Unsafe.AsPointer(ref this), StackCapacity);

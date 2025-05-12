@@ -1,23 +1,13 @@
 @echo off
 setlocal EnableDelayedExpansion
 
-echo: # BUILDING AND RUNNNG THE TESTS IN DEBUG MODE
+echo: # BUILDING AND RUNNING THE TESTS IN DEBUG MODE
 echo:
-echo:
-
-set "FrameworkParam=-f:net9.0"
-set "LatestSupportedNetProp=-p:LatestSupportedNet=net9.0"
-if [%1] NEQ [] (
-    set "FrameworkParam=-f:%1"
-    set "LatestSupportedNetProp=-p:LatestSupportedNet=%1"
-)
-echo:FrameworkParam == '%FrameworkParam%', LatestSupportedNetProp == '%LatestSupportedNetProp%'
-
 echo:
 echo:## Starting: RESTORE and BUILD...
 echo: 
 
-dotnet build %LatestSupportedNetProp% -c:Debug
+dotnet build -c:Debug
 if %ERRORLEVEL% neq 0 goto :error
 
 echo:
@@ -26,10 +16,22 @@ echo:## Finished: RESTORE and BUILD
 echo: 
 echo:## Starting: TESTS...
 echo:
-
-dotnet run --no-build %LatestSupportedNetProp% %FrameworkParam% -c:Debug --project test/FastExpressionCompiler.TestsRunner
+echo:running on .NET 9.0 (Latest)
+dotnet run --no-build -f:net9.0 -c:Debug --project test/FastExpressionCompiler.TestsRunner
 if %ERRORLEVEL% neq 0 goto :error
 
+echo:
+echo:running on .NET 8.0 (LTS)
+dotnet run --no-build -f:net8.0 -c:Debug --project test/FastExpressionCompiler.TestsRunner
+if %ERRORLEVEL% neq 0 goto :error
+
+echo:
+echo:running on .NET 6.0 (Previous LTS)
+dotnet run --no-build -f:net6.0 -c:Debug --project test/FastExpressionCompiler.TestsRunner
+if %ERRORLEVEL% neq 0 goto :error
+
+echo:
+echo:running on .NET 4.7.2
 dotnet run --no-build -c:Debug --project test/FastExpressionCompiler.TestsRunner.Net472
 if %ERRORLEVEL% neq 0 goto :error
 echo:

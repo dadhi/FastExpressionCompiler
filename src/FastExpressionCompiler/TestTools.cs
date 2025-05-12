@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using static System.Environment;
 
 #if LIGHT_EXPRESSION
 namespace FastExpressionCompiler.LightExpression;
@@ -530,6 +531,10 @@ public enum AssertKind
     IsNotNullNullable,
     AreEqual,
     AreNotEqual,
+    AreSame,
+    AreNotSame,
+    AreEqualCollections,
+    GreaterOrEqual,
     Throws,
 }
 
@@ -585,8 +590,13 @@ public struct TestContext
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Fail(string testName, int sourceLineNumber, AssertKind assertKind, string message)
     {
+#if DEBUG
+        // When debugging raise the fail immediately as excpetion to avoid false sense of security
+        throw new AssertionException($"`{testName}` failed at line {sourceLineNumber}:{NewLine}{message}{NewLine}");
+#else
         TestRun.Failures.Add(new TestFailure(testName, sourceLineNumber, assertKind, message));
         return false;
+#endif
     }
 
     /// <summary>Always fails with the provided message</summary>
@@ -598,11 +608,10 @@ public struct TestContext
     /// <summary>Checks if `actual is true`. Method returns `bool` so the latter test logic may depend on it, e.g. to return early</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsTrue(bool actual,
-        [CallerArgumentExpression(nameof(actual))] string actualName = "<actual>", [CallerMemberName] string testName = "<test>",
-        [CallerLineNumber] int sourceLineNumber = -1) =>
-        actual ||
-            Fail(testName, sourceLineNumber, AssertKind.IsTrue,
-                $"Expected `IsTrue({actualName})`, but found false");
+        [CallerArgumentExpression(nameof(actual))] string actualName = "<actual>",
+        [CallerMemberName] string testName = "<test>", [CallerLineNumber] int sourceLineNumber = -1) =>
+        actual || Fail(testName, sourceLineNumber, AssertKind.IsTrue,
+            $"Expected `IsTrue({actualName})`, but found false");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool AreEqual<T>(T expected, T actual,
@@ -610,48 +619,39 @@ public struct TestContext
         [CallerArgumentExpression(nameof(actual))] string actualName = "<actual>",
         [CallerMemberName] string testName = "<test>", [CallerLineNumber] int sourceLineNumber = -1) =>
         Equals(expected, actual) || Fail(testName, sourceLineNumber, AssertKind.AreEqual,
-            $"Expected `AreEqual({expectedName}, {actualName})`, but found `{expected.ToCode()}` is Not equal to `{actual.ToCode()}`");
+            $"Expected `AreEqual(expected: {expectedName}, actual: {actualName})`,{NewLine} but found expected: `{expected.ToCode()}` and actual: `{actual.ToCode()}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool AreSame<T>(T expected, T actual,
-        [CallerArgumentExpression(nameof(expected))]
-        string expectedName = "expected",
-        [CallerArgumentExpression(nameof(actual))]
-        string actualName = "actual") where T : class =>
-        ReferenceEquals(expected, actual) ? true : throw new AssertionException(
+    public bool AreSame<T>(T expected, T actual,
+        [CallerArgumentExpression(nameof(expected))] string expectedName = "<expected>",
+        [CallerArgumentExpression(nameof(actual))] string actualName = "<actual>",
+        [CallerMemberName] string testName = "<test>", [CallerLineNumber] int sourceLineNumber = -1) where T : class =>
+        ReferenceEquals(expected, actual) || Fail(testName, sourceLineNumber, AssertKind.AreSame,
             $"Expected `AreSame({expectedName}, {actualName})`, but found `{expected.ToCode()}` is Not the same `{actual.ToCode()}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool AreNotSame<T>(T expected, T actual,
-        [CallerArgumentExpression(nameof(expected))]
-        string expectedName = "expected",
-        [CallerArgumentExpression(nameof(actual))]
-        string actualName = "actual") where T : class =>
-        !ReferenceEquals(expected, actual) ? true : throw new AssertionException(
+    public bool AreNotSame<T>(T expected, T actual,
+        [CallerArgumentExpression(nameof(expected))] string expectedName = "<expected>",
+        [CallerArgumentExpression(nameof(actual))] string actualName = "<actual>",
+        [CallerMemberName] string testName = "<test>", [CallerLineNumber] int sourceLineNumber = -1) where T : class =>
+        !ReferenceEquals(expected, actual) || Fail(testName, sourceLineNumber, AssertKind.AreNotSame,
             $"Expected `AreNotSame({expectedName}, {actualName})`, but found `{expected.ToCode()}` is same as `{actual.ToCode()}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool AreEqual<T>(T expected, T actual,
-        [CallerArgumentExpression(nameof(expected))]
-        string expectedName = "expected",
-        [CallerArgumentExpression(nameof(actual))]
-        string actualName = "actual") =>
-        Equals(expected, actual) ? true : throw new AssertionException(
-            $"Expected `AreEqual({expectedName}, {actualName})`, but found `{expected.ToCode()}` is Not equal to `{actual.ToCode()}`");
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool AreNotEqual<T>(T expected, T actual,
-        [CallerArgumentExpression(nameof(expected))] string expectedName = "expected", [CallerArgumentExpression(nameof(actual))]
-        string actualName = "actual") =>
-        !Equals(expected, actual) ? true : throw new AssertionException(
+    public bool AreNotEqual<T>(T expected, T actual,
+        [CallerArgumentExpression(nameof(expected))] string expectedName = "<expected>",
+        [CallerArgumentExpression(nameof(actual))] string actualName = "<actual>",
+        [CallerMemberName] string testName = "<test>", [CallerLineNumber] int sourceLineNumber = -1) =>
+        !Equals(expected, actual) || Fail(testName, sourceLineNumber, AssertKind.AreNotEqual,
             $"Expected `AreNotEqual({expectedName}, {actualName})`, but found `{expected.ToCode()}` is equal to `{actual.ToCode()}`");
 
     public record struct ItemsCompared<T>(int Index, bool IsEqual, T Expected, T Actual);
 
     /// <summary>Should cover the case with the `expected` to be an array as well.</summary>
-    public static bool AreEqual<T>(IEnumerable<T> expected, IEnumerable<T> actual,
-        [CallerArgumentExpression(nameof(expected))] string expectedName = "expected",
-        [CallerArgumentExpression(nameof(actual))] string actualName = "actual")
+    public bool AreEqual<T>(IEnumerable<T> expected, IEnumerable<T> actual,
+        [CallerArgumentExpression(nameof(expected))] string expectedName = "<expected>",
+        [CallerArgumentExpression(nameof(actual))] string actualName = "<actual>",
+        [CallerMemberName] string testName = "<test>", [CallerLineNumber] int sourceLineNumber = -1)
     {
         var expectedEnumerator = expected.GetEnumerator();
         var actualEnumerator = actual.GetEnumerator();
@@ -791,110 +791,101 @@ public struct TestContext
                     sb.AppendLine($"{index,4}{(isEqual ? "    " : " -> ")}{expectedItem.ToCode(),16},{actualItem.ToCode(),16}");
             }
 
-            throw new AssertionException(sb.ToString());
+            return Fail(testName, sourceLineNumber, AssertKind.AreEqualCollections, sb.ToString());
         }
 
         return true;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool AreEqual<T>(T[] expected, T[] actual,
-        [CallerArgumentExpression(nameof(expected))]
-        string expectedName = "expected",
-        [CallerArgumentExpression(nameof(actual))]
-        string actualName = "actual") =>
-        AreEqual((IEnumerable<T>)expected, actual, expectedName, actualName);
+    public bool AreEqual<T>(T[] expected, T[] actual,
+        [CallerArgumentExpression(nameof(expected))] string expectedName = "<expected>",
+        [CallerArgumentExpression(nameof(actual))] string actualName = "<actual>",
+        [CallerMemberName] string testName = "<test>", [CallerLineNumber] int sourceLineNumber = -1) =>
+        AreEqual((IEnumerable<T>)expected, actual, expectedName, actualName, testName, sourceLineNumber);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool GreaterOrEqual<T>(T expected, T actual,
-        [CallerArgumentExpression(nameof(expected))]
-        string expectedName = "expected",
-        [CallerArgumentExpression(nameof(actual))]
-        string actualName = "actual")
+    public bool GreaterOrEqual<T>(T expected, T actual,
+        [CallerArgumentExpression(nameof(expected))] string expectedName = "<expected>",
+        [CallerArgumentExpression(nameof(actual))] string actualName = "<actual>",
+        [CallerMemberName] string testName = "<test>", [CallerLineNumber] int sourceLineNumber = -1)
         where T : IComparable<T> =>
-        expected.CompareTo(actual) >= 0 ? true : throw new AssertionException(
+        expected.CompareTo(actual) >= 0 || Fail(testName, sourceLineNumber, AssertKind.GreaterOrEqual,
             $"Expected `GreaterOrEqual({expectedName}, {actualName})`, but found `{expected.ToCode()} < {actual.ToCode()}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool Less<T>(T expected, T actual,
+    public bool Less<T>(T expected, T actual,
         [CallerArgumentExpression(nameof(expected))]
-        string expectedName = "expected",
+        string expectedName = "<expected>",
         [CallerArgumentExpression(nameof(actual))]
-        string actualName = "actual")
+        string actualName = "<actual>")
         where T : IComparable<T> =>
         expected.CompareTo(actual) < 0 ? true : throw new AssertionException(
             $"Expected `Less({expectedName}, {actualName})`, but found `{expected.ToCode()} >= {actual.ToCode()}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool Greater<T>(T expected, T actual,
+    public bool Greater<T>(T expected, T actual,
         [CallerArgumentExpression(nameof(expected))]
-        string expectedName = "expected",
+        string expectedName = "<expected>",
         [CallerArgumentExpression(nameof(actual))]
-        string actualName = "actual")
+        string actualName = "<actual>")
         where T : IComparable<T> =>
         expected.CompareTo(actual) > 0 ? true : throw new AssertionException(
             $"Expected `Greater({expectedName}, {actualName})`, but found `{expected.ToCode()} <= {actual.ToCode()}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool LessOrEqual<T>(T expected, T actual,
+    public bool LessOrEqual<T>(T expected, T actual,
         [CallerArgumentExpression(nameof(expected))]
-        string expectedName = "expected",
+        string expectedName = "<expected>",
         [CallerArgumentExpression(nameof(actual))]
-        string actualName = "actual")
+        string actualName = "<actual>")
         where T : IComparable<T> =>
         expected.CompareTo(actual) <= 0 ? true : throw new AssertionException(
             $"Expected `LessOrEqual({expectedName}, {actualName})`, but found `{expected.ToCode()} > {actual.ToCode()}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsNull<T>(T actual,
-        [CallerArgumentExpression(nameof(actual))] string actualName = "actual",
+        [CallerArgumentExpression(nameof(actual))] string actualName = "<actual>",
         [CallerMemberName] string testName = "<test>", [CallerLineNumber] int sourceLineNumber = -1) where T : class =>
         actual is null || Fail(testName, sourceLineNumber, AssertKind.IsNull,
             $"Expected `IsNull({actualName})`, but found not null `{actual.ToCode()}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsNull<T>(T? actual,
-        [CallerArgumentExpression(nameof(actual))] string actualName = "actual",
+        [CallerArgumentExpression(nameof(actual))] string actualName = "<actual>",
         [CallerMemberName] string testName = "<test>", [CallerLineNumber] int sourceLineNumber = -1) where T : struct =>
         !actual.HasValue || Fail(testName, sourceLineNumber, AssertKind.IsNullNullable,
             $"Expected the nullable `IsNull({actualName})`, but found it has a value `{actual.Value}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsNotNull<T>(T actual,
-        [CallerArgumentExpression(nameof(actual))] string actualName = "actual",
+        [CallerArgumentExpression(nameof(actual))] string actualName = "<actual>",
         [CallerMemberName] string testName = "<test>", [CallerLineNumber] int sourceLineNumber = -1) where T : class =>
         actual is not null || Fail(testName, sourceLineNumber, AssertKind.IsNotNull,
             $"Expected `IsNotNull({actualName})`, but found null");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsNotNull<T>(T? actual,
-        [CallerArgumentExpression(nameof(actual))] string actualName = "actual",
+        [CallerArgumentExpression(nameof(actual))] string actualName = "<actual>",
         [CallerMemberName] string testName = "<test>", [CallerLineNumber] int sourceLineNumber = -1) where T : struct =>
         actual.HasValue || Fail(testName, sourceLineNumber, AssertKind.IsNotNullNullable,
             $"Expected the nullable `IsNotNull({actualName})`, but found null");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsTrue(bool actual,
-        [CallerArgumentExpression(nameof(actual))]
-        string actualName = "actual") =>
-        actual ? true : throw new AssertionException(
-            $"Expected `IsTrue({actualName})`, but found false");
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool IsFalse(bool actual,
-        [CallerArgumentExpression(nameof(actual))] string actualName = "actual",
+        [CallerArgumentExpression(nameof(actual))] string actualName = "<actual>",
         [CallerMemberName] string testName = "<test>", [CallerLineNumber] int sourceLineNumber = -1) =>
         !actual || Fail(testName, sourceLineNumber, AssertKind.IsFalse,
             $"Expected `IsFalse({actualName})`, but found true");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool IsInstanceOf<T>(object actual,
+    public bool IsInstanceOf<T>(object actual,
         [CallerArgumentExpression(nameof(actual))]
-        string actualName = "actual") =>
+        string actualName = "<actual>") =>
         actual is T ? true : throw new AssertionException(
             $"Expected `IsInstanceOf<{typeof(T).ToCode()}>({actualName})`, but found `IsInstanceOf<{actual?.GetType().ToCode() ?? "_"}>({actual.ToCode()})`");
 
-    public static E Throws<E>(Action action,
+    public E Throws<E>(Action action,
         [CallerArgumentExpression(nameof(action))]
         string actionName = "<action to throw>")
         where E : Exception
@@ -916,29 +907,29 @@ public struct TestContext
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool Contains(string expected, string actual,
+    public bool Contains(string expected, string actual,
         [CallerArgumentExpression(nameof(expected))]
-        string expectedName = "expected",
+        string expectedName = "<expected>",
         [CallerArgumentExpression(nameof(actual))]
-        string actualName = "actual") =>
+        string actualName = "<actual>") =>
         actual.Contains(expected) ? true : throw new AssertionException(
             $"Expected string `Contains({expectedName}, {actualName})`, but found expected `{expected.ToCode()}` is not in `{actual.ToCode()}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool DoesNotContain(string expected, string actual,
+    public bool DoesNotContain(string expected, string actual,
         [CallerArgumentExpression(nameof(expected))]
-        string expectedName = "expected",
+        string expectedName = "<expected>",
         [CallerArgumentExpression(nameof(actual))]
-        string actualName = "actual") =>
+        string actualName = "<actual>") =>
         !actual.Contains(expected) ? true : throw new AssertionException(
             $"Expected string `DoesNotContain({expectedName}, {actualName})`, but found expected `{expected.ToCode()}` is in `{actual.ToCode()}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static bool StartsWith(string expected, string actual,
+    public bool StartsWith(string expected, string actual,
         [CallerArgumentExpression(nameof(expected))]
-        string expectedName = "expected",
+        string expectedName = "<expected>",
         [CallerArgumentExpression(nameof(actual))]
-        string actualName = "actual") =>
+        string actualName = "<actual>") =>
         actual.StartsWith(expected) ? true : throw new AssertionException(
             $"Expected string `StartsWith({expectedName}, {actualName})`, but found expected `{expected.ToCode()}` is not at start of `{actual.ToCode()}`");
 }
@@ -989,7 +980,7 @@ public sealed class TestRun
                 ++FailedTestCount;
 
                 if (testStopException != null)
-                    Console.WriteLine($"Unexpected exception in test '{testsName}':{Environment.NewLine}'{testStopException}'");
+                    Console.WriteLine($"Unexpected exception in test '{testsName}':{NewLine}'{testStopException}'");
 
                 if (testFailureCount > 0)
                 {
@@ -997,7 +988,7 @@ public sealed class TestRun
                     for (var i = 0; i < testFailureCount; ++i)
                     {
                         ref var f = ref Failures.GetSurePresentItemRef(failureCount + i);
-                        Console.WriteLine($"#{i} at line {f.SourceLineNumber}:{Environment.NewLine}'{f.Message}'");
+                        Console.WriteLine($"{i}. `{f.TestMethodName}` failed at line {f.SourceLineNumber}:{NewLine}{f.Message}{NewLine}");
                     }
                 }
             }

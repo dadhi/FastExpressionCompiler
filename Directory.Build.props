@@ -5,12 +5,15 @@
 
         <NeutralLanguage>en-US</NeutralLanguage>
         <LangVersion>latest</LangVersion>
-        <LatestSupportedNet>net9.0</LatestSupportedNet>
 
         <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
         <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
 
         <NoWarn>IDE0251;IDE0079;IDE0047;NETSDK1212</NoWarn>
+
+        <!-- When set, reducec number of the TargetPlatforms to speedup a local Dev -->
+        <DevMode>false</DevMode>
+
     </PropertyGroup>
 
     <ItemGroup>
