@@ -2668,35 +2668,38 @@ namespace FastExpressionCompiler
 
             private static void EmitDefault(Type type, ILGenerator il)
             {
-                if (!type.GetTypeInfo().IsValueType)
+                if (type.IsClass)
                 {
                     il.Demit(OpCodes.Ldnull);
+                    return;
                 }
-                else if (
-                    type == typeof(bool) ||
-                    type == typeof(byte) ||
-                    type == typeof(char) ||
-                    type == typeof(sbyte) ||
-                    type == typeof(int) ||
-                    type == typeof(uint) ||
-                    type == typeof(short) ||
-                    type == typeof(ushort))
+                switch (Type.GetTypeCode(type))
                 {
-                    il.Demit(OpCodes.Ldc_I4_0);
+                    case TypeCode.Boolean:
+                    case TypeCode.Char:
+                    case TypeCode.Byte:
+                    case TypeCode.SByte:
+                    case TypeCode.Int16:
+                    case TypeCode.UInt16:
+                    case TypeCode.Int32:
+                    case TypeCode.UInt32:
+                        il.Demit(OpCodes.Ldc_I4_0);
+                        break;
+                    case TypeCode.Int64:
+                    case TypeCode.UInt64:
+                        il.Demit(OpCodes.Ldc_I4_0);
+                        il.Demit(OpCodes.Conv_I8);
+                        break;
+                    case TypeCode.Single:
+                        il.Demit(OpCodes.Ldc_R4, default(float));
+                        break;
+                    case TypeCode.Double:
+                        il.Demit(OpCodes.Ldc_R8, default(double));
+                        break;
+                    default:
+                        EmitLoadLocalVariable(il, InitValueTypeVariable(il, type));
+                        break;
                 }
-                else if (
-                    type == typeof(long) ||
-                    type == typeof(ulong))
-                {
-                    il.Demit(OpCodes.Ldc_I4_0);
-                    il.Demit(OpCodes.Conv_I8);
-                }
-                else if (type == typeof(float))
-                    il.Demit(OpCodes.Ldc_R4, default(float));
-                else if (type == typeof(double))
-                    il.Demit(OpCodes.Ldc_R8, default(double));
-                else
-                    EmitLoadLocalVariable(il, InitValueTypeVariable(il, type));
             }
 
 #if LIGHT_EXPRESSION
