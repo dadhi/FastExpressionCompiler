@@ -2107,7 +2107,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.AndAlso:
                         case ExpressionType.OrElse:
                             {
-                                if (exprType.IsPrimitive && Interpreter.TryInterpretBool_new(out var resultBool, expr, setup))
+                                if (Interpreter.TryInterpretBool_new(out var resultBool, expr, setup))
                                 {
                                     if ((parent & ParentFlags.IgnoreResult) == 0)
                                         il.Demit(resultBool ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
@@ -2117,7 +2117,7 @@ namespace FastExpressionCompiler
                             }
                         case ExpressionType.Not:
                             {
-                                if (exprType.IsPrimitive && Interpreter.TryInterpretBool_new(out var resultBool, expr, setup))
+                                if (Interpreter.TryInterpretBool_new(out var resultBool, expr, setup))
                                 {
                                     if ((parent & ParentFlags.IgnoreResult) == 0)
                                         il.Demit(resultBool ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
@@ -2130,7 +2130,13 @@ namespace FastExpressionCompiler
 
                         case ExpressionType.Conditional:
                             var condExpr = (ConditionalExpression)expr;
-                            return TryEmitConditional(condExpr.Test, condExpr.IfTrue, condExpr.IfFalse, paramExprs, il, ref closure, setup, parent);
+                            var testExpr = condExpr.Test;
+                            if (Interpreter.TryInterpretBool_new(out var testIsTrue, testExpr, setup))
+                            {
+                                expr = testIsTrue ? condExpr.IfTrue : condExpr.IfFalse;
+                                continue; // no recursion, just continue with the left or right side of condition
+                            }
+                            return TryEmitConditional(testExpr, condExpr.IfTrue, condExpr.IfFalse, paramExprs, il, ref closure, setup, parent);
 
                         case ExpressionType.PostIncrementAssign:
                         case ExpressionType.PreIncrementAssign:
@@ -5256,9 +5262,17 @@ namespace FastExpressionCompiler
                     var cs0 = cases[0];
                     if (cs0.TestValues.Count == 1)
                     {
-                        Expression testExpr = customEqualMethod == null
-                            ? Equal(switchValueExpr, cs0.TestValues[0])
-                            : Call(customEqualMethod, switchValueExpr, cs0.TestValues[0]);
+                        Expression testExpr;
+                        if (customEqualMethod == null)
+                        {
+                            // todo: @perf avoid creation of the additional expression
+                            testExpr = Equal(switchValueExpr, cs0.TestValues[0]);
+                            if (Interpreter.TryInterpretBool_new(out var testResult, testExpr, setup))
+                                return TryEmit(testResult ? cs0.Body : expr.DefaultBody, paramExprs, il, ref closure, setup, parent);
+                        }
+                        else
+                            testExpr = Call(customEqualMethod, switchValueExpr, cs0.TestValues[0]);
+
                         return TryEmitConditional(testExpr, cs0.Body, expr.DefaultBody, paramExprs, il, ref closure, setup, parent);
                     }
                 }
@@ -5944,12 +5958,6 @@ namespace FastExpressionCompiler
 #endif
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
-                // Try emit a single side of the condition based on the interpreted condition value
-                if (Interpreter.TryInterpretBool_new(out var testIsTrue, testExpr, setup))
-                    return testIsTrue
-                        ? TryEmit(ifTrueExpr, paramExprs, il, ref closure, setup, parent)
-                        : TryEmit(ifFalseExpr, paramExprs, il, ref closure, setup, parent);
-
                 testExpr = TryReduceCondition(testExpr);
                 var testNodeType = testExpr.NodeType;
 
@@ -7961,6 +7969,7 @@ namespace FastExpressionCompiler
                 return false;
             }
 
+            // todo: @perf try split to `TryInterpretBinary` overload to streamline the calls for TryEmitConditional and similar
             /// <summary>Tries to interpret the expression of the Primitive type of Constant, Convert, Logical, Comparison, Arithmetic.</summary>
             internal static bool TryInterpretBool(ref bool resultBool, Expression expr, ExpressionType nodeType)
             {
