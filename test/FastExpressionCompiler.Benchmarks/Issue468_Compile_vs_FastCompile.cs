@@ -175,16 +175,16 @@ public class Issue468_InvokeCompiled_vs_InvokeCompiledFast
         return _compiledFast_DisableInterpreter();
     }
 
-    [Benchmark(Baseline = true)]
-    public bool Interpret()
-    {
-        return ExpressionCompiler.Interpreter.TryInterpretBool(out var result, _expr.Body) && result;
-    }
+    // [Benchmark(Baseline = true)]
+    // public bool Interpret()
+    // {
+    //     return ExpressionCompiler.Interpreter.TryInterpretBool(out var result, _expr.Body) && result;
+    // }
 
     [Benchmark]
     public bool Interpret_new()
     {
-        return ExpressionCompiler.Interpreter.TryInterpretBool_new(out var result, _expr.Body, CompilerFlags.Default) && result;
+        return ExpressionCompiler.Interpreter.TryInterpretBool(out var result, _expr.Body, CompilerFlags.Default) && result;
     }
 
     // [Benchmark]
@@ -239,6 +239,16 @@ DefaultJob : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
 | Compiled                        | 22,937.50 ns | 447.883 ns | 784.432 ns | 22,947.67 ns | 230.86 |   14.14 |    3 | 0.6714 | 0.6409 |    4232 B |       88.17 |
 | CompiledFast                    |     99.62 ns |   2.044 ns |   5.275 ns |     97.03 ns |   1.00 |    0.07 |    1 | 0.0076 |      - |      48 B |        1.00 |
 | CompiledFast_DisableInterpreter |  3,010.37 ns |  60.174 ns |  91.893 ns |  3,010.03 ns |  30.30 |    1.80 |    2 | 0.1755 | 0.1678 |    1143 B |       23.81 |
+
+
+## New results after cleanup
+
+| Method                          | Mean         | Error      | StdDev     | Ratio  | RatioSD | Rank | Gen0   | Gen1   | Allocated | Alloc Ratio |
+|-------------------------------- |-------------:|-----------:|-----------:|-------:|--------:|-----:|-------:|-------:|----------:|------------:|
+| Compiled                        | 22,844.78 ns | 327.497 ns | 290.317 ns | 351.80 |    6.40 |    3 | 0.6714 | 0.6409 |    4232 B |          NA |
+| CompiledFast_DisableInterpreter |  3,089.13 ns |  54.757 ns |  48.541 ns |  47.57 |    0.96 |    2 | 0.1793 | 0.1755 |    1144 B |          NA |
+| CompiledFast                    |     64.95 ns |   1.082 ns |   0.903 ns |   1.00 |    0.02 |    1 |      - |      - |         - |          NA |
+
 */
 [MemoryDiagnoser, RankColumn]
 // [SimpleJob(RuntimeMoniker.Net90)]
@@ -259,15 +269,15 @@ public class Issue468_Compile_vs_FastCompile
         return _expr.Compile();
     }
 
+    [Benchmark]
+    public object CompiledFast_DisableInterpreter()
+    {
+        return _expr.CompileFast(flags: CompilerFlags.DisableInterpreter);
+    }
+
     [Benchmark(Baseline = true)]
     public object CompiledFast()
     {
         return _expr.CompileFast();
-    }
-
-    // [Benchmark]
-    public object CompiledFast_DisableInterpreter()
-    {
-        return _expr.CompileFast(flags: CompilerFlags.DisableInterpreter);
     }
 }
