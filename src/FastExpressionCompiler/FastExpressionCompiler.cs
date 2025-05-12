@@ -127,9 +127,9 @@ namespace FastExpressionCompiler
             (TDelegate)(TryCompileBoundToFirstClosureParam(
                 typeof(TDelegate) == typeof(Delegate) ? lambdaExpr.Type : typeof(TDelegate), lambdaExpr.Body,
 #if LIGHT_EXPRESSION
-                lambdaExpr, RentOrNewClosureTypeToParamTypes(lambdaExpr),
+                lambdaExpr,
 #else
-                lambdaExpr.Parameters, RentOrNewClosureTypeToParamTypes(lambdaExpr.Parameters),
+                lambdaExpr.Parameters,
 #endif
                 lambdaExpr.ReturnType, flags) ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys()));
 
@@ -168,9 +168,9 @@ namespace FastExpressionCompiler
         public static Delegate CompileFast(this LambdaExpression lambdaExpr, bool ifFastFailedReturnNull = false, CompilerFlags flags = CompilerFlags.Default) =>
             (Delegate)TryCompileBoundToFirstClosureParam(lambdaExpr.Type, lambdaExpr.Body,
 #if LIGHT_EXPRESSION
-            lambdaExpr, RentOrNewClosureTypeToParamTypes(lambdaExpr),
+            lambdaExpr,
 #else
-            lambdaExpr.Parameters, RentOrNewClosureTypeToParamTypes(lambdaExpr.Parameters),
+            lambdaExpr.Parameters,
 #endif
             lambdaExpr.ReturnType, flags) ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
@@ -220,7 +220,7 @@ namespace FastExpressionCompiler
 #else
                 lambdaExpr.Parameters,
 #endif
-                _closureAsASingleParamType, typeof(R), flags) ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
+                typeof(R), flags) ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Func<T1, R> CompileFast<T1, R>(this Expression<Func<T1, R>> lambdaExpr,
@@ -231,7 +231,7 @@ namespace FastExpressionCompiler
 #else
                 lambdaExpr.Parameters,
 #endif
-            new[] { typeof(ArrayClosure), typeof(T1) }, typeof(R), flags) ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
+            typeof(R), flags) ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Compiles lambda expression to TDelegate type. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Func<T1, T2, R> CompileFast<T1, T2, R>(this Expression<Func<T1, T2, R>> lambdaExpr,
@@ -242,7 +242,6 @@ namespace FastExpressionCompiler
 #else
                 lambdaExpr.Parameters,
 #endif
-                new[] { typeof(ArrayClosure), typeof(T1), typeof(T2) }, // todo: @perf rent and return the array of types to pool
                 typeof(R), flags) ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
@@ -254,7 +253,7 @@ namespace FastExpressionCompiler
 #else
                 lambdaExpr.Parameters,
 #endif
-            new[] { typeof(ArrayClosure), typeof(T1), typeof(T2), typeof(T3) }, typeof(R), flags)
+            typeof(R), flags)
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Compiles lambda expression to TDelegate type. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
@@ -266,7 +265,7 @@ namespace FastExpressionCompiler
 #else
                 lambdaExpr.Parameters,
 #endif
-                new[] { typeof(ArrayClosure), typeof(T1), typeof(T2), typeof(T3), typeof(T4) }, typeof(R), flags)
+                typeof(R), flags)
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
@@ -278,7 +277,7 @@ namespace FastExpressionCompiler
 #else
                 lambdaExpr.Parameters,
 #endif
-                new[] { typeof(ArrayClosure), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5) }, typeof(R), flags)
+                typeof(R), flags)
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
@@ -290,7 +289,7 @@ namespace FastExpressionCompiler
 #else
                 lambdaExpr.Parameters,
 #endif
-                new[] { typeof(ArrayClosure), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6) }, typeof(R), flags)
+                typeof(R), flags)
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
@@ -301,7 +300,7 @@ namespace FastExpressionCompiler
 #else
                 lambdaExpr.Parameters,
 #endif
-            _closureAsASingleParamType, typeof(void), flags) ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
+            typeof(void), flags) ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Action<T1> CompileFast<T1>(this Expression<Action<T1>> lambdaExpr,
@@ -312,7 +311,7 @@ namespace FastExpressionCompiler
 #else
                 lambdaExpr.Parameters,
 #endif
-            new[] { typeof(ArrayClosure), typeof(T1) }, typeof(void), flags) ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
+            typeof(void), flags) ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Action<T1, T2> CompileFast<T1, T2>(this Expression<Action<T1, T2>> lambdaExpr,
@@ -323,7 +322,7 @@ namespace FastExpressionCompiler
 #else
                 lambdaExpr.Parameters,
 #endif
-            new[] { typeof(ArrayClosure), typeof(T1), typeof(T2) }, typeof(void), flags) ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
+            typeof(void), flags) ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Action<T1, T2, T3> CompileFast<T1, T2, T3>(this Expression<Action<T1, T2, T3>> lambdaExpr,
@@ -334,7 +333,7 @@ namespace FastExpressionCompiler
 #else
                 lambdaExpr.Parameters,
 #endif
-                new[] { typeof(ArrayClosure), typeof(T1), typeof(T2), typeof(T3) }, typeof(void), flags)
+                typeof(void), flags)
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
@@ -346,7 +345,7 @@ namespace FastExpressionCompiler
 #else
                 lambdaExpr.Parameters,
 #endif
-                new[] { typeof(ArrayClosure), typeof(T1), typeof(T2), typeof(T3), typeof(T4) }, typeof(void), flags)
+                typeof(void), flags)
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
@@ -358,7 +357,7 @@ namespace FastExpressionCompiler
 #else
                 lambdaExpr.Parameters,
 #endif
-                new[] { typeof(ArrayClosure), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5) }, typeof(void), flags)
+                typeof(void), flags)
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
@@ -370,7 +369,7 @@ namespace FastExpressionCompiler
 #else
                 lambdaExpr.Parameters,
 #endif
-                new[] { typeof(ArrayClosure), typeof(T1), typeof(T2), typeof(T3), typeof(T4), typeof(T5), typeof(T6) }, typeof(void), flags)
+                typeof(void), flags)
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         #endregion
@@ -380,9 +379,9 @@ namespace FastExpressionCompiler
             where TDelegate : class =>
             (TDelegate)TryCompileBoundToFirstClosureParam(typeof(TDelegate) == typeof(Delegate) ? lambdaExpr.Type : typeof(TDelegate), lambdaExpr.Body,
 #if LIGHT_EXPRESSION
-            lambdaExpr, RentOrNewClosureTypeToParamTypes(lambdaExpr),
+            lambdaExpr,
 #else
-            lambdaExpr.Parameters, RentOrNewClosureTypeToParamTypes(lambdaExpr.Parameters),
+            lambdaExpr.Parameters,
 #endif
             lambdaExpr.ReturnType, flags);
 
@@ -486,14 +485,19 @@ namespace FastExpressionCompiler
 
 #if LIGHT_EXPRESSION
         internal static object TryCompileBoundToFirstClosureParam(Type delegateType, Expression bodyExpr, IParameterProvider paramExprs,
-            Type[] closurePlusParamTypes, Type returnType, CompilerFlags flags)
+            Type returnType, CompilerFlags flags)
         {
+            var closurePlusParamTypes = RentOrNewClosureTypeToParamTypes(paramExprs);
             if (bodyExpr is NoArgsNewClassIntrinsicExpression newNoArgs)
+            {
+                // there is no Return of the pooled parameter types here, because in the rarest case with the unused lambda arguments we may just exaust the pooled instance 
                 return CompileNoArgsNew(newNoArgs.Constructor, delegateType, closurePlusParamTypes, returnType);
+            }
 #else
         internal static object TryCompileBoundToFirstClosureParam(Type delegateType, Expression bodyExpr, IReadOnlyList<PE> paramExprs,
-            Type[] closurePlusParamTypes, Type returnType, CompilerFlags flags)
+            Type returnType, CompilerFlags flags)
         {
+            var closurePlusParamTypes = RentOrNewClosureTypeToParamTypes(paramExprs);
 #endif
             // Try to avoid compilation altogether for Func<bool> delegates via Interpreter, see #468
             if (returnType == typeof(bool) & closurePlusParamTypes.Length == 1
@@ -541,13 +545,14 @@ namespace FastExpressionCompiler
                 return null;
             il.Demit(OpCodes.Ret);
 
+            ReturnClosureTypeToParamTypesToPool(closurePlusParamTypes);
+
             return method.CreateDelegate(delegateType, closure);
         }
 
         private static readonly Type[] _closureAsASingleParamType = { typeof(ArrayClosure) };
         private static readonly Type[][] _closureTypePlusParamTypesPool = new Type[8][]; // todo: @perf @mem could we use this for other Type arrays?
 
-        // todo: @perf optimize
 #if LIGHT_EXPRESSION
         private static Type[] RentOrNewClosureTypeToParamTypes(IParameterProvider paramExprs)
         {
@@ -560,37 +565,23 @@ namespace FastExpressionCompiler
             if (count == 0)
                 return _closureAsASingleParamType;
 
-            if (count < 8)
-            {
-                var pooledClosureAndParamTypes = Interlocked.Exchange(ref _closureTypePlusParamTypesPool[count], null);
-                if (pooledClosureAndParamTypes != null)
-                {
-                    for (var i = 0; i < count; i++)
-                    {
-                        var parameterExpr = paramExprs.GetParameter(i); // todo: @perf can we avoid calling virtual GetParameter() and maybe use intrinsic with NoByRef?
-                        pooledClosureAndParamTypes[i + 1] = parameterExpr.IsByRef ? parameterExpr.Type.MakeByRefType() : parameterExpr.Type;
-                    }
-                    return pooledClosureAndParamTypes;
-                }
-            }
-
-            // todo: @perf the code maybe simplified and then will be the candidate for the inlining
-            var closureAndParamTypes = new Type[count + 1];
-            closureAndParamTypes[0] = typeof(ArrayClosure);
+            var pooled = count < 8 ? Interlocked.Exchange(ref _closureTypePlusParamTypesPool[count], null) ?? new Type[count + 1] : new Type[count + 1];
+            pooled[0] = typeof(ArrayClosure);
             for (var i = 0; i < count; i++)
             {
-                var parameterExpr = paramExprs.GetParameter(i);
-                closureAndParamTypes[i + 1] = parameterExpr.IsByRef ? parameterExpr.Type.MakeByRefType() : parameterExpr.Type;
+                var paramExpr = paramExprs.GetParameter(i); // todo: @perf can we avoid calling virtual GetParameter() and maybe use intrinsic with NoByRef?
+                pooled[i + 1] = !paramExpr.IsByRef ? paramExpr.Type : paramExpr.Type.MakeByRefType();
             }
-            return closureAndParamTypes;
+
+            return pooled;
         }
 
         [MethodImpl((MethodImplOptions)256)]
         private static void ReturnClosureTypeToParamTypesToPool(Type[] closurePlusParamTypes)
         {
-            var paramCount = closurePlusParamTypes.Length - 1;
-            if (paramCount != 0 && paramCount < 8)
-                Interlocked.Exchange(ref _closureTypePlusParamTypesPool[paramCount], closurePlusParamTypes); // todo: @perf we don't need the Interlocked here
+            var paramCountOnly = closurePlusParamTypes.Length - 1;
+            if (paramCountOnly != 0 & paramCountOnly < 8)
+                Interlocked.Exchange(ref _closureTypePlusParamTypesPool[paramCountOnly], closurePlusParamTypes); // todo: @perf we don't need the Interlocked here
         }
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
@@ -2105,7 +2096,7 @@ namespace FastExpressionCompiler
                                     || TryEmitArithmetic(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, nodeType, exprType, paramExprs, il,
                                         ref closure, setup, parent);
                             }
-                        // todo: @wip @feature #472 add interpretation when those node types are supported
+                        // todo: @feature #472 add interpretation when those node types are supported
                         case ExpressionType.AddChecked:
                         case ExpressionType.SubtractChecked:
                         case ExpressionType.MultiplyChecked:

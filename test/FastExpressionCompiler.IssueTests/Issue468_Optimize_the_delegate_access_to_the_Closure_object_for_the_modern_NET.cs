@@ -14,8 +14,8 @@ public struct Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_th
 {
     public void Run(TestRun t)
     {
-        Original_expression_with_closure(t);
         Original_expression(t);
+        Original_expression_with_closure(t);
     }
 
     // Exposing for the benchmarking
