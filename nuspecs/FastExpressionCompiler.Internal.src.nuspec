@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata minClientVersion="3.3.0">
         <id>FastExpressionCompiler.Internal.src</id>
-        <version>5.1.1</version>
+        <version>5.2.0</version>
         <authors>Maksim Volkau</authors>
         <copyright>Copyright © 2016-2025 Maksim Volkau</copyright>
         <projectUrl>https://github.com/dadhi/FastExpressionCompiler</projectUrl>
@@ -12,6 +12,13 @@
         <description>FastExpressionCompiler is 10-40x times faster than Expression.Compile()</description>
         <tags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</tags>
         <releaseNotes><![CDATA[
+## v5.2.0 Feature release
+
+- feat: #466 Simplify creation of the updateable value that can be put into Closure with the Expression.ConstantRef
+- feat: #472 Interpreter to reduce the IL emitted by the Logical, Comparison, Arithmetics expressions, by calculating them during compile time and using the calculation result in IL
+- feat: Expose TestTools and FastExpressionCompiler.ILDecoder to enable testing and diagnostic in the consumer code
+
+
 ## v5.1.1. Bug-fix release
 
 - fix: #461 InvalidProgramException when null checking type by ref
