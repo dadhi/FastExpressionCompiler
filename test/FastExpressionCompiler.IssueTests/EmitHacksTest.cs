@@ -11,8 +11,13 @@ using System.Runtime.CompilerServices;
 namespace FastExpressionCompiler.IssueTests
 {
     
-    public class EmitHacksTest : ITest
+    public class EmitHacksTest : ITest, ITestX
     {
+        public void Run(TestRun t)
+        {
+            TryToReuseTheDynamicMethod(t);
+        }
+
         public int Run()
         {
             DynamicMethod_Emit_Hack();
@@ -21,7 +26,11 @@ namespace FastExpressionCompiler.IssueTests
             return 3;
         }
 
-        
+        void TryToReuseTheDynamicMethod(TestContext t)
+        {
+            t.Fail("TryToReuseTheDynamicMethod is not implemented yet");
+        }
+
         public void DynamicMethod_Emit_Hack()
         {
             var f = Get_DynamicMethod_Emit_Hack();

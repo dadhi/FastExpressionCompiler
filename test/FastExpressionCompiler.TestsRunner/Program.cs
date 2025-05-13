@@ -11,6 +11,11 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
+#if NET8_0_OR_GREATER && !LIGHT_EXPRESSION
+            var ts = new TestRun();
+            ts.Run(new EmitHacksTest());
+#endif
+
             var t = new LightExpression.TestRun();
 
             t.Run(new LightExpression.IssueTests.Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET());

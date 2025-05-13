@@ -437,7 +437,7 @@ namespace FastExpressionCompiler
 
             var delegateType = typeof(TDelegate) != typeof(Delegate) ? typeof(TDelegate) : lambdaExpr.Type;
             var @delegate = (TDelegate)(object)method.CreateDelegate(delegateType, new ArrayClosure(closureInfo.Constants.Items));
-            ReturnClosureTypeToParamTypesToPool(closurePlusParamTypes);
+            FreeClosureTypeToParamTypesToPool(closurePlusParamTypes);
             return @delegate;
         }
 
@@ -468,7 +468,7 @@ namespace FastExpressionCompiler
 
             var delegateType = typeof(TDelegate) != typeof(Delegate) ? typeof(TDelegate) : lambdaExpr.Type;
             var @delegate = (TDelegate)(object)method.CreateDelegate(delegateType, EmptyArrayClosure);
-            ReturnClosureTypeToParamTypesToPool(closurePlusParamTypes);
+            FreeClosureTypeToParamTypesToPool(closurePlusParamTypes);
             return @delegate;
         }
 
@@ -545,43 +545,70 @@ namespace FastExpressionCompiler
                 return null;
             il.Demit(OpCodes.Ret);
 
-            ReturnClosureTypeToParamTypesToPool(closurePlusParamTypes);
+            FreeClosureTypeToParamTypesToPool(closurePlusParamTypes);
 
             return method.CreateDelegate(delegateType, closure);
         }
 
         private static readonly Type[] _closureAsASingleParamType = { typeof(ArrayClosure) };
-        private static readonly Type[][] _closureTypePlusParamTypesPool = new Type[8][]; // todo: @perf @mem could we use this for other Type arrays?
+        private static readonly Type[][] _paramTypesPoolWithElem0OfLength1 = new Type[8][]; // todo: @perf @mem could we use this for other Type arrays?
 
 #if LIGHT_EXPRESSION
-        private static Type[] RentOrNewClosureTypeToParamTypes(IParameterProvider paramExprs)
+        internal static Type[] RentOrNewClosureTypeToParamTypes(IParameterProvider paramExprs)
         {
             var count = paramExprs.ParameterCount;
 #else
-        private static Type[] RentOrNewClosureTypeToParamTypes(IReadOnlyList<PE> paramExprs)
+        internal static Type[] RentOrNewClosureTypeToParamTypes(IReadOnlyList<PE> paramExprs)
         {
             var count = paramExprs.Count;
 #endif
             if (count == 0)
                 return _closureAsASingleParamType;
 
-            var pooled = count < 8 ? Interlocked.Exchange(ref _closureTypePlusParamTypesPool[count], null) ?? new Type[count + 1] : new Type[count + 1];
-            pooled[0] = typeof(ArrayClosure);
+            var pooledOrNew = count < 8 ? Interlocked.Exchange(ref _paramTypesPoolWithElem0OfLength1[count], null) ?? new Type[count + 1] : new Type[count + 1];
+            pooledOrNew[0] = typeof(ArrayClosure);
             for (var i = 0; i < count; i++)
             {
                 var paramExpr = paramExprs.GetParameter(i); // todo: @perf can we avoid calling virtual GetParameter() and maybe use intrinsic with NoByRef?
-                pooled[i + 1] = !paramExpr.IsByRef ? paramExpr.Type : paramExpr.Type.MakeByRefType();
+                pooledOrNew[i + 1] = !paramExpr.IsByRef ? paramExpr.Type : paramExpr.Type.MakeByRefType();
             }
 
-            return pooled;
+            return pooledOrNew;
         }
 
         [MethodImpl((MethodImplOptions)256)]
-        private static void ReturnClosureTypeToParamTypesToPool(Type[] closurePlusParamTypes)
+        internal static Type[] RentOrNewClosureTypeToParamTypes(Type p1, Type p2)
+        {
+            var pooledOrNew = Interlocked.Exchange(ref _paramTypesPoolWithElem0OfLength1[2], null) ?? new Type[3];
+            pooledOrNew[0] = typeof(ArrayClosure);
+            pooledOrNew[1] = p1;
+            pooledOrNew[2] = p2;
+            return pooledOrNew;
+        }
+
+        [MethodImpl((MethodImplOptions)256)]
+        internal static Type[] RentParamTypes(Type p0, Type p1)
+        {
+            var pooledOrNew = Interlocked.Exchange(ref _paramTypesPoolWithElem0OfLength1[1], null) ?? new Type[2];
+            pooledOrNew[0] = p0;
+            pooledOrNew[1] = p1;
+            return pooledOrNew;
+        }
+
+        [MethodImpl((MethodImplOptions)256)]
+        internal static void FreeClosureTypeToParamTypesToPool(Type[] closurePlusParamTypes)
         {
             var paramCountOnly = closurePlusParamTypes.Length - 1;
             if (paramCountOnly != 0 & paramCountOnly < 8)
-                Interlocked.Exchange(ref _closureTypePlusParamTypesPool[paramCountOnly], closurePlusParamTypes); // todo: @perf we don't need the Interlocked here
+                Interlocked.Exchange(ref _paramTypesPoolWithElem0OfLength1[paramCountOnly], closurePlusParamTypes); // todo: @perf we don't need the Interlocked here
+        }
+
+        [MethodImpl((MethodImplOptions)256)]
+        internal static void FreeParamTypes(Type[] paramTypes)
+        {
+            var paramCount = paramTypes.Length;
+            if (paramCount != 0 & paramCount < 8)
+                Interlocked.Exchange(ref _paramTypesPoolWithElem0OfLength1[paramCount - 1], paramTypes); // todo: @perf we don't need the Interlocked here
         }
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
@@ -1735,7 +1762,7 @@ namespace FastExpressionCompiler
             {
                 var paramTypes = RentOrNewClosureTypeToParamTypes(nestedLambdaParamExprs);
                 nestedLambdaInfo.Lambda = CompileNoArgsNew(newNoArgs.Constructor, nestedLambdaExpr.Type, paramTypes, nestedReturnType);
-                ReturnClosureTypeToParamTypesToPool(paramTypes);
+                FreeClosureTypeToParamTypesToPool(paramTypes);
                 return true;
             }
 #else
@@ -1780,7 +1807,7 @@ namespace FastExpressionCompiler
                 : nestedConstsAndLambdas == null ? new NestedLambdaForNonPassedParams(nestedLambda)
                 : new NestedLambdaForNonPassedParamsWithConstants(nestedLambda, nestedConstsAndLambdas);
 
-            ReturnClosureTypeToParamTypesToPool(closurePlusParamTypes);
+            FreeClosureTypeToParamTypesToPool(closurePlusParamTypes);
             return true;
         }
 
@@ -8325,7 +8352,7 @@ namespace FastExpressionCompiler
         }
         */
 
-        private static readonly Func<ILGenerator, Type, int> _getNextLocalVarIndex;
+        internal static readonly Func<ILGenerator, Type, int> _getNextLocalVarIndex;
 
         internal static int PostInc(ref int i) => i++;
 
@@ -8345,26 +8372,18 @@ namespace FastExpressionCompiler
                 return;
 
             // looking for the `SignatureHelper.AddArgument(Type argument, bool pinned)`
-            MethodInfo addArgumentMethod = null;
-            foreach (var m in typeof(SignatureHelper).GetTypeInfo().GetDeclaredMethods("AddArgument"))
-            {
-                var ps = m.GetParameters();
-                if (ps.Length == 2 && ps[0].ParameterType == typeof(Type) && ps[1].ParameterType == typeof(bool))
-                {
-                    addArgumentMethod = m;
-                    break;
-                }
-            }
-
+            var typeAndBoolParamTypes = ExpressionCompiler.RentParamTypes(typeof(Type), typeof(bool));
+            var addArgumentMethod = typeof(SignatureHelper).GetMethod("AddArgument", typeAndBoolParamTypes);
             if (addArgumentMethod == null)
                 return;
+            ExpressionCompiler.FreeParamTypes(typeAndBoolParamTypes);
 
             // our own helper - always available
-            var postIncMethod = typeof(ILGeneratorHacks).GetTypeInfo().GetDeclaredMethod(nameof(PostInc));
+            var postIncMethod = typeof(ILGeneratorHacks).GetMethod(nameof(PostInc), BindingFlags.Static | BindingFlags.NonPublic);
+            Debug.Assert(postIncMethod != null, "PostInc method not found!");
 
-            var efficientMethod = new DynamicMethod(string.Empty,
-                typeof(int), new[] { typeof(ExpressionCompiler.ArrayClosure), typeof(ILGenerator), typeof(Type) },
-                typeof(ExpressionCompiler.ArrayClosure), skipVisibility: true);
+            var paramTypes = ExpressionCompiler.RentOrNewClosureTypeToParamTypes(typeof(ILGenerator), typeof(Type));
+            var efficientMethod = new DynamicMethod(string.Empty, typeof(int), paramTypes, typeof(ExpressionCompiler.ArrayClosure), true);
             var il = efficientMethod.GetILGenerator();
 
             // emitting `il.m_localSignature.AddArgument(type);`
@@ -8383,6 +8402,8 @@ namespace FastExpressionCompiler
 
             _getNextLocalVarIndex = (Func<ILGenerator, Type, int>)efficientMethod.CreateDelegate(
                 typeof(Func<ILGenerator, Type, int>), ExpressionCompiler.EmptyArrayClosure);
+
+            ExpressionCompiler.FreeClosureTypeToParamTypesToPool(paramTypes);
 
             // todo: @perf do batch Emit by manually calling `EnsureCapacity` once then `InternalEmit` multiple times
             // todo: @perf Replace the `Emit(opcode, int)` with the more specialized `Emit(opcode)`, `Emit(opcode, byte)` or `Emit(opcode, short)` 
