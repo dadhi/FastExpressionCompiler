@@ -591,7 +591,7 @@ public struct TestContext
     public bool Fail(string testName, int sourceLineNumber, AssertKind assertKind, string message)
     {
 #if DEBUG
-        // When debugging raise the fail immediately as excpetion to avoid false sense of security
+        // When debugging raise the fail immediately as exception to avoid false sense of security
         throw new AssertionException($"`{testName}` failed at line {sourceLineNumber}:{NewLine}{message}{NewLine}");
 #else
         TestRun.Failures.Add(new TestFailure(testName, sourceLineNumber, assertKind, message));
