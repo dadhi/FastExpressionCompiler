@@ -510,13 +510,56 @@ public interface IStack<T, TStack>
     Span<T> AsSpan();
 }
 
-#pragma warning restore CS0436
-
-internal struct Stack2<T>
+internal static class StackTools<T, TStack>
+    where TStack : struct, IStack<T, TStack>
 {
+#if NETSTANDARD2_0_OR_GREATER || NET472
+    internal static readonly ConstructorInfo SpanConstructor =
+        typeof(Span<T>).GetConstructor(new[] { typeof(void*), typeof(int) });
+
+    internal delegate Span<T> AsSpanDelegate(ref TStack stack, int capacity);
+
+    internal static AsSpanDelegate CompileAsSpanDelegate()
+    {
+        var dynamicMethod = new DynamicMethod(
+            "",
+            typeof(Span<T>),
+            new[] { typeof(TStack).MakeByRefType(), typeof(int) }, // todo: @perf pool this thing
+            typeof(TStack),
+            true
+        );
+
+        // Set capacity to the estimated size to avoid realloc, 1 + 1 + 1 + 5 + 1 = 9 bytes + a small buffer
+        var il = dynamicMethod.GetILGenerator(16);
+
+        // IL to replicate: return new Span<T>(Unsafe.AsPointer(ref this), StackCapacity);
+        il.Emit(OpCodes.Ldarg_0);         // Load 'ref this'
+        il.Emit(OpCodes.Conv_U);          // Convert managed reference to native unsigned int (void*)
+        il.Emit(OpCodes.Ldarg_1);         // Load length (StackCapacity) argument
+        il.Emit(OpCodes.Newobj, SpanConstructor);
+        il.Emit(OpCodes.Ret);
+
+        return (AsSpanDelegate)dynamicMethod.CreateDelegate(typeof(AsSpanDelegate));
+    }
+
+    // todo: @perf do we even need a lazy here?
+    internal static readonly Lazy<AsSpanDelegate> LazyCompiledAsSpanDelegate = new(CompileAsSpanDelegate);
+#endif
+}
+
+/// <summary>Implementation of `IStack` for 2 items on stack</summary>
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public struct Stack2<T> : IStack<T, Stack2<T>>
+{
+    /// <summary>Count of items on stack</summary>
     public const int StackCapacity = 2;
+
     internal T _it0, _it1;
 
+    /// <inheritdoc/>
+    public int Capacity => StackCapacity;
+
+    /// <inheritdoc/>
     [UnscopedRef]
     [MethodImpl((MethodImplOptions)256)]
     public ref T GetSurePresentRef(int index)
@@ -528,6 +571,45 @@ internal struct Stack2<T>
             default: return ref _it1;
         }
     }
+
+    /// <inheritdoc/>
+    public T this[int index]
+    {
+        [MethodImpl((MethodImplOptions)256)]
+        get
+        {
+            Debug.Assert(index < StackCapacity);
+            return index switch
+            {
+                0 => _it0,
+                _ => _it1,
+            };
+        }
+        [MethodImpl((MethodImplOptions)256)]
+        set => Set(index, in value);
+    }
+
+    /// <inheritdoc/>
+    [MethodImpl((MethodImplOptions)256)]
+    public void Set(int index, in T value)
+    {
+        Debug.Assert(index < StackCapacity);
+        switch (index)
+        {
+            case 0: _it0 = value; break;
+            default: _it1 = value; break;
+        }
+    }
+
+    /// <inheritdoc/>
+    [UnscopedRef]
+    [MethodImpl((MethodImplOptions)256)]
+    public Span<T> AsSpan() =>
+#if NETSTANDARD2_0_OR_GREATER || NET472
+        StackTools<T, Stack2<T>>.LazyCompiledAsSpanDelegate.Value(ref this, StackCapacity);
+#else
+        MemoryMarshal.CreateSpan(ref Unsafe.As<Stack2<T>, T>(ref this), StackCapacity);
+#endif
 }
 
 /// <summary>Implementation of `IStack` for 4 items on stack</summary>
@@ -557,48 +639,6 @@ public struct Stack4<T> : IStack<T, Stack4<T>>
         }
     }
 
-#if NETSTANDARD2_0_OR_GREATER || NET472
-    private delegate Span<T> AsSpanDelegate(ref Stack4<T> stack, int capacity);
-
-    private static AsSpanDelegate CompileAsSpanDelegate()
-    {
-        var dynamicMethod = new DynamicMethod(
-            "__AsSpan_Stack4_",
-            typeof(Span<T>),
-            new[] { typeof(Stack4<T>).MakeByRefType(), typeof(int) },
-            typeof(Stack4<T>).Module,
-            true
-        );
-
-        var spanConstructor = typeof(Span<T>).GetConstructor(new[] { typeof(void*), typeof(int) });
-        Debug.Assert(spanConstructor != null);
-
-        // Set capacity to estimated size = 1 + 1 + 1 + 5 + 1 = 9 bytes + a small buffer
-        var il = dynamicMethod.GetILGenerator(16);
-
-        // IL to replicate: return new Span<T>(Unsafe.AsPointer(ref this), StackCapacity);
-        il.Emit(OpCodes.Ldarg_0);         // Load 'ref this'
-        il.Emit(OpCodes.Conv_U);          // Convert managed reference to native unsigned int (void*)
-        il.Emit(OpCodes.Ldarg_1);         // Load length (StackCapacity) argument
-        il.Emit(OpCodes.Newobj, spanConstructor);
-        il.Emit(OpCodes.Ret);
-
-        return (AsSpanDelegate)dynamicMethod.CreateDelegate(typeof(AsSpanDelegate));
-    }
-
-    private static readonly Lazy<AsSpanDelegate> _lazyCompiledAsSpanDelegate = new(CompileAsSpanDelegate);
-
-    /// <inheritdoc/>
-    [UnscopedRef]
-    [MethodImpl((MethodImplOptions)256)]
-    public Span<T> AsSpan() => _lazyCompiledAsSpanDelegate.Value(ref this, StackCapacity);
-#else
-    /// <inheritdoc/>
-    [UnscopedRef]
-    [MethodImpl((MethodImplOptions)256)]
-    public Span<T> AsSpan() => MemoryMarshal.CreateSpan(ref Unsafe.As<Stack4<T>, T>(ref this), StackCapacity);
-#endif
-
     /// <inheritdoc/>
     public T this[int index]
     {
@@ -611,8 +651,7 @@ public struct Stack4<T> : IStack<T, Stack4<T>>
                 0 => _it0,
                 1 => _it1,
                 2 => _it2,
-                3 => _it3,
-                _ => default,
+                _ => _it3,
             };
         }
         [MethodImpl((MethodImplOptions)256)]
@@ -629,10 +668,19 @@ public struct Stack4<T> : IStack<T, Stack4<T>>
             case 0: _it0 = value; break;
             case 1: _it1 = value; break;
             case 2: _it2 = value; break;
-            case 3: _it3 = value; break;
-            default: break;
+            default: _it3 = value; break;
         }
     }
+
+    /// <inheritdoc/>
+    [UnscopedRef]
+    [MethodImpl((MethodImplOptions)256)]
+    public Span<T> AsSpan() =>
+#if NETSTANDARD2_0_OR_GREATER || NET472
+        StackTools<T, Stack4<T>>.LazyCompiledAsSpanDelegate.Value(ref this, StackCapacity);
+#else
+        MemoryMarshal.CreateSpan(ref Unsafe.As<Stack4<T>, T>(ref this), StackCapacity);
+#endif
 }
 
 // todo: @wip

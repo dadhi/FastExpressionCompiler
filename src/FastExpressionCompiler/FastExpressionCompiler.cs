@@ -490,7 +490,7 @@ namespace FastExpressionCompiler
             var closurePlusParamTypes = RentOrNewClosureTypeToParamTypes(paramExprs);
             if (bodyExpr is NoArgsNewClassIntrinsicExpression newNoArgs)
             {
-                // there is no Return of the pooled parameter types here, because in the rarest case with the unused lambda arguments we may just exaust the pooled instance 
+                // there is no Return of the pooled parameter types here, because in the rarest case with the unused lambda arguments we may just exhaust the pooled instance 
                 return CompileNoArgsNew(newNoArgs.Constructor, delegateType, closurePlusParamTypes, returnType);
             }
 #else
