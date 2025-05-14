@@ -3,6 +3,7 @@ using System.Linq.Expressions;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Diagnosers;
 using BenchmarkDotNet.Jobs;
+using BenchmarkDotNet.Order;
 
 namespace FastExpressionCompiler.Benchmarks;
 
@@ -279,5 +280,24 @@ public class Issue468_Compile_vs_FastCompile
     public object CompiledFast()
     {
         return _expr.CompileFast();
+    }
+}
+
+[MemoryDiagnoser, RankColumn, Orderer(SummaryOrderPolicy.FastestToSlowest)]
+public class Issue475_ReuseVsNoReuse
+{
+    /*
+    
+    */
+    [Benchmark(Baseline = true)]
+    public object NoReuse()
+    {
+        return IssueTests.Issue475_Reuse_DynamicMethod_if_possible.NoReuse();
+    }
+
+    [Benchmark]
+    public object Reuse()
+    {
+        return IssueTests.Issue475_Reuse_DynamicMethod_if_possible.Reuse();
     }
 }

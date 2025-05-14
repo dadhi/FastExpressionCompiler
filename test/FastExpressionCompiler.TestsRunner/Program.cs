@@ -11,9 +11,9 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-#if NET8_0_OR_GREATER && !LIGHT_EXPRESSION
+#if NET8_0_OR_GREATER
             var ts = new TestRun();
-            ts.Run(new EmitHacksTest());
+            ts.Run(new Issue475_Reuse_DynamicMethod_if_possible());
 #endif
 
             var t = new LightExpression.TestRun();

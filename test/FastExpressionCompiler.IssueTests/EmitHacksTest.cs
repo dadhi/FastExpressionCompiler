@@ -7,68 +7,17 @@ using System.Reflection.Emit;
 using System.Buffers.Binary;
 using System.Runtime.CompilerServices;
 
-
 namespace FastExpressionCompiler.IssueTests
 {
     
-    public class EmitHacksTest : ITest, ITestX
+    public class EmitHacksTest : ITest
     {
-        public void Run(TestRun t)
-        {
-            TryToReuseTheDynamicMethod(t);
-        }
-
         public int Run()
         {
             DynamicMethod_Emit_Hack();
             // DynamicMethod_Emit_Newobj();
             // DynamicMethod_Hack_Emit_Newobj();
             return 3;
-        }
-
-        void TryToReuseTheDynamicMethod(TestContext t)
-        {
-            // Let's say there is a DynamicMethod of Func<int, int> returning its argument, 
-            // at the end I want to reuse the created DynamicMethod for another Func<int, int> returning arg + 42
-
-            var dynMethod = new DynamicMethod(string.Empty,
-                typeof(int),
-                [typeof(ExpressionCompiler.ArrayClosure), typeof(int)], 
-                typeof(ExpressionCompiler.ArrayClosure), 
-                true);
-            
-            var il = dynMethod.GetILGenerator();
-
-            il.Emit(OpCodes.Ldarg_1);
-            il.Emit(OpCodes.Ret);
-
-            var func = (Func<int, int>)dynMethod.CreateDelegate(typeof(Func<int, int>), ExpressionCompiler.EmptyArrayClosure);
-            t.AreEqual(41, func(41));
-
-            // Reset the DynamicMethod internals that we need to reuse:
-            // _ilGenerator = null;
-            // _initLocals = true;
-            // _methodHandle = null;
-            var dynMethodType = dynMethod.GetType();
-            var ilGeneratorField = dynMethodType.GetField("_ilGenerator", BindingFlags.Instance | BindingFlags.NonPublic);
-            var initLocalsField = dynMethodType.GetField("_initLocals", BindingFlags.Instance | BindingFlags.NonPublic);
-            var methodHandleField = dynMethodType.GetField("_methodHandle", BindingFlags.Instance | BindingFlags.NonPublic);
-
-            Console.WriteLine($"{{_ilGenerator: {ilGeneratorField?.GetValue(dynMethod) ?? "null"}, _initLocals: {initLocalsField.GetValue(dynMethod)}, _methodHandle: {methodHandleField?.GetValue(dynMethod) ?? "null"}}}");
-            ilGeneratorField.SetValue(dynMethod, null);
-            initLocalsField.SetValue(dynMethod, true);
-            // methodHandleField.SetValue(dynMethod, null); // breaks the CLR
-
-            var il2 = dynMethod.GetILGenerator();
-
-            il2.Emit(OpCodes.Ldarg_1);
-            il2.Emit(OpCodes.Ldc_I4, 42);
-            il2.Emit(OpCodes.Add);
-            il2.Emit(OpCodes.Ret);
-            t.AreEqual(41, func(41));
-
-            var func2 = (Func<int, int>)dynMethod.CreateDelegate(typeof(Func<int, int>), ExpressionCompiler.EmptyArrayClosure);
-            t.AreEqual(83, func2(41));
         }
 
         public void DynamicMethod_Emit_Hack()
