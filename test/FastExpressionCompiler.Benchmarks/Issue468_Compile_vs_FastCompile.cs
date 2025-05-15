@@ -287,17 +287,37 @@ public class Issue468_Compile_vs_FastCompile
 public class Issue475_ReuseVsNoReuse
 {
     /*
-    
+    ## Baseline
+
+    BenchmarkDotNet v0.14.0, Windows 11 (10.0.26100.3915)
+    Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
+    .NET SDK 9.0.203
+    [Host]     : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+    DefaultJob : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+
+
+    | Method             | Mean     | Error     | StdDev    | Ratio | RatioSD | Rank | Gen0   | Gen1   | Allocated | Alloc Ratio |
+    |------------------- |---------:|----------:|----------:|------:|--------:|-----:|-------:|-------:|----------:|------------:|
+    | ReuseILGenerator   | 5.317 us | 0.1028 us | 0.1441 us |  0.95 |    0.04 |    1 | 0.3510 | 0.3433 |   2.16 KB |        0.94 |
+    | NoReuseILGenerator | 5.602 us | 0.1085 us | 0.1590 us |  1.00 |    0.04 |    1 | 0.3738 | 0.3586 |    2.3 KB |        1.00 |
+
+    ## Reusing the whole ILGenerator with the m_scope tokens and m_ILStream
+
+    | Method             | Mean     | Error     | StdDev    | Ratio | RatioSD | Rank | Gen0   | Gen1   | Allocated | Alloc Ratio |
+    |------------------- |---------:|----------:|----------:|------:|--------:|-----:|-------:|-------:|----------:|------------:|
+    | ReuseILGenerator   | 4.531 us | 0.0898 us | 0.1451 us |  0.87 |    0.04 |    1 | 0.2747 | 0.2670 |   1.71 KB |        0.74 |
+    | NoReuseILGenerator | 5.211 us | 0.1025 us | 0.1874 us |  1.00 |    0.05 |    2 | 0.3738 | 0.3586 |    2.3 KB |        1.00 |
+
     */
     [Benchmark(Baseline = true)]
-    public object NoReuse()
+    public object NoReuseILGenerator()
     {
-        return IssueTests.Issue475_Reuse_DynamicMethod_if_possible.NoReuse();
+        return IssueTests.Issue475_Reuse_DynamicMethod_if_possible.NoReuseILGenerator();
     }
 
     [Benchmark]
-    public object Reuse()
+    public object ReuseILGenerator()
     {
-        return IssueTests.Issue475_Reuse_DynamicMethod_if_possible.Reuse();
+        return IssueTests.Issue475_Reuse_DynamicMethod_if_possible.ReuseILGenerator();
     }
 }

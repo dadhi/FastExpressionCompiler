@@ -2333,7 +2333,7 @@ namespace FastExpressionCompiler
 
                         case ExpressionType.Default:
                             if (exprType != typeof(void) && (parent & ParentFlags.IgnoreResult) == 0)
-                                EmitDefault(exprType, il);
+                                EmitDefault(il, exprType);
                             return true;
 
                         case ExpressionType.Index:
@@ -2690,7 +2690,8 @@ namespace FastExpressionCompiler
                 return il.EmitPopIfIgnoreResult(parent);
             }
 
-            private static void EmitDefault(Type type, ILGenerator il)
+            /// <summary>Emit default op code for the type</summary>
+            public static void EmitDefault(ILGenerator il, Type type)
             {
                 if (type.IsClass)
                 {
@@ -6216,8 +6217,9 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Ldloca, (short)location);
             }
 
+            /// <summary>Load local variable on stack</summary>
             [MethodImpl((MethodImplOptions)256)]
-            internal static bool EmitLoadLocalVariable(ILGenerator il, int location)
+            public static bool EmitLoadLocalVariable(ILGenerator il, int location)
             {
                 if (location == 0)
                     il.Demit(OpCodes.Ldloc_0);
@@ -6267,8 +6269,9 @@ namespace FastExpressionCompiler
                 return location;
             }
 
+            /// <summary>Stores and loads the variable</summary>
             [MethodImpl((MethodImplOptions)256)]
-            internal static void EmitStoreAndLoadLocalVariable(ILGenerator il, int location)
+            public static void EmitStoreAndLoadLocalVariable(ILGenerator il, int location)
             {
                 if (location == 0)
                 {
@@ -6302,7 +6305,8 @@ namespace FastExpressionCompiler
                 }
             }
 
-            internal static int EmitStoreAndLoadLocalVariable(ILGenerator il, Type t)
+            /// <summary>Stores and loads the variable, and returns it</summary>
+            public static int EmitStoreAndLoadLocalVariable(ILGenerator il, Type t)
             {
                 var location = il.GetNextLocalVarIndex(t);
                 EmitStoreAndLoadLocalVariable(il, location);
@@ -8150,7 +8154,7 @@ namespace FastExpressionCompiler
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    internal static class ILGeneratorTools
+    public static class ILGeneratorTools
     {
 #if DEMIT
         [MethodImpl((MethodImplOptions)256)]
