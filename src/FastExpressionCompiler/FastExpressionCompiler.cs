@@ -487,20 +487,20 @@ namespace FastExpressionCompiler
         internal static object TryCompileBoundToFirstClosureParam(Type delegateType, Expression bodyExpr, IParameterProvider paramExprs,
             Type returnType, CompilerFlags flags)
         {
-            var closurePlusParamTypes = RentOrNewClosureTypeToParamTypes(paramExprs);
+            var closureAndParamTypes = RentOrNewClosureTypeToParamTypes(paramExprs);
             if (bodyExpr is NoArgsNewClassIntrinsicExpression newNoArgs)
             {
                 // there is no Return of the pooled parameter types here, because in the rarest case with the unused lambda arguments we may just exhaust the pooled instance 
-                return CompileNoArgsNew(newNoArgs.Constructor, delegateType, closurePlusParamTypes, returnType);
+                return CompileNoArgsNew(newNoArgs.Constructor, delegateType, closureAndParamTypes, returnType);
             }
 #else
         internal static object TryCompileBoundToFirstClosureParam(Type delegateType, Expression bodyExpr, IReadOnlyList<PE> paramExprs,
             Type returnType, CompilerFlags flags)
         {
-            var closurePlusParamTypes = RentOrNewClosureTypeToParamTypes(paramExprs);
+            var closureAndParamTypes = RentOrNewClosureTypeToParamTypes(paramExprs);
 #endif
             // Try to avoid compilation altogether for Func<bool> delegates via Interpreter, see #468
-            if (returnType == typeof(bool) & closurePlusParamTypes.Length == 1
+            if (returnType == typeof(bool) & closureAndParamTypes.Length == 1
                 && Interpreter.IsCandidateForInterpretation(bodyExpr)
                 && Interpreter.TryInterpretBool(out var result, bodyExpr, flags))
                 return result ? Interpreter.TrueFunc : Interpreter.FalseFunc;
@@ -529,10 +529,11 @@ namespace FastExpressionCompiler
             // note: @slow this is what System.Compiles does and which makes the compilation 10x slower, but the invocation become faster by a single branch instruction
             // var method = new DynamicMethod(string.Empty, returnType, closurePlusParamTypes, true);
             // this is FEC way, significantly faster compilation, but +1 branch instruction in the invocation
-            var method = new DynamicMethod(string.Empty, returnType, closurePlusParamTypes, typeof(ArrayClosure), true);
+            var method = new DynamicMethod(string.Empty, returnType, closureAndParamTypes, typeof(ArrayClosure), true);
 
-            // todo: @perf can we just count the Expressions in the TryCollect phase and use it as N * 4 or something?
-            var il = method.GetILGenerator();
+            // todo: @wip #475
+            // var il = method.GetILGenerator();
+            var il = PoolOrNewILGenerator(method, returnType, closureAndParamTypes);
 
             if (closure.ConstantsAndNestedLambdas != null)
                 EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref closureInfo);
@@ -545,9 +546,12 @@ namespace FastExpressionCompiler
                 return null;
             il.Demit(OpCodes.Ret);
 
-            FreeClosureTypeAndParamTypes(closurePlusParamTypes);
+            var dlg = method.CreateDelegate(delegateType, closure);
 
-            return method.CreateDelegate(delegateType, closure);
+            FreeILGenerator(method, il);
+            FreeClosureTypeAndParamTypes(closureAndParamTypes);
+
+            return dlg;
         }
 
 #if NET8_0_OR_GREATER
@@ -680,7 +684,6 @@ namespace FastExpressionCompiler
         internal static Action<DynamicMethod, ILGenerator, Type, Type[]>
             ReuseDynamicILGeneratorOfAnySignature = ReuseDynamicILGeneratorOfAnyMethodSignature();
 
-        [ThreadStatic]
         internal static ILGenerator pooledILGenerator;
 #endif
 
@@ -691,7 +694,7 @@ namespace FastExpressionCompiler
 #if NET8_0_OR_GREATER
             var il = Interlocked.Exchange(ref pooledILGenerator, null);
             if (il != null)
-                ReuseDynamicILGeneratorOfAnySignature(dynMethod, il, typeof(void), paramTypes);
+                ReuseDynamicILGeneratorOfAnySignature(dynMethod, il, returnType, paramTypes);
             else
                 il = dynMethod.GetILGenerator();
             return il;

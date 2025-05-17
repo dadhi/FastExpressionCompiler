@@ -9,7 +9,7 @@ public class Program
     {
         // todo: README.md Benchmarks
         // --------------------------------------------
-        // BenchmarkRunner.Run<HoistedLambdaBenchmark.Compilation>();
+        BenchmarkRunner.Run<HoistedLambdaBenchmark.Compilation>();
         // BenchmarkRunner.Run<HoistedLambdaBenchmark.Invocation>();
 
         // BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Compilation>();
@@ -25,7 +25,7 @@ public class Program
 
         //--------------------------------------------
 
-        BenchmarkRunner.Run<Issue475_ReuseVsNoReuse>();
+        // BenchmarkRunner.Run<Issue475_ReuseVsNoReuse>();
 
         // BenchmarkRunner.Run<Issue468_Compile_vs_FastCompile>();
         // BenchmarkRunner.Run<Issue468_InvokeCompiled_vs_InvokeCompiledFast>();

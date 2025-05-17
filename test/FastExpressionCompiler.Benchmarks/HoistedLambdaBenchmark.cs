@@ -122,6 +122,20 @@ namespace FastExpressionCompiler.Benchmarks
             | Compile                    | 145.015 us | 2.0703 us | 1.7288 us | 42.06 |    1.91 | 0.7324 |      - |   4.49 KB |        2.92 |
             | CompileFast                |   3.454 us | 0.0688 us | 0.1495 us |  1.00 |    0.06 | 0.2441 | 0.2365 |   1.54 KB |        1.00 |
             | ConvertToLight_CompileFast |   3.947 us | 0.0789 us | 0.1520 us |  1.14 |    0.07 | 0.3052 | 0.2899 |   1.96 KB |        1.27 |
+
+            ## v5.20 Baseline before ILGenerator pooling
+
+            BenchmarkDotNet v0.14.0, Windows 11 (10.0.26100.4061)
+            Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
+            .NET SDK 9.0.203
+            [Host]     : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+            DefaultJob : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+
+
+            | Method      | Mean       | Error     | StdDev    | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
+            |------------ |-----------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
+            | Compile     | 152.305 us | 2.9218 us | 4.0960 us | 45.18 |    1.35 | 0.7324 |      - |   4.49 KB |        2.92 |
+            | CompileFast |   3.371 us | 0.0543 us | 0.0482 us |  1.00 |    0.02 | 0.2441 | 0.2365 |   1.54 KB |        1.00 |
             */
 
             [Benchmark]
@@ -130,7 +144,7 @@ namespace FastExpressionCompiler.Benchmarks
             [Benchmark(Baseline = true)]
             public object CompileFast() => _hoistedExpr.CompileFast();
 
-            [Benchmark]
+            // [Benchmark]
             public object ConvertToLight_CompileFast() => _hoistedExpr.ToLightExpression().CompileFast();
         }
 
