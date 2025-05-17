@@ -222,8 +222,6 @@ public class Issue475_Reuse_DynamicMethod_if_possible : ITestX
         t.AreEqual(41, func(41)); // ensure that the first delegate is still working
     }
 
-    internal static ILGenerator pooledILGenerator;
-
     public static object CreateDynamicILGenerator()
     {
         var paramTypes = ExpressionCompiler.RentOrNewClosureTypeToParamTypes(typeof(int), typeof(int).MakeByRefType());
@@ -257,11 +255,7 @@ public class Issue475_Reuse_DynamicMethod_if_possible : ITestX
             typeof(ExpressionCompiler.ArrayClosure),
             true);
 
-        var il = Interlocked.Exchange(ref pooledILGenerator, null);
-        if (il != null)
-            ReuseDynamicILGeneratorOfAnySignature(dynMethod, il, typeof(void), paramTypes);
-        else
-            il = dynMethod.GetILGenerator();
+        var il = ExpressionCompiler.PoolOrNewILGenerator(dynMethod, typeof(void), paramTypes);
 
         il.Emit(OpCodes.Ldarg_2);
         il.Emit(OpCodes.Ldarg_2);
@@ -272,9 +266,9 @@ public class Issue475_Reuse_DynamicMethod_if_possible : ITestX
         il.Emit(OpCodes.Ret);
 
         var func = (Action2ndByRef<int>)dynMethod.CreateDelegate(typeof(Action2ndByRef<int>), ExpressionCompiler.EmptyArrayClosure);
-        IlGeneratorField.SetValue(dynMethod, null); // required
 
-        Interlocked.Exchange(ref pooledILGenerator, il);
+        ExpressionCompiler.FreeILGenerator(dynMethod, il);
+
         ExpressionCompiler.FreeClosureTypeAndParamTypes(paramTypes);
 
         return func;
