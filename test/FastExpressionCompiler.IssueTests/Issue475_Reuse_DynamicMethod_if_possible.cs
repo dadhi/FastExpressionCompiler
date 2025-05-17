@@ -189,6 +189,10 @@ public class Issue475_Reuse_DynamicMethod_if_possible : ITestX
         il.Emit(OpCodes.Ret);
 
         var func = (Func<int, int>)dynMethod.CreateDelegate(typeof(Func<int, int>), ExpressionCompiler.EmptyArrayClosure);
+
+        // remove the link between DynamicMethod and ILGenerator, by setting it to null
+        IlGeneratorField.SetValue(dynMethod, null);
+
         t.AreEqual(41, func(41));
 
         Type[] paramTypes = [typeof(ExpressionCompiler.ArrayClosure), typeof(int), typeof(int).MakeByRefType()];
@@ -244,7 +248,7 @@ public class Issue475_Reuse_DynamicMethod_if_possible : ITestX
         return func;
     }
 
-    public static object TryPoolDynamicILGenerator()
+    public static object PoolDynamicILGenerator()
     {
         var paramTypes = ExpressionCompiler.RentOrNewClosureTypeToParamTypes(typeof(int), typeof(int).MakeByRefType());
         var dynMethod = new DynamicMethod(string.Empty,
@@ -268,8 +272,11 @@ public class Issue475_Reuse_DynamicMethod_if_possible : ITestX
         il.Emit(OpCodes.Ret);
 
         var func = (Action2ndByRef<int>)dynMethod.CreateDelegate(typeof(Action2ndByRef<int>), ExpressionCompiler.EmptyArrayClosure);
+        IlGeneratorField.SetValue(dynMethod, null); // required
+
         Interlocked.Exchange(ref pooledILGenerator, il);
         ExpressionCompiler.FreeClosureTypeAndParamTypes(paramTypes);
+
         return func;
     }
 
@@ -294,7 +301,7 @@ public class Issue475_Reuse_DynamicMethod_if_possible : ITestX
             typeof(ExpressionCompiler.ArrayClosure),
             true);
 
-        var il = dynMethod.GetILGenerator();
+        var il = dynMethod.GetILGenerator(256); // precalculating the size to avoid waste
 
         var baseFields = DynamicILGeneratorType.BaseType.GetFields(allDeclared);
         foreach (var field in baseFields)
@@ -379,8 +386,8 @@ public class Issue475_Reuse_DynamicMethod_if_possible : ITestX
 
         il.Emit(OpCodes.Ret);
 
-        return (Action<DynamicMethod, ILGenerator, Type, Type[]>)dynMethod.CreateDelegate(
-            typeof(Action<DynamicMethod, ILGenerator, Type, Type[]>), ExpressionCompiler.EmptyArrayClosure);
+        var act = dynMethod.CreateDelegate(typeof(Action<DynamicMethod, ILGenerator, Type, Type[]>), ExpressionCompiler.EmptyArrayClosure);
+        return (Action<DynamicMethod, ILGenerator, Type, Type[]>)act;
     }
 
     internal static Action<DynamicMethod, ILGenerator, Type, Type[]> ReuseDynamicILGeneratorOfAnySignature = ReuseDynamicILGeneratorOfAnyMethodSignature();

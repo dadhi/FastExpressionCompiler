@@ -326,6 +326,6 @@ public class Issue475_ReuseVsNoReuse
     [Benchmark]
     public object ReuseILGenerator()
     {
-        return IssueTests.Issue475_Reuse_DynamicMethod_if_possible.TryPoolDynamicILGenerator();
+        return IssueTests.Issue475_Reuse_DynamicMethod_if_possible.PoolDynamicILGenerator();
     }
 }
