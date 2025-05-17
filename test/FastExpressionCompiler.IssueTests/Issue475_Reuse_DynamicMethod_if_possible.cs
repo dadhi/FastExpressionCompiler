@@ -3,6 +3,8 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Diagnostics;
 using System.Collections.Generic;
+using System.Threading;
+
 
 
 
@@ -20,6 +22,7 @@ public class Issue475_Reuse_DynamicMethod_if_possible : ITestX
 {
     public void Run(TestRun t)
     {
+        TryToReuseIlGenerator_for_any_signature(t);
         TryToReuseIlGenerator(t);
         TryToReuseTheDynamicMethod_FailedWithInternalClrError_BecauseTheResultDelegateIsLinkedWithDynamicMethod(t);
     }
@@ -109,12 +112,13 @@ public class Issue475_Reuse_DynamicMethod_if_possible : ITestX
             m_methodSigToken = m_scope.GetTokenFor(methodSignature);
 
             m_ScopeTree = new ScopeTree();
-            // cleanup
+            // clear ilstream bytes to reuse the buffer
             m_ILStream = new byte[Math.Max(size, DefaultSize)];
 
+            m_localSignature = SignatureHelper.GetLocalVarSigHelper((method as RuntimeMethodBuilder)?.GetTypeBuilder().Module);
+            
             // set to the new DynamicMethod
             m_methodBuilder = method;
-            m_localSignature = SignatureHelper.GetLocalVarSigHelper((method as RuntimeMethodBuilder)?.GetTypeBuilder().Module);
 
         }
     */
@@ -152,7 +156,6 @@ public class Issue475_Reuse_DynamicMethod_if_possible : ITestX
         //     [dynMethod2, methodSignature, 64], null);
         // IlGeneratorField.SetValue(dynMethod2, il2);
 
-
         // ## Option 2
         // var il2 = ConfigureDynamicILGenerator(dynMethod2, il);
 
@@ -169,6 +172,218 @@ public class Issue475_Reuse_DynamicMethod_if_possible : ITestX
         t.AreEqual(83, func2(41));
         t.AreEqual(41, func(41)); // ensure that the first delegate is still working
     }
+
+    public delegate void Action2ndByRef<T>(T arg0, ref T arg1);
+
+    public void TryToReuseIlGenerator_for_any_signature(TestContext t)
+    {
+        var dynMethod = new DynamicMethod(string.Empty,
+            typeof(int),
+            [typeof(ExpressionCompiler.ArrayClosure), typeof(int)],
+            typeof(ExpressionCompiler.ArrayClosure),
+            true);
+
+        var il = dynMethod.GetILGenerator();
+
+        il.Emit(OpCodes.Ldarg_1);
+        il.Emit(OpCodes.Ret);
+
+        var func = (Func<int, int>)dynMethod.CreateDelegate(typeof(Func<int, int>), ExpressionCompiler.EmptyArrayClosure);
+        t.AreEqual(41, func(41));
+
+        Type[] paramTypes = [typeof(ExpressionCompiler.ArrayClosure), typeof(int), typeof(int).MakeByRefType()];
+        var dynMethod2 = new DynamicMethod(string.Empty,
+            typeof(void),
+            paramTypes,
+            typeof(ExpressionCompiler.ArrayClosure),
+            true);
+
+        // Let start with reusing the same method signature from the old ILGenerator
+        // var il2 = dynMethod2.GetILGenerator();
+        ReuseDynamicILGeneratorOfAnySignature(dynMethod2, il, typeof(void), paramTypes);
+        var il2 = il;
+
+        il2.Emit(OpCodes.Ldarg_2);
+        il2.Emit(OpCodes.Ldarg_2);
+        il2.Emit(OpCodes.Ldind_I4);
+        il2.Emit(OpCodes.Ldarg_1);
+        il2.Emit(OpCodes.Add);
+        il2.Emit(OpCodes.Stind_I4);
+        il2.Emit(OpCodes.Ret);
+
+        var func2 = (Action2ndByRef<int>)dynMethod2.CreateDelegate(typeof(Action2ndByRef<int>), ExpressionCompiler.EmptyArrayClosure);
+        var arg = 41;
+        func2(42, ref arg);
+        t.AreEqual(83, arg);
+        t.AreEqual(41, func(41)); // ensure that the first delegate is still working
+    }
+
+    internal static ILGenerator pooledILGenerator;
+
+    public static object CreateDynamicILGenerator()
+    {
+        var paramTypes = ExpressionCompiler.RentOrNewClosureTypeToParamTypes(typeof(int), typeof(int).MakeByRefType());
+        var dynMethod = new DynamicMethod(string.Empty,
+            typeof(void),
+            paramTypes,
+            typeof(ExpressionCompiler.ArrayClosure),
+            true);
+
+        var il = dynMethod.GetILGenerator();
+
+        il.Emit(OpCodes.Ldarg_2);
+        il.Emit(OpCodes.Ldarg_2);
+        il.Emit(OpCodes.Ldind_I4);
+        il.Emit(OpCodes.Ldarg_1);
+        il.Emit(OpCodes.Add);
+        il.Emit(OpCodes.Stind_I4);
+        il.Emit(OpCodes.Ret);
+
+        var func = (Action2ndByRef<int>)dynMethod.CreateDelegate(typeof(Action2ndByRef<int>), ExpressionCompiler.EmptyArrayClosure);
+        ExpressionCompiler.FreeClosureTypeAndParamTypes(paramTypes);
+        return func;
+    }
+
+    public static object TryPoolDynamicILGenerator()
+    {
+        var paramTypes = ExpressionCompiler.RentOrNewClosureTypeToParamTypes(typeof(int), typeof(int).MakeByRefType());
+        var dynMethod = new DynamicMethod(string.Empty,
+            typeof(void),
+            paramTypes,
+            typeof(ExpressionCompiler.ArrayClosure),
+            true);
+
+        var il = Interlocked.Exchange(ref pooledILGenerator, null);
+        if (il != null)
+            ReuseDynamicILGeneratorOfAnySignature(dynMethod, il, typeof(void), paramTypes);
+        else
+            il = dynMethod.GetILGenerator();
+
+        il.Emit(OpCodes.Ldarg_2);
+        il.Emit(OpCodes.Ldarg_2);
+        il.Emit(OpCodes.Ldind_I4);
+        il.Emit(OpCodes.Ldarg_1);
+        il.Emit(OpCodes.Add);
+        il.Emit(OpCodes.Stind_I4);
+        il.Emit(OpCodes.Ret);
+
+        var func = (Action2ndByRef<int>)dynMethod.CreateDelegate(typeof(Action2ndByRef<int>), ExpressionCompiler.EmptyArrayClosure);
+        Interlocked.Exchange(ref pooledILGenerator, il);
+        ExpressionCompiler.FreeClosureTypeAndParamTypes(paramTypes);
+        return func;
+    }
+
+    internal static MethodInfo GetMethodSigHelperMethod = typeof(SignatureHelper)
+        .GetMethod("GetMethodSigHelper", BindingFlags.Static | BindingFlags.Public, null, [typeof(Module), typeof(Type), typeof(Type[])], null);
+
+    internal static MethodInfo GetSignatureMethod = typeof(SignatureHelper)
+        .GetMethod("GetSignature", BindingFlags.Instance | BindingFlags.NonPublic, null, [typeof(bool)], null);
+
+    internal static MethodInfo GetTokenForMethod = DynamicILGeneratorScopeField.FieldType
+        .GetMethod("GetTokenFor", BindingFlags.Instance | BindingFlags.Public, null, [typeof(byte[])], null);
+
+    internal static FieldInfo MethodSigTokenField = DynamicILGeneratorType.GetField("m_methodSigToken", BindingFlags.Instance | BindingFlags.NonPublic);
+
+    internal static Action<DynamicMethod, ILGenerator, Type, Type[]> ReuseDynamicILGeneratorOfAnyMethodSignature()
+    {
+        const BindingFlags allDeclared = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+
+        var dynMethod = new DynamicMethod(string.Empty,
+            typeof(void),
+            [typeof(ExpressionCompiler.ArrayClosure), typeof(DynamicMethod), typeof(ILGenerator), typeof(Type), typeof(Type[])],
+            typeof(ExpressionCompiler.ArrayClosure),
+            true);
+
+        var il = dynMethod.GetILGenerator();
+
+        var baseFields = DynamicILGeneratorType.BaseType.GetFields(allDeclared);
+        foreach (var field in baseFields)
+        {
+            var fieldName = field.Name;
+            if (fieldName == "m_localSignature") // todo: skip, let's see how it works
+                continue;
+
+            // m_ScopeTree = new ScopeTree();
+            if (fieldName == "m_ScopeTree")
+            {
+                il.Demit(OpCodes.Ldarg_2);
+                il.Demit(OpCodes.Newobj, ScopeTreeCtor);
+                il.Demit(OpCodes.Stfld, field);
+                continue;
+            }
+
+            // m_methodBuilder = method; // dynamicMethod
+            if (fieldName == "m_methodBuilder")
+            {
+                il.Demit(OpCodes.Ldarg_2);
+                il.Demit(OpCodes.Ldarg_1);
+                il.Demit(OpCodes.Stfld, field);
+                continue;
+            }
+
+            // instead of m_ILStream = new byte[Math.Max(size, DefaultSize)];
+            // let's clear it and reuse the buffer
+            if (fieldName == "m_ILStream")
+            {
+                il.Demit(OpCodes.Ldarg_2);
+                il.Demit(OpCodes.Ldfld, field);
+                var ilStreamVar = ExpressionCompiler.EmittingVisitor.EmitStoreAndLoadLocalVariable(il, typeof(byte[]));
+                il.Demit(OpCodes.Ldc_I4_0);
+                ExpressionCompiler.EmittingVisitor.EmitLoadLocalVariable(il, ilStreamVar);
+                il.Demit(OpCodes.Ldlen);
+                il.Demit(OpCodes.Call, ArrayClearMethod);
+                continue;
+            }
+
+            il.Demit(OpCodes.Ldarg_2);
+            ExpressionCompiler.EmittingVisitor.EmitDefault(il, field.FieldType);
+            il.Demit(OpCodes.Stfld, field);
+        }
+
+        il.Emit(OpCodes.Ldarg_2);
+        il.Emit(OpCodes.Ldfld, DynamicILGeneratorScopeField);
+        var scopeVar = ExpressionCompiler.EmittingVisitor.EmitStoreAndLoadLocalVariable(il, DynamicILGeneratorScopeField.FieldType);
+        il.Emit(OpCodes.Ldfld, DynamicScopeTokensField);
+        il.Emit(OpCodes.Dup);
+
+        // reset its List<T>._size to 1, keep the 0th item
+        il.Emit(OpCodes.Ldc_I4_1);
+        il.Emit(OpCodes.Stfld, ListOfObjectsSize);
+
+        // set the 0th item to null
+        il.Emit(OpCodes.Ldc_I4_0);
+        il.Emit(OpCodes.Ldnull);
+        il.Emit(OpCodes.Call, DynamicScopeTokensItem.SetMethod);
+
+        //  byte[] methodSignature =
+        //      SignatureHelper.GetMethodSigHelper(Module? mod, Type? returnType, Type[]? parameterTypes).GetSignature(true);
+        il.Emit(OpCodes.Ldnull); // for the module
+        il.Emit(OpCodes.Ldarg_3); // load return type
+        il.Emit(OpCodes.Ldarg_S, 4); // load parameter types arrays
+        il.Emit(OpCodes.Call, GetMethodSigHelperMethod);
+        il.Emit(OpCodes.Ldc_I4_1); // load true
+        il.Emit(OpCodes.Call, GetSignatureMethod);
+        var signatureBytesVar = ExpressionCompiler.EmittingVisitor.EmitStoreLocalVariable(il, typeof(byte[])); // todo: perf could reuse byte[]?
+
+        // m_methodSigToken = m_scope.GetTokenFor(methodSignature);
+        il.Emit(OpCodes.Ldarg_2);
+        ExpressionCompiler.EmittingVisitor.EmitLoadLocalVariable(il, scopeVar);
+        ExpressionCompiler.EmittingVisitor.EmitLoadLocalVariable(il, signatureBytesVar);
+        il.Emit(OpCodes.Call, GetTokenForMethod);
+        il.Emit(OpCodes.Stfld, MethodSigTokenField);
+
+        // store the reused ILGenerator to 
+        il.Emit(OpCodes.Ldarg_1);
+        il.Emit(OpCodes.Ldarg_2);
+        il.Emit(OpCodes.Stfld, IlGeneratorField);
+
+        il.Emit(OpCodes.Ret);
+
+        return (Action<DynamicMethod, ILGenerator, Type, Type[]>)dynMethod.CreateDelegate(
+            typeof(Action<DynamicMethod, ILGenerator, Type, Type[]>), ExpressionCompiler.EmptyArrayClosure);
+    }
+
+    internal static Action<DynamicMethod, ILGenerator, Type, Type[]> ReuseDynamicILGeneratorOfAnySignature = ReuseDynamicILGeneratorOfAnyMethodSignature();
 
     internal static Action<DynamicMethod, ILGenerator> ReuseDynamicILGeneratorOfTheSameSignature()
     {

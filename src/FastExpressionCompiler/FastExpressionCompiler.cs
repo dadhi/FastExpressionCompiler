@@ -437,7 +437,7 @@ namespace FastExpressionCompiler
 
             var delegateType = typeof(TDelegate) != typeof(Delegate) ? typeof(TDelegate) : lambdaExpr.Type;
             var @delegate = (TDelegate)(object)method.CreateDelegate(delegateType, new ArrayClosure(closureInfo.Constants.Items));
-            FreeClosureTypeToParamTypesToPool(closurePlusParamTypes);
+            FreeClosureTypeAndParamTypes(closurePlusParamTypes);
             return @delegate;
         }
 
@@ -468,7 +468,7 @@ namespace FastExpressionCompiler
 
             var delegateType = typeof(TDelegate) != typeof(Delegate) ? typeof(TDelegate) : lambdaExpr.Type;
             var @delegate = (TDelegate)(object)method.CreateDelegate(delegateType, EmptyArrayClosure);
-            FreeClosureTypeToParamTypesToPool(closurePlusParamTypes);
+            FreeClosureTypeAndParamTypes(closurePlusParamTypes);
             return @delegate;
         }
 
@@ -545,7 +545,7 @@ namespace FastExpressionCompiler
                 return null;
             il.Demit(OpCodes.Ret);
 
-            FreeClosureTypeToParamTypesToPool(closurePlusParamTypes);
+            FreeClosureTypeAndParamTypes(closurePlusParamTypes);
 
             return method.CreateDelegate(delegateType, closure);
         }
@@ -576,8 +576,9 @@ namespace FastExpressionCompiler
             return pooledOrNew;
         }
 
+        /// <summary>Renting the array of types of closure + plus the passed parameter types</summary>
         [MethodImpl((MethodImplOptions)256)]
-        internal static Type[] RentOrNewClosureTypeToParamTypes(Type p1, Type p2)
+        public static Type[] RentOrNewClosureTypeToParamTypes(Type p1, Type p2)
         {
             var pooledOrNew = Interlocked.Exchange(ref _paramTypesPoolWithElem0OfLength1[2], null) ?? new Type[3];
             pooledOrNew[0] = typeof(ArrayClosure);
@@ -586,8 +587,9 @@ namespace FastExpressionCompiler
             return pooledOrNew;
         }
 
+        /// <summary>Renting the array of the passed parameter types</summary>
         [MethodImpl((MethodImplOptions)256)]
-        internal static Type[] RentParamTypes(Type p0, Type p1)
+        public static Type[] RentParamTypes(Type p0, Type p1)
         {
             var pooledOrNew = Interlocked.Exchange(ref _paramTypesPoolWithElem0OfLength1[1], null) ?? new Type[2];
             pooledOrNew[0] = p0;
@@ -595,16 +597,18 @@ namespace FastExpressionCompiler
             return pooledOrNew;
         }
 
+        /// <summary>Freeing to the pool the array of types of closure + plus the passed parameter types</summary>
         [MethodImpl((MethodImplOptions)256)]
-        internal static void FreeClosureTypeToParamTypesToPool(Type[] closurePlusParamTypes)
+        public static void FreeClosureTypeAndParamTypes(Type[] closurePlusParamTypes)
         {
             var paramCountOnly = closurePlusParamTypes.Length - 1;
             if (paramCountOnly != 0 & paramCountOnly < 8)
                 Interlocked.Exchange(ref _paramTypesPoolWithElem0OfLength1[paramCountOnly], closurePlusParamTypes); // todo: @perf we don't need the Interlocked here
         }
 
+        /// <summary>Freeing to the pool the array of the passed parameter types</summary>
         [MethodImpl((MethodImplOptions)256)]
-        internal static void FreeParamTypes(Type[] paramTypes)
+        public static void FreeParamTypes(Type[] paramTypes)
         {
             var paramCount = paramTypes.Length;
             if (paramCount != 0 & paramCount < 8)
@@ -1762,7 +1766,7 @@ namespace FastExpressionCompiler
             {
                 var paramTypes = RentOrNewClosureTypeToParamTypes(nestedLambdaParamExprs);
                 nestedLambdaInfo.Lambda = CompileNoArgsNew(newNoArgs.Constructor, nestedLambdaExpr.Type, paramTypes, nestedReturnType);
-                FreeClosureTypeToParamTypesToPool(paramTypes);
+                FreeClosureTypeAndParamTypes(paramTypes);
                 return true;
             }
 #else
@@ -1807,7 +1811,7 @@ namespace FastExpressionCompiler
                 : nestedConstsAndLambdas == null ? new NestedLambdaForNonPassedParams(nestedLambda)
                 : new NestedLambdaForNonPassedParamsWithConstants(nestedLambda, nestedConstsAndLambdas);
 
-            FreeClosureTypeToParamTypesToPool(closurePlusParamTypes);
+            FreeClosureTypeAndParamTypes(closurePlusParamTypes);
             return true;
         }
 
@@ -1999,7 +2003,8 @@ namespace FastExpressionCompiler
         public static class EmittingVisitor
         {
             // todo: @perf use UnsafeAccessAttribute
-            private static readonly MethodInfo _getTypeFromHandleMethod =
+            /// <summary>Get a type from handle</summary>
+            public static readonly MethodInfo GetTypeFromHandleMethod =
                 ((Func<RuntimeTypeHandle, Type>)Type.GetTypeFromHandle).Method;
             private static readonly MethodInfo _objectEqualsMethod =
                 ((Func<object, object, bool>)object.Equals).Method;
@@ -3585,7 +3590,7 @@ namespace FastExpressionCompiler
                     if (constValue is Type t)
                     {
                         il.Demit(OpCodes.Ldtoken, t);
-                        return EmitMethodCall(il, _getTypeFromHandleMethod);
+                        return EmitMethodCall(il, GetTypeFromHandleMethod);
                     }
                     if (!TryEmitPrimitiveOrEnumOrDecimalConstant(il, constValue, constType))
                         return false;
@@ -6244,8 +6249,9 @@ namespace FastExpressionCompiler
                 return true;
             }
 
+            /// <summary>Store the variable location on stack</summary>
             [MethodImpl((MethodImplOptions)256)]
-            private static void EmitStoreLocalVariable(ILGenerator il, int location)
+            public static void EmitStoreLocalVariable(ILGenerator il, int location)
             {
                 if (location == 0)
                     il.Demit(OpCodes.Stloc_0);
@@ -6261,8 +6267,9 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Stloc, (short)location);
             }
 
+            /// <summary>Get and store the variable of the type on stack</summary>
             [MethodImpl((MethodImplOptions)256)]
-            private static int EmitStoreLocalVariable(ILGenerator il, Type type)
+            public static int EmitStoreLocalVariable(ILGenerator il, Type type)
             {
                 var location = il.GetNextLocalVarIndex(type);
                 EmitStoreLocalVariable(il, location);
@@ -8407,7 +8414,7 @@ namespace FastExpressionCompiler
             _getNextLocalVarIndex = (Func<ILGenerator, Type, int>)efficientMethod.CreateDelegate(
                 typeof(Func<ILGenerator, Type, int>), ExpressionCompiler.EmptyArrayClosure);
 
-            ExpressionCompiler.FreeClosureTypeToParamTypesToPool(paramTypes);
+            ExpressionCompiler.FreeClosureTypeAndParamTypes(paramTypes);
 
             // todo: @perf do batch Emit by manually calling `EnsureCapacity` once then `InternalEmit` multiple times
             // todo: @perf Replace the `Emit(opcode, int)` with the more specialized `Emit(opcode)`, `Emit(opcode, byte)` or `Emit(opcode, short)` 

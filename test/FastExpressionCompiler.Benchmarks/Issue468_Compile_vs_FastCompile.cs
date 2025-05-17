@@ -308,16 +308,24 @@ public class Issue475_ReuseVsNoReuse
     | ReuseILGenerator   | 4.531 us | 0.0898 us | 0.1451 us |  0.87 |    0.04 |    1 | 0.2747 | 0.2670 |   1.71 KB |        0.74 |
     | NoReuseILGenerator | 5.211 us | 0.1025 us | 0.1874 us |  1.00 |    0.05 |    2 | 0.3738 | 0.3586 |    2.3 KB |        1.00 |
 
+    ## Closer to the usage example of pooling a single ILGenerator instance, reusable for any method signature
+
+    | Method             | Mean     | Error     | StdDev    | Median   | Ratio | RatioSD | Rank | Gen0   | Gen1   | Allocated | Alloc Ratio |
+    |------------------- |---------:|----------:|----------:|---------:|------:|--------:|-----:|-------:|-------:|----------:|------------:|
+    | PoolILGenerator    | 2.173 us | 0.0407 us | 0.0734 us | 2.140 us |  0.78 |    0.04 |    1 | 0.1068 | 0.1030 |     687 B |        0.60 |
+    | CreateILGenerator  | 2.799 us | 0.0559 us | 0.0949 us | 2.767 us |  1.00 |    0.05 |    2 | 0.1793 | 0.1755 |    1144 B |        1.00 |
+
     */
     [Benchmark(Baseline = true)]
     public object NoReuseILGenerator()
     {
-        return IssueTests.Issue475_Reuse_DynamicMethod_if_possible.NoReuseILGenerator();
+        // return IssueTests.Issue475_Reuse_DynamicMethod_if_possible.NoReuseILGenerator();
+        return IssueTests.Issue475_Reuse_DynamicMethod_if_possible.CreateDynamicILGenerator();
     }
 
     [Benchmark]
     public object ReuseILGenerator()
     {
-        return IssueTests.Issue475_Reuse_DynamicMethod_if_possible.ReuseILGenerator();
+        return IssueTests.Issue475_Reuse_DynamicMethod_if_possible.TryPoolDynamicILGenerator();
     }
 }
