@@ -153,7 +153,7 @@ namespace FastExpressionCompiler.Benchmarks
                 LightExpression.ExpressionCompiler.CompileFast(CreateManualLightExprWithParams(), true);
         }
 
-        [MemoryDiagnoser]
+        [MemoryDiagnoser, RankColumn, Orderer(BenchmarkDotNet.Order.SummaryOrderPolicy.FastestToSlowest)]
         public class Compilation
         {
             /*
@@ -226,6 +226,21 @@ namespace FastExpressionCompiler.Benchmarks
             | Compile_SystemExpression     | 94.596 us | 4.4636 us | 13.0205 us | 89.418 us | 29.16 |    3.55 | 0.4883 |      - |   4.73 KB |        3.41 |
             | CompileFast_SystemExpression |  3.047 us | 0.0607 us |  0.1183 us |  3.010 us |  0.97 |    0.06 | 0.2213 | 0.2136 |   1.39 KB |        1.00 |
             | CompileFast_LightExpression  |  3.151 us | 0.0628 us |  0.1117 us |  3.130 us |  1.00 |    0.00 | 0.2213 | 0.2136 |   1.39 KB |        1.00 |
+
+            # v5.3.0 - Pooling the ILGenerator
+
+            BenchmarkDotNet v0.14.0, Windows 11 (10.0.26100.4061)
+            Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
+            .NET SDK 9.0.203
+            [Host]     : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+            DefaultJob : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+
+
+            | Method                       | Mean       | Error     | StdDev    | Ratio | RatioSD | Rank | Gen0   | Gen1   | Allocated | Alloc Ratio |
+            |----------------------------- |-----------:|----------:|----------:|------:|--------:|-----:|-------:|-------:|----------:|------------:|
+            | CompileFast_SystemExpression |   3.219 us | 0.0380 us | 0.0337 us |  0.98 |    0.01 |    1 | 0.1793 | 0.1755 |   1.12 KB |        1.00 |
+            | CompileFast_LightExpression  |   3.292 us | 0.0407 us | 0.0381 us |  1.00 |    0.02 |    1 | 0.1793 | 0.1755 |   1.12 KB |        1.00 |
+            | Compile_SystemExpression     | 102.515 us | 1.4959 us | 2.2390 us | 31.14 |    0.75 |    2 | 0.7324 | 0.4883 |   4.74 KB |        4.24 |
 
             */
 

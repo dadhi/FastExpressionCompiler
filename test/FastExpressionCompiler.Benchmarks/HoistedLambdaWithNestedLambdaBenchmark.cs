@@ -123,6 +123,14 @@ namespace FastExpressionCompiler.Benchmarks
             | Compile     | 421.09 us | 8.382 us | 18.221 us | 413.02 us | 36.29 |    2.09 | 1.9531 | 0.9766 |  12.04 KB |        2.61 |
             | CompileFast |  11.62 us | 0.230 us |  0.464 us |  11.42 us |  1.00 |    0.06 | 0.7324 | 0.7019 |   4.62 KB |        1.00 |
 
+
+            ## v5.2.0 ILGenerator pooling
+
+            | Method      | Mean      | Error    | StdDev   | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
+            |------------ |----------:|---------:|---------:|------:|--------:|-------:|-------:|----------:|------------:|
+            | Compile     | 410.18 us | 6.928 us | 5.785 us | 36.97 |    0.92 | 1.9531 | 1.4648 |  12.04 KB |        2.74 |
+            | CompileFast |  11.10 us | 0.214 us | 0.237 us |  1.00 |    0.03 | 0.7019 | 0.6714 |    4.4 KB |        1.00 |
+
             */
             [Benchmark]
             public Func<X> Compile() => _hoistedExpr.Compile();

@@ -275,7 +275,10 @@ public class Issue475_Reuse_DynamicMethod_if_possible : ITestX
     }
 
     internal static MethodInfo GetMethodSigHelperMethod = typeof(SignatureHelper)
-        .GetMethod("GetMethodSigHelper", BindingFlags.Static | BindingFlags.Public, null, [typeof(Module), typeof(Type), typeof(Type[])], null);
+        .GetMethod(nameof(SignatureHelper.GetMethodSigHelper), BindingFlags.Static | BindingFlags.Public, null, [typeof(Module), typeof(Type), typeof(Type[])], null);
+
+    internal static MethodInfo GetLocalVarSigHelperMethod = typeof(SignatureHelper)
+        .GetMethod(nameof(SignatureHelper.GetLocalVarSigHelper), BindingFlags.Static | BindingFlags.Public, null, Type.EmptyTypes, null);
 
     internal static MethodInfo GetSignatureMethod = typeof(SignatureHelper)
         .GetMethod("GetSignature", BindingFlags.Instance | BindingFlags.NonPublic, null, [typeof(bool)], null);
@@ -302,7 +305,13 @@ public class Issue475_Reuse_DynamicMethod_if_possible : ITestX
         {
             var fieldName = field.Name;
             if (fieldName == "m_localSignature") // todo: skip, let's see how it works
+            {
+                // m_localSignature = SignatureHelper.GetLocalVarSigHelper((method as RuntimeMethodBuilder)?.GetTypeBuilder().Module);
+                il.Demit(OpCodes.Ldarg_2);
+                il.Demit(OpCodes.Call, GetLocalVarSigHelperMethod);
+                il.Demit(OpCodes.Stfld, field);
                 continue;
+            }
 
             // m_ScopeTree = new ScopeTree();
             if (fieldName == "m_ScopeTree")
@@ -326,13 +335,20 @@ public class Issue475_Reuse_DynamicMethod_if_possible : ITestX
             // let's clear it and reuse the buffer
             if (fieldName == "m_ILStream")
             {
+                // New Array. todo: @perf pool the array
                 il.Demit(OpCodes.Ldarg_2);
-                il.Demit(OpCodes.Ldfld, field);
-                var ilStreamVar = ExpressionCompiler.EmittingVisitor.EmitStoreAndLoadLocalVariable(il, typeof(byte[]));
-                il.Demit(OpCodes.Ldc_I4_0);
-                ExpressionCompiler.EmittingVisitor.EmitLoadLocalVariable(il, ilStreamVar);
-                il.Demit(OpCodes.Ldlen);
-                il.Demit(OpCodes.Call, ArrayClearMethod);
+                il.Demit(OpCodes.Ldc_I4_S, 64);
+                il.Emit(OpCodes.Newarr, typeof(byte));
+                il.Demit(OpCodes.Stfld, field);
+
+                // Clear Array
+                // il.Demit(OpCodes.Ldarg_2);
+                // il.Demit(OpCodes.Ldfld, field);
+                // var ilStreamVar = ExpressionCompiler.EmittingVisitor.EmitStoreAndLoadLocalVariable(il, typeof(byte[]));
+                // il.Demit(OpCodes.Ldc_I4_0);
+                // ExpressionCompiler.EmittingVisitor.EmitLoadLocalVariable(il, ilStreamVar);
+                // il.Demit(OpCodes.Ldlen);
+                // il.Demit(OpCodes.Call, ArrayClearMethod);
                 continue;
             }
 
@@ -341,20 +357,24 @@ public class Issue475_Reuse_DynamicMethod_if_possible : ITestX
             il.Demit(OpCodes.Stfld, field);
         }
 
-        il.Emit(OpCodes.Ldarg_2);
-        il.Emit(OpCodes.Ldfld, DynamicILGeneratorScopeField);
-        var scopeVar = ExpressionCompiler.EmittingVisitor.EmitStoreAndLoadLocalVariable(il, DynamicILGeneratorScopeField.FieldType);
-        il.Emit(OpCodes.Ldfld, DynamicScopeTokensField);
-        il.Emit(OpCodes.Dup);
+        // il.Emit(OpCodes.Ldarg_2);
+        // var scope = new DynamicScope();
+        il.Emit(OpCodes.Newobj, DynamicILGeneratorScopeField.FieldType.GetConstructor(Type.EmptyTypes));
+        var scopeVar = ExpressionCompiler.EmittingVisitor.EmitStoreLocalVariable(il, DynamicILGeneratorScopeField.FieldType);
 
-        // reset its List<T>._size to 1, keep the 0th item
-        il.Emit(OpCodes.Ldc_I4_1);
-        il.Emit(OpCodes.Stfld, ListOfObjectsSize);
+        // il.Emit(OpCodes.Ldfld, DynamicILGeneratorScopeField);
+        // var scopeVar = ExpressionCompiler.EmittingVisitor.EmitStoreAndLoadLocalVariable(il, DynamicILGeneratorScopeField.FieldType);
+        // il.Emit(OpCodes.Ldfld, DynamicScopeTokensField);
+        // il.Emit(OpCodes.Dup);
 
-        // set the 0th item to null
-        il.Emit(OpCodes.Ldc_I4_0);
-        il.Emit(OpCodes.Ldnull);
-        il.Emit(OpCodes.Call, DynamicScopeTokensItem.SetMethod);
+        // // reset its List<T>._size to 1, keep the 0th item
+        // il.Emit(OpCodes.Ldc_I4_1);
+        // il.Emit(OpCodes.Stfld, ListOfObjectsSize);
+
+        // // set the 0th item to null
+        // il.Emit(OpCodes.Ldc_I4_0);
+        // il.Emit(OpCodes.Ldnull);
+        // il.Emit(OpCodes.Call, DynamicScopeTokensItem.SetMethod);
 
         //  byte[] methodSignature =
         //      SignatureHelper.GetMethodSigHelper(Module? mod, Type? returnType, Type[]? parameterTypes).GetSignature(true);
@@ -366,14 +386,19 @@ public class Issue475_Reuse_DynamicMethod_if_possible : ITestX
         il.Emit(OpCodes.Call, GetSignatureMethod);
         var signatureBytesVar = ExpressionCompiler.EmittingVisitor.EmitStoreLocalVariable(il, typeof(byte[])); // todo: perf could reuse byte[]?
 
-        // m_methodSigToken = m_scope.GetTokenFor(methodSignature);
+        // m_methodSigToken = scope.GetTokenFor(methodSignature);
         il.Emit(OpCodes.Ldarg_2);
         ExpressionCompiler.EmittingVisitor.EmitLoadLocalVariable(il, scopeVar);
         ExpressionCompiler.EmittingVisitor.EmitLoadLocalVariable(il, signatureBytesVar);
         il.Emit(OpCodes.Call, GetTokenForMethod);
         il.Emit(OpCodes.Stfld, MethodSigTokenField);
 
-        // store the reused ILGenerator to 
+        // m_scope = scope;
+        il.Emit(OpCodes.Ldarg_2);
+        ExpressionCompiler.EmittingVisitor.EmitLoadLocalVariable(il, scopeVar);
+        il.Emit(OpCodes.Stfld, DynamicILGeneratorScopeField);
+
+        // store the reused ILGenerator to
         il.Emit(OpCodes.Ldarg_1);
         il.Emit(OpCodes.Ldarg_2);
         il.Emit(OpCodes.Stfld, IlGeneratorField);

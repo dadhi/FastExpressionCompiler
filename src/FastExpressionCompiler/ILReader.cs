@@ -1030,8 +1030,8 @@ public class ModuleScopeTokenResolver : ITokenResolver
 [UnconditionalSuppressMessage("Trimming", "IL2080:'this' argument does not satisfy 'DynamicallyAccessedMemberTypes' in call to 'target method'. The field/type does not have matching annotations.", Justification = "Uses reflection on internal types and is not trim-compatible.")]
 internal class DynamicScopeTokenResolver : ITokenResolver
 {
-    private static readonly PropertyInfo _indexer;
-    private static readonly FieldInfo _scopeFi;
+    private static readonly PropertyInfo _ilGeneratorScopeIndexer;
+    private static readonly FieldInfo _ilGeneratorScope;
 
     private static readonly Type _genMethodInfoType;
     private static readonly FieldInfo _genmethFi1;
@@ -1049,10 +1049,10 @@ internal class DynamicScopeTokenResolver : ITokenResolver
         const BindingFlags memberFlags = BindingFlags.NonPublic | BindingFlags.Instance;
 
         var dynamicScopeType = Type.GetType("System.Reflection.Emit.DynamicScope") ?? throw new InvalidOperationException("DynamicScope type is not found");
-        _indexer = dynamicScopeType.GetProperty("Item", memberFlags) ?? throw new InvalidOperationException("DynamicScope.Item property is not found");
+        _ilGeneratorScopeIndexer = dynamicScopeType.GetProperty("Item", memberFlags) ?? throw new InvalidOperationException("DynamicScope.Item property is not found");
 
         var dynamicIlGeneratorType = Type.GetType("System.Reflection.Emit.DynamicILGenerator") ?? throw new InvalidOperationException("DynamicILGenerator type is not found");
-        _scopeFi = dynamicIlGeneratorType.GetField("m_scope", memberFlags) ?? throw new InvalidOperationException("DynamicILGenerator._scope field is not found");
+        _ilGeneratorScope = dynamicIlGeneratorType.GetField("m_scope", memberFlags) ?? throw new InvalidOperationException("DynamicILGenerator._scope field is not found");
 
         _varArgMethodType = Type.GetType("System.Reflection.Emit.VarArgMethod");
         _varargFi1 = _varArgMethodType.GetField("m_method", memberFlags);
@@ -1069,12 +1069,10 @@ internal class DynamicScopeTokenResolver : ITokenResolver
 
     private readonly object _scope;
 
-    private object this[int token] => _indexer.GetValue(_scope, [token]);
+    private object this[int token] => _ilGeneratorScopeIndexer.GetValue(_scope, [token]);
 
-    public DynamicScopeTokenResolver(DynamicMethod dm)
-    {
-        _scope = _scopeFi.GetValue(dm.GetILGenerator());
-    }
+    public DynamicScopeTokenResolver(DynamicMethod dm) =>
+        _scope = _ilGeneratorScope.GetValue(dm.GetILGenerator());
 
     public string AsString(int token) => this[token] as string;
 
@@ -1084,11 +1082,9 @@ internal class DynamicScopeTokenResolver : ITokenResolver
             return FieldInfo.GetFieldFromHandle((RuntimeFieldHandle)this[token]);
 
         if (this[token].GetType() == _genFieldInfoType)
-        {
             return FieldInfo.GetFieldFromHandle(
                 (RuntimeFieldHandle)_genfieldFi1.GetValue(this[token]),
                 (RuntimeTypeHandle)_genfieldFi2.GetValue(this[token]));
-        }
 
         Debug.Assert(false, $"unexpected type: {this[token].GetType()}");
         return null;
