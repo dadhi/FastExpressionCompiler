@@ -224,7 +224,7 @@ public class Issue475_Reuse_DynamicMethod_if_possible : ITestX
 
     public static object CreateDynamicILGenerator()
     {
-        var paramTypes = ExpressionCompiler.RentOrNewClosureTypeToParamTypes(typeof(int), typeof(int).MakeByRefType());
+        var paramTypes = ExpressionCompiler.RentPooledOrNewClosureTypeToParamTypes(typeof(int), typeof(int).MakeByRefType());
         var dynMethod = new DynamicMethod(string.Empty,
             typeof(void),
             paramTypes,
@@ -242,20 +242,20 @@ public class Issue475_Reuse_DynamicMethod_if_possible : ITestX
         il.Emit(OpCodes.Ret);
 
         var func = (Action2ndByRef<int>)dynMethod.CreateDelegate(typeof(Action2ndByRef<int>), ExpressionCompiler.EmptyArrayClosure);
-        ExpressionCompiler.FreeClosureTypeAndParamTypes(paramTypes);
+        ExpressionCompiler.FreePooledClosureTypeAndParamTypes(paramTypes);
         return func;
     }
 
     public static object PoolDynamicILGenerator()
     {
-        var paramTypes = ExpressionCompiler.RentOrNewClosureTypeToParamTypes(typeof(int), typeof(int).MakeByRefType());
+        var paramTypes = ExpressionCompiler.RentPooledOrNewClosureTypeToParamTypes(typeof(int), typeof(int).MakeByRefType());
         var dynMethod = new DynamicMethod(string.Empty,
             typeof(void),
             paramTypes,
             typeof(ExpressionCompiler.ArrayClosure),
             true);
 
-        var il = ExpressionCompiler.PoolOrNewILGenerator(dynMethod, typeof(void), paramTypes);
+        var il = ExpressionCompiler.RentPooledOrNewILGenerator(dynMethod, typeof(void), paramTypes);
 
         il.Emit(OpCodes.Ldarg_2);
         il.Emit(OpCodes.Ldarg_2);
@@ -267,9 +267,9 @@ public class Issue475_Reuse_DynamicMethod_if_possible : ITestX
 
         var func = (Action2ndByRef<int>)dynMethod.CreateDelegate(typeof(Action2ndByRef<int>), ExpressionCompiler.EmptyArrayClosure);
 
-        ExpressionCompiler.FreeILGenerator(dynMethod, il);
+        ExpressionCompiler.FreePooledILGenerator(dynMethod, il);
 
-        ExpressionCompiler.FreeClosureTypeAndParamTypes(paramTypes);
+        ExpressionCompiler.FreePooledClosureTypeAndParamTypes(paramTypes);
 
         return func;
     }

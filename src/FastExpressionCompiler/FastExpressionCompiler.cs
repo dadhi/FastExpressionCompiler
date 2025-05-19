@@ -413,9 +413,9 @@ namespace FastExpressionCompiler
             this LambdaExpression lambdaExpr, ref ClosureInfo closureInfo, CompilerFlags flags) where TDelegate : class
         {
 #if LIGHT_EXPRESSION
-            var closurePlusParamTypes = RentOrNewClosureTypeToParamTypes(lambdaExpr);
+            var closurePlusParamTypes = RentPooledOrNewClosureTypeToParamTypes(lambdaExpr);
 #else
-            var closurePlusParamTypes = RentOrNewClosureTypeToParamTypes(lambdaExpr.Parameters);
+            var closurePlusParamTypes = RentPooledOrNewClosureTypeToParamTypes(lambdaExpr.Parameters);
 #endif
             var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, closurePlusParamTypes,
                 typeof(ExpressionCompiler), skipVisibility: true);
@@ -437,7 +437,7 @@ namespace FastExpressionCompiler
 
             var delegateType = typeof(TDelegate) != typeof(Delegate) ? typeof(TDelegate) : lambdaExpr.Type;
             var @delegate = (TDelegate)(object)method.CreateDelegate(delegateType, new ArrayClosure(closureInfo.Constants.Items));
-            FreeClosureTypeAndParamTypes(closurePlusParamTypes);
+            FreePooledClosureTypeAndParamTypes(closurePlusParamTypes);
             return @delegate;
         }
 
@@ -447,9 +447,9 @@ namespace FastExpressionCompiler
         {
             var closureInfo = new ClosureInfo(ClosureStatus.UserProvided);
 #if LIGHT_EXPRESSION
-            var closurePlusParamTypes = RentOrNewClosureTypeToParamTypes(lambdaExpr);
+            var closurePlusParamTypes = RentPooledOrNewClosureTypeToParamTypes(lambdaExpr);
 #else
-            var closurePlusParamTypes = RentOrNewClosureTypeToParamTypes(lambdaExpr.Parameters);
+            var closurePlusParamTypes = RentPooledOrNewClosureTypeToParamTypes(lambdaExpr.Parameters);
 #endif
             var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, closurePlusParamTypes, typeof(ArrayClosure),
                 skipVisibility: true);
@@ -468,7 +468,7 @@ namespace FastExpressionCompiler
 
             var delegateType = typeof(TDelegate) != typeof(Delegate) ? typeof(TDelegate) : lambdaExpr.Type;
             var @delegate = (TDelegate)(object)method.CreateDelegate(delegateType, EmptyArrayClosure);
-            FreeClosureTypeAndParamTypes(closurePlusParamTypes);
+            FreePooledClosureTypeAndParamTypes(closurePlusParamTypes);
             return @delegate;
         }
 
@@ -487,7 +487,7 @@ namespace FastExpressionCompiler
         internal static object TryCompileBoundToFirstClosureParam(Type delegateType, Expression bodyExpr, IParameterProvider paramExprs,
             Type returnType, CompilerFlags flags)
         {
-            var closureAndParamTypes = RentOrNewClosureTypeToParamTypes(paramExprs);
+            var closureAndParamTypes = RentPooledOrNewClosureTypeToParamTypes(paramExprs);
             if (bodyExpr is NoArgsNewClassIntrinsicExpression newNoArgs)
             {
                 // there is no Return of the pooled parameter types here, because in the rarest case with the unused lambda arguments we may just exhaust the pooled instance 
@@ -497,7 +497,7 @@ namespace FastExpressionCompiler
         internal static object TryCompileBoundToFirstClosureParam(Type delegateType, Expression bodyExpr, IReadOnlyList<PE> paramExprs,
             Type returnType, CompilerFlags flags)
         {
-            var closureAndParamTypes = RentOrNewClosureTypeToParamTypes(paramExprs);
+            var closureAndParamTypes = RentPooledOrNewClosureTypeToParamTypes(paramExprs);
 #endif
             // Try to avoid compilation altogether for Func<bool> delegates via Interpreter, see #468
             if (returnType == typeof(bool) & closureAndParamTypes.Length == 1
@@ -531,7 +531,7 @@ namespace FastExpressionCompiler
             // this is FEC way, significantly faster compilation, but +1 branch instruction in the invocation
             var method = new DynamicMethod(string.Empty, returnType, closureAndParamTypes, typeof(ArrayClosure), true);
 
-            var il = PoolOrNewILGenerator(method, returnType, closureAndParamTypes);
+            var il = RentPooledOrNewILGenerator(method, returnType, closureAndParamTypes);
 
             if (closure.ConstantsAndNestedLambdas != null)
                 EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref closureInfo);
@@ -546,8 +546,8 @@ namespace FastExpressionCompiler
 
             var dlg = method.CreateDelegate(delegateType, closure);
 
-            FreeILGenerator(method, il);
-            FreeClosureTypeAndParamTypes(closureAndParamTypes);
+            FreePooledILGenerator(method, il);
+            FreePooledClosureTypeAndParamTypes(closureAndParamTypes);
 
             return dlg;
         }
@@ -713,7 +713,7 @@ namespace FastExpressionCompiler
 
         /// <summary>Get new or pool and configure existing DynamicILGenerator</summary>
         [MethodImpl((MethodImplOptions)256)]
-        public static ILGenerator PoolOrNewILGenerator(DynamicMethod dynMethod, Type returnType, Type[] paramTypes,
+        public static ILGenerator RentPooledOrNewILGenerator(DynamicMethod dynMethod, Type returnType, Type[] paramTypes,
             // the default ILGenerator size is 64 in .NET 8.0+
             int streamSize = 64)
         {
@@ -731,7 +731,7 @@ namespace FastExpressionCompiler
 
         /// <summary>Should be called only after call to DynamicMethod.CreateDelegate</summary>
         [MethodImpl((MethodImplOptions)256)]
-        public static void FreeILGenerator(DynamicMethod dynMethod, ILGenerator il)
+        public static void FreePooledILGenerator(DynamicMethod dynMethod, ILGenerator il)
         {
 #if NET8_0_OR_GREATER
             // todo: @wip #475 might be required to avoid the undefined behavior when the previous DynamicMethod is still linked to the wrong ILGenerator
@@ -744,11 +744,11 @@ namespace FastExpressionCompiler
         private static readonly Type[][] _paramTypesPoolWithElem0OfLength1 = new Type[8][]; // todo: @perf @mem could we use this for other Type arrays?
 
 #if LIGHT_EXPRESSION
-        internal static Type[] RentOrNewClosureTypeToParamTypes(IParameterProvider paramExprs)
+        internal static Type[] RentPooledOrNewClosureTypeToParamTypes(IParameterProvider paramExprs)
         {
             var count = paramExprs.ParameterCount;
 #else
-        internal static Type[] RentOrNewClosureTypeToParamTypes(IReadOnlyList<PE> paramExprs)
+        internal static Type[] RentPooledOrNewClosureTypeToParamTypes(IReadOnlyList<PE> paramExprs)
         {
             var count = paramExprs.Count;
 #endif
@@ -768,7 +768,7 @@ namespace FastExpressionCompiler
 
         /// <summary>Renting the array of types of closure + plus the passed parameter types</summary>
         [MethodImpl((MethodImplOptions)256)]
-        public static Type[] RentOrNewClosureTypeToParamTypes(Type p1, Type p2)
+        public static Type[] RentPooledOrNewClosureTypeToParamTypes(Type p1, Type p2)
         {
             var pooledOrNew = Interlocked.Exchange(ref _paramTypesPoolWithElem0OfLength1[2], null) ?? new Type[3];
             pooledOrNew[0] = typeof(ArrayClosure);
@@ -779,7 +779,7 @@ namespace FastExpressionCompiler
 
         /// <summary>Renting the array of the passed parameter types</summary>
         [MethodImpl((MethodImplOptions)256)]
-        public static Type[] RentParamTypes(Type p0, Type p1)
+        public static Type[] RentPooledOrNewParamTypes(Type p0, Type p1)
         {
             var pooledOrNew = Interlocked.Exchange(ref _paramTypesPoolWithElem0OfLength1[1], null) ?? new Type[2];
             pooledOrNew[0] = p0;
@@ -789,7 +789,7 @@ namespace FastExpressionCompiler
 
         /// <summary>Freeing to the pool the array of types of closure + plus the passed parameter types</summary>
         [MethodImpl((MethodImplOptions)256)]
-        public static void FreeClosureTypeAndParamTypes(Type[] closurePlusParamTypes)
+        public static void FreePooledClosureTypeAndParamTypes(Type[] closurePlusParamTypes)
         {
             var paramCountOnly = closurePlusParamTypes.Length - 1;
             if (paramCountOnly != 0 & paramCountOnly < 8)
@@ -1954,9 +1954,9 @@ namespace FastExpressionCompiler
 
             if (nestedLambdaBody is NoArgsNewClassIntrinsicExpression newNoArgs)
             {
-                var paramTypes = RentOrNewClosureTypeToParamTypes(nestedLambdaParamExprs);
+                var paramTypes = RentPooledOrNewClosureTypeToParamTypes(nestedLambdaParamExprs);
                 nestedLambdaInfo.Lambda = CompileNoArgsNew(newNoArgs.Constructor, nestedLambdaExpr.Type, paramTypes, nestedReturnType);
-                FreeClosureTypeAndParamTypes(paramTypes);
+                FreePooledClosureTypeAndParamTypes(paramTypes);
                 return true;
             }
 #else
@@ -1975,10 +1975,10 @@ namespace FastExpressionCompiler
                     ? EmptyArrayClosure
                     : new ArrayClosure(nestedConstsAndLambdas);
 
-            var closurePlusParamTypes = RentOrNewClosureTypeToParamTypes(nestedLambdaParamExprs);
+            var closurePlusParamTypes = RentPooledOrNewClosureTypeToParamTypes(nestedLambdaParamExprs);
 
             var method = new DynamicMethod(string.Empty, nestedReturnType, closurePlusParamTypes, typeof(ArrayClosure), true);
-            var il = method.GetILGenerator();
+            var il = RentPooledOrNewILGenerator(method, nestedReturnType, closurePlusParamTypes);
 
             if (nestedConstsAndLambdas != null)
                 EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref nestedClosureInfo);
@@ -1997,11 +1997,12 @@ namespace FastExpressionCompiler
                 ? method.CreateDelegate(nestedLambdaExpr.Type, nestedLambdaClosure)
                 : method.CreateDelegate(Tools.GetFuncOrActionType(closurePlusParamTypes, nestedReturnType), null);
 
+            FreePooledILGenerator(method, il);
+            FreePooledClosureTypeAndParamTypes(closurePlusParamTypes);
+
             nestedLambdaInfo.Lambda = !hasNonPassedParameters ? nestedLambda
                 : nestedConstsAndLambdas == null ? new NestedLambdaForNonPassedParams(nestedLambda)
                 : new NestedLambdaForNonPassedParamsWithConstants(nestedLambda, nestedConstsAndLambdas);
-
-            FreeClosureTypeAndParamTypes(closurePlusParamTypes);
             return true;
         }
 
@@ -8574,7 +8575,7 @@ namespace FastExpressionCompiler
                 return;
 
             // looking for the `SignatureHelper.AddArgument(Type argument, bool pinned)`
-            var typeAndBoolParamTypes = ExpressionCompiler.RentParamTypes(typeof(Type), typeof(bool));
+            var typeAndBoolParamTypes = ExpressionCompiler.RentPooledOrNewParamTypes(typeof(Type), typeof(bool));
             var addArgumentMethod = typeof(SignatureHelper).GetMethod("AddArgument", typeAndBoolParamTypes);
             if (addArgumentMethod == null)
                 return;
@@ -8584,7 +8585,7 @@ namespace FastExpressionCompiler
             var postIncMethod = typeof(ILGeneratorHacks).GetMethod(nameof(PostInc), BindingFlags.Static | BindingFlags.NonPublic);
             Debug.Assert(postIncMethod != null, "PostInc method not found!");
 
-            var paramTypes = ExpressionCompiler.RentOrNewClosureTypeToParamTypes(typeof(ILGenerator), typeof(Type));
+            var paramTypes = ExpressionCompiler.RentPooledOrNewClosureTypeToParamTypes(typeof(ILGenerator), typeof(Type));
             var efficientMethod = new DynamicMethod(string.Empty, typeof(int), paramTypes, typeof(ExpressionCompiler.ArrayClosure), true);
             var il = efficientMethod.GetILGenerator();
 
@@ -8605,7 +8606,7 @@ namespace FastExpressionCompiler
             _getNextLocalVarIndex = (Func<ILGenerator, Type, int>)efficientMethod.CreateDelegate(
                 typeof(Func<ILGenerator, Type, int>), ExpressionCompiler.EmptyArrayClosure);
 
-            ExpressionCompiler.FreeClosureTypeAndParamTypes(paramTypes);
+            ExpressionCompiler.FreePooledClosureTypeAndParamTypes(paramTypes);
 
             // todo: @perf do batch Emit by manually calling `EnsureCapacity` once then `InternalEmit` multiple times
             // todo: @perf Replace the `Emit(opcode, int)` with the more specialized `Emit(opcode)`, `Emit(opcode, byte)` or `Emit(opcode, short)` 

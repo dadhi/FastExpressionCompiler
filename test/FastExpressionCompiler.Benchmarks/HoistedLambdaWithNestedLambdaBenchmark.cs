@@ -124,12 +124,19 @@ namespace FastExpressionCompiler.Benchmarks
             | CompileFast |  11.62 us | 0.230 us |  0.464 us |  11.42 us |  1.00 |    0.06 | 0.7324 | 0.7019 |   4.62 KB |        1.00 |
 
 
-            ## v5.2.0 ILGenerator pooling
+            ## v5.3.0 ILGenerator pooling
 
             | Method      | Mean      | Error    | StdDev   | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
             |------------ |----------:|---------:|---------:|------:|--------:|-------:|-------:|----------:|------------:|
             | Compile     | 410.18 us | 6.928 us | 5.785 us | 36.97 |    0.92 | 1.9531 | 1.4648 |  12.04 KB |        2.74 |
             | CompileFast |  11.10 us | 0.214 us | 0.237 us |  1.00 |    0.03 | 0.7019 | 0.6714 |    4.4 KB |        1.00 |
+
+            ## v5.3.0 ILGenerator pooling for the nested lambdas too
+
+            | Method      | Mean      | Error    | StdDev   | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
+            |------------ |----------:|---------:|---------:|------:|--------:|-------:|-------:|----------:|------------:|
+            | Compile     | 413.38 us | 5.859 us | 5.480 us | 39.90 |    0.88 | 1.9531 | 1.4648 |  12.04 KB |        3.06 |
+            | CompileFast |  10.36 us | 0.195 us | 0.191 us |  1.00 |    0.03 | 0.6409 | 0.6104 |   3.93 KB |        1.00 |
 
             */
             [Benchmark]
