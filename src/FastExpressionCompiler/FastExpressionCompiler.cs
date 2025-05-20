@@ -8542,13 +8542,15 @@ namespace FastExpressionCompiler
                 if (GetSignatureMethod == null)
                     goto endOfReuse;
 
-                var getTokenForParams = ExpressionCompiler.RentPooledOrNewParamTypes(typeof(bool[]));
+                var getTokenForParams = ExpressionCompiler.RentPooledOrNewParamTypes(typeof(byte[]));
                 var GetTokenForMethod = DynamicILGeneratorScopeField.FieldType.GetMethod("GetTokenFor", instancePublic, null, getTokenForParams, null);
                 ExpressionCompiler.FreePooledParamTypes(getTokenForParams);
                 if (GetTokenForMethod == null)
                     goto endOfReuse;
 
                 var MethodSigTokenField = DynamicILGeneratorType.GetField("m_methodSigToken", instanceNonPublic);
+                if (MethodSigTokenField == null)
+                    goto endOfReuse;
 
                 var paramTypes = ExpressionCompiler.RentPooledOrNewParamTypes(
                         typeof(ExpressionCompiler.ArrayClosure), typeof(DynamicMethod), typeof(ILGenerator), typeof(Type), typeof(Type[]));

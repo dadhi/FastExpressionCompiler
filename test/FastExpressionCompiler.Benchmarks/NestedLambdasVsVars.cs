@@ -9,7 +9,7 @@ using L = FastExpressionCompiler.LightExpression.Expression;
 
 namespace FastExpressionCompiler.Benchmarks
 {
-    [MemoryDiagnoser]
+    [MemoryDiagnoser, RankColumn, Orderer(BenchmarkDotNet.Order.SummaryOrderPolicy.FastestToSlowest)]
     // [HardwareCounters(HardwareCounter.CacheMisses, HardwareCounter.BranchMispredictions, HardwareCounter.BranchInstructions)]
     public class NestedLambdasVsVars
     {
