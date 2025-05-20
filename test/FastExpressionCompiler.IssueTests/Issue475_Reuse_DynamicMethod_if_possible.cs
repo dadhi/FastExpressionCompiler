@@ -104,22 +104,18 @@ public class Issue475_Reuse_DynamicMethod_if_possible : ITestX
         private readonly int m_methodSigToken;
 
         public DynamicILGenerator(
-            DynamicMethod method, 
-            byte[] methodSignature, 
+            DynamicMethod method,
+            byte[] methodSignature,
             int streamSize)
         {
             m_scope = new DynamicScope();
             m_methodSigToken = m_scope.GetTokenFor(methodSignature);
 
             m_ScopeTree = new ScopeTree();
-            // clear ilstream bytes to reuse the buffer
             m_ILStream = new byte[Math.Max(size, DefaultSize)];
 
             m_localSignature = SignatureHelper.GetLocalVarSigHelper((method as RuntimeMethodBuilder)?.GetTypeBuilder().Module);
-            
-            // set to the new DynamicMethod
-            m_methodBuilder = method;
-
+            m_methodBuilder = method; // set to the new DynamicMethod
         }
     */
     public void TryToReuseIlGenerator(TestContext t)
@@ -224,7 +220,7 @@ public class Issue475_Reuse_DynamicMethod_if_possible : ITestX
 
     public static object CreateDynamicILGenerator()
     {
-        var paramTypes = ExpressionCompiler.RentPooledOrNewClosureTypeToParamTypes(typeof(int), typeof(int).MakeByRefType());
+        var paramTypes = ExpressionCompiler.RentPooledOrNewParamTypes(typeof(ExpressionCompiler.ArrayClosure), typeof(int), typeof(int).MakeByRefType());
         var dynMethod = new DynamicMethod(string.Empty,
             typeof(void),
             paramTypes,
@@ -242,13 +238,13 @@ public class Issue475_Reuse_DynamicMethod_if_possible : ITestX
         il.Emit(OpCodes.Ret);
 
         var func = (Action2ndByRef<int>)dynMethod.CreateDelegate(typeof(Action2ndByRef<int>), ExpressionCompiler.EmptyArrayClosure);
-        ExpressionCompiler.FreePooledClosureTypeAndParamTypes(paramTypes);
+        ExpressionCompiler.FreePooledParamTypes(paramTypes);
         return func;
     }
 
     public static object PoolDynamicILGenerator()
     {
-        var paramTypes = ExpressionCompiler.RentPooledOrNewClosureTypeToParamTypes(typeof(int), typeof(int).MakeByRefType());
+        var paramTypes = ExpressionCompiler.RentPooledOrNewParamTypes(typeof(int), typeof(int).MakeByRefType());
         var dynMethod = new DynamicMethod(string.Empty,
             typeof(void),
             paramTypes,
@@ -269,7 +265,7 @@ public class Issue475_Reuse_DynamicMethod_if_possible : ITestX
 
         ExpressionCompiler.FreePooledILGenerator(dynMethod, il);
 
-        ExpressionCompiler.FreePooledClosureTypeAndParamTypes(paramTypes);
+        ExpressionCompiler.FreePooledParamTypes(paramTypes);
 
         return func;
     }

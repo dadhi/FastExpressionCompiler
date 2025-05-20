@@ -552,164 +552,9 @@ namespace FastExpressionCompiler
             return dlg;
         }
 
-#if NET8_0_OR_GREATER
-        internal static readonly FieldInfo IlGeneratorField =
-            typeof(DynamicMethod).GetField("_ilGenerator", BindingFlags.Instance | BindingFlags.NonPublic);
-        internal static readonly Type DynamicILGeneratorType = IlGeneratorField.FieldType;
-        internal static readonly ConstructorInfo ScopeTreeCtor =
-            DynamicILGeneratorType.BaseType
-                .GetField("m_ScopeTree", BindingFlags.Instance | BindingFlags.NonPublic)
-                .FieldType.GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, null, Type.EmptyTypes, null);
-
-        internal static readonly MethodInfo ArrayClearMethod =
-            typeof(Array).GetMethod(nameof(Array.Clear), [typeof(Array), typeof(int), typeof(int)]);
-        internal static readonly FieldInfo ListOfObjectsSize =
-            typeof(List<object>).GetField("_size", BindingFlags.Instance | BindingFlags.NonPublic);
-
-        internal static readonly FieldInfo DynamicILGeneratorScopeField =
-            DynamicILGeneratorType.GetField("m_scope", BindingFlags.Instance | BindingFlags.NonPublic);
-        internal static readonly FieldInfo DynamicScopeTokensField =
-            DynamicILGeneratorScopeField.FieldType.GetField("m_tokens", BindingFlags.Instance | BindingFlags.NonPublic);
-        internal static readonly PropertyInfo DynamicScopeTokensItem =
-            DynamicScopeTokensField.FieldType.GetProperty("Item");
-        internal static MethodInfo GetMethodSigHelperMethod = typeof(SignatureHelper)
-            .GetMethod("GetMethodSigHelper", BindingFlags.Static | BindingFlags.Public, null, [typeof(Module), typeof(Type), typeof(Type[])], null);
-        internal static MethodInfo GetLocalVarSigHelperMethod = typeof(SignatureHelper)
-            .GetMethod(nameof(SignatureHelper.GetLocalVarSigHelper), BindingFlags.Static | BindingFlags.Public, null, Type.EmptyTypes, null);
-        internal static MethodInfo GetSignatureMethod = typeof(SignatureHelper)
-            .GetMethod("GetSignature", BindingFlags.Instance | BindingFlags.NonPublic, null, [typeof(bool)], null);
-        internal static MethodInfo GetTokenForMethod = DynamicILGeneratorScopeField.FieldType
-            .GetMethod("GetTokenFor", BindingFlags.Instance | BindingFlags.Public, null, [typeof(byte[])], null);
-        internal static FieldInfo MethodSigTokenField =
-            DynamicILGeneratorType.GetField("m_methodSigToken", BindingFlags.Instance | BindingFlags.NonPublic);
-        internal static Action<DynamicMethod, ILGenerator, Type, Type[]> ReuseDynamicILGeneratorOfAnyMethodSignature()
-        {
-            var dynMethod = new DynamicMethod(string.Empty,
-                typeof(void),
-                [typeof(ExpressionCompiler.ArrayClosure), typeof(DynamicMethod), typeof(ILGenerator), typeof(Type), typeof(Type[])],
-                typeof(ExpressionCompiler.ArrayClosure),
-                true);
-
-            var il = dynMethod.GetILGenerator(256); // precalculating the size to avoid waste
-
-            var baseFields = DynamicILGeneratorType.BaseType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
-            foreach (var field in baseFields)
-            {
-                var fieldName = field.Name;
-                if (fieldName == "m_localSignature")
-                {
-                    // todo: skip, let's see how it works
-                    il.Demit(OpCodes.Ldarg_2);
-                    il.Demit(OpCodes.Call, GetLocalVarSigHelperMethod);
-                    il.Demit(OpCodes.Stfld, field);
-                    continue;
-                }
-
-                // m_ScopeTree = new ScopeTree();
-                if (fieldName == "m_ScopeTree")
-                {
-                    il.Demit(OpCodes.Ldarg_2);
-                    il.Demit(OpCodes.Newobj, ScopeTreeCtor);
-                    il.Demit(OpCodes.Stfld, field);
-                    continue;
-                }
-
-                // m_methodBuilder = method; // dynamicMethod
-                if (fieldName == "m_methodBuilder")
-                {
-                    il.Demit(OpCodes.Ldarg_2);
-                    il.Demit(OpCodes.Ldarg_1);
-                    il.Demit(OpCodes.Stfld, field);
-                    continue;
-                }
-
-                // instead of m_ILStream = new byte[Math.Max(size, DefaultSize)];
-                // let's clear it and reuse the buffer
-                if (fieldName == "m_ILStream")
-                {
-                    // New Array. todo: @perf pool the array
-                    // il.Demit(OpCodes.Ldarg_2);
-                    // il.Demit(OpCodes.Ldc_I4_S, 64);
-                    // il.Emit(OpCodes.Newarr, typeof(byte));
-                    // il.Demit(OpCodes.Stfld, field);
-
-                    // Clear Array
-                    // il.Demit(OpCodes.Ldarg_2);
-                    // il.Demit(OpCodes.Ldfld, field);
-                    // var ilStreamVar = ExpressionCompiler.EmittingVisitor.EmitStoreAndLoadLocalVariable(il, typeof(byte[]));
-                    // il.Demit(OpCodes.Ldc_I4_0);
-                    // ExpressionCompiler.EmittingVisitor.EmitLoadLocalVariable(il, ilStreamVar);
-                    // il.Demit(OpCodes.Ldlen);
-                    // il.Demit(OpCodes.Call, ArrayClearMethod);
-                    continue;
-                }
-
-                il.Demit(OpCodes.Ldarg_2);
-                ExpressionCompiler.EmittingVisitor.EmitDefault(il, field.FieldType);
-                il.Demit(OpCodes.Stfld, field);
-            }
-
-            // il.Emit(OpCodes.Ldarg_2);
-            // var scope = new DynamicScope();
-            il.Emit(OpCodes.Newobj, DynamicILGeneratorScopeField.FieldType.GetConstructor(Type.EmptyTypes));
-            var scopeVar = ExpressionCompiler.EmittingVisitor.EmitStoreLocalVariable(il, DynamicILGeneratorScopeField.FieldType);
-
-            // il.Emit(OpCodes.Ldfld, DynamicILGeneratorScopeField);
-            // var scopeVar = ExpressionCompiler.EmittingVisitor.EmitStoreAndLoadLocalVariable(il, DynamicILGeneratorScopeField.FieldType);
-            // il.Emit(OpCodes.Ldfld, DynamicScopeTokensField);
-            // il.Emit(OpCodes.Dup);
-
-            // // reset its List<T>._size to 1, keep the 0th item
-            // il.Emit(OpCodes.Ldc_I4_1);
-            // il.Emit(OpCodes.Stfld, ListOfObjectsSize);
-
-            // // set the 0th item to null
-            // il.Emit(OpCodes.Ldc_I4_0);
-            // il.Emit(OpCodes.Ldnull);
-            // il.Emit(OpCodes.Call, DynamicScopeTokensItem.SetMethod);
-
-            //  byte[] methodSignature =
-            //      SignatureHelper.GetMethodSigHelper(Module? mod, Type? returnType, Type[]? parameterTypes).GetSignature(true);
-            il.Emit(OpCodes.Ldnull); // for the module
-            il.Emit(OpCodes.Ldarg_3); // load return type
-            il.Emit(OpCodes.Ldarg_S, 4); // load parameter types arrays
-            il.Emit(OpCodes.Call, GetMethodSigHelperMethod);
-            il.Emit(OpCodes.Ldc_I4_1); // load true
-            il.Emit(OpCodes.Call, GetSignatureMethod);
-            var signatureBytesVar = ExpressionCompiler.EmittingVisitor.EmitStoreLocalVariable(il, typeof(byte[])); // todo: perf could reuse byte[]?
-
-            // m_methodSigToken = m_scope.GetTokenFor(methodSignature);
-            il.Emit(OpCodes.Ldarg_2);
-            ExpressionCompiler.EmittingVisitor.EmitLoadLocalVariable(il, scopeVar);
-            ExpressionCompiler.EmittingVisitor.EmitLoadLocalVariable(il, signatureBytesVar);
-            il.Emit(OpCodes.Call, GetTokenForMethod);
-            il.Emit(OpCodes.Stfld, MethodSigTokenField);
-
-            // m_scope = new DynamicScope();
-            il.Emit(OpCodes.Ldarg_2);
-            ExpressionCompiler.EmittingVisitor.EmitLoadLocalVariable(il, scopeVar);
-            il.Emit(OpCodes.Stfld, DynamicILGeneratorScopeField);
-
-            // store the reused ILGenerator to 
-            il.Emit(OpCodes.Ldarg_1);
-            il.Emit(OpCodes.Ldarg_2);
-            il.Emit(OpCodes.Stfld, IlGeneratorField);
-
-            il.Emit(OpCodes.Ret);
-
-            var act = dynMethod.CreateDelegate(typeof(Action<DynamicMethod, ILGenerator, Type, Type[]>), ExpressionCompiler.EmptyArrayClosure);
-
-            // todo: @wip #475 use the ILGenerator of the dynMethod for the pooledILGenerator
-
-            return (Action<DynamicMethod, ILGenerator, Type, Type[]>)act;
-        }
-
-        internal static Action<DynamicMethod, ILGenerator, Type, Type[]>
-            ReuseDynamicILGeneratorOfAnySignature = ReuseDynamicILGeneratorOfAnyMethodSignature();
-
+#if NET6_0_OR_GREATER
         [ThreadStatic]
         internal static ILGenerator pooledILGenerator;
-#endif
 
         /// <summary>Get new or pool and configure existing DynamicILGenerator</summary>
         [MethodImpl((MethodImplOptions)256)]
@@ -717,28 +562,40 @@ namespace FastExpressionCompiler
             // the default ILGenerator size is 64 in .NET 8.0+
             int streamSize = 64)
         {
-#if NET8_0_OR_GREATER
-            var il = Interlocked.Exchange(ref pooledILGenerator, null);
-            if (il != null)
-                ReuseDynamicILGeneratorOfAnySignature(dynMethod, il, returnType, paramTypes);
-            else
-                il = dynMethod.GetILGenerator(streamSize);
-            return il;
-#else
+            if (DynamicMethodILGeneratorHacks.ReuseDynamicILGenerator != null)
+            {
+                var pooledIL = Interlocked.Exchange(ref pooledILGenerator, null);
+                if (pooledIL != null)
+                {
+                    DynamicMethodILGeneratorHacks.ReuseDynamicILGenerator(dynMethod, pooledIL, returnType, paramTypes);
+                    return pooledIL;
+                }
+            }
             return dynMethod.GetILGenerator(streamSize);
-#endif
         }
 
         /// <summary>Should be called only after call to DynamicMethod.CreateDelegate</summary>
         [MethodImpl((MethodImplOptions)256)]
         public static void FreePooledILGenerator(DynamicMethod dynMethod, ILGenerator il)
         {
-#if NET8_0_OR_GREATER
             // todo: @wip #475 might be required to avoid the undefined behavior when the previous DynamicMethod is still linked to the wrong ILGenerator
             // IlGeneratorField.SetValue(dynMethod, null);
-            Interlocked.Exchange(ref pooledILGenerator, il);
-#endif
+
+            if (DynamicMethodILGeneratorHacks.ReuseDynamicILGenerator != null)
+                Interlocked.Exchange(ref pooledILGenerator, il);
         }
+#else
+        /// <summary>Get new or pool and configure existing DynamicILGenerator</summary>
+        [MethodImpl((MethodImplOptions)256)]
+        public static ILGenerator RentPooledOrNewILGenerator(DynamicMethod dynMethod, Type returnType, Type[] paramTypes,
+            // the default ILGenerator size is 64 in .NET 8.0+
+            int streamSize = 64) =>
+            dynMethod.GetILGenerator(streamSize);
+
+        /// <summary>Should be called only after call to DynamicMethod.CreateDelegate</summary>
+        [MethodImpl((MethodImplOptions)256)]
+        public static void FreePooledILGenerator(DynamicMethod dynMethod, ILGenerator il) { /* do nothing */ }
+#endif
 
         private static readonly Type[] _closureAsASingleParamType = { typeof(ArrayClosure) };
         private static readonly Type[][] _paramTypesPoolWithElem0OfLength1 = new Type[8][]; // todo: @perf @mem could we use this for other Type arrays?
@@ -766,14 +623,12 @@ namespace FastExpressionCompiler
             return pooledOrNew;
         }
 
-        /// <summary>Renting the array of types of closure + plus the passed parameter types</summary>
+        /// <summary>Renting the array of the passed parameter types</summary>
         [MethodImpl((MethodImplOptions)256)]
-        public static Type[] RentPooledOrNewClosureTypeToParamTypes(Type p1, Type p2)
+        public static Type[] RentPooledOrNewParamTypes(Type p0)
         {
-            var pooledOrNew = Interlocked.Exchange(ref _paramTypesPoolWithElem0OfLength1[2], null) ?? new Type[3];
-            pooledOrNew[0] = typeof(ArrayClosure);
-            pooledOrNew[1] = p1;
-            pooledOrNew[2] = p2;
+            var pooledOrNew = Interlocked.Exchange(ref _paramTypesPoolWithElem0OfLength1[0], null) ?? new Type[1];
+            pooledOrNew[0] = p0;
             return pooledOrNew;
         }
 
@@ -787,22 +642,58 @@ namespace FastExpressionCompiler
             return pooledOrNew;
         }
 
+        /// <summary>Renting the array of the passed parameter types</summary>
+        [MethodImpl((MethodImplOptions)256)]
+        public static Type[] RentPooledOrNewParamTypes(Type p0, Type p1, Type p2)
+        {
+            var pooledOrNew = Interlocked.Exchange(ref _paramTypesPoolWithElem0OfLength1[2], null) ?? new Type[3];
+            pooledOrNew[0] = p0;
+            pooledOrNew[1] = p1;
+            pooledOrNew[2] = p2;
+            return pooledOrNew;
+        }
+
+        /// <summary>Renting the array of the passed parameter types</summary>
+        [MethodImpl((MethodImplOptions)256)]
+        public static Type[] RentPooledOrNewParamTypes(Type p0, Type p1, Type p2, Type p3)
+        {
+            var pooledOrNew = Interlocked.Exchange(ref _paramTypesPoolWithElem0OfLength1[3], null) ?? new Type[4];
+            pooledOrNew[0] = p0;
+            pooledOrNew[1] = p1;
+            pooledOrNew[2] = p2;
+            pooledOrNew[3] = p3;
+            return pooledOrNew;
+        }
+
+        /// <summary>Renting the array of the passed parameter types</summary>
+        [MethodImpl((MethodImplOptions)256)]
+        public static Type[] RentPooledOrNewParamTypes(Type p0, Type p1, Type p2, Type p3, Type p4)
+        {
+            var pooledOrNew = Interlocked.Exchange(ref _paramTypesPoolWithElem0OfLength1[4], null) ?? new Type[5];
+            pooledOrNew[0] = p0;
+            pooledOrNew[1] = p1;
+            pooledOrNew[2] = p2;
+            pooledOrNew[3] = p3;
+            pooledOrNew[4] = p4;
+            return pooledOrNew;
+        }
+
         /// <summary>Freeing to the pool the array of types of closure + plus the passed parameter types</summary>
         [MethodImpl((MethodImplOptions)256)]
         public static void FreePooledClosureTypeAndParamTypes(Type[] closurePlusParamTypes)
         {
             var paramCountOnly = closurePlusParamTypes.Length - 1;
             if (paramCountOnly != 0 & paramCountOnly < 8)
-                Interlocked.Exchange(ref _paramTypesPoolWithElem0OfLength1[paramCountOnly], closurePlusParamTypes); // todo: @perf we don't need the Interlocked here
+                Interlocked.Exchange(ref _paramTypesPoolWithElem0OfLength1[paramCountOnly], closurePlusParamTypes);
         }
 
         /// <summary>Freeing to the pool the array of the passed parameter types</summary>
         [MethodImpl((MethodImplOptions)256)]
-        public static void FreeParamTypes(Type[] paramTypes)
+        public static void FreePooledParamTypes(Type[] paramTypes)
         {
             var paramCount = paramTypes.Length;
             if (paramCount != 0 & paramCount < 8)
-                Interlocked.Exchange(ref _paramTypesPoolWithElem0OfLength1[paramCount - 1], paramTypes); // todo: @perf we don't need the Interlocked here
+                Interlocked.Exchange(ref _paramTypesPoolWithElem0OfLength1[paramCount - 1], paramTypes);
         }
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
@@ -8527,7 +8418,7 @@ namespace FastExpressionCompiler
 
     /// <summary>Reflecting the internal methods to access the more performant for defining the local variable</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
-    public static class ILGeneratorHacks
+    public static class DynamicMethodILGeneratorHacks
     {
         // The original ILGenerator methods we are trying to hack without allocating the `LocalBuilder`
         /*
@@ -8554,60 +8445,247 @@ namespace FastExpressionCompiler
         }
         */
 
-        internal static readonly Func<ILGenerator, Type, int> _getNextLocalVarIndex;
+        internal static readonly Func<ILGenerator, Type, int> GetNextLocalVarLocation;
 
         internal static int PostInc(ref int i) => i++;
 
-        static ILGeneratorHacks()
+        internal static Action<DynamicMethod, ILGenerator, Type, Type[]> ReuseDynamicILGenerator;
+
+        static DynamicMethodILGeneratorHacks()
         {
-            // todo: @wip combine with #475
-            // the default allocatee method
-            _getNextLocalVarIndex = (i, t) => i.DeclareLocal(t).LocalIndex;
+            const BindingFlags instanceNonPublic = BindingFlags.Instance | BindingFlags.NonPublic;
+            const BindingFlags instancePublic = BindingFlags.Instance | BindingFlags.Public;
+            const BindingFlags staticNonPublic = BindingFlags.Static | BindingFlags.NonPublic;
+            const BindingFlags staticPublic = BindingFlags.Static | BindingFlags.Public;
 
-            // now let's try to acquire the more efficient less allocating method
-            var ilGenTypeInfo = typeof(ILGenerator).GetTypeInfo();
-            var localSignatureField = ilGenTypeInfo.GetDeclaredField("m_localSignature");
-            if (localSignatureField == null)
-                return;
+            var _iLGeneratorField = typeof(DynamicMethod).GetField("_ilGenerator", instanceNonPublic);
+            if (_iLGeneratorField == null)
+                return; // nothing to look here
 
-            var localCountField = ilGenTypeInfo.GetDeclaredField("m_localCount");
-            if (localCountField == null)
-                return;
+            var DynamicILGeneratorType = _iLGeneratorField.FieldType;
+            {
+                // ## 1. Reuse the DynamicILGenerator
+                //
+                // Reference code - NET. v8, v9:
+                /*
+                    public ILGenerator GetILGenerator(int streamSize)
+                    {
+                        if (_ilGenerator == null)
+                        {
+                            byte[] methodSignature = SignatureHelper.GetMethodSigHelper(
+                                null, CallingConvention, ReturnType, null, null, _parameterTypes, null, null).GetSignature(true);
+                            _ilGenerator = new DynamicILGenerator(this, methodSignature, streamSize);
+                        }
+                        return _ilGenerator;
+                    }
 
-            // looking for the `SignatureHelper.AddArgument(Type argument, bool pinned)`
-            var typeAndBoolParamTypes = ExpressionCompiler.RentPooledOrNewParamTypes(typeof(Type), typeof(bool));
-            var addArgumentMethod = typeof(SignatureHelper).GetMethod("AddArgument", typeAndBoolParamTypes);
-            if (addArgumentMethod == null)
-                return;
-            ExpressionCompiler.FreeParamTypes(typeAndBoolParamTypes);
+                    internal sealed class DynamicScope
+                    {
+                        internal readonly List<object?> m_tokens = new List<object?> { null };
+                        public int GetTokenFor(byte[] signature)
+                        {
+                            m_tokens.Add(signature);
+                            return m_tokens.Count - 1 | (int)MetadataTokenType.Signature;
+                        }
+                    }
 
-            // our own helper - always available
-            var postIncMethod = typeof(ILGeneratorHacks).GetMethod(nameof(PostInc), BindingFlags.Static | BindingFlags.NonPublic);
-            Debug.Assert(postIncMethod != null, "PostInc method not found!");
+                    internal DynamicScope m_scope;
+                    private readonly int m_methodSigToken;
 
-            var paramTypes = ExpressionCompiler.RentPooledOrNewClosureTypeToParamTypes(typeof(ILGenerator), typeof(Type));
-            var efficientMethod = new DynamicMethod(string.Empty, typeof(int), paramTypes, typeof(ExpressionCompiler.ArrayClosure), true);
-            var il = efficientMethod.GetILGenerator();
+                    public DynamicILGenerator(
+                        DynamicMethod method,
+                        byte[] methodSignature,
+                        int streamSize)
+                    {
+                        m_scope = new DynamicScope();
+                        m_methodSigToken = m_scope.GetTokenFor(methodSignature);
 
-            // emitting `il.m_localSignature.AddArgument(type);`
-            il.Emit(OpCodes.Ldarg_1);  // load `il` argument (arg_0 is the empty closure object)
-            il.Emit(OpCodes.Ldfld, localSignatureField);
-            il.Emit(OpCodes.Ldarg_2);  // load `type` argument
-            il.Emit(OpCodes.Ldc_I4_0); // load `pinned: false` argument
-            il.Emit(OpCodes.Call, addArgumentMethod);
+                        m_ScopeTree = new ScopeTree();
+                        m_ILStream = new byte[Math.Max(size, DefaultSize)];
 
-            // emitting `return PostInc(ref il.LocalCount);`
-            il.Emit(OpCodes.Ldarg_1); // load `il` argument
-            il.Emit(OpCodes.Ldflda, localCountField);
-            il.Emit(OpCodes.Call, postIncMethod);
+                        m_localSignature = SignatureHelper.GetLocalVarSigHelper((method as RuntimeMethodBuilder)?.GetTypeBuilder().Module);
+                        m_methodBuilder = method; // set to the new DynamicMethod
+                    }
+                */
+                var m_ScopeTreeField = DynamicILGeneratorType.GetField("m_ScopeTree", instanceNonPublic);
+                if (m_ScopeTreeField == null)
+                    goto endOfReuse;
 
-            il.Emit(OpCodes.Ret);
+                var ScopeTreeCtor = m_ScopeTreeField.FieldType.GetConstructor(instanceNonPublic, null, Type.EmptyTypes, null);
+                if (ScopeTreeCtor == null)
+                    goto endOfReuse;
 
-            _getNextLocalVarIndex = (Func<ILGenerator, Type, int>)efficientMethod.CreateDelegate(
-                typeof(Func<ILGenerator, Type, int>), ExpressionCompiler.EmptyArrayClosure);
+                var DynamicILGeneratorScopeField = DynamicILGeneratorType.GetField("m_scope", instanceNonPublic);
+                if (DynamicILGeneratorScopeField == null)
+                    goto endOfReuse;
 
-            ExpressionCompiler.FreePooledClosureTypeAndParamTypes(paramTypes);
+                var DynamicScopeTokensField = DynamicILGeneratorScopeField.FieldType.GetField("m_tokens", instanceNonPublic);
+                if (DynamicScopeTokensField == null)
+                    goto endOfReuse;
 
+                var DynamicScopeTokensItem = DynamicScopeTokensField.FieldType.GetProperty("Item");
+                Debug.Assert(DynamicScopeTokensItem != null, "DynamicScopeTokens.Item should not be null");
+
+                var getMethodSigHelperParams = ExpressionCompiler.RentPooledOrNewParamTypes(typeof(Module), typeof(Type), typeof(Type[]));
+                var GetMethodSigHelperMethod = typeof(SignatureHelper).GetMethod("GetMethodSigHelper", staticPublic, null, getMethodSigHelperParams, null);
+                ExpressionCompiler.FreePooledParamTypes(getMethodSigHelperParams);
+                if (GetMethodSigHelperMethod == null)
+                    goto endOfReuse;
+
+                var GetLocalVarSigHelperMethod = typeof(SignatureHelper).GetMethod("GetLocalVarSigHelper", staticPublic, null, Type.EmptyTypes, null);
+                if (GetLocalVarSigHelperMethod == null)
+                    goto endOfReuse;
+
+                var getSignatureParams = ExpressionCompiler.RentPooledOrNewParamTypes(typeof(bool));
+                var GetSignatureMethod = typeof(SignatureHelper).GetMethod("GetSignature", instanceNonPublic, null, getSignatureParams, null);
+                ExpressionCompiler.FreePooledParamTypes(getSignatureParams);
+                if (GetSignatureMethod == null)
+                    goto endOfReuse;
+
+                var getTokenForParams = ExpressionCompiler.RentPooledOrNewParamTypes(typeof(bool[]));
+                var GetTokenForMethod = DynamicILGeneratorScopeField.FieldType.GetMethod("GetTokenFor", instancePublic, null, getTokenForParams, null);
+                ExpressionCompiler.FreePooledParamTypes(getTokenForParams);
+                if (GetTokenForMethod == null)
+                    goto endOfReuse;
+
+                var MethodSigTokenField = DynamicILGeneratorType.GetField("m_methodSigToken", instanceNonPublic);
+
+                var paramTypes = ExpressionCompiler.RentPooledOrNewParamTypes(
+                        typeof(ExpressionCompiler.ArrayClosure), typeof(DynamicMethod), typeof(ILGenerator), typeof(Type), typeof(Type[]));
+
+                var dynMethod = new DynamicMethod(string.Empty, typeof(void), paramTypes, typeof(ExpressionCompiler.ArrayClosure), true);
+
+                var il = dynMethod.GetILGenerator(256); // precalculating the size to avoid waste
+
+                var baseFields = DynamicILGeneratorType.BaseType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
+                foreach (var field in baseFields)
+                {
+                    var fieldName = field.Name;
+                    if (fieldName == "m_localSignature")
+                    {
+                        il.Demit(OpCodes.Ldarg_2);
+                        il.Demit(OpCodes.Call, GetLocalVarSigHelperMethod);
+                        il.Demit(OpCodes.Stfld, field);
+                        continue;
+                    }
+
+                    // m_ScopeTree = new ScopeTree();
+                    if (fieldName == "m_ScopeTree")
+                    {
+                        il.Demit(OpCodes.Ldarg_2);
+                        il.Demit(OpCodes.Newobj, ScopeTreeCtor);
+                        il.Demit(OpCodes.Stfld, field);
+                        continue;
+                    }
+
+                    // m_methodBuilder = method; // dynamicMethod
+                    if (fieldName == "m_methodBuilder")
+                    {
+                        il.Demit(OpCodes.Ldarg_2);
+                        il.Demit(OpCodes.Ldarg_1);
+                        il.Demit(OpCodes.Stfld, field);
+                        continue;
+                    }
+
+                    if (fieldName == "m_ILStream")
+                        continue; // reuse the previous il stream
+
+                    il.Demit(OpCodes.Ldarg_2);
+                    ExpressionCompiler.EmittingVisitor.EmitDefault(il, field.FieldType);
+                    il.Demit(OpCodes.Stfld, field);
+                }
+
+                // var scope = new DynamicScope();
+                il.Emit(OpCodes.Newobj, DynamicILGeneratorScopeField.FieldType.GetConstructor(Type.EmptyTypes));
+                var scopeVar = ExpressionCompiler.EmittingVisitor.EmitStoreLocalVariable(il, DynamicILGeneratorScopeField.FieldType);
+
+                //  byte[] methodSignature =
+                //      SignatureHelper.GetMethodSigHelper(Module? mod, Type? returnType, Type[]? parameterTypes).GetSignature(true);
+                il.Emit(OpCodes.Ldnull); // for the module
+                il.Emit(OpCodes.Ldarg_3); // load return type
+                il.Emit(OpCodes.Ldarg_S, 4); // load parameter types arrays
+                il.Emit(OpCodes.Call, GetMethodSigHelperMethod);
+                il.Emit(OpCodes.Ldc_I4_1); // load true
+                il.Emit(OpCodes.Call, GetSignatureMethod);
+                var signatureBytesVar = ExpressionCompiler.EmittingVisitor.EmitStoreLocalVariable(il, typeof(byte[])); // todo: perf could reuse byte[]?
+
+                // m_methodSigToken = m_scope.GetTokenFor(methodSignature);
+                il.Emit(OpCodes.Ldarg_2);
+                ExpressionCompiler.EmittingVisitor.EmitLoadLocalVariable(il, scopeVar);
+                ExpressionCompiler.EmittingVisitor.EmitLoadLocalVariable(il, signatureBytesVar);
+                il.Emit(OpCodes.Call, GetTokenForMethod);
+                il.Emit(OpCodes.Stfld, MethodSigTokenField);
+
+                // m_scope = new DynamicScope();
+                il.Emit(OpCodes.Ldarg_2);
+                ExpressionCompiler.EmittingVisitor.EmitLoadLocalVariable(il, scopeVar);
+                il.Emit(OpCodes.Stfld, DynamicILGeneratorScopeField);
+
+                // store the reused ILGenerator to 
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Ldarg_2);
+                il.Emit(OpCodes.Stfld, _iLGeneratorField);
+
+                il.Emit(OpCodes.Ret);
+
+                ReuseDynamicILGenerator = (Action<DynamicMethod, ILGenerator, Type, Type[]>)
+                    dynMethod.CreateDelegate(typeof(Action<DynamicMethod, ILGenerator, Type, Type[]>), ExpressionCompiler.EmptyArrayClosure);
+
+                // todo: @wip #475 use the ILGenerator of the dynMethod for the pooledILGenerator
+
+                ExpressionCompiler.FreePooledParamTypes(paramTypes);
+            endOfReuse:;
+            }
+            {
+                // ## 2. Get Next Local Variable Index/Location
+
+                // Let's try to acquire the more efficient less allocating method
+                var m_localSignatureField = DynamicILGeneratorType.GetField("m_localSignature", instanceNonPublic);
+                if (m_localSignatureField == null)
+                    goto endOfGetNextVar;
+
+                var m_localCountField = DynamicILGeneratorType.GetField("m_localCount", instanceNonPublic);
+                if (m_localCountField == null)
+                    goto endOfGetNextVar;
+
+                // looking for the `SignatureHelper.AddArgument(Type argument, bool pinned)`
+                var typeAndBoolParamTypes = ExpressionCompiler.RentPooledOrNewParamTypes(typeof(Type), typeof(bool));
+                var SignaturHelper_AddArgumentMethod = typeof(SignatureHelper).GetMethod("AddArgument", typeAndBoolParamTypes);
+                ExpressionCompiler.FreePooledParamTypes(typeAndBoolParamTypes);
+                if (SignaturHelper_AddArgumentMethod == null)
+                    goto endOfGetNextVar;
+
+                // our own helper - always available
+                var postIncMethod = typeof(DynamicMethodILGeneratorHacks).GetMethod(nameof(PostInc), staticNonPublic);
+                Debug.Assert(postIncMethod != null, "PostInc method not found!");
+
+                var paramTypes = ExpressionCompiler.RentPooledOrNewParamTypes(typeof(ExpressionCompiler.ArrayClosure), typeof(ILGenerator), typeof(Type));
+                var getNextVarDynamicMethod = new DynamicMethod(string.Empty, typeof(int), paramTypes, typeof(ExpressionCompiler.ArrayClosure), true);
+                var il = getNextVarDynamicMethod.GetILGenerator();
+
+                // emitting `il.m_localSignature.AddArgument(type);`
+                il.Emit(OpCodes.Ldarg_1);  // load `il` argument (arg_0 is the empty closure object)
+                il.Emit(OpCodes.Ldfld, m_localSignatureField);
+                il.Emit(OpCodes.Ldarg_2);  // load `type` argument
+                il.Emit(OpCodes.Ldc_I4_0); // load `pinned: false` argument
+                il.Emit(OpCodes.Call, SignaturHelper_AddArgumentMethod);
+
+                // emitting `return PostInc(ref il.LocalCount);`
+                il.Emit(OpCodes.Ldarg_1); // load `il` argument
+                il.Emit(OpCodes.Ldflda, m_localCountField);
+                il.Emit(OpCodes.Call, postIncMethod);
+
+                il.Emit(OpCodes.Ret);
+
+                GetNextLocalVarLocation = (Func<ILGenerator, Type, int>)
+                    getNextVarDynamicMethod.CreateDelegate(typeof(Func<ILGenerator, Type, int>), ExpressionCompiler.EmptyArrayClosure);
+
+                ExpressionCompiler.FreePooledParamTypes(paramTypes);
+            endOfGetNextVar:;
+            }
+
+            // ## 3 TBD
+            //
             // todo: @perf do batch Emit by manually calling `EnsureCapacity` once then `InternalEmit` multiple times
             // todo: @perf Replace the `Emit(opcode, int)` with the more specialized `Emit(opcode)`, `Emit(opcode, byte)` or `Emit(opcode, short)` 
             // avoiding internal check for Ldc_I4, Ldarg, Ldarga, Starg then call `PutInteger4` only if needed see https://source.dot.net/#System.Private.CoreLib/src/System/Reflection/Emit/ILGenerator.cs,690f350859394132
@@ -8642,7 +8720,7 @@ namespace FastExpressionCompiler
                 Debug.WriteLine("Error tracking the local variable usage: " + ex);
             }
 #endif
-            return _getNextLocalVarIndex(il, t);
+            return GetNextLocalVarLocation?.Invoke(il, t) ?? il.DeclareLocal(t).LocalIndex;
         }
 
         // todo: @perf add MultiOpCodes emit to save on the EnsureCapacity calls
