@@ -8579,7 +8579,10 @@ namespace FastExpressionCompiler
                 }
 
                 // var scope = new DynamicScope();
-                il.Emit(OpCodes.Newobj, DynamicILGeneratorScopeType.GetConstructor(Type.EmptyTypes));
+                var dynamicScopeCtor = DynamicILGeneratorScopeType.GetConstructor(Type.EmptyTypes);
+                if (dynamicScopeCtor == null)
+                    goto endOfReuse;
+                il.Emit(OpCodes.Newobj, dynamicScopeCtor);
                 var scopeVar = il.DeclareLocal(DynamicILGeneratorScopeType).LocalIndex;
                 ExpressionCompiler.EmittingVisitor.EmitStoreLocalVariable(il, scopeVar);
 
@@ -8656,12 +8659,13 @@ namespace FastExpressionCompiler
                 */
                 var sigBytesVar = il.DeclareLocal(typeof(byte[])).LocalIndex;
 
-                var interlockedExchangeMethod =
-                    typeof(Interlocked).GetMethod(nameof(Interlocked.Exchange), staticPublic, null, [typeof(object).MakeByRefType(), typeof(object)], null);
+                var interlockedExchangeParams = ExpressionCompiler.RentPooledOrNewParamTypes(typeof(object).MakeByRefType(), typeof(object));
+                var interlockedExchangeMethod = typeof(Interlocked).GetMethod(nameof(Interlocked.Exchange), staticPublic, null, interlockedExchangeParams, null);
+                ExpressionCompiler.FreePooledParamTypes(interlockedExchangeParams);
                 Debug.Assert(interlockedExchangeMethod != null, "Interlocked.Exchange method not found!");
 
                 var pooledSignatureHelperField = typeof(DynamicMethodILGeneratorHacks).GetField(nameof(_pooledSignatureHelper), staticNonPublic);
-                Debug.Assert(pooledSignatureHelperField != null, "PooledSignatureHelper field not found!");
+                Debug.Assert(pooledSignatureHelperField != null, "_pooledSignatureHelper field not found!");
 
                 il.Emit(OpCodes.Ldsflda, pooledSignatureHelperField);
                 il.Emit(OpCodes.Ldnull);
@@ -8709,8 +8713,9 @@ namespace FastExpressionCompiler
                 il.Emit(OpCodes.Ldarg_3); // load return type
                 il.Emit(OpCodes.Ldnull); // load required return type custom modifiers
                 il.Emit(OpCodes.Ldnull); // load optional return type custom modifiers
-                var AddOneArgTypeHelperMethod = typeof(SignatureHelper).GetMethod("AddOneArgTypeHelper", instanceNonPublic, null,
-                    [typeof(Type), typeof(Type[]), typeof(Type[])], null);
+                var addOneArgTypeHelperParams = ExpressionCompiler.RentPooledOrNewParamTypes(typeof(Type), typeof(Type[]), typeof(Type[]));
+                var AddOneArgTypeHelperMethod = typeof(SignatureHelper).GetMethod("AddOneArgTypeHelper", instanceNonPublic, null, addOneArgTypeHelperParams, null);
+                ExpressionCompiler.FreePooledParamTypes(addOneArgTypeHelperParams);
                 if (AddOneArgTypeHelperMethod == null)
                     goto endOfReuse;
                 il.Emit(OpCodes.Call, AddOneArgTypeHelperMethod);
@@ -8720,8 +8725,10 @@ namespace FastExpressionCompiler
                 il.Emit(OpCodes.Ldarg_S, 4); // load parameter types arrays
                 il.Emit(OpCodes.Ldnull); // load required parameter type custom modifiers
                 il.Emit(OpCodes.Ldnull); // load optional parameter type custom modifiers
-                var AddArgumentsMethod = typeof(SignatureHelper).GetMethod("AddArguments", instanceNonPublic, null,
-                    [typeof(Type[]), typeof(Type[][]), typeof(Type[][])], null);
+
+                var addArgumentsParams = ExpressionCompiler.RentPooledOrNewParamTypes(typeof(Type), typeof(Type[][]), typeof(Type[][]));
+                var AddArgumentsMethod = typeof(SignatureHelper).GetMethod("AddArguments", instancePublic, null, addArgumentsParams, null);
+                ExpressionCompiler.FreePooledParamTypes(addArgumentsParams);
                 if (AddArgumentsMethod == null)
                     goto endOfReuse;
                 il.Emit(OpCodes.Call, AddArgumentsMethod);
