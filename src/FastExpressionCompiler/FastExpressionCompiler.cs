@@ -8726,7 +8726,7 @@ namespace FastExpressionCompiler
                 il.Emit(OpCodes.Ldnull); // load required parameter type custom modifiers
                 il.Emit(OpCodes.Ldnull); // load optional parameter type custom modifiers
 
-                var addArgumentsParams = ExpressionCompiler.RentPooledOrNewParamTypes(typeof(Type), typeof(Type[][]), typeof(Type[][]));
+                var addArgumentsParams = ExpressionCompiler.RentPooledOrNewParamTypes(typeof(Type[]), typeof(Type[][]), typeof(Type[][]));
                 var AddArgumentsMethod = typeof(SignatureHelper).GetMethod("AddArguments", instancePublic, null, addArgumentsParams, null);
                 ExpressionCompiler.FreePooledParamTypes(addArgumentsParams);
                 if (AddArgumentsMethod == null)
@@ -8743,6 +8743,7 @@ namespace FastExpressionCompiler
                 il.Emit(OpCodes.Ldsflda, pooledSignatureHelperField);
                 ExpressionCompiler.EmittingVisitor.EmitLoadLocalVariable(il, sigHelperVar);
                 il.Emit(OpCodes.Call, interlockedExchangeMethod);
+                il.Emit(OpCodes.Pop); // pop the old unused value
 
                 // done
                 var labelSigHelperDone = il.DefineLabel();

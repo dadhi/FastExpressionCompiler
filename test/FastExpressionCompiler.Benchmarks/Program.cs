@@ -12,7 +12,7 @@ public class Program
         // BenchmarkRunner.Run<HoistedLambdaBenchmark.Compilation>();
         // BenchmarkRunner.Run<HoistedLambdaBenchmark.Invocation>();
 
-        // BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Compilation>();
+        BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Compilation>();
         // BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Invocation>();
 
         // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Compilation>();

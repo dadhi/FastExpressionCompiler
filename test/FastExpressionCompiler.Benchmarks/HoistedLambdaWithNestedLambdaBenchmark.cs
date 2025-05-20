@@ -138,6 +138,13 @@ namespace FastExpressionCompiler.Benchmarks
             | Compile     | 413.38 us | 5.859 us | 5.480 us | 39.90 |    0.88 | 1.9531 | 1.4648 |  12.04 KB |        3.06 |
             | CompileFast |  10.36 us | 0.195 us | 0.191 us |  1.00 |    0.03 | 0.6409 | 0.6104 |   3.93 KB |        1.00 |
 
+            ## v5.3.0 ILGenerator+SignaturHelper pooling for the nested lambdas too
+
+            | Method      | Mean      | Error    | StdDev    | Median    | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
+            |------------ |----------:|---------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
+            | Compile     | 437.16 us | 8.631 us | 20.004 us | 438.94 us | 39.26 |    3.33 | 1.9531 | 0.9766 |  12.04 KB |        3.19 |
+            | CompileFast |  11.20 us | 0.329 us |  0.896 us |  10.93 us |  1.01 |    0.11 | 0.6104 | 0.5951 |   3.77 KB |        1.00 |
+
             */
             [Benchmark]
             public Func<X> Compile() => _hoistedExpr.Compile();
