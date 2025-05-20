@@ -21,7 +21,7 @@ public class Program
         // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Create_and_Compile>(); // not included in README.md, may be it needs to
 
         // BenchmarkRunner.Run<LightExprVsExpr_Create_ComplexExpr>();
-        BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_ComplexExpr>();
+        // BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_ComplexExpr>();
 
         //--------------------------------------------
 

@@ -11,6 +11,9 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
+            new LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest().Run();
+            // new Issue55_CompileFast_crash_with_ref_parameter().Run();
+
 #if NET8_0_OR_GREATER
             var ts = new TestRun();
             ts.Run(new Issue475_Reuse_DynamicMethod_if_possible());
@@ -21,29 +24,6 @@ namespace FastExpressionCompiler.UnitTests
             t.Run(new LightExpression.IssueTests.Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET());
             t.Run(new LightExpression.IssueTests.Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_expressions_during_the_compilation());
             t.Run(new LightExpression.IssueTests.Issue473_InvalidProgramException_when_using_Expression_Condition_with_converted_decimal_expression());
-
-            // new Issue55_CompileFast_crash_with_ref_parameter().Run();
-
-            // new LightExpression.UnitTests.ConstantAndConversionTests().Run();
-
-            // new LightExpression.IssueTests.Issue461_InvalidProgramException_when_null_checking_type_by_ref().Run();
-            // new Issue341_Equality_comparison_between_nullable_and_null_inside_Any_produces_incorrect_compiled_expression().Run();
-            // new LightExpression.IssueTests.Issue460_ArgumentException_when_converting_from_object_to_type_with_explicit_operator().Run();
-            // new LightExpression.IssueTests.Issue458_Support_TryFault().Run();
-            // new LightExpression.IssueTests.Issue451_Operator_implicit_explicit_produces_InvalidProgram().Run();
-            // new LightExpression.IssueTests.Issue55_CompileFast_crash_with_ref_parameter().Run();
-
-            // new Issue357_Invalid_program_exception().Run();
-            // new ValueTypeTests().Run();
-            // new LightExpression.IssueTestsArithmeticOperationsTests().Run();
-
-            // new LightExpression.IssueTests.Issue183_NullableDecimal().Run();
-            // new LightExpression.IssueTests.Issue159_NumericConversions().Run();
-            // new AssignTests().Run();
-
-            // new LightExpression.IssueTests.Issue449_MemberInit_produces_InvalidProgram().Run();
-            // new LightExpression.IssueTests.Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_values().Run();
-            // new LightExpression.IssueTests.Issue353_NullReferenceException_when_calling_CompileFast_results().Run();
 
             RunAllTests();
         }

@@ -8601,6 +8601,42 @@ namespace FastExpressionCompiler
                 il.Emit(OpCodes.Newobj, DynamicILGeneratorScopeField.FieldType.GetConstructor(Type.EmptyTypes));
                 var scopeVar = ExpressionCompiler.EmittingVisitor.EmitStoreLocalVariable(il, DynamicILGeneratorScopeField.FieldType);
 
+                // todo: @perf Reuse SignatureHelper, it is a class used at the end just to GetSignature bytes, e.g.
+                /*
+                    private byte[] m_signature; // todo: @perf keep it, because it would be copied anyway
+                    private int m_currSig; // index into m_signature buffer for next available byte
+                    private int m_sizeLoc; // index into m_signature buffer to put m_argCount (will be NO_SIZE_IN_SIG if no arg count is needed)
+                    private ModuleBuilder? m_module;
+                    private bool m_sigDone;
+                    private int m_argCount; // tracking number of arguments in the signature
+                */
+                // todo: @perf GetSignature(true) will copy internal byte buffer almost always, see
+                /*
+                    internal byte[] GetSignature(bool appendEndOfSig)
+                    {
+                        // Chops the internal signature to the appropriate length.  Adds the
+                        // end token to the signature and marks the signature as finished so that
+                        // no further tokens can be added. Return the full signature in a trimmed array.
+                        if (!m_sigDone)
+                        {
+                            if (appendEndOfSig)
+                                AddElementType(CorElementType.ELEMENT_TYPE_END);
+                            SetNumberOfSignatureElements(true);
+                            m_sigDone = true;
+                        }
+            
+                        // This case will only happen if the user got the signature through
+                        // InternalGetSignature first and then called GetSignature.
+                        if (m_signature.Length > m_currSig)
+                        {
+                            byte[] temp = new byte[m_currSig];
+                            Array.Copy(m_signature, temp, m_currSig);
+                            m_signature = temp;
+                        }
+            
+                        return m_signature;
+                    }
+                */
                 //  byte[] methodSignature =
                 //      SignatureHelper.GetMethodSigHelper(Module? mod, Type? returnType, Type[]? parameterTypes).GetSignature(true);
                 il.Emit(OpCodes.Ldnull); // for the module
@@ -8611,14 +8647,14 @@ namespace FastExpressionCompiler
                 il.Emit(OpCodes.Call, GetSignatureMethod);
                 var signatureBytesVar = ExpressionCompiler.EmittingVisitor.EmitStoreLocalVariable(il, typeof(byte[])); // todo: perf could reuse byte[]?
 
-                // m_methodSigToken = m_scope.GetTokenFor(methodSignature);
+                // m_methodSigToken = scope.GetTokenFor(methodSignature);
                 il.Emit(OpCodes.Ldarg_2);
                 ExpressionCompiler.EmittingVisitor.EmitLoadLocalVariable(il, scopeVar);
                 ExpressionCompiler.EmittingVisitor.EmitLoadLocalVariable(il, signatureBytesVar);
                 il.Emit(OpCodes.Call, GetTokenForMethod);
                 il.Emit(OpCodes.Stfld, MethodSigTokenField);
 
-                // m_scope = new DynamicScope();
+                // m_scope = scope;
                 il.Emit(OpCodes.Ldarg_2);
                 ExpressionCompiler.EmittingVisitor.EmitLoadLocalVariable(il, scopeVar);
                 il.Emit(OpCodes.Stfld, DynamicILGeneratorScopeField);
