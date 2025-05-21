@@ -8393,10 +8393,10 @@ namespace FastExpressionCompiler
     [RequiresUnreferencedCode(Trimming.Message)]
     public static class DynamicMethodHacks
     {
-#if NET6_0_OR_GREATER
         [ThreadStatic]
-        internal static ILGenerator pooledILGenerator;
+        internal static ILGenerator _pooledILGenerator;
 
+#if NET6_0_OR_GREATER
         /// <summary>Get new or pool and configure existing DynamicILGenerator</summary>
         [MethodImpl((MethodImplOptions)256)]
         public static ILGenerator RentPooledOrNewILGenerator(DynamicMethod dynMethod, Type returnType, Type[] paramTypes,
@@ -8405,8 +8405,8 @@ namespace FastExpressionCompiler
         {
             if (DynamicMethodHacks.ReuseDynamicILGenerator != null)
             {
-                var pooledIL = pooledILGenerator;
-                pooledILGenerator = null;
+                var pooledIL = _pooledILGenerator;
+                _pooledILGenerator = null;
                 if (pooledIL != null)
                 {
                     DynamicMethodHacks.ReuseDynamicILGenerator(dynMethod, pooledIL, returnType, paramTypes);
@@ -8428,7 +8428,7 @@ namespace FastExpressionCompiler
             // IlGeneratorField.SetValue(dynMethod, null);
 
             if (DynamicMethodHacks.ReuseDynamicILGenerator != null)
-                pooledILGenerator = il;
+                _pooledILGenerator = il;
         }
 #else
         /// <summary>Get new or pool and configure existing DynamicILGenerator</summary>
@@ -8826,6 +8826,9 @@ namespace FastExpressionCompiler
 
                 ReuseDynamicILGenerator = (Action<DynamicMethod, ILGenerator, Type, Type[]>)
                     dynMethod.CreateDelegate(typeof(Action<DynamicMethod, ILGenerator, Type, Type[]>), ExpressionCompiler.EmptyArrayClosure);
+
+                // Put the first used ILGenerator into the pool, let's not waste it from te get go
+                _pooledILGenerator = il;
 
                 ExpressionCompiler.FreePooledParamTypes(dynMethodParamTypes);
             endOfReuse:;
