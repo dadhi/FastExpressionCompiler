@@ -8592,7 +8592,6 @@ namespace FastExpressionCompiler
                 var scopeVar = il.DeclareLocal(DynamicILGeneratorScopeType).LocalIndex;
                 ExpressionCompiler.EmittingVisitor.EmitStoreLocalVariable(il, scopeVar);
 
-                // todo: @perf Reuse SignatureHelper, it is a class used at the end just to GetSignature bytes, e.g.
                 /*
                     private byte[] m_signature; // todo: @perf keep it, because it would be copied anyway
                     private int m_currSig; // index into m_signature buffer for next available byte
@@ -8665,12 +8664,6 @@ namespace FastExpressionCompiler
                 }
                 */
                 var sigBytesVar = il.DeclareLocal(typeof(byte[])).LocalIndex;
-
-                // todo: @wip remove
-                // var interlockedExchangeParams = ExpressionCompiler.RentPooledOrNewParamTypes(typeof(object).MakeByRefType(), typeof(object));
-                // var interlockedExchangeMethod = typeof(Interlocked).GetMethod(nameof(Interlocked.Exchange), staticPublic, null, interlockedExchangeParams, null);
-                // ExpressionCompiler.FreePooledParamTypes(interlockedExchangeParams);
-                // Debug.Assert(interlockedExchangeMethod != null, "Interlocked.Exchange method not found!");
 
                 var pooledSignatureHelperField = typeof(DynamicMethodHacks).GetField(nameof(_pooledSignatureHelper), staticNonPublic);
                 Debug.Assert(pooledSignatureHelperField != null, "_pooledSignatureHelper field not found!");
@@ -8747,11 +8740,9 @@ namespace FastExpressionCompiler
                 il.Emit(OpCodes.Call, SignatureHelper_GetSignatureMethod);
                 ExpressionCompiler.EmittingVisitor.EmitStoreLocalVariable(il, sigBytesVar);
 
-                // free the signature helper to the pool
+                // return the signature helper to the pool
                 ExpressionCompiler.EmittingVisitor.EmitLoadLocalVariable(il, sigHelperVar);
                 il.Emit(OpCodes.Stsfld, pooledSignatureHelperField);
-                // il.Emit(OpCodes.Call, interlockedExchangeMethod);
-                // il.Emit(OpCodes.Pop); // pop the old unused value
 
                 // done
                 var labelSigHelperDone = il.DefineLabel();
