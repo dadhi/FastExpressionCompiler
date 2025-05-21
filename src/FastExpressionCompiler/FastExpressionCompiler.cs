@@ -8559,7 +8559,7 @@ namespace FastExpressionCompiler
 
                 var dynMethod = new DynamicMethod(string.Empty, typeof(void), dynMethodParamTypes, typeof(ExpressionCompiler.ArrayClosure), true);
 
-                var il = dynMethod.GetILGenerator(256); // precalculating the size to avoid waste
+                var il = dynMethod.GetILGenerator(512); // precalculated size to avoid waste
 
                 var baseFields = DynamicILGeneratorType.BaseType.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
                 foreach (var field in baseFields)

@@ -117,19 +117,18 @@ BenchmarkDotNet v0.13.7, Windows 11 (10.0.22621.1992/22H2/2022Update/SunValley2)
 | LightExpression_with_sub_expressions_CompiledFast |  19.31 us |  0.321 us |  0.343 us |  1.00 |    0.00 | 1.1902 | 1.1292 |   7.32 KB |        1.00 |
 |          Expression_with_sub_expressions_Compiled | 602.67 us | 22.702 us | 65.502 us | 30.55 |    3.29 | 3.9063 | 2.9297 |   28.7 KB |        3.92 |
 
-## v5.3.0 Pooled ILGenerator - really?
+## v5.3.0 Pooled ILGenerator
 
-| Method                                            | Mean      | Error    | StdDev   | Ratio | RatioSD | Rank | Gen0   | Gen1   | Allocated | Alloc Ratio |
-|-------------------------------------------------- |----------:|---------:|---------:|------:|--------:|-----:|-------:|-------:|----------:|------------:|
-| LightExpression_with_sub_expressions_CompiledFast |  17.58 us | 0.342 us | 0.522 us |  1.00 |    0.04 |    1 | 1.1597 | 1.0986 |   7.17 KB |        1.00 |
-| Expression_with_sub_expressions_Compiled          | 518.95 us | 8.148 us | 7.223 us | 29.54 |    0.94 |    2 | 3.9063 | 2.9297 |  28.25 KB |        3.94 |
+BenchmarkDotNet v0.14.0, Windows 11 (10.0.26100.4061)
+Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
+.NET SDK 9.0.203
+  [Host]     : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
 
-## SigntatureHelper pooling, no changes which is really strange
-
-| Method                                            | Mean      | Error     | StdDev    | Median    | Ratio | RatioSD | Rank | Gen0   | Gen1   | Allocated | Alloc Ratio |
-|-------------------------------------------------- |----------:|----------:|----------:|----------:|------:|--------:|-----:|-------:|-------:|----------:|------------:|
-| LightExpression_with_sub_expressions_CompiledFast |  17.76 us |  0.349 us |  0.429 us |  17.84 us |  1.00 |    0.03 |    1 | 1.1597 | 1.0986 |   7.17 KB |        1.00 |
-| Expression_with_sub_expressions_Compiled          | 529.61 us | 10.300 us | 22.608 us | 517.68 us | 29.84 |    1.45 |    2 | 3.9063 | 2.9297 |  28.25 KB |        3.94 |
+| Method                                            | Mean      | Error     | StdDev    | Ratio | RatioSD | Rank | Gen0   | Gen1   | Allocated | Alloc Ratio |
+|-------------------------------------------------- |----------:|----------:|----------:|------:|--------:|-----:|-------:|-------:|----------:|------------:|
+| LightExpression_with_sub_expressions_CompiledFast |  16.81 us |  0.298 us |  0.264 us |  1.00 |    0.02 |    1 | 1.1292 | 1.0986 |   6.98 KB |        1.00 |
+| Expression_with_sub_expressions_Compiled          | 527.85 us | 10.287 us | 16.016 us | 31.41 |    1.06 |    2 | 3.9063 | 2.9297 |  28.25 KB |        4.05 |
 
 */
         private Expression<Func<A>> _expr;//, _exprWithVars;

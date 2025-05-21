@@ -235,13 +235,19 @@ namespace FastExpressionCompiler.Benchmarks
             [Host]     : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
             DefaultJob : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
 
-
             | Method                       | Mean       | Error     | StdDev    | Ratio | RatioSD | Rank | Gen0   | Gen1   | Allocated | Alloc Ratio |
             |----------------------------- |-----------:|----------:|----------:|------:|--------:|-----:|-------:|-------:|----------:|------------:|
             | CompileFast_SystemExpression |   3.219 us | 0.0380 us | 0.0337 us |  0.98 |    0.01 |    1 | 0.1793 | 0.1755 |   1.12 KB |        1.00 |
             | CompileFast_LightExpression  |   3.292 us | 0.0407 us | 0.0381 us |  1.00 |    0.02 |    1 | 0.1793 | 0.1755 |   1.12 KB |        1.00 |
             | Compile_SystemExpression     | 102.515 us | 1.4959 us | 2.2390 us | 31.14 |    0.75 |    2 | 0.7324 | 0.4883 |   4.74 KB |        4.24 |
 
+            # v5.3.0 - Pooling the ILGenerator+SignatureHelper
+
+            | Method                       | Mean       | Error     | StdDev    | Ratio | RatioSD | Rank | Gen0   | Gen1   | Allocated | Alloc Ratio |
+            |----------------------------- |-----------:|----------:|----------:|------:|--------:|-----:|-------:|-------:|----------:|------------:|
+            | CompileFast_SystemExpression |   3.190 us | 0.0519 us | 0.0485 us |  0.97 |    0.02 |    1 | 0.1755 | 0.1678 |   1.08 KB |        1.00 |
+            | CompileFast_LightExpression  |   3.300 us | 0.0633 us | 0.0650 us |  1.00 |    0.03 |    1 | 0.1755 | 0.1678 |   1.08 KB |        1.00 |
+            | Compile_SystemExpression     | 106.339 us | 2.1083 us | 4.1120 us | 32.24 |    1.38 |    2 | 0.7324 | 0.6104 |   4.74 KB |        4.40 |
             */
 
             [Benchmark]

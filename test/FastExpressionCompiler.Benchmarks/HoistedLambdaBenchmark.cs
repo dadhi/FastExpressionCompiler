@@ -123,7 +123,7 @@ namespace FastExpressionCompiler.Benchmarks
             | CompileFast                |   3.454 us | 0.0688 us | 0.1495 us |  1.00 |    0.06 | 0.2441 | 0.2365 |   1.54 KB |        1.00 |
             | ConvertToLight_CompileFast |   3.947 us | 0.0789 us | 0.1520 us |  1.14 |    0.07 | 0.3052 | 0.2899 |   1.96 KB |        1.27 |
 
-            ## v5.20 Baseline before ILGenerator pooling
+            ## v5.2.0 Baseline before ILGenerator pooling
 
             BenchmarkDotNet v0.14.0, Windows 11 (10.0.26100.4061)
             Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
@@ -138,12 +138,12 @@ namespace FastExpressionCompiler.Benchmarks
             | CompileFast |   3.371 us | 0.0543 us | 0.0482 us |  1.00 |    0.02 | 0.2441 | 0.2365 |   1.54 KB |        1.00 |
 
 
-            ## Dynamic ILGenerator pooling
+            ## v5.3.0 Dynamic ILGenerator+SignatureHelper pooling
 
             | Method      | Mean       | Error     | StdDev    | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
             |------------ |-----------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
-            | Compile     | 144.134 us | 0.8706 us | 0.6797 us | 44.92 |    1.33 | 0.7324 | 0.4883 |   4.49 KB |        3.44 |
-            | CompileFast |   3.211 us | 0.0639 us | 0.0975 us |  1.00 |    0.04 | 0.2098 | 0.2060 |    1.3 KB |        1.00 |
+            | Compile     | 149.614 us | 2.8135 us | 2.7633 us | 47.01 |    1.58 | 0.7324 |      - |   4.49 KB |        3.66 |
+            | CompileFast |   3.185 us | 0.0629 us | 0.0941 us |  1.00 |    0.04 | 0.1984 | 0.1907 |   1.23 KB |        1.00 |
             */
 
             [Benchmark]
