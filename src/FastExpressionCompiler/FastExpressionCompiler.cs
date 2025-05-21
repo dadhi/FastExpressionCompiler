@@ -8390,11 +8390,16 @@ namespace FastExpressionCompiler
         {
             if (DynamicMethodHacks.ReuseDynamicILGenerator != null)
             {
-                var pooledIL = Interlocked.Exchange(ref pooledILGenerator, null);
+                var pooledIL = pooledILGenerator;
+                pooledILGenerator = null;
                 if (pooledIL != null)
                 {
                     DynamicMethodHacks.ReuseDynamicILGenerator(dynMethod, pooledIL, returnType, paramTypes);
                     return pooledIL;
+                }
+                else
+                {
+                    Debug.WriteLine("Using the the New ILGenerator instead of the pooled one");
                 }
             }
             return dynMethod.GetILGenerator(streamSize);
@@ -8408,7 +8413,7 @@ namespace FastExpressionCompiler
             // IlGeneratorField.SetValue(dynMethod, null);
 
             if (DynamicMethodHacks.ReuseDynamicILGenerator != null)
-                Interlocked.Exchange(ref pooledILGenerator, il);
+                pooledILGenerator = il;
         }
 #else
         /// <summary>Get new or pool and configure existing DynamicILGenerator</summary>
@@ -8639,7 +8644,8 @@ namespace FastExpressionCompiler
                 */
                 // pseudo code to reuse the pooled SignatureHelper
                 /*
-                var signatureHelper = Interlocked.Exchange(ref _pooledSignatureHelper, null);
+                var signatureHelper = _pooledSignatureHelper;
+                _pooledSignatureHelper = null;
                 if (signatureHelper == null)
                     signatureBytes = SignatureHelper.GetMethodSigHelper(null, returnType, paramTypes).GetSignature(true);
                 else
@@ -8655,24 +8661,25 @@ namespace FastExpressionCompiler
                     signatureHelper.AddArguments(paramTypes, null, null);
 
                     var signatureBytes = signatureHelper.GetSignature(true);
-                    Interlocked.Exchange(ref _pooledSignatureHelper, signatureHelper);
+                    _pooledSignatureHelper = signatureHelper;
                 }
                 */
                 var sigBytesVar = il.DeclareLocal(typeof(byte[])).LocalIndex;
 
-                var interlockedExchangeParams = ExpressionCompiler.RentPooledOrNewParamTypes(typeof(object).MakeByRefType(), typeof(object));
-                var interlockedExchangeMethod = typeof(Interlocked).GetMethod(nameof(Interlocked.Exchange), staticPublic, null, interlockedExchangeParams, null);
-                ExpressionCompiler.FreePooledParamTypes(interlockedExchangeParams);
-                Debug.Assert(interlockedExchangeMethod != null, "Interlocked.Exchange method not found!");
+                // todo: @wip remove
+                // var interlockedExchangeParams = ExpressionCompiler.RentPooledOrNewParamTypes(typeof(object).MakeByRefType(), typeof(object));
+                // var interlockedExchangeMethod = typeof(Interlocked).GetMethod(nameof(Interlocked.Exchange), staticPublic, null, interlockedExchangeParams, null);
+                // ExpressionCompiler.FreePooledParamTypes(interlockedExchangeParams);
+                // Debug.Assert(interlockedExchangeMethod != null, "Interlocked.Exchange method not found!");
 
                 var pooledSignatureHelperField = typeof(DynamicMethodHacks).GetField(nameof(_pooledSignatureHelper), staticNonPublic);
                 Debug.Assert(pooledSignatureHelperField != null, "_pooledSignatureHelper field not found!");
 
-                il.Emit(OpCodes.Ldsflda, pooledSignatureHelperField);
-                il.Emit(OpCodes.Ldnull);
-                il.Emit(OpCodes.Call, interlockedExchangeMethod);
+                il.Emit(OpCodes.Ldsfld, pooledSignatureHelperField);
                 var sigHelperVar = il.DeclareLocal(typeof(SignatureHelper)).LocalIndex;
-                ExpressionCompiler.EmittingVisitor.EmitStoreAndLoadLocalVariable(il, sigHelperVar);
+                ExpressionCompiler.EmittingVisitor.EmitStoreAndLoadLocalVariable(il, sigHelperVar); // loading it here to do a Brfalse below, after setting the field to null
+                il.Emit(OpCodes.Ldnull); // set the pooled instance to null
+                il.Emit(OpCodes.Stsfld, pooledSignatureHelperField);
 
                 var labelSigHelperNull = il.DefineLabel();
                 il.Emit(OpCodes.Brfalse, labelSigHelperNull);
@@ -8741,10 +8748,10 @@ namespace FastExpressionCompiler
                 ExpressionCompiler.EmittingVisitor.EmitStoreLocalVariable(il, sigBytesVar);
 
                 // free the signature helper to the pool
-                il.Emit(OpCodes.Ldsflda, pooledSignatureHelperField);
                 ExpressionCompiler.EmittingVisitor.EmitLoadLocalVariable(il, sigHelperVar);
-                il.Emit(OpCodes.Call, interlockedExchangeMethod);
-                il.Emit(OpCodes.Pop); // pop the old unused value
+                il.Emit(OpCodes.Stsfld, pooledSignatureHelperField);
+                // il.Emit(OpCodes.Call, interlockedExchangeMethod);
+                // il.Emit(OpCodes.Pop); // pop the old unused value
 
                 // done
                 var labelSigHelperDone = il.DefineLabel();
