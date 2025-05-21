@@ -316,7 +316,7 @@ public class Issue475_ReuseVsNoReuse
     | CreateILGenerator  | 2.799 us | 0.0559 us | 0.0949 us | 2.767 us |  1.00 |    0.05 |    2 | 0.1793 | 0.1755 |    1144 B |        1.00 |
 
 
-    ## Resluts after fixing the pooling to the all tests
+    ## Results after fixing the pooling for all tests
 
     | Method             | Mean     | Error     | StdDev    | Ratio | RatioSD | Rank | Gen0   | Gen1   | Allocated | Alloc Ratio |
     |------------------- |---------:|----------:|----------:|------:|--------:|-----:|-------:|-------:|----------:|------------:|
