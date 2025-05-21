@@ -244,7 +244,7 @@ public class Issue475_Reuse_DynamicMethod_if_possible : ITestX
 
     public static object PoolDynamicILGenerator()
     {
-        var paramTypes = ExpressionCompiler.RentPooledOrNewParamTypes(typeof(int), typeof(int).MakeByRefType());
+        var paramTypes = ExpressionCompiler.RentPooledOrNewParamTypes(typeof(ExpressionCompiler.ArrayClosure), typeof(int), typeof(int).MakeByRefType());
         var dynMethod = new DynamicMethod(string.Empty,
             typeof(void),
             paramTypes,

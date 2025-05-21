@@ -475,7 +475,7 @@ namespace FastExpressionCompiler
         private static Delegate CompileNoArgsNew(ConstructorInfo ctor, Type delegateType, Type[] closurePlusParamTypes, Type returnType)
         {
             var method = new DynamicMethod(string.Empty, returnType, closurePlusParamTypes, typeof(ArrayClosure), true);
-            var il = DynamicMethodHacks.RentPooledOrNewILGenerator(method, returnType, closurePlusParamTypes);
+            var il = DynamicMethodHacks.RentPooledOrNewILGenerator(method, returnType, closurePlusParamTypes, newStreamSize: 16);
             il.Demit(OpCodes.Newobj, ctor);
             if (returnType == typeof(void))
                 il.Demit(OpCodes.Pop);
@@ -8401,7 +8401,7 @@ namespace FastExpressionCompiler
         [MethodImpl((MethodImplOptions)256)]
         public static ILGenerator RentPooledOrNewILGenerator(DynamicMethod dynMethod, Type returnType, Type[] paramTypes,
             // the default ILGenerator size is 64 in .NET 8.0+
-            int streamSize = 64)
+            int newStreamSize = 64)
         {
             if (DynamicMethodHacks.ReuseDynamicILGenerator != null)
             {
@@ -8414,10 +8414,10 @@ namespace FastExpressionCompiler
                 }
                 else
                 {
-                    Debug.WriteLine("Using the the New ILGenerator instead of the pooled one");
+                    Debug.WriteLine("Unexpected: using a New ILGenerator instead of the pooled one");
                 }
             }
-            return dynMethod.GetILGenerator(streamSize);
+            return dynMethod.GetILGenerator(newStreamSize);
         }
 
         /// <summary>Should be called only after call to DynamicMethod.CreateDelegate</summary>
@@ -8433,8 +8433,9 @@ namespace FastExpressionCompiler
 #else
         /// <summary>Get new or pool and configure existing DynamicILGenerator</summary>
         [MethodImpl((MethodImplOptions)256)]
-        public static ILGenerator RentPooledOrNewILGenerator(DynamicMethod dynMethod, Type returnType, Type[] paramTypes, int streamSize = 64) =>
-            dynMethod.GetILGenerator(streamSize);
+        public static ILGenerator RentPooledOrNewILGenerator(DynamicMethod dynMethod, Type returnType, Type[] paramTypes,
+            int newStreamSize = 64) =>
+            dynMethod.GetILGenerator(newStreamSize);
 
         /// <summary>Should be called only after call to DynamicMethod.CreateDelegate</summary>
         [MethodImpl((MethodImplOptions)256)]
