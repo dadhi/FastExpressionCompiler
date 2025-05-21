@@ -531,9 +531,9 @@ namespace FastExpressionCompiler
             // note: @slow this is what System.Compiles does and which makes the compilation 10x slower, but the invocation become faster by a single branch instruction
             // var method = new DynamicMethod(string.Empty, returnType, closurePlusParamTypes, true);
             // this is FEC way, significantly faster compilation, but +1 branch instruction in the invocation
-            var method = new DynamicMethod(string.Empty, returnType, closureAndParamTypes, typeof(ArrayClosure), true);
+            var dynMethod = new DynamicMethod(string.Empty, returnType, closureAndParamTypes, typeof(ArrayClosure), true);
 
-            var il = DynamicMethodHacks.RentPooledOrNewILGenerator(method, returnType, closureAndParamTypes);
+            var il = DynamicMethodHacks.RentPooledOrNewILGenerator(dynMethod, returnType, closureAndParamTypes);
 
             if (closure.ConstantsAndNestedLambdas != null)
                 EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref closureInfo);
@@ -546,9 +546,9 @@ namespace FastExpressionCompiler
                 return null;
             il.Demit(OpCodes.Ret);
 
-            var dlg = method.CreateDelegate(delegateType, closure);
+            var dlg = dynMethod.CreateDelegate(delegateType, closure);
 
-            DynamicMethodHacks.FreePooledILGenerator(method, il);
+            DynamicMethodHacks.FreePooledILGenerator(dynMethod, il);
             FreePooledClosureTypeAndParamTypes(closureAndParamTypes);
 
             return dlg;
@@ -8814,8 +8814,6 @@ namespace FastExpressionCompiler
                 ReuseDynamicILGenerator = (Action<DynamicMethod, ILGenerator, Type, Type[]>)
                     dynMethod.CreateDelegate(typeof(Action<DynamicMethod, ILGenerator, Type, Type[]>), ExpressionCompiler.EmptyArrayClosure);
 
-                // todo: @wip #475 use the ILGenerator of the dynMethod for the pooledILGenerator
-
                 ExpressionCompiler.FreePooledParamTypes(dynMethodParamTypes);
             endOfReuse:;
             }
@@ -8867,10 +8865,9 @@ namespace FastExpressionCompiler
                 Debug.Assert(postIncMethod != null, "PostInc method not found!");
 
                 var paramTypes = ExpressionCompiler.RentPooledOrNewParamTypes(typeof(ExpressionCompiler.ArrayClosure), typeof(ILGenerator), typeof(Type));
-                var getNextVarDynamicMethod = new DynamicMethod(string.Empty, typeof(int), paramTypes, typeof(ExpressionCompiler.ArrayClosure), true);
+                var dynMethod = new DynamicMethod(string.Empty, typeof(int), paramTypes, typeof(ExpressionCompiler.ArrayClosure), true);
 
-                // todo: @wip #475 use the PooledILGenerator
-                var il = getNextVarDynamicMethod.GetILGenerator();
+                var il = RentPooledOrNewILGenerator(dynMethod, typeof(int), paramTypes);
 
                 // emitting `il.m_localSignature.AddArgument(type);`
                 il.Emit(OpCodes.Ldarg_1);  // load `il` argument (arg_0 is the empty closure object)
@@ -8887,8 +8884,9 @@ namespace FastExpressionCompiler
                 il.Emit(OpCodes.Ret);
 
                 GetNextLocalVarLocation = (Func<ILGenerator, Type, int>)
-                    getNextVarDynamicMethod.CreateDelegate(typeof(Func<ILGenerator, Type, int>), ExpressionCompiler.EmptyArrayClosure);
+                    dynMethod.CreateDelegate(typeof(Func<ILGenerator, Type, int>), ExpressionCompiler.EmptyArrayClosure);
 
+                FreePooledILGenerator(dynMethod, il);
                 ExpressionCompiler.FreePooledParamTypes(paramTypes);
             endOfGetNextVar:;
             }
