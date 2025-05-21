@@ -507,51 +507,55 @@ namespace FastExpressionCompiler
                 && Interpreter.TryInterpretBool(out var result, bodyExpr, flags))
                 return result ? Interpreter.TrueFunc : Interpreter.FalseFunc;
 
+            Delegate compiledDelegate = null;
+
             // The method collects the info from the all nested lambdas deep down up-front and de-duplicates the lambdas as well.
             var closureInfo = new ClosureInfo(ClosureStatus.ToBeCollected);
-            if (!TryCollectBoundConstants(ref closureInfo, bodyExpr, paramExprs, null, ref closureInfo.NestedLambdas, flags))
-                return null;
-
-            ArrayClosure closure;
-            if ((flags & CompilerFlags.EnableDelegateDebugInfo) == 0)
+            var collectResult = TryCollectInfo(ref closureInfo, bodyExpr, paramExprs, null, ref closureInfo.NestedLambdas, flags);
+            if (collectResult == Result.OK)
             {
-                closure = (closureInfo.Status & ClosureStatus.HasClosure) == 0
-                    ? EmptyArrayClosure
-                    : new ArrayClosure(closureInfo.GetArrayOfConstantsAndNestedLambdas());
+                ArrayClosure closure;
+                if ((flags & CompilerFlags.EnableDelegateDebugInfo) == 0)
+                {
+                    closure = (closureInfo.Status & ClosureStatus.HasClosure) == 0
+                        ? EmptyArrayClosure
+                        : new ArrayClosure(closureInfo.GetArrayOfConstantsAndNestedLambdas());
+                }
+                else
+                {   // todo: @feature add the debug info to the nested lambdas!
+                    var debugExpr = Lambda(delegateType, bodyExpr, paramExprs?.ToReadOnlyList() ?? Tools.Empty<PE>());
+                    var constantsAndNestedLambdas = (closureInfo.Status & ClosureStatus.HasClosure) == 0
+                        ? null
+                        : closureInfo.GetArrayOfConstantsAndNestedLambdas();
+                    closure = new DebugArrayClosure(constantsAndNestedLambdas, debugExpr);
+                }
+
+                // note: @slow this is what System.Compiles does and which makes the compilation 10x slower, but the invocation become faster by a single branch instruction
+                // var method = new DynamicMethod(string.Empty, returnType, closurePlusParamTypes, true);
+                // this is FEC way, significantly faster compilation, but +1 branch instruction in the invocation
+                var dynMethod = new DynamicMethod(string.Empty, returnType, closureAndParamTypes, typeof(ArrayClosure), true);
+
+                var il = DynamicMethodHacks.RentPooledOrNewILGenerator(dynMethod, returnType, closureAndParamTypes);
+
+                if (closure.ConstantsAndNestedLambdas != null)
+                    EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref closureInfo);
+
+                var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
+                if (returnType.IsByRef)
+                    parent |= ParentFlags.ReturnByRef;
+
+                if (EmittingVisitor.TryEmit(bodyExpr, paramExprs, il, ref closureInfo, flags, parent))
+                {
+                    il.Demit(OpCodes.Ret);
+                    compiledDelegate = dynMethod.CreateDelegate(delegateType, closure);
+                }
+
+                DynamicMethodHacks.FreePooledILGenerator(dynMethod, il);
             }
-            else
-            {   // todo: @feature add the debug info to the nested lambdas!
-                var debugExpr = Lambda(delegateType, bodyExpr, paramExprs?.ToReadOnlyList() ?? Tools.Empty<PE>());
-                var constantsAndNestedLambdas = (closureInfo.Status & ClosureStatus.HasClosure) == 0
-                    ? null
-                    : closureInfo.GetArrayOfConstantsAndNestedLambdas();
-                closure = new DebugArrayClosure(constantsAndNestedLambdas, debugExpr);
-            }
-
-            // note: @slow this is what System.Compiles does and which makes the compilation 10x slower, but the invocation become faster by a single branch instruction
-            // var method = new DynamicMethod(string.Empty, returnType, closurePlusParamTypes, true);
-            // this is FEC way, significantly faster compilation, but +1 branch instruction in the invocation
-            var dynMethod = new DynamicMethod(string.Empty, returnType, closureAndParamTypes, typeof(ArrayClosure), true);
-
-            var il = DynamicMethodHacks.RentPooledOrNewILGenerator(dynMethod, returnType, closureAndParamTypes);
-
-            if (closure.ConstantsAndNestedLambdas != null)
-                EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref closureInfo);
-
-            var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
-            if (returnType.IsByRef)
-                parent |= ParentFlags.ReturnByRef;
-
-            if (!EmittingVisitor.TryEmit(bodyExpr, paramExprs, il, ref closureInfo, flags, parent))
-                return null;
-            il.Demit(OpCodes.Ret);
-
-            var dlg = dynMethod.CreateDelegate(delegateType, closure);
-
-            DynamicMethodHacks.FreePooledILGenerator(dynMethod, il);
             FreePooledClosureTypeAndParamTypes(closureAndParamTypes);
 
-            return dlg;
+            return compiledDelegate
+                ?? ((flags & CompilerFlags.ThrowOnNotSupportedExpression) == 0 ? null : NotSupportedCase<object>(collectResult));
         }
 
         private static readonly Type[] _closureAsASingleParamType = { typeof(ArrayClosure) };
@@ -1220,6 +1224,19 @@ namespace FastExpressionCompiler
             NotSupported_ExceptionCatchFilter = 1010
         }
 
+        /// <summary>Return value is ignored</summary>
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        internal static T NotSupportedCase<T>(Result reason)
+        {
+            if (reason == Result.OK)
+            {
+                Debug.WriteLine($"Not support case found in TryEmit phase because the TryCollect phase is {reason}");
+                Debugger.Break();
+            }
+            Debug.WriteLine($"Not supported case is found with the reason: {reason}");
+            throw new NotSupportedExpressionException(reason);
+        }
+
         /// <summary>Wraps the call to `TryCollectInfo` for the compatibility and provide the root place to check the returned error code.
         /// Important: The method collects the info from the nested lambdas up-front and de-duplicates the lambdas as well.</summary>
         [MethodImpl((MethodImplOptions)256)]
@@ -1232,9 +1249,7 @@ namespace FastExpressionCompiler
             NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, CompilerFlags flags)
         {
             var r = TryCollectInfo(ref closure, expr, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
-            if (r != Result.OK & (flags & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
-                throw new NotSupportedExpressionException(r);
-            return true; // exposed here for debugging to set a breakpoint
+            return r == Result.OK || (flags & CompilerFlags.ThrowOnNotSupportedExpression) != 0 && NotSupportedCase<bool>(r);
         }
 
         /// <summary>Collects the information about closure constants, nested lambdas, non-passed parameters, goto labels and variables in blocks.
