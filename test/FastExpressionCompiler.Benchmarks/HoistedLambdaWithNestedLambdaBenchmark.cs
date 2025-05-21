@@ -123,7 +123,6 @@ namespace FastExpressionCompiler.Benchmarks
             | Compile     | 421.09 us | 8.382 us | 18.221 us | 413.02 us | 36.29 |    2.09 | 1.9531 | 0.9766 |  12.04 KB |        2.61 |
             | CompileFast |  11.62 us | 0.230 us |  0.464 us |  11.42 us |  1.00 |    0.06 | 0.7324 | 0.7019 |   4.62 KB |        1.00 |
 
-
             ## v5.3.0 ILGenerator pooling
 
             | Method      | Mean      | Error    | StdDev   | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
@@ -138,7 +137,7 @@ namespace FastExpressionCompiler.Benchmarks
             | Compile     | 413.38 us | 5.859 us | 5.480 us | 39.90 |    0.88 | 1.9531 | 1.4648 |  12.04 KB |        3.06 |
             | CompileFast |  10.36 us | 0.195 us | 0.191 us |  1.00 |    0.03 | 0.6409 | 0.6104 |   3.93 KB |        1.00 |
 
-            ## v5.3.0 ILGenerator+SignaturHelper pooling for the nested lambdas too
+            ## v5.3.0 ILGenerator+SignaturHelper pooling
 
             | Method      | Mean      | Error    | StdDev    | Median    | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
             |------------ |----------:|---------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|

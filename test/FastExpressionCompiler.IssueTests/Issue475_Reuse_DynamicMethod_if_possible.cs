@@ -251,7 +251,7 @@ public class Issue475_Reuse_DynamicMethod_if_possible : ITestX
             typeof(ExpressionCompiler.ArrayClosure),
             true);
 
-        var il = ExpressionCompiler.RentPooledOrNewILGenerator(dynMethod, typeof(void), paramTypes);
+        var il = DynamicMethodHacks.RentPooledOrNewILGenerator(dynMethod, typeof(void), paramTypes);
 
         il.Emit(OpCodes.Ldarg_2);
         il.Emit(OpCodes.Ldarg_2);
@@ -263,7 +263,7 @@ public class Issue475_Reuse_DynamicMethod_if_possible : ITestX
 
         var func = (Action2ndByRef<int>)dynMethod.CreateDelegate(typeof(Action2ndByRef<int>), ExpressionCompiler.EmptyArrayClosure);
 
-        ExpressionCompiler.FreePooledILGenerator(dynMethod, il);
+        DynamicMethodHacks.FreePooledILGenerator(dynMethod, il);
 
         ExpressionCompiler.FreePooledParamTypes(paramTypes);
 

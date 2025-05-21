@@ -12,7 +12,7 @@ public class Program
         // BenchmarkRunner.Run<HoistedLambdaBenchmark.Compilation>();
         // BenchmarkRunner.Run<HoistedLambdaBenchmark.Invocation>();
 
-        BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Compilation>();
+        // BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Compilation>();
         // BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Invocation>();
 
         // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Compilation>();
@@ -58,7 +58,7 @@ public class Program
         //a.Expression_with_sub_expressions_CompiledFast();
         //a.Expression_with_sub_expressions_Compiled();
 
-        // BenchmarkRunner.Run<NestedLambdasVsVars>();
+        BenchmarkRunner.Run<NestedLambdasVsVars>();
 
         // BenchmarkRunner.Run<AutoMapper_Map_Dictionary_of_Obj_with_One_prop.Compile_only>();
         // BenchmarkRunner.Run<AutoMapper_Map_Dictionary_of_Obj_with_One_prop.Invoke_compiled_delegate>();

@@ -436,9 +436,9 @@ namespace FastExpressionCompiler
             il.Demit(OpCodes.Ret);
 
             var delegateType = typeof(TDelegate) != typeof(Delegate) ? typeof(TDelegate) : lambdaExpr.Type;
-            var @delegate = (TDelegate)(object)method.CreateDelegate(delegateType, new ArrayClosure(closureInfo.Constants.Items));
+            var dlg = (TDelegate)(object)method.CreateDelegate(delegateType, new ArrayClosure(closureInfo.Constants.Items));
             FreePooledClosureTypeAndParamTypes(closurePlusParamTypes);
-            return @delegate;
+            return dlg;
         }
 
         /// <summary>Tries to compile expression to "static" delegate, skipping the step of collecting the closure object.</summary>
@@ -467,20 +467,22 @@ namespace FastExpressionCompiler
             il.Demit(OpCodes.Ret);
 
             var delegateType = typeof(TDelegate) != typeof(Delegate) ? typeof(TDelegate) : lambdaExpr.Type;
-            var @delegate = (TDelegate)(object)method.CreateDelegate(delegateType, EmptyArrayClosure);
+            var dlg = (TDelegate)(object)method.CreateDelegate(delegateType, EmptyArrayClosure);
             FreePooledClosureTypeAndParamTypes(closurePlusParamTypes);
-            return @delegate;
+            return dlg;
         }
 
         private static Delegate CompileNoArgsNew(ConstructorInfo ctor, Type delegateType, Type[] closurePlusParamTypes, Type returnType)
         {
             var method = new DynamicMethod(string.Empty, returnType, closurePlusParamTypes, typeof(ArrayClosure), true);
-            var il = method.GetILGenerator(16); // 16 is enough for maximum of 3 possible ops
+            var il = DynamicMethodHacks.RentPooledOrNewILGenerator(method, returnType, closurePlusParamTypes);
             il.Demit(OpCodes.Newobj, ctor);
             if (returnType == typeof(void))
                 il.Demit(OpCodes.Pop);
             il.Demit(OpCodes.Ret);
-            return method.CreateDelegate(delegateType, EmptyArrayClosure);
+            var dlg = method.CreateDelegate(delegateType, EmptyArrayClosure);
+            DynamicMethodHacks.FreePooledILGenerator(method, il);
+            return dlg;
         }
 
 #if LIGHT_EXPRESSION
@@ -531,7 +533,7 @@ namespace FastExpressionCompiler
             // this is FEC way, significantly faster compilation, but +1 branch instruction in the invocation
             var method = new DynamicMethod(string.Empty, returnType, closureAndParamTypes, typeof(ArrayClosure), true);
 
-            var il = RentPooledOrNewILGenerator(method, returnType, closureAndParamTypes);
+            var il = DynamicMethodHacks.RentPooledOrNewILGenerator(method, returnType, closureAndParamTypes);
 
             if (closure.ConstantsAndNestedLambdas != null)
                 EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref closureInfo);
@@ -546,56 +548,11 @@ namespace FastExpressionCompiler
 
             var dlg = method.CreateDelegate(delegateType, closure);
 
-            FreePooledILGenerator(method, il);
+            DynamicMethodHacks.FreePooledILGenerator(method, il);
             FreePooledClosureTypeAndParamTypes(closureAndParamTypes);
 
             return dlg;
         }
-
-#if NET6_0_OR_GREATER
-        [ThreadStatic]
-        internal static ILGenerator pooledILGenerator;
-
-        /// <summary>Get new or pool and configure existing DynamicILGenerator</summary>
-        [MethodImpl((MethodImplOptions)256)]
-        public static ILGenerator RentPooledOrNewILGenerator(DynamicMethod dynMethod, Type returnType, Type[] paramTypes,
-            // the default ILGenerator size is 64 in .NET 8.0+
-            int streamSize = 64)
-        {
-            if (DynamicMethodILGeneratorHacks.ReuseDynamicILGenerator != null)
-            {
-                var pooledIL = Interlocked.Exchange(ref pooledILGenerator, null);
-                if (pooledIL != null)
-                {
-                    DynamicMethodILGeneratorHacks.ReuseDynamicILGenerator(dynMethod, pooledIL, returnType, paramTypes);
-                    return pooledIL;
-                }
-            }
-            return dynMethod.GetILGenerator(streamSize);
-        }
-
-        /// <summary>Should be called only after call to DynamicMethod.CreateDelegate</summary>
-        [MethodImpl((MethodImplOptions)256)]
-        public static void FreePooledILGenerator(DynamicMethod _, ILGenerator il)
-        {
-            // todo: @wip #475 might be required to avoid the undefined behavior when the previous DynamicMethod is still linked to the wrong ILGenerator
-            // IlGeneratorField.SetValue(dynMethod, null);
-
-            if (DynamicMethodILGeneratorHacks.ReuseDynamicILGenerator != null)
-                Interlocked.Exchange(ref pooledILGenerator, il);
-        }
-#else
-        /// <summary>Get new or pool and configure existing DynamicILGenerator</summary>
-        [MethodImpl((MethodImplOptions)256)]
-        public static ILGenerator RentPooledOrNewILGenerator(DynamicMethod dynMethod, Type returnType, Type[] paramTypes,
-            // the default ILGenerator size is 64 in .NET 8.0+
-            int streamSize = 64) =>
-            dynMethod.GetILGenerator(streamSize);
-
-        /// <summary>Should be called only after call to DynamicMethod.CreateDelegate</summary>
-        [MethodImpl((MethodImplOptions)256)]
-        public static void FreePooledILGenerator(DynamicMethod dynMethod, ILGenerator il) { /* do nothing */ }
-#endif
 
         private static readonly Type[] _closureAsASingleParamType = { typeof(ArrayClosure) };
         private static readonly Type[][] _paramTypesPoolWithElem0OfLength1 = new Type[8][]; // todo: @perf @mem could we use this for other Type arrays?
@@ -1869,7 +1826,7 @@ namespace FastExpressionCompiler
             var closurePlusParamTypes = RentPooledOrNewClosureTypeToParamTypes(nestedLambdaParamExprs);
 
             var method = new DynamicMethod(string.Empty, nestedReturnType, closurePlusParamTypes, typeof(ArrayClosure), true);
-            var il = RentPooledOrNewILGenerator(method, nestedReturnType, closurePlusParamTypes);
+            var il = DynamicMethodHacks.RentPooledOrNewILGenerator(method, nestedReturnType, closurePlusParamTypes);
 
             if (nestedConstsAndLambdas != null)
                 EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref nestedClosureInfo);
@@ -1878,23 +1835,24 @@ namespace FastExpressionCompiler
             if (nestedReturnType.IsByRef)
                 parent |= ParentFlags.ReturnByRef;
 
-            if (!EmittingVisitor.TryEmit(nestedLambdaBody, nestedLambdaParamExprs, il, ref nestedClosureInfo, setup, parent))
-                return false;
-            il.Demit(OpCodes.Ret);
+            var emitOk = EmittingVisitor.TryEmit(nestedLambdaBody, nestedLambdaParamExprs, il, ref nestedClosureInfo, setup, parent);
+            if (emitOk)
+            {
+                il.Demit(OpCodes.Ret);
 
-            // If we don't have closure then create a static or an open delegate to pass closure later in `TryEmitNestedLambda`,
-            // constructing the new closure with NonPassedParams and the rest of items stored in NestedLambdaWithConstantsAndNestedLambdas
-            var nestedLambda = nestedLambdaClosure != null
-                ? method.CreateDelegate(nestedLambdaExpr.Type, nestedLambdaClosure)
-                : method.CreateDelegate(Tools.GetFuncOrActionType(closurePlusParamTypes, nestedReturnType), null);
+                // If we don't have closure then create a static or an open delegate to pass closure later in `TryEmitNestedLambda`,
+                // constructing the new closure with NonPassedParams and the rest of items stored in NestedLambdaWithConstantsAndNestedLambdas
+                var nestedLambda = nestedLambdaClosure != null
+                    ? method.CreateDelegate(nestedLambdaExpr.Type, nestedLambdaClosure)
+                    : method.CreateDelegate(Tools.GetFuncOrActionType(closurePlusParamTypes, nestedReturnType), null);
 
-            FreePooledILGenerator(method, il);
+                nestedLambdaInfo.Lambda = !hasNonPassedParameters ? nestedLambda
+                    : nestedConstsAndLambdas == null ? new NestedLambdaForNonPassedParams(nestedLambda)
+                    : new NestedLambdaForNonPassedParamsWithConstants(nestedLambda, nestedConstsAndLambdas);
+            }
+            DynamicMethodHacks.FreePooledILGenerator(method, il);
             FreePooledClosureTypeAndParamTypes(closurePlusParamTypes);
-
-            nestedLambdaInfo.Lambda = !hasNonPassedParameters ? nestedLambda
-                : nestedConstsAndLambdas == null ? new NestedLambdaForNonPassedParams(nestedLambda)
-                : new NestedLambdaForNonPassedParamsWithConstants(nestedLambda, nestedConstsAndLambdas);
-            return true;
+            return emitOk;
         }
 
         /// <summary>Return IDelegateDebugInfo if the delegate is fast compiled with `CompilerFlags.EnableDelegateDebugInfo` flag</summary>
@@ -8418,8 +8376,51 @@ namespace FastExpressionCompiler
 
     /// <summary>Reflecting the internal methods to access the more performant for defining the local variable</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
-    public static class DynamicMethodILGeneratorHacks
+    public static class DynamicMethodHacks
     {
+#if NET6_0_OR_GREATER
+        [ThreadStatic]
+        internal static ILGenerator pooledILGenerator;
+
+        /// <summary>Get new or pool and configure existing DynamicILGenerator</summary>
+        [MethodImpl((MethodImplOptions)256)]
+        public static ILGenerator RentPooledOrNewILGenerator(DynamicMethod dynMethod, Type returnType, Type[] paramTypes,
+            // the default ILGenerator size is 64 in .NET 8.0+
+            int streamSize = 64)
+        {
+            if (DynamicMethodHacks.ReuseDynamicILGenerator != null)
+            {
+                var pooledIL = Interlocked.Exchange(ref pooledILGenerator, null);
+                if (pooledIL != null)
+                {
+                    DynamicMethodHacks.ReuseDynamicILGenerator(dynMethod, pooledIL, returnType, paramTypes);
+                    return pooledIL;
+                }
+            }
+            return dynMethod.GetILGenerator(streamSize);
+        }
+
+        /// <summary>Should be called only after call to DynamicMethod.CreateDelegate</summary>
+        [MethodImpl((MethodImplOptions)256)]
+        public static void FreePooledILGenerator(DynamicMethod _, ILGenerator il)
+        {
+            // todo: @wip #475 might be required to avoid the undefined behavior when the previous DynamicMethod is still linked to the wrong ILGenerator
+            // IlGeneratorField.SetValue(dynMethod, null);
+
+            if (DynamicMethodHacks.ReuseDynamicILGenerator != null)
+                Interlocked.Exchange(ref pooledILGenerator, il);
+        }
+#else
+        /// <summary>Get new or pool and configure existing DynamicILGenerator</summary>
+        [MethodImpl((MethodImplOptions)256)]
+        public static ILGenerator RentPooledOrNewILGenerator(DynamicMethod dynMethod, Type returnType, Type[] paramTypes, int streamSize = 64) =>
+            dynMethod.GetILGenerator(streamSize);
+
+        /// <summary>Should be called only after call to DynamicMethod.CreateDelegate</summary>
+        [MethodImpl((MethodImplOptions)256)]
+        public static void FreePooledILGenerator(DynamicMethod dynMethod, ILGenerator il) { /* do nothing */ }
+#endif
+
         internal static readonly Func<ILGenerator, Type, int> GetNextLocalVarLocation;
 
         internal static int PostInc(ref int i) => i++;
@@ -8431,7 +8432,7 @@ namespace FastExpressionCompiler
         internal static SignatureHelper _pooledSignatureHelper;
 #pragma warning restore CS0649
 
-        static DynamicMethodILGeneratorHacks()
+        static DynamicMethodHacks()
         {
             const BindingFlags instanceNonPublic = BindingFlags.Instance | BindingFlags.NonPublic;
             const BindingFlags instancePublic = BindingFlags.Instance | BindingFlags.Public;
@@ -8664,7 +8665,7 @@ namespace FastExpressionCompiler
                 ExpressionCompiler.FreePooledParamTypes(interlockedExchangeParams);
                 Debug.Assert(interlockedExchangeMethod != null, "Interlocked.Exchange method not found!");
 
-                var pooledSignatureHelperField = typeof(DynamicMethodILGeneratorHacks).GetField(nameof(_pooledSignatureHelper), staticNonPublic);
+                var pooledSignatureHelperField = typeof(DynamicMethodHacks).GetField(nameof(_pooledSignatureHelper), staticNonPublic);
                 Debug.Assert(pooledSignatureHelperField != null, "_pooledSignatureHelper field not found!");
 
                 il.Emit(OpCodes.Ldsflda, pooledSignatureHelperField);
@@ -8862,11 +8863,13 @@ namespace FastExpressionCompiler
                     goto endOfGetNextVar;
 
                 // our own helper - always available
-                var postIncMethod = typeof(DynamicMethodILGeneratorHacks).GetMethod(nameof(PostInc), staticNonPublic);
+                var postIncMethod = typeof(DynamicMethodHacks).GetMethod(nameof(PostInc), staticNonPublic);
                 Debug.Assert(postIncMethod != null, "PostInc method not found!");
 
                 var paramTypes = ExpressionCompiler.RentPooledOrNewParamTypes(typeof(ExpressionCompiler.ArrayClosure), typeof(ILGenerator), typeof(Type));
                 var getNextVarDynamicMethod = new DynamicMethod(string.Empty, typeof(int), paramTypes, typeof(ExpressionCompiler.ArrayClosure), true);
+
+                // todo: @wip #475 use the PooledILGenerator
                 var il = getNextVarDynamicMethod.GetILGenerator();
 
                 // emitting `il.m_localSignature.AddArgument(type);`
