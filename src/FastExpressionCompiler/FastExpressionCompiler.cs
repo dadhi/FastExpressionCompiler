@@ -5571,8 +5571,8 @@ namespace FastExpressionCompiler
                         if (!TryEmit(left, paramExprs, il, ref closure, setup, operandParent))
                             return false;
 
-                        // This is only required for the special case, check the #341 `Nullable_decimal_parameter_with_decimal_constant_comparison_cases`
-                        if (leftType.GetUnderlyingNullableTypeUnsafe() == typeof(decimal))
+                        // See #341 `Nullable_decimal_parameter_with_decimal_constant_comparison_cases`
+                        if (!closure.LastEmitIsAddress && !(left is ParameterExpression p && p.IsByRef)) // Nullable type does not track IsByRef for some reason, so we check the param explicitly, see #461 `Case_equal_nullable_and_object_null`
                             EmitStoreAndLoadLocalVariableAddress(il, leftType);
 
                         EmitMethodCall(il, leftType.GetNullableHasValueGetterMethod());
@@ -5586,7 +5586,7 @@ namespace FastExpressionCompiler
                         if (!TryEmit(right, paramExprs, il, ref closure, setup, operandParent))
                             return false;
 
-                        if (rightType.GetUnderlyingNullableTypeUnsafe() == typeof(decimal))
+                        if (!closure.LastEmitIsAddress && !(right is ParameterExpression p && p.IsByRef))
                             EmitStoreAndLoadLocalVariableAddress(il, rightType);
 
                         EmitMethodCall(il, rightType.GetNullableHasValueGetterMethod());
@@ -8914,7 +8914,7 @@ namespace FastExpressionCompiler
                 var dynMethod = new DynamicMethod(string.Empty, typeof(int), paramTypes, typeof(ExpressionCompiler.ArrayClosure), true);
 
                 // it does not use the pooled il generator here, to isolate this variable hack from the il generator pooling hack and for the better problem diagnostics
-                var il = dynMethod.GetILGenerator(); // todo: @wip set the stream size
+                var il = dynMethod.GetILGenerator(32);
 
                 // emitting `il.m_localSignature.AddArgument(type);`
                 il.Emit(OpCodes.Ldarg_1);  // load `il` argument (arg_0 is the empty closure object)

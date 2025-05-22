@@ -11,24 +11,25 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
-            ILGeneratorTools.DisableILGeneratorPooling = true;
+            // ILGeneratorTools.DisableILGeneratorPooling = true;
+            // LightExpression.ILGeneratorTools.DisableILGeneratorPooling = true;
 
+            // new Issue461_InvalidProgramException_when_null_checking_type_by_ref().Run();
             // new LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest().Run();
             // new Issue55_CompileFast_crash_with_ref_parameter().Run();
 
-#if NET8_0_OR_GREATER
-            // var ts = new TestRun();
-            // ts.Run(new Issue475_Reuse_DynamicMethod_if_possible());
-#endif
+            var t = new LightExpression.TestRun(LightExpression.TestFlags.RethrowException);
 
-            var t = new LightExpression.TestRun();
-
-            // t.Run(new LightExpression.IssueTests.Issue476_System_ExecutionEngineException_with_nullables_on_repeated_calls_to_ConcurrentDictionary(),
-            //     LightExpression.TestFlags.RethrowException);
+            t.Run(new LightExpression.IssueTests.Issue476_System_ExecutionEngineException_with_nullables_on_repeated_calls_to_ConcurrentDictionary());
 
             t.Run(new LightExpression.IssueTests.Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET());
             t.Run(new LightExpression.IssueTests.Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_expressions_during_the_compilation());
             t.Run(new LightExpression.IssueTests.Issue473_InvalidProgramException_when_using_Expression_Condition_with_converted_decimal_expression());
+
+#if NET8_0_OR_GREATER
+            var ts = new TestRun();
+            ts.Run(new Issue475_Reuse_DynamicMethod_if_possible());
+#endif
 
             RunAllTests();
         }

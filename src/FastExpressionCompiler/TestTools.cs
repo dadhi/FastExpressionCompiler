@@ -556,9 +556,8 @@ public record struct TestStats(
 public enum TestFlags : byte
 {
     Default = 0,
-    TrackAllInsteadOfFailedOnlyTests = 1 << 0,
+    TrackAllInsteadOfFailedOnlyTests = 1,
     RethrowException = 1 << 1,
-
 }
 
 #if !NETCOREAPP3_0_OR_GREATER
@@ -950,9 +949,14 @@ public sealed class TestRun
     public SmallList<TestStats> Stats;
     public SmallList<TestFailure> Failures;
 
+    public TestFlags Flags;
+    public TestRun(TestFlags flags = TestFlags.Default) => Flags = flags;
+
     /// <summary>Will output the failures while running</summary>
-    public void Run<T>(T test, TestFlags tracking = TestFlags.Default) where T : ITestX
+    public void Run<T>(T test, TestFlags flags = TestFlags.Default) where T : ITestX
     {
+        // use global flags if the local flags are default
+        flags = flags != TestFlags.Default ? flags : Flags;
         var totalTestCount = TotalTestCount;
         var failureCount = Failures.Count;
         Exception testStopException = null;
@@ -960,15 +964,13 @@ public sealed class TestRun
         {
             test.Run(this);
         }
-        catch (Exception ex)
+        catch (Exception ex) when ((flags & TestFlags.RethrowException) == 0)
         {
-            if ((tracking & TestFlags.RethrowException) != 0)
-                throw;
             testStopException = ex;
         }
 
         var testFailureCount = Failures.Count - failureCount;
-        if (testStopException != null | testFailureCount > 0 | (tracking & TestFlags.TrackAllInsteadOfFailedOnlyTests) != 0)
+        if (testStopException != null | testFailureCount > 0 | (flags & TestFlags.TrackAllInsteadOfFailedOnlyTests) != 0)
         {
             // todo: @perf Or may be we can put it under the debug only?
             var testsType = test.GetType();
