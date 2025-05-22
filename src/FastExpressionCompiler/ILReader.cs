@@ -43,7 +43,7 @@ public static class ILReaderFactory
 #endif
 
 #if !NET8_0_OR_GREATER
-        if (dynamicMethod == null && sourceType == _rtDynamicMethodType)
+        if (dynamicMethod == null & sourceType == _rtDynamicMethodType)
             dynamicMethod = (DynamicMethod)_fiOwner.GetValue(source);
 #if DEBUG_INTERNALS
         Console.WriteLine($"m_rtDynamicMethodType: {_rtDynamicMethodType}, _fiOwner: {_fiOwner}");

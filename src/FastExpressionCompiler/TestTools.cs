@@ -12,6 +12,7 @@ using static System.Environment;
 
 #if LIGHT_EXPRESSION
 namespace FastExpressionCompiler.LightExpression;
+
 using FastExpressionCompiler.LightExpression.ILDecoder;
 using FastExpressionCompiler.LightExpression.ImTools;
 #else
@@ -551,10 +552,13 @@ public record struct TestStats(
     int FirstFailureIndex,
     int FailureCount);
 
-public enum TestTracking
+[Flags]
+public enum TestFlags : byte
 {
-    TrackFailedTestsOnly = 0,
-    TrackAllTests,
+    Default = 0,
+    TrackAllInsteadOfFailedOnlyTests = 1 << 0,
+    RethrowException = 1 << 1,
+
 }
 
 #if !NETCOREAPP3_0_OR_GREATER
@@ -946,9 +950,8 @@ public sealed class TestRun
     public SmallList<TestStats> Stats;
     public SmallList<TestFailure> Failures;
 
-    // todo: @wip put the output under the feature flag
     /// <summary>Will output the failures while running</summary>
-    public void Run<T>(T test, TestTracking tracking = TestTracking.TrackFailedTestsOnly) where T : ITestX
+    public void Run<T>(T test, TestFlags tracking = TestFlags.Default) where T : ITestX
     {
         var totalTestCount = TotalTestCount;
         var failureCount = Failures.Count;
@@ -959,13 +962,13 @@ public sealed class TestRun
         }
         catch (Exception ex)
         {
+            if ((tracking & TestFlags.RethrowException) != 0)
+                throw;
             testStopException = ex;
         }
 
         var testFailureCount = Failures.Count - failureCount;
-        if (testStopException != null ||
-            tracking == TestTracking.TrackAllTests ||
-            tracking == TestTracking.TrackFailedTestsOnly & testFailureCount > 0)
+        if (testStopException != null | testFailureCount > 0 | (tracking & TestFlags.TrackAllInsteadOfFailedOnlyTests) != 0)
         {
             // todo: @perf Or may be we can put it under the debug only?
             var testsType = test.GetType();

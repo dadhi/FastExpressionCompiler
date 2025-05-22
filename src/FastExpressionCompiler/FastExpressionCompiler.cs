@@ -8218,11 +8218,17 @@ namespace FastExpressionCompiler
     [RequiresUnreferencedCode(Trimming.Message)]
     public static class ILGeneratorTools
     {
+        /// <summary>Configuration option to disable the pooling</summary>
+        public static bool DisableILGeneratorPooling;
+        /// <summary>Configuration option to disable the ILGenerator Emit debug output</summary>
+        public static bool DisableDemit;
+
 #if DEMIT
         [MethodImpl((MethodImplOptions)256)]
         public static void Demit(this ILGenerator il, OpCode opcode, [CallerMemberName] string emitterName = "", [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode);
+            if (DisableDemit) return;
             Debug.WriteLine($"{opcode}  -- {emitterName}:{emitterLine}");
         }
 
@@ -8230,6 +8236,7 @@ namespace FastExpressionCompiler
         public static void Demit(this ILGenerator il, OpCode opcode, Type type, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, type);
+            if (DisableDemit) return;
             Debug.WriteLine($"{opcode} {type.ToCode(stripNamespace: true)}  -- {emitterName}:{emitterLine}");
         }
 
@@ -8237,6 +8244,7 @@ namespace FastExpressionCompiler
         public static void Demit(this ILGenerator il, OpCode opcode, FieldInfo value, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, value);
+            if (DisableDemit) return;
 
             var declType = value.DeclaringType?.ToCode(stripNamespace: true) ?? "";
             var fieldType = value.FieldType.ToCode(stripNamespace: true);
@@ -8247,6 +8255,7 @@ namespace FastExpressionCompiler
         public static void Demit(this ILGenerator il, OpCode opcode, MethodInfo value, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, value);
+            if (DisableDemit) return;
 
             var declType = value.DeclaringType?.ToCode(stripNamespace: true) ?? "";
             var retType = value.ReturnType.ToCode(stripNamespace: true);
@@ -8260,6 +8269,7 @@ namespace FastExpressionCompiler
         public static void Demit(this ILGenerator il, OpCode opcode, ConstructorInfo value, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, value);
+            if (DisableDemit) return;
 
             var declType = value.DeclaringType?.ToCode(stripNamespace: true) ?? "";
             var signature = value.ToString();
@@ -8273,6 +8283,7 @@ namespace FastExpressionCompiler
             [CallerArgumentExpression("value")] string valueName = null, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, value);
+            if (DisableDemit) return;
             Debug.WriteLine($"{opcode} {valueName ?? value.ToString()}  -- {emitterName}:{emitterLine}");
         }
 
@@ -8281,6 +8292,7 @@ namespace FastExpressionCompiler
             [CallerArgumentExpression("value")] string valueName = null, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.MarkLabel(value);
+            if (DisableDemit) return;
             Debug.WriteLine($"{valueName ?? value.ToString()}  -- {emitterName}:{emitterLine}: ");
         }
 
@@ -8288,6 +8300,7 @@ namespace FastExpressionCompiler
         public static void Demit(this ILGenerator il, OpCode opcode, byte value, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, value);
+            if (DisableDemit) return;
             Debug.WriteLine($"{opcode} {value}  -- {emitterName}:{emitterLine}");
         }
 
@@ -8295,6 +8308,7 @@ namespace FastExpressionCompiler
         public static void Demit(this ILGenerator il, OpCode opcode, sbyte value, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, value);
+            if (DisableDemit) return;
             Debug.WriteLine($"{opcode} {value}  -- {emitterName}:{emitterLine}");
         }
 
@@ -8302,6 +8316,7 @@ namespace FastExpressionCompiler
         public static void Demit(this ILGenerator il, OpCode opcode, short value, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, value);
+            if (DisableDemit) return;
             Debug.WriteLine($"{opcode} {value}  -- {emitterName}:{emitterLine}");
         }
 
@@ -8309,6 +8324,7 @@ namespace FastExpressionCompiler
         public static void Demit(this ILGenerator il, OpCode opcode, int value, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, value);
+            if (DisableDemit) return;
             Debug.WriteLine($"{opcode} {value}  -- {emitterName}:{emitterLine}");
         }
 
@@ -8316,6 +8332,7 @@ namespace FastExpressionCompiler
         public static void Demit(this ILGenerator il, OpCode opcode, long value, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, value);
+            if (DisableDemit) return;
             Debug.WriteLine($"{opcode} {value}  -- {emitterName}:{emitterLine}");
         }
 
@@ -8323,6 +8340,7 @@ namespace FastExpressionCompiler
         public static void Demit(this ILGenerator il, OpCode opcode, float value, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, value);
+            if (DisableDemit) return;
             Debug.WriteLine($"{opcode} {value}  -- {emitterName}:{emitterLine}");
         }
 
@@ -8330,6 +8348,7 @@ namespace FastExpressionCompiler
         public static void Demit(this ILGenerator il, OpCode opcode, double value, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, value);
+            if (DisableDemit) return;
             Debug.WriteLine($"{opcode} {value}  -- {emitterName}:{emitterLine}");
         }
 
@@ -8337,6 +8356,7 @@ namespace FastExpressionCompiler
         public static void Demit(this ILGenerator il, string value, OpCode opcode, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.Emit(opcode, value);
+            if (DisableDemit) return;
             Debug.WriteLine($"{opcode} {value}  -- {emitterName}:{emitterLine}");
         }
 
@@ -8422,10 +8442,10 @@ namespace FastExpressionCompiler
 
         /// <summary>Should be called only after call to DynamicMethod.CreateDelegate</summary>
         [MethodImpl((MethodImplOptions)256)]
-        public static void FreePooledILGenerator(DynamicMethod _, ILGenerator il)
+        public static void FreePooledILGenerator(DynamicMethod dynMethod, ILGenerator il)
         {
             // todo: @wip #475 might be required to avoid the undefined behavior when the previous DynamicMethod is still linked to the wrong ILGenerator
-            // IlGeneratorField.SetValue(dynMethod, null);
+            // ILGeneratorField.SetValue(dynMethod, null);
 
             if (DynamicMethodHacks.ReuseDynamicILGenerator != null)
                 _pooledILGenerator = il;
@@ -8453,6 +8473,9 @@ namespace FastExpressionCompiler
         internal static SignatureHelper _pooledSignatureHelper;
 #pragma warning restore CS0649
 
+        internal static FieldInfo ILGeneratorField;
+        internal static Type DynamicILGeneratorType;
+
         static DynamicMethodHacks()
         {
             const BindingFlags instanceNonPublic = BindingFlags.Instance | BindingFlags.NonPublic;
@@ -8460,11 +8483,17 @@ namespace FastExpressionCompiler
             const BindingFlags staticNonPublic = BindingFlags.Static | BindingFlags.NonPublic;
             const BindingFlags staticPublic = BindingFlags.Static | BindingFlags.Public;
 
-            var _iLGeneratorField = typeof(DynamicMethod).GetField("_ilGenerator", instanceNonPublic);
-            if (_iLGeneratorField == null)
-                return; // nothing to look here
+            ILGeneratorField = typeof(DynamicMethod).GetField("_ilGenerator", instanceNonPublic);
+            if (ILGeneratorField == null)
+                return; // nothing to do here
 
-            var DynamicILGeneratorType = _iLGeneratorField.FieldType;
+            DynamicILGeneratorType = ILGeneratorField.FieldType;
+
+            // Avoid demit polluting the output of the the initialization phase
+            var prevDemitValue = ILGeneratorTools.DisableDemit;
+            ILGeneratorTools.DisableDemit = true;
+
+            if (!ILGeneratorTools.DisableILGeneratorPooling)
             {
                 // ## 1. Reuse the DynamicILGenerator
                 //
@@ -8756,7 +8785,7 @@ namespace FastExpressionCompiler
                 il.Emit(OpCodes.Call, SignatureHelper_GetSignatureMethod);
                 ExpressionCompiler.EmittingVisitor.EmitStoreLocalVariable(il, sigBytesVar);
 
-                // return the signature helper to the pool
+                // free the signature helper to the pool
                 ExpressionCompiler.EmittingVisitor.EmitLoadLocalVariable(il, sigHelperVar);
                 il.Emit(OpCodes.Stsfld, pooledSignatureHelperField);
 
@@ -8821,7 +8850,7 @@ namespace FastExpressionCompiler
                 // store the reused ILGenerator to 
                 il.Emit(OpCodes.Ldarg_1);
                 il.Emit(OpCodes.Ldarg_2);
-                il.Emit(OpCodes.Stfld, _iLGeneratorField);
+                il.Emit(OpCodes.Stfld, ILGeneratorField);
 
                 il.Emit(OpCodes.Ret);
 
@@ -8872,9 +8901,9 @@ namespace FastExpressionCompiler
 
                 // looking for the `SignatureHelper.AddArgument(Type argument, bool pinned)`
                 var typeAndBoolParamTypes = ExpressionCompiler.RentPooledOrNewParamTypes(typeof(Type), typeof(bool));
-                var SignaturHelper_AddArgumentMethod = typeof(SignatureHelper).GetMethod("AddArgument", typeAndBoolParamTypes);
+                var SignatureHelper_AddArgumentMethod = typeof(SignatureHelper).GetMethod("AddArgument", typeAndBoolParamTypes);
                 ExpressionCompiler.FreePooledParamTypes(typeAndBoolParamTypes);
-                if (SignaturHelper_AddArgumentMethod == null)
+                if (SignatureHelper_AddArgumentMethod == null)
                     goto endOfGetNextVar;
 
                 // our own helper - always available
@@ -8884,14 +8913,15 @@ namespace FastExpressionCompiler
                 var paramTypes = ExpressionCompiler.RentPooledOrNewParamTypes(typeof(ExpressionCompiler.ArrayClosure), typeof(ILGenerator), typeof(Type));
                 var dynMethod = new DynamicMethod(string.Empty, typeof(int), paramTypes, typeof(ExpressionCompiler.ArrayClosure), true);
 
-                var il = RentPooledOrNewILGenerator(dynMethod, typeof(int), paramTypes);
+                // it does not use the pooled il generator here, to isolate this variable hack from the il generator pooling hack and for the better problem diagnostics
+                var il = dynMethod.GetILGenerator(); // todo: @wip set the stream size
 
                 // emitting `il.m_localSignature.AddArgument(type);`
                 il.Emit(OpCodes.Ldarg_1);  // load `il` argument (arg_0 is the empty closure object)
                 il.Emit(OpCodes.Ldfld, m_localSignatureField);
                 il.Emit(OpCodes.Ldarg_2);  // load `type` argument
                 il.Emit(OpCodes.Ldc_I4_0); // load `pinned: false` argument
-                il.Emit(OpCodes.Call, SignaturHelper_AddArgumentMethod);
+                il.Emit(OpCodes.Call, SignatureHelper_AddArgumentMethod);
 
                 // emitting `return PostInc(ref il.LocalCount);`
                 il.Emit(OpCodes.Ldarg_1); // load `il` argument
@@ -8903,10 +8933,12 @@ namespace FastExpressionCompiler
                 GetNextLocalVarLocation = (Func<ILGenerator, Type, int>)
                     dynMethod.CreateDelegate(typeof(Func<ILGenerator, Type, int>), ExpressionCompiler.EmptyArrayClosure);
 
-                FreePooledILGenerator(dynMethod, il);
                 ExpressionCompiler.FreePooledParamTypes(paramTypes);
             endOfGetNextVar:;
             }
+
+            // Restore the demit
+            ILGeneratorTools.DisableDemit = prevDemitValue;
 
             // ## 3 TBD
             //
