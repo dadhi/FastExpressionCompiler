@@ -17,6 +17,7 @@ using FastExpressionCompiler.LightExpression.ILDecoder;
 using FastExpressionCompiler.LightExpression.ImTools;
 #else
 namespace FastExpressionCompiler;
+
 using FastExpressionCompiler.ILDecoder;
 using FastExpressionCompiler.ImTools;
 using System.Linq.Expressions;

@@ -15,7 +15,7 @@ namespace FastExpressionCompiler.UnitTests
             // LightExpression.ILGeneratorTools.DisableILGeneratorPooling = true;
 
             // new Issue461_InvalidProgramException_when_null_checking_type_by_ref().Run();
-            // new LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest().Run();
+            new LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest().Run();
             // new Issue55_CompileFast_crash_with_ref_parameter().Run();
 
             var t = new LightExpression.TestRun(LightExpression.TestFlags.RethrowException);

@@ -42,6 +42,7 @@ namespace FastExpressionCompiler.LightExpression
     using static FastExpressionCompiler.LightExpression.Expression;
     using PE = FastExpressionCompiler.LightExpression.ParameterExpression;
     using FastExpressionCompiler.LightExpression.ImTools;
+    using FastExpressionCompiler.LightExpression.ILDecoder;
     using static FastExpressionCompiler.LightExpression.ImTools.SmallMap4;
 #else
 namespace FastExpressionCompiler
@@ -49,6 +50,7 @@ namespace FastExpressionCompiler
     using static System.Linq.Expressions.Expression;
     using PE = System.Linq.Expressions.ParameterExpression;
     using FastExpressionCompiler.ImTools;
+    using FastExpressionCompiler.ILDecoder;
     using static FastExpressionCompiler.ImTools.SmallMap4;
 #endif
     using System;
@@ -104,6 +106,8 @@ namespace FastExpressionCompiler
         string ExpressionString { get; }
         /// <summary>The equivalent C# code of the lambda expression</summary>
         string CSharpString { get; }
+        /// <summary>Delegate IL op-codes and tokens</summary>
+        string ILString { get; }
 
         // todo: @feature add the debug info to the nested lambdas
         // /// <summary>Total nested lambda counting</summary>
@@ -514,19 +518,17 @@ namespace FastExpressionCompiler
             var collectResult = TryCollectInfo(ref closureInfo, bodyExpr, paramExprs, null, ref closureInfo.NestedLambdas, flags);
             if (collectResult == Result.OK)
             {
+                var constantsAndNestedLambdas = (closureInfo.Status & ClosureStatus.HasClosure) != 0
+                    ? closureInfo.GetArrayOfConstantsAndNestedLambdas()
+                    : null;
+
                 ArrayClosure closure;
-                if ((flags & CompilerFlags.EnableDelegateDebugInfo) == 0)
-                {
-                    closure = (closureInfo.Status & ClosureStatus.HasClosure) == 0
-                        ? EmptyArrayClosure
-                        : new ArrayClosure(closureInfo.GetArrayOfConstantsAndNestedLambdas());
-                }
+                var hasDebugInfo = (flags & CompilerFlags.EnableDelegateDebugInfo) != 0;
+                if (!hasDebugInfo)
+                    closure = constantsAndNestedLambdas == null ? EmptyArrayClosure : new ArrayClosure(constantsAndNestedLambdas);
                 else
-                {   // todo: @feature add the debug info to the nested lambdas!
+                {
                     var debugExpr = Lambda(delegateType, bodyExpr, paramExprs?.ToReadOnlyList() ?? Tools.Empty<PE>());
-                    var constantsAndNestedLambdas = (closureInfo.Status & ClosureStatus.HasClosure) == 0
-                        ? null
-                        : closureInfo.GetArrayOfConstantsAndNestedLambdas();
                     closure = new DebugArrayClosure(constantsAndNestedLambdas, debugExpr);
                 }
 
@@ -548,6 +550,8 @@ namespace FastExpressionCompiler
                 {
                     il.Demit(OpCodes.Ret);
                     compiledDelegate = dynMethod.CreateDelegate(delegateType, closure);
+                    if (hasDebugInfo)
+                        ((DebugArrayClosure)closure).ILString = compiledDelegate.Method.ToILString().ToString();
                 }
 
                 DynamicMethodHacks.FreePooledILGenerator(dynMethod, il);
@@ -1007,6 +1011,9 @@ namespace FastExpressionCompiler
 
             private readonly Lazy<string> _csharpString;
             public string CSharpString => _csharpString.Value;
+
+            public string ILString { get; internal set; }
+
             public DebugArrayClosure(object[] constantsAndNestedLambdas, LambdaExpression expr)
                 : base(constantsAndNestedLambdas)
             {
@@ -1804,7 +1811,7 @@ namespace FastExpressionCompiler
             return false;
         }
 
-        private static bool TryCompileNestedLambda(ref ClosureInfo nestedClosureInfo, NestedLambdaInfo nestedLambdaInfo, CompilerFlags setup)
+        private static bool TryCompileNestedLambda(ref ClosureInfo nestedClosureInfo, NestedLambdaInfo nestedLambdaInfo, CompilerFlags flags)
         {
             // 1. Try to compile nested lambda in place
             // 2. Check that parameters used in compiled lambda are passed or closed by outer lambda
@@ -1829,28 +1836,34 @@ namespace FastExpressionCompiler
             nestedClosureInfo.NestedLambdas = nestedLambdaInfo.NestedLambdas;
             nestedClosureInfo.NonPassedParameters = nestedLambdaInfo.NonPassedParameters;
 
-            var nestedConstsAndLambdas = nestedClosureInfo.GetArrayOfConstantsAndNestedLambdas();
+            var constantsAndNestedLambdas = (nestedClosureInfo.Status & ClosureStatus.HasClosure) != 0
+                ? nestedClosureInfo.GetArrayOfConstantsAndNestedLambdas()
+                : null;
 
             ArrayClosure nestedLambdaClosure = null;
             var hasNonPassedParameters = nestedLambdaInfo.NonPassedParameters.Count != 0;
             if (!hasNonPassedParameters)
-                nestedLambdaClosure = (nestedClosureInfo.Status & ClosureStatus.HasClosure) == 0
-                    ? EmptyArrayClosure
-                    : new ArrayClosure(nestedConstsAndLambdas);
+            {
+                var hasDebugInfo = (flags & CompilerFlags.EnableDelegateDebugInfo) != 0;
+                if (!hasDebugInfo)
+                    nestedLambdaClosure = constantsAndNestedLambdas == null ? EmptyArrayClosure : new ArrayClosure(constantsAndNestedLambdas);
+                else
+                    nestedLambdaClosure = new DebugArrayClosure(constantsAndNestedLambdas, nestedLambdaExpr);
+            }
 
             var closurePlusParamTypes = RentPooledOrNewClosureTypeToParamTypes(nestedLambdaParamExprs);
 
             var method = new DynamicMethod(string.Empty, nestedReturnType, closurePlusParamTypes, typeof(ArrayClosure), true);
             var il = DynamicMethodHacks.RentPooledOrNewILGenerator(method, nestedReturnType, closurePlusParamTypes);
 
-            if (nestedConstsAndLambdas != null)
+            if (constantsAndNestedLambdas != null)
                 EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref nestedClosureInfo);
 
             var parent = nestedReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
             if (nestedReturnType.IsByRef)
                 parent |= ParentFlags.ReturnByRef;
 
-            var emitOk = EmittingVisitor.TryEmit(nestedLambdaBody, nestedLambdaParamExprs, il, ref nestedClosureInfo, setup, parent);
+            var emitOk = EmittingVisitor.TryEmit(nestedLambdaBody, nestedLambdaParamExprs, il, ref nestedClosureInfo, flags, parent);
             if (emitOk)
             {
                 il.Demit(OpCodes.Ret);
@@ -1862,8 +1875,8 @@ namespace FastExpressionCompiler
                     : method.CreateDelegate(Tools.GetFuncOrActionType(closurePlusParamTypes, nestedReturnType), null);
 
                 nestedLambdaInfo.Lambda = !hasNonPassedParameters ? nestedLambda
-                    : nestedConstsAndLambdas == null ? new NestedLambdaForNonPassedParams(nestedLambda)
-                    : new NestedLambdaForNonPassedParamsWithConstants(nestedLambda, nestedConstsAndLambdas);
+                    : constantsAndNestedLambdas == null ? new NestedLambdaForNonPassedParams(nestedLambda)
+                    : new NestedLambdaForNonPassedParamsWithConstants(nestedLambda, constantsAndNestedLambdas);
             }
             DynamicMethodHacks.FreePooledILGenerator(method, il);
             FreePooledClosureTypeAndParamTypes(closurePlusParamTypes);
