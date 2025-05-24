@@ -123,6 +123,27 @@ namespace FastExpressionCompiler.Benchmarks
             | Compile     | 421.09 us | 8.382 us | 18.221 us | 413.02 us | 36.29 |    2.09 | 1.9531 | 0.9766 |  12.04 KB |        2.61 |
             | CompileFast |  11.62 us | 0.230 us |  0.464 us |  11.42 us |  1.00 |    0.06 | 0.7324 | 0.7019 |   4.62 KB |        1.00 |
 
+            ## v5.3.0 ILGenerator pooling
+
+            | Method      | Mean      | Error    | StdDev   | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
+            |------------ |----------:|---------:|---------:|------:|--------:|-------:|-------:|----------:|------------:|
+            | Compile     | 410.18 us | 6.928 us | 5.785 us | 36.97 |    0.92 | 1.9531 | 1.4648 |  12.04 KB |        2.74 |
+            | CompileFast |  11.10 us | 0.214 us | 0.237 us |  1.00 |    0.03 | 0.7019 | 0.6714 |    4.4 KB |        1.00 |
+
+            ## v5.3.0 ILGenerator pooling for the nested lambdas too
+
+            | Method      | Mean      | Error    | StdDev   | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
+            |------------ |----------:|---------:|---------:|------:|--------:|-------:|-------:|----------:|------------:|
+            | Compile     | 413.38 us | 5.859 us | 5.480 us | 39.90 |    0.88 | 1.9531 | 1.4648 |  12.04 KB |        3.06 |
+            | CompileFast |  10.36 us | 0.195 us | 0.191 us |  1.00 |    0.03 | 0.6409 | 0.6104 |   3.93 KB |        1.00 |
+
+            ## v5.3.0 ILGenerator+SignaturHelper pooling
+
+            | Method      | Mean      | Error    | StdDev    | Median    | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
+            |------------ |----------:|---------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
+            | Compile     | 437.16 us | 8.631 us | 20.004 us | 438.94 us | 39.26 |    3.33 | 1.9531 | 0.9766 |  12.04 KB |        3.19 |
+            | CompileFast |  11.20 us | 0.329 us |  0.896 us |  10.93 us |  1.01 |    0.11 | 0.6104 | 0.5951 |   3.77 KB |        1.00 |
+
             */
             [Benchmark]
             public Func<X> Compile() => _hoistedExpr.Compile();

@@ -15,7 +15,7 @@ public class Program
         // BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Compilation>();
         // BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Invocation>();
 
-        // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Compilation>();
+        BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Compilation>();
         // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Invocation>();
         // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Create>(); // not included in README.md, may be it needs to
         // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Create_and_Compile>(); // not included in README.md, may be it needs to
@@ -25,7 +25,7 @@ public class Program
 
         //--------------------------------------------
 
-        BenchmarkRunner.Run<Issue475_ReuseVsNoReuse>();
+        // BenchmarkRunner.Run<Issue475_ReuseVsNoReuse>();
 
         // BenchmarkRunner.Run<Issue468_Compile_vs_FastCompile>();
         // BenchmarkRunner.Run<Issue468_InvokeCompiled_vs_InvokeCompiledFast>();

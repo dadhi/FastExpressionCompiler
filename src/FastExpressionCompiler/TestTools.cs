@@ -12,10 +12,12 @@ using static System.Environment;
 
 #if LIGHT_EXPRESSION
 namespace FastExpressionCompiler.LightExpression;
+
 using FastExpressionCompiler.LightExpression.ILDecoder;
 using FastExpressionCompiler.LightExpression.ImTools;
 #else
 namespace FastExpressionCompiler;
+
 using FastExpressionCompiler.ILDecoder;
 using FastExpressionCompiler.ImTools;
 using System.Linq.Expressions;
@@ -551,10 +553,12 @@ public record struct TestStats(
     int FirstFailureIndex,
     int FailureCount);
 
-public enum TestTracking
+[Flags]
+public enum TestFlags : byte
 {
-    TrackFailedTestsOnly = 0,
-    TrackAllTests,
+    Default = 0,
+    TrackAllInsteadOfFailedOnlyTests = 1,
+    RethrowException = 1 << 1,
 }
 
 #if !NETCOREAPP3_0_OR_GREATER
@@ -946,10 +950,14 @@ public sealed class TestRun
     public SmallList<TestStats> Stats;
     public SmallList<TestFailure> Failures;
 
-    // todo: @wip put the output under the feature flag
+    public TestFlags Flags;
+    public TestRun(TestFlags flags = TestFlags.Default) => Flags = flags;
+
     /// <summary>Will output the failures while running</summary>
-    public void Run<T>(T test, TestTracking tracking = TestTracking.TrackFailedTestsOnly) where T : ITestX
+    public void Run<T>(T test, TestFlags flags = TestFlags.Default) where T : ITestX
     {
+        // use global flags if the local flags are default
+        flags = flags != TestFlags.Default ? flags : Flags;
         var totalTestCount = TotalTestCount;
         var failureCount = Failures.Count;
         Exception testStopException = null;
@@ -957,15 +965,13 @@ public sealed class TestRun
         {
             test.Run(this);
         }
-        catch (Exception ex)
+        catch (Exception ex) when ((flags & TestFlags.RethrowException) == 0)
         {
             testStopException = ex;
         }
 
         var testFailureCount = Failures.Count - failureCount;
-        if (testStopException != null ||
-            tracking == TestTracking.TrackAllTests ||
-            tracking == TestTracking.TrackFailedTestsOnly & testFailureCount > 0)
+        if (testStopException != null | testFailureCount > 0 | (flags & TestFlags.TrackAllInsteadOfFailedOnlyTests) != 0)
         {
             // todo: @perf Or may be we can put it under the debug only?
             var testsType = test.GetType();

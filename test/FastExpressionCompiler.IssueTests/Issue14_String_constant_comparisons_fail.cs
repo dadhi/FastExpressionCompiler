@@ -28,7 +28,6 @@ namespace FastExpressionCompiler.IssueTests
             return 6;
         }
 
-
         public void String_equality_should_work()
         {
             System.Linq.Expressions.Expression<Func<string, bool>> se = str => str == "Hello";
@@ -42,7 +41,6 @@ namespace FastExpressionCompiler.IssueTests
             // this is needed because for the string literal above it does reference comparison, and here it does op_Equality
             Asserts.IsTrue(isHello(new StringBuilder("Hello").ToString()));
         }
-
 
         public void String_not_equality_should_work()
         {
@@ -58,7 +56,6 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.IsFalse(isHello(new StringBuilder("Hello").ToString()));
         }
 
-
         public void Guid_equality_should_work()
         {
             var expectedId = Guid.NewGuid();
@@ -72,7 +69,6 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.IsTrue(isExpectedId(expectedId));
         }
 
-
         public void Guid_not_equality_should_work()
         {
             var expectedId = Guid.NewGuid();
@@ -85,7 +81,6 @@ namespace FastExpressionCompiler.IssueTests
 
             Asserts.IsFalse(isExpectedId(expectedId));
         }
-
 
         public void Enum_equality_should_work()
         {
@@ -101,7 +96,6 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         enum Blah { Foo, Bar }
-
 
         public void Class_Equals_equality_should_work()
         {
