@@ -476,15 +476,18 @@ namespace FastExpressionCompiler
             return dlg;
         }
 
-        private static Delegate CompileNoArgsNew(ConstructorInfo ctor, Type delegateType, Type[] closurePlusParamTypes, Type returnType)
+        private static Delegate CompileNoArgsNew(NewExpression newExpr, Type delegateType, Type[] closurePlusParamTypes, Type returnType, CompilerFlags flags)
         {
             var method = new DynamicMethod(string.Empty, returnType, closurePlusParamTypes, typeof(ArrayClosure), true);
             var il = DynamicMethodHacks.RentPooledOrNewILGenerator(method, returnType, closurePlusParamTypes, newStreamSize: 16);
-            il.Demit(OpCodes.Newobj, ctor);
+            il.Demit(OpCodes.Newobj, newExpr.Constructor);
             if (returnType == typeof(void))
                 il.Demit(OpCodes.Pop);
             il.Demit(OpCodes.Ret);
-            var dlg = method.CreateDelegate(delegateType, EmptyArrayClosure);
+
+            var hasDebugInfo = (flags & CompilerFlags.EnableDelegateDebugInfo) != 0;
+            var closure = !hasDebugInfo ? EmptyArrayClosure : new DebugArrayClosure(null, Lambda(newExpr, Tools.Empty<PE>()));
+            var dlg = method.CreateDelegate(delegateType, closure);
             DynamicMethodHacks.FreePooledILGenerator(method, il);
             return dlg;
         }
@@ -493,12 +496,11 @@ namespace FastExpressionCompiler
         internal static object TryCompileBoundToFirstClosureParam(Type delegateType, Expression bodyExpr, IParameterProvider paramExprs,
             Type returnType, CompilerFlags flags)
         {
+            // There is no Return of the pooled parameter types here, 
+            // because in the rarest case with the unused lambda arguments we may just exhaust the pooled instance 
             var closureAndParamTypes = RentPooledOrNewClosureTypeToParamTypes(paramExprs);
-            if (bodyExpr is NoArgsNewClassIntrinsicExpression newNoArgs)
-            {
-                // there is no Return of the pooled parameter types here, because in the rarest case with the unused lambda arguments we may just exhaust the pooled instance 
-                return CompileNoArgsNew(newNoArgs.Constructor, delegateType, closureAndParamTypes, returnType);
-            }
+            if (bodyExpr is NoArgsNewClassIntrinsicExpression newExpr)
+                return CompileNoArgsNew(newExpr, delegateType, closureAndParamTypes, returnType, flags);
 #else
         internal static object TryCompileBoundToFirstClosureParam(Type delegateType, Expression bodyExpr, IReadOnlyList<PE> paramExprs,
             Type returnType, CompilerFlags flags)
@@ -528,8 +530,8 @@ namespace FastExpressionCompiler
                     closure = constantsAndNestedLambdas == null ? EmptyArrayClosure : new ArrayClosure(constantsAndNestedLambdas);
                 else
                 {
-                    var debugExpr = Lambda(delegateType, bodyExpr, paramExprs?.ToReadOnlyList() ?? Tools.Empty<PE>());
-                    closure = new DebugArrayClosure(constantsAndNestedLambdas, debugExpr);
+                    var debugLambdaExpr = Lambda(delegateType, bodyExpr, paramExprs?.ToReadOnlyList() ?? Tools.Empty<PE>());
+                    closure = new DebugArrayClosure(constantsAndNestedLambdas, debugLambdaExpr);
                 }
 
                 // note: @slow this is what System.Compiles does and which makes the compilation 10x slower, but the invocation become faster by a single branch instruction
@@ -1822,10 +1824,10 @@ namespace FastExpressionCompiler
 #if LIGHT_EXPRESSION
             var nestedLambdaParamExprs = (IParameterProvider)nestedLambdaExpr;
 
-            if (nestedLambdaBody is NoArgsNewClassIntrinsicExpression newNoArgs)
+            if (nestedLambdaBody is NoArgsNewClassIntrinsicExpression newExpr)
             {
                 var paramTypes = RentPooledOrNewClosureTypeToParamTypes(nestedLambdaParamExprs);
-                nestedLambdaInfo.Lambda = CompileNoArgsNew(newNoArgs.Constructor, nestedLambdaExpr.Type, paramTypes, nestedReturnType);
+                nestedLambdaInfo.Lambda = CompileNoArgsNew(newExpr, nestedLambdaExpr.Type, paramTypes, nestedReturnType, flags);
                 FreePooledClosureTypeAndParamTypes(paramTypes);
                 return true;
             }
