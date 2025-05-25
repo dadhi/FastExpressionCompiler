@@ -210,8 +210,9 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.IsNotNull(f);
             f.PrintIL();
 
-            if (f.TryGetDebugClosureNestedLambdaOrConstant(out var item) && item is Delegate d)
-                d.PrintIL("sumFunc");
+            var di = f.TryGetDebugInfo();
+            foreach (var ni in di.EnumerateNestedLambdas())
+                ni.PrintIL("sumFunc");
 
             var y = f(10);
             Asserts.AreEqual(1009, y);

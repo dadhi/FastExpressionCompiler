@@ -31,7 +31,7 @@ public static class ILReaderFactory
         _rtDynamicMethodType.GetField("m_owner", BindingFlags.Instance | BindingFlags.NonPublic);
 #endif
 
-    public static ILReader Create(object source)
+    public static ILReader CreateILReader(object source)
     {
         var sourceType = source.GetType();
         var dynamicMethod = source as DynamicMethod;
@@ -62,16 +62,13 @@ public static class ILReaderFactory
         return null;
     }
 
-    public static StringBuilder ToILString(this MethodInfo method, StringBuilder s = null)
+    public static StringBuilder ToILString(this MethodInfo method, StringBuilder s = null) => ToILString(CreateILReader(method), s);
+
+    public static StringBuilder ToILString(this IEnumerable<ILInstruction> ilInstructions, StringBuilder s = null)
     {
-        if (method is null) throw new ArgumentNullException(nameof(method));
-
         s ??= new StringBuilder();
-
-        var ilReader = Create(method);
-
         var line = 0;
-        foreach (var il in ilReader)
+        foreach (var il in ilInstructions)
         {
             try
             {

@@ -49,7 +49,7 @@ public static class TestTools
     {
         if (DisableAssertOpCodes) return;
 
-        var ilReader = ILReaderFactory.Create(method);
+        var ilReader = ILReaderFactory.CreateILReader(method);
         if (ilReader is null)
         {
             Debug.WriteLine($"Reading IL is currently not supported");
@@ -139,6 +139,16 @@ public static class TestTools
         var s = new StringBuilder();
         s.Append(tag == null ? "<il>" : "<" + tag + ">").AppendLine();
         method.ToILString(s);
+        s.AppendLine().Append(tag == null ? "</il>" : "</" + tag + ">");
+        Console.WriteLine(s);
+    }
+
+    public static void PrintIL(this IDelegateDebugInfo delegateDebugInfo, string tag = null)
+    {
+        if (!AllowPrintIL) return;
+        var s = new StringBuilder();
+        s.Append(tag == null ? "<il>" : "<" + tag + ">").AppendLine();
+        s.Append(delegateDebugInfo.ILString);
         s.AppendLine().Append(tag == null ? "</il>" : "</" + tag + ">");
         Console.WriteLine(s);
     }

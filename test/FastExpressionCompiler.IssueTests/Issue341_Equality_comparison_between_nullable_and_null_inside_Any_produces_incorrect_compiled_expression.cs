@@ -307,13 +307,16 @@ public class Issue341_Equality_comparison_between_nullable_and_null_inside_Any_p
         var compiledSys = expression.CompileSys();
         compiledSys.PrintIL("sys");
 
-        var compiledFast = expression.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
-        Asserts.IsNotNull(compiledFast);
+        var f = expression.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
+        Asserts.IsNotNull(f);
 
-        compiledFast.PrintIL("fast");
+        f.PrintIL("fast");
 
-        if (compiledFast.TryGetDebugClosureNestedLambdaOrConstant(out var item) && item is Delegate d)
-            d.PrintIL("predicate");
+        var dis = f.TryGetDebugInfo();
+        foreach (var di in dis.EnumerateNestedLambdas())
+        {
+            di.PrintIL("predicate");
+        }
 
         var instance = new Test()
         {
@@ -326,7 +329,7 @@ public class Issue341_Equality_comparison_between_nullable_and_null_inside_Any_p
         var result = compiledSys(instance);
         Asserts.IsTrue(result);
 
-        result = compiledFast(instance);
+        result = f(instance);
         Asserts.IsTrue(result);
     }
 

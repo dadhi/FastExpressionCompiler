@@ -102,19 +102,21 @@ namespace FastExpressionCompiler
     {
         /// <summary>The lambda expression object that was compiled to the delegate</summary>
         LambdaExpression Expression { get; }
+
         /// <summary>The lambda expression construction syntax C# code</summary>
         string ExpressionString { get; }
+
         /// <summary>The equivalent C# code of the lambda expression</summary>
         string CSharpString { get; }
-        /// <summary>Delegate IL op-codes and tokens</summary>
+
+        /// <summary>Delegate IL op-codes</summary>
+        ILInstruction[] ILInstructions { get; }
+
+        /// <summary>Delegate IL op-codes</summary>
         string ILString { get; }
 
-        // todo: @feature add the debug info to the nested lambdas
-        // /// <summary>Total nested lambda counting</summary>
-        // ushort NestedLambdaCount { get; } // todo: @wip count nested lambdas and expressions
-
-        // /// <summary>Nested lambda compiled counting, should be less or equal to `NestedLambdaCount` so that the same lambda compiled only once.</summary>
-        // ushort NestedLambdaCompiledTimesCount { get; }
+        /// <summary>Enumerates all nested lambdas in the closure object, if any.</summary>
+        IEnumerable<IDelegateDebugInfo> EnumerateNestedLambdas();
     }
 
     /// <summary>Compiles expression to delegate ~20 times faster than Expression.Compile.
@@ -489,6 +491,8 @@ namespace FastExpressionCompiler
             var closure = !hasDebugInfo ? EmptyArrayClosure : new DebugArrayClosure(null, Lambda(newExpr, Tools.Empty<PE>()));
             var dlg = method.CreateDelegate(delegateType, closure);
             DynamicMethodHacks.FreePooledILGenerator(method, il);
+            if (hasDebugInfo)
+                ((DebugArrayClosure)closure).ILInstructions = ILReaderFactory.CreateILReader(dlg.Method).ToArray();
             return dlg;
         }
 
@@ -553,7 +557,7 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Ret);
                     compiledDelegate = dynMethod.CreateDelegate(delegateType, closure);
                     if (hasDebugInfo)
-                        ((DebugArrayClosure)closure).ILString = compiledDelegate.Method.ToILString().ToString();
+                        ((DebugArrayClosure)closure).ILInstructions = ILReaderFactory.CreateILReader(compiledDelegate.Method).ToArray();
                 }
 
                 DynamicMethodHacks.FreePooledILGenerator(dynMethod, il);
@@ -1003,71 +1007,69 @@ namespace FastExpressionCompiler
             public ArrayClosure(object[] constantsAndNestedLambdas) => ConstantsAndNestedLambdas = constantsAndNestedLambdas;
         }
 
+        // todo: @rename to DiagInfoClosure
         [RequiresUnreferencedCode(Trimming.Message)]
         public sealed class DebugArrayClosure : ArrayClosure, IDelegateDebugInfo
         {
             public LambdaExpression Expression { get; internal set; }
 
-            private readonly Lazy<string> _expressionString;
-            public string ExpressionString => _expressionString.Value;
+            private string _expressionString;
+            public string ExpressionString
+            {
+                get
+                {
+                    if (_expressionString != null)
+                        return _expressionString;
+                    var expr = Expression;
+                    return expr == null
+                        ? "<Expression is not set to the DebugArrayClosure>"
+                        : (_expressionString = expr.ToExpressionString());
+                }
+            }
+            private string _csharpString;
+            public string CSharpString
+            {
+                get
+                {
+                    if (_csharpString != null)
+                        return _csharpString;
+                    var expr = Expression;
+                    return expr == null
+                        ? "<Expression is not set to the DebugArrayClosure>"
+                        : (_csharpString = expr.ToCSharpString());
+                }
+            }
 
-            private readonly Lazy<string> _csharpString;
-            public string CSharpString => _csharpString.Value;
+            public ILInstruction[] ILInstructions { get; internal set; }
 
-            public string ILString { get; internal set; }
+            private string _ilString;
+            public string ILString
+            {
+                get
+                {
+                    if (_ilString != null)
+                        return _ilString;
+                    var ilInstructions = ILInstructions;
+                    return ilInstructions == null
+                        ? "<ILInstructions are not set to the DebugArrayClosure>"
+                        : (_ilString = ILInstructions.ToILString().ToString());
+                }
+            }
 
             public DebugArrayClosure(object[] constantsAndNestedLambdas, LambdaExpression expr)
-                : base(constantsAndNestedLambdas)
-            {
+                : base(constantsAndNestedLambdas) =>
                 Expression = expr;
-                _expressionString = new Lazy<string>(() => Expression?.ToExpressionString() ?? "<expression is not available>");
-                _csharpString = new Lazy<string>(() => Expression?.ToCSharpString() ?? "<expression is not available>");
-            }
-        }
 
-        public static bool TryGetDebugClosureNestedLambdaOrConstant(this Delegate parentLambda, out object item, int itemIndex = 0)
-        {
-            var target = parentLambda.Target;
-            if (target is ExpressionCompiler.DebugArrayClosure t)
+            // <inheritdoc />
+            public IEnumerable<IDelegateDebugInfo> EnumerateNestedLambdas()
             {
-                var closureItems = t.ConstantsAndNestedLambdas;
-                if (itemIndex < closureItems.Length)
-                {
-                    item = closureItems[itemIndex];
-                    return true;
-                }
-            }
-            item = null;
-            return false;
-        }
-
-        public static bool TryGetDebugClosureNestedLambda(this Delegate parentLambda, int itemIndex, out Delegate d)
-        {
-            var target = parentLambda.Target;
-            if (target is ExpressionCompiler.DebugArrayClosure t)
-            {
-                var closureItems = t.ConstantsAndNestedLambdas;
-                if (itemIndex < closureItems.Length)
-                {
-                    var nestedLambda = closureItems[itemIndex];
-                    d = (Delegate)(nestedLambda is NestedLambdaForNonPassedParams n ? n.NestedLambda : nestedLambda);
-                    return true;
-                }
-            }
-            d = null;
-            return false;
-        }
-
-        public static IEnumerable<object> EnumerateDebugConstantsAndNestedLambdas(this Delegate parentLambda)
-        {
-            var target = parentLambda.Target;
-            if (target is ExpressionCompiler.DebugArrayClosure t)
-            {
-                foreach (var item in t.ConstantsAndNestedLambdas)
-                    if (item is NestedLambdaForNonPassedParams nestedLambda)
-                        yield return nestedLambda.NestedLambda;
-                    else
-                        yield return item;
+                if (ConstantsAndNestedLambdas != null)
+                    foreach (var item in ConstantsAndNestedLambdas)
+                    {
+                        var dlg = (item is NestedLambdaForNonPassedParams nestedLambda ? nestedLambda.NestedLambda : item) as Delegate;
+                        if (dlg != null && dlg.Target is IDelegateDebugInfo delegateDebugInfo)
+                            yield return delegateDebugInfo;
+                    }
             }
         }
 
@@ -1844,9 +1846,9 @@ namespace FastExpressionCompiler
 
             ArrayClosure nestedLambdaClosure = null;
             var hasNonPassedParameters = nestedLambdaInfo.NonPassedParameters.Count != 0;
+            var hasDebugInfo = (flags & CompilerFlags.EnableDelegateDebugInfo) != 0;
             if (!hasNonPassedParameters)
             {
-                var hasDebugInfo = (flags & CompilerFlags.EnableDelegateDebugInfo) != 0;
                 if (!hasDebugInfo)
                     nestedLambdaClosure = constantsAndNestedLambdas == null ? EmptyArrayClosure : new ArrayClosure(constantsAndNestedLambdas);
                 else
@@ -1876,9 +1878,14 @@ namespace FastExpressionCompiler
                     ? method.CreateDelegate(nestedLambdaExpr.Type, nestedLambdaClosure)
                     : method.CreateDelegate(Tools.GetFuncOrActionType(closurePlusParamTypes, nestedReturnType), null);
 
-                nestedLambdaInfo.Lambda = !hasNonPassedParameters ? nestedLambda
-                    : constantsAndNestedLambdas == null ? new NestedLambdaForNonPassedParams(nestedLambda)
-                    : new NestedLambdaForNonPassedParamsWithConstants(nestedLambda, constantsAndNestedLambdas);
+                nestedLambdaInfo.Lambda = !hasNonPassedParameters
+                    ? nestedLambda
+                    : constantsAndNestedLambdas == null
+                        ? new NestedLambdaForNonPassedParams(nestedLambda)
+                        : new NestedLambdaForNonPassedParamsWithConstants(nestedLambda, constantsAndNestedLambdas);
+
+                if (nestedLambdaClosure is DebugArrayClosure debugInfoClosure)
+                    debugInfoClosure.ILInstructions = ILReaderFactory.CreateILReader(nestedLambda).ToArray();
             }
             DynamicMethodHacks.FreePooledILGenerator(method, il);
             FreePooledClosureTypeAndParamTypes(closurePlusParamTypes);

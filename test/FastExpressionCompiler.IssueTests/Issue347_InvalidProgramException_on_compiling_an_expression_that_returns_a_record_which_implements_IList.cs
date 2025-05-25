@@ -17,7 +17,6 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-
     public class Issue347_InvalidProgramException_on_compiling_an_expression_that_returns_a_record_which_implements_IList : ITest
     {
         public int Run()
@@ -29,7 +28,6 @@ namespace FastExpressionCompiler.IssueTests
             Test_original();
             return 5;
         }
-
 
         public void Test_passing_struct_item_in_object_array_parameter()
         {
@@ -62,7 +60,6 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(42, y);
         }
 
-
         public void Test_struct_parameter_in_closure_of_the_nested_lambda()
         {
             var incMethod = GetType().GetMethod(nameof(Inc), BindingFlags.Public | BindingFlags.Static);
@@ -88,7 +85,11 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.IsNotNull(f);
             f.PrintIL();
 
-            // todo: @wip #475 better diagnostics in the presence of the pooling
+            var di = f.TryGetDebugInfo();
+            foreach (var ni in di.EnumerateNestedLambdas())
+                ni.PrintIL("nested");
+
+            //todo: @wip #475
             // if (f.TryGetDebugClosureNestedLambda(0, out var d))
             // {
             //     d.PrintIL("nested");
@@ -108,7 +109,6 @@ namespace FastExpressionCompiler.IssueTests
             var y = f(m);
             Asserts.AreEqual(43, y);
         }
-
 
         public void Test_nullable_param_in_closure_of_the_nested_lambda()
         {
@@ -138,7 +138,6 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         public static int Inc(Func<int> f) => f() + 1;
-
 
         public void Test_nullable_of_struct_and_struct_field_in_the_nested_lambda()
         {
@@ -180,7 +179,6 @@ namespace FastExpressionCompiler.IssueTests
             var y = f(container);
             Asserts.AreEqual(43, y);
         }
-
 
         public void Test_original()
         {
@@ -247,8 +245,11 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.IsNotNull(f);
             f.PrintIL();
 
-            if (f.TryGetDebugClosureNestedLambdaOrConstant(out var item) && item is Delegate d)
-                d.PrintIL("nested");
+            var dis = f.TryGetDebugInfo();
+            foreach (var di in dis.EnumerateNestedLambdas())
+            {
+                di.PrintIL("nested");
+            }
 
             var y = f(container);
             Asserts.AreEqual(1, y.Count);
