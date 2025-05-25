@@ -175,12 +175,15 @@ public static class SmallList
     public static int GetIndexOrAdd<TItem, TEq>(this ref SmallList<TItem> source, in TItem item, TEq eq = default)
         where TEq : struct, IEq<TItem>
     {
-        var i = TryGetIndex(source.Items, in item, 0, source.Count, eq);
-        if (i != -1)
-            return i;
-        i = source.Count;
+        var count = source.Count;
+        if (count != 0)
+        {
+            var index = TryGetIndex(source.Items, in item, 0, count, eq);
+            if (index != -1)
+                return index;
+        }
         source.Add() = item;
-        return i;
+        return count;
     }
 
     /// <summary>Returns surely present item ref by its index</summary>
