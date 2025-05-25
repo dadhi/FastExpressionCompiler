@@ -487,12 +487,16 @@ namespace FastExpressionCompiler
                 il.Demit(OpCodes.Pop);
             il.Demit(OpCodes.Ret);
 
-            var hasDebugInfo = (flags & CompilerFlags.EnableDelegateDebugInfo) != 0;
-            var closure = !hasDebugInfo ? EmptyArrayClosure : new DebugArrayClosure(null, Lambda(newExpr, Tools.Empty<PE>()));
+            var closure = (flags & CompilerFlags.EnableDelegateDebugInfo) == 0
+                ? EmptyArrayClosure
+                : new DebugArrayClosure(null, Lambda(newExpr, Tools.Empty<PE>()));
+
             var dlg = method.CreateDelegate(delegateType, closure);
             DynamicMethodHacks.FreePooledILGenerator(method, il);
-            if (hasDebugInfo)
-                ((DebugArrayClosure)closure).ILInstructions = ILReaderFactory.CreateILReader(dlg.Method).ToArray();
+
+            if (closure is DebugArrayClosure diagClosure)
+                diagClosure.ILInstructions = ILReaderFactory.CreateILReader(dlg.Method).ToArray();
+
             return dlg;
         }
 
@@ -529,8 +533,7 @@ namespace FastExpressionCompiler
                     : null;
 
                 ArrayClosure closure;
-                var hasDebugInfo = (flags & CompilerFlags.EnableDelegateDebugInfo) != 0;
-                if (!hasDebugInfo)
+                if ((flags & CompilerFlags.EnableDelegateDebugInfo) == 0)
                     closure = constantsAndNestedLambdas == null ? EmptyArrayClosure : new ArrayClosure(constantsAndNestedLambdas);
                 else
                 {
@@ -556,8 +559,8 @@ namespace FastExpressionCompiler
                 {
                     il.Demit(OpCodes.Ret);
                     compiledDelegate = dynMethod.CreateDelegate(delegateType, closure);
-                    if (hasDebugInfo)
-                        ((DebugArrayClosure)closure).ILInstructions = ILReaderFactory.CreateILReader(compiledDelegate.Method).ToArray();
+                    if (closure is DebugArrayClosure diagClosure)
+                        diagClosure.ILInstructions = ILReaderFactory.CreateILReader(compiledDelegate.Method).ToArray();
                 }
 
                 DynamicMethodHacks.FreePooledILGenerator(dynMethod, il);
