@@ -313,7 +313,7 @@ public sealed class ILReader : IEnumerable<ILInstruction>
     }
 }
 
-
+// todo: @perf add the Tag enum to switch on faster then switching on type. 
 public abstract class ILInstruction
 {
     public readonly int Offset;
@@ -581,8 +581,7 @@ public class MethodBaseILProvider : IILProvider
             throw new ArgumentNullException(nameof(method));
 
         var methodType = method.GetType();
-
-        if (methodType != _runtimeMethodInfoType && methodType != _runtimeConstructorInfoType)
+        if (methodType != _runtimeMethodInfoType & methodType != _runtimeConstructorInfoType)
             throw new ArgumentException("Must have type RuntimeMethodInfo or RuntimeConstructorInfo.", nameof(method));
 
         _method = method;
@@ -1041,27 +1040,32 @@ internal class DynamicScopeTokenResolver : ITokenResolver
     private static readonly FieldInfo _genfieldFi1;
     private static readonly FieldInfo _genfieldFi2;
 
+    [UnconditionalSuppressMessage("Trimming", "IL2075", Justification = "Reflection on internal types, not trim-compatible.")]
     static DynamicScopeTokenResolver()
     {
-        const BindingFlags memberFlags = BindingFlags.NonPublic | BindingFlags.Instance;
+        const BindingFlags instanceNonPublic = BindingFlags.NonPublic | BindingFlags.Instance;
 
-        var dynamicScopeType = Type.GetType("System.Reflection.Emit.DynamicScope") ?? throw new InvalidOperationException("DynamicScope type is not found");
-        _ilGeneratorScopeIndexer = dynamicScopeType.GetProperty("Item", memberFlags) ?? throw new InvalidOperationException("DynamicScope.Item property is not found");
+        var ilGeneratorField = typeof(DynamicMethod).GetField("_ilGenerator", instanceNonPublic);
 
-        var dynamicIlGeneratorType = Type.GetType("System.Reflection.Emit.DynamicILGenerator") ?? throw new InvalidOperationException("DynamicILGenerator type is not found");
-        _ilGeneratorScope = dynamicIlGeneratorType.GetField("m_scope", memberFlags) ?? throw new InvalidOperationException("DynamicILGenerator._scope field is not found");
+        var dynamicIlGeneratorType = ilGeneratorField.FieldType;
+        _ilGeneratorScope = dynamicIlGeneratorType.GetField("m_scope", instanceNonPublic)
+            ?? throw new InvalidOperationException("DynamicILGenerator._scope field is not found");
+
+        var dynamicScopeType = _ilGeneratorScope.FieldType;
+        _ilGeneratorScopeIndexer = dynamicScopeType.GetProperty("Item", instanceNonPublic)
+            ?? throw new InvalidOperationException("DynamicScope.Item property is not found");
 
         _varArgMethodType = Type.GetType("System.Reflection.Emit.VarArgMethod");
-        _varargFi1 = _varArgMethodType.GetField("m_method", memberFlags);
+        _varargFi1 = _varArgMethodType.GetField("m_method", instanceNonPublic);
 
         _genMethodInfoType = Type.GetType("System.Reflection.Emit.GenericMethodInfo");
-        _genmethFi1 = _genMethodInfoType.GetField("m_methodHandle", memberFlags);
-        _genmethFi2 = _genMethodInfoType.GetField("m_context", memberFlags);
+        _genmethFi1 = _genMethodInfoType.GetField("m_methodHandle", instanceNonPublic);
+        _genmethFi2 = _genMethodInfoType.GetField("m_context", instanceNonPublic);
 
         _genFieldInfoType = Type.GetType("System.Reflection.Emit.GenericFieldInfo", throwOnError: false);
 
-        _genfieldFi1 = _genFieldInfoType?.GetField("m_fieldHandle", memberFlags);
-        _genfieldFi2 = _genFieldInfoType?.GetField("m_context", memberFlags);
+        _genfieldFi1 = _genFieldInfoType?.GetField("m_fieldHandle", instanceNonPublic);
+        _genfieldFi2 = _genFieldInfoType?.GetField("m_context", instanceNonPublic);
     }
 
     private readonly object _scope;
