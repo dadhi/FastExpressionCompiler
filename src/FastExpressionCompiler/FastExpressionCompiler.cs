@@ -1850,12 +1850,9 @@ namespace FastExpressionCompiler
             ArrayClosure nestedLambdaClosure = null;
             var hasNonPassedParameters = nestedLambdaInfo.NonPassedParameters.Count != 0;
             if (!hasNonPassedParameters)
-            {
-                if ((flags & CompilerFlags.EnableDelegateDebugInfo) == 0)
-                    nestedLambdaClosure = constantsAndNestedLambdas == null ? EmptyArrayClosure : new ArrayClosure(constantsAndNestedLambdas);
-                else
-                    nestedLambdaClosure = new DebugArrayClosure(constantsAndNestedLambdas, nestedLambdaExpr);
-            }
+                nestedLambdaClosure = ((flags & CompilerFlags.EnableDelegateDebugInfo) == 0)
+                    ? constantsAndNestedLambdas == null ? EmptyArrayClosure : new ArrayClosure(constantsAndNestedLambdas)
+                    : new DebugArrayClosure(constantsAndNestedLambdas, nestedLambdaExpr);
 
             var closurePlusParamTypes = RentPooledOrNewClosureTypeToParamTypes(nestedLambdaParamExprs);
 
