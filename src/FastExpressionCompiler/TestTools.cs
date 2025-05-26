@@ -49,7 +49,7 @@ public static class TestTools
     {
         if (DisableAssertOpCodes) return;
 
-        var ilReader = ILReaderFactory.CreateILReader(method);
+        var ilReader = ILReaderFactory.GetILReaderOrNull(method);
         if (ilReader is null)
         {
             Debug.WriteLine($"Reading IL is currently not supported");

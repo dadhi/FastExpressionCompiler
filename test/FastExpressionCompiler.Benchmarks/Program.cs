@@ -15,7 +15,7 @@ public class Program
         // BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Compilation>();
         // BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Invocation>();
 
-        BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Compilation>();
+        // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Compilation>();
         // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Invocation>();
         // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Create>(); // not included in README.md, may be it needs to
         // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Create_and_Compile>(); // not included in README.md, may be it needs to
@@ -37,7 +37,7 @@ public class Program
 
         // BenchmarkRunner.Run<EmitHacks.MethodStaticNoArgsEmit>();
 
-        // BenchmarkRunner.Run<ExprLinqAnyOfNotNullDecimal.Compile>();
+        BenchmarkRunner.Run<ExprLinqAnyOfNotNullDecimal.Compile>();
         // BenchmarkRunner.Run<ExprLinqAnyOfNotNullDecimal.Invoke>();
 
         // BenchmarkRunner.Run<RepoDb_ListInit.Compile>();

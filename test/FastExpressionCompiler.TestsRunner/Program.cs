@@ -14,9 +14,10 @@ namespace FastExpressionCompiler.UnitTests
             // ILGeneratorTools.DisableILGeneratorPooling = true;
             // LightExpression.ILGeneratorTools.DisableILGeneratorPooling = true;
 
-            // new Issue461_InvalidProgramException_when_null_checking_type_by_ref().Run();
+            new LightExpression.IssueTests.Issue341_Equality_comparison_between_nullable_and_null_inside_Any_produces_incorrect_compiled_expression().Run();
             new LightExpression.IssueTests.Issue347_InvalidProgramException_on_compiling_an_expression_that_returns_a_record_which_implements_IList().Run();
             new LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest().Run();
+            // new Issue461_InvalidProgramException_when_null_checking_type_by_ref().Run();
             // new Issue55_CompileFast_crash_with_ref_parameter().Run();
 
             var t = new LightExpression.TestRun(LightExpression.TestFlags.RethrowException);

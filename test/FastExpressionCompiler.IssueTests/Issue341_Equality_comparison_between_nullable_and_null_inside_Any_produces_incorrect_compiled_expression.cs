@@ -15,6 +15,8 @@ public class Issue341_Equality_comparison_between_nullable_and_null_inside_Any_p
 {
     public int Run()
     {
+        Nullable_decimal_member_not_equal_to_null_inside_predicate();
+
         foreach (var (a, op, b, expected) in Data)
             Nullable_decimal_parameters_comparison_cases(a, op, b, expected);
 
@@ -29,7 +31,6 @@ public class Issue341_Equality_comparison_between_nullable_and_null_inside_Any_p
         Null_not_equal_to_nullable_decimal();
         Nullable_decimal_equal_to_null();
         Nullable_decimal_member_not_equal_to_null();
-        Nullable_decimal_member_not_equal_to_null_inside_predicate();
 
         return Data.Length * 2 + 9;
     }

@@ -71,12 +71,29 @@ namespace FastExpressionCompiler.Benchmarks
         static Expression<Func<Test, bool>> _expression = t => t.A.Any(e => e.Value != null);
 
 /*
+
+## Baseline
+
 |        Method |       Mean |     Error |    StdDev | Ratio | RatioSD |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
 |-------------- |-----------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
-| CompileSystem | 111.985 us | 2.0430 us | 1.8111 us | 15.30 |    0.46 | 1.4648 | 1.2207 |  10.04 KB |        3.15 |
 |   CompileFast |   7.286 us | 0.1417 us | 0.1891 us |  1.00 |    0.00 | 0.5188 | 0.4883 |   3.19 KB |        1.00 |
+| CompileSystem | 111.985 us | 2.0430 us | 1.8111 us | 15.30 |    0.46 | 1.4648 | 1.2207 |  10.04 KB |        3.15 |
+
+
+## v5.3.0 
+
+BenchmarkDotNet v0.14.0, Windows 11 (10.0.26100.4061)
+Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
+.NET SDK 9.0.203
+  [Host]     : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+  DefaultJob : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+
+| Method        | Mean       | Error     | StdDev    | Ratio | RatioSD | Rank | Gen0   | Gen1   | Allocated | Alloc Ratio |
+|-------------- |-----------:|----------:|----------:|------:|--------:|-----:|-------:|-------:|----------:|------------:|
+| CompileFast   |   7.070 us | 0.1356 us | 0.1268 us |  1.00 |    0.02 |    1 | 0.3815 | 0.3662 |   2.38 KB |        1.00 |
+| CompileSystem | 137.265 us | 1.6377 us | 1.4518 us | 19.42 |    0.39 |    2 | 1.4648 | 1.2207 |   9.82 KB |        4.12 |
 */
-        [MemoryDiagnoser]
+        [MemoryDiagnoser, RankColumn, Orderer(BenchmarkDotNet.Order.SummaryOrderPolicy.FastestToSlowest)]
         public class Compile
         {
             [Benchmark]
