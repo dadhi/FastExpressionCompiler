@@ -62,7 +62,13 @@ public static class ILReaderFactory
         return null;
     }
 
-    public static StringBuilder ToILString(this MethodInfo method, StringBuilder s = null) => ToILString(GetILReaderOrNull(method), s);
+    public static StringBuilder ToILString(this MethodInfo method, StringBuilder s = null)
+    {
+        var il = GetILReaderOrNull(method);
+        return il != null
+            ? il.ToILString(s)
+            : (s ?? new StringBuilder()).AppendLine($"ILReader for {method} is not supported");
+    }
 
     public static StringBuilder ToILString(this IEnumerable<ILInstruction> ilInstructions, StringBuilder s = null)
     {

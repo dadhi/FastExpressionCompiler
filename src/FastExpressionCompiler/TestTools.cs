@@ -134,28 +134,27 @@ public static class TestTools
         Console.WriteLine(result = expr.ToCSharpString());
     }
 
-    public static void PrintIL(this Delegate @delegate, [CallerMemberName] string tag = null)
+    public static void PrintIL(this Delegate dlg, [CallerMemberName] string tag = null)
     {
         if (!AllowPrintIL) return;
-        @delegate.Method.PrintIL(tag);
+        if (dlg.TryGetDebugInfo() is { } diagInfo)
+            diagInfo.PrintIL(tag);
+        else
+            dlg.Method.PrintIL(tag);
     }
 
-    public static void PrintIL(this MethodInfo method, string tag = null)
+    public static void PrintIL(this MethodInfo method, [CallerMemberName] string tag = null) =>
+        PrintIL(tag, method, static (m, s) => m.ToILString(s));
+
+    public static void PrintIL(this IDelegateDebugInfo diagInfo, [CallerMemberName] string tag = null) =>
+        PrintIL(tag, diagInfo, static (di, s) => s.Append(di.ILString));
+
+    private static void PrintIL<A>(string tag, A state, Action<A, StringBuilder> printIL)
     {
         if (!AllowPrintIL) return;
         var s = new StringBuilder();
         s.Append(tag == null ? "<il>" : "<" + tag + ">").AppendLine();
-        method.ToILString(s);
-        s.AppendLine().Append(tag == null ? "</il>" : "</" + tag + ">");
-        Console.WriteLine(s);
-    }
-
-    public static void PrintIL(this IDelegateDebugInfo delegateDebugInfo, string tag = null)
-    {
-        if (!AllowPrintIL) return;
-        var s = new StringBuilder();
-        s.Append(tag == null ? "<il>" : "<" + tag + ">").AppendLine();
-        s.Append(delegateDebugInfo.ILString);
+        printIL(state, s);
         s.AppendLine().Append(tag == null ? "</il>" : "</" + tag + ">");
         Console.WriteLine(s);
     }
@@ -475,8 +474,7 @@ public static class Asserts
     [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
         Justification = "The method is used for the testing purposes only.")]
     public static E Throws<E>(Action action,
-        [CallerArgumentExpression(nameof(action))]
-        string actionName = "<action to throw>")
+        [CallerArgumentExpression(nameof(action))] string actionName = "<action to throw>")
         where E : Exception
     {
         try

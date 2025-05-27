@@ -60,16 +60,16 @@ namespace FastExpressionCompiler.IssueTests
             var position = new TextPosition { Position = 42 };
             var program = Throw(New(typeof(ParseException).GetConstructors()[0], Constant("314"), Constant(position)));
 
-            var expr = Expression.Lambda<Action>(program);
+            var expr = Lambda<Action>(program);
             expr.PrintCSharp(s => s.Replace(GetType().Name + ".", ""));
 
-            var fSys = expr.CompileSys();
-            fSys.PrintIL("sys");
-            Asserts.Throws<ParseException>(() => fSys());
+            var fs = expr.CompileSys();
+            fs.PrintIL("sys");
+            Asserts.Throws<ParseException>(() => fs());
 
-            var fFast = expr.CompileFast();
-            fFast.PrintIL("fast");
-            Asserts.Throws<ParseException>(() => fFast());
+            var ff = expr.CompileFast();
+            ff.PrintIL("fast");
+            Asserts.Throws<ParseException>(() => ff());
         }
 
 #if LIGHT_EXPRESSION
