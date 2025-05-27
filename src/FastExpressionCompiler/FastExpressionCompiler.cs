@@ -3585,11 +3585,9 @@ namespace FastExpressionCompiler
                     var constValue = expr.Value;
                     if (constValue != null)
                         ok = TryEmitConstant(closure.ContainsConstantsOrNestedLambdas(), exprType, constValue.GetType(), constValue, il, ref closure, byRefIndex);
-                    else if (exprType.IsValueType) // null for a value type
-                    {
-                        EmitLoadLocalVariable(il, InitValueTypeVariable(il, exprType)); // yep, this is a proper way to emit the Nullable null
-                        ok = true;
-                    }
+                    else if (exprType.IsValueType)
+                         // null for a value type and yep, this is a proper way to emit the Nullable null
+                        ok = EmitLoadLocalVariable(il, InitValueTypeVariable(il, exprType));
                     else
                     {
                         il.Demit(OpCodes.Ldnull);
@@ -3597,15 +3595,21 @@ namespace FastExpressionCompiler
                     }
                 }
 
-                if (ok && byRefIndex != -1)
-                    EmitStoreAndLoadLocalVariableAddress(il, exprType); // todo: @wip are we doing it twice inside the TryEmitConstant and here?
+                if (ok & byRefIndex != -1)
+                    EmitStoreAndLoadLocalVariableAddress(il, exprType);
                 return ok;
             }
 
             [MethodImpl((MethodImplOptions)256)]
-            public static bool TryEmitNotNullConstant(bool considerClosure, object consValue, ILGenerator il, ref ClosureInfo closure,
-                int byRefIndex = -1) =>
-                TryEmitConstant(considerClosure, null, consValue.GetType(), consValue, il, ref closure, byRefIndex);
+            public static bool TryEmitNotNullConstant(bool considerClosure, object constValue, ILGenerator il, ref ClosureInfo closure, int byRefIndex = -1)
+            {
+                Debug.Assert(constValue != null, "Expecting that the constant value is not null here");
+                var constType = constValue.GetType();
+                var ok = TryEmitConstant(considerClosure, null, constType, constValue, il, ref closure, byRefIndex);
+                if (ok & byRefIndex != -1)
+                    EmitStoreAndLoadLocalVariableAddress(il, constType);
+                return ok;
+            }
 
             public static bool TryEmitConstant(bool considerClosure, Type exprType, Type constType, object constValue, ILGenerator il, ref ClosureInfo closure,
                 int byRefIndex = -1, FieldInfo refField = null)
@@ -3641,19 +3645,13 @@ namespace FastExpressionCompiler
                         }
 #endif
                         if (constType.IsValueType)
-                        {
                             il.Demit(OpCodes.Unbox_Any, constType);
-                            if (byRefIndex != -1)
-                                EmitStoreAndLoadLocalVariableAddress(il, constType);
-                        }
 #if NETFRAMEWORK
                         else
-                        {
-                            // The cast probably required only for Full CLR starting, 
+                            // The cast is probably required only for the Full CLR, 
                             // e.g. `Test_283_Case6_MappingSchemaTests_CultureInfo_VerificationException`.
                             // .NET Core does not seem to care about verifiability and it's faster without the explicit cast.
                             il.Demit(OpCodes.Castclass, constType);
-                        }
 #endif
                     }
                 }
