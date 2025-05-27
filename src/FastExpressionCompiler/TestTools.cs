@@ -42,20 +42,25 @@ public static class TestTools
 #endif
     }
 
-    public static void AssertOpCodes(this Delegate @delegate, params OpCode[] expectedCodes) =>
-        AssertOpCodes(@delegate.Method, expectedCodes);
+    public static void AssertOpCodes(this Delegate dlg, params OpCode[] expectedCodes)
+    {
+        if (dlg.TryGetDebugInfo() is var diagInfo)
+            AssertOpCodes(diagInfo.ILInstructions, expectedCodes);
+        else
+            AssertOpCodes(dlg.Method, expectedCodes);
+    }
 
-    public static void AssertOpCodes(this MethodInfo method, params OpCode[] expectedCodes)
+    public static void AssertOpCodes(this MethodInfo method, params OpCode[] expectedCodes) =>
+        AssertOpCodes(ILReaderFactory.GetILReaderOrNull(method)?.ToArray() ?? [], expectedCodes);
+
+    public static void AssertOpCodes(this IDelegateDebugInfo debugInfo, params OpCode[] expectedCodes) =>
+        AssertOpCodes(debugInfo.ILInstructions, expectedCodes);
+
+    public static void AssertOpCodes(this IEnumerable<ILInstruction> il, params OpCode[] expectedCodes)
     {
         if (DisableAssertOpCodes) return;
 
-        var ilReader = ILReaderFactory.GetILReaderOrNull(method);
-        if (ilReader is null)
-        {
-            Debug.WriteLine($"Reading IL is currently not supported");
-            return;
-        }
-        var actualCodes = ilReader.Select(x => x.OpCode).ToArray();
+        var actualCodes = il.Select(x => x.OpCode).ToArray();
 
         var sb = new StringBuilder();
         var index = 0;

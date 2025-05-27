@@ -92,7 +92,7 @@ namespace FastExpressionCompiler.IssueTests
             var a = "test";
             Asserts.AreEqual(a, systCompiled(ref a));
 
-            var fastCompiled = lambda.CompileFast(ifFastFailedReturnNull: true);
+            var fastCompiled = lambda.CompileFast(ifFastFailedReturnNull: true, CompilerFlags.EnableDelegateDebugInfo);
             Asserts.IsNotNull(fastCompiled);
 
             fastCompiled.AssertOpCodes(
@@ -131,7 +131,7 @@ namespace FastExpressionCompiler.IssueTests
             var a = "test";
             Asserts.AreEqual(a, systCompiled(ref cls, ref a));
 
-            var fastCompiled = lambda.CompileFast(ifFastFailedReturnNull: true);
+            var fastCompiled = lambda.CompileFast(ifFastFailedReturnNull: true, CompilerFlags.EnableDelegateDebugInfo);
             Asserts.IsNotNull(fastCompiled);
 
             fastCompiled.AssertOpCodes(
@@ -172,7 +172,7 @@ namespace FastExpressionCompiler.IssueTests
             var a = 1;
             Asserts.AreEqual("1", systCompiled(ref cls, ref a));
 
-            var fastCompiled = lambda.CompileFast(ifFastFailedReturnNull: true);
+            var fastCompiled = lambda.CompileFast(ifFastFailedReturnNull: true, CompilerFlags.EnableDelegateDebugInfo);
             Asserts.IsNotNull(fastCompiled);
             fastCompiled.PrintIL();
 
@@ -195,7 +195,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var lambda = Lambda<RefValueTypeDelegate>(call, parameter);
 
-            var fastCompiled = lambda.CompileFast(ifFastFailedReturnNull: true);
+            var fastCompiled = lambda.CompileFast(ifFastFailedReturnNull: true, CompilerFlags.EnableDelegateDebugInfo);
             Asserts.IsNotNull(fastCompiled);
 
             fastCompiled.Method.AssertOpCodes(

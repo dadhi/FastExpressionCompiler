@@ -30,7 +30,7 @@ public class Issue423_Converting_a_uint_to_a_float_gives_the_wrong_result : ITes
         var fs = expr.CompileSys();
         fs.PrintIL();
 
-        var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+        var ff = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo | CompilerFlags.ThrowOnNotSupportedExpression);
         ff.PrintIL();
 
         ff.AssertOpCodes(

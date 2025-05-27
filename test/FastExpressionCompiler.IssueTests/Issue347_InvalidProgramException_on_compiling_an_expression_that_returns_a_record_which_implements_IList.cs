@@ -87,24 +87,20 @@ namespace FastExpressionCompiler.IssueTests
 
             var di = f.TryGetDebugInfo();
             foreach (var ni in di.EnumerateNestedLambdas())
+            {
                 ni.PrintIL("nested");
-
-            //todo: @wip #475
-            // if (f.TryGetDebugClosureNestedLambda(0, out var d))
-            // {
-            //     d.PrintIL("nested");
-            //     d.AssertOpCodes(
-            //         OpCodes.Ldarg_0,
-            //         OpCodes.Ldfld,      // ArrayClosureWithNonPassedParams.NonPassedParams
-            //         OpCodes.Ldc_I4_0,
-            //         OpCodes.Ldelem_Ref,
-            //         OpCodes.Unbox_Any,  // NotifyModel
-            //         OpCodes.Stloc_0,
-            //         OpCodes.Ldloca_S,   // 0
-            //         OpCodes.Call,       // NotifyModel.get_Number1
-            //         OpCodes.Ret
-            //     );
-            // }
+                ni.AssertOpCodes(
+                    OpCodes.Ldarg_0,
+                    OpCodes.Ldfld,      // ArrayClosureWithNonPassedParams.NonPassedParams
+                    OpCodes.Ldc_I4_0,
+                    OpCodes.Ldelem_Ref,
+                    OpCodes.Unbox_Any,  // NotifyModel
+                    OpCodes.Stloc_0,
+                    OpCodes.Ldloca_S,   // 0
+                    OpCodes.Call,       // NotifyModel.get_Number1
+                    OpCodes.Ret
+                );
+            }
 
             var y = f(m);
             Asserts.AreEqual(43, y);
@@ -247,9 +243,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var dis = f.TryGetDebugInfo();
             foreach (var di in dis.EnumerateNestedLambdas())
-            {
                 di.PrintIL("nested");
-            }
 
             var y = f(container);
             Asserts.AreEqual(1, y.Count);

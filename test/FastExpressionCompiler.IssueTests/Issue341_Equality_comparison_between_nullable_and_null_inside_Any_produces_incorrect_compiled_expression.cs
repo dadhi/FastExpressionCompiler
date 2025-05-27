@@ -315,9 +315,7 @@ public class Issue341_Equality_comparison_between_nullable_and_null_inside_Any_p
 
         var dis = f.TryGetDebugInfo();
         foreach (var di in dis.EnumerateNestedLambdas())
-        {
             di.PrintIL("predicate");
-        }
 
         var instance = new Test()
         {

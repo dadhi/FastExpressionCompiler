@@ -74,7 +74,7 @@ namespace FastExpressionCompiler.IssueTests
             func.PrintIL();
             LocalAssert(func);
 
-            var funcFast = lambda.CompileFast(true);
+            var funcFast = lambda.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             funcFast.PrintIL();
             funcFast.AssertOpCodes(
                 OpCodes.Ldarg_3,
@@ -180,7 +180,7 @@ namespace FastExpressionCompiler.IssueTests
             s.PrintIL();
             // LocalAssert(s); // system thing does not work for the structs, but works for the class
 
-            var f = lambda.CompileFast(true);
+            var f = lambda.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             f.PrintIL();
             f.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -224,7 +224,7 @@ namespace FastExpressionCompiler.IssueTests
             s.PrintIL();
             LocalAssert(s); // works for class
 
-            var f = lambda.CompileFast(true);
+            var f = lambda.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             f.PrintIL();
             f.AssertOpCodes(
                 OpCodes.Ldarg_1,

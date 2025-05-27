@@ -118,7 +118,7 @@ namespace FastExpressionCompiler.IssueTests
             var expectedResult = expected(new ValueHolder<ulong?> { Value = ulong.MaxValue });
             Asserts.AreEqual(false, expectedResult);
 
-            var actual = lambdaExpr.CompileFast(true);
+            var actual = lambdaExpr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
 
             actual.Method.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -315,7 +315,7 @@ namespace FastExpressionCompiler.IssueTests
             var expr = Lambda<Func<ValueHolder<float>, bool>>(condition, floatParamExpr);
             var source = new ValueHolder<float> { Value = float.MaxValue };
 
-            var compiledFast = expr.CompileFast(true);
+            var compiledFast = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
 
             compiledFast.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -346,7 +346,7 @@ namespace FastExpressionCompiler.IssueTests
             var compiled = expr.CompileSys();
             compiled.PrintIL();
 
-            var compiledFast = expr.CompileFast(true);
+            var compiledFast = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             compiledFast.PrintIL();
 
             compiledFast.AssertOpCodes(
@@ -632,7 +632,7 @@ namespace FastExpressionCompiler.IssueTests
                 block,
                 nullableIntHolderParam);
 
-            var adapt = adaptExpr.CompileFast(true);
+            var adapt = adaptExpr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             adapt.Method.AssertOpCodes(
                 OpCodes.Newobj,
                 OpCodes.Stloc_0, // todo: can be replaced with dup #
@@ -663,7 +663,7 @@ namespace FastExpressionCompiler.IssueTests
             var adaptExpr = Lambda<Func<ValueHolder<int?>, ValueHolder<double>>>(
                 memberInit, nullableIntHolderParam);
 
-            var adapt = adaptExpr.CompileFast(true);
+            var adapt = adaptExpr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
 
             adapt.Method.AssertOpCodes(
                 OpCodes.Newobj,
@@ -702,7 +702,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var source = new ValueHolder<decimal?> { Value = 938378.637m };
 
-            var adapt = expr.CompileFast(true);
+            var adapt = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             adapt.Method.AssertOpCodes(
                 OpCodes.Newobj,
                 OpCodes.Stloc_0, // todo: can be simplified with dup #173
@@ -742,7 +742,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var source = new ValueHolder<decimal> { Value = 5332.00m };
 
-            var adapt = expr.CompileFast(true);
+            var adapt = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             adapt.Method.AssertOpCodes(
                 OpCodes.Newobj,
                 OpCodes.Stloc_0, // todo: can be simplified with dup #173

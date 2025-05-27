@@ -79,7 +79,7 @@ namespace FastExpressionCompiler.UnitTests
             var getString = @cs(() => "hey");
             Asserts.AreEqual("hey", getString());
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
             ff.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -103,7 +103,7 @@ namespace FastExpressionCompiler.UnitTests
             var getString = @cs(() => "hey");
             Asserts.AreEqual("hey", getString());
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
 #if NET6_0_OR_GREATER
             ff.AssertOpCodes(

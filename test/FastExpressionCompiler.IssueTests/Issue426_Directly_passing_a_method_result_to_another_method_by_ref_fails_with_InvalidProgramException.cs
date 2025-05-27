@@ -52,7 +52,7 @@ public class Issue426_Directly_passing_a_method_result_to_another_method_by_ref_
         var fs = expr.CompileSys();
         fs.PrintIL();
 
-        var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+        var ff = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo | CompilerFlags.ThrowOnNotSupportedExpression);
         ff.PrintIL();
 
         ff.AssertOpCodes(
@@ -80,7 +80,7 @@ public class Issue426_Directly_passing_a_method_result_to_another_method_by_ref_
         var fs = expr.CompileSys();
         fs.PrintIL();
 
-        var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+        var ff = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo | CompilerFlags.ThrowOnNotSupportedExpression);
         ff.PrintIL();
 
         ff.AssertOpCodes(
@@ -108,7 +108,7 @@ public class Issue426_Directly_passing_a_method_result_to_another_method_by_ref_
         var fs = expr.CompileSys();
         fs.PrintIL();
 
-        var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+        var ff = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo | CompilerFlags.ThrowOnNotSupportedExpression);
         ff.PrintIL();
 
         ff.AssertOpCodes(

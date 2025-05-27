@@ -51,7 +51,7 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
         var fs = expr.CompileSys();
         fs.PrintIL();
 
-        var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+        var ff = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo | CompilerFlags.ThrowOnNotSupportedExpression);
         ff.PrintIL();
 
         ff.AssertOpCodes(
@@ -86,7 +86,7 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
         var fs = expr.CompileSys();
         fs.PrintIL();
 
-        var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+        var ff = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo | CompilerFlags.ThrowOnNotSupportedExpression);
         ff.PrintIL();
 
         ff.AssertOpCodes(
@@ -127,7 +127,7 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
         var fs = expr.CompileSys();
         fs.PrintIL();
 
-        var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+        var ff = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo | CompilerFlags.ThrowOnNotSupportedExpression);
         ff.PrintIL();
 
         ff.AssertOpCodes(
@@ -167,7 +167,7 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
         var fs = expr.CompileSys();
         fs.PrintIL();
 
-        var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+        var ff = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo | CompilerFlags.ThrowOnNotSupportedExpression);
         ff.PrintIL();
 
         ff.AssertOpCodes(
@@ -204,7 +204,7 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
 
         expr.PrintCSharp();
 
-        var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+        var ff = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo | CompilerFlags.ThrowOnNotSupportedExpression);
         ff.PrintIL();
 
         ff.AssertOpCodes(
@@ -234,7 +234,7 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
         // var @cs = (MyDelegateByRef)((ref int int__32854180) => //Int32
         //     ref int__32854180);
 
-        var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+        var ff = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo | CompilerFlags.ThrowOnNotSupportedExpression);
         ff.PrintIL();
 
         ff.AssertOpCodes(
@@ -261,7 +261,7 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
         // var @cs = (MyDelegateByRef)((ref int int__32854180) => //Int32
         //     ref Issue414_Incorrect_il_when_passing_by_ref_value.ReturnRef(ref int__32854180));
 
-        var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+        var ff = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo | CompilerFlags.ThrowOnNotSupportedExpression);
         ff.PrintIL();
 
         ff.AssertOpCodes(
@@ -287,7 +287,7 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
         // var @cs = (MyDelegate)((ref int int__32854180) => //Int32
         //     ref Issue414_Incorrect_il_when_passing_by_ref_value.ReturnRef(ref int__32854180));
 
-        var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+        var ff = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo | CompilerFlags.ThrowOnNotSupportedExpression);
         ff.PrintIL();
 
         // ff.AssertOpCodes(

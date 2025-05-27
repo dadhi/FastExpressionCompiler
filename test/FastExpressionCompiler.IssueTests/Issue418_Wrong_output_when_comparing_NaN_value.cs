@@ -41,7 +41,7 @@ public class Issue418_Wrong_output_when_comparing_NaN_value : ITest
         var fs = expr.CompileSys();
         fs.PrintIL();
 
-        var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+        var ff = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo | CompilerFlags.ThrowOnNotSupportedExpression);
         ff.PrintIL();
 
         ff.AssertOpCodes(
@@ -68,7 +68,7 @@ public class Issue418_Wrong_output_when_comparing_NaN_value : ITest
         var fs = expr.CompileSys();
         fs.PrintIL();
 
-        var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+        var ff = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo | CompilerFlags.ThrowOnNotSupportedExpression);
         ff.PrintIL();
 
         ff.AssertOpCodes(
@@ -95,7 +95,7 @@ public class Issue418_Wrong_output_when_comparing_NaN_value : ITest
         var fs = expr.CompileSys();
         fs.PrintIL();
 
-        var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+        var ff = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo | CompilerFlags.ThrowOnNotSupportedExpression);
         ff.PrintIL();
 
         ff.AssertOpCodes(
@@ -127,7 +127,7 @@ public class Issue418_Wrong_output_when_comparing_NaN_value : ITest
         var fs = expr.CompileSys();
         fs.PrintIL();
 
-        var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+        var ff = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo | CompilerFlags.ThrowOnNotSupportedExpression);
         ff.PrintIL();
 
         ff.AssertOpCodes(
@@ -157,7 +157,7 @@ public class Issue418_Wrong_output_when_comparing_NaN_value : ITest
         var fs = expr.CompileSys();
         fs.PrintIL();
 
-        var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+        var ff = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo | CompilerFlags.ThrowOnNotSupportedExpression);
         ff.PrintIL();
 
         ff.AssertOpCodes(
@@ -189,7 +189,7 @@ public class Issue418_Wrong_output_when_comparing_NaN_value : ITest
         var fs = expr.CompileSys();
         fs.PrintIL();
 
-        var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+        var ff = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo | CompilerFlags.ThrowOnNotSupportedExpression);
         ff.PrintIL();
 
         ff.AssertOpCodes(
@@ -221,7 +221,7 @@ public class Issue418_Wrong_output_when_comparing_NaN_value : ITest
         var fs = expr.CompileSys();
         fs.PrintIL();
 
-        var ff = expr.CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression);
+        var ff = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo | CompilerFlags.ThrowOnNotSupportedExpression);
         ff.PrintIL();
 
         ff.AssertOpCodes(

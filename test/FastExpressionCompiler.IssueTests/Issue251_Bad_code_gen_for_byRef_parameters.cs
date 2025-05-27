@@ -29,7 +29,7 @@ namespace FastExpressionCompiler.IssueTests
 
             expr.PrintCSharp();
 
-            var f = expr.CompileFast(true);
+            var f = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             Asserts.IsNotNull(f);
             f.PrintIL();
 

@@ -50,7 +50,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             s(ref x);
             Asserts.AreEqual(2, x);
 
-            var f = e.CompileFast(true);
+            var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             f.PrintIL();
             f.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -88,7 +88,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             s(ref x);
             Asserts.AreEqual(2, x);
 
-            var f = e.CompileFast(true);
+            var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             f.PrintIL();
             f.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -146,7 +146,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             Asserts.AreEqual(2.0f, x);
             Asserts.AreEqual(1.0f, y);
 
-            var f = e.CompileFast(true);
+            var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             f.PrintIL();
             // todo: @wip the IL codes is the same for the System Compile but the expected values are different
             // f.AssertOpCodes(
@@ -190,7 +190,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             Asserts.AreEqual(2, x);
             Asserts.AreEqual(1, y);
 
-            var f = e.CompileFast(true);
+            var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             f.PrintIL();
             f.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -238,7 +238,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             @cs(array);
             Asserts.AreEqual(43, array[0]);
 
-            var fs = e.CompileFast(true);
+            var fs = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             fs.PrintIL();
             fs.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -292,7 +292,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             var vs = @cs();
             Asserts.AreEqual(12, vs[0].x);
 
-            var fs = e.CompileFast(true);
+            var fs = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             fs.PrintIL();
             fs.AssertOpCodes(
                 OpCodes.Ldc_I4_S,// 10
@@ -353,7 +353,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             Asserts.AreEqual(0, x);
             Asserts.AreEqual(1, a[9].x);
 
-            var fs = e.CompileFast(true);
+            var fs = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             fs.PrintIL();
             fs.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -416,7 +416,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             Asserts.AreEqual(1, x);
             Asserts.AreEqual(1, a[9].x);
 
-            var fs = e.CompileFast(true);
+            var fs = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             fs.PrintIL();
             fs.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -481,7 +481,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             var vs = @cs();
             Asserts.AreEqual(53, vs[0].x);
 
-            var fs = e.CompileFast(true);
+            var fs = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             fs.PrintIL();
             fs.AssertOpCodes(
                 OpCodes.Ldc_I4_S,// 10
@@ -584,7 +584,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             var a = @cs();
             Asserts.AreEqual(100, a.Length);
 
-            var f = e.CompileFast(true);
+            var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             f.PrintIL();
             f.AssertOpCodes(
                 OpCodes.Ldc_I4_S,// 100
