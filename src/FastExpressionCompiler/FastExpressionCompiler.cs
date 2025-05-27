@@ -2399,18 +2399,12 @@ namespace FastExpressionCompiler
 
                         case ExpressionType.Throw:
                             {
-                                var throwExpr = (UnaryExpression)expr;
-                                if (throwExpr.Operand is null)
-                                {
-                                    il.Demit(OpCodes.Rethrow);
-                                }
-                                else
-                                {
-                                    if (!TryEmit(throwExpr.Operand, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult))
-                                        return false;
-                                    il.Demit(OpCodes.Throw);
-                                }
-                                return true;
+                                var ok = true;
+                                var throwOperand = ((UnaryExpression)expr).Operand;
+                                if (throwOperand != null)
+                                    ok = TryEmit(throwOperand, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult);
+                                il.Demit(throwOperand != null ? OpCodes.Throw : OpCodes.Rethrow);
+                                return ok;
                             }
 
                         case ExpressionType.Default:
