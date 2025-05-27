@@ -21,7 +21,7 @@ public class NestedLambdasSharedToExpressionCodeStringTest : ITest
     {
         var e = CreateExpression();
 
-        var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
+        var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo); // todo: @wip #478 CompileFast should PrintCSharp and PrintIL in Debug configuration, if the EnablePrintCSharp, EnablePrintIL is set  
 
         Asserts.IsNotNull(f);
     }
