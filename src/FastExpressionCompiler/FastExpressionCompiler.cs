@@ -1892,7 +1892,8 @@ namespace FastExpressionCompiler
         }
 
         /// <summary>Return IDelegateDebugInfo if the delegate is fast compiled with `CompilerFlags.EnableDelegateDebugInfo` flag</summary>
-        public static IDelegateDebugInfo TryGetDebugInfo<D>(this D d) where D : Delegate => d.Target as IDelegateDebugInfo;
+        public static IDelegateDebugInfo TryGetDebugInfo<TDelegate>(this TDelegate d)
+            where TDelegate : Delegate => d?.Target as IDelegateDebugInfo;
 
 #if LIGHT_EXPRESSION
         private static Result TryCollectMemberInitExprConstants(ref ClosureInfo closure, MemberInitExpression expr,

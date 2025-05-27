@@ -44,7 +44,8 @@ public static class TestTools
 
     public static void AssertOpCodes(this Delegate dlg, params OpCode[] expectedCodes)
     {
-        if (dlg.TryGetDebugInfo() is var diagInfo)
+        var diagInfo = dlg.TryGetDebugInfo();
+        if (diagInfo != null)
             AssertOpCodes(diagInfo.ILInstructions, expectedCodes);
         else
             AssertOpCodes(dlg.Method, expectedCodes);
@@ -58,14 +59,14 @@ public static class TestTools
 
     public static void AssertOpCodes(this IEnumerable<ILInstruction> il, params OpCode[] expectedCodes)
     {
+#if NET8_0_OR_GREATER
         if (DisableAssertOpCodes) return;
-
-        var actualCodes = il.Select(x => x.OpCode).ToArray();
 
         var sb = new StringBuilder();
         var index = 0;
-        foreach (var code in actualCodes)
+        foreach (var i in il)
         {
+            var code = i.OpCode;
             if (index < 1000)
                 sb.AppendLine($"{index,-4}{code}");
             else if (index < 10000000)
@@ -75,7 +76,8 @@ public static class TestTools
             ++index;
         }
 
-        Asserts.AreEqual(expectedCodes, actualCodes);
+        Asserts.AreEqual(expectedCodes, il.Select(x => x.OpCode));
+#endif
     }
 
     public static void PrintExpression(this Expression expr, bool completeTypeNames = false)
