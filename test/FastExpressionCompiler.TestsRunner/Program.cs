@@ -14,7 +14,7 @@ namespace FastExpressionCompiler.UnitTests
             // ILGeneratorTools.DisableILGeneratorPooling = true;
             // LightExpression.ILGeneratorTools.DisableILGeneratorPooling = true;
 
-            new LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest().Run();
+            // new LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest().Run();
 
             new LightExpression.IssueTests.Issue347_InvalidProgramException_on_compiling_an_expression_that_returns_a_record_which_implements_IList().Run();
             // new Issue316_in_parameter().Run();
