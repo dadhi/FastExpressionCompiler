@@ -83,24 +83,22 @@ namespace FastExpressionCompiler.IssueTests
 
             var f = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             Asserts.IsNotNull(f);
-            f.PrintIL();
 
-            var di = f.TryGetDebugInfo();
-            foreach (var ni in di.EnumerateNestedLambdas())
-            {
-                ni.PrintIL("nested");
-                ni.AssertOpCodes(
-                    OpCodes.Ldarg_0,
-                    OpCodes.Ldfld,      // ArrayClosureWithNonPassedParams.NonPassedParams
-                    OpCodes.Ldc_I4_0,
-                    OpCodes.Ldelem_Ref,
-                    OpCodes.Unbox_Any,  // NotifyModel
-                    OpCodes.Stloc_0,
-                    OpCodes.Ldloca_S,   // 0
-                    OpCodes.Call,       // NotifyModel.get_Number1
-                    OpCodes.Ret
-                );
-            }
+            var fd = f.TryGetDebugInfo();
+            fd.PrintIL();
+
+            var nested = fd.EnumerateNestedLambdas().First();
+            nested.AssertOpCodes(
+                OpCodes.Ldarg_0,
+                OpCodes.Ldfld,      // ArrayClosureWithNonPassedParams.NonPassedParams
+                OpCodes.Ldc_I4_0,
+                OpCodes.Ldelem_Ref,
+                OpCodes.Unbox_Any,  // NotifyModel
+                OpCodes.Stloc_0,
+                OpCodes.Ldloca_S,   // 0
+                OpCodes.Call,       // NotifyModel.get_Number1
+                OpCodes.Ret
+            );
 
             var y = f(m);
             Asserts.AreEqual(43, y);

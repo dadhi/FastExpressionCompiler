@@ -154,6 +154,8 @@ public static class TestTools
 
     public static void PrintIL(this IDelegateDebugInfo diagInfo, [CallerMemberName] string tag = null)
     {
+        if (!AllowPrintIL) return;
+
         SmallMap4<IDelegateDebugInfo, string, RefEq<IDelegateDebugInfo>,
             SmallMap4.SingleArrayEntries<IDelegateDebugInfo, string, RefEq<IDelegateDebugInfo>>
         > uniquePrinted = default;
