@@ -175,7 +175,7 @@ public static class TestTools
                 PrintIL($"{printedTag}", "already printed", static (ap, s) => s.Append(ap));
             else
             {
-                printedTag = $"{n}_tag";
+                printedTag = $"{n}_{tag}";
                 PrintIL(nested, ref uniquePrinted, printedTag);
             }
             ++n;
