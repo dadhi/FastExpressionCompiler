@@ -61,22 +61,7 @@ public static class TestTools
     {
 #if NET8_0_OR_GREATER
         if (DisableAssertOpCodes) return;
-
-        var sb = new StringBuilder();
-        var index = 0;
-        foreach (var i in il)
-        {
-            var code = i.OpCode;
-            if (index < 1000)
-                sb.AppendLine($"{index,-4}{code}");
-            else if (index < 10000000)
-                sb.AppendLine($"{index,-8}{code}");
-            else
-                sb.AppendLine($"{index,-12}{code}");
-            ++index;
-        }
-
-        Asserts.AreEqual(expectedCodes, il.Select(x => x.OpCode));
+        Asserts.AreEqual(expectedCodes, il?.Select(x => x.OpCode) ?? []);
 #endif
     }
 

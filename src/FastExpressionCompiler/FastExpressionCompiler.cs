@@ -495,7 +495,7 @@ namespace FastExpressionCompiler
             DynamicMethodHacks.FreePooledILGenerator(method, il);
 
             if (closure is DebugArrayClosure diagClosure)
-                diagClosure.ILInstructions = ILReaderFactory.GetILReaderOrNull(dlg.Method)?.ToArray() ?? [];
+                diagClosure.ILInstructions = dlg.Method.ReadAllInstructions();
 
             return dlg;
         }
@@ -560,7 +560,7 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Ret);
                     compiledDelegate = dynMethod.CreateDelegate(delegateType, closure);
                     if (closure is DebugArrayClosure diagClosure)
-                        diagClosure.ILInstructions = ILReaderFactory.GetILReaderOrNull(compiledDelegate.Method)?.ToArray() ?? [];
+                        diagClosure.ILInstructions = compiledDelegate.Method.ReadAllInstructions();
                 }
 
                 DynamicMethodHacks.FreePooledILGenerator(dynMethod, il);
@@ -1018,9 +1018,13 @@ namespace FastExpressionCompiler
         {
             public LambdaExpression Expression { get; internal set; }
 
-            public DebugArrayClosure(object[] nonPassedParams, object[] constantsAndNestedLambdas, LambdaExpression expr)
-                : base(nonPassedParams, constantsAndNestedLambdas) =>
+            public DebugArrayClosure(object[] nonPassedParams, object[] constantsAndNestedLambdas,
+                LambdaExpression expr, ILInstruction[] il = null)
+                : base(nonPassedParams, constantsAndNestedLambdas)
+            {
                 Expression = expr;
+                ILInstructions = il;
+            }
 
             private string _expressionString;
             public string ExpressionString
@@ -1059,7 +1063,7 @@ namespace FastExpressionCompiler
                     if (_ilString != null)
                         return _ilString;
                     var ilInstructions = ILInstructions;
-                    return ilInstructions == null
+                    return ilInstructions == null || ilInstructions.Length == 0
                         ? "<ILInstructions are not set to the DebugArrayClosure>"
                         : (_ilString = ILInstructions.ToILString().ToString());
                 }
@@ -1119,8 +1123,11 @@ namespace FastExpressionCompiler
         {
             public static FieldInfo ExpressionField =
                 typeof(NestedLambdaForNonPassedParamsWithConstantsWithDiagInfo).GetField(nameof(Expression));
+            public static FieldInfo ILInstructionsField =
+                typeof(NestedLambdaForNonPassedParamsWithConstantsWithDiagInfo).GetField(nameof(ILInstructions));
 
             public readonly LambdaExpression Expression;
+            public ILInstruction[] ILInstructions;
             public NestedLambdaForNonPassedParamsWithConstantsWithDiagInfo(object nestedLambda, object constantsAndNestedLambdas, LambdaExpression expr)
                 : base(nestedLambda, constantsAndNestedLambdas) => Expression = expr;
         }
@@ -1896,8 +1903,14 @@ namespace FastExpressionCompiler
                             : new NestedLambdaForNonPassedParamsWithConstants(nestedLambda, constantsAndNestedLambdas)
                         : new NestedLambdaForNonPassedParamsWithConstantsWithDiagInfo(nestedLambda, constantsAndNestedLambdas, nestedLambdaExpr);
 
-                if (nestedLambdaClosure is DebugArrayClosure debugInfoClosure)
-                    debugInfoClosure.ILInstructions = ILReaderFactory.GetILReaderOrNull(nestedLambda.Method)?.ToArray() ?? [];
+                if (hasDiagInfo)
+                {
+                    var ilInstructions = nestedLambda.Method.ReadAllInstructions();
+                    if (nestedLambdaClosure is DebugArrayClosure debugInfoClosure)
+                        debugInfoClosure.ILInstructions = ilInstructions;
+                    else
+                        ((NestedLambdaForNonPassedParamsWithConstantsWithDiagInfo)nestedLambdaInfo.Lambda).ILInstructions = ilInstructions;
+                }
             }
             DynamicMethodHacks.FreePooledILGenerator(method, il);
             FreePooledClosureTypeAndParamTypes(closurePlusParamTypes);
@@ -5259,6 +5272,7 @@ namespace FastExpressionCompiler
                     EmitLoadLocalVariable(il, nestedLambdaInfo.LambdaVarIndex);
                     il.Demit(OpCodes.Ldfld, NestedLambdaForNonPassedParamsWithConstants.ConstantsAndNestedLambdasField);
                     il.Demit(OpCodes.Ldfld, NestedLambdaForNonPassedParamsWithConstantsWithDiagInfo.ExpressionField);
+                    il.Demit(OpCodes.Ldfld, NestedLambdaForNonPassedParamsWithConstantsWithDiagInfo.ILInstructionsField);
                     il.Demit(OpCodes.Newobj, DebugArrayClosureCtor);
                 }
                 else if (nestedLambdaInfo.Lambda is NestedLambdaForNonPassedParamsWithConstants)

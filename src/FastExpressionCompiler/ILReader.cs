@@ -10,6 +10,7 @@ using System.Reflection.Emit;
 using System.Text;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using System.Linq;
 
 #if LIGHT_EXPRESSION
 namespace FastExpressionCompiler.LightExpression.ILDecoder;
@@ -69,6 +70,9 @@ public static class ILReaderFactory
             ? il.ToILString(s)
             : (s ?? new StringBuilder()).AppendLine($"ILReader for {method} is not supported");
     }
+
+    public static ILInstruction[] ReadAllInstructions(this MethodBase source) =>
+        GetILReaderOrNull(source)?.ToArray() ?? [];
 
     public static StringBuilder ToILString(this IEnumerable<ILInstruction> ilInstructions, StringBuilder s = null)
     {
