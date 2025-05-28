@@ -3580,7 +3580,7 @@ namespace FastExpressionCompiler
                     if (constValue != null)
                         ok = TryEmitConstant(closure.ContainsConstantsOrNestedLambdas(), exprType, constValue.GetType(), constValue, il, ref closure, byRefIndex);
                     else if (exprType.IsValueType)
-                         // null for a value type and yep, this is a proper way to emit the Nullable null
+                        // null for a value type and yep, this is a proper way to emit the Nullable null
                         ok = EmitLoadLocalVariable(il, InitValueTypeVariable(il, exprType));
                     else
                     {

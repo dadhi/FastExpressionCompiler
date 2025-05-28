@@ -157,10 +157,17 @@ public static class TestTools
         SmallMap4<IDelegateDebugInfo, string, RefEq<IDelegateDebugInfo>,
             SmallMap4.SingleArrayEntries<IDelegateDebugInfo, string, RefEq<IDelegateDebugInfo>>
         > uniquePrinted = default;
-        PrintIL(diagInfo, ref uniquePrinted, tag);
+        var totalNestedCount = 0;
+        PrintIL(diagInfo, ref totalNestedCount, ref uniquePrinted, tag);
+        if (totalNestedCount > 0)
+        {
+            Console.WriteLine("--------------------------------------");
+            Console.WriteLine($"Total nested lambdas: {totalNestedCount}, unique printed: {uniquePrinted.Count}");
+        }
     }
 
     private static void PrintIL(this IDelegateDebugInfo diagInfo,
+        ref int totalNestedCount,
         ref SmallMap4<IDelegateDebugInfo, string, RefEq<IDelegateDebugInfo>,
             SmallMap4.SingleArrayEntries<IDelegateDebugInfo, string, RefEq<IDelegateDebugInfo>>> uniquePrinted,
         [CallerMemberName] string tag = null)
@@ -176,9 +183,10 @@ public static class TestTools
             else
             {
                 printedTag = $"{n}_{tag}";
-                PrintIL(nested, ref uniquePrinted, printedTag);
+                PrintIL(nested, ref totalNestedCount, ref uniquePrinted, printedTag);
             }
             ++n;
+            ++totalNestedCount;
         }
     }
 
