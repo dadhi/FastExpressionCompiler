@@ -13,15 +13,19 @@ public class NestedLambdasSharedToExpressionCodeStringTest : ITest
         Issue478_Debug_info_should_be_included_into_nested_lambdas();
         Should_output_a_valid_expression_code();
         Test_the_output_expression_code();
-        return 2;
+        return 3;
     }
-
 
     public void Issue478_Debug_info_should_be_included_into_nested_lambdas()
     {
         var e = CreateExpression();
 
-        var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo); // todo: @wip #478 CompileFast should PrintCSharp and PrintIL in Debug configuration, if the EnablePrintCSharp, EnablePrintIL is set  
+        var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
+
+        var di = f.TryGetDebugInfo();
+        di.PrintCSharp();
+
+        di.PrintIL();
 
         Asserts.IsNotNull(f);
     }

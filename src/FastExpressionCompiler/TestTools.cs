@@ -134,6 +134,12 @@ public static class TestTools
         Console.WriteLine(result = expr.ToCSharpString());
     }
 
+    public static void PrintCSharp(this IDelegateDebugInfo diagInfo)
+    {
+        if (!AllowPrintCS) return;
+        Console.WriteLine(diagInfo.CSharpString);
+    }
+
     public static void PrintIL(this Delegate dlg, [CallerMemberName] string tag = null)
     {
         if (!AllowPrintIL) return;
@@ -146,8 +152,35 @@ public static class TestTools
     public static void PrintIL(this MethodInfo method, [CallerMemberName] string tag = null) =>
         PrintIL(tag, method, static (m, s) => m.ToILString(s));
 
-    public static void PrintIL(this IDelegateDebugInfo diagInfo, [CallerMemberName] string tag = null) =>
-        PrintIL(tag, diagInfo, static (di, s) => s.Append(di.ILString));
+    public static void PrintIL(this IDelegateDebugInfo diagInfo, [CallerMemberName] string tag = null)
+    {
+        SmallMap4<IDelegateDebugInfo, string, RefEq<IDelegateDebugInfo>,
+            SmallMap4.SingleArrayEntries<IDelegateDebugInfo, string, RefEq<IDelegateDebugInfo>>
+        > uniquePrinted = default;
+        PrintIL(diagInfo, ref uniquePrinted, tag);
+    }
+
+    private static void PrintIL(this IDelegateDebugInfo diagInfo,
+        ref SmallMap4<IDelegateDebugInfo, string, RefEq<IDelegateDebugInfo>,
+            SmallMap4.SingleArrayEntries<IDelegateDebugInfo, string, RefEq<IDelegateDebugInfo>>> uniquePrinted,
+        [CallerMemberName] string tag = null)
+    {
+        PrintIL(tag, diagInfo.ILString, static (ils, s) => s.Append(ils));
+
+        var n = 0;
+        foreach (var nested in diagInfo.EnumerateNestedLambdas())
+        {
+            ref var printedTag = ref uniquePrinted.AddOrGetValueRef(nested, out var printed);
+            if (printed)
+                PrintIL($"{printedTag}", "already printed", static (ap, s) => s.Append(ap));
+            else
+            {
+                printedTag = $"{n}_tag";
+                PrintIL(nested, ref uniquePrinted, printedTag);
+            }
+            ++n;
+        }
+    }
 
     private static void PrintIL<A>(string tag, A state, Action<A, StringBuilder> printIL)
     {
