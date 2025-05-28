@@ -5267,7 +5267,8 @@ namespace FastExpressionCompiler
                 EmitLoadLocalVariable(il, nonPassedParamsVarIndex);
 
                 // Load the constants as a second argument and call the closure constructor
-                if (nestedLambdaInfo.Lambda is NestedLambdaForNonPassedParamsWithConstantsWithDiagInfo)
+                var lambda = nestedLambdaInfo.Lambda;
+                if (lambda is NestedLambdaForNonPassedParamsWithConstantsWithDiagInfo)
                 {
                     EmitLoadLocalVariable(il, nestedLambdaInfo.LambdaVarIndex);
                     il.Demit(OpCodes.Ldfld, NestedLambdaForNonPassedParamsWithConstants.ConstantsAndNestedLambdasField);
@@ -5275,7 +5276,7 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Ldfld, NestedLambdaForNonPassedParamsWithConstantsWithDiagInfo.ILInstructionsField);
                     il.Demit(OpCodes.Newobj, DebugArrayClosureCtor);
                 }
-                else if (nestedLambdaInfo.Lambda is NestedLambdaForNonPassedParamsWithConstants)
+                else if (lambda is NestedLambdaForNonPassedParamsWithConstants)
                 {
                     EmitLoadLocalVariable(il, nestedLambdaInfo.LambdaVarIndex);
                     il.Demit(OpCodes.Ldfld, NestedLambdaForNonPassedParamsWithConstants.ConstantsAndNestedLambdasField);
@@ -5285,7 +5286,6 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Newobj, ArrayClosureWithNonPassedParamsCtor);
 
                 // Call the `Curry` method with the nested lambda and closure to produce a closed lambda with the expected signature
-                var lambda = nestedLambdaInfo.Lambda;
                 var lambdaType = (lambda is NestedLambdaForNonPassedParams lp ? lp.NestedLambda : lambda).GetType();
                 var lambdaTypeArgs = lambdaType.GetGenericArguments();
                 var nestedLambdaExpr = nestedLambdaInfo.LambdaExpression;
