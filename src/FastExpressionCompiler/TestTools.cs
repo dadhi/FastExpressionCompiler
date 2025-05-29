@@ -65,9 +65,12 @@ public static class TestTools
 #endif
     }
 
-    public static void PrintExpression(this Expression expr, bool completeTypeNames = false)
+    public static void PrintExpression(this Expression expr, bool completeTypeNames = false,
+        [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "")
     {
         if (!AllowPrintExpression) return;
+        Console.WriteLine();
+        Console.WriteLine($"//{Path.GetFileNameWithoutExtension(filePath)}.{caller}");
         Console.WriteLine(
             expr.ToExpressionString(out var _, out var _, out var _,
             stripNamespace: true,
@@ -75,6 +78,10 @@ public static class TestTools
             indentSpaces: 4)
         );
     }
+
+    public static void PrintExpression(this IDelegateDebugInfo debugInfo, bool completeTypeNames = false,
+        [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "") =>
+        PrintExpression(debugInfo.Expression, completeTypeNames, caller, filePath);
 
     public static void PrintCSharp(this Expression expr, bool completeTypeNames = false,
         [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "")
@@ -129,8 +136,9 @@ public static class TestTools
     /// In case of nested lambda represented in the expression of the Constant Delegate, 
     /// and the Delegate.Target being IDelegateDebugInfo, you may call `IDelegateDebugInfo.EnumerateNestedLambdas()`
     /// and output C# for each nested lambda</summary>
-    public static void PrintCSharp(this IDelegateDebugInfo debugInfo) =>
-        debugInfo.Expression.PrintCSharp();
+    public static void PrintCSharp(this IDelegateDebugInfo debugInfo, bool completeTypeNames = false,
+        [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "") =>
+        debugInfo.Expression.PrintCSharp(completeTypeNames, caller, filePath);
 
     public static void PrintIL(this Delegate dlg, [CallerMemberName] string tag = null)
     {
@@ -178,10 +186,10 @@ public static class TestTools
         {
             ref var printedTag = ref uniquePrinted.AddOrGetValueRef(nested, out var printed);
             if (printed)
-                PrintIL($"{printedTag}", "already printed", static (ap, s) => s.Append(ap));
+                PrintIL($"{printedTag}", "printed already", static (ap, s) => s.Append(ap));
             else
             {
-                printedTag = $"{n}_{tag}";
+                printedTag = $"{n}_nested_in_{tag}";
                 PrintIL(nested, ref totalNestedCount, ref uniquePrinted, printedTag);
             }
             ++n;

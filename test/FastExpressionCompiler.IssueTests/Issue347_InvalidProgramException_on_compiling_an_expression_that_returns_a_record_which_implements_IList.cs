@@ -21,12 +21,27 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            Issue478_Test_diagnostics();
             Test_struct_parameter_in_closure_of_the_nested_lambda();
             Test_passing_struct_item_in_object_array_parameter();
             Test_nullable_param_in_closure_of_the_nested_lambda();
             Test_nullable_of_struct_and_struct_field_in_the_nested_lambda();
             Test_original();
-            return 5;
+            return 6;
+        }
+
+        public void Issue478_Test_diagnostics()
+        {
+            System.Linq.Expressions.Expression<Func<int, Func<int>>> expr = n => () => n + 1;
+            var e = expr.FromSysExpression();
+            e.PrintExpression();
+            e.PrintCSharp();
+
+            var f = e.CompileFast(flags: CompilerFlags.EnableDelegateDebugInfo);
+            var d = f.TryGetDebugInfo();
+            d.PrintExpression();
+            d.PrintCSharp();
+            d.PrintIL();
         }
 
         public void Test_passing_struct_item_in_object_array_parameter()

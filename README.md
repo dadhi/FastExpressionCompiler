@@ -300,16 +300,90 @@ FEC V3 has added powerful diagnostics and code generation tools.
 
 You may pass the optional `CompilerFlags.EnableDelegateDebugInfo`  into the `CompileFast` methods.
 
-`EnableDelegateDebugInfo` adds the diagnostic info into the compiled delegate including its source Expression and C# code. 
-Can be used as following:
+`EnableDelegateDebugInfo` adds the diagnostic info into the compiled delegate including its source Expression and compiled IL code. 
+
+It can be used as following:
 
 ```cs
-var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
-var di = f.Target as IDelegateDebugInfo;
-Asserts.IsNotNull(di.Expression);
-Asserts.IsNotNull(di.ExpressionString);
-Asserts.IsNotNull(di.CSharpString);
+System.Linq.Expressions.Expression<Func<int, Func<int>>> e = 
+  n => () => n + 1;
+var f = e.CompileFast(flags: CompilerFlags.EnableDelegateDebugInfo);
+var d = f.TryGetDebugInfo();
+d.PrintExpression();
+d.PrintCSharp();
+d.PrintIL(); // available in NET8+
 ```
+
+<details><summary>Expand to see the output of the above code...</summary>
+
+
+Output of `d.PrintExpression()` is the valid C#:
+
+```cs
+var p = new ParameterExpression[1]; // the parameter expressions
+var e = new Expression[3]; // the unique expressions
+var expr = Lambda<Func<int, Func<int>>>(
+  e[0]=Lambda<Func<int>>(
+      e[1]=MakeBinary(ExpressionType.Add,
+          p[0]=Parameter(typeof(int), "n"),
+          e[2]=Constant(1)), new ParameterExpression[0]),
+  p[0 // (int n)
+      ]);
+```
+
+Output of `d.PrintCSharp()` is the valid C#:
+
+```cs
+var @cs = (Func<int, Func<int>>)((int n) => //Func<int>
+    (Func<int>)(() => //int
+        n + 1));
+```
+
+Output of `d.PrintIL()` (includes the IL of the nested lambda):
+
+```
+<Caller>
+0   ldarg.0
+1   ldfld object[] ExpressionCompiler.ArrayClosure.ConstantsAndNestedLambdas
+6   stloc.0
+7   ldloc.0
+8   ldc.i4.0
+9   ldelem.ref
+10  stloc.1
+11  ldloc.1
+12  ldc.i4.1
+13  newarr object
+18  stloc.2
+19  ldloc.2
+20  stfld object[] ExpressionCompiler.NestedLambdaForNonPassedParams.NonPassedParams
+25  ldloc.2
+26  ldc.i4.0
+27  ldarg.1
+28  box int
+33  stelem.ref
+34  ldloc.1
+35  ldfld object ExpressionCompiler.NestedLambdaForNonPassedParams.NestedLambda
+40  ldloc.2
+41  ldloc.1
+42  ldfld object[] ExpressionCompiler.NestedLambdaForNonPassedParamsWithConstants.ConstantsAndNestedLambdas
+47  newobj ExpressionCompiler.ArrayClosureWithNonPassedParams(System.Object[], System.Object[])
+52  call Func<int> ExpressionCompiler.CurryClosureFuncs.Curry(System.Func`2[FastExpressionCompiler.LightExpression.ExpressionCompiler+ArrayClosure,System.Int32], ArrayClosure)
+57  ret
+</Caller>
+<0_nested_in_Caller>
+0   ldarg.0
+1   ldfld object[] ExpressionCompiler.ArrayClosureWithNonPassedParams.NonPassedParams
+6   ldc.i4.0
+7   ldelem.ref
+8   unbox.any int
+13  ldc.i4.1
+14  add
+15  ret
+</0_nested_in_Caller>
+```
+
+</details>
+
 
 ### ThrowOnNotSupportedExpression and NotSupported_ flags
 
