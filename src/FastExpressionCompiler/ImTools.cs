@@ -538,12 +538,14 @@ internal static class StackTools<T, TStack>
 
     internal delegate Span<T> AsSpanDelegate(ref TStack stack, int capacity);
 
-    internal static AsSpanDelegate CompileAsSpanDelegate()
+    internal static readonly AsSpanDelegate AsSpanCompiled;
+
+    static StackTools()
     {
         var dynamicMethod = new DynamicMethod(
-            "",
+            string.Empty,
             typeof(Span<T>),
-            new[] { typeof(TStack).MakeByRefType(), typeof(int) }, // todo: @perf pool this thing
+            [typeof(TStack).MakeByRefType(), typeof(int)], // todo: @perf pool this thing
             typeof(TStack),
             true
         );
@@ -558,11 +560,8 @@ internal static class StackTools<T, TStack>
         il.Emit(OpCodes.Newobj, SpanConstructor);
         il.Emit(OpCodes.Ret);
 
-        return (AsSpanDelegate)dynamicMethod.CreateDelegate(typeof(AsSpanDelegate));
+        AsSpanCompiled = (AsSpanDelegate)dynamicMethod.CreateDelegate(typeof(AsSpanDelegate));
     }
-
-    // todo: @perf do we even need a lazy here?
-    internal static readonly Lazy<AsSpanDelegate> LazyCompiledAsSpanDelegate = new(CompileAsSpanDelegate);
 #endif
 }
 
@@ -625,7 +624,7 @@ public struct Stack2<T> : IStack<T, Stack2<T>>
     [MethodImpl((MethodImplOptions)256)]
     public Span<T> AsSpan() =>
 #if NETSTANDARD2_0_OR_GREATER || NET472
-        StackTools<T, Stack2<T>>.LazyCompiledAsSpanDelegate.Value(ref this, StackCapacity);
+        StackTools<T, Stack2<T>>.AsSpanCompiled(ref this, StackCapacity);
 #else
         MemoryMarshal.CreateSpan(ref Unsafe.As<Stack2<T>, T>(ref this), StackCapacity);
 #endif
@@ -696,7 +695,7 @@ public struct Stack4<T> : IStack<T, Stack4<T>>
     [MethodImpl((MethodImplOptions)256)]
     public Span<T> AsSpan() =>
 #if NETSTANDARD2_0_OR_GREATER || NET472
-        StackTools<T, Stack4<T>>.LazyCompiledAsSpanDelegate.Value(ref this, StackCapacity);
+        StackTools<T, Stack4<T>>.AsSpanCompiled(ref this, StackCapacity);
 #else
         MemoryMarshal.CreateSpan(ref Unsafe.As<Stack4<T>, T>(ref this), StackCapacity);
 #endif
@@ -769,7 +768,7 @@ public struct Stack16<T> : IStack<T, Stack16<T>>
     [MethodImpl((MethodImplOptions)256)]
     public Span<T> AsSpan() =>
 #if NETSTANDARD2_0_OR_GREATER || NET472
-        StackTools<T, Stack16<T>>.LazyCompiledAsSpanDelegate.Value(ref this, StackCapacity);
+        StackTools<T, Stack16<T>>.AsSpanCompiled(ref this, StackCapacity);
 #else
         MemoryMarshal.CreateSpan(ref Unsafe.As<Stack16<T>, T>(ref this), StackCapacity);
 #endif
