@@ -174,12 +174,11 @@ Creating the expression:
 
 Creating and compiling:
 
-| Method                                               |       Mean |     Error |     StdDev | Ratio | RatioSD |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
-| ---------------------------------------------------- | ---------: | --------: | ---------: | ----: | ------: | -----: | -----: | --------: | ----------: |
-| Create_SystemExpression_and_Compile                  | 212.157 us | 4.2180 us | 11.4036 us | 44.77 |    3.31 | 0.9766 | 0.4883 |   7.15 KB |        2.95 |
-| Create_SystemExpression_and_CompileFast              |   6.656 us | 0.1322 us |  0.3065 us |  1.40 |    0.10 | 0.5188 | 0.4883 |   3.27 KB |        1.35 |
-| Create_LightExpression_and_CompileFast               |   4.751 us | 0.0947 us |  0.2411 us |  1.00 |    0.07 | 0.3815 | 0.3662 |   2.42 KB |        1.00 |
-| CreateLightExpression_and_CompileFast_with_intrinsic |   4.604 us | 0.0918 us |  0.1915 us |  0.97 |    0.06 | 0.3815 | 0.3662 |   2.35 KB |        0.97 |
+| Method                                  |       Mean |     Error |    StdDev |     Median | Ratio | RatioSD | Rank |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
+| --------------------------------------- | ---------: | --------: | --------: | ---------: | ----: | ------: | ---: | -----: | -----: | --------: | ----------: |
+| Create_LightExpression_and_CompileFast  |   4.957 us | 0.0986 us | 0.2362 us |   4.913 us |  1.00 |    0.07 |    1 | 0.3510 | 0.3052 |   2.15 KB |        1.00 |
+| Create_SystemExpression_and_CompileFast |   6.518 us | 0.1889 us | 0.5541 us |   6.300 us |  1.32 |    0.13 |    2 | 0.4578 | 0.4272 |   2.97 KB |        1.38 |
+| Create_SystemExpression_and_Compile     | 205.000 us | 4.0938 us | 7.3819 us | 206.353 us | 41.44 |    2.45 |    3 | 0.9766 | 0.4883 |   7.15 KB |        3.33 |
 
 
 ## Difference between FastExpressionCompiler and FastExpressionCompiler.LightExpression

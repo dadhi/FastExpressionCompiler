@@ -261,6 +261,15 @@ namespace FastExpressionCompiler.Benchmarks
         | Create_LightExpression                 |   153.7 ns |  3.14 ns |  8.61 ns |   150.5 ns |  1.00 |    0.08 | 0.0789 |     496 B |        1.00 |
         | Create_LightExpression_with_intrinsics |   161.0 ns |  2.80 ns |  2.19 ns |   161.0 ns |  1.05 |    0.06 | 0.0777 |     488 B |        0.98 |
 
+
+        ## v5.3.0 + BDN v0.15.0
+
+        | Method                                  | Mean       | Error     | StdDev    | Median     | Ratio | RatioSD | Rank | Gen0   | Gen1   | Allocated | Alloc Ratio |
+        |---------------------------------------- |-----------:|----------:|----------:|-----------:|------:|--------:|-----:|-------:|-------:|----------:|------------:|
+        | Create_LightExpression_and_CompileFast  |   4.957 us | 0.0986 us | 0.2362 us |   4.913 us |  1.00 |    0.07 |    1 | 0.3510 | 0.3052 |   2.15 KB |        1.00 |
+        | Create_SystemExpression_and_CompileFast |   6.518 us | 0.1889 us | 0.5541 us |   6.300 us |  1.32 |    0.13 |    2 | 0.4578 | 0.4272 |   2.97 KB |        1.38 |
+        | Create_SystemExpression_and_Compile     | 205.000 us | 4.0938 us | 7.3819 us | 206.353 us | 41.44 |    2.45 |    3 | 0.9766 | 0.4883 |   7.15 KB |        3.33 |
+
         */
 
         [Benchmark]
