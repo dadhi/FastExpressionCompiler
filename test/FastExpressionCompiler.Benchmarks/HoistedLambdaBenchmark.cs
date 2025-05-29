@@ -17,7 +17,7 @@ namespace FastExpressionCompiler.Benchmarks
 
         private static readonly System.Linq.Expressions.Expression<Func<X>> _hoistedExpr = GetHoistedExpr();
 
-        [MemoryDiagnoser]
+        [MemoryDiagnoser, RankColumn, Orderer(BenchmarkDotNet.Order.SummaryOrderPolicy.FastestToSlowest)]
         public class Compilation
         {
             /*
@@ -122,6 +122,42 @@ namespace FastExpressionCompiler.Benchmarks
             | Compile                    | 145.015 us | 2.0703 us | 1.7288 us | 42.06 |    1.91 | 0.7324 |      - |   4.49 KB |        2.92 |
             | CompileFast                |   3.454 us | 0.0688 us | 0.1495 us |  1.00 |    0.06 | 0.2441 | 0.2365 |   1.54 KB |        1.00 |
             | ConvertToLight_CompileFast |   3.947 us | 0.0789 us | 0.1520 us |  1.14 |    0.07 | 0.3052 | 0.2899 |   1.96 KB |        1.27 |
+
+            ## v5.2.0 Baseline before ILGenerator pooling
+
+            BenchmarkDotNet v0.14.0, Windows 11 (10.0.26100.4061)
+            Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
+            .NET SDK 9.0.203
+            [Host]     : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+            DefaultJob : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+
+
+            | Method      | Mean       | Error     | StdDev    | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
+            |------------ |-----------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
+            | Compile     | 152.305 us | 2.9218 us | 4.0960 us | 45.18 |    1.35 | 0.7324 |      - |   4.49 KB |        2.92 |
+            | CompileFast |   3.371 us | 0.0543 us | 0.0482 us |  1.00 |    0.02 | 0.2441 | 0.2365 |   1.54 KB |        1.00 |
+
+
+            ## v5.3.0 Dynamic ILGenerator+SignatureHelper pooling
+
+            | Method      | Mean       | Error     | StdDev    | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
+            |------------ |-----------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
+            | Compile     | 149.614 us | 2.8135 us | 2.7633 us | 47.01 |    1.58 | 0.7324 |      - |   4.49 KB |        3.66 |
+            | CompileFast |   3.185 us | 0.0629 us | 0.0941 us |  1.00 |    0.04 | 0.1984 | 0.1907 |   1.23 KB |        1.00 |
+
+            ## v5.3.0 + BDN v0.15.0
+
+            BenchmarkDotNet v0.15.0, Windows 11 (10.0.26100.4061/24H2/2024Update/HudsonValley)
+            Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
+            .NET SDK 9.0.203
+            [Host]     : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+            DefaultJob : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+
+
+            | Method      | Mean       | Error     | StdDev    | Ratio | RatioSD | Rank | Gen0   | Gen1   | Allocated | Alloc Ratio |
+            |------------ |-----------:|----------:|----------:|------:|--------:|-----:|-------:|-------:|----------:|------------:|
+            | CompileFast |   3.183 us | 0.0459 us | 0.0407 us |  1.00 |    0.02 |    1 | 0.1984 | 0.1945 |   1.23 KB |        1.00 |
+            | Compile     | 147.312 us | 1.9291 us | 1.8946 us | 46.28 |    0.81 |    2 | 0.4883 | 0.2441 |   4.48 KB |        3.65 |
             */
 
             [Benchmark]
@@ -130,11 +166,11 @@ namespace FastExpressionCompiler.Benchmarks
             [Benchmark(Baseline = true)]
             public object CompileFast() => _hoistedExpr.CompileFast();
 
-            [Benchmark]
+            // [Benchmark]
             public object ConvertToLight_CompileFast() => _hoistedExpr.ToLightExpression().CompileFast();
         }
 
-        [MemoryDiagnoser]
+        [MemoryDiagnoser, RankColumn, Orderer(BenchmarkDotNet.Order.SummaryOrderPolicy.FastestToSlowest)]
         public class Invocation
         {
             /*
@@ -213,6 +249,14 @@ namespace FastExpressionCompiler.Benchmarks
             | DirectConstructorCall | 5.734 ns | 0.1501 ns | 0.2745 ns | 5.679 ns |  0.86 |    0.05 | 0.0051 |      32 B |        1.00 |
             | CompiledLambda        | 6.857 ns | 0.1915 ns | 0.5434 ns | 6.704 ns |  1.01 |    0.09 | 0.0051 |      32 B |        1.00 |
             | FastCompiledLambda    | 6.746 ns | 0.1627 ns | 0.1442 ns | 6.751 ns |  1.00 |    0.00 | 0.0051 |      32 B |        1.00 |
+
+            ## v5.3.0 + BDN v0.15.0
+
+            | Method                | Mean     | Error     | StdDev    | Ratio | RatioSD | Rank | Gen0   | Allocated | Alloc Ratio |
+            |---------------------- |---------:|----------:|----------:|------:|--------:|-----:|-------:|----------:|------------:|
+            | DirectConstructorCall | 6.055 ns | 0.0632 ns | 0.0560 ns |  1.00 |    0.01 |    1 | 0.0051 |      32 B |        1.00 |
+            | CompiledLambda        | 7.853 ns | 0.2013 ns | 0.1681 ns |  1.30 |    0.03 |    2 | 0.0051 |      32 B |        1.00 |
+            | FastCompiledLambda    | 7.962 ns | 0.2186 ns | 0.4052 ns |  1.31 |    0.07 |    2 | 0.0051 |      32 B |        1.00 |
             */
 
             private static readonly Func<X> _lambdaCompiled = _hoistedExpr.Compile();
@@ -221,7 +265,7 @@ namespace FastExpressionCompiler.Benchmarks
             private readonly A _aa = new A();
             private readonly B _bb = new B();
 
-            [Benchmark]
+            [Benchmark(Baseline = true)]
             public object DirectConstructorCall() =>
                 new X(_aa, _bb);
 
@@ -229,7 +273,7 @@ namespace FastExpressionCompiler.Benchmarks
             public object CompiledLambda() =>
                 _lambdaCompiled();
 
-            [Benchmark(Baseline = true)]
+            [Benchmark]
             public object FastCompiledLambda() =>
                 _lambdaCompiledFast();
         }

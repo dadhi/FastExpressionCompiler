@@ -10,11 +10,25 @@ public class NestedLambdasSharedToExpressionCodeStringTest : ITest
 {
     public int Run()
     {
+        Issue478_Debug_info_should_be_included_into_nested_lambdas();
         Should_output_a_valid_expression_code();
         Test_the_output_expression_code();
-        return 2;
+        return 3;
     }
 
+    public void Issue478_Debug_info_should_be_included_into_nested_lambdas()
+    {
+        var e = CreateExpression();
+
+        var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
+
+        var di = f.TryGetDebugInfo();
+        di.PrintCSharp();
+
+        di.PrintIL();
+
+        Asserts.IsNotNull(f);
+    }
 
     public void Should_output_a_valid_expression_code()
     {

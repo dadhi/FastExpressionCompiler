@@ -315,6 +315,14 @@ public class Issue475_ReuseVsNoReuse
     | PoolILGenerator    | 2.173 us | 0.0407 us | 0.0734 us | 2.140 us |  0.78 |    0.04 |    1 | 0.1068 | 0.1030 |     687 B |        0.60 |
     | CreateILGenerator  | 2.799 us | 0.0559 us | 0.0949 us | 2.767 us |  1.00 |    0.05 |    2 | 0.1793 | 0.1755 |    1144 B |        1.00 |
 
+
+    ## Results after fixing the pooling for all tests
+
+    | Method             | Mean     | Error     | StdDev    | Ratio | RatioSD | Rank | Gen0   | Gen1   | Allocated | Alloc Ratio |
+    |------------------- |---------:|----------:|----------:|------:|--------:|-----:|-------:|-------:|----------:|------------:|
+    | ReuseILGenerator   | 2.791 us | 0.0542 us | 0.0556 us |  0.88 |    0.05 |    1 | 0.1411 | 0.1373 |     904 B |        0.79 |
+    | NoReuseILGenerator | 3.195 us | 0.0640 us | 0.1846 us |  1.00 |    0.08 |    2 | 0.1793 | 0.1755 |    1144 B |        1.00 |
+
     */
     [Benchmark(Baseline = true)]
     public object NoReuseILGenerator()

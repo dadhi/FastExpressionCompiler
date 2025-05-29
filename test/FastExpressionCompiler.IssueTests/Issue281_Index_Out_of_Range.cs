@@ -47,7 +47,7 @@ namespace FastExpressionCompiler.IssueTests
             var m = new List<string> { "a" };
             Asserts.AreEqual("a", fs(m, 0));
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
             ff.AssertOpCodes(
                 OpCodes.Ldarg_1,

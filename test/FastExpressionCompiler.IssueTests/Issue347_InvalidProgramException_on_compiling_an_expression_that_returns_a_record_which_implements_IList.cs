@@ -17,19 +17,32 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-
     public class Issue347_InvalidProgramException_on_compiling_an_expression_that_returns_a_record_which_implements_IList : ITest
     {
         public int Run()
         {
+            Issue478_Test_diagnostics();
             Test_struct_parameter_in_closure_of_the_nested_lambda();
             Test_passing_struct_item_in_object_array_parameter();
             Test_nullable_param_in_closure_of_the_nested_lambda();
             Test_nullable_of_struct_and_struct_field_in_the_nested_lambda();
             Test_original();
-            return 5;
+            return 6;
         }
 
+        public void Issue478_Test_diagnostics()
+        {
+            System.Linq.Expressions.Expression<Func<int, Func<int>>> expr = n => () => n + 1;
+            var e = expr.FromSysExpression();
+            e.PrintExpression();
+            e.PrintCSharp();
+
+            var f = e.CompileFast(flags: CompilerFlags.EnableDelegateDebugInfo);
+            var d = f.TryGetDebugInfo();
+            d.PrintExpression();
+            d.PrintCSharp();
+            d.PrintIL();
+        }
 
         public void Test_passing_struct_item_in_object_array_parameter()
         {
@@ -62,7 +75,6 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(42, y);
         }
 
-
         public void Test_struct_parameter_in_closure_of_the_nested_lambda()
         {
             var incMethod = GetType().GetMethod(nameof(Inc), BindingFlags.Public | BindingFlags.Static);
@@ -88,26 +100,22 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.IsNotNull(f);
             f.PrintIL();
 
-            if (f.TryGetDebugClosureNestedLambda(0, out var d))
-            {
-                d.PrintIL("nested");
-                d.AssertOpCodes(
-                    OpCodes.Ldarg_0,
-                    OpCodes.Ldfld,      // ArrayClosureWithNonPassedParams.NonPassedParams
-                    OpCodes.Ldc_I4_0,
-                    OpCodes.Ldelem_Ref,
-                    OpCodes.Unbox_Any,  // NotifyModel
-                    OpCodes.Stloc_0,
-                    OpCodes.Ldloca_S,   // 0
-                    OpCodes.Call,       // NotifyModel.get_Number1
-                    OpCodes.Ret
-                );
-            }
+            var nested = f.EnumerateNestedLambdas().First();
+            nested.AssertOpCodes(
+                OpCodes.Ldarg_0,
+                OpCodes.Ldfld,      // ArrayClosureWithNonPassedParams.NonPassedParams
+                OpCodes.Ldc_I4_0,
+                OpCodes.Ldelem_Ref,
+                OpCodes.Unbox_Any,  // NotifyModel
+                OpCodes.Stloc_0,
+                OpCodes.Ldloca_S,   // 0
+                OpCodes.Call,       // NotifyModel.get_Number1
+                OpCodes.Ret
+            );
 
             var y = f(m);
             Asserts.AreEqual(43, y);
         }
-
 
         public void Test_nullable_param_in_closure_of_the_nested_lambda()
         {
@@ -137,7 +145,6 @@ namespace FastExpressionCompiler.IssueTests
         }
 
         public static int Inc(Func<int> f) => f() + 1;
-
 
         public void Test_nullable_of_struct_and_struct_field_in_the_nested_lambda()
         {
@@ -179,7 +186,6 @@ namespace FastExpressionCompiler.IssueTests
             var y = f(container);
             Asserts.AreEqual(43, y);
         }
-
 
         public void Test_original()
         {
@@ -245,9 +251,6 @@ namespace FastExpressionCompiler.IssueTests
             var f = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             Asserts.IsNotNull(f);
             f.PrintIL();
-
-            if (f.TryGetDebugClosureNestedLambdaOrConstant(out var item) && item is Delegate d)
-                d.PrintIL("nested");
 
             var y = f(container);
             Asserts.AreEqual(1, y.Count);

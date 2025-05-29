@@ -41,7 +41,7 @@ namespace FastExpressionCompiler.IssueTests
         {
             var ret = Block(Constant(7), Constant(7), Constant(7));
             var lambda = Lambda<Func<int>>(ret);
-            var fastCompiled = lambda.CompileFast<Func<int>>(true);
+            var fastCompiled = lambda.CompileFast<Func<int>>(true, CompilerFlags.EnableDelegateDebugInfo);
             Asserts.IsNotNull(fastCompiled);
             Asserts.AreEqual(7, fastCompiled());
 

@@ -20,6 +20,7 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            RefMethodCallingRefMethodWithLocal_OfStruct();
             RefMethodCallingRefMethodWithLocal_OfString();
 
             BlockWithNonRefStatementLast();
@@ -29,7 +30,6 @@ namespace FastExpressionCompiler.IssueTests
             RefMethodCallingRefMethod();
             RefMethodCallingRefMethodCustomStruct();
             RefMethodCallingRefMethodWithLocal_OfInt();
-            RefMethodCallingRefMethodWithLocal_OfStruct();
             OutRefMethodCallingRefMethodWithLocal();
             RefMethodCallingRefMethodWithLocalReturnLocalCalled();
             VariableVariableRefVariableRefParameterReturn();
@@ -246,7 +246,7 @@ namespace FastExpressionCompiler.IssueTests
             fs(ref a);
             Asserts.AreEqual("0", a);
 
-            var ff = lambda.CompileFast(true);
+            var ff = lambda.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.AssertOpCodes(expectedIL);
             a = "0";
             ff(ref a);
@@ -287,14 +287,14 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ret
             };
 
-            var compiledS = lambda.CompileSys();
-            compiledS.AssertOpCodes(expectedIL);
+            var fs = lambda.CompileSys();
+            fs.AssertOpCodes(expectedIL);
 
-            var compiledB = lambda.CompileFast(true);
-            compiledB.AssertOpCodes(expectedIL);
+            var ff = lambda.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
+            ff.AssertOpCodes(expectedIL);
 
             var exampleB = new RecVal("0");
-            compiledB(ref exampleB);
+            ff(ref exampleB);
             Asserts.AreEqual("0", exampleB.S);
 
             ActionRef<RecVal> direct = SetIntoLocalVariableAndCallOtherRef;
@@ -467,15 +467,15 @@ namespace FastExpressionCompiler.IssueTests
                 ),
                 objRef);
 
-            var compiledB = lambda.CompileFast<FuncRef<int, int>>(true);
-            compiledB.Method.AssertOpCodes(
+            var ff = lambda.CompileFast<FuncRef<int, int>>(true, CompilerFlags.EnableDelegateDebugInfo);
+            ff.AssertOpCodes(
                 OpCodes.Ldarg_1,
                 OpCodes.Ldarg_1,
                 OpCodes.Call,
                 OpCodes.Ldc_I4_M1,
                 OpCodes.Ret);
 
-            LocalAssert(compiledB);
+            LocalAssert(ff);
 
             FuncRef<int, int> direct = SetIntoLocalVariableAndCallOtherRef;
             LocalAssert(direct);
@@ -772,7 +772,7 @@ namespace FastExpressionCompiler.IssueTests
             var s = lambda.CompileSys();
             s.PrintIL();
 
-            var f = lambda.CompileFast(true);
+            var f = lambda.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             f.PrintIL();
             f.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -799,7 +799,7 @@ namespace FastExpressionCompiler.IssueTests
 
             var e = Lambda<ActionRefIn<StructWithIntField, int>>(body, objRef, objVal);
 
-            var fs = e.CompileFast<ActionRefIn<StructWithIntField, int>>(true);
+            var fs = e.CompileFast<ActionRefIn<StructWithIntField, int>>(true, CompilerFlags.EnableDelegateDebugInfo);
 
             fs.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -811,7 +811,6 @@ namespace FastExpressionCompiler.IssueTests
             fs(ref x1, 7);
             Asserts.AreEqual(7, x1.IntField);
         }
-
 
         public void RefAssign()
         {
@@ -830,12 +829,12 @@ namespace FastExpressionCompiler.IssueTests
                 Asserts.AreEqual(8.0, exampleA);
             }
 
-            var compiledA = lambda.CompileSys();
-            compiledA.PrintIL();
-            LocalAssert(compiledA);
+            var fs = lambda.CompileSys();
+            fs.PrintIL();
+            LocalAssert(fs);
 
-            var compiledB = lambda.CompileFast(true);
-            compiledB.AssertOpCodes(
+            var ff = lambda.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
+            ff.AssertOpCodes(
                 OpCodes.Ldarg_1,
                 OpCodes.Ldarg_1,
                 OpCodes.Ldind_R8,
@@ -844,12 +843,11 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Stind_R8,
                 OpCodes.Ret);
 
-            LocalAssert(compiledB);
+            LocalAssert(ff);
 
             ActionRef<double> direct = AddSet;
             LocalAssert(direct);
         }
-
 
         public void RefAssignCustomStruct()
         {

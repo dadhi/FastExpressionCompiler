@@ -153,7 +153,7 @@ namespace FastExpressionCompiler.Benchmarks
                 LightExpression.ExpressionCompiler.CompileFast(CreateManualLightExprWithParams(), true);
         }
 
-        [MemoryDiagnoser]
+        [MemoryDiagnoser, RankColumn, Orderer(BenchmarkDotNet.Order.SummaryOrderPolicy.FastestToSlowest)]
         public class Compilation
         {
             /*
@@ -227,22 +227,44 @@ namespace FastExpressionCompiler.Benchmarks
             | CompileFast_SystemExpression |  3.047 us | 0.0607 us |  0.1183 us |  3.010 us |  0.97 |    0.06 | 0.2213 | 0.2136 |   1.39 KB |        1.00 |
             | CompileFast_LightExpression  |  3.151 us | 0.0628 us |  0.1117 us |  3.130 us |  1.00 |    0.00 | 0.2213 | 0.2136 |   1.39 KB |        1.00 |
 
+            # v5.3.0 - Pooling the ILGenerator
+
+            BenchmarkDotNet v0.14.0, Windows 11 (10.0.26100.4061)
+            Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
+            .NET SDK 9.0.203
+            [Host]     : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+            DefaultJob : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+
+            | Method                       | Mean       | Error     | StdDev    | Ratio | RatioSD | Rank | Gen0   | Gen1   | Allocated | Alloc Ratio |
+            |----------------------------- |-----------:|----------:|----------:|------:|--------:|-----:|-------:|-------:|----------:|------------:|
+            | CompileFast_SystemExpression |   3.219 us | 0.0380 us | 0.0337 us |  0.98 |    0.01 |    1 | 0.1793 | 0.1755 |   1.12 KB |        1.00 |
+            | CompileFast_LightExpression  |   3.292 us | 0.0407 us | 0.0381 us |  1.00 |    0.02 |    1 | 0.1793 | 0.1755 |   1.12 KB |        1.00 |
+            | Compile_SystemExpression     | 102.515 us | 1.4959 us | 2.2390 us | 31.14 |    0.75 |    2 | 0.7324 | 0.4883 |   4.74 KB |        4.24 |
+
+            # v5.3.0 - Pooling the ILGenerator+SignatureHelper
+
+            | Method                       | Mean       | Error     | StdDev    | Ratio | RatioSD | Rank | Gen0   | Gen1   | Allocated | Alloc Ratio |
+            |----------------------------- |-----------:|----------:|----------:|------:|--------:|-----:|-------:|-------:|----------:|------------:|
+            | CompileFast_SystemExpression |   3.190 us | 0.0519 us | 0.0485 us |  0.97 |    0.02 |    1 | 0.1755 | 0.1678 |   1.08 KB |        1.00 |
+            | CompileFast_LightExpression  |   3.300 us | 0.0633 us | 0.0650 us |  1.00 |    0.03 |    1 | 0.1755 | 0.1678 |   1.08 KB |        1.00 |
+            | Compile_SystemExpression     | 106.339 us | 2.1083 us | 4.1120 us | 32.24 |    1.38 |    2 | 0.7324 | 0.6104 |   4.74 KB |        4.40 |
+
             */
 
             [Benchmark]
             public Func<B, X> Compile_SystemExpression() =>
                 _expr.Compile();
 
-            [Benchmark]
+            [Benchmark(Baseline = true)]
             public Func<B, X> CompileFast_SystemExpression() =>
                 _expr.CompileFast(true);
 
-            [Benchmark(Baseline = true)]
+            [Benchmark]
             public Func<B, X> CompileFast_LightExpression() =>
                 LightExpression.ExpressionCompiler.CompileFast(_leExpr, true);
         }
 
-        [MemoryDiagnoser]
+        [MemoryDiagnoser, RankColumn, Orderer(BenchmarkDotNet.Order.SummaryOrderPolicy.FastestToSlowest)]
         public class Invocation
         {
             /*
@@ -317,7 +339,7 @@ namespace FastExpressionCompiler.Benchmarks
             private static readonly B _bb = new B();
             private static readonly Func<B, X> _lambda = b => new X(_aa, b);
 
-            [Benchmark]
+            [Benchmark(Baseline = true)]
             public X DirectCall() => _lambda(_bb);
 
             [Benchmark]
@@ -326,7 +348,7 @@ namespace FastExpressionCompiler.Benchmarks
             [Benchmark]
             public X CompiledFast_SystemExpression() => _lambdaCompiledFast(_bb);
 
-            [Benchmark(Baseline = true)]
+            [Benchmark]
             public X CompiledFast_LightExpression() => _lambdaCompiledFast_LightExpession(_bb);
         }
     }

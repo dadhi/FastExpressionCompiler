@@ -58,11 +58,11 @@ In addition, the memory consumption taken by the compilation will be much smalle
 **Updated to .NET 9.0**
 
 ```ini
-BenchmarkDotNet v0.14.0, Windows 11 (10.0.22631.4391/23H2/2023Update/SunValley3)
+BenchmarkDotNet v0.15.0, Windows 11 (10.0.26100.4061/24H2/2024Update/HudsonValley)
 Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
-.NET SDK 9.0.100
-  [Host]     : .NET 9.0.0 (9.0.24.52809), X64 RyuJIT AVX2
-  DefaultJob : .NET 9.0.0 (9.0.24.52809), X64 RyuJIT AVX2
+.NET SDK 9.0.203
+[Host]     : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+DefaultJob : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
 ```
 
 ### Hoisted expression with the constructor and two arguments in closure
@@ -75,18 +75,18 @@ Expression<Func<X>> e = () => new X(a, b);
 
 Compiling expression:
 
-| Method      |       Mean |     Error |    StdDev | Ratio | RatioSD |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
-| ----------- | ---------: | --------: | --------: | ----: | ------: | -----: | -----: | --------: | ----------: |
-| Compile     | 151.570 us | 3.0196 us | 6.7538 us | 44.27 |    2.13 | 0.7324 |      - |   4.49 KB |        2.92 |
-| CompileFast |   3.425 us | 0.0676 us | 0.0664 us |  1.00 |    0.03 | 0.2441 | 0.2365 |   1.54 KB |        1.00 |
+| Method      |       Mean |     Error |    StdDev | Ratio | RatioSD | Rank |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
+| ----------- | ---------: | --------: | --------: | ----: | ------: | ---: | -----: | -----: | --------: | ----------: |
+| CompileFast |   3.183 us | 0.0459 us | 0.0407 us |  1.00 |    0.02 |    1 | 0.1984 | 0.1945 |   1.23 KB |        1.00 |
+| Compile     | 147.312 us | 1.9291 us | 1.8946 us | 46.28 |    0.81 |    2 | 0.4883 | 0.2441 |   4.48 KB |        3.65 |
 
 Invoking the compiled delegate (comparing to the direct constructor call):
 
-| Method                |     Mean |     Error |    StdDev |   Median | Ratio | RatioSD |   Gen0 | Allocated | Alloc Ratio |
-| --------------------- | -------: | --------: | --------: | -------: | ----: | ------: | -----: | --------: | ----------: |
-| DirectConstructorCall | 6.920 ns | 0.2007 ns | 0.3462 ns | 7.051 ns |  0.86 |    0.06 | 0.0051 |      32 B |        1.00 |
-| CompiledLambda        | 8.095 ns | 0.2195 ns | 0.5216 ns | 7.845 ns |  1.01 |    0.08 | 0.0051 |      32 B |        1.00 |
-| FastCompiledLambda    | 8.066 ns | 0.2206 ns | 0.3234 ns | 8.156 ns |  1.00 |    0.06 | 0.0051 |      32 B |        1.00 |
+| Method                |     Mean |     Error |    StdDev | Ratio | RatioSD | Rank |   Gen0 | Allocated | Alloc Ratio |
+| --------------------- | -------: | --------: | --------: | ----: | ------: | ---: | -----: | --------: | ----------: |
+| DirectConstructorCall | 6.055 ns | 0.0632 ns | 0.0560 ns |  1.00 |    0.01 |    1 | 0.0051 |      32 B |        1.00 |
+| CompiledLambda        | 7.853 ns | 0.2013 ns | 0.1681 ns |  1.30 |    0.03 |    2 | 0.0051 |      32 B |        1.00 |
+| FastCompiledLambda    | 7.962 ns | 0.2186 ns | 0.4052 ns |  1.31 |    0.07 |    2 | 0.0051 |      32 B |        1.00 |
 
 
 ### Hoisted expression with the static method and two nested lambdas and two arguments in closure
@@ -99,19 +99,18 @@ Expression<Func<X>> getXExpr = () => CreateX((aa, bb) => new X(aa, bb), new Lazy
 
 Compiling expression:
 
-| Method      |      Mean |    Error |    StdDev |    Median | Ratio | RatioSD |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
-| ----------- | --------: | -------: | --------: | --------: | ----: | ------: | -----: | -----: | --------: | ----------: |
-| Compile     | 421.09 us | 8.382 us | 18.221 us | 413.02 us | 36.29 |    2.09 | 1.9531 | 0.9766 |  12.04 KB |        2.61 |
-| CompileFast |  11.62 us | 0.230 us |  0.464 us |  11.42 us |  1.00 |    0.06 | 0.7324 | 0.7019 |   4.62 KB |        1.00 |
-
+| Method      |      Mean |    Error |   StdDev | Ratio | RatioSD | Rank |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
+| ----------- | --------: | -------: | -------: | ----: | ------: | ---: | -----: | -----: | --------: | ----------: |
+| CompileFast |  11.12 us | 0.189 us | 0.158 us |  1.00 |    0.02 |    1 | 0.6104 | 0.5798 |   3.77 KB |        1.00 |
+| Compile     | 415.09 us | 4.277 us | 3.571 us | 37.34 |    0.60 |    2 | 1.9531 | 1.4648 |  12.04 KB |        3.19 |
 
 Invoking compiled delegate comparing to direct method call:
 
-| Method              |        Mean |     Error |    StdDev |      Median | Ratio | RatioSD |   Gen0 | Allocated | Alloc Ratio |
-| ------------------- | ----------: | --------: | --------: | ----------: | ----: | ------: | -----: | --------: | ----------: |
-| DirectMethodCall    |    43.45 ns |  0.922 ns |  1.905 ns |    44.13 ns |  1.09 |    0.08 | 0.0268 |     168 B |        1.62 |
-| Invoke_Compiled     | 1,181.25 ns | 23.664 ns | 56.240 ns | 1,161.87 ns | 29.66 |    2.24 | 0.0420 |     264 B |        2.54 |
-| Invoke_CompiledFast |    39.96 ns |  0.856 ns |  2.442 ns |    38.96 ns |  1.00 |    0.08 | 0.0166 |     104 B |        1.00 |
+| Method              |        Mean |     Error |    StdDev | Ratio | RatioSD | Rank |   Gen0 | Allocated | Alloc Ratio |
+| ------------------- | ----------: | --------: | --------: | ----: | ------: | ---: | -----: | --------: | ----------: |
+| DirectMethodCall    |    40.29 ns |  0.549 ns |  0.487 ns |  1.00 |    0.02 |    1 | 0.0268 |     168 B |        1.00 |
+| Invoke_CompiledFast |    40.59 ns |  0.157 ns |  0.123 ns |  1.01 |    0.01 |    1 | 0.0166 |     104 B |        0.62 |
+| Invoke_Compiled     | 1,142.12 ns | 11.877 ns | 14.586 ns | 28.35 |    0.48 |    2 | 0.0420 |     264 B |        1.57 |
 
 
 ### Manually composed expression with parameters and closure
@@ -127,21 +126,20 @@ var expr = Expression.Lambda(
 
 Compiling expression:
 
-| Method                       |      Mean |     Error |    StdDev |    Median | Ratio | RatioSD |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
-| ---------------------------- | --------: | --------: | --------: | --------: | ----: | ------: | -----: | -----: | --------: | ----------: |
-| Compile_SystemExpression     | 89.076 us | 2.6699 us | 7.6605 us | 85.180 us | 28.12 |    3.05 | 0.7324 | 0.4883 |   4.74 KB |        3.41 |
-| CompileFast_SystemExpression |  3.138 us | 0.0550 us | 0.0565 us |  3.118 us |  0.99 |    0.03 | 0.2213 | 0.2136 |   1.39 KB |        1.00 |
-| CompileFast_LightExpression  |  3.180 us | 0.0602 us | 0.0591 us |  3.163 us |  1.00 |    0.00 | 0.2213 | 0.2136 |   1.39 KB |        1.00 |
-
+| Method                       |       Mean |     Error |    StdDev | Ratio | RatioSD | Rank |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
+| ---------------------------- | ---------: | --------: | --------: | ----: | ------: | ---: | -----: | -----: | --------: | ----------: |
+| CompileFast_LightExpression  |   3.107 us | 0.0562 us | 0.0498 us |  0.99 |    0.02 |    1 | 0.1755 | 0.1678 |   1.08 KB |        1.00 |
+| CompileFast_SystemExpression |   3.126 us | 0.0288 us | 0.0256 us |  1.00 |    0.01 |    1 | 0.1755 | 0.1678 |   1.08 KB |        1.00 |
+| Compile_SystemExpression     | 103.948 us | 1.9593 us | 2.5477 us | 33.26 |    0.84 |    2 | 0.7324 | 0.4883 |   4.74 KB |        4.40 |
 
 Invoking the compiled delegate compared to the normal delegate and the direct call:
 
-| Method                        |     Mean |     Error |    StdDev |   Median | Ratio | RatioSD |   Gen0 | Allocated | Alloc Ratio |
-| ----------------------------- | -------: | --------: | --------: | -------: | ----: | ------: | -----: | --------: | ----------: |
-| DirectCall                    | 8.388 ns | 0.2655 ns | 0.7575 ns | 8.092 ns |  1.00 |    0.07 | 0.0051 |      32 B |        1.00 |
-| Compiled_SystemExpression     | 9.474 ns | 0.1870 ns | 0.4105 ns | 9.381 ns |  1.10 |    0.05 | 0.0051 |      32 B |        1.00 |
-| CompiledFast_SystemExpression | 8.575 ns | 0.1624 ns | 0.1440 ns | 8.517 ns |  1.00 |    0.02 | 0.0051 |      32 B |        1.00 |
-| CompiledFast_LightExpression  | 8.584 ns | 0.0776 ns | 0.0862 ns | 8.594 ns |  1.00 |    0.00 | 0.0051 |      32 B |        1.00 |
+| Method                        |     Mean |    Error |   StdDev | Ratio | Rank |   Gen0 | Allocated | Alloc Ratio |
+| ----------------------------- | -------: | -------: | -------: | ----: | ---: | -----: | --------: | ----------: |
+| DirectCall                    | 10.19 ns | 0.108 ns | 0.085 ns |  1.00 |    1 | 0.0051 |      32 B |        1.00 |
+| CompiledFast_LightExpression  | 10.70 ns | 0.089 ns | 0.070 ns |  1.05 |    2 | 0.0051 |      32 B |        1.00 |
+| CompiledFast_SystemExpression | 10.91 ns | 0.071 ns | 0.066 ns |  1.07 |    2 | 0.0051 |      32 B |        1.00 |
+| Compiled_SystemExpression     | 11.59 ns | 0.098 ns | 0.081 ns |  1.14 |    3 | 0.0051 |      32 B |        1.00 |
 
 
 ### FastExpressionCompiler.LightExpression.Expression vs System.Linq.Expressions.Expression
@@ -169,20 +167,18 @@ Hopefully you are checking the expression arguments yourself and not waiting for
 
 Creating the expression:
 
-| Method                                 |       Mean |    Error |   StdDev |     Median | Ratio | RatioSD |   Gen0 | Allocated | Alloc Ratio |
-| -------------------------------------- | ---------: | -------: | -------: | ---------: | ----: | ------: | -----: | --------: | ----------: |
-| Create_SystemExpression                | 1,110.9 ns | 22.19 ns | 62.23 ns | 1,086.1 ns |  7.25 |    0.56 | 0.2060 |    1304 B |        2.63 |
-| Create_LightExpression                 |   153.7 ns |  3.14 ns |  8.61 ns |   150.5 ns |  1.00 |    0.08 | 0.0789 |     496 B |        1.00 |
-| Create_LightExpression_with_intrinsics |   161.0 ns |  2.80 ns |  2.19 ns |   161.0 ns |  1.05 |    0.06 | 0.0777 |     488 B |        0.98 |
+| Method                  |       Mean |    Error |   StdDev |     Median | Ratio | RatioSD | Rank |   Gen0 | Allocated | Alloc Ratio |
+| ----------------------- | ---------: | -------: | -------: | ---------: | ----: | ------: | ---: | -----: | --------: | ----------: |
+| Create_LightExpression  |   156.6 ns |  3.19 ns |  8.18 ns |   151.9 ns |  1.00 |    0.07 |    1 | 0.0827 |     520 B |        1.00 |
+| Create_SystemExpression | 1,065.0 ns | 14.24 ns | 11.89 ns | 1,069.3 ns |  6.82 |    0.34 |    2 | 0.2060 |    1304 B |        2.51 |
 
 Creating and compiling:
 
-| Method                                               |       Mean |     Error |     StdDev | Ratio | RatioSD |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
-| ---------------------------------------------------- | ---------: | --------: | ---------: | ----: | ------: | -----: | -----: | --------: | ----------: |
-| Create_SystemExpression_and_Compile                  | 212.157 us | 4.2180 us | 11.4036 us | 44.77 |    3.31 | 0.9766 | 0.4883 |   7.15 KB |        2.95 |
-| Create_SystemExpression_and_CompileFast              |   6.656 us | 0.1322 us |  0.3065 us |  1.40 |    0.10 | 0.5188 | 0.4883 |   3.27 KB |        1.35 |
-| Create_LightExpression_and_CompileFast               |   4.751 us | 0.0947 us |  0.2411 us |  1.00 |    0.07 | 0.3815 | 0.3662 |   2.42 KB |        1.00 |
-| CreateLightExpression_and_CompileFast_with_intrinsic |   4.604 us | 0.0918 us |  0.1915 us |  0.97 |    0.06 | 0.3815 | 0.3662 |   2.35 KB |        0.97 |
+| Method                                  |       Mean |     Error |    StdDev |     Median | Ratio | RatioSD | Rank |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
+| --------------------------------------- | ---------: | --------: | --------: | ---------: | ----: | ------: | ---: | -----: | -----: | --------: | ----------: |
+| Create_LightExpression_and_CompileFast  |   4.957 us | 0.0986 us | 0.2362 us |   4.913 us |  1.00 |    0.07 |    1 | 0.3510 | 0.3052 |   2.15 KB |        1.00 |
+| Create_SystemExpression_and_CompileFast |   6.518 us | 0.1889 us | 0.5541 us |   6.300 us |  1.32 |    0.13 |    2 | 0.4578 | 0.4272 |   2.97 KB |        1.38 |
+| Create_SystemExpression_and_Compile     | 205.000 us | 4.0938 us | 7.3819 us | 206.353 us | 41.44 |    2.45 |    3 | 0.9766 | 0.4883 |   7.15 KB |        3.33 |
 
 
 ## Difference between FastExpressionCompiler and FastExpressionCompiler.LightExpression
@@ -300,16 +296,90 @@ FEC V3 has added powerful diagnostics and code generation tools.
 
 You may pass the optional `CompilerFlags.EnableDelegateDebugInfo`  into the `CompileFast` methods.
 
-`EnableDelegateDebugInfo` adds the diagnostic info into the compiled delegate including its source Expression and C# code. 
-Can be used as following:
+`EnableDelegateDebugInfo` adds the diagnostic info into the compiled delegate including its source Expression and compiled IL code. 
+
+It can be used as following:
 
 ```cs
-var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
-var di = f.Target as IDelegateDebugInfo;
-Asserts.IsNotNull(di.Expression);
-Asserts.IsNotNull(di.ExpressionString);
-Asserts.IsNotNull(di.CSharpString);
+System.Linq.Expressions.Expression<Func<int, Func<int>>> e = 
+  n => () => n + 1;
+var f = e.CompileFast(flags: CompilerFlags.EnableDelegateDebugInfo);
+var d = f.TryGetDebugInfo();
+d.PrintExpression();
+d.PrintCSharp();
+d.PrintIL(); // available in NET8+
 ```
+
+<details><summary>Expand to see the output of the above code...</summary>
+
+
+Output of `d.PrintExpression()` is the valid C#:
+
+```cs
+var p = new ParameterExpression[1]; // the parameter expressions
+var e = new Expression[3]; // the unique expressions
+var expr = Lambda<Func<int, Func<int>>>(
+  e[0]=Lambda<Func<int>>(
+      e[1]=MakeBinary(ExpressionType.Add,
+          p[0]=Parameter(typeof(int), "n"),
+          e[2]=Constant(1)), new ParameterExpression[0]),
+  p[0 // (int n)
+      ]);
+```
+
+Output of `d.PrintCSharp()` is the valid C#:
+
+```cs
+var @cs = (Func<int, Func<int>>)((int n) => //Func<int>
+    (Func<int>)(() => //int
+        n + 1));
+```
+
+Output of `d.PrintIL()` (includes the IL of the nested lambda):
+
+```
+<Caller>
+0   ldarg.0
+1   ldfld object[] ExpressionCompiler.ArrayClosure.ConstantsAndNestedLambdas
+6   stloc.0
+7   ldloc.0
+8   ldc.i4.0
+9   ldelem.ref
+10  stloc.1
+11  ldloc.1
+12  ldc.i4.1
+13  newarr object
+18  stloc.2
+19  ldloc.2
+20  stfld object[] ExpressionCompiler.NestedLambdaForNonPassedParams.NonPassedParams
+25  ldloc.2
+26  ldc.i4.0
+27  ldarg.1
+28  box int
+33  stelem.ref
+34  ldloc.1
+35  ldfld object ExpressionCompiler.NestedLambdaForNonPassedParams.NestedLambda
+40  ldloc.2
+41  ldloc.1
+42  ldfld object[] ExpressionCompiler.NestedLambdaForNonPassedParamsWithConstants.ConstantsAndNestedLambdas
+47  newobj ExpressionCompiler.ArrayClosureWithNonPassedParams(System.Object[], System.Object[])
+52  call Func<int> ExpressionCompiler.CurryClosureFuncs.Curry(System.Func`2[FastExpressionCompiler.LightExpression.ExpressionCompiler+ArrayClosure,System.Int32], ArrayClosure)
+57  ret
+</Caller>
+<0_nested_in_Caller>
+0   ldarg.0
+1   ldfld object[] ExpressionCompiler.ArrayClosureWithNonPassedParams.NonPassedParams
+6   ldc.i4.0
+7   ldelem.ref
+8   unbox.any int
+13  ldc.i4.1
+14  add
+15  ret
+</0_nested_in_Caller>
+```
+
+</details>
+
 
 ### ThrowOnNotSupportedExpression and NotSupported_ flags
 

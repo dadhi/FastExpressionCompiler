@@ -46,7 +46,7 @@ public class Issue365_Working_with_ref_return_values : ITest
 
         // var fs = e.CompileSys(); // todo: does not convert ref returning method calls, cause unable to find the property on the T& type
 
-        var ff = e.CompileFast(true);
+        var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
         ff.AssertOpCodes(
             OpCodes.Ldarg_1,
             OpCodes.Call, // ParamValue& GetParamValueByRef()
@@ -89,7 +89,7 @@ public class Issue365_Working_with_ref_return_values : ITest
 
         // var fs = e.CompileSys(); // todo: does not conver ref returning method calls, cause unable cannot find the property on the T& type
 
-        var ff = e.CompileFast(true);
+        var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
         ff.AssertOpCodes(
             OpCodes.Ldarg_1,
             OpCodes.Call, // ParamValue& GetParamValueByRef()

@@ -47,7 +47,7 @@ namespace FastExpressionCompiler.IssueTests
                 Constant(0));
 
             var lambda = Lambda<Func<string, int>>(condition, pParam);
-            var convert1 = lambda.CompileFast(true);
+            var convert1 = lambda.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             Asserts.IsNotNull(convert1);
             Asserts.AreEqual(1, convert1("aaa"));
 

@@ -37,7 +37,7 @@ public class Issue374_CompileFast_does_not_work_with_HasFlag : ITest
         Asserts.IsTrue(fs(b1));
         Asserts.IsFalse(fs(b2));
 
-        var ff = e.CompileFast(true);
+        var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
         ff.PrintIL();
         ff.AssertOpCodes(
             OpCodes.Ldarg_1,

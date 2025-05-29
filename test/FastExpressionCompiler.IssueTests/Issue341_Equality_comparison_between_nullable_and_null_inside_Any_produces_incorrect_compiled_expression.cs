@@ -15,6 +15,8 @@ public class Issue341_Equality_comparison_between_nullable_and_null_inside_Any_p
 {
     public int Run()
     {
+        Nullable_decimal_member_not_equal_to_null_inside_predicate();
+
         foreach (var (a, op, b, expected) in Data)
             Nullable_decimal_parameters_comparison_cases(a, op, b, expected);
 
@@ -29,7 +31,6 @@ public class Issue341_Equality_comparison_between_nullable_and_null_inside_Any_p
         Null_not_equal_to_nullable_decimal();
         Nullable_decimal_equal_to_null();
         Nullable_decimal_member_not_equal_to_null();
-        Nullable_decimal_member_not_equal_to_null_inside_predicate();
 
         return Data.Length * 2 + 9;
     }
@@ -307,13 +308,9 @@ public class Issue341_Equality_comparison_between_nullable_and_null_inside_Any_p
         var compiledSys = expression.CompileSys();
         compiledSys.PrintIL("sys");
 
-        var compiledFast = expression.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
-        Asserts.IsNotNull(compiledFast);
-
-        compiledFast.PrintIL("fast");
-
-        if (compiledFast.TryGetDebugClosureNestedLambdaOrConstant(out var item) && item is Delegate d)
-            d.PrintIL("predicate");
+        var f = expression.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
+        Asserts.IsNotNull(f);
+        f.PrintIL("fast");
 
         var instance = new Test()
         {
@@ -326,7 +323,7 @@ public class Issue341_Equality_comparison_between_nullable_and_null_inside_Any_p
         var result = compiledSys(instance);
         Asserts.IsTrue(result);
 
-        result = compiledFast(instance);
+        result = f(instance);
         Asserts.IsTrue(result);
     }
 

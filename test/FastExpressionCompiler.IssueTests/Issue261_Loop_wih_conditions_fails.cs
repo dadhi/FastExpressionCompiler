@@ -608,7 +608,7 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
     var fs = e.CompileSys();
     fs.PrintIL();
 
-    var ff = e.CompileFast(true);
+    var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
     ff.AssertOpCodes(
         OpCodes.Ldarg_2,
         OpCodes.Stloc_0,
@@ -641,7 +641,7 @@ p[0]=Parameter(typeof(PrimitiveValue), "result")
       elArr, index
     );
 
-    var f = e.CompileFast(true);
+    var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
 
     f.AssertOpCodes(
         OpCodes.Ldarg_2,

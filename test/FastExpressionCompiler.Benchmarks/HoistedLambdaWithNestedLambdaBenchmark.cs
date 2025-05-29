@@ -18,7 +18,7 @@ namespace FastExpressionCompiler.Benchmarks
 
         private static readonly Expression<Func<X>> _hoistedExpr = GetHoistedExpr();
 
-        [MemoryDiagnoser]
+        [MemoryDiagnoser, RankColumn, Orderer(BenchmarkDotNet.Order.SummaryOrderPolicy.FastestToSlowest)]
         public class Compilation
         {
             /*
@@ -123,6 +123,34 @@ namespace FastExpressionCompiler.Benchmarks
             | Compile     | 421.09 us | 8.382 us | 18.221 us | 413.02 us | 36.29 |    2.09 | 1.9531 | 0.9766 |  12.04 KB |        2.61 |
             | CompileFast |  11.62 us | 0.230 us |  0.464 us |  11.42 us |  1.00 |    0.06 | 0.7324 | 0.7019 |   4.62 KB |        1.00 |
 
+            ## v5.3.0 ILGenerator pooling
+
+            | Method      | Mean      | Error    | StdDev   | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
+            |------------ |----------:|---------:|---------:|------:|--------:|-------:|-------:|----------:|------------:|
+            | Compile     | 410.18 us | 6.928 us | 5.785 us | 36.97 |    0.92 | 1.9531 | 1.4648 |  12.04 KB |        2.74 |
+            | CompileFast |  11.10 us | 0.214 us | 0.237 us |  1.00 |    0.03 | 0.7019 | 0.6714 |    4.4 KB |        1.00 |
+
+            ## v5.3.0 ILGenerator pooling for the nested lambdas too
+
+            | Method      | Mean      | Error    | StdDev   | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
+            |------------ |----------:|---------:|---------:|------:|--------:|-------:|-------:|----------:|------------:|
+            | Compile     | 413.38 us | 5.859 us | 5.480 us | 39.90 |    0.88 | 1.9531 | 1.4648 |  12.04 KB |        3.06 |
+            | CompileFast |  10.36 us | 0.195 us | 0.191 us |  1.00 |    0.03 | 0.6409 | 0.6104 |   3.93 KB |        1.00 |
+
+            ## v5.3.0 ILGenerator+SignaturHelper pooling
+
+            | Method      | Mean      | Error    | StdDev    | Median    | Ratio | RatioSD | Gen0   | Gen1   | Allocated | Alloc Ratio |
+            |------------ |----------:|---------:|----------:|----------:|------:|--------:|-------:|-------:|----------:|------------:|
+            | Compile     | 437.16 us | 8.631 us | 20.004 us | 438.94 us | 39.26 |    3.33 | 1.9531 | 0.9766 |  12.04 KB |        3.19 |
+            | CompileFast |  11.20 us | 0.329 us |  0.896 us |  10.93 us |  1.01 |    0.11 | 0.6104 | 0.5951 |   3.77 KB |        1.00 |
+
+            ## v5.3.0 + BDN v0.15.0
+
+            | Method      | Mean      | Error    | StdDev   | Ratio | RatioSD | Rank | Gen0   | Gen1   | Allocated | Alloc Ratio |
+            |------------ |----------:|---------:|---------:|------:|--------:|-----:|-------:|-------:|----------:|------------:|
+            | CompileFast |  11.12 us | 0.189 us | 0.158 us |  1.00 |    0.02 |    1 | 0.6104 | 0.5798 |   3.77 KB |        1.00 |
+            | Compile     | 415.09 us | 4.277 us | 3.571 us | 37.34 |    0.60 |    2 | 1.9531 | 1.4648 |  12.04 KB |        3.19 |
+
             */
             [Benchmark]
             public Func<X> Compile() => _hoistedExpr.Compile();
@@ -131,7 +159,7 @@ namespace FastExpressionCompiler.Benchmarks
             public Func<X> CompileFast() => _hoistedExpr.CompileFast();
         }
 
-        [MemoryDiagnoser]
+        [MemoryDiagnoser, RankColumn, Orderer(BenchmarkDotNet.Order.SummaryOrderPolicy.FastestToSlowest)]
         public class Invocation
         {
             /*
@@ -232,7 +260,7 @@ namespace FastExpressionCompiler.Benchmarks
             private readonly A _aa = new A();
             private readonly B _bb = new B();
 
-            [Benchmark]
+            [Benchmark(Baseline = true)]
             public X DirectMethodCall() =>
                 CreateX((a, b) => new X(a, b), new Lazy<A>(() => _aa), _bb);
 
@@ -240,7 +268,7 @@ namespace FastExpressionCompiler.Benchmarks
             public X Invoke_Compiled() =>
                 _lambdaCompiled();
 
-            [Benchmark(Baseline = true)]
+            [Benchmark]
             public X Invoke_CompiledFast() =>
                 _lambdaCompiledFast();
         }

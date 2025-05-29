@@ -94,7 +94,7 @@ namespace FastExpressionCompiler.IssueTests
             fs(a1);
             Asserts.AreEqual(33, a1[2]);
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
             ff.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -137,7 +137,7 @@ namespace FastExpressionCompiler.IssueTests
             fs(a1, ref b1);
             Asserts.AreEqual(33, a1[2]);
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
             ff.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -175,7 +175,7 @@ namespace FastExpressionCompiler.IssueTests
             fs(a1);
             Asserts.AreEqual(33, a1[1, 2]);
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
             ff.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -259,7 +259,7 @@ namespace FastExpressionCompiler.IssueTests
             fs(a1);
             Asserts.AreEqual(-33, a1.Elem);
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
             ff.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -297,7 +297,7 @@ namespace FastExpressionCompiler.IssueTests
             fs(a1);
             Asserts.AreEqual(9, a1.Elem);
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
             ff.AssertOpCodes(
                 OpCodes.Ldarga_S,
@@ -337,7 +337,7 @@ namespace FastExpressionCompiler.IssueTests
             fs(ref a1);
             Asserts.AreEqual(-33, a1.Elem);
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
             ff.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -574,7 +574,7 @@ namespace FastExpressionCompiler.IssueTests
             fs(ref a1);
             Asserts.AreEqual(10, a1[2]);
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
             ff.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -621,7 +621,7 @@ namespace FastExpressionCompiler.IssueTests
             fs(a1);
             Asserts.AreEqual(9, a1.Elem);
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
             ff.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -670,7 +670,7 @@ namespace FastExpressionCompiler.IssueTests
             fs(ref a1);
             Asserts.AreEqual(9, a1.Elem); // todo: @sys does not work, or is there bug in converting to the Expression?
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
             ff.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -730,7 +730,7 @@ namespace FastExpressionCompiler.IssueTests
             fs(ref a1);
             Asserts.AreEqual(-3, a1.Elem); // todo: @sys does not work, or is there bug in converting to the Expression?
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
             ff.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -876,7 +876,7 @@ namespace FastExpressionCompiler.IssueTests
             fs();
             Asserts.AreEqual(33, Box.StaticField);
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
             ff.AssertOpCodes(
                 OpCodes.Ldsfld,
@@ -914,7 +914,7 @@ namespace FastExpressionCompiler.IssueTests
             fs();
             Asserts.AreEqual(33, Box.StaticProp);
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
             ff.AssertOpCodes(
                 OpCodes.Call,       // Box.get_StaticProp
@@ -954,7 +954,7 @@ namespace FastExpressionCompiler.IssueTests
             fs(b1);
             Asserts.AreEqual(42, b1.Field);
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
             ff.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -1003,7 +1003,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(null, b1.NullableField);
             Asserts.AreEqual(42, b2.NullableField);
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
             ff.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -1070,7 +1070,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(null, a1[2]);
             Asserts.AreEqual(42, a2[2]);
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
             // ff.AssertOpCodes(
             //     OpCodes.Ldarg_1,
@@ -1138,7 +1138,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(null, b1.NullableProp);
             Asserts.AreEqual(42, b2.NullableProp);
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
             ff.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -1247,7 +1247,7 @@ namespace FastExpressionCompiler.IssueTests
             fs(b1);
             Asserts.AreEqual(10, b1.Field);
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
             ff.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -1289,7 +1289,7 @@ namespace FastExpressionCompiler.IssueTests
             fs(b1);
             Asserts.AreEqual(10, b1.Field);
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
             ff.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -1410,7 +1410,7 @@ namespace FastExpressionCompiler.IssueTests
             // Asserts.AreEqual(10, v1.Value); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
             Asserts.AreEqual(9, v1.Field); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
 
             ff.AssertOpCodes(
@@ -1461,7 +1461,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(null, v1.NullableField);
             Asserts.AreEqual(9, v2.NullableField); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
 
             ff.AssertOpCodes(
@@ -1524,7 +1524,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(null, v1.NullableProp);
             Asserts.AreEqual(9, v2.NullableProp); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
 
             ff.AssertOpCodes(
@@ -1592,7 +1592,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(9, v2.NullableField); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
             Asserts.AreEqual(10, x2);
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
             ff.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -1663,7 +1663,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(9, v2.NullableProp); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
             Asserts.AreEqual(10, x2);
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
             ff.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -1733,7 +1733,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(9, v2.NullableField); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
             Asserts.AreEqual(9, x2);
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
             ff.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -1796,7 +1796,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(9, v1.Field); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
             Asserts.AreEqual(10, x1);
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
             ff.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -1846,7 +1846,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(9, v1.Field); // todo: @sys that System.Compile does not work with ref ValueType.Member Increment/Decrement operations
             Asserts.AreEqual(9, x1);
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
             ff.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -1901,7 +1901,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(null, b1.NullableField);
             Asserts.AreEqual(42, b2.NullableField);
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
             ff.AssertOpCodes(
                 OpCodes.Ldarg_1,
@@ -1967,7 +1967,7 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(42, b2.NullableField);
             Asserts.AreEqual(42, x2);
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
             ff.AssertOpCodes(
                 OpCodes.Ldarg_1,

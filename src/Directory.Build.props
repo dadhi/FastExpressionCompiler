@@ -33,6 +33,7 @@
     </ItemGroup>
 
     <PropertyGroup>
+        <Features>strict</Features>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     </PropertyGroup>
 

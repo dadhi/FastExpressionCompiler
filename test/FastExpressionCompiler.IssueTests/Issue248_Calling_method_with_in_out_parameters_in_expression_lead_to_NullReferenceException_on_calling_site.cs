@@ -33,7 +33,7 @@ namespace FastExpressionCompiler.IssueTests
 
             expr.PrintCSharp();
 
-            var serialize = expr.CompileFast(true);
+            var serialize = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             Asserts.IsNotNull(serialize);
             serialize.PrintIL();
 
@@ -74,7 +74,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Callvirt,
                 OpCodes.Ret);
 
-            var serialize = expr.CompileFast(true);
+            var serialize = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             Asserts.IsNotNull(serialize);
             serialize.PrintIL();
 
@@ -113,7 +113,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Callvirt,
                 OpCodes.Ret);
 
-            var serialize = expr.CompileFast(true);
+            var serialize = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             Asserts.IsNotNull(serialize);
             serialize.PrintIL();
 
@@ -157,7 +157,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Callvirt,
                 OpCodes.Ret);
 
-            var serialize = expr.CompileFast(true);
+            var serialize = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             Asserts.IsNotNull(serialize);
             serialize.PrintIL();
 

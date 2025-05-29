@@ -377,7 +377,7 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(33, fs(arr, 1));
             Asserts.AreEqual(33 /*should be 32*/, arr[1].N); // todo: @sys Compile is wrong and evaluates to 33
 
-            var ff = e.CompileFast(true);
+            var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
             ff.AssertOpCodes(
                 OpCodes.Ldarg_1,

@@ -44,7 +44,7 @@ public struct Issue461_InvalidProgramException_when_null_checking_type_by_ref : 
         Asserts.IsTrue(fs(null));
         Asserts.IsFalse(fs(new Target()));
 
-        var ff = expr.CompileFast(false);
+        var ff = expr.CompileFast(false, CompilerFlags.EnableDelegateDebugInfo);
         ff.PrintIL();
         Asserts.IsTrue(ff(null));
         Asserts.IsFalse(ff(new Target()));
@@ -73,7 +73,7 @@ public struct Issue461_InvalidProgramException_when_null_checking_type_by_ref : 
         Asserts.IsFalse(fs(null));
         Asserts.IsTrue(fs(new Target()));
 
-        var ff = expr.CompileFast(false);
+        var ff = expr.CompileFast(false, CompilerFlags.EnableDelegateDebugInfo);
         ff.PrintIL();
         Asserts.IsFalse(ff(null));
         Asserts.IsTrue(ff(new Target()));
@@ -109,7 +109,7 @@ public struct Issue461_InvalidProgramException_when_null_checking_type_by_ref : 
         Asserts.IsTrue(fs(null));
         Asserts.IsFalse(fs(new XX()));
 
-        var ff = expr.CompileFast(false);
+        var ff = expr.CompileFast(false, CompilerFlags.EnableDelegateDebugInfo);
         ff.PrintIL();
         Asserts.IsTrue(ff(null));
         Asserts.IsFalse(ff(new XX()));
@@ -138,7 +138,7 @@ public struct Issue461_InvalidProgramException_when_null_checking_type_by_ref : 
         Asserts.IsFalse(fs(null));
         Asserts.IsTrue(fs(new XX()));
 
-        var ff = expr.CompileFast(false);
+        var ff = expr.CompileFast(false, CompilerFlags.EnableDelegateDebugInfo);
         ff.PrintIL();
         Asserts.IsFalse(ff(null));
         Asserts.IsTrue(ff(new XX()));
@@ -164,7 +164,7 @@ public struct Issue461_InvalidProgramException_when_null_checking_type_by_ref : 
         fs.PrintIL();
         Asserts.IsTrue(fs(1.142m));
 
-        var ff = expr.CompileFast(false);
+        var ff = expr.CompileFast(false, CompilerFlags.EnableDelegateDebugInfo);
         ff.PrintIL();
         Asserts.IsTrue(ff(1.142m));
 

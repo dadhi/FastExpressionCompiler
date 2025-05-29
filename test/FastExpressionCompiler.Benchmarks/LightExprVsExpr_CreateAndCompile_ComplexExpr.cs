@@ -4,7 +4,7 @@ using LE = FastExpressionCompiler.LightExpression.ExpressionCompiler;
 
 namespace FastExpressionCompiler.Benchmarks
 {
-    [MemoryDiagnoser]
+    [MemoryDiagnoser, RankColumn, Orderer(BenchmarkDotNet.Order.SummaryOrderPolicy.FastestToSlowest)]
     public class LightExprVsExpr_CreateAndCompile_ComplexExpr
     {
         /**
@@ -139,6 +139,21 @@ namespace FastExpressionCompiler.Benchmarks
         | Create_SystemExpression_and_CompileFast              |   6.656 us | 0.1322 us |  0.3065 us |  1.40 |    0.10 | 0.5188 | 0.4883 |   3.27 KB |        1.35 |
         | Create_LightExpression_and_CompileFast               |   4.751 us | 0.0947 us |  0.2411 us |  1.00 |    0.07 | 0.3815 | 0.3662 |   2.42 KB |        1.00 |
         | CreateLightExpression_and_CompileFast_with_intrinsic |   4.604 us | 0.0918 us |  0.1915 us |  0.97 |    0.06 | 0.3815 | 0.3662 |   2.35 KB |        0.97 |
+
+
+        ## v5.3.0 ILGenerator pooling
+
+        BenchmarkDotNet v0.14.0, Windows 11 (10.0.26100.4061)
+        Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
+        .NET SDK 9.0.203
+        [Host]     : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+        DefaultJob : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+
+        | Method                                  | Mean       | Error     | StdDev    | Median     | Ratio | RatioSD | Rank | Gen0   | Gen1   | Allocated | Alloc Ratio |
+        |---------------------------------------- |-----------:|----------:|----------:|-----------:|------:|--------:|-----:|-------:|-------:|----------:|------------:|
+        | Create_LightExpression_and_CompileFast  |   4.494 us | 0.0809 us | 0.0932 us |   4.481 us |  1.00 |    0.03 |    1 | 0.3510 | 0.3281 |   2.15 KB |        1.00 |
+        | Create_SystemExpression_and_CompileFast |   6.465 us | 0.1249 us | 0.1439 us |   6.472 us |  1.44 |    0.04 |    2 | 0.4578 | 0.4272 |   2.97 KB |        1.38 |
+        | Create_SystemExpression_and_Compile     | 207.973 us | 4.1326 us | 6.5548 us | 211.782 us | 46.30 |    1.71 |    3 | 0.9766 | 0.7324 |   7.15 KB |        3.33 |
         */
 
         [Benchmark]
@@ -153,12 +168,12 @@ namespace FastExpressionCompiler.Benchmarks
         public object Create_LightExpression_and_CompileFast() =>
             LE.CompileFast(LightExpressionTests.CreateComplexLightExpression());
 
-        [Benchmark]
+        // [Benchmark]
         public object CreateLightExpression_and_CompileFast_with_intrinsic() =>
             LE.CompileFast(LightExpressionTests.CreateComplexLightExpression_with_intrinsics());
     }
 
-    [MemoryDiagnoser]
+    [MemoryDiagnoser, RankColumn, Orderer(BenchmarkDotNet.Order.SummaryOrderPolicy.FastestToSlowest)]
     public class LightExprVsExpr_Create_ComplexExpr
     {
         /*
@@ -246,6 +261,15 @@ namespace FastExpressionCompiler.Benchmarks
         | Create_LightExpression                 |   153.7 ns |  3.14 ns |  8.61 ns |   150.5 ns |  1.00 |    0.08 | 0.0789 |     496 B |        1.00 |
         | Create_LightExpression_with_intrinsics |   161.0 ns |  2.80 ns |  2.19 ns |   161.0 ns |  1.05 |    0.06 | 0.0777 |     488 B |        0.98 |
 
+
+        ## v5.3.0 + BDN v0.15.0
+
+        | Method                                  | Mean       | Error     | StdDev    | Median     | Ratio | RatioSD | Rank | Gen0   | Gen1   | Allocated | Alloc Ratio |
+        |---------------------------------------- |-----------:|----------:|----------:|-----------:|------:|--------:|-----:|-------:|-------:|----------:|------------:|
+        | Create_LightExpression_and_CompileFast  |   4.957 us | 0.0986 us | 0.2362 us |   4.913 us |  1.00 |    0.07 |    1 | 0.3510 | 0.3052 |   2.15 KB |        1.00 |
+        | Create_SystemExpression_and_CompileFast |   6.518 us | 0.1889 us | 0.5541 us |   6.300 us |  1.32 |    0.13 |    2 | 0.4578 | 0.4272 |   2.97 KB |        1.38 |
+        | Create_SystemExpression_and_Compile     | 205.000 us | 4.0938 us | 7.3819 us | 206.353 us | 41.44 |    2.45 |    3 | 0.9766 | 0.4883 |   7.15 KB |        3.33 |
+
         */
 
         [Benchmark]
@@ -256,7 +280,7 @@ namespace FastExpressionCompiler.Benchmarks
         public object Create_LightExpression() =>
             LightExpressionTests.CreateComplexLightExpression();
 
-        [Benchmark]
+        // [Benchmark]
         public object Create_LightExpression_with_intrinsics() =>
             LightExpressionTests.CreateComplexLightExpression_with_intrinsics();
     }

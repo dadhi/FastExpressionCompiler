@@ -12,10 +12,12 @@ using static System.Environment;
 
 #if LIGHT_EXPRESSION
 namespace FastExpressionCompiler.LightExpression;
+
 using FastExpressionCompiler.LightExpression.ILDecoder;
 using FastExpressionCompiler.LightExpression.ImTools;
 #else
 namespace FastExpressionCompiler;
+
 using FastExpressionCompiler.ILDecoder;
 using FastExpressionCompiler.ImTools;
 using System.Linq.Expressions;
@@ -40,40 +42,35 @@ public static class TestTools
 #endif
     }
 
-    public static void AssertOpCodes(this Delegate @delegate, params OpCode[] expectedCodes) =>
-        AssertOpCodes(@delegate.Method, expectedCodes);
-
-    public static void AssertOpCodes(this MethodInfo method, params OpCode[] expectedCodes)
+    public static void AssertOpCodes(this Delegate dlg, params OpCode[] expectedCodes)
     {
-        if (DisableAssertOpCodes) return;
-
-        var ilReader = ILReaderFactory.Create(method);
-        if (ilReader is null)
-        {
-            Debug.WriteLine($"Reading IL is currently not supported");
-            return;
-        }
-        var actualCodes = ilReader.Select(x => x.OpCode).ToArray();
-
-        var sb = new StringBuilder();
-        var index = 0;
-        foreach (var code in actualCodes)
-        {
-            if (index < 1000)
-                sb.AppendLine($"{index,-4}{code}");
-            else if (index < 10000000)
-                sb.AppendLine($"{index,-8}{code}");
-            else
-                sb.AppendLine($"{index,-12}{code}");
-            ++index;
-        }
-
-        Asserts.AreEqual(expectedCodes, actualCodes);
+        var diagInfo = dlg.TryGetDebugInfo();
+        if (diagInfo != null)
+            AssertOpCodes(diagInfo.ILInstructions, expectedCodes);
+        else
+            AssertOpCodes(dlg.Method, expectedCodes);
     }
 
-    public static void PrintExpression(this Expression expr, bool completeTypeNames = false)
+    public static void AssertOpCodes(this MethodInfo method, params OpCode[] expectedCodes) =>
+        AssertOpCodes(ILReaderFactory.GetILReaderOrNull(method)?.ToArray() ?? [], expectedCodes);
+
+    public static void AssertOpCodes(this IDelegateDebugInfo debugInfo, params OpCode[] expectedCodes) =>
+        AssertOpCodes(debugInfo.ILInstructions, expectedCodes);
+
+    public static void AssertOpCodes(this IEnumerable<ILInstruction> il, params OpCode[] expectedCodes)
+    {
+#if NET8_0_OR_GREATER
+        if (DisableAssertOpCodes) return;
+        Asserts.AreEqual(expectedCodes, il?.Select(x => x.OpCode) ?? []);
+#endif
+    }
+
+    public static void PrintExpression(this Expression expr, bool completeTypeNames = false,
+        [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "")
     {
         if (!AllowPrintExpression) return;
+        Console.WriteLine();
+        Console.WriteLine($"//{Path.GetFileNameWithoutExtension(filePath)}.{caller}");
         Console.WriteLine(
             expr.ToExpressionString(out var _, out var _, out var _,
             stripNamespace: true,
@@ -82,12 +79,22 @@ public static class TestTools
         );
     }
 
+    public static void PrintExpression(this IDelegateDebugInfo debugInfo, bool completeTypeNames = false,
+        [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "") =>
+        PrintExpression(debugInfo.Expression, completeTypeNames, caller, filePath);
+
     public static void PrintCSharp(this Expression expr, bool completeTypeNames = false,
         [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "")
     {
         if (!AllowPrintIL) return;
         Console.WriteLine();
         Console.WriteLine($"//{Path.GetFileNameWithoutExtension(filePath)}.{caller}");
+
+        if (expr == null)
+        {
+            Console.WriteLine("<null expression>");
+            return;
+        }
 
         var sb = new StringBuilder(1024);
         sb.Append("var @cs = ");
@@ -125,18 +132,77 @@ public static class TestTools
         Console.WriteLine(result = expr.ToCSharpString());
     }
 
-    public static void PrintIL(this Delegate @delegate, [CallerMemberName] string tag = null)
+    /// <summary>The method outputs the whole code of the expression including the code of the nested lambdas.
+    /// In case of nested lambda represented in the expression of the Constant Delegate, 
+    /// and the Delegate.Target being IDelegateDebugInfo, you may call `IDelegateDebugInfo.EnumerateNestedLambdas()`
+    /// and output C# for each nested lambda</summary>
+    public static void PrintCSharp(this IDelegateDebugInfo debugInfo, bool completeTypeNames = false,
+        [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "") =>
+        debugInfo.Expression.PrintCSharp(completeTypeNames, caller, filePath);
+
+    public static void PrintIL(this Delegate dlg, [CallerMemberName] string tag = null)
     {
         if (!AllowPrintIL) return;
-        @delegate.Method.PrintIL(tag);
+        if (dlg.Target is IDelegateDebugInfo debugInfo)
+            debugInfo.PrintIL(tag);
+        else
+            dlg.Method.PrintIL(tag);
     }
 
-    public static void PrintIL(this MethodInfo method, string tag = null)
+    public static void PrintIL(this MethodInfo method, [CallerMemberName] string tag = null) =>
+        PrintIL(tag, method, static (m, s) => m.ToILString(s));
+
+    /// <summary>Prints the IL instructions of the delegate debug info, including nested lambdas.</summary>
+    public static void PrintIL(this IDelegateDebugInfo debugInfo, [CallerMemberName] string tag = null)
+    {
+        if (!AllowPrintIL) return;
+
+        SmallMap4<IDelegateDebugInfo, string, RefEq<IDelegateDebugInfo>,
+            SmallMap4.SingleArrayEntries<IDelegateDebugInfo, string, RefEq<IDelegateDebugInfo>>
+        > uniquePrinted = default;
+        var totalNestedCount = 0;
+
+        PrintIL(debugInfo, ref totalNestedCount, ref uniquePrinted, tag ?? "top");
+
+        if (totalNestedCount > 0)
+        {
+            Console.WriteLine("--------------------------------------");
+            Console.WriteLine($"Nested lambdas total: {totalNestedCount}, unique: {uniquePrinted.Count}");
+        }
+    }
+
+    private static void PrintIL(IDelegateDebugInfo debugInfo,
+        ref int totalNestedCount,
+        ref SmallMap4<IDelegateDebugInfo, string, RefEq<IDelegateDebugInfo>,
+            SmallMap4.SingleArrayEntries<IDelegateDebugInfo, string, RefEq<IDelegateDebugInfo>>> uniquePrinted,
+        string tag)
+    {
+        Debug.Assert(tag != null, "tag should not be null");
+
+        PrintIL(tag, debugInfo.ILInstructions, static (il, s) => il.ToILString(s));
+
+        var n = 0;
+        foreach (var nested in debugInfo.EnumerateNestedLambdas())
+        {
+            ref var printedTag = ref uniquePrinted.AddOrGetValueRef(nested, out var printed);
+            if (printed)
+                PrintIL($"{printedTag}", "printed already", static (ap, s) => s.Append(ap));
+            else
+            {
+                printedTag = $"{n}_nested_in_{tag}";
+                PrintIL(nested, ref totalNestedCount, ref uniquePrinted, printedTag);
+            }
+            ++n;
+            ++totalNestedCount;
+        }
+    }
+
+    private static void PrintIL<A>(string tag, A state, Action<A, StringBuilder> printIL)
     {
         if (!AllowPrintIL) return;
         var s = new StringBuilder();
         s.Append(tag == null ? "<il>" : "<" + tag + ">").AppendLine();
-        method.ToILString(s);
+        printIL(state, s);
         s.AppendLine().Append(tag == null ? "</il>" : "</" + tag + ">");
         Console.WriteLine(s);
     }
@@ -456,8 +522,7 @@ public static class Asserts
     [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode",
         Justification = "The method is used for the testing purposes only.")]
     public static E Throws<E>(Action action,
-        [CallerArgumentExpression(nameof(action))]
-        string actionName = "<action to throw>")
+        [CallerArgumentExpression(nameof(action))] string actionName = "<action to throw>")
         where E : Exception
     {
         try
@@ -551,10 +616,12 @@ public record struct TestStats(
     int FirstFailureIndex,
     int FailureCount);
 
-public enum TestTracking
+[Flags]
+public enum TestFlags : byte
 {
-    TrackFailedTestsOnly = 0,
-    TrackAllTests,
+    Default = 0,
+    TrackAllInsteadOfFailedOnlyTests = 1,
+    RethrowException = 1 << 1,
 }
 
 #if !NETCOREAPP3_0_OR_GREATER
@@ -946,10 +1013,14 @@ public sealed class TestRun
     public SmallList<TestStats> Stats;
     public SmallList<TestFailure> Failures;
 
-    // todo: @wip put the output under the feature flag
+    public TestFlags Flags;
+    public TestRun(TestFlags flags = TestFlags.Default) => Flags = flags;
+
     /// <summary>Will output the failures while running</summary>
-    public void Run<T>(T test, TestTracking tracking = TestTracking.TrackFailedTestsOnly) where T : ITestX
+    public void Run<T>(T test, TestFlags flags = TestFlags.Default) where T : ITestX
     {
+        // use global flags if the local flags are default
+        flags = flags != TestFlags.Default ? flags : Flags;
         var totalTestCount = TotalTestCount;
         var failureCount = Failures.Count;
         Exception testStopException = null;
@@ -957,15 +1028,13 @@ public sealed class TestRun
         {
             test.Run(this);
         }
-        catch (Exception ex)
+        catch (Exception ex) when ((flags & TestFlags.RethrowException) == 0)
         {
             testStopException = ex;
         }
 
         var testFailureCount = Failures.Count - failureCount;
-        if (testStopException != null ||
-            tracking == TestTracking.TrackAllTests ||
-            tracking == TestTracking.TrackFailedTestsOnly & testFailureCount > 0)
+        if (testStopException != null | testFailureCount > 0 | (flags & TestFlags.TrackAllInsteadOfFailedOnlyTests) != 0)
         {
             // todo: @perf Or may be we can put it under the debug only?
             var testsType = test.GetType();
