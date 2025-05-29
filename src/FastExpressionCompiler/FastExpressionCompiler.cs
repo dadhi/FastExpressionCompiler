@@ -103,19 +103,11 @@ namespace FastExpressionCompiler
         /// <summary>The lambda expression object that was compiled to the delegate</summary>
         LambdaExpression Expression { get; }
 
-        /// <summary>The lambda expression construction syntax C# code</summary>
-        string ExpressionString { get; }
-
-        /// <summary>The equivalent C# code of the lambda expression</summary>
-        string CSharpString { get; }
-
         /// <summary>Delegate IL op-codes</summary>
         ILInstruction[] ILInstructions { get; }
 
-        /// <summary>Delegate IL op-codes</summary>
-        string ILString { get; }
-
-        /// <summary>Enumerates all nested lambdas in the closure object, if any.</summary>
+        /// <summary>Enumerate any nested lambdas in the delegate</summary>
+        [RequiresUnreferencedCode(Trimming.Message)]
         IEnumerable<IDelegateDebugInfo> EnumerateNestedLambdas();
     }
 
@@ -1012,11 +1004,32 @@ namespace FastExpressionCompiler
             public ArrayClosure(object[] constantsAndNestedLambdas) => ConstantsAndNestedLambdas = constantsAndNestedLambdas;
         }
 
-        // todo: @rename to DiagInfoClosure
+        internal static IEnumerable<IDelegateDebugInfo> EnumerateNestedLambdas(object[] constantsAndNestedLambdas)
+        {
+            if (constantsAndNestedLambdas != null && constantsAndNestedLambdas.Length != 0)
+                // todo: @perf how to skip until the nested lambdas fast
+                foreach (var item in constantsAndNestedLambdas)
+                {
+                    if (item is IDelegateDebugInfo diagInfo)
+                        yield return diagInfo;
+
+                    var dlg = (item is NestedLambdaForNonPassedParams nestedLambda ? nestedLambda.NestedLambda : item) as Delegate;
+                    if (dlg != null && dlg.Target is IDelegateDebugInfo dlgDiagInfo)
+                        yield return dlgDiagInfo;
+                }
+        }
+
+        /// <summary>Enumerate any nested lambdas in the delegate compiled with CompilerFlags.EnableDelegateDebugInfo flag</summary>
+        public static IEnumerable<IDelegateDebugInfo> EnumerateNestedLambdas(
+            this Delegate fastCompiledDelegateWithDiagInfoFlag) =>
+            fastCompiledDelegateWithDiagInfoFlag.Target is ArrayClosure closure ? EnumerateNestedLambdas(closure.ConstantsAndNestedLambdas) : [];
+
         [RequiresUnreferencedCode(Trimming.Message)]
         public sealed class DebugArrayClosure : ArrayClosureWithNonPassedParams, IDelegateDebugInfo
         {
             public LambdaExpression Expression { get; internal set; }
+
+            public ILInstruction[] ILInstructions { get; internal set; }
 
             public DebugArrayClosure(object[] nonPassedParams, object[] constantsAndNestedLambdas,
                 LambdaExpression expr, ILInstruction[] il = null)
@@ -1026,59 +1039,9 @@ namespace FastExpressionCompiler
                 ILInstructions = il;
             }
 
-            private string _expressionString;
-            public string ExpressionString
-            {
-                get
-                {
-                    if (_expressionString != null)
-                        return _expressionString;
-                    var expr = Expression;
-                    return expr == null
-                        ? "<Expression is not set to the DebugArrayClosure>"
-                        : (_expressionString = expr.ToExpressionString());
-                }
-            }
-            private string _csharpString;
-            public string CSharpString
-            {
-                get
-                {
-                    if (_csharpString != null)
-                        return _csharpString;
-                    var expr = Expression;
-                    return expr == null
-                        ? "<Expression is not set to the DebugArrayClosure>"
-                        : (_csharpString = expr.ToCSharpString());
-                }
-            }
-
-            public ILInstruction[] ILInstructions { get; internal set; }
-
-            private string _ilString;
-            public string ILString
-            {
-                get
-                {
-                    if (_ilString != null)
-                        return _ilString;
-                    var ilInstructions = ILInstructions;
-                    return ilInstructions == null || ilInstructions.Length == 0
-                        ? "<ILInstructions are not set to the DebugArrayClosure>"
-                        : (_ilString = ILInstructions.ToILString().ToString());
-                }
-            }
-
-            public IEnumerable<IDelegateDebugInfo> EnumerateNestedLambdas()
-            {
-                if (ConstantsAndNestedLambdas != null)
-                    foreach (var item in ConstantsAndNestedLambdas)
-                    {
-                        var dlg = (item is NestedLambdaForNonPassedParams nestedLambda ? nestedLambda.NestedLambda : item) as Delegate;
-                        if (dlg != null && dlg.Target is IDelegateDebugInfo delegateDebugInfo)
-                            yield return delegateDebugInfo;
-                    }
-            }
+            [RequiresUnreferencedCode(Trimming.Message)]
+            public IEnumerable<IDelegateDebugInfo> EnumerateNestedLambdas() =>
+                ExpressionCompiler.EnumerateNestedLambdas(ConstantsAndNestedLambdas);
         }
 
         // todo: @perf better to move the case with no constants to another class OR we can reuse ArrayClosure but now ConstantsAndNestedLambdas will hold NonPassedParams
@@ -1114,22 +1077,21 @@ namespace FastExpressionCompiler
             public static FieldInfo ConstantsAndNestedLambdasField =
                 typeof(NestedLambdaForNonPassedParamsWithConstants).GetField(nameof(ConstantsAndNestedLambdas));
 
-            public readonly object ConstantsAndNestedLambdas;
-            public NestedLambdaForNonPassedParamsWithConstants(object nestedLambda, object constantsAndNestedLambdas)
+            public readonly object[] ConstantsAndNestedLambdas;
+            public NestedLambdaForNonPassedParamsWithConstants(object nestedLambda, object[] constantsAndNestedLambdas)
                 : base(nestedLambda) => ConstantsAndNestedLambdas = constantsAndNestedLambdas;
         }
 
-        public sealed class NestedLambdaForNonPassedParamsWithConstantsWithDiagInfo : NestedLambdaForNonPassedParamsWithConstants
+        public sealed class NestedLambdaForNonPassedParamsWithConstantsWithDiagInfo : NestedLambdaForNonPassedParamsWithConstants, IDelegateDebugInfo
         {
-            public static FieldInfo ExpressionField =
-                typeof(NestedLambdaForNonPassedParamsWithConstantsWithDiagInfo).GetField(nameof(Expression));
-            public static FieldInfo ILInstructionsField =
-                typeof(NestedLambdaForNonPassedParamsWithConstantsWithDiagInfo).GetField(nameof(ILInstructions));
-
-            public readonly LambdaExpression Expression;
-            public ILInstruction[] ILInstructions;
-            public NestedLambdaForNonPassedParamsWithConstantsWithDiagInfo(object nestedLambda, object constantsAndNestedLambdas, LambdaExpression expr)
+            public LambdaExpression Expression { get; }
+            public ILInstruction[] ILInstructions { get; internal set; }
+            public NestedLambdaForNonPassedParamsWithConstantsWithDiagInfo(object nestedLambda, object[] constantsAndNestedLambdas, LambdaExpression expr)
                 : base(nestedLambda, constantsAndNestedLambdas) => Expression = expr;
+
+            [RequiresUnreferencedCode(Trimming.Message)]
+            public IEnumerable<IDelegateDebugInfo> EnumerateNestedLambdas() =>
+                ExpressionCompiler.EnumerateNestedLambdas(ConstantsAndNestedLambdas);
         }
 
         internal static class CurryClosureFuncs
@@ -5268,15 +5230,7 @@ namespace FastExpressionCompiler
 
                 // Load the constants as a second argument and call the closure constructor
                 var lambda = nestedLambdaInfo.Lambda;
-                if (lambda is NestedLambdaForNonPassedParamsWithConstantsWithDiagInfo)
-                {
-                    EmitLoadLocalVariable(il, nestedLambdaInfo.LambdaVarIndex);
-                    il.Demit(OpCodes.Ldfld, NestedLambdaForNonPassedParamsWithConstants.ConstantsAndNestedLambdasField);
-                    il.Demit(OpCodes.Ldfld, NestedLambdaForNonPassedParamsWithConstantsWithDiagInfo.ExpressionField);
-                    il.Demit(OpCodes.Ldfld, NestedLambdaForNonPassedParamsWithConstantsWithDiagInfo.ILInstructionsField);
-                    il.Demit(OpCodes.Newobj, DebugArrayClosureCtor);
-                }
-                else if (lambda is NestedLambdaForNonPassedParamsWithConstants)
+                if (lambda is NestedLambdaForNonPassedParamsWithConstants)
                 {
                     EmitLoadLocalVariable(il, nestedLambdaInfo.LambdaVarIndex);
                     il.Demit(OpCodes.Ldfld, NestedLambdaForNonPassedParamsWithConstants.ConstantsAndNestedLambdasField);

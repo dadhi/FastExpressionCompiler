@@ -83,11 +83,9 @@ namespace FastExpressionCompiler.IssueTests
 
             var f = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             Asserts.IsNotNull(f);
+            f.PrintIL();
 
-            var fd = f.TryGetDebugInfo();
-            fd.PrintIL();
-
-            var nested = fd.EnumerateNestedLambdas().First();
+            var nested = f.EnumerateNestedLambdas().First();
             nested.AssertOpCodes(
                 OpCodes.Ldarg_0,
                 OpCodes.Ldfld,      // ArrayClosureWithNonPassedParams.NonPassedParams
@@ -238,10 +236,6 @@ namespace FastExpressionCompiler.IssueTests
             var f = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             Asserts.IsNotNull(f);
             f.PrintIL();
-
-            var dis = f.TryGetDebugInfo();
-            foreach (var di in dis.EnumerateNestedLambdas())
-                di.PrintIL("nested");
 
             var y = f(container);
             Asserts.AreEqual(1, y.Count);

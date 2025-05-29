@@ -119,17 +119,14 @@ public static class TestTools
         Console.WriteLine(result = expr.ToCSharpString());
     }
 
-    public static void PrintCSharp(this IDelegateDebugInfo diagInfo)
-    {
-        if (!AllowPrintCS) return;
-        Console.WriteLine(diagInfo.CSharpString);
-    }
+    public static void PrintCSharp(this IDelegateDebugInfo debugInfo) =>
+        debugInfo.Expression.PrintCSharp();
 
     public static void PrintIL(this Delegate dlg, [CallerMemberName] string tag = null)
     {
         if (!AllowPrintIL) return;
-        if (dlg.TryGetDebugInfo() is { } diagInfo)
-            diagInfo.PrintIL(tag);
+        if (dlg.Target is IDelegateDebugInfo debugInfo)
+            debugInfo.PrintIL(tag);
         else
             dlg.Method.PrintIL(tag);
     }
@@ -137,7 +134,8 @@ public static class TestTools
     public static void PrintIL(this MethodInfo method, [CallerMemberName] string tag = null) =>
         PrintIL(tag, method, static (m, s) => m.ToILString(s));
 
-    public static void PrintIL(this IDelegateDebugInfo diagInfo, [CallerMemberName] string tag = null)
+    /// <summary>Prints the IL instructions of the delegate debug info, including nested lambdas.</summary>
+    public static void PrintIL(this IDelegateDebugInfo debugInfo, [CallerMemberName] string tag = null)
     {
         if (!AllowPrintIL) return;
 
@@ -145,7 +143,9 @@ public static class TestTools
             SmallMap4.SingleArrayEntries<IDelegateDebugInfo, string, RefEq<IDelegateDebugInfo>>
         > uniquePrinted = default;
         var totalNestedCount = 0;
-        PrintIL(diagInfo, ref totalNestedCount, ref uniquePrinted, tag);
+
+        PrintIL(debugInfo, ref totalNestedCount, ref uniquePrinted, tag ?? "top");
+
         if (totalNestedCount > 0)
         {
             Console.WriteLine("--------------------------------------");
@@ -153,16 +153,18 @@ public static class TestTools
         }
     }
 
-    private static void PrintIL(this IDelegateDebugInfo diagInfo,
+    private static void PrintIL(IDelegateDebugInfo debugInfo,
         ref int totalNestedCount,
         ref SmallMap4<IDelegateDebugInfo, string, RefEq<IDelegateDebugInfo>,
             SmallMap4.SingleArrayEntries<IDelegateDebugInfo, string, RefEq<IDelegateDebugInfo>>> uniquePrinted,
-        [CallerMemberName] string tag = null)
+        string tag)
     {
-        PrintIL(tag, diagInfo.ILString, static (ils, s) => s.Append(ils));
+        Debug.Assert(tag != null, "tag should not be null");
+
+        PrintIL(tag, debugInfo.ILInstructions, static (il, s) => il.ToILString(s));
 
         var n = 0;
-        foreach (var nested in diagInfo.EnumerateNestedLambdas())
+        foreach (var nested in debugInfo.EnumerateNestedLambdas())
         {
             ref var printedTag = ref uniquePrinted.AddOrGetValueRef(nested, out var printed);
             if (printed)

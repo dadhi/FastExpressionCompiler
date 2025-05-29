@@ -210,10 +210,6 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.IsNotNull(f);
             f.PrintIL();
 
-            var di = f.TryGetDebugInfo();
-            foreach (var ni in di.EnumerateNestedLambdas())
-                ni.PrintIL("sumFunc");
-
             var y = f(10);
             Asserts.AreEqual(1009, y);
         }

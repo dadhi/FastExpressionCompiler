@@ -310,12 +310,7 @@ public class Issue341_Equality_comparison_between_nullable_and_null_inside_Any_p
 
         var f = expression.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
         Asserts.IsNotNull(f);
-
         f.PrintIL("fast");
-
-        var dis = f.TryGetDebugInfo();
-        foreach (var di in dis.EnumerateNestedLambdas())
-            di.PrintIL("predicate");
 
         var instance = new Test()
         {
