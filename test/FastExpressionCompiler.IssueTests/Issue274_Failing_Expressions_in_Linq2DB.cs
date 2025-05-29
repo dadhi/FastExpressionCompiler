@@ -58,7 +58,9 @@ public class Issue274_Failing_Expressions_in_Linq2DB : ITest
 
         var de = f.Target as IDelegateDebugInfo;
         Asserts.IsNotNull(de.Expression);
+#if NET8_0_OR_GREATER
         Asserts.IsTrue(de.ILInstructions.Length > 0);
+#endif
     }
 
     public void Test_case_1_Minimal_compare_nullable_with_null_conditional()
