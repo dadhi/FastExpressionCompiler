@@ -4372,7 +4372,7 @@ namespace FastExpressionCompiler
 
                                 // required for calling the method on the value type parameter
                                 var objType = objExpr.Type;
-                                objVarByAddress = objType.IsValueType && !closure.LastEmitIsAddress && // todo: @wip avoid ad-hocking with parameter here
+                                objVarByAddress = !closure.LastEmitIsAddress && objType.IsValueType && // todo: @wip avoid ad-hocking with parameter here
                                     (objExpr.NodeType != ExpressionType.Parameter || !((ParameterExpression)objExpr).IsByRef);
                                 if (objVarByAddress)
                                     objVar = EmitStoreAndLoadLocalVariableAddress(il, objType);
@@ -8425,13 +8425,14 @@ namespace FastExpressionCompiler
             // the default ILGenerator size is 64 in .NET 8.0+
             int newStreamSize = 64)
         {
-            if (DynamicMethodHacks.ReuseDynamicILGenerator != null)
+            var reuseILGenerator = DynamicMethodHacks.ReuseDynamicILGenerator;
+            if (reuseILGenerator != null)
             {
                 var pooledIL = _pooledILGenerator;
                 _pooledILGenerator = null;
                 if (pooledIL != null)
                 {
-                    DynamicMethodHacks.ReuseDynamicILGenerator(dynMethod, pooledIL, returnType, paramTypes);
+                    reuseILGenerator(dynMethod, pooledIL, returnType, paramTypes);
                     return pooledIL;
                 }
                 else
@@ -8446,9 +8447,6 @@ namespace FastExpressionCompiler
         [MethodImpl((MethodImplOptions)256)]
         public static void FreePooledILGenerator(DynamicMethod dynMethod, ILGenerator il)
         {
-            // todo: @wip #475 might be required to avoid the undefined behavior when the previous DynamicMethod is still linked to the wrong ILGenerator
-            // ILGeneratorField.SetValue(dynMethod, null);
-
             if (DynamicMethodHacks.ReuseDynamicILGenerator != null)
                 _pooledILGenerator = il;
         }

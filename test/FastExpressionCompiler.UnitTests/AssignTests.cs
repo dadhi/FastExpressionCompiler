@@ -380,7 +380,6 @@ namespace FastExpressionCompiler.UnitTests
             // todo: @wip #431 generates different names for the unnamed variables which is not comparable
             Asserts.AreEqual(expr.ToCSharpString(), restoredExpr.ToCSharpString());
 #endif
-
             Asserts.IsNotNull(fs);
             Asserts.AreEqual(5, fs());
         }

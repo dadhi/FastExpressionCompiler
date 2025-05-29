@@ -148,7 +148,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
 
             var f = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             f.PrintIL();
-            // todo: @wip the IL codes is the same for the System Compile but the expected values are different
+            // todo: @wip the IL codes is the same for the System.Compile but the expected values are different
             // f.AssertOpCodes(
             // IL_0000: ldarg.1
             // IL_0001: ldarg.1

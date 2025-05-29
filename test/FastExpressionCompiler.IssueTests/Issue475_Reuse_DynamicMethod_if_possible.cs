@@ -628,7 +628,7 @@ public class Issue475_Reuse_DynamicMethod_if_possible : ITestX
         // d.StoreDynamicMethod(this);
         // return d;
 
-        // todo: @wip Calling this second time in `-c:Release` will produce `Fatal error. Internal CLR error. (0x80131506) ## :-( Failed with ERROR: -1073741819` (the -c:Debug is working fine)
+        // note: Calling this second time in `-c:Release` will produce `Fatal error. Internal CLR error. (0x80131506) ## :-( Failed with ERROR: -1073741819` (the -c:Debug is working fine)
         // runtimeMethodHandle = GetMethodDescriptorMethod.Invoke(dynMethod, null);
 
         // var func2 = (Func<int, int>)CreateDelegateMethod.Invoke(null, [typeof(Func<int, int>), ExpressionCompiler.EmptyArrayClosure, runtimeMethodHandle]);
