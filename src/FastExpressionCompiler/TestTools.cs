@@ -125,6 +125,10 @@ public static class TestTools
         Console.WriteLine(result = expr.ToCSharpString());
     }
 
+    /// <summary>The method outputs the whole code of the expression including the code of the nested lambdas.
+    /// In case of nested lambda represented in the expression of the Constant Delegate, 
+    /// and the Delegate.Target being IDelegateDebugInfo, you may call `IDelegateDebugInfo.EnumerateNestedLambdas()`
+    /// and output C# for each nested lambda</summary>
     public static void PrintCSharp(this IDelegateDebugInfo debugInfo) =>
         debugInfo.Expression.PrintCSharp();
 
