@@ -83,6 +83,12 @@ public static class TestTools
         Console.WriteLine();
         Console.WriteLine($"//{Path.GetFileNameWithoutExtension(filePath)}.{caller}");
 
+        if (expr == null)
+        {
+            Console.WriteLine("<null expression>");
+            return;
+        }
+
         var sb = new StringBuilder(1024);
         sb.Append("var @cs = ");
         sb = expr.ToCSharpString(sb,
@@ -149,7 +155,7 @@ public static class TestTools
         if (totalNestedCount > 0)
         {
             Console.WriteLine("--------------------------------------");
-            Console.WriteLine($"Total nested lambdas: {totalNestedCount}, unique printed: {uniquePrinted.Count}");
+            Console.WriteLine($"Nested lambdas total: {totalNestedCount}, unique: {uniquePrinted.Count}");
         }
     }
 
