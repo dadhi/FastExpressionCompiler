@@ -58,11 +58,11 @@ In addition, the memory consumption taken by the compilation will be much smalle
 **Updated to .NET 9.0**
 
 ```ini
-BenchmarkDotNet v0.14.0, Windows 11 (10.0.22631.4391/23H2/2023Update/SunValley3)
+BenchmarkDotNet v0.15.0, Windows 11 (10.0.26100.4061/24H2/2024Update/HudsonValley)
 Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
-.NET SDK 9.0.100
-  [Host]     : .NET 9.0.0 (9.0.24.52809), X64 RyuJIT AVX2
-  DefaultJob : .NET 9.0.0 (9.0.24.52809), X64 RyuJIT AVX2
+.NET SDK 9.0.203
+[Host]     : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+DefaultJob : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
 ```
 
 ### Hoisted expression with the constructor and two arguments in closure
@@ -75,18 +75,18 @@ Expression<Func<X>> e = () => new X(a, b);
 
 Compiling expression:
 
-| Method      |       Mean |     Error |    StdDev | Ratio | RatioSD |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
-| ----------- | ---------: | --------: | --------: | ----: | ------: | -----: | -----: | --------: | ----------: |
-| Compile     | 151.570 us | 3.0196 us | 6.7538 us | 44.27 |    2.13 | 0.7324 |      - |   4.49 KB |        2.92 |
-| CompileFast |   3.425 us | 0.0676 us | 0.0664 us |  1.00 |    0.03 | 0.2441 | 0.2365 |   1.54 KB |        1.00 |
+| Method      |       Mean |     Error |    StdDev | Ratio | RatioSD | Rank |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
+| ----------- | ---------: | --------: | --------: | ----: | ------: | ---: | -----: | -----: | --------: | ----------: |
+| CompileFast |   3.183 us | 0.0459 us | 0.0407 us |  1.00 |    0.02 |    1 | 0.1984 | 0.1945 |   1.23 KB |        1.00 |
+| Compile     | 147.312 us | 1.9291 us | 1.8946 us | 46.28 |    0.81 |    2 | 0.4883 | 0.2441 |   4.48 KB |        3.65 |
 
 Invoking the compiled delegate (comparing to the direct constructor call):
 
-| Method                |     Mean |     Error |    StdDev |   Median | Ratio | RatioSD |   Gen0 | Allocated | Alloc Ratio |
-| --------------------- | -------: | --------: | --------: | -------: | ----: | ------: | -----: | --------: | ----------: |
-| DirectConstructorCall | 6.920 ns | 0.2007 ns | 0.3462 ns | 7.051 ns |  0.86 |    0.06 | 0.0051 |      32 B |        1.00 |
-| CompiledLambda        | 8.095 ns | 0.2195 ns | 0.5216 ns | 7.845 ns |  1.01 |    0.08 | 0.0051 |      32 B |        1.00 |
-| FastCompiledLambda    | 8.066 ns | 0.2206 ns | 0.3234 ns | 8.156 ns |  1.00 |    0.06 | 0.0051 |      32 B |        1.00 |
+| Method                |     Mean |     Error |    StdDev | Ratio | RatioSD | Rank |   Gen0 | Allocated | Alloc Ratio |
+| --------------------- | -------: | --------: | --------: | ----: | ------: | ---: | -----: | --------: | ----------: |
+| DirectConstructorCall | 6.055 ns | 0.0632 ns | 0.0560 ns |  1.00 |    0.01 |    1 | 0.0051 |      32 B |        1.00 |
+| CompiledLambda        | 7.853 ns | 0.2013 ns | 0.1681 ns |  1.30 |    0.03 |    2 | 0.0051 |      32 B |        1.00 |
+| FastCompiledLambda    | 7.962 ns | 0.2186 ns | 0.4052 ns |  1.31 |    0.07 |    2 | 0.0051 |      32 B |        1.00 |
 
 
 ### Hoisted expression with the static method and two nested lambdas and two arguments in closure
@@ -99,19 +99,18 @@ Expression<Func<X>> getXExpr = () => CreateX((aa, bb) => new X(aa, bb), new Lazy
 
 Compiling expression:
 
-| Method      |      Mean |    Error |    StdDev |    Median | Ratio | RatioSD |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
-| ----------- | --------: | -------: | --------: | --------: | ----: | ------: | -----: | -----: | --------: | ----------: |
-| Compile     | 421.09 us | 8.382 us | 18.221 us | 413.02 us | 36.29 |    2.09 | 1.9531 | 0.9766 |  12.04 KB |        2.61 |
-| CompileFast |  11.62 us | 0.230 us |  0.464 us |  11.42 us |  1.00 |    0.06 | 0.7324 | 0.7019 |   4.62 KB |        1.00 |
-
+| Method      |      Mean |    Error |   StdDev | Ratio | RatioSD | Rank |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
+| ----------- | --------: | -------: | -------: | ----: | ------: | ---: | -----: | -----: | --------: | ----------: |
+| CompileFast |  11.12 us | 0.189 us | 0.158 us |  1.00 |    0.02 |    1 | 0.6104 | 0.5798 |   3.77 KB |        1.00 |
+| Compile     | 415.09 us | 4.277 us | 3.571 us | 37.34 |    0.60 |    2 | 1.9531 | 1.4648 |  12.04 KB |        3.19 |
 
 Invoking compiled delegate comparing to direct method call:
 
-| Method              |        Mean |     Error |    StdDev |      Median | Ratio | RatioSD |   Gen0 | Allocated | Alloc Ratio |
-| ------------------- | ----------: | --------: | --------: | ----------: | ----: | ------: | -----: | --------: | ----------: |
-| DirectMethodCall    |    43.45 ns |  0.922 ns |  1.905 ns |    44.13 ns |  1.09 |    0.08 | 0.0268 |     168 B |        1.62 |
-| Invoke_Compiled     | 1,181.25 ns | 23.664 ns | 56.240 ns | 1,161.87 ns | 29.66 |    2.24 | 0.0420 |     264 B |        2.54 |
-| Invoke_CompiledFast |    39.96 ns |  0.856 ns |  2.442 ns |    38.96 ns |  1.00 |    0.08 | 0.0166 |     104 B |        1.00 |
+| Method              |        Mean |     Error |    StdDev | Ratio | RatioSD | Rank |   Gen0 | Allocated | Alloc Ratio |
+| ------------------- | ----------: | --------: | --------: | ----: | ------: | ---: | -----: | --------: | ----------: |
+| DirectMethodCall    |    40.29 ns |  0.549 ns |  0.487 ns |  1.00 |    0.02 |    1 | 0.0268 |     168 B |        1.00 |
+| Invoke_CompiledFast |    40.59 ns |  0.157 ns |  0.123 ns |  1.01 |    0.01 |    1 | 0.0166 |     104 B |        0.62 |
+| Invoke_Compiled     | 1,142.12 ns | 11.877 ns | 14.586 ns | 28.35 |    0.48 |    2 | 0.0420 |     264 B |        1.57 |
 
 
 ### Manually composed expression with parameters and closure

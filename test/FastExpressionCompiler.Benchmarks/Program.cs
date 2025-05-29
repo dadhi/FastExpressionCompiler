@@ -13,7 +13,7 @@ public class Program
         // BenchmarkRunner.Run<HoistedLambdaBenchmark.Invocation>();
 
         // BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Compilation>();
-        // BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Invocation>();
+        BenchmarkRunner.Run<HoistedLambdaWithNestedLambdaBenchmark.Invocation>();
 
         // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Compilation>();
         // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Invocation>();
@@ -37,7 +37,7 @@ public class Program
 
         // BenchmarkRunner.Run<EmitHacks.MethodStaticNoArgsEmit>();
 
-        BenchmarkRunner.Run<ExprLinqAnyOfNotNullDecimal.Compile>();
+        // BenchmarkRunner.Run<ExprLinqAnyOfNotNullDecimal.Compile>();
         // BenchmarkRunner.Run<ExprLinqAnyOfNotNullDecimal.Invoke>();
 
         // BenchmarkRunner.Run<RepoDb_ListInit.Compile>();

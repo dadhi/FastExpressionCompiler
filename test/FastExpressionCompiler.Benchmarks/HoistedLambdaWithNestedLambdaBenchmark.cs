@@ -18,7 +18,7 @@ namespace FastExpressionCompiler.Benchmarks
 
         private static readonly Expression<Func<X>> _hoistedExpr = GetHoistedExpr();
 
-        [MemoryDiagnoser]
+        [MemoryDiagnoser, RankColumn, Orderer(BenchmarkDotNet.Order.SummaryOrderPolicy.FastestToSlowest)]
         public class Compilation
         {
             /*
@@ -144,6 +144,13 @@ namespace FastExpressionCompiler.Benchmarks
             | Compile     | 437.16 us | 8.631 us | 20.004 us | 438.94 us | 39.26 |    3.33 | 1.9531 | 0.9766 |  12.04 KB |        3.19 |
             | CompileFast |  11.20 us | 0.329 us |  0.896 us |  10.93 us |  1.01 |    0.11 | 0.6104 | 0.5951 |   3.77 KB |        1.00 |
 
+            ## v5.3.0 + BDN v0.15.0
+
+            | Method      | Mean      | Error    | StdDev   | Ratio | RatioSD | Rank | Gen0   | Gen1   | Allocated | Alloc Ratio |
+            |------------ |----------:|---------:|---------:|------:|--------:|-----:|-------:|-------:|----------:|------------:|
+            | CompileFast |  11.12 us | 0.189 us | 0.158 us |  1.00 |    0.02 |    1 | 0.6104 | 0.5798 |   3.77 KB |        1.00 |
+            | Compile     | 415.09 us | 4.277 us | 3.571 us | 37.34 |    0.60 |    2 | 1.9531 | 1.4648 |  12.04 KB |        3.19 |
+
             */
             [Benchmark]
             public Func<X> Compile() => _hoistedExpr.Compile();
@@ -152,7 +159,7 @@ namespace FastExpressionCompiler.Benchmarks
             public Func<X> CompileFast() => _hoistedExpr.CompileFast();
         }
 
-        [MemoryDiagnoser]
+        [MemoryDiagnoser, RankColumn, Orderer(BenchmarkDotNet.Order.SummaryOrderPolicy.FastestToSlowest)]
         public class Invocation
         {
             /*
@@ -253,7 +260,7 @@ namespace FastExpressionCompiler.Benchmarks
             private readonly A _aa = new A();
             private readonly B _bb = new B();
 
-            [Benchmark]
+            [Benchmark(Baseline = true)]
             public X DirectMethodCall() =>
                 CreateX((a, b) => new X(a, b), new Lazy<A>(() => _aa), _bb);
 
@@ -261,7 +268,7 @@ namespace FastExpressionCompiler.Benchmarks
             public X Invoke_Compiled() =>
                 _lambdaCompiled();
 
-            [Benchmark(Baseline = true)]
+            [Benchmark]
             public X Invoke_CompiledFast() =>
                 _lambdaCompiledFast();
         }
