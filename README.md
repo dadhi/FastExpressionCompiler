@@ -126,21 +126,20 @@ var expr = Expression.Lambda(
 
 Compiling expression:
 
-| Method                       |      Mean |     Error |    StdDev |    Median | Ratio | RatioSD |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
-| ---------------------------- | --------: | --------: | --------: | --------: | ----: | ------: | -----: | -----: | --------: | ----------: |
-| Compile_SystemExpression     | 89.076 us | 2.6699 us | 7.6605 us | 85.180 us | 28.12 |    3.05 | 0.7324 | 0.4883 |   4.74 KB |        3.41 |
-| CompileFast_SystemExpression |  3.138 us | 0.0550 us | 0.0565 us |  3.118 us |  0.99 |    0.03 | 0.2213 | 0.2136 |   1.39 KB |        1.00 |
-| CompileFast_LightExpression  |  3.180 us | 0.0602 us | 0.0591 us |  3.163 us |  1.00 |    0.00 | 0.2213 | 0.2136 |   1.39 KB |        1.00 |
-
+| Method                       |       Mean |     Error |    StdDev | Ratio | RatioSD | Rank |   Gen0 |   Gen1 | Allocated | Alloc Ratio |
+| ---------------------------- | ---------: | --------: | --------: | ----: | ------: | ---: | -----: | -----: | --------: | ----------: |
+| CompileFast_LightExpression  |   3.107 us | 0.0562 us | 0.0498 us |  0.99 |    0.02 |    1 | 0.1755 | 0.1678 |   1.08 KB |        1.00 |
+| CompileFast_SystemExpression |   3.126 us | 0.0288 us | 0.0256 us |  1.00 |    0.01 |    1 | 0.1755 | 0.1678 |   1.08 KB |        1.00 |
+| Compile_SystemExpression     | 103.948 us | 1.9593 us | 2.5477 us | 33.26 |    0.84 |    2 | 0.7324 | 0.4883 |   4.74 KB |        4.40 |
 
 Invoking the compiled delegate compared to the normal delegate and the direct call:
 
-| Method                        |     Mean |     Error |    StdDev |   Median | Ratio | RatioSD |   Gen0 | Allocated | Alloc Ratio |
-| ----------------------------- | -------: | --------: | --------: | -------: | ----: | ------: | -----: | --------: | ----------: |
-| DirectCall                    | 8.388 ns | 0.2655 ns | 0.7575 ns | 8.092 ns |  1.00 |    0.07 | 0.0051 |      32 B |        1.00 |
-| Compiled_SystemExpression     | 9.474 ns | 0.1870 ns | 0.4105 ns | 9.381 ns |  1.10 |    0.05 | 0.0051 |      32 B |        1.00 |
-| CompiledFast_SystemExpression | 8.575 ns | 0.1624 ns | 0.1440 ns | 8.517 ns |  1.00 |    0.02 | 0.0051 |      32 B |        1.00 |
-| CompiledFast_LightExpression  | 8.584 ns | 0.0776 ns | 0.0862 ns | 8.594 ns |  1.00 |    0.00 | 0.0051 |      32 B |        1.00 |
+| Method                        |     Mean |    Error |   StdDev | Ratio | Rank |   Gen0 | Allocated | Alloc Ratio |
+| ----------------------------- | -------: | -------: | -------: | ----: | ---: | -----: | --------: | ----------: |
+| DirectCall                    | 10.19 ns | 0.108 ns | 0.085 ns |  1.00 |    1 | 0.0051 |      32 B |        1.00 |
+| CompiledFast_LightExpression  | 10.70 ns | 0.089 ns | 0.070 ns |  1.05 |    2 | 0.0051 |      32 B |        1.00 |
+| CompiledFast_SystemExpression | 10.91 ns | 0.071 ns | 0.066 ns |  1.07 |    2 | 0.0051 |      32 B |        1.00 |
+| Compiled_SystemExpression     | 11.59 ns | 0.098 ns | 0.081 ns |  1.14 |    3 | 0.0051 |      32 B |        1.00 |
 
 
 ### FastExpressionCompiler.LightExpression.Expression vs System.Linq.Expressions.Expression
@@ -168,11 +167,10 @@ Hopefully you are checking the expression arguments yourself and not waiting for
 
 Creating the expression:
 
-| Method                                 |       Mean |    Error |   StdDev |     Median | Ratio | RatioSD |   Gen0 | Allocated | Alloc Ratio |
-| -------------------------------------- | ---------: | -------: | -------: | ---------: | ----: | ------: | -----: | --------: | ----------: |
-| Create_SystemExpression                | 1,110.9 ns | 22.19 ns | 62.23 ns | 1,086.1 ns |  7.25 |    0.56 | 0.2060 |    1304 B |        2.63 |
-| Create_LightExpression                 |   153.7 ns |  3.14 ns |  8.61 ns |   150.5 ns |  1.00 |    0.08 | 0.0789 |     496 B |        1.00 |
-| Create_LightExpression_with_intrinsics |   161.0 ns |  2.80 ns |  2.19 ns |   161.0 ns |  1.05 |    0.06 | 0.0777 |     488 B |        0.98 |
+| Method                  |       Mean |    Error |   StdDev |     Median | Ratio | RatioSD | Rank |   Gen0 | Allocated | Alloc Ratio |
+| ----------------------- | ---------: | -------: | -------: | ---------: | ----: | ------: | ---: | -----: | --------: | ----------: |
+| Create_LightExpression  |   156.6 ns |  3.19 ns |  8.18 ns |   151.9 ns |  1.00 |    0.07 |    1 | 0.0827 |     520 B |        1.00 |
+| Create_SystemExpression | 1,065.0 ns | 14.24 ns | 11.89 ns | 1,069.3 ns |  6.82 |    0.34 |    2 | 0.2060 |    1304 B |        2.51 |
 
 Creating and compiling:
 

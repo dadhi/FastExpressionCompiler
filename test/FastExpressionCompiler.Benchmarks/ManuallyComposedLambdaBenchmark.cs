@@ -248,22 +248,23 @@ namespace FastExpressionCompiler.Benchmarks
             | CompileFast_SystemExpression |   3.190 us | 0.0519 us | 0.0485 us |  0.97 |    0.02 |    1 | 0.1755 | 0.1678 |   1.08 KB |        1.00 |
             | CompileFast_LightExpression  |   3.300 us | 0.0633 us | 0.0650 us |  1.00 |    0.03 |    1 | 0.1755 | 0.1678 |   1.08 KB |        1.00 |
             | Compile_SystemExpression     | 106.339 us | 2.1083 us | 4.1120 us | 32.24 |    1.38 |    2 | 0.7324 | 0.6104 |   4.74 KB |        4.40 |
+
             */
 
             [Benchmark]
             public Func<B, X> Compile_SystemExpression() =>
                 _expr.Compile();
 
-            [Benchmark]
+            [Benchmark(Baseline = true)]
             public Func<B, X> CompileFast_SystemExpression() =>
                 _expr.CompileFast(true);
 
-            [Benchmark(Baseline = true)]
+            [Benchmark]
             public Func<B, X> CompileFast_LightExpression() =>
                 LightExpression.ExpressionCompiler.CompileFast(_leExpr, true);
         }
 
-        [MemoryDiagnoser]
+        [MemoryDiagnoser, RankColumn, Orderer(BenchmarkDotNet.Order.SummaryOrderPolicy.FastestToSlowest)]
         public class Invocation
         {
             /*
@@ -338,7 +339,7 @@ namespace FastExpressionCompiler.Benchmarks
             private static readonly B _bb = new B();
             private static readonly Func<B, X> _lambda = b => new X(_aa, b);
 
-            [Benchmark]
+            [Benchmark(Baseline = true)]
             public X DirectCall() => _lambda(_bb);
 
             [Benchmark]
@@ -347,7 +348,7 @@ namespace FastExpressionCompiler.Benchmarks
             [Benchmark]
             public X CompiledFast_SystemExpression() => _lambdaCompiledFast(_bb);
 
-            [Benchmark(Baseline = true)]
+            [Benchmark]
             public X CompiledFast_LightExpression() => _lambdaCompiledFast_LightExpession(_bb);
         }
     }

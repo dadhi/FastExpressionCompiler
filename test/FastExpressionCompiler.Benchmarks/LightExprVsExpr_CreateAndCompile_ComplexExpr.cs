@@ -271,7 +271,7 @@ namespace FastExpressionCompiler.Benchmarks
         public object Create_LightExpression() =>
             LightExpressionTests.CreateComplexLightExpression();
 
-        [Benchmark]
+        // [Benchmark]
         public object Create_LightExpression_with_intrinsics() =>
             LightExpressionTests.CreateComplexLightExpression_with_intrinsics();
     }
