@@ -3,9 +3,10 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Diagnosers;
+using FastExpressionCompiler.ImTools;
 
-namespace FastExpressionCompiler.Benchmarks
-{
+namespace FastExpressionCompiler.Benchmarks;
+
 /*
 BenchmarkDotNet v0.13.7, Windows 11 (10.0.22621.1992/22H2/2022Update/SunValley2)
 11th Gen Intel Core i7-1185G7 3.00GHz, 1 CPU, 8 logical and 4 physical cores
@@ -22,68 +23,123 @@ BenchmarkDotNet v0.13.7, Windows 11 (10.0.22621.1992/22H2/2022Update/SunValley2)
 |        ArrayResize |     4 | 24.71 ns | 2.497 ns | 7.165 ns | 22.67 ns |  1.59 |    0.39 | 0.0140 |                    47 |              0 |                       0 |      88 B |        1.00 |
 */
 
-    [MemoryDiagnoser]
-    [HardwareCounters(HardwareCounter.CacheMisses, HardwareCounter.BranchMispredictions, HardwareCounter.BranchInstructions)]
-    public class ArrayCopy_vs_ArrayResize_vs_ForLoop
+[MemoryDiagnoser]
+[HardwareCounters(HardwareCounter.CacheMisses, HardwareCounter.BranchMispredictions, HardwareCounter.BranchInstructions)]
+public class ArrayCopy_vs_ArrayResize_vs_ForLoop
+{
+    [Params(4)]
+    // [Params(4, 8)]
+    public int Count;
+
+    public Type[] Items;
+
+    [GlobalSetup]
+    public void Init()
     {
-        [Params(4)]
-        // [Params(4, 8)]
-        public int Count;
+        Items = new Type[Count];
+        for (var i = 1; i < Count; i++)
+            Items[i] = GetType();
 
-        public Type[] Items;
+        Items[0] = typeof(string);
+    }
 
-        [GlobalSetup]
-        public void Init()
+    [Benchmark(Baseline = true)]
+    public Type[] ArrayCopy()
+    {
+        var source = Items;
+        var target = new Type[source.Length << 1];
+        Array.Copy(source, 0, target, 0, source.Length);
+        return target;
+    }
+
+    [Benchmark]
+    public Type[] ManualForLoop()
+    {
+        var source = Items;
+        var target = new Type[source.Length << 1];
+        for (var i = 0; i < source.Length; i++)
+            target[i] = source[i];
+        return target;
+    }
+
+    [Benchmark]
+    public Type[] MarshallingForLoop()
+    {
+        var count = Items.Length;
+        ref var source = ref MemoryMarshal.GetArrayDataReference(Items);
+        ref var sourceNoMore = ref Unsafe.Add(ref source, count);
+        var targetArr = new Type[count << 1];
+        ref var target = ref MemoryMarshal.GetArrayDataReference(targetArr);
+        while (Unsafe.IsAddressLessThan(ref source, ref sourceNoMore))
         {
-            Items = new Type[Count];
-            for (var i = 1; i < Count; i++) 
-                Items[i] = GetType();
-
-            Items[0] = typeof(string);
+            target = source;
+            target = ref Unsafe.Add(ref target, 1);
+            source = ref Unsafe.Add(ref source, 1);
         }
+        return targetArr;
+    }
 
-        [Benchmark(Baseline = true)]
-        public Type[] ArrayCopy()
+    [Benchmark]
+    public Type[] ArrayResize()
+    {
+        var target = Items;
+        Array.Resize(ref target, target.Length << 1);
+        return target;
+    }
+}
+
+[MemoryDiagnoser, RankColumn, Orderer(BenchmarkDotNet.Order.SummaryOrderPolicy.FastestToSlowest)]
+[HardwareCounters(HardwareCounter.CacheMisses, HardwareCounter.BranchInstructions, HardwareCounter.BranchMispredictions)]
+public class SmallList_Switch_vs_AsSpan_ByRef_Access
+{
+    /*
+    ## Baseline: hmm, why AsSpan is faster even if it is utilized only by half of the acces, the other part hits the heap?
+
+    BenchmarkDotNet v0.15.0, Windows 11 (10.0.26100.4061/24H2/2024Update/HudsonValley)
+    Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
+    .NET SDK 9.0.203
+      [Host]     : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+      DefaultJob : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+
+
+    | Method                  | Mean      | Error     | StdDev    | Ratio | RatioSD | Rank | BranchInstructions/Op | BranchMispredictions/Op | CacheMisses/Op | Allocated | Alloc Ratio |
+    |------------------------ |----------:|----------:|----------:|------:|--------:|-----:|----------------------:|------------------------:|---------------:|----------:|------------:|
+    | Double_and_Sum_AsSpan   |  9.959 ns | 0.2341 ns | 0.4567 ns |  0.64 |    0.04 |    1 |                    29 |                       0 |              0 |         - |          NA |
+    | Double_and_Sum_BySwitch | 15.605 ns | 0.3465 ns | 0.7532 ns |  1.00 |    0.07 |    2 |                    35 |                       0 |              0 |         - |          NA |    */
+
+    SmallList<int, Stack4<int>> _smallList;
+
+    [GlobalSetup]
+    public void Init()
+    {
+        // 4 on stack and 4 on heap
+        for (var i = 0; i < 8; i++)
+            _smallList.Add(i);
+    }
+
+    [Benchmark(Baseline = true)]
+    public int Double_and_Sum_BySwitch()
+    {
+        var sum = 0;
+        for (var i = 0; i < _smallList.Count; i++)
         {
-            var source = Items;
-            var target = new Type[source.Length << 1];
-            Array.Copy(source, 0, target, 0, source.Length);
-            return target;
+            ref var n = ref _smallList.GetSurePresentItemRef(i);
+            n += n;
+            sum += n;
         }
+        return sum;
+    }
 
-        [Benchmark]
-        public Type[] ManualForLoop()
+    [Benchmark]
+    public int Double_and_Sum_AsSpan()
+    {
+        var sum = 0;
+        for (var i = 0; i < _smallList.Count; i++)
         {
-            var source = Items;
-            var target = new Type[source.Length << 1];
-            for (var i = 0; i < source.Length; i++)
-                target[i] = source[i];
-            return target;
+            ref var n = ref _smallList.GetSurePresentItemRef2(i);
+            n += n;
+            sum += n;
         }
-
-        [Benchmark]
-        public Type[] MarshallingForLoop()
-        {
-            var count = Items.Length;
-            ref var source = ref MemoryMarshal.GetArrayDataReference(Items);
-            ref var sourceNoMore = ref Unsafe.Add(ref source, count);
-            var targetArr = new Type[count << 1];
-            ref var target = ref MemoryMarshal.GetArrayDataReference(targetArr);
-            while (Unsafe.IsAddressLessThan(ref source, ref sourceNoMore))
-            {
-                target = source;
-                target = ref Unsafe.Add(ref target, 1);
-                source = ref Unsafe.Add(ref source, 1);
-            }
-            return targetArr;
-        }
-
-        [Benchmark]
-        public Type[] ArrayResize()
-        {
-            var target = Items;
-            Array.Resize(ref target, target.Length << 1);
-            return target;
-        }
+        return sum;
     }
 }

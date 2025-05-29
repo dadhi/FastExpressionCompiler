@@ -235,6 +235,22 @@ public static class SmallList
         return ref list._rest[index - stackCap];
     }
 
+    /// <summary>Returns a surely present item ref by its index</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public static ref T GetSurePresentItemRef2<T, TStack>(this ref SmallList<T, TStack> list, int index)
+        where TStack : struct, IStack<T, TStack>
+    {
+        Debug.Assert(list.Count != 0);
+        Debug.Assert(index < list.Count);
+
+        var stackCap = list.StackCapacity;
+        if (index < stackCap)
+            return ref list._stack.AsSpan()[index];
+
+        Debug.Assert(list._rest != null);
+        return ref list._rest[index - stackCap];
+    }
+
     /// <summary>Returns last present item ref, assumes that the list is not empty!</summary>
     [MethodImpl((MethodImplOptions)256)]
     public static ref TItem GetLastSurePresentItem<TItem>(this ref SmallList4<TItem> source) =>
@@ -683,6 +699,79 @@ public struct Stack4<T> : IStack<T, Stack4<T>>
         StackTools<T, Stack4<T>>.LazyCompiledAsSpanDelegate.Value(ref this, StackCapacity);
 #else
         MemoryMarshal.CreateSpan(ref Unsafe.As<Stack4<T>, T>(ref this), StackCapacity);
+#endif
+}
+
+// todo: @wip
+/// <summary>Implementation of `IStack` for 4 items on stack</summary>
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public struct Stack16<T> : IStack<T, Stack16<T>>
+{
+    /// <summary>Count of items on stack</summary>
+    public const int StackCapacity = 16;
+
+    internal T _it0, _it1, _it2, _it3, _it4, _it5, _it6, _it7;
+    internal T _it8, _it9, _it10, _it11, _it12, _it13, _it14, _it15;
+
+    /// <inheritdoc/>
+    public int Capacity => StackCapacity;
+
+    /// <inheritdoc/>
+    [UnscopedRef]
+    [MethodImpl((MethodImplOptions)256)]
+    public ref T GetSurePresentRef(int index)
+    {
+        Debug.Assert(index < StackCapacity);
+        switch (index)
+        {
+            case 0: return ref _it0;
+            case 1: return ref _it1;
+            case 2: return ref _it2;
+            default: return ref _it3;
+        }
+    }
+
+    /// <inheritdoc/>
+    public T this[int index]
+    {
+        [MethodImpl((MethodImplOptions)256)]
+        get
+        {
+            Debug.Assert(index < StackCapacity);
+            return index switch
+            {
+                0 => _it0,
+                1 => _it1,
+                2 => _it2,
+                _ => _it3,
+            };
+        }
+        [MethodImpl((MethodImplOptions)256)]
+        set => Set(index, in value);
+    }
+
+    /// <summary>Sets the value by the index</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public void Set(int index, in T value)
+    {
+        Debug.Assert(index < StackCapacity);
+        switch (index)
+        {
+            case 0: _it0 = value; break;
+            case 1: _it1 = value; break;
+            case 2: _it2 = value; break;
+            default: _it3 = value; break;
+        }
+    }
+
+    /// <inheritdoc/>
+    [UnscopedRef]
+    [MethodImpl((MethodImplOptions)256)]
+    public Span<T> AsSpan() =>
+#if NETSTANDARD2_0_OR_GREATER || NET472
+        StackTools<T, Stack16<T>>.LazyCompiledAsSpanDelegate.Value(ref this, StackCapacity);
+#else
+        MemoryMarshal.CreateSpan(ref Unsafe.As<Stack16<T>, T>(ref this), StackCapacity);
 #endif
 }
 
