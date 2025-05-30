@@ -411,6 +411,61 @@ public static class SmallList
         public void Dispose() { }
     }
 
+    /// <summary>Enumerates all the items</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public static SmallListEnumerable<T, TStack> Enumerate<T, TStack>(this ref SmallList<T, TStack> list)
+        where TStack : struct, IStack<T, TStack>
+         => new SmallListEnumerable<T, TStack>(list);
+
+    /// <summary>Enumerable on stack, without allocations</summary>
+    public struct SmallListEnumerable<T, TStack> : IEnumerable<T>
+        where TStack : struct, IStack<T, TStack>
+    {
+        private readonly SmallList<T, TStack> _list;
+        /// <summary>Constructor</summary>
+        public SmallListEnumerable(SmallList<T, TStack> list) => _list = list;
+        /// <inheritdoc />
+        [MethodImpl((MethodImplOptions)256)]
+        public SmallListEnumerator<T, TStack> GetEnumerator() => new SmallListEnumerator<T, TStack>(_list);
+        IEnumerator<T> IEnumerable<T>.GetEnumerator() => GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+    }
+
+    /// <summary>Enumerator on stack, without allocations</summary>
+    public struct SmallListEnumerator<T, TStack> : IEnumerator<T>, IEnumerator
+        where TStack : struct, IStack<T, TStack>
+    {
+        private readonly SmallList<T, TStack> _list;
+        private int _index;
+        internal SmallListEnumerator(SmallList<T, TStack> list)
+        {
+            _list = list;
+            _index = -1;
+        }
+        private T _current;
+        /// <inheritdoc />
+        public T Current => _current;
+        object IEnumerator.Current => _current;
+        /// <inheritdoc />
+        [MethodImpl((MethodImplOptions)256)]
+        public bool MoveNext()
+        {
+            var index = ++_index;
+            if (index < _list.Count)
+            {
+                _current = index < _list.StackCapacity
+                    ? _list._stack.GetSurePresentRef(index)
+                    : _list._rest[index - _list.StackCapacity];
+                return true;
+            }
+            return false;
+        }
+        /// <inheritdoc />
+        public void Reset() => _index = -1;
+        /// <inheritdoc />
+        public void Dispose() { }
+    }
+
     /// <summary>Returns surely present item ref by its index</summary>
     [MethodImpl((MethodImplOptions)256)]
     public static ref TItem GetSurePresentItemRef<TItem>(this ref SmallList2<TItem> source, int index)

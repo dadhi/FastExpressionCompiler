@@ -56,12 +56,10 @@ public struct Issue476_System_ExecutionEngineException_with_nullables_on_repeate
         for (var i = 0; i < 8; ++i)
             _smallList.Add2(i);
 
-        var sum = 0;
-        for (var i = 0; i < _smallList.Count; i++)
-        {
-            ref var n = ref _smallList.GetSurePresentItemRef2(i);
-            n += n;
-            sum += n;
-        }
+        var doubleSum = 0;
+        foreach (var n in _smallList.Enumerate())
+            doubleSum += n + n;
+
+        t.AreEqual(112, doubleSum);
     }
 }

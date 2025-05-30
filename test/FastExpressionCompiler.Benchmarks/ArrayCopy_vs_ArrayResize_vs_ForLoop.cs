@@ -148,21 +148,47 @@ public class SmallList_Switch_vs_AsSpan_ByRef_Access
 [HardwareCounters(HardwareCounter.CacheMisses, HardwareCounter.BranchInstructions, HardwareCounter.BranchMispredictions)]
 public class SmallList_Switch_vs_AsSpan_ByRef_Add
 {
-    SmallList<int, Stack4<int>> _smallList;
+    /*
+    ## Strange baseline
+
+    BenchmarkDotNet v0.15.0, Windows 11 (10.0.26100.4202/24H2/2024Update/HudsonValley)
+    Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
+    .NET SDK 9.0.203
+    [Host]     : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+    DefaultJob : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+
+    | Method       | Mean     | Error    | StdDev   | Ratio | RatioSD | Rank | BranchInstructions/Op | CacheMisses/Op | BranchMispredictions/Op | Gen0   | Allocated | Alloc Ratio |
+    |------------- |---------:|---------:|---------:|------:|--------:|-----:|----------------------:|---------------:|------------------------:|-------:|----------:|------------:|
+    | Add_AsSpan   | 38.59 ns | 0.833 ns | 2.417 ns |  0.92 |    0.08 |    1 |                    78 |              1 |                       0 | 0.0063 |      40 B |        1.00 |
+    | Add_BySwitch | 41.96 ns | 0.876 ns | 2.458 ns |  1.00 |    0.08 |    2 |                    80 |              1 |                       0 | 0.0063 |      40 B |        1.00 |
+    */
 
     [Benchmark(Baseline = true)]
-    public SmallList<int, Stack4<int>> Add_BySwitch()
+    public int Add_BySwitch()
     {
-        for (var i = 0; i < 8; ++i)
-            _smallList.Add(i);
-        return _smallList;
+        SmallList<int, Stack4<int>> list = default;
+
+        for (var n = 8; n > 0; --n)
+            list.Add(n + 3);
+
+        var sum = 0;
+        foreach (var n in list.Enumerate())
+            sum += n;
+        return sum;
     }
 
     [Benchmark]
-    public SmallList<int, Stack4<int>> Add_AsSpan()
+    public int Add_AsSpan()
     {
-        for (var i = 0; i < 8; ++i)
-            _smallList.Add2(i);
-        return _smallList;
+        SmallList<int, Stack4<int>> list = default;
+
+        for (var n = 8; n > 0; --n)
+            list.Add2(n + 3);
+
+
+        var sum = 0;
+        foreach (var n in list.Enumerate())
+            sum += n;
+        return sum;
     }
 }
