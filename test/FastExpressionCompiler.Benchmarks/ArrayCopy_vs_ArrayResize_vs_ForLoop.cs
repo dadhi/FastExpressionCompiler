@@ -143,3 +143,26 @@ public class SmallList_Switch_vs_AsSpan_ByRef_Access
         return sum;
     }
 }
+
+[MemoryDiagnoser, RankColumn, Orderer(BenchmarkDotNet.Order.SummaryOrderPolicy.FastestToSlowest)]
+[HardwareCounters(HardwareCounter.CacheMisses, HardwareCounter.BranchInstructions, HardwareCounter.BranchMispredictions)]
+public class SmallList_Switch_vs_AsSpan_ByRef_Add
+{
+    SmallList<int, Stack4<int>> _smallList;
+
+    [Benchmark(Baseline = true)]
+    public SmallList<int, Stack4<int>> Add_BySwitch()
+    {
+        for (var i = 0; i < 8; ++i)
+            _smallList.Add(i);
+        return _smallList;
+    }
+
+    [Benchmark]
+    public SmallList<int, Stack4<int>> Add_AsSpan()
+    {
+        for (var i = 0; i < 8; ++i)
+            _smallList.Add2(i);
+        return _smallList;
+    }
+}

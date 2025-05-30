@@ -211,10 +211,10 @@ public static class SmallList
         Debug.Assert(index < source.Capacity);
         switch (index)
         {
-            case 0: return ref source._it0;
-            case 1: return ref source._it1;
-            case 2: return ref source._it2;
-            case 3: return ref source._it3;
+            case 0: return ref source._i0;
+            case 1: return ref source._i1;
+            case 2: return ref source._i2;
+            case 3: return ref source._i3;
             default: return ref RefTools<TItem>.GetNullRef();
         }
     }
@@ -572,7 +572,7 @@ public struct Stack2<T> : IStack<T, Stack2<T>>
     /// <summary>Count of items on stack</summary>
     public const int StackCapacity = 2;
 
-    internal T _it0, _it1;
+    internal T _i0, _i1;
 
     /// <inheritdoc/>
     public int Capacity => StackCapacity;
@@ -585,8 +585,8 @@ public struct Stack2<T> : IStack<T, Stack2<T>>
         Debug.Assert(index < StackCapacity);
         switch (index)
         {
-            case 0: return ref _it0;
-            default: return ref _it1;
+            case 0: return ref _i0;
+            default: return ref _i1;
         }
     }
 
@@ -599,8 +599,8 @@ public struct Stack2<T> : IStack<T, Stack2<T>>
             Debug.Assert(index < StackCapacity);
             return index switch
             {
-                0 => _it0,
-                _ => _it1,
+                0 => _i0,
+                _ => _i1,
             };
         }
         [MethodImpl((MethodImplOptions)256)]
@@ -614,8 +614,8 @@ public struct Stack2<T> : IStack<T, Stack2<T>>
         Debug.Assert(index < StackCapacity);
         switch (index)
         {
-            case 0: _it0 = value; break;
-            default: _it1 = value; break;
+            case 0: _i0 = value; break;
+            default: _i1 = value; break;
         }
     }
 
@@ -637,7 +637,7 @@ public struct Stack4<T> : IStack<T, Stack4<T>>
     /// <summary>Count of items on stack</summary>
     public const int StackCapacity = 4;
 
-    internal T _it0, _it1, _it2, _it3;
+    internal T _i0, _i1, _i2, _i3;
 
     /// <inheritdoc/>
     public int Capacity => StackCapacity;
@@ -650,10 +650,10 @@ public struct Stack4<T> : IStack<T, Stack4<T>>
         Debug.Assert(index < StackCapacity);
         switch (index)
         {
-            case 0: return ref _it0;
-            case 1: return ref _it1;
-            case 2: return ref _it2;
-            default: return ref _it3;
+            case 0: return ref _i0;
+            case 1: return ref _i1;
+            case 2: return ref _i2;
+            default: return ref _i3;
         }
     }
 
@@ -666,10 +666,10 @@ public struct Stack4<T> : IStack<T, Stack4<T>>
             Debug.Assert(index < StackCapacity);
             return index switch
             {
-                0 => _it0,
-                1 => _it1,
-                2 => _it2,
-                _ => _it3,
+                0 => _i0,
+                1 => _i1,
+                2 => _i2,
+                _ => _i3,
             };
         }
         [MethodImpl((MethodImplOptions)256)]
@@ -683,10 +683,10 @@ public struct Stack4<T> : IStack<T, Stack4<T>>
         Debug.Assert(index < StackCapacity);
         switch (index)
         {
-            case 0: _it0 = value; break;
-            case 1: _it1 = value; break;
-            case 2: _it2 = value; break;
-            default: _it3 = value; break;
+            case 0: _i0 = value; break;
+            case 1: _i1 = value; break;
+            case 2: _i2 = value; break;
+            default: _i3 = value; break;
         }
     }
 
@@ -826,6 +826,18 @@ public struct SmallList<TItem, TStack>
         var stackCap = _stack.Capacity;
         if (index < stackCap)
             _stack.Set(index, in item);
+        else
+            SmallList.AddDefaultAndGetRef(ref _rest, index - stackCap) = item;
+    }
+
+    /// <summary>Adds the item to the end of the list aka the Stack.Push</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public void Add2(in TItem item)
+    {
+        var index = _count++;
+        var stackCap = _stack.Capacity;
+        if (index < stackCap)
+            _stack.AsSpan()[index] = item;
         else
             SmallList.AddDefaultAndGetRef(ref _rest, index - stackCap) = item;
     }
