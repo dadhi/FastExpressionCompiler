@@ -13,8 +13,10 @@ using System.Runtime.CompilerServices;
 using System.Linq;
 
 #if LIGHT_EXPRESSION
+using FastExpressionCompiler.LightExpression.ImTools;
 namespace FastExpressionCompiler.LightExpression.ILDecoder;
 #else
+using FastExpressionCompiler.ImTools;
 namespace FastExpressionCompiler.ILDecoder;
 #endif
 
@@ -332,6 +334,14 @@ public abstract class ILInstruction
         Offset = offset;
         OpCode = opCode;
     }
+}
+
+// todo: @wip
+/// <summary>Data-oriented structure SOA of IL instructions.</summary>
+public struct ILs
+{
+    public SmallList<OpCode, Stack16<OpCode>> Offset;
+    public SmallList<OpCode, Stack16<OpCode>> OpCodes;
 }
 
 public sealed class InlineNoneInstruction : ILInstruction

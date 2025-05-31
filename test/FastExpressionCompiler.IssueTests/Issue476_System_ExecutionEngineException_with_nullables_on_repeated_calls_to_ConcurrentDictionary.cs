@@ -1,11 +1,13 @@
 using System;
-using System.Collections.Concurrent;
+
 
 #if LIGHT_EXPRESSION
+using FastExpressionCompiler.LightExpression.ImTools;
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.IssueTests;
 #else
 using System.Linq.Expressions;
+using FastExpressionCompiler.ImTools;
 using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
@@ -14,6 +16,7 @@ public struct Issue476_System_ExecutionEngineException_with_nullables_on_repeate
 {
     public void Run(TestRun t)
     {
+        TestSmallList(t);
         Original_case(t);
     }
 
@@ -44,5 +47,19 @@ public struct Issue476_System_ExecutionEngineException_with_nullables_on_repeate
 
         t.IsTrue(ff(notNull));
         t.IsFalse(ff(aNull));
+    }
+
+    SmallList<int, Stack4<int>> _smallList;
+
+    public void TestSmallList(TestContext t)
+    {
+        for (var i = 0; i < 8; ++i)
+            _smallList.Add(i);
+
+        var doubleSum = 0;
+        foreach (var n in _smallList)
+            doubleSum += n + n;
+
+        t.AreEqual(56, doubleSum);
     }
 }

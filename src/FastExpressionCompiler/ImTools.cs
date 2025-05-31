@@ -26,6 +26,11 @@ THE SOFTWARE.
 // ReSharper disable once InconsistentNaming
 #nullable disable
 
+#if !NETSTANDARD2_0_OR_GREATER && !NET472
+#define SUPPORTS_UNSAFE
+#define SUPPORTS_CREATE_SPAN
+#endif
+
 #if LIGHT_EXPRESSION
 namespace FastExpressionCompiler.LightExpression.ImTools;
 #else
@@ -41,11 +46,6 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Diagnostics.CodeAnalysis;
 
-#if NETSTANDARD2_0_OR_GREATER || NET472
-using System.Reflection.Emit;
-using System.Reflection;
-#endif
-
 using static SmallMap4;
 
 /// <summary>Helpers and polyfills for the missing things in the old .NET versions</summary>
@@ -55,8 +55,8 @@ public static class RefTools<T>
     /// Note that the result is the `null` even for the struct `T`, so avoid the accessing its members without the check</summary>
     [MethodImpl((MethodImplOptions)256)]
     public static ref T GetNullRef() =>
-#if NET6_0_OR_GREATER
-           ref Unsafe.NullRef<T>();
+#if SUPPORTS_UNSAFE
+        ref Unsafe.NullRef<T>();
 #else
         ref _missing;
     internal static T _missing = default;
@@ -90,6 +90,12 @@ public static class SmallList
 {
     internal const int ForLoopCopyCount = 4;
     internal const int DefaultInitialCapacity = 4;
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    internal static ref T ThrowIndexOutOfBounds<T>(int index, int count)
+    {
+        throw new IndexOutOfRangeException($"Index {index} is out of range of count {count} for SmallList<{typeof(T)},..>.");
+    }
 
     [MethodImpl((MethodImplOptions)256)]
     internal static void Expand<TItem>(ref TItem[] items)
@@ -188,215 +194,6 @@ public static class SmallList
 
     /// <summary>Returns surely present item ref by its index</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref TItem GetSurePresentItemRef<TItem>(this ref SmallList4<TItem> source, int index)
-    {
-        Debug.Assert(source.Count != 0);
-        Debug.Assert(index < source.Count);
-        switch (index)
-        {
-            case 0: return ref source._it0;
-            case 1: return ref source._it1;
-            case 2: return ref source._it2;
-            case 3: return ref source._it3;
-            default:
-                Debug.Assert(source._rest != null, $"Expecting deeper items are already existing on stack at index: {index}");
-                return ref source._rest[index - SmallList4<TItem>.StackCapacity];
-        }
-    }
-
-    /// <summary>Returns a surely present item ref by its index</summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public static ref TItem GetSurePresentItemRef<TItem>(this ref Stack4<TItem> source, int index)
-    {
-        Debug.Assert(index < source.Capacity);
-        switch (index)
-        {
-            case 0: return ref source._it0;
-            case 1: return ref source._it1;
-            case 2: return ref source._it2;
-            case 3: return ref source._it3;
-            default: return ref RefTools<TItem>.GetNullRef();
-        }
-    }
-
-    /// <summary>Returns a surely present item ref by its index</summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public static ref T GetSurePresentItemRef<T, TStack>(this ref SmallList<T, TStack> list, int index)
-        where TStack : struct, IStack<T, TStack>
-    {
-        Debug.Assert(list.Count != 0);
-        Debug.Assert(index < list.Count);
-
-        var stackCap = list.StackCapacity;
-        if (index < stackCap)
-            return ref list._stack.GetSurePresentRef(index);
-
-        Debug.Assert(list._rest != null);
-        return ref list._rest[index - stackCap];
-    }
-
-    /// <summary>Returns last present item ref, assumes that the list is not empty!</summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public static ref TItem GetLastSurePresentItem<TItem>(this ref SmallList4<TItem> source) =>
-        ref source.GetSurePresentItemRef(source._count - 1);
-
-    /// <summary>Appends the default item to the end of the list and returns the reference to it.</summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public static ref TItem AddDefaultAndGetRef<TItem>(this ref SmallList4<TItem> source)
-    {
-        var index = source._count++;
-        switch (index)
-        {
-            case 0: return ref source._it0;
-            case 1: return ref source._it1;
-            case 2: return ref source._it2;
-            case 3: return ref source._it3;
-            default:
-                return ref AddDefaultAndGetRef(ref source._rest, index - SmallList4<TItem>.StackCapacity);
-        }
-    }
-
-    /// <summary>Looks for the item in the list and return its index if found or -1 for the absent item</summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public static int TryGetIndex<TItem, TEq>(this ref SmallList4<TItem> source, TItem it, TEq eq = default)
-        where TEq : struct, IEq<TItem>
-    {
-        switch (source._count)
-        {
-            case 1:
-                if (eq.Equals(it, source._it0)) return 0;
-                break;
-
-            case 2:
-                if (eq.Equals(it, source._it0)) return 0;
-                if (eq.Equals(it, source._it1)) return 1;
-                break;
-
-            case 3:
-                if (eq.Equals(it, source._it0)) return 0;
-                if (eq.Equals(it, source._it1)) return 1;
-                if (eq.Equals(it, source._it2)) return 2;
-                break;
-
-            case var n:
-                if (eq.Equals(it, source._it0)) return 0;
-                if (eq.Equals(it, source._it1)) return 1;
-                if (eq.Equals(it, source._it2)) return 2;
-                if (eq.Equals(it, source._it3)) return 3;
-                const int StackCapacity = SmallList4<TItem>.StackCapacity;
-                if (n == StackCapacity)
-                    break;
-
-                return source._rest.TryGetIndex(in it, 0, source._count - StackCapacity, eq, -1 - StackCapacity) + StackCapacity;
-        }
-        return -1;
-    }
-
-    /// <summary>Returns the index of the found item or appends the item to the end of the list, and returns its index</summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public static int GetIndexOrAdd<TItem, TEq>(this ref SmallList4<TItem> source, in TItem item, TEq eq = default)
-        where TEq : struct, IEq<TItem>
-    {
-        switch (source._count)
-        {
-            case 0:
-                source._count = 1;
-                source._it0 = item;
-                return 0;
-
-            case 1:
-                if (eq.Equals(item, source._it0)) return 0;
-                source._count = 2;
-                source._it1 = item;
-                return 1;
-
-            case 2:
-                if (eq.Equals(item, source._it0)) return 0;
-                if (eq.Equals(item, source._it1)) return 1;
-                source._count = 3;
-                source._it2 = item;
-                return 2;
-
-            case 3:
-                if (eq.Equals(item, source._it0)) return 0;
-                if (eq.Equals(item, source._it1)) return 1;
-                if (eq.Equals(item, source._it2)) return 2;
-                source._count = 4;
-                source._it3 = item;
-                return 3;
-
-            default:
-                if (eq.Equals(item, source._it0)) return 0;
-                if (eq.Equals(item, source._it1)) return 1;
-                if (eq.Equals(item, source._it2)) return 2;
-                if (eq.Equals(item, source._it3)) return 3;
-                var restCount = source._count - SmallList4<TItem>.StackCapacity;
-                if (restCount != 0)
-                {
-                    var i = source._rest.TryGetIndex(item, 0, restCount, eq);
-                    if (i != -1)
-                        return i + SmallList4<TItem>.StackCapacity;
-                }
-                AddDefaultAndGetRef(ref source._rest, restCount) = item;
-                return source._count++;
-        }
-    }
-
-    /// <summary>Enumerates all the items</summary>
-    public static SmallList4Enumerable<TItem> Enumerate<TItem>(this ref SmallList4<TItem> list) => new SmallList4Enumerable<TItem>(list);
-
-    /// <summary>Enumerable on stack, without allocations</summary>
-    public struct SmallList4Enumerable<TItem> : IEnumerable<TItem>, IEnumerable
-    {
-        private readonly SmallList4<TItem> _list;
-        /// <summary>Constructor</summary>
-        public SmallList4Enumerable(SmallList4<TItem> list) => _list = list;
-        /// <inheritdoc />
-        public SmallList4Enumerator<TItem> GetEnumerator() => new SmallList4Enumerator<TItem>(_list);
-        IEnumerator<TItem> IEnumerable<TItem>.GetEnumerator() => GetEnumerator();
-        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-    }
-
-    /// <summary>Enumerator on stack, without allocations</summary>
-    public struct SmallList4Enumerator<TItem> : IEnumerator<TItem>, IEnumerator
-    {
-        private readonly SmallList4<TItem> _list;
-        private int _index;
-        internal SmallList4Enumerator(SmallList4<TItem> list)
-        {
-            _list = list;
-            _index = -1;
-        }
-        private TItem _current;
-        /// <inheritdoc />
-        public TItem Current => _current;
-        object IEnumerator.Current => _current;
-        /// <inheritdoc />
-        public bool MoveNext()
-        {
-            var index = ++_index;
-            var list = _list;
-            if (index < _list.Count)
-                switch (index)
-                {
-                    case 0: _current = list._it0; return true;
-                    case 1: _current = list._it1; return true;
-                    case 2: _current = list._it2; return true;
-                    case 3: _current = list._it3; return true;
-                    default:
-                        _current = list._rest[index - SmallList4<TItem>.StackCapacity];
-                        return true;
-                }
-            return false;
-        }
-        /// <inheritdoc />
-        public void Reset() => _index = -1;
-        /// <inheritdoc />
-        public void Dispose() { }
-    }
-
-    /// <summary>Returns surely present item ref by its index</summary>
-    [MethodImpl((MethodImplOptions)256)]
     public static ref TItem GetSurePresentItemRef<TItem>(this ref SmallList2<TItem> source, int index)
     {
         Debug.Assert(source.Count != 0);
@@ -406,7 +203,7 @@ public static class SmallList
             case 0: return ref source._it0;
             case 1: return ref source._it1;
             default:
-                Debug.Assert(source._rest != null, $"Expecting deeper items are already existing on stack at index: {index}");
+                Debug.Assert(source._rest != null, $"Expecting deeper items are already existing on heap at index: {index}");
                 return ref source._rest[index - SmallList2<TItem>.StackCapacity];
         }
     }
@@ -489,64 +286,45 @@ public static class SmallList
 
 #pragma warning disable CS9101 // UnscopedRef goes wrong on Ubuntu
 
+internal static class Stack
+{
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    internal static ref T ThrowIndexOutOfBounds<T>(int index, int capacity)
+    {
+        throw new IndexOutOfRangeException($"Index {index} is out of range for Stack{capacity}<{typeof(T)},..>.");
+    }
+}
+
 // todo: @wip generalized Stack is the WIP and may be moved to ImTools repo
 /// <summary>Abstracts over collection of the items on stack of the fixed Capacity,
 /// to be used as a part of the hybrid data structures which grow from stack to heap</summary>
 public interface IStack<T, TStack>
     where TStack : struct, IStack<T, TStack>
 {
-    /// <summary>Count of items holding</summary>
+    /// <summary>Possible count of items holding on stack</summary>
     int Capacity { get; }
 
-    /// <summary>Indexer</summary>
-    T this[int index] { get; set; }
-
-    /// <summary>Set indexed item via value passed by-ref</summary>
-    void Set(int index, in T item);
-
-    /// <summary>Gets the ref to the struct T field/item by index. Does not not check the index boundaries - do it externally!</summary>
+    /// <summary>Gets first item by ref</summary>
     [UnscopedRef]
-    ref T GetSurePresentRef(int index);
+    ref T First { get; }
 
+    /// <summary>Gets last item by ref</summary>
+    [UnscopedRef]
+    ref T Last { get; }
+
+    /// <summary>Returns the item by ref to read and write the item value,
+    /// but does not check the index bounds comparing to the `this[index]`</summary>
+    [UnscopedRef]
+    ref T GetSurePresentItemRef(int index);
+
+    /// <summary>Indexer returning the item by ref to read and write the item value</summary>
+    [UnscopedRef]
+    ref T this[int index] { get; }
+
+#if SUPPORTS_CREATE_SPAN
     /// <summary>Creates a span from the struct items</summary>
     [UnscopedRef]
     Span<T> AsSpan();
-}
-
-internal static class StackTools<T, TStack>
-    where TStack : struct, IStack<T, TStack>
-{
-#if NETSTANDARD2_0_OR_GREATER || NET472
-    internal static readonly ConstructorInfo SpanConstructor =
-        typeof(Span<T>).GetConstructor(new[] { typeof(void*), typeof(int) });
-
-    internal delegate Span<T> AsSpanDelegate(ref TStack stack, int capacity);
-
-    internal static AsSpanDelegate CompileAsSpanDelegate()
-    {
-        var dynamicMethod = new DynamicMethod(
-            "",
-            typeof(Span<T>),
-            new[] { typeof(TStack).MakeByRefType(), typeof(int) }, // todo: @perf pool this thing
-            typeof(TStack),
-            true
-        );
-
-        // Set capacity to the estimated size to avoid realloc, 1 + 1 + 1 + 5 + 1 = 9 bytes + a small buffer
-        var il = dynamicMethod.GetILGenerator(16);
-
-        // IL to replicate: return new Span<T>(Unsafe.AsPointer(ref this), StackCapacity);
-        il.Emit(OpCodes.Ldarg_0);         // Load 'ref this'
-        il.Emit(OpCodes.Conv_U);          // Convert managed reference to native unsigned int (void*)
-        il.Emit(OpCodes.Ldarg_1);         // Load length (StackCapacity) argument
-        il.Emit(OpCodes.Newobj, SpanConstructor);
-        il.Emit(OpCodes.Ret);
-
-        return (AsSpanDelegate)dynamicMethod.CreateDelegate(typeof(AsSpanDelegate));
-    }
-
-    // todo: @perf do we even need a lazy here?
-    internal static readonly Lazy<AsSpanDelegate> LazyCompiledAsSpanDelegate = new(CompileAsSpanDelegate);
 #endif
 }
 
@@ -564,53 +342,46 @@ public struct Stack2<T> : IStack<T, Stack2<T>>
 
     /// <inheritdoc/>
     [UnscopedRef]
+    public ref T First { get => ref _it0; }
+
+    /// <inheritdoc/>
+    [UnscopedRef]
+    public ref T Last { get => ref _it1; }
+
+    /// <inheritdoc/>
+    [UnscopedRef]
     [MethodImpl((MethodImplOptions)256)]
-    public ref T GetSurePresentRef(int index)
+    public ref T GetSurePresentItemRef(int index)
     {
-        Debug.Assert(index < StackCapacity);
+#if SUPPORTS_UNSAFE
+        return ref Unsafe.Add(ref _it0, index);
+#else
         switch (index)
         {
             case 0: return ref _it0;
             default: return ref _it1;
         }
-    }
-
-    /// <inheritdoc/>
-    public T this[int index]
-    {
-        [MethodImpl((MethodImplOptions)256)]
-        get
-        {
-            Debug.Assert(index < StackCapacity);
-            return index switch
-            {
-                0 => _it0,
-                _ => _it1,
-            };
-        }
-        [MethodImpl((MethodImplOptions)256)]
-        set => Set(index, in value);
-    }
-
-    /// <inheritdoc/>
-    [MethodImpl((MethodImplOptions)256)]
-    public void Set(int index, in T value)
-    {
-        Debug.Assert(index < StackCapacity);
-        switch (index)
-        {
-            case 0: _it0 = value; break;
-            default: _it1 = value; break;
-        }
+#endif
     }
 
     /// <inheritdoc/>
     [UnscopedRef]
+    public ref T this[int index]
+    {
+        [MethodImpl((MethodImplOptions)256)]
+        get
+        {
+            if (index < 0 | index >= StackCapacity)
+                return ref Stack.ThrowIndexOutOfBounds<T>(index, StackCapacity);
+            return ref GetSurePresentItemRef(index);
+        }
+    }
+
+#if SUPPORTS_CREATE_SPAN
+    /// <inheritdoc/>
+    [UnscopedRef]
     [MethodImpl((MethodImplOptions)256)]
     public Span<T> AsSpan() =>
-#if NETSTANDARD2_0_OR_GREATER || NET472
-        StackTools<T, Stack2<T>>.LazyCompiledAsSpanDelegate.Value(ref this, StackCapacity);
-#else
         MemoryMarshal.CreateSpan(ref Unsafe.As<Stack2<T>, T>(ref this), StackCapacity);
 #endif
 }
@@ -629,10 +400,20 @@ public struct Stack4<T> : IStack<T, Stack4<T>>
 
     /// <inheritdoc/>
     [UnscopedRef]
+    public ref T First { get => ref _it0; }
+
+    /// <inheritdoc/>
+    [UnscopedRef]
+    public ref T Last { get => ref _it3; }
+
+    /// <inheritdoc/>
+    [UnscopedRef]
     [MethodImpl((MethodImplOptions)256)]
-    public ref T GetSurePresentRef(int index)
+    public ref T GetSurePresentItemRef(int index)
     {
-        Debug.Assert(index < StackCapacity);
+#if SUPPORTS_UNSAFE
+        return ref Unsafe.Add(ref _it0, index);
+#else
         switch (index)
         {
             case 0: return ref _it0;
@@ -640,56 +421,171 @@ public struct Stack4<T> : IStack<T, Stack4<T>>
             case 2: return ref _it2;
             default: return ref _it3;
         }
-    }
-
-    /// <inheritdoc/>
-    public T this[int index]
-    {
-        [MethodImpl((MethodImplOptions)256)]
-        get
-        {
-            Debug.Assert(index < StackCapacity);
-            return index switch
-            {
-                0 => _it0,
-                1 => _it1,
-                2 => _it2,
-                _ => _it3,
-            };
-        }
-        [MethodImpl((MethodImplOptions)256)]
-        set => Set(index, in value);
-    }
-
-    /// <summary>Sets the value by the index</summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public void Set(int index, in T value)
-    {
-        Debug.Assert(index < StackCapacity);
-        switch (index)
-        {
-            case 0: _it0 = value; break;
-            case 1: _it1 = value; break;
-            case 2: _it2 = value; break;
-            default: _it3 = value; break;
-        }
+#endif
     }
 
     /// <inheritdoc/>
     [UnscopedRef]
+    public ref T this[int index]
+    {
+        [MethodImpl((MethodImplOptions)256)]
+        get
+        {
+            if (index < 0 | index >= StackCapacity)
+                return ref Stack.ThrowIndexOutOfBounds<T>(index, StackCapacity);
+            return ref GetSurePresentItemRef(index);
+        }
+    }
+
+#if SUPPORTS_CREATE_SPAN
+    /// <inheritdoc/>
+    [UnscopedRef]
     [MethodImpl((MethodImplOptions)256)]
     public Span<T> AsSpan() =>
-#if NETSTANDARD2_0_OR_GREATER || NET472
-        StackTools<T, Stack4<T>>.LazyCompiledAsSpanDelegate.Value(ref this, StackCapacity);
-#else
         MemoryMarshal.CreateSpan(ref Unsafe.As<Stack4<T>, T>(ref this), StackCapacity);
+#endif
+}
+
+/// <summary>Implementation of `IStack` for 8 items on stack</summary>
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public struct Stack8<T> : IStack<T, Stack8<T>>
+{
+    /// <summary>Count of items on stack</summary>
+    public const int StackCapacity = 8;
+    internal T _it0, _it1, _it2, _it3, _it4, _it5, _it6, _it7;
+
+    /// <inheritdoc/>
+    public int Capacity => StackCapacity;
+
+    /// <inheritdoc/>
+    [UnscopedRef]
+    public ref T First { get => ref _it0; }
+
+    /// <inheritdoc/>
+    [UnscopedRef]
+    public ref T Last { get => ref _it7; }
+
+    /// <inheritdoc/>
+    [UnscopedRef]
+    [MethodImpl((MethodImplOptions)256)]
+    public ref T GetSurePresentItemRef(int index)
+    {
+#if SUPPORTS_UNSAFE
+        return ref Unsafe.Add(ref _it0, index);
+#else
+        switch (index)
+        {
+            case 0: return ref _it0;
+            case 1: return ref _it1;
+            case 2: return ref _it2;
+            case 3: return ref _it3;
+            case 4: return ref _it4;
+            case 5: return ref _it5;
+            case 6: return ref _it6;
+            default: return ref _it7;
+        }
+#endif
+    }
+
+    /// <inheritdoc/>
+    [UnscopedRef]
+    public ref T this[int index]
+    {
+        [MethodImpl((MethodImplOptions)256)]
+        get
+        {
+            if (index < 0 | index >= StackCapacity)
+                return ref Stack.ThrowIndexOutOfBounds<T>(index, StackCapacity);
+            return ref GetSurePresentItemRef(index);
+        }
+    }
+
+#if SUPPORTS_CREATE_SPAN
+    /// <inheritdoc/>
+    [UnscopedRef]
+    [MethodImpl((MethodImplOptions)256)]
+    public Span<T> AsSpan() =>
+        MemoryMarshal.CreateSpan(ref Unsafe.As<Stack8<T>, T>(ref this), StackCapacity);
+#endif
+}
+
+/// <summary>Implementation of `IStack` for 16 items on stack</summary>
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public struct Stack16<T> : IStack<T, Stack16<T>>
+{
+    /// <summary>Count of items on stack</summary>
+    public const int StackCapacity = 16;
+
+    internal T _it0, _it1, _it2, _it3, _it4, _it5, _it6, _it7;
+    internal T _it8, _it9, _it10, _it11, _it12, _it13, _it14, _it15;
+
+    /// <inheritdoc/>
+    public int Capacity => StackCapacity;
+
+    /// <inheritdoc/>
+    [UnscopedRef]
+    public ref T First { get => ref _it0; }
+
+    /// <inheritdoc/>
+    [UnscopedRef]
+    public ref T Last { get => ref _it15; }
+
+    /// <inheritdoc/>
+    [UnscopedRef]
+    [MethodImpl((MethodImplOptions)256)]
+    public ref T GetSurePresentItemRef(int index)
+    {
+#if SUPPORTS_UNSAFE
+        return ref Unsafe.Add(ref _it0, index);
+#else
+        switch (index)
+        {
+            case 0: return ref _it0;
+            case 1: return ref _it1;
+            case 2: return ref _it2;
+            case 3: return ref _it3;
+            case 4: return ref _it4;
+            case 5: return ref _it5;
+            case 6: return ref _it6;
+            case 7: return ref _it7;
+            case 8: return ref _it8;
+            case 9: return ref _it9;
+            case 10: return ref _it10;
+            case 11: return ref _it11;
+            case 12: return ref _it12;
+            case 13: return ref _it13;
+            case 14: return ref _it14;
+            default: return ref _it15;
+        }
+#endif
+    }
+
+    /// <inheritdoc/>
+    [UnscopedRef]
+    public ref T this[int index]
+    {
+        [MethodImpl((MethodImplOptions)256)]
+        get
+        {
+            if (index < 0 | index >= StackCapacity)
+                return ref Stack.ThrowIndexOutOfBounds<T>(index, StackCapacity);
+            return ref GetSurePresentItemRef(index);
+        }
+    }
+
+#if SUPPORTS_CREATE_SPAN
+    /// <inheritdoc/>
+    [UnscopedRef]
+    [MethodImpl((MethodImplOptions)256)]
+    public Span<T> AsSpan() =>
+        MemoryMarshal.CreateSpan(ref Unsafe.As<Stack16<T>, T>(ref this), StackCapacity);
 #endif
 }
 
 // todo: @wip
 /// <summary>Generic version of SmallList abstracted for how much items are on stack</summary>
-public struct SmallList<TItem, TStack>
-    where TStack : struct, IStack<TItem, TStack>
+public struct SmallList<T, TStack> : IEnumerable<T>
+    where TStack : struct, IStack<T, TStack>
 {
     internal int _count;
     // For this warning it is fine `_stack` is never assigned to, and will always have its default value
@@ -697,7 +593,7 @@ public struct SmallList<TItem, TStack>
     internal TStack _stack;
 #pragma warning restore CS0649
 
-    internal TItem[] _rest;
+    internal T[] _rest;
 
     /// <inheritdoc />
     public int StackCapacity
@@ -713,377 +609,198 @@ public struct SmallList<TItem, TStack>
         get => _count;
     }
 
-    /// <summary>Returns surely present item by its index</summary>
-    public TItem this[int index]
+    /// <summary>Ensures that the list has allocated space to hold `count` of items</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public void InitCount(int count)
+    {
+        Debug.Assert(count > 0, "Count should be more than 0");
+        Debug.Assert(_count == 0, "Initial the count should be 0");
+
+        // Add the StackCapacity empty space at the end, we may use it later for BuildToArray.
+        // The actual source Capacity will be StackCapacity + count.
+        if (count > StackCapacity)
+            _rest = new T[count];
+        _count = count;
+    }
+
+    /// <summary>Returns surely present item by ref</summary>
+    [UnscopedRef]
+    public ref T this[int index]
     {
         [MethodImpl((MethodImplOptions)256)]
         get
         {
-            Debug.Assert(_count != 0);
-            Debug.Assert(index < _count);
+            if (index < 0 | index >= _count)
+                return ref SmallList.ThrowIndexOutOfBounds<T>(index, _count);
+
             var stackCap = _stack.Capacity;
             if (index < stackCap)
-                return _stack[index];
+                return ref _stack.GetSurePresentItemRef(index);
 
-            Debug.Assert(_rest != null);
-            return _rest[index - stackCap];
+            Debug.Assert(_rest != null, "Expecting deeper items are already existing on heap");
+            return ref _rest[index - stackCap];
         }
     }
 
-    /// <summary>Adds the item to the end of the list aka the Stack.Push</summary>
+    /// <summary>Returns a surely present item ref by its index</summary>
+    [UnscopedRef]
     [MethodImpl((MethodImplOptions)256)]
-    public void Add(in TItem item)
+    public ref T GetSurePresentItemRef(int index)
     {
-        var index = _count++;
+        Debug.Assert(Count != 0);
+        Debug.Assert(index < Count);
+
         var stackCap = _stack.Capacity;
         if (index < stackCap)
-            _stack.Set(index, in item);
-        else
-            SmallList.AddDefaultAndGetRef(ref _rest, index - stackCap) = item;
-    }
-}
+            return ref _stack.GetSurePresentItemRef(index);
 
-/// <summary>List with the number of first items (4) stored inside its struct and the rest in the growable array.
-/// Supports addition and removal (remove is without resize) only at the end of the list, aka Stack behavior</summary>
-[DebuggerDisplay("{Count} of {_it0?.ToString()}, {_it1?.ToString()}, {_it2?.ToString()}, {_it3?.ToString()}, ...")]
-public struct SmallList4<TItem>
-{
-    /// <summary>The number of entries stored inside the map itself without moving them to array on heap</summary>
-    public const int StackCapacity = 4;
-
-    internal int _count;
-    internal TItem _it0, _it1, _it2, _it3;
-    internal TItem[] _rest;
-
-    /// <summary>Gets the number of items in the list</summary>
-    public int Count
-    {
-        [MethodImpl((MethodImplOptions)256)]
-        get => _count;
+        Debug.Assert(_rest != null);
+        return ref _rest[index - stackCap]; // todo: @wip use GetSurePresentItemRef for the array?
     }
 
-    /// <summary>Populate with one item</summary>
+    /// <summary>Appends the default item to the end of the list and returns the reference to it.</summary>
+    [UnscopedRef]
     [MethodImpl((MethodImplOptions)256)]
-    public void Init1(TItem it0)
-    {
-        _count = 1;
-        _it0 = it0;
-    }
-
-    /// <summary>Populate with two items</summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public void Init2(TItem it0, TItem it1)
-    {
-        _count = 2;
-        _it0 = it0;
-        _it1 = it1;
-    }
-
-    /// <summary>Populate with 3 items</summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public void Init3(TItem it0, TItem it1, TItem it2)
-    {
-        _count = 3;
-        _it0 = it0;
-        _it1 = it1;
-        _it2 = it2;
-    }
-
-    /// <summary>Populate with 4 items</summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public void Init4(TItem it0, TItem it1, TItem it2, TItem it3)
-    {
-        _count = StackCapacity;
-        _it0 = it0;
-        _it1 = it1;
-        _it2 = it2;
-        _it3 = it3;
-    }
-
-    /// <summary>Populate with `count` items</summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public void Init(int count, in TItem it0, in TItem it1, in TItem it2, in TItem it3)
-    {
-        Debug.Assert(count >= 0 & count <= 4);
-        _count = count;
-        _it0 = it0;
-        _it1 = it1;
-        _it2 = it2;
-        _it3 = it3;
-    }
-
-    /// <summary>Populates the list stack items and owns/uses the provided rest array and its count</summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public void Embed(TItem it0, TItem it1, TItem it2, TItem it3, TItem[] rest, int restCount)
-    {
-        _it0 = it0;
-        _it1 = it1;
-        _it2 = it2;
-        _it3 = it3;
-        _rest = rest;
-        _count = StackCapacity + restCount;
-    }
-
-    /// <summary>Populate with arbitrary items</summary>
-    public void InitFromList<TList>(TList items) where TList : IReadOnlyList<TItem>
-    {
-        switch (items.Count)
-        {
-            case 0:
-                break;
-            case 1:
-                Init1(items[0]);
-                break;
-            case 2:
-                Init2(items[0], items[1]);
-                break;
-            case 3:
-                Init3(items[0], items[1], items[2]);
-                break;
-            case 4:
-                Init4(items[0], items[1], items[2], items[3]);
-                break;
-            default:
-                Init4(items[0], items[1], items[2], items[3]);
-
-                // keep the capacity at count + StackCapacity
-                _count = items.Count;
-                var rest = new TItem[_count]; // todo: @perf take from the ArrayPool.Shared
-                for (var i = StackCapacity; i < _count; ++i)
-                    rest[i - StackCapacity] = items[i]; // todo: @perf does List have a Copy?
-                _rest = rest;
-                break;
-        }
-    }
-
-    /// <summary>Returns surely present item by its index</summary>
-    public TItem this[int index]
-    {
-        [MethodImpl((MethodImplOptions)256)]
-        get
-        {
-            Debug.Assert(_count != 0);
-            Debug.Assert(index < _count);
-            switch (index)
-            {
-                case 0: return _it0;
-                case 1: return _it1;
-                case 2: return _it2;
-                case 3: return _it3;
-                default:
-                    Debug.Assert(_rest != null, $"Expecting deeper items are already existing on stack at index: {index}");
-                    return _rest[index - StackCapacity];
-            }
-        }
-    }
-
-    /// <summary>Adds the item to the end of the list aka the Stack.Push</summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public void Add(in TItem item)
+    public ref T AddDefaultAndGetRef()
     {
         var index = _count++;
-        switch (index)
-        {
-            case 0: _it0 = item; break;
-            case 1: _it1 = item; break;
-            case 2: _it2 = item; break;
-            case 3: _it3 = item; break;
-            default:
-                SmallList.AddDefaultAndGetRef(ref _rest, index - StackCapacity) = item;
-                break;
-        }
+        var stackCap = StackCapacity;
+        if (index < stackCap)
+            return ref _stack.GetSurePresentItemRef(index);
+        return ref SmallList.AddDefaultAndGetRef(ref _rest, index - stackCap);
     }
 
-    /// <summary>Adds the default item to the end of the list aka the Stack.Push default</summary>
+    /// <summary>Adds the item to the end of the list aka the Stack.Push. Returns the index of the added item.</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public void AddDefault()
+    public int Add(in T item)
     {
-        if (++_count >= StackCapacity)
-            SmallList.AddDefaultAndGetRef(ref _rest, _count - StackCapacity);
+        var index = _count++;
+        var stackCap = StackCapacity;
+        if (index < stackCap)
+            _stack.GetSurePresentItemRef(index) = item;
+        else
+            SmallList.AddDefaultAndGetRef(ref _rest, index - stackCap) = item;
+        return index;
+    }
+
+    /// <summary>Looks for the item in the list and return its index if found or -1 for the absent item</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public int TryGetIndex<TEq>(in T item, TEq eq = default) where TEq : struct, IEq<T>
+    {
+        if (_count != 0)
+        {
+            var index = 0;
+            foreach (var it in this)
+            {
+                if (eq.Equals(item, it))
+                    return index;
+                ++index;
+            }
+        }
+        return -1;
+    }
+
+    /// <summary>Returns the index of the found item or appends the item to the end of the list, and returns its index</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public int GetIndexOrAdd<TEq>(in T item, TEq eq = default) where TEq : struct, IEq<T>
+    {
+        var i = TryGetIndex(in item, eq);
+        return i != -1 ? i : Add(in item);
+    }
+
+    ///<summary>Clears the list, but keeps the already allocated array on heap to reuse in the future</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public void Clear()
+    {
+        _stack = default; // todo: @perf is there way to faster clear items on stack?
+        var restCount = _count - StackCapacity;
+        if (restCount > 0)
+        {
+            Debug.Assert(_rest != null, "Expecting deeper items are already existing on heap");
+            Array.Clear(_rest, 0, restCount);
+        }
+        _count = 0;
+    }
+
+#if SUPPORTS_CREATE_SPAN
+    // todo: @wip @remove for benchmarking only
+    /// <summary>Returns a surely present item ref by its index</summary>
+    [UnscopedRef]
+    [MethodImpl((MethodImplOptions)256)]
+    public ref T GetSurePresentItemRef2(int index)
+    {
+        Debug.Assert(Count != 0);
+        Debug.Assert(index < Count);
+
+        var stackCap = StackCapacity;
+        if (index < stackCap)
+            return ref _stack.AsSpan()[index];
+
+        Debug.Assert(_rest != null);
+        return ref _rest[index - stackCap];
+    }
+#endif
+
+    /// <summary>Returns last present item ref, assumes that the list is not empty!</summary>
+    [UnscopedRef]
+    [MethodImpl((MethodImplOptions)256)]
+    public ref T GetLastSurePresentItem()
+    {
+        Debug.Assert(_count != 0, "Expecting that the list is not empty");
+        return ref GetSurePresentItemRef(_count - 1);
     }
 
     /// <summary>Removes the last item from the list aka the Stack Pop. Assumes that the list is not empty!</summary>
     [MethodImpl((MethodImplOptions)256)]
     public void RemoveLastSurePresentItem()
     {
-        Debug.Assert(_count != 0);
+        Debug.Assert(_count != 0, "Expecting that the list is not empty");
         var index = --_count;
-        switch (index)
-        {
-            case 0: _it0 = default; break;
-            case 1: _it1 = default; break;
-            case 2: _it2 = default; break;
-            case 3: _it3 = default; break;
-            default:
-                Debug.Assert(_rest != null, $"Expecting a deeper parent stack created before accessing it here at level {index}");
-                _rest[index - StackCapacity] = default;
-                break;
-        }
+        GetSurePresentItemRef(index) = default;
     }
 
-    /// <summary>Adds another list to the current list</summary>
-    public void AddList(in SmallList4<TItem> added)
-    {
-        if (_count == 0)
-        {
-            Init4(added._it0, added._it1, added._it2, added._it3);
-            var addedRestCount = added.Count - StackCapacity;
-            if (addedRestCount > 0)
-            {
-                _rest = new TItem[addedRestCount + StackCapacity]; // add a bit of the empty room of `StackCapacity` at the end, so you may add the new items without immediate resize 
-                Array.Copy(added._rest, 0, _rest, 0, addedRestCount);
-            }
-            // Setting the _count here because Init4 above sets the count to 4, but in reality the added list may have less items than 4
-            _count = added.Count;
-            return;
-        }
-        switch (added.Count)
-        {
-            case 0: break;
-            case 1: Add(added._it0); break;
-            case 2: Add(added._it0); Add(added._it1); break;
-            case 3: Add(added._it0); Add(added._it1); Add(added._it2); break;
-            case 4: Add(added._it0); Add(added._it1); Add(added._it2); Add(added._it3); break;
-            case var addedCount:
-                Add(added._it0); Add(added._it1); Add(added._it2); Add(added._it3);
-
-                // Here the _count reflects the 4 added items above
-                var addedRestCount = addedCount - StackCapacity;
-                var currRestCount = _count - StackCapacity;
-
-                // Expand the rest so it can hold the current items and added items
-                if (_rest.Length < currRestCount + addedRestCount)
-                {
-                    var newRest = new TItem[currRestCount + addedRestCount + StackCapacity]; // add a bit of the empty room of `StackCapacity` at the end
-                    Array.Copy(_rest, 0, newRest, 0, currRestCount);
-                    _rest = newRest;
-                }
-
-                // Copy the added items to the rest
-                Array.Copy(added._rest, 0, _rest, currRestCount, addedRestCount);
-                _count += addedRestCount;
-                break;
-        }
-    }
-
-    /// <summary>Drops the first item out of the list, and shifts the remaining items indices by -1, so the second item become the first and so on.
-    /// If the list is empty the method does nothing.
-    /// The method returns number of the dropped items, e.g. 0 or 1.
-    /// The method is similar to JS Array.shift</summary>
+    /// <summary>Returns an enumerator struct</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public int DropFirst()
-    {
-        switch (_count)
-        {
-            case 0: return 0;
-            case 1: _it0 = default; break;
-            case 2: _it0 = _it1; _it1 = default; break;
-            case 3: _it0 = _it1; _it1 = _it2; _it2 = default; break;
-            case 4: _it0 = _it1; _it1 = _it2; _it2 = _it3; _it3 = default; break;
-            default:
-                _it0 = _it1; _it1 = _it2; _it2 = _it3; _it3 = _rest[0];
-                Array.Copy(_rest, 1, _rest, 0, (_count - StackCapacity) - 1);
-                _rest[(_count - StackCapacity) - 1] = default;
-                break;
-        }
-        --_count;
-        return 1;
-    }
-
-    ///<summary>Clears the list, but keeps the already allocated array on heap to reuse in the future</summary>
-    public void Clear()
-    {
-        _it0 = default;
-        _it1 = default;
-        _it2 = default;
-        _it3 = default;
-        if (_count > StackCapacity)
-        {
-            Debug.Assert(_rest != null);
-            Array.Clear(_rest, 0, _rest.Length);
-        }
-        _count = 0;
-    }
-
-    /// <summary>Drops the first `n` items out of the list, and shifts the remaining items indices by -1, so the second item become the first and so on.
-    /// If the list is empty the method does nothing.
-    /// The method returns number of the dropped items, e.g. 0 or 1.
-    /// The method is similar to JS Array.shift</summary>
-    public int DropFirstN(int n)
-    {
-        if (n <= 0)
-            return 0;
-
-        if (n >= _count)
-        {
-            Clear();
-            return _count;
-        }
-
-        if (_count <= StackCapacity)
-        {
-            switch (n)
-            {
-                case 1: _it0 = _it1; _it1 = _it2; _it2 = _it3; _it3 = default; break;
-                case 2: _it0 = _it2; _it1 = _it3; _it2 = default; _it3 = default; break;
-                // no need to check for n == 4, as the n is strictly less than _count in the check above
-                default: _it0 = _it3; _it1 = default; _it2 = default; _it3 = default; break;
-            }
-        }
-        else
-        {
-            Debug.Assert(_rest != null);
-            var last = (_count - StackCapacity) - n;
-            switch (n)
-            {
-                case 1:
-                    _it0 = _it1; _it1 = _it2; _it2 = _it3; _it3 = _rest[0];
-                    Array.Copy(_rest, 1, _rest, 0, last); // don't worry if the `last` is 0 (for the 5 item list), Array.Copy will handle 0 just fine.
-                    _rest[last] = default;
-                    break;
-                case 2:
-                    _it0 = _it2; _it1 = _it3; _it2 = _rest[0]; _it3 = _rest[1];
-                    Array.Copy(_rest, 2, _rest, 0, last);
-                    _rest[last] = default; _rest[last + 1] = default;
-                    break;
-                case 3:
-                    _it0 = _it3; _it1 = _rest[0]; _it2 = _rest[1]; _it3 = _rest[2];
-                    Array.Copy(_rest, 3, _rest, 0, last);
-                    _rest[last] = default; _rest[last + 1] = default; _rest[last + 2] = default;
-                    break;
-                default:
-                    _it0 = _rest[0]; _it1 = _rest[1]; _it2 = _rest[2]; _it3 = _rest[3];
-                    Array.Copy(_rest, n, _rest, 0, last);
-                    Array.Clear(_rest, last, n);
-                    break;
-            }
-        }
-
-        _count -= n;
-        return n;
-    }
-
-    /// <summary>Copy items to new the array</summary>
-    public TItem[] ToArray()
-    {
-        switch (_count)
-        {
-            case 0: return Tools.Empty<TItem>();
-            case 1: return new[] { _it0 };
-            case 2: return new[] { _it0, _it1 };
-            case 3: return new[] { _it0, _it1, _it2 };
-            case 4: return new[] { _it0, _it1, _it2, _it3 };
-            default:
-                var items = new TItem[_count];
-                items[0] = _it0;
-                items[1] = _it1;
-                items[2] = _it2;
-                items[3] = _it3;
-                Array.Copy(_rest, 0, items, 4, _count - StackCapacity);
-                return items;
-        }
-    }
+    public SmallListEnumerator<T, TStack> GetEnumerator() => new SmallListEnumerator<T, TStack>(this);
+    IEnumerator<T> IEnumerable<T>.GetEnumerator() => GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }
+
+/// <summary>Enumerator on stack, without allocations</summary>
+public struct SmallListEnumerator<T, TStack> : IEnumerator<T>, IEnumerator
+    where TStack : struct, IStack<T, TStack>
+{
+    private readonly SmallList<T, TStack> _list;
+    private int _index;
+    internal SmallListEnumerator(SmallList<T, TStack> list)
+    {
+        _list = list;
+        _index = -1;
+    }
+    private T _current;
+    /// <inheritdoc />
+    public T Current => _current;
+    object IEnumerator.Current => _current;
+    /// <inheritdoc />
+    [MethodImpl((MethodImplOptions)256)]
+    public bool MoveNext()
+    {
+        var index = ++_index;
+        if (index < _list.Count)
+        {
+            _current = index < _list.StackCapacity
+                ? _list._stack.GetSurePresentItemRef(index)
+                : _list._rest[index - _list.StackCapacity];
+            return true;
+        }
+        return false;
+    }
+    /// <inheritdoc />
+    public void Reset() => _index = -1;
+    /// <inheritdoc />
+    public void Dispose() { }
+}
+
 
 /// <summary>List with the number of first items (2) stored inside its struct and the rest in the growable array.
 /// Supports addition and removal (remove is without resize) only at the end of the list, aka Stack behavior</summary>
@@ -1179,7 +896,7 @@ public struct SmallList2<TItem>
                 case 0: return _it0;
                 case 1: return _it1;
                 default:
-                    Debug.Assert(_rest != null, $"Expecting deeper items are already existing on stack at index: {index}");
+                    Debug.Assert(_rest != null, $"Expecting deeper items are already existing on heap at index: {index}");
                     return _rest[index - StackCapacity];
             }
         }

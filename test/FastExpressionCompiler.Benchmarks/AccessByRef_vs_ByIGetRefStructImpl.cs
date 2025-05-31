@@ -31,52 +31,52 @@ BenchmarkDotNet v0.13.7, Windows 11 (10.0.22621.1992/22H2/2022Update/SunValley2)
 [MemoryDiagnoser]
 public class AccessByRef_vs_ByIGetRefStructImpl
 {
-    private readonly SmallList4<LabelInfo> Labels;
+  // private readonly SmallList4<LabelInfo> Labels;
 
-    public AccessByRef_vs_ByIGetRefStructImpl()
-    {
-        for (var i = 0; i < 8; ++i)
-            Labels.AddDefault();
-    }
+  // public AccessByRef_vs_ByIGetRefStructImpl()
+  // {
+  //     for (var i = 0; i < 8; ++i)
+  //         Labels.AddDefault();
+  // }
 
-    // [Benchmark(Baseline = true)]
-    // public void AccessByRef()
-    // {
-    //     for (short i = 3; i < 8; ++i)
-    //     {
-    //         ref var l = ref Labels.DebugDeepItems[i];
-    //         l.InlinedLambdaInvokeIndex = i;
-    //     }
-    // }
+  // [Benchmark(Baseline = true)]
+  // public void AccessByRef()
+  // {
+  //     for (short i = 3; i < 8; ++i)
+  //     {
+  //         ref var l = ref Labels.DebugDeepItems[i];
+  //         l.InlinedLambdaInvokeIndex = i;
+  //     }
+  // }
 
-    // [Benchmark]
-    // public void ByIGetRefStructImpl()
-    // {
-    //     for (short i = 3; i < 8; ++i)
-    //         Labels.GetSurePresentItem<SetInlinedLambdaInvokeIndex, short, xo>(i, i);
-    // }
+  // [Benchmark]
+  // public void ByIGetRefStructImpl()
+  // {
+  //     for (short i = 3; i < 8; ++i)
+  //         Labels.GetSurePresentItem<SetInlinedLambdaInvokeIndex, short, xo>(i, i);
+  // }
 
-    // [Benchmark]
-    // public void StaticMethodAsDelegate()
-    // {
-    //     for (short i = 3; i < 8; ++i)
-    //         Labels.GetSurePresentItem(i, i, Handle);
+  // [Benchmark]
+  // public void StaticMethodAsDelegate()
+  // {
+  //     for (short i = 3; i < 8; ++i)
+  //         Labels.GetSurePresentItem(i, i, Handle);
 
-    //     [MethodImpl((MethodImplOptions)256)]
-    //     static xo Handle(ref LabelInfo it, in short n)
-    //     {
-    //         it.InlinedLambdaInvokeIndex = n;
-    //         return default;
-    //     }
-    // }
+  //     [MethodImpl((MethodImplOptions)256)]
+  //     static xo Handle(ref LabelInfo it, in short n)
+  //     {
+  //         it.InlinedLambdaInvokeIndex = n;
+  //         return default;
+  //     }
+  // }
 
-    // public struct SetInlinedLambdaInvokeIndex : IHandleRef<LabelInfo, short, xo>
-    // {
-    //     [MethodImpl((MethodImplOptions)256)]
-    //     public xo Handle(ref LabelInfo it, in short n)
-    //     {
-    //         it.InlinedLambdaInvokeIndex = n;
-    //         return default;
-    //     }
-    // }
+  // public struct SetInlinedLambdaInvokeIndex : IHandleRef<LabelInfo, short, xo>
+  // {
+  //     [MethodImpl((MethodImplOptions)256)]
+  //     public xo Handle(ref LabelInfo it, in short n)
+  //     {
+  //         it.InlinedLambdaInvokeIndex = n;
+  //         return default;
+  //     }
+  // }
 }
