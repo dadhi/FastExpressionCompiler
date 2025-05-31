@@ -105,25 +105,33 @@ public class SmallList_Switch_vs_AsSpan_ByRef_Access
     | Method                  | Mean      | Error     | StdDev    | Ratio | RatioSD | Rank | BranchInstructions/Op | BranchMispredictions/Op | CacheMisses/Op | Allocated | Alloc Ratio |
     |------------------------ |----------:|----------:|----------:|------:|--------:|-----:|----------------------:|------------------------:|---------------:|----------:|------------:|
     | Double_and_Sum_AsSpan   |  9.959 ns | 0.2341 ns | 0.4567 ns |  0.64 |    0.04 |    1 |                    29 |                       0 |              0 |         - |          NA |
-    | Double_and_Sum_BySwitch | 15.605 ns | 0.3465 ns | 0.7532 ns |  1.00 |    0.07 |    2 |                    35 |                       0 |              0 |         - |          NA |    */
+    | Double_and_Sum_BySwitch | 15.605 ns | 0.3465 ns | 0.7532 ns |  1.00 |    0.07 |    2 |                    35 |                       0 |              0 |         - |          NA |
 
-    SmallList<int, Stack4<int>> _smallList;
+    ## Indexer using Unsafe.Add vs AsSpan()[index]
+
+    | Method                 | Mean     | Error    | StdDev   | Ratio | RatioSD | Rank | BranchInstructions/Op | BranchMispredictions/Op | CacheMisses/Op | Allocated | Alloc Ratio |
+    |----------------------- |---------:|---------:|---------:|------:|--------:|-----:|----------------------:|------------------------:|---------------:|----------:|------------:|
+    | Double_and_Sum_Indexer | 17.29 ns | 0.380 ns | 0.355 ns |  1.00 |    0.03 |    1 |                    57 |                       0 |              0 |         - |          NA |
+    | Double_and_Sum_AsSpan  | 22.10 ns | 0.311 ns | 0.275 ns |  1.28 |    0.03 |    2 |                    57 |                       0 |              0 |         - |          NA |
+    */
+
+    SmallList<int, Stack8<int>> _list;
 
     [GlobalSetup]
     public void Init()
     {
-        // 4 on stack and 4 on heap
-        for (var i = 0; i < 8; i++)
-            _smallList.Add(i);
+        // half on stack and half on heap
+        for (var i = 0; i < 16; i++)
+            _list.Add(i);
     }
 
     [Benchmark(Baseline = true)]
-    public int Double_and_Sum_BySwitch()
+    public int Double_and_Sum_Indexer()
     {
         var sum = 0;
-        for (var i = 0; i < _smallList.Count; i++)
+        for (var i = 0; i < _list.Count; i++)
         {
-            ref var n = ref _smallList.GetSurePresentItemRef(i);
+            ref var n = ref _list.GetSurePresentItemRef(i);
             n += n;
             sum += n;
         }
@@ -134,9 +142,9 @@ public class SmallList_Switch_vs_AsSpan_ByRef_Access
     public int Double_and_Sum_AsSpan()
     {
         var sum = 0;
-        for (var i = 0; i < _smallList.Count; i++)
+        for (var i = 0; i < _list.Count; i++)
         {
-            ref var n = ref _smallList.GetSurePresentItemRef2(i);
+            ref var n = ref _list.GetSurePresentItemRef2(i);
             n += n;
             sum += n;
         }
@@ -164,27 +172,12 @@ public class SmallList_Switch_vs_AsSpan_ByRef_Add
     */
 
     [Benchmark(Baseline = true)]
-    public int Add_BySwitch()
+    public int Add_BySpan()
     {
         SmallList<int, Stack4<int>> list = default;
 
         for (var n = 8; n > 0; --n)
             list.Add(n + 3);
-
-        var sum = 0;
-        foreach (var n in list.Enumerate())
-            sum += n;
-        return sum;
-    }
-
-    [Benchmark]
-    public int Add_AsSpan()
-    {
-        SmallList<int, Stack4<int>> list = default;
-
-        for (var n = 8; n > 0; --n)
-            list.Add2(n + 3);
-
 
         var sum = 0;
         foreach (var n in list.Enumerate())

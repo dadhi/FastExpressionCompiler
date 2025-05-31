@@ -737,8 +737,8 @@ namespace FastExpressionCompiler
             /// <summary>Tracks the use of the variables in the blocks stack per variable, 
             /// (uint) contains (ushort) BlockIndex in the upper bits and (ushort) VarIndex in the lower bits.
             /// to determine if variable is the local variable and in what block it's defined</summary>
-            private SmallMap4<PE, SmallList4<uint>,
-                RefEq<PE>, SmallMap4.SingleArrayEntries<PE, SmallList4<uint>, RefEq<PE>>
+            private SmallMap4<PE, SmallList<uint, Stack4<uint>>,
+                RefEq<PE>, SmallMap4.SingleArrayEntries<PE, SmallList<uint, Stack4<uint>>, RefEq<PE>>
                 > _varInBlockMap;
 
             /// The map of inlined invocations collected in TryCollect and then used in TryEmit
@@ -754,7 +754,7 @@ namespace FastExpressionCompiler
             internal bool HasComplexExpression;
 
             /// The stack for the lambda invocation and the labels bound to them
-            internal SmallList4<LabelInfo> LambdaInvokeStackLabels;
+            internal SmallList<LabelInfo, Stack4<LabelInfo>> LambdaInvokeStackLabels;
 
             /// Tracks of how many gotos, labels referencing the specific target, they may be the same gotos expression,
             /// because the gotos may be reused multiple times in the big expression
@@ -952,12 +952,13 @@ namespace FastExpressionCompiler
             }
         }
 
-        internal static ref LabelInfo GetLabelOrInvokeIndexByTarget(ref this SmallList4<LabelInfo> labels, object labelTarget, out bool found)
+        internal static ref LabelInfo GetLabelOrInvokeIndexByTarget(
+            ref this SmallList<LabelInfo, Stack4<LabelInfo>> labels, object labelTarget, out bool found)
         {
             var count = labels.Count;
             for (var i = 0; i < count; ++i) // todo: @perf make this loop into the SmallList method to avoid index check on each item
             {
-                ref var label = ref labels.GetSurePresentItemRef(i);
+                ref var label = ref labels[i];
                 if (label.Target == labelTarget)
                 {
                     found = true;
@@ -2467,7 +2468,7 @@ namespace FastExpressionCompiler
                         }
                         else
                         {
-                            SmallList4<int> argVars = default;
+                            SmallList<int, Stack8<int>> argVars = default;
                             for (var i = 0; i < argCount; ++i)
                             {
                                 var argExpr = argExprs.GetArgument(i);
@@ -4977,7 +4978,7 @@ namespace FastExpressionCompiler
                         // don't forget to store the object into the variable first, before emitting the arguments
                         var objVar = objExpr == null ? -1 : EmitStoreLocalVariable(il, objExpr.Type);
 
-                        SmallList4<int> argVars = default;
+                        SmallList<int, Stack8<int>> argVars = default;
                         for (var i = 0; i < methodParams.Length; i++)
                         {
                             var argExpr = callArgs.GetArgument(i);
@@ -9128,7 +9129,7 @@ namespace FastExpressionCompiler
         {
             if (paramsExprs.TryGetIndex(out var i, pe, paramsExprs.Count, default(RefEq<PE>)))
             {
-                SmallList4<NamedWithIndex> named = default;
+                SmallList<NamedWithIndex, Stack4<NamedWithIndex>> named = default;
                 return sb
                     .Append("p[").Append(i)
                     .Append(" // (")
@@ -9149,7 +9150,7 @@ namespace FastExpressionCompiler
         {
             if (labelTargets.TryGetIndex(out var i, lt, labelTargets.Count, default(RefEq<LabelTarget>)))
             {
-                SmallList4<NamedWithIndex> named = default;
+                SmallList<NamedWithIndex, Stack4<NamedWithIndex>> named = default;
                 return sb.Append("l[").Append(i)
                     .Append(" // (").AppendName(lt, lt.Name, lt.Type.ToCode(stripNamespace, printType), ref named, lt.GetHashCode()).Append(')')
                     .NewLineIndent(lineIndent).Append(']');
@@ -9613,7 +9614,7 @@ namespace FastExpressionCompiler
         public static StringBuilder ToCSharpString(this Expression e, StringBuilder sb,
             int lineIndent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4, ObjectToCode notRecognizedToCode = null)
         {
-            var named = new SmallList4<NamedWithIndex>();
+            SmallList<NamedWithIndex, Stack4<NamedWithIndex>> named = default;
             return e.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
                 lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
         }
@@ -9653,7 +9654,7 @@ namespace FastExpressionCompiler
                 : sb;
 
         internal static StringBuilder ToCSharpString(this Expression e,
-            StringBuilder sb, EnclosedIn enclosedIn, ref SmallList4<NamedWithIndex> named,
+            StringBuilder sb, EnclosedIn enclosedIn, ref SmallList<NamedWithIndex, Stack4<NamedWithIndex>> named,
             int lineIndent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4,
             ObjectToCode notRecognizedToCode = null, bool isReturnByRef = false)
         {
@@ -10070,7 +10071,7 @@ namespace FastExpressionCompiler
                         lineIndent = sb.GetRealLineIndent(lineIndent);
 
                         var returnsValue = e.Type != typeof(void);
-                        void PrintPart(Expression part, ref SmallList4<NamedWithIndex> named)
+                        void PrintPart(Expression part, ref SmallList<NamedWithIndex, Stack4<NamedWithIndex>> named)
                         {
                             var incIndent = lineIndent + indentSpaces;
                             if (part is BlockExpression pb)
@@ -10474,7 +10475,7 @@ namespace FastExpressionCompiler
             enclosedIn == EnclosedIn.Block | // statement in a block don't need the parens as well
             enclosedIn == EnclosedIn.Return;
 
-        private static StringBuilder ToCSharpBlock(this Expression expr, StringBuilder sb, ref SmallList4<NamedWithIndex> named,
+        private static StringBuilder ToCSharpBlock(this Expression expr, StringBuilder sb, ref SmallList<NamedWithIndex, Stack4<NamedWithIndex>> named,
             int lineIndent, bool stripNamespace, Func<Type, string, string> printType, int indentSpaces, ObjectToCode notRecognizedToCode)
         {
             sb.NewLineIndent(lineIndent).Append('{');
@@ -10492,7 +10493,7 @@ namespace FastExpressionCompiler
         }
 
         private static StringBuilder ToCSharpExpression(this Expression expr,
-            StringBuilder sb, EnclosedIn enclosedIn, ref SmallList4<NamedWithIndex> named, bool newLineExpr,
+            StringBuilder sb, EnclosedIn enclosedIn, ref SmallList<NamedWithIndex, Stack4<NamedWithIndex>> named, bool newLineExpr,
             int lineIndent, bool stripNamespace, Func<Type, string, string> printType, int indentSpaces, ObjectToCode notRecognizedToCode)
         {
             if (!expr.NodeType.IsBlockLike())
@@ -10563,7 +10564,7 @@ namespace FastExpressionCompiler
         private const string NotSupportedExpression = "// NOT_SUPPORTED_EXPRESSION: ";
 
         private static StringBuilder ToCSharpString(this IReadOnlyList<MemberBinding> bindings,
-            StringBuilder sb, EnclosedIn enclosedIn, ref SmallList4<NamedWithIndex> named,
+            StringBuilder sb, EnclosedIn enclosedIn, ref SmallList<NamedWithIndex, Stack4<NamedWithIndex>> named,
             int lineIndent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4, ObjectToCode notRecognizedToCode = null)
         {
             var count = bindings.Count;
@@ -10619,7 +10620,8 @@ namespace FastExpressionCompiler
             return sb;
         }
 
-        private static StringBuilder BlockToCSharpString(this BlockExpression b, StringBuilder sb, ref SmallList4<NamedWithIndex> named,
+        private static StringBuilder BlockToCSharpString(this BlockExpression b, StringBuilder sb,
+            ref SmallList<NamedWithIndex, Stack4<NamedWithIndex>> named,
             int lineIndent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4,
             ObjectToCode notRecognizedToCode = null, bool inTheLastBlock = false, BinaryExpression blockResultAssignment = null,
             bool containerIgnoresResult = false // in case of the container is lambda which is the Action/void delegate and ignores result, we don't need the `return` - it will be invalid c#
@@ -10919,7 +10921,8 @@ namespace FastExpressionCompiler
             public int Index;
         }
 
-        internal static StringBuilder AppendName(this StringBuilder sb, object parOrTarget, string name, string typeCode, ref SmallList4<NamedWithIndex> named,
+        internal static StringBuilder AppendName(this StringBuilder sb, object parOrTarget, string name, string typeCode,
+            ref SmallList<NamedWithIndex, Stack4<NamedWithIndex>> named,
             int noNameIndex = 0)
         {
             var nameIndex = 0;
@@ -10959,7 +10962,8 @@ namespace FastExpressionCompiler
             return sb.Append(validTypeIdent).Append('_').Append(noNameIndex);
         }
 
-        internal static StringBuilder AppendLabelName(this StringBuilder sb, LabelTarget target, ref SmallList4<NamedWithIndex> named) =>
+        internal static StringBuilder AppendLabelName(this StringBuilder sb, LabelTarget target,
+            ref SmallList<NamedWithIndex, Stack4<NamedWithIndex>> named) =>
             sb.AppendName(target, target.Name, target.Type.ToCode(stripNamespace: true), ref named);
 
         /// <summary>Returns the standard name (alias) for the well-known primitive type, e.g. Int16 -> short</summary>

@@ -54,12 +54,12 @@ public struct Issue476_System_ExecutionEngineException_with_nullables_on_repeate
     public void TestSmallList(TestContext t)
     {
         for (var i = 0; i < 8; ++i)
-            _smallList.Add2(i);
+            _smallList.Add(i);
 
         var doubleSum = 0;
         foreach (var n in _smallList.Enumerate())
             doubleSum += n + n;
 
-        t.AreEqual(112, doubleSum);
+        t.AreEqual(56, doubleSum);
     }
 }

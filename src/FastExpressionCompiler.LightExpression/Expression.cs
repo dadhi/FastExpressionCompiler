@@ -81,7 +81,8 @@ public abstract class Expression
     public virtual bool IsCustomToCSharpString => false;
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public virtual StringBuilder CustomToCSharpString(StringBuilder sb, EnclosedIn enclosedIn, ref SmallList4<NamedWithIndex> named,
+    public virtual StringBuilder CustomToCSharpString(StringBuilder sb, EnclosedIn enclosedIn,
+        ref SmallList<NamedWithIndex, Stack4<NamedWithIndex>> named,
         int lineIndent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4,
         ObjectToCode notRecognizedToCode = null) => sb;
 
@@ -3352,7 +3353,8 @@ public class ConvertDelegateIntrinsicExpression : UnaryExpression
 
     [RequiresUnreferencedCode(Trimming.Message)]
     public override StringBuilder CustomToCSharpString(StringBuilder sb,
-        EnclosedIn enclosedIn, ref SmallList4<NamedWithIndex> named,
+        EnclosedIn enclosedIn,
+        ref SmallList<NamedWithIndex, Stack4<NamedWithIndex>> named,
         int lineIndent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4,
         ObjectToCode notRecognizedToCode = null)
     {
@@ -5283,7 +5285,7 @@ public class LabelTarget
         Justification = "The method is used for debugging purposes only.")]
     public override string ToString()
     {
-        SmallList4<NamedWithIndex> named = default;
+        SmallList<NamedWithIndex, Stack4<NamedWithIndex>> named = default;
         return new StringBuilder().AppendLabelName(this, ref named).ToString();
     }
 }
