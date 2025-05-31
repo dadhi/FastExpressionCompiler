@@ -10929,7 +10929,7 @@ namespace FastExpressionCompiler
             if (noNameIndex == 0)
             {
                 var found = false;
-                foreach (var n in named.Enumerate())
+                foreach (var n in named)
                 {
                     if (found = ReferenceEquals(n.Named, parOrTarget))
                     {

@@ -180,7 +180,7 @@ public class SmallList_Switch_vs_AsSpan_ByRef_Add
             list.Add(n + 3);
 
         var sum = 0;
-        foreach (var n in list.Enumerate())
+        foreach (var n in list)
             sum += n;
         return sum;
     }

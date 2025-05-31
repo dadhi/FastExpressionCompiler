@@ -401,7 +401,7 @@ public static class Asserts
                 else
                     sb.AppendLine($"first {MaxNonEqualItemCount} non equal items (and stopped searching):");
 
-                foreach (var (index, isEqual, expectedItem, actualItem) in collectedItems.Enumerate())
+                foreach (var (index, isEqual, expectedItem, actualItem) in collectedItems)
                     sb.AppendLine($"{index,4}{(isEqual ? "    " : " -> ")}{expectedItem.ToCode(),16},{actualItem.ToCode(),16}");
             }
 
@@ -854,7 +854,7 @@ public struct TestContext
                 else
                     sb.AppendLine($"first {MaxNonEqualItemCount} non equal items (and stopped searching):");
 
-                foreach (var (index, isEqual, expectedItem, actualItem) in collectedItems.Enumerate())
+                foreach (var (index, isEqual, expectedItem, actualItem) in collectedItems)
                     sb.AppendLine($"{index,4}{(isEqual ? "    " : " -> ")}{expectedItem.ToCode(),16},{actualItem.ToCode(),16}");
             }
 

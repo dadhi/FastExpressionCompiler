@@ -57,7 +57,7 @@ public struct Issue476_System_ExecutionEngineException_with_nullables_on_repeate
             _smallList.Add(i);
 
         var doubleSum = 0;
-        foreach (var n in _smallList.Enumerate())
+        foreach (var n in _smallList)
             doubleSum += n + n;
 
         t.AreEqual(56, doubleSum);
