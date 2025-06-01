@@ -773,7 +773,7 @@ namespace FastExpressionCompiler
 
             /// Constant usage count and variable index.
             /// It is a separate collection from the Constants because we directly convert later into the closure array
-            public SmallList2<short> ConstantUsageThenVarIndex;
+            public SmallList<short, Stack2<short>> ConstantUsageThenVarIndex;
 
             /// <summary>Parameters not passed through lambda parameter list But used inside lambda body.
             /// The top expression should Not contain not passed parameters.</summary>
@@ -1686,9 +1686,9 @@ namespace FastExpressionCompiler
 #else
             var lambdaPars = lambdaExpr.Parameters;
 #endif
-            SmallList2<Expression> inlinedBlockExprs = default;
-            SmallList2<ParameterExpression> savedVars = default;
-            SmallList2<Expression> savedVarsBlockExprs = default;
+            SmallList<Expression, Stack2<Expression>> inlinedBlockExprs = default;
+            SmallList<ParameterExpression, Stack2<ParameterExpression>> savedVars = default;
+            SmallList<Expression, Stack2<Expression>> savedVarsBlockExprs = default;
 
             for (var i = 0; i < invokeArgCount; i++)
             {
@@ -11308,7 +11308,7 @@ namespace FastExpressionCompiler
         }
 
         // todo: @improve figure how to avoid the duplication with the method above IReadOnlyList<T> exprs
-        internal static StringBuilder NewLineIndentArgumentExprs<T>(this StringBuilder sb, SmallList2<T> exprs,
+        internal static StringBuilder NewLineIndentArgumentExprs<T>(this StringBuilder sb, SmallList<T, Stack2<T>> exprs,
             List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
             int lineIndent, bool stripNamespace, Func<Type, string, string> printType, int indentSpaces, ObjectToCode notRecognizedToCode)
             where T : Expression

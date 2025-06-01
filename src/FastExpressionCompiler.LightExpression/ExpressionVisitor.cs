@@ -65,7 +65,7 @@ public abstract class ExpressionVisitor
         return newNodes ?? nodes;
     }
 
-    public IReadOnlyList<Expression> Visit(SmallList2<Expression> nodes)
+    public IReadOnlyList<Expression> Visit(SmallList<Expression, Stack2<Expression>> nodes)
     {
         var newNodes = new Expression[nodes.Count];
         for (var i = 0; i < nodes.Count; ++i)

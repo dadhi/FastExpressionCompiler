@@ -1598,7 +1598,7 @@ public abstract class Expression
 
     public static BlockExpression Block(IEnumerable<Expression> expressions) => new BlockExpression(expressions.AsReadOnlyList()); // todo: @perf optimize the double copying
 
-    public static BlockExpression Block(in SmallList2<Expression> expressions) => new BlockExpression(in expressions);
+    public static BlockExpression Block(in SmallList<Expression, Stack2<Expression>> expressions) => new BlockExpression(in expressions);
 
     public static BlockExpression Block(IEnumerable<ParameterExpression> variables, Expression expr0) =>
         new ManyVariablesBlockExpression(variables.AsReadOnlyList(), expr0); // todo: @perf @mem add the check for empty variables
@@ -1620,7 +1620,7 @@ public abstract class Expression
     public static BlockExpression Block(IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions) =>
         Block(variables, expressions.AsReadOnlyList());
 
-    public static BlockExpression Block(IEnumerable<ParameterExpression> variables, in SmallList2<Expression> expressions)
+    public static BlockExpression Block(IEnumerable<ParameterExpression> variables, in SmallList<Expression, Stack2<Expression>> expressions)
     {
         var vars = variables.AsReadOnlyList();
         return vars.Count == 0
@@ -1643,7 +1643,7 @@ public abstract class Expression
     public static BlockExpression Block(Type type, IEnumerable<Expression> expressions) =>
         new TypedBlockExpression(type, expressions.AsReadOnlyList()); // todo: @perf @mem
 
-    public static BlockExpression Block(Type type, in SmallList2<Expression> expressions) =>
+    public static BlockExpression Block(Type type, in SmallList<Expression, Stack2<Expression>> expressions) =>
         new TypedBlockExpression(type, in expressions);
 
     public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, Expression expr0)
@@ -1670,7 +1670,7 @@ public abstract class Expression
     public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions) =>
         new TypedManyVariablesBlockExpression(type, variables.AsReadOnlyList(), expressions.AsReadOnlyList()); // todo: @perf @mem
 
-    public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, in SmallList2<Expression> expressions) =>
+    public static BlockExpression Block(Type type, IEnumerable<ParameterExpression> variables, in SmallList<Expression, Stack2<Expression>> expressions) =>
         new TypedManyVariablesBlockExpression(type, variables.AsReadOnlyList(), in expressions);
 
     public static BlockExpression MakeBlock(Type type, IEnumerable<ParameterExpression> variables, IEnumerable<Expression> expressions)
@@ -5062,20 +5062,47 @@ public class BlockExpression : Expression, IArgumentProvider
     public override ExpressionType NodeType => ExpressionType.Block;
     public override Type Type => Result.Type;
     public virtual IReadOnlyList<ParameterExpression> Variables => Tools.Empty<ParameterExpression>();
-    public SmallList2<Expression> Expressions;
+    public SmallList<Expression, Stack2<Expression>> Expressions;
     public Expression Result => Expressions.GetLastSurePresentItem(); // todo: @check what if no expressions?
     public virtual int ArgumentCount => 0;
     public virtual Expression GetArgument(int index) => throw new NotImplementedException();
-    internal BlockExpression(in SmallList2<Expression> expressions) =>
+    internal BlockExpression(in SmallList<Expression, Stack2<Expression>> expressions) =>
         Expressions = expressions;
-    internal BlockExpression(Expression e0) =>
-        Expressions.Populate1(e0);
-    internal BlockExpression(Expression e0, Expression e1) =>
-        Expressions.Populate2(e0, e1);
-    internal BlockExpression(Expression e0, Expression e1, params Expression[] rest) =>
-        Expressions.Populate(e0, e1, rest);
-    internal BlockExpression(IReadOnlyList<Expression> expressions) =>
-        Expressions.Populate(expressions);
+    internal BlockExpression(Expression e0)
+    {
+        Expressions.Stack._it0 = e0;
+        Expressions.Count = 1;
+    }
+    internal BlockExpression(Expression e0, Expression e1)
+    {
+        Expressions.Stack._it0 = e0;
+        Expressions.Stack._it1 = e1;
+        Expressions.Count = 2;
+    }
+    internal BlockExpression(Expression e0, Expression e1, params Expression[] rest)
+    {
+        Expressions.Stack._it0 = e0;
+        Expressions.Stack._it1 = e1;
+        Expressions.Rest = rest;
+        Expressions.Count = rest.Length + 2;
+    }
+    internal BlockExpression(IReadOnlyList<Expression> expressions)
+    {
+        Debug.Assert(expressions != null, "Expressions cannot be null");
+        var count = expressions.Count;
+        if (count >= 1)
+            Expressions.Stack._it0 = expressions[0];
+        if (count >= 2)
+            Expressions.Stack._it1 = expressions[1];
+        if (count >= 3)
+        {
+            var rest = new Expression[count - 2];
+            for (var i = 2; i < count; ++i)
+                rest[i - 2] = expressions[i];
+            Expressions.Rest = rest;
+        }
+        Expressions.Count = count;
+    }
 #if SUPPORTS_VISITOR
     [RequiresUnreferencedCode(Trimming.Message)]
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitBlock(this);
@@ -5090,7 +5117,7 @@ public class BlockExpression : Expression, IArgumentProvider
 public sealed class TypedBlockExpression : BlockExpression
 {
     public override Type Type { get; }
-    internal TypedBlockExpression(Type type, in SmallList2<Expression> expressions) : base(in expressions) => Type = type;
+    internal TypedBlockExpression(Type type, in SmallList<Expression, Stack2<Expression>> expressions) : base(in expressions) => Type = type;
     internal TypedBlockExpression(Type type, Expression e0) : base(e0) => Type = type;
     internal TypedBlockExpression(Type type, Expression e0, Expression e1) : base(e0, e1) => Type = type;
     internal TypedBlockExpression(Type type, Expression e0, Expression e1, params Expression[] rest) : base(e0, e1, rest) => Type = type;
@@ -5102,7 +5129,7 @@ public class ManyVariablesBlockExpression : BlockExpression
     public sealed override IReadOnlyList<ParameterExpression> Variables { get; }
     public sealed override int ArgumentCount => Expressions.Count;
     public sealed override Expression GetArgument(int index) => Expressions.GetSurePresentItemRef(index);
-    internal ManyVariablesBlockExpression(IReadOnlyList<ParameterExpression> variables, in SmallList2<Expression> expressions) : base(in expressions) =>
+    internal ManyVariablesBlockExpression(IReadOnlyList<ParameterExpression> variables, in SmallList<Expression, Stack2<Expression>> expressions) : base(in expressions) =>
         Variables = variables;
     internal ManyVariablesBlockExpression(IReadOnlyList<ParameterExpression> variables, Expression e0) : base(e0) =>
         Variables = variables;
@@ -5117,7 +5144,7 @@ public class ManyVariablesBlockExpression : BlockExpression
 public sealed class TypedManyVariablesBlockExpression : ManyVariablesBlockExpression
 {
     public override Type Type { get; }
-    internal TypedManyVariablesBlockExpression(Type type, IReadOnlyList<ParameterExpression> variables, in SmallList2<Expression> expressions)
+    internal TypedManyVariablesBlockExpression(Type type, IReadOnlyList<ParameterExpression> variables, in SmallList<Expression, Stack2<Expression>> expressions)
         : base(variables, in expressions) => Type = type;
     internal TypedManyVariablesBlockExpression(Type type, IReadOnlyList<ParameterExpression> variables, Expression e0)
         : base(variables, e0) => Type = type;

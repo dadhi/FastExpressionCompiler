@@ -138,18 +138,18 @@ public class SmallList_Switch_vs_AsSpan_ByRef_Access
         return sum;
     }
 
-    [Benchmark]
-    public int Double_and_Sum_AsSpan()
-    {
-        var sum = 0;
-        for (var i = 0; i < _list.Count; i++)
-        {
-            ref var n = ref _list.GetSurePresentItemRef2(i);
-            n += n;
-            sum += n;
-        }
-        return sum;
-    }
+    // [Benchmark]
+    // public int Double_and_Sum_AsSpan()
+    // {
+    //     var sum = 0;
+    //     for (var i = 0; i < _list.Count; i++)
+    //     {
+    //         ref var n = ref _list.GetSurePresentItemRef2(i);
+    //         n += n;
+    //         sum += n;
+    //     }
+    //     return sum;
+    // }
 }
 
 [MemoryDiagnoser, RankColumn, Orderer(BenchmarkDotNet.Order.SummaryOrderPolicy.FastestToSlowest)]
