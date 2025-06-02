@@ -157,9 +157,7 @@ public static class TestTools
     {
         if (!AllowPrintIL) return;
 
-        SmallMap4<IDelegateDebugInfo, string, RefEq<IDelegateDebugInfo>,
-            SmallMap4.SingleArrayEntries<IDelegateDebugInfo, string, RefEq<IDelegateDebugInfo>>
-        > uniquePrinted = default;
+        SmallMap4<IDelegateDebugInfo, string, RefEq<IDelegateDebugInfo>> uniquePrinted = default;
         var totalNestedCount = 0;
 
         PrintIL(debugInfo, ref totalNestedCount, ref uniquePrinted, tag ?? "top");
@@ -167,14 +165,13 @@ public static class TestTools
         if (totalNestedCount > 0)
         {
             Console.WriteLine("--------------------------------------");
-            Console.WriteLine($"Nested lambdas total: {totalNestedCount}, unique: {uniquePrinted.Count}");
+            Console.WriteLine($"Nested lambdas total: {totalNestedCount}, unique: {uniquePrinted.Map.Count}");
         }
     }
 
     private static void PrintIL(IDelegateDebugInfo debugInfo,
         ref int totalNestedCount,
-        ref SmallMap4<IDelegateDebugInfo, string, RefEq<IDelegateDebugInfo>,
-            SmallMap4.SingleArrayEntries<IDelegateDebugInfo, string, RefEq<IDelegateDebugInfo>>> uniquePrinted,
+        ref SmallMap4<IDelegateDebugInfo, string, RefEq<IDelegateDebugInfo>> uniquePrinted,
         string tag)
     {
         Debug.Assert(tag != null, "tag should not be null");
@@ -184,7 +181,7 @@ public static class TestTools
         var n = 0;
         foreach (var nested in debugInfo.EnumerateNestedLambdas())
         {
-            ref var printedTag = ref uniquePrinted.AddOrGetValueRef(nested, out var printed);
+            ref var printedTag = ref uniquePrinted.Map.AddOrGetValueRef(nested, out var printed);
             if (printed)
                 PrintIL($"{printedTag}", "printed already", static (ap, s) => s.Append(ap));
             else

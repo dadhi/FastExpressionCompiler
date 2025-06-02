@@ -107,6 +107,7 @@ public class SmallList_Switch_vs_AsSpan_ByRef_Access
     | Double_and_Sum_AsSpan   |  9.959 ns | 0.2341 ns | 0.4567 ns |  0.64 |    0.04 |    1 |                    29 |                       0 |              0 |         - |          NA |
     | Double_and_Sum_BySwitch | 15.605 ns | 0.3465 ns | 0.7532 ns |  1.00 |    0.07 |    2 |                    35 |                       0 |              0 |         - |          NA |
 
+
     ## Indexer using Unsafe.Add vs AsSpan()[index]
 
     | Method                 | Mean     | Error    | StdDev   | Ratio | RatioSD | Rank | BranchInstructions/Op | BranchMispredictions/Op | CacheMisses/Op | Allocated | Alloc Ratio |

@@ -43,7 +43,7 @@ namespace FastExpressionCompiler.LightExpression
     using PE = FastExpressionCompiler.LightExpression.ParameterExpression;
     using FastExpressionCompiler.LightExpression.ImTools;
     using FastExpressionCompiler.LightExpression.ILDecoder;
-    using static FastExpressionCompiler.LightExpression.ImTools.SmallMap4;
+    using static FastExpressionCompiler.LightExpression.ImTools.SmallMap;
 #else
 namespace FastExpressionCompiler
 {
@@ -51,7 +51,7 @@ namespace FastExpressionCompiler
     using PE = System.Linq.Expressions.ParameterExpression;
     using FastExpressionCompiler.ImTools;
     using FastExpressionCompiler.ILDecoder;
-    using static FastExpressionCompiler.ImTools.SmallMap4;
+    using static FastExpressionCompiler.ImTools.SmallMap;
 #endif
     using System;
     using System.Collections;
@@ -737,19 +737,13 @@ namespace FastExpressionCompiler
             /// <summary>Tracks the use of the variables in the blocks stack per variable, 
             /// (uint) contains (ushort) BlockIndex in the upper bits and (ushort) VarIndex in the lower bits.
             /// to determine if variable is the local variable and in what block it's defined</summary>
-            private SmallMap4<PE, SmallList<uint, Stack4<uint>>,
-                RefEq<PE>, SmallMap4.SingleArrayEntries<PE, SmallList<uint, Stack4<uint>>, RefEq<PE>>
-                > _varInBlockMap;
+            private SmallMap4<PE, SmallList<uint, Stack4<uint>>, RefEq<PE>> _varInBlock;
 
             /// The map of inlined invocations collected in TryCollect and then used in TryEmit
-            internal SmallMap4<InvocationExpression, Expression, RefEq<InvocationExpression>,
-                SmallMap4.SingleArrayEntries<InvocationExpression, Expression, RefEq<InvocationExpression>>
-                > InlinedLambdaInvocationMap;
+            internal SmallMap4<InvocationExpression, Expression, RefEq<InvocationExpression>> InlinedLambdaInvocation;
 
             /// New or Call expressions containing the complex expression, e.g. inlined Lambda Invoke or Try with Finally
-            internal SmallMap4<Expression, NoValue, RefEq<Expression>,
-                SmallMap4.SingleArrayEntries<Expression, NoValue, RefEq<Expression>>
-                > ArgsContainingComplexExpression;
+            internal SmallMap4<Expression, NoValue, RefEq<Expression>> ArgsContainingComplexExpression;
 
             internal bool HasComplexExpression;
 
@@ -758,9 +752,7 @@ namespace FastExpressionCompiler
 
             /// Tracks of how many gotos, labels referencing the specific target, they may be the same gotos expression,
             /// because the gotos may be reused multiple times in the big expression
-            internal SmallMap4<object, (ushort, ushort), RefEq<object>,
-                SmallMap4.SingleArrayEntries<object, (ushort, ushort), RefEq<object>>
-                > TargetToGotosAndLabels;
+            internal SmallMap4<object, (ushort, ushort), RefEq<object>> TargetToGotosAndLabels;
 
             /// This is required because we have the return from the nested lambda expression,
             /// and when inlined in the parent lambda it is no longer the return but just a jump to the label.
@@ -917,7 +909,7 @@ namespace FastExpressionCompiler
             [MethodImpl((MethodImplOptions)256)]
             private void PushVarInBlockMap(ParameterExpression pe, ushort blockIndex, ushort varIndex)
             {
-                ref var blocks = ref _varInBlockMap.AddOrGetValueRef(pe, out _);
+                ref var blocks = ref _varInBlock.Map.AddOrGetValueRef(pe, out _);
                 if (blocks.Count == 0 || (blocks.GetLastSurePresentItem() >>> 16) != blockIndex)
                     blocks.Add((uint)(blockIndex << 16) | varIndex);
             }
@@ -925,10 +917,10 @@ namespace FastExpressionCompiler
             public void PopBlock()
             {
                 Debug.Assert(_blockCount > 0);
-                var varCount = _varInBlockMap.Count;
+                var varCount = _varInBlock.Map.Count;
                 for (var i = 0; i < varCount; ++i)
                 {
-                    ref var varBlocks = ref _varInBlockMap.GetSurePresentEntryRef(i);
+                    ref var varBlocks = ref _varInBlock.Map.GetSurePresentEntryRef(i);
                     if (varBlocks.Value.Count == _blockCount)
                         varBlocks.Value.RemoveLastSurePresentItem();
                 }
@@ -938,14 +930,14 @@ namespace FastExpressionCompiler
             [MethodImpl((MethodImplOptions)256)]
             public bool IsLocalVar(ParameterExpression varParamExpr)
             {
-                ref var blocks = ref _varInBlockMap.TryGetValueRefUnsafe(varParamExpr, out var found);
+                ref var blocks = ref _varInBlock.Map.TryGetValueRef(varParamExpr, out var found);
                 return found && blocks.Count != 0;
             }
 
             [MethodImpl((MethodImplOptions)256)]
             public int GetDefinedLocalVarOrDefault(ParameterExpression varParamExpr)
             {
-                ref var blocks = ref _varInBlockMap.TryGetValueRefUnsafe(varParamExpr, out var found);
+                ref var blocks = ref _varInBlock.Map.TryGetValueRef(varParamExpr, out var found);
                 return found && blocks.Count != 0 // rare case with the block count 0 may occur when we collected the block and vars, but not yet defined the variable for it
                     ? (int)(blocks.GetLastSurePresentItem() & ushort.MaxValue)
                     : -1;
@@ -1339,7 +1331,7 @@ namespace FastExpressionCompiler
                             if (hasComplexExpression)
                             {
                                 closure.HasComplexExpression = true;
-                                closure.ArgsContainingComplexExpression.AddOrGetValueRef(callExpr, out _);
+                                closure.ArgsContainingComplexExpression.Map.AddOrGetValueRef(callExpr, out _);
                             }
                             return r;
                         }
@@ -1376,7 +1368,7 @@ namespace FastExpressionCompiler
                             if (hasComplexExpression)
                             {
                                 closure.HasComplexExpression = true;
-                                closure.ArgsContainingComplexExpression.AddOrGetValueRef(newExpr, out _);
+                                closure.ArgsContainingComplexExpression.Map.AddOrGetValueRef(newExpr, out _);
                             }
 
                             return r;
@@ -1475,7 +1467,7 @@ namespace FastExpressionCompiler
                                 closure.CurrentInlinedLambdaInvokeIndex = closure.AddInlinedLambdaInvoke(invokeExpr);
                                 closure.HasComplexExpression = false; // switch off because we have entered the inlined lambda
 
-                                ref var inlinedExpr = ref closure.InlinedLambdaInvocationMap.AddOrGetValueRef(invokeExpr, out var found);
+                                ref var inlinedExpr = ref closure.InlinedLambdaInvocation.Map.AddOrGetValueRef(invokeExpr, out var found);
                                 if (!found)
                                     inlinedExpr = CreateInlinedLambdaInvocationExpression(invokeArgs, invokeArgCount, lambdaExpr);
 
@@ -1585,7 +1577,7 @@ namespace FastExpressionCompiler
                         var labelExpr = (LabelExpression)expr;
                         closure.AddLabel(labelExpr.Target, closure.CurrentInlinedLambdaInvokeIndex);
                         if (labelExpr.Target != null)
-                            closure.TargetToGotosAndLabels.AddOrGetValueRef(labelExpr.Target, out _).Item2++;
+                            closure.TargetToGotosAndLabels.Map.AddOrGetValueRef(labelExpr.Target, out _).Item2++;
                         if (labelExpr.DefaultValue == null)
                             return r;
                         expr = labelExpr.DefaultValue;
@@ -1594,7 +1586,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.Goto:
                         var gotoExpr = (GotoExpression)expr;
                         if (gotoExpr.Target != null)
-                            closure.TargetToGotosAndLabels.AddOrGetValueRef(gotoExpr.Target, out _).Item1++;
+                            closure.TargetToGotosAndLabels.Map.AddOrGetValueRef(gotoExpr.Target, out _).Item1++;
                         if (gotoExpr.Value == null)
                             return r;
                         expr = gotoExpr.Value;
@@ -2327,7 +2319,7 @@ namespace FastExpressionCompiler
                                             statementExprs[i + 1] is LabelExpression label && label.Target == gt.Target)
                                         {
                                             // But we cannot use the return pattern and eliminate the target label if we have more gotos referencing it, see #430
-                                            var (gotos, labels) = closure.TargetToGotosAndLabels.TryGetValueRefUnsafe(label.Target, out var found);
+                                            var (gotos, labels) = closure.TargetToGotosAndLabels.Map.TryGetValueRef(label.Target, out var found);
                                             if (found && gotos <= labels)
                                             {
                                                 if ((parent & ParentFlags.TryCatch) != 0)
@@ -2460,7 +2452,7 @@ namespace FastExpressionCompiler
                     }
                     else
                     {
-                        if (!closure.ArgsContainingComplexExpression.ContainsKey(newExpr))
+                        if (!closure.ArgsContainingComplexExpression.Map.ContainsKey(newExpr))
                         {
                             for (var i = 0; i < argCount; ++i)
                                 if (!TryEmit(argExprs.GetArgument(i), paramExprs, il, ref closure, setup, parent, pars[i].ParameterType.IsByRef ? i : -1))
@@ -4960,7 +4952,7 @@ namespace FastExpressionCompiler
 #else
                     var callArgs = callExpr.Arguments;
 #endif
-                    if (!closure.ArgsContainingComplexExpression.ContainsKey(callExpr))
+                    if (!closure.ArgsContainingComplexExpression.Map.ContainsKey(callExpr))
                     {
                         if (loadObjByAddress)
                             EmitStoreAndLoadLocalVariableAddress(il, objExpr.Type);
@@ -5282,7 +5274,7 @@ namespace FastExpressionCompiler
                 {
                     parent |= ParentFlags.InlinedLambdaInvoke;
 
-                    ref var inlinedExpr = ref closure.InlinedLambdaInvocationMap.AddOrGetValueRef(expr, out var found);
+                    ref var inlinedExpr = ref closure.InlinedLambdaInvocation.Map.AddOrGetValueRef(expr, out var found);
                     Debug.Assert(found, "The invocation expression should be collected in TryCollectInfo but it is not");
                     if (!found)
                         return false;
@@ -8954,9 +8946,7 @@ namespace FastExpressionCompiler
 
 #if DEBUG_INFO_LOCAL_VARIABLE_USAGE
         [ThreadStatic]
-        public static SmallMap4<Type, int, RefEq<Type>,
-            SmallMap4.SingleArrayEntries<Type, int, RefEq<Type>>
-            > LocalVarUsage;
+        public static SmallMap8<Type, int, RefEq<Type>> LocalVarUsage;
 #endif
         // todo: @perf add the map of the used local variables that can be reused, e.g. we are getting the variable used in the local scope but then we may return them into POOL and reuse (many of int variable can be reuses, say for indexes)
         /// <summary>Efficiently returns the next variable index, hopefully without unnecessary allocations.</summary>
@@ -8966,7 +8956,7 @@ namespace FastExpressionCompiler
 #if DEBUG_INFO_LOCAL_VARIABLE_USAGE
             try
             {
-                ref var varUsage = ref LocalVarUsage.AddOrGetValueRef(t, out var found);
+                ref var varUsage = ref LocalVarUsage.Map.AddOrGetValueRef(t, out var found);
                 if (!found)
                     varUsage = 1;
                 else
