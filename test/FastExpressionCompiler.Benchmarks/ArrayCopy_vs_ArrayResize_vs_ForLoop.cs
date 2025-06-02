@@ -114,6 +114,15 @@ public class SmallList_Switch_vs_AsSpan_ByRef_Access
     |----------------------- |---------:|---------:|---------:|------:|--------:|-----:|----------------------:|------------------------:|---------------:|----------:|------------:|
     | Double_and_Sum_Indexer | 17.29 ns | 0.380 ns | 0.355 ns |  1.00 |    0.03 |    1 |                    57 |                       0 |              0 |         - |          NA |
     | Double_and_Sum_AsSpan  | 22.10 ns | 0.311 ns | 0.275 ns |  1.28 |    0.03 |    2 |                    57 |                       0 |              0 |         - |          NA |
+
+
+    ## Indexer using Rest[] vs. Rest.GetSurePresentItemRef(i)
+
+    | Method                 | Mean     | Error    | StdDev   | Ratio | RatioSD | Rank | BranchInstructions/Op | BranchMispredictions/Op | CacheMisses/Op | Allocated | Alloc Ratio |
+    |----------------------- |---------:|---------:|---------:|------:|--------:|-----:|----------------------:|------------------------:|---------------:|----------:|------------:|
+    | Double_and_Sum_AsSpan  | 17.97 ns | 0.454 ns | 1.325 ns |  0.83 |    0.08 |    1 |                    41 |                       0 |              0 |         - |          NA |
+    | Double_and_Sum_Indexer | 21.82 ns | 0.478 ns | 1.309 ns |  1.00 |    0.08 |    2 |                    49 |                       0 |              0 |         - |          NA |
+
     */
 
     SmallList<int, Stack8<int>> _list;
@@ -139,18 +148,18 @@ public class SmallList_Switch_vs_AsSpan_ByRef_Access
         return sum;
     }
 
-    // [Benchmark]
-    // public int Double_and_Sum_AsSpan()
-    // {
-    //     var sum = 0;
-    //     for (var i = 0; i < _list.Count; i++)
-    //     {
-    //         ref var n = ref _list.GetSurePresentItemRef2(i);
-    //         n += n;
-    //         sum += n;
-    //     }
-    //     return sum;
-    // }
+    [Benchmark]
+    public int Double_and_Sum_AsSpan()
+    {
+        var sum = 0;
+        for (var i = 0; i < _list.Count; i++)
+        {
+            ref var n = ref _list.GetSurePresentItemRef2(i);
+            n += n;
+            sum += n;
+        }
+        return sum;
+    }
 }
 
 [MemoryDiagnoser, RankColumn, Orderer(BenchmarkDotNet.Order.SummaryOrderPolicy.FastestToSlowest)]

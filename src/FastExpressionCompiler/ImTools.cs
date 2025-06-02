@@ -485,6 +485,22 @@ public struct SmallList<T, TStack> : IEnumerable<T>
         return ref Rest[index - stackCap];
     }
 
+    /// <summary>Returns a surely present item ref by its index</summary>
+    [UnscopedRef]
+    [MethodImpl((MethodImplOptions)256)]
+    public ref T GetSurePresentItemRef2(int index)
+    {
+        Debug.Assert(Count != 0);
+        Debug.Assert(index >= 0 & index < Count);
+
+        var stackCap = Stack.Capacity;
+        if (index < stackCap)
+            return ref Stack.GetSurePresentItemRef(index);
+
+        Debug.Assert(Rest != null);
+        return ref Rest.GetSurePresentItemRef(index - stackCap);
+    }
+
     /// <summary>Appends the default item to the end of the list and returns the reference to it.</summary>
     [UnscopedRef]
     [MethodImpl((MethodImplOptions)256)]
