@@ -143,7 +143,6 @@ public static class SmallList
     public static ref T GetSurePresentItemRef<T>(this ref SmallList<T> source, int index) =>
         ref source.Items[index];
 
-    // todo: @perf @wip benchmark this
     /// <summary>Returns surely present item ref by its index without boundary checks</summary>
     [MethodImpl((MethodImplOptions)256)]
     public static ref T GetSurePresentItemRef<T>(this T[] items, int index)
@@ -465,7 +464,7 @@ public struct SmallList<T, TStack> : IEnumerable<T>
                 return ref Stack.GetSurePresentItemRef(index);
 
             Debug.Assert(Rest != null, "Expecting deeper items are already existing on heap");
-            return ref Rest[index - stackCap];
+            return ref Rest.GetSurePresentItemRef(index - stackCap);
         }
     }
 
@@ -854,14 +853,8 @@ public static class SmallMap
 
         /// <inheritdoc/>
         [MethodImpl((MethodImplOptions)256)]
-        public ref Entry<K, V> GetSurePresentEntryRef(int index)
-        {
-#if NET7_0_OR_GREATER
-            return ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(_entries), index);
-#else
-            return ref _entries[index];
-#endif
-        }
+        public ref Entry<K, V> GetSurePresentEntryRef(int index) =>
+            ref _entries.GetSurePresentItemRef(index);
 
         /// <inheritdoc/>
         [MethodImpl((MethodImplOptions)256)]
@@ -869,11 +862,8 @@ public static class SmallMap
         {
             if (index == _entries.Length)
                 Array.Resize(ref _entries, index << 1);
-#if NET7_0_OR_GREATER
-            ref var e = ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(_entries), index);
-#else
-            ref var e = ref _entries[index];
-#endif
+
+            ref var e = ref _entries.GetSurePresentItemRef(index);
             e.Key = key;
             return ref e.Value;
         }
@@ -1016,13 +1006,13 @@ public struct SmallMap<K, V, TEq, TStack, TEntries>
 
     private void AddJustHashAndEntryIndexWithoutResizing(int hash, int index)
     {
+        var hashIndex = hash & IndexMask;
+
 #if NET7_0_OR_GREATER
         ref var hashesAndIndexes = ref MemoryMarshal.GetArrayDataReference(_packedHashesAndIndexes);
 #else
         var hashesAndIndexes = _packedHashesAndIndexes;
 #endif
-        var hashIndex = hash & IndexMask;
-
         // 1. Skip over hashes with the bigger and equal probes. The hashes with bigger probes overlapping from the earlier ideal positions
         ref var h = ref GetHashRef(ref hashesAndIndexes, hashIndex);
         var probes = 1;
