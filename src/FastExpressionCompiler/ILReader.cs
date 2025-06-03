@@ -336,13 +336,37 @@ public abstract class ILInstruction
     }
 }
 
+// internal struct BaseIL
+// {
+//     public OperandType OperandType;
+//     public int Offset;
+//     public OpCode OpCode;
+
+//     // List of possible extras:
+//     // - InlineNoneInstruction does not have an extra
+//     //
+//     // - Stores `int` for 
+//     // OperandType.InlineBrTarget->Delta, 
+//     // OperandType.ShortInlineBrTarget->Delta, 
+//     // OperandType.InlineI->Int32
+//     // todo: may be store delta inline as ExtraOpArrayIndex itself
+//     public const int ExtraDeltasArrayIndex = 1;
+
+//     // This is for OperandType.InlineSwitch
+//     public const int ExtraSwitchesArrayIndex = 2;
+
+//     public int ExtraOpArrayIndex;
+//     public int ExtraOpItemIndex;
+// }
+
 // todo: @wip
-/// <summary>Data-oriented structure SOA of IL instructions.</summary>
-public struct ILs
-{
-    public SmallList<OpCode, Stack16<OpCode>> Offset;
-    public SmallList<OpCode, Stack16<OpCode>> OpCodes;
-}
+// <summary>Data-oriented structure SOA of IL instructions.</summary>
+// internal struct ILs
+// {
+//     public SmallList<BaseIL, Stack16<BaseIL>> BaseILs;
+//     public SmallList<int, Stack16<int>> Deltas;
+//     public SmallList<(int[] Deltas, int[] TargetOffsets), Stack2<(int[] Deltas, int[] TargetOffsets)>> Switches;
+// }
 
 public sealed class InlineNoneInstruction : ILInstruction
 {
@@ -525,15 +549,15 @@ public sealed class InlineTokInstruction : ILInstruction
 public sealed class InlineStringInstruction : ILInstruction
 {
     public override OperandType OperandType => OperandType.InlineString;
-    private readonly ITokenResolver _resolver;
+    // private readonly ITokenResolver _resolver;
     public int Token { get; }
-    private string _string;
-    public string String => _string ??= _resolver.AsString(Token);
+    // private string _string;
+    public string String;// => _string ??= _resolver.AsString(Token);
 
     internal InlineStringInstruction(int offset, OpCode opCode, int token, ITokenResolver resolver)
         : base(offset, opCode)
     {
-        _resolver = resolver;
+        String = resolver.AsString(token);
         Token = token;
     }
 }

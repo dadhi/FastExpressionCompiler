@@ -9804,7 +9804,6 @@ namespace FastExpressionCompiler
                         sb.Append("new ").Append(e.Type.GetElementType().ToCode(stripNamespace, printType));
                         sb.Append(e.NodeType == ExpressionType.NewArrayInit ? "[]{" : "[");
 
-                        // todo: @wip @minor we probably don't each array bound on the new line
                         var exprs = x.Expressions;
                         if (exprs.Count == 1)
                             exprs[0].ToCSharpString(sb, EnclosedIn.AvoidParens, ref named,

@@ -473,8 +473,8 @@ public struct SmallList<T, TStack> : IEnumerable<T>
     [MethodImpl((MethodImplOptions)256)]
     public ref T GetSurePresentItemRef(int index)
     {
-        Debug.Assert(Count != 0);
-        Debug.Assert(index >= 0 & index < Count);
+        Debug.Assert(Count != 0, "SmallList.GetSurePresentItemRef: list should not be empty");
+        Debug.Assert(index >= 0 & index < Count, $"SmallList.GetSurePresentItemRef: index {index} should be less than Count {Count}");
 
         var stackCap = Stack.Capacity;
         if (index < stackCap)
@@ -482,22 +482,6 @@ public struct SmallList<T, TStack> : IEnumerable<T>
 
         Debug.Assert(Rest != null);
         return ref Rest[index - stackCap];
-    }
-
-    /// <summary>Returns a surely present item ref by its index</summary>
-    [UnscopedRef]
-    [MethodImpl((MethodImplOptions)256)]
-    public ref T GetSurePresentItemRef2(int index)
-    {
-        Debug.Assert(Count != 0);
-        Debug.Assert(index >= 0 & index < Count);
-
-        var stackCap = Stack.Capacity;
-        if (index < stackCap)
-            return ref Stack.GetSurePresentItemRef(index);
-
-        Debug.Assert(Rest != null);
-        return ref Rest.GetSurePresentItemRef(index - stackCap);
     }
 
     /// <summary>Appends the default item to the end of the list and returns the reference to it.</summary>
@@ -577,9 +561,9 @@ public struct SmallList<T, TStack> : IEnumerable<T>
     [MethodImpl((MethodImplOptions)256)]
     public void RemoveLastSurePresentItem()
     {
-        Debug.Assert(Count != 0, "Expecting that the list is not empty");
-        var index = --Count;
-        GetSurePresentItemRef(index) = default;
+        Debug.Assert(Count != 0, "SmallList.RemoveLastSurePresentItem: Expecting that the list is not empty");
+        GetSurePresentItemRef(Count - 1) = default;
+        --Count;
     }
 
     /// <summary>Returns an enumerator struct</summary>
