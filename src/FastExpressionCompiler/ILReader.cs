@@ -227,7 +227,7 @@ public sealed class ILReader : IEnumerable<ILInstruction>
             ? _oneByteOpCodes[code]
             : _twoByteOpCodes[ReadByte(ref position)];
 
-        var token = 0;
+        int token;
         return opCode.OperandType switch
         {
             // 32-bit integer branch target
@@ -269,9 +269,9 @@ public sealed class ILReader : IEnumerable<ILInstruction>
 
     private int[] ReadDeltas(ref int position)
     {
-        var cases = ReadInt32(ref position);
-        var deltas = new int[cases];
-        for (var i = 0; i < cases; i++)
+        var caseCount = ReadInt32(ref position);
+        var deltas = new int[caseCount];
+        for (var i = 0; i < caseCount; i++)
             deltas[i] = ReadInt32(ref position);
         return deltas;
     }
@@ -370,9 +370,8 @@ public sealed class InlineNoneInstruction : ILInstruction
 public sealed class InlineBrTargetInstruction : ILInstruction
 {
     public override OperandType OperandType => OperandType.InlineBrTarget;
-    public int Delta { get; }
+    public readonly int Delta;
     public int TargetOffset => Offset + Delta + 1 + 4;
-
     internal InlineBrTargetInstruction(int offset, OpCode opCode, int delta)
         : base(offset, opCode) => Delta = delta;
 }
@@ -380,7 +379,7 @@ public sealed class InlineBrTargetInstruction : ILInstruction
 public sealed class ShortInlineBrTargetInstruction : ILInstruction
 {
     public override OperandType OperandType => OperandType.ShortInlineBrTarget;
-    public sbyte Delta { get; }
+    public readonly sbyte Delta;
     public int TargetOffset => Offset + Delta + 1 + 1;
     internal ShortInlineBrTargetInstruction(int offset, OpCode opCode, sbyte delta)
         : base(offset, opCode) => Delta = delta;
@@ -389,35 +388,27 @@ public sealed class ShortInlineBrTargetInstruction : ILInstruction
 public sealed class InlineSwitchInstruction : ILInstruction
 {
     public override OperandType OperandType => OperandType.InlineSwitch;
-    private readonly int[] _deltas;
-    private int[] _targetOffsets;
-
+    public readonly int[] Deltas;
+    public readonly int[] TargetOffsets;
     internal InlineSwitchInstruction(int offset, OpCode opCode, int[] deltas)
-        : base(offset, opCode) => _deltas = deltas;
-
-    public int[] Deltas => (int[])_deltas.Clone();
-
-    public int[] TargetOffsets
+        : base(offset, opCode)
     {
-        get
-        {
-            if (_targetOffsets == null)
-            {
-                var cases = _deltas.Length;
-                var itself = 1 + 4 + 4 * cases;
-                _targetOffsets = new int[cases];
-                for (var i = 0; i < cases; i++)
-                    _targetOffsets[i] = Offset + _deltas[i] + itself;
-            }
-            return _targetOffsets;
-        }
+        Deltas = deltas;
+
+        var caseCount = deltas.Length;
+        var itself = 1 + 4 + 4 * caseCount;
+        var targetOffsets = new int[caseCount];
+        for (var i = 0; i < caseCount; i++)
+            targetOffsets[i] = Offset + deltas[i] + itself;
+
+        TargetOffsets = targetOffsets;
     }
 }
 
 public sealed class InlineIInstruction : ILInstruction
 {
     public override OperandType OperandType => OperandType.InlineI;
-    public int Int32 { get; }
+    public readonly int Int32;
     internal InlineIInstruction(int offset, OpCode opCode, int value)
         : base(offset, opCode) => Int32 = value;
 }
@@ -425,8 +416,7 @@ public sealed class InlineIInstruction : ILInstruction
 public sealed class InlineI8Instruction : ILInstruction
 {
     public override OperandType OperandType => OperandType.InlineI8;
-    public long Int64 { get; }
-
+    public readonly long Int64;
     internal InlineI8Instruction(int offset, OpCode opCode, long value)
         : base(offset, opCode) => Int64 = value;
 }
@@ -434,8 +424,7 @@ public sealed class InlineI8Instruction : ILInstruction
 public sealed class ShortInlineIInstruction : ILInstruction
 {
     public override OperandType OperandType => OperandType.ShortInlineI;
-    public byte Byte { get; }
-
+    public readonly byte Byte;
     internal ShortInlineIInstruction(int offset, OpCode opCode, byte value)
         : base(offset, opCode) => Byte = value;
 }
@@ -443,8 +432,7 @@ public sealed class ShortInlineIInstruction : ILInstruction
 public class InlineRInstruction : ILInstruction
 {
     public override OperandType OperandType => OperandType.InlineR;
-    public double Double { get; }
-
+    public readonly double Double;
     internal InlineRInstruction(int offset, OpCode opCode, double value)
         : base(offset, opCode) => Double = value;
 }
@@ -452,8 +440,7 @@ public class InlineRInstruction : ILInstruction
 public sealed class ShortInlineRInstruction : ILInstruction
 {
     public override OperandType OperandType => OperandType.ShortInlineR;
-    public float Single { get; }
-
+    public readonly float Single;
     internal ShortInlineRInstruction(int offset, OpCode opCode, float value)
         : base(offset, opCode) => Single = value;
 }
@@ -476,7 +463,6 @@ public sealed class InlineMethodInstruction : ILInstruction
     public override OperandType OperandType => OperandType.InlineMethod;
     public readonly int Token;
     public readonly MethodBase Method;
-
     internal InlineMethodInstruction(int offset, OpCode opCode, int token, MethodBase method)
         : base(offset, opCode)
     {
@@ -529,7 +515,6 @@ public sealed class InlineStringInstruction : ILInstruction
     public override OperandType OperandType => OperandType.InlineString;
     public readonly int Token;
     public readonly string String;
-
     internal InlineStringInstruction(int offset, OpCode opCode, int token, string s)
         : base(offset, opCode)
     {
@@ -541,7 +526,7 @@ public sealed class InlineStringInstruction : ILInstruction
 public sealed class InlineVarInstruction : ILInstruction
 {
     public override OperandType OperandType => OperandType.InlineVar;
-    public ushort Ordinal { get; }
+    public readonly ushort Ordinal;
     internal InlineVarInstruction(int offset, OpCode opCode, ushort ordinal)
         : base(offset, opCode) => Ordinal = ordinal;
 }
@@ -549,8 +534,7 @@ public sealed class InlineVarInstruction : ILInstruction
 public sealed class ShortInlineVarInstruction : ILInstruction
 {
     public override OperandType OperandType => OperandType.ShortInlineVar;
-    public byte Ordinal { get; }
-
+    public readonly byte Ordinal;
     internal ShortInlineVarInstruction(int offset, OpCode opCode, byte ordinal)
         : base(offset, opCode) => Ordinal = ordinal;
 }
@@ -566,8 +550,7 @@ public class MethodBaseILProvider : IILProvider
     private static readonly Type _runtimeMethodInfoType = Type.GetType("System.Reflection.RuntimeMethodInfo");
     private static readonly Type _runtimeConstructorInfoType = Type.GetType("System.Reflection.RuntimeConstructorInfo");
 
-    private readonly MethodBase _method;
-    private byte[] _byteArray;
+    private readonly byte[] _byteArray;
 
     public MethodBaseILProvider(MethodBase method)
     {
@@ -578,13 +561,10 @@ public class MethodBaseILProvider : IILProvider
         if (methodType != _runtimeMethodInfoType & methodType != _runtimeConstructorInfoType)
             throw new ArgumentException("Must have type RuntimeMethodInfo or RuntimeConstructorInfo.", nameof(method));
 
-        _method = method;
+        _byteArray = method.GetMethodBody()?.GetILAsByteArray() ?? [];
     }
 
-    public byte[] GetByteArray()
-    {
-        return _byteArray ??= _method.GetMethodBody()?.GetILAsByteArray() ?? [];
-    }
+    public byte[] GetByteArray() => _byteArray;
 }
 
 [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Uses reflection on internal types and is not trim-compatible.")]
@@ -609,29 +589,24 @@ public class DynamicMethodILProvider : IILProvider
     private static readonly MethodInfo _miBakeByteArray =
         _runtimeILGeneratorType.GetMethod("BakeByteArray", BindingFlags.NonPublic | BindingFlags.Instance);
 
-    private readonly DynamicMethod _method;
-    private byte[] _byteArray;
+    private readonly byte[] _byteArray;
 
-    public DynamicMethodILProvider(DynamicMethod method) => _method = method;
-
-    public byte[] GetByteArray()
+    public DynamicMethodILProvider(DynamicMethod method)
     {
-        if (_byteArray == null)
+        var ilgen = method.GetILGenerator();
+        try
         {
-            var ilgen = _method.GetILGenerator();
-            try
-            {
-                _byteArray = (byte[])_miBakeByteArray.Invoke(ilgen, null) ?? [];
-            }
-            catch (TargetInvocationException)
-            {
-                var length = (int)_fiLen.GetValue(ilgen);
-                _byteArray = new byte[length];
-                Array.Copy((byte[])_fiStream.GetValue(ilgen), _byteArray, length);
-            }
+            _byteArray = (byte[])_miBakeByteArray.Invoke(ilgen, null) ?? [];
         }
-        return _byteArray;
+        catch (TargetInvocationException)
+        {
+            var length = (int)_fiLen.GetValue(ilgen);
+            _byteArray = new byte[length];
+            Array.Copy((byte[])_fiStream.GetValue(ilgen), _byteArray, length);
+        }
     }
+
+    public byte[] GetByteArray() => _byteArray;
 }
 
 public static class ILFormatter
