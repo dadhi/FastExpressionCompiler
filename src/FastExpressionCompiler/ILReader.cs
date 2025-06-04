@@ -85,15 +85,24 @@ public static class ILReaderFactory
             try
             {
                 s = line++ > 0 ? s.AppendLine() : s;
-                Formatter.Label(s, il.Offset).Append(": ").Append(il.OpCode);
+                ILFormatter.Label(s, il.Offset).Append(": ").Append(il.OpCode);
                 switch (il.OperandType)
                 {
+                    case OperandType.InlineBrTarget:
+                        ILFormatter.Label(s.Append(' '), ((InlineBrTargetInstruction)il).TargetOffset);
+                        break;
+                    case OperandType.InlineI:
+                        s.Append(' ').Append(((InlineIInstruction)il).Int32);
+                        break;
                     case OperandType.InlineField:
                         var f = (InlineFieldInstruction)il;
                         s.Append(' ')
                             .AppendTypeName(f.Field.FieldType).Append(' ')
                             .AppendTypeName(f.Field.DeclaringType).Append('.')
                             .Append(f.Field.Name);
+                        break;
+                    case OperandType.InlineI8:
+                        s.Append(' ').Append(((InlineI8Instruction)il).Int64);
                         break;
                     case OperandType.InlineMethod:
                         var m = (InlineMethodInstruction)il;
@@ -114,56 +123,40 @@ public static class ILReaderFactory
                         else
                             s.Append(' ').AppendTypeName(m.Method.DeclaringType).Append('.').Append(sig);
                         break;
-                    case OperandType.InlineType:
-                        var t = (InlineTypeInstruction)il;
-                        s.Append(' ').AppendTypeName(t.Type);
-                        break;
-                    case OperandType.InlineTok:
-                        var tok = (InlineTokInstruction)il;
-                        s.Append(' ').Append(tok.Member.Name);
-                        break;
-                    case OperandType.InlineBrTarget:
-                        Formatter.Label(s.Append(' '), ((InlineBrTargetInstruction)il).TargetOffset);
-                        break;
-                    case OperandType.InlineSwitch:
-                        var sw = (InlineSwitchInstruction)il;
-                        Formatter.MultipleLabels(s.Append(" switch "), sw.TargetOffsets);
-                        break;
-                    case OperandType.ShortInlineBrTarget:
-                        var sbr = (ShortInlineBrTargetInstruction)il;
-                        s.Append(' ').Append(sbr.TargetOffset);
-                        break;
-                    case OperandType.InlineSig:
-                        Formatter.SigByteArrayToString(s.Append(' '), ((InlineSigInstruction)il).Signature);
-                        break;
-                    case OperandType.InlineString:
-                        Formatter.EscapedString(s.Append(' '), ((InlineStringInstruction)il).String);
-                        break;
-                    case OperandType.ShortInlineI:
-                        var sii = (ShortInlineIInstruction)il;
-                        s.Append(' ').Append(sii.Byte);
-                        break;
-                    case OperandType.InlineI:
-                        var ii = (InlineIInstruction)il;
-                        s.Append(' ').Append(ii.Int32);
-                        break;
-                    case OperandType.InlineI8:
-                        var i8 = (InlineI8Instruction)il;
-                        s.Append(' ').Append(i8.Int64);
-                        break;
-                    case OperandType.ShortInlineR:
-                        var sir = (ShortInlineRInstruction)il;
-                        s.Append(' ').Append(sir.Single);
+                    case OperandType.InlineNone:
                         break;
                     case OperandType.InlineR:
-                        var ir = (InlineRInstruction)il;
-                        s.Append(' ').Append(ir.Double);
+                        s.Append(' ').Append(((InlineRInstruction)il).Double);
+                        break;
+                    case OperandType.InlineSig:
+                        ILFormatter.SigByteArrayToString(s.Append(' '), ((InlineSigInstruction)il).Signature);
+                        break;
+                    case OperandType.InlineString:
+                        ILFormatter.EscapedString(s.Append(' '), ((InlineStringInstruction)il).String);
+                        break;
+                    case OperandType.InlineSwitch:
+                        ILFormatter.MultipleLabels(s.Append(" switch "), ((InlineSwitchInstruction)il).TargetOffsets);
+                        break;
+                    case OperandType.InlineTok:
+                        s.Append(' ').Append(((InlineTokInstruction)il).Member.Name);
+                        break;
+                    case OperandType.InlineType:
+                        s.Append(' ').AppendTypeName(((InlineTypeInstruction)il).Type);
                         break;
                     case OperandType.InlineVar:
-                        Formatter.Argument(s.Append(' '), ((InlineVarInstruction)il).Ordinal);
+                        ILFormatter.Argument(s.Append(' '), ((InlineVarInstruction)il).Ordinal);
+                        break;
+                    case OperandType.ShortInlineBrTarget:
+                        s.Append(' ').Append(((ShortInlineBrTargetInstruction)il).TargetOffset);
+                        break;
+                    case OperandType.ShortInlineI:
+                        s.Append(' ').Append(((ShortInlineIInstruction)il).Byte);
+                        break;
+                    case OperandType.ShortInlineR:
+                        s.Append(' ').Append(((ShortInlineRInstruction)il).Single);
                         break;
                     case OperandType.ShortInlineVar:
-                        Formatter.Argument(s.Append(' '), ((ShortInlineVarInstruction)il).Ordinal);
+                        ILFormatter.Argument(s.Append(' '), ((ShortInlineVarInstruction)il).Ordinal);
                         break;
                     default:
                         break;
@@ -237,39 +230,39 @@ public sealed class ILReader : IEnumerable<ILInstruction>
         var token = 0;
         return opCode.OperandType switch
         {
-            OperandType.InlineNone => new InlineNoneInstruction(offset, opCode),
-            // 8-bit integer branch target
-            OperandType.ShortInlineBrTarget => new ShortInlineBrTargetInstruction(offset, opCode, ReadSByte(ref position)),
             // 32-bit integer branch target
             OperandType.InlineBrTarget => new InlineBrTargetInstruction(offset, opCode, ReadInt32(ref position)),
-            // 8-bit integer: 001F  ldc.i4.s, FE12  unaligned.
-            OperandType.ShortInlineI => new ShortInlineIInstruction(offset, opCode, ReadByte(ref position)),
+            // 32-bit metadata token
+            OperandType.InlineField => new InlineFieldInstruction(offset, opCode, token = ReadInt32(ref position), _resolver.AsField(token)),
             // 32-bit integer
             OperandType.InlineI => new InlineIInstruction(offset, opCode, ReadInt32(ref position)),
             // 64-bit integer
             OperandType.InlineI8 => new InlineI8Instruction(offset, opCode, ReadInt64(ref position)),
-            // 32-bit IEEE floating point number
-            OperandType.ShortInlineR => new ShortInlineRInstruction(offset, opCode, ReadSingle(ref position)),
-            // 64-bit IEEE floating point number
-            OperandType.InlineR => new InlineRInstruction(offset, opCode, ReadDouble(ref position)),
-            // 8-bit integer containing the ordinal of a local variable or an argument
-            OperandType.ShortInlineVar => new ShortInlineVarInstruction(offset, opCode, ReadByte(ref position)),
-            // 16-bit integer containing the ordinal of a local variable or an argument
-            OperandType.InlineVar => new InlineVarInstruction(offset, opCode, ReadUInt16(ref position)),
-            // 32-bit metadata string token
-            OperandType.InlineString => new InlineStringInstruction(offset, opCode, token = ReadInt32(ref position), _resolver.AsString(token)),
-            // 32-bit metadata signature token
-            OperandType.InlineSig => new InlineSigInstruction(offset, opCode, token = ReadInt32(ref position), _resolver.AsSignature(token)),
             // 32-bit metadata token
             OperandType.InlineMethod => new InlineMethodInstruction(offset, opCode, token = ReadInt32(ref position), _resolver.AsMethod(token)),
-            // 32-bit metadata token
-            OperandType.InlineField => new InlineFieldInstruction(offset, opCode, token = ReadInt32(ref position), _resolver.AsField(token)),
-            // 32-bit metadata token
-            OperandType.InlineType => new InlineTypeInstruction(offset, opCode, token = ReadInt32(ref position), _resolver.AsType(token)),
-            // FieldRef, MethodRef, or TypeRef token
-            OperandType.InlineTok => new InlineTokInstruction(offset, opCode, token = ReadInt32(ref position), _resolver.AsMember(token)),
+            OperandType.InlineNone => new InlineNoneInstruction(offset, opCode),
+            // 64-bit IEEE floating point number
+            OperandType.InlineR => new InlineRInstruction(offset, opCode, ReadDouble(ref position)),
+            // 32-bit metadata signature token
+            OperandType.InlineSig => new InlineSigInstruction(offset, opCode, token = ReadInt32(ref position), _resolver.AsSignature(token)),
+            // 32-bit metadata string token
+            OperandType.InlineString => new InlineStringInstruction(offset, opCode, token = ReadInt32(ref position), _resolver.AsString(token)),
             // 32-bit integer argument to a switch instruction
             OperandType.InlineSwitch => new InlineSwitchInstruction(offset, opCode, ReadDeltas(ref position)),
+            // FieldRef, MethodRef, or TypeRef token
+            OperandType.InlineTok => new InlineTokInstruction(offset, opCode, token = ReadInt32(ref position), _resolver.AsMember(token)),
+            // 32-bit metadata token
+            OperandType.InlineType => new InlineTypeInstruction(offset, opCode, token = ReadInt32(ref position), _resolver.AsType(token)),
+            // 16-bit integer containing the ordinal of a local variable or an argument
+            OperandType.InlineVar => new InlineVarInstruction(offset, opCode, ReadUInt16(ref position)),
+            // 8-bit integer branch target
+            OperandType.ShortInlineBrTarget => new ShortInlineBrTargetInstruction(offset, opCode, ReadSByte(ref position)),
+            // 8-bit integer: 001F  ldc.i4.s, FE12  unaligned.
+            OperandType.ShortInlineI => new ShortInlineIInstruction(offset, opCode, ReadByte(ref position)),
+            // 32-bit IEEE floating point number
+            OperandType.ShortInlineR => new ShortInlineRInstruction(offset, opCode, ReadSingle(ref position)),
+            // 8-bit integer containing the ordinal of a local variable or an argument
+            OperandType.ShortInlineVar => new ShortInlineVarInstruction(offset, opCode, ReadByte(ref position)),
             _ => throw new NotSupportedException($"Unsupported operand type: {opCode.OperandType}"),
         };
     }
@@ -370,7 +363,6 @@ public abstract class ILInstruction
 public sealed class InlineNoneInstruction : ILInstruction
 {
     public override OperandType OperandType => OperandType.InlineNone;
-
     internal InlineNoneInstruction(int offset, OpCode opCode)
         : base(offset, opCode) { }
 }
@@ -642,7 +634,7 @@ public class DynamicMethodILProvider : IILProvider
     }
 }
 
-public static class Formatter
+public static class ILFormatter
 {
     public static StringBuilder Int32ToHex(StringBuilder sb, int int32) => sb.Append(int32.ToString("X8"));
     public static StringBuilder Int16ToHex(StringBuilder sb, int int16) => sb.Append(int16.ToString("X4"));
