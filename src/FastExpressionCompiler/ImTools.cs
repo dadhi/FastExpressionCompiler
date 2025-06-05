@@ -762,13 +762,22 @@ public static class SmallMap
     // Window with the hash mask wothout the lead ProbeMask and closing IndexMask 0b00000111111111111111111111110000
     internal const int HashMask = HashAndIndexMask & ~IndexMask;
 
+    /// <summary>Represent a keyed entry stored in the SmallMap.
+    /// Its implementation struct may include the additional Value for the Map or just the Key for the Set.
+    /// The implementation may also decide to make Value readonly or writable for the in-place update</summary>
+    public interface IEntry<K>
+    {
+        /// <summary>Returns the key of the payload</summary>
+        K Key { get; internal set; }
+    }
+
     /// <summary>Holds a single entry consisting of key and value. 
     /// Value may be set or changed but the key is set in stone (by construction).</summary>
     [DebuggerDisplay("{Key?.ToString()}->{Value}")]
-    public struct Entry<K, V>
+    public struct Entry<K, V> : IEntry<K>
     {
         /// <summary>The readonly key</summary>
-        public K Key;
+        public K Key { get; set; }
         /// <summary>The mutable value</summary>
         public V Value;
         /// <summary>Construct with the key and default value</summary>
@@ -780,14 +789,6 @@ public static class SmallMap
             Value = value;
         }
     }
-
-    /// <summary>Creates the map with the <see cref="SingleArrayEntries{K, V, TEq}"/> storage</summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public static SmallMap<K, V, TEq, TStack, SingleArrayEntries<K, V, TEq>>
-        New<K, V, TEq, TStack>(byte capacityBitShift = 0)
-        where TEq : struct, IEq<K>
-        where TStack : struct, IStack<Entry<K, V>, TStack>
-        => new(capacityBitShift);
 
     /// <summary>Binary representation of the `int`</summary>
     public static string ToB(int x) => System.Convert.ToString(x, 2).PadLeft(32, '0');
@@ -806,18 +807,19 @@ public static class SmallMap
     internal static int GetHash(ref int[] start, int distance) => start[distance];
 #endif
 
-    // todo: @perf can we move the Entry into the type parameter to configure and possibly save the memory e.g. for the sets? 
     /// <summary>Abstraction to configure your own entries data structure. Check the derived types for the examples</summary>
-    public interface IEntries<K, V, TEq> where TEq : IEq<K>
+    public interface IEntries<K, TEntry, TEq>
+        where TEntry : struct, IEntry<K>
+        where TEq : IEq<K>
     {
         /// <summary>Initializes the entries storage to the specified capacity</summary>
         void Init(int capacityPowerOfTwoPlease);
 
         /// <summary>Returns the reference to entry by its index, index should map to the present/non-removed entry</summary>
-        ref Entry<K, V> GetSurePresentEntryRef(int index);
+        ref TEntry GetSurePresentEntryRef(int index);
 
         /// <summary>Adds the key at the "end" of entries - so the order of addition is preserved.</summary>
-        ref V AddKeyAndGetValueRef(K key, int index);
+        ref TEntry AddKeyAndGetEntryRef(K key, int index);
     }
 
     internal const int MinEntriesCapacity = 2;
@@ -827,30 +829,67 @@ public static class SmallMap
 
     /// <summary>Stores the entries in a single dynamically reallocated growing array</summary>
     [DebuggerDisplay("{Capacity:_entries?.Length ?? 0} of {_entries?[0]}, {_entries?[1]}, ...")]
-    public struct SingleArrayEntries<K, V, TEq> : IEntries<K, V, TEq> where TEq : struct, IEq<K>
+    public struct SingleArrayEntries<K, TEntry, TEq> : IEntries<K, TEntry, TEq>
+        where TEntry : struct, IEntry<K>
+        where TEq : struct, IEq<K>
     {
-        internal Entry<K, V>[] _entries;
+        internal TEntry[] _entries;
 
         /// <inheritdoc/>
         public void Init(int capacityPowerOfTwoPlease) =>
-            _entries = new Entry<K, V>[capacityPowerOfTwoPlease];
+            _entries = new TEntry[capacityPowerOfTwoPlease];
 
         /// <inheritdoc/>
         [MethodImpl((MethodImplOptions)256)]
-        public ref Entry<K, V> GetSurePresentEntryRef(int index) =>
+        public ref TEntry GetSurePresentEntryRef(int index) =>
             ref _entries.GetSurePresentItemRef(index);
 
         /// <inheritdoc/>
         [MethodImpl((MethodImplOptions)256)]
-        public ref V AddKeyAndGetValueRef(K key, int index)
+        public ref TEntry AddKeyAndGetEntryRef(K key, int index)
         {
             if (index == _entries.Length)
                 Array.Resize(ref _entries, index << 1);
 
             ref var e = ref _entries.GetSurePresentItemRef(index);
             e.Key = key;
-            return ref e.Value;
+            return ref e;
         }
+    }
+
+    /// <summary>Gets the ref to the existing entry.Value by the provided key (found == true),
+    /// or adds a new entry (found == false) and returns it.Value by ref. 
+    /// So the method always return a non-null ref to the value, either existing or added</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public static ref V AddOrGetValueRef<K, V, TStackEntries, TEq, TEntries>(
+        this ref SmallMap<K, Entry<K, V>, TEq, TStackEntries, TEntries> map, K key, out bool found)
+        where TEq : struct, IEq<K>
+        where TStackEntries : struct, IStack<Entry<K, V>, TStackEntries>
+        where TEntries : struct, IEntries<K, Entry<K, V>, TEq> =>
+        ref map.AddOrGetEntryRef(key, out found).Value;
+
+    /// <summary>Adds an entry for sure absent key.
+    /// Provides the performance in scenarios where you look for the present key, and using it, and if ABSENT then add the new one.
+    /// So this method optimized NOT to look for the present item for the second time</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public static ref V AddSureAbsentDefaultAndGetRef<K, V, TStackEntries, TEq, TEntries>(
+        this ref SmallMap<K, Entry<K, V>, TEq, TStackEntries, TEntries> map, K key)
+        where TEq : struct, IEq<K>
+        where TStackEntries : struct, IStack<Entry<K, V>, TStackEntries>
+        where TEntries : struct, IEntries<K, Entry<K, V>, TEq>
+        => ref map.AddSureAbsentDefaultEntryAndGetRef(key).Value;
+
+    /// <summary>Lookups for the stored entry by key. Returns the ref to the found entry.Value or the null ref</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public static ref V TryGetValueRef<K, V, TStackEntries, TEq, TEntries>(
+        this ref SmallMap<K, Entry<K, V>, TEq, TStackEntries, TEntries> map, K key, out bool found)
+        where TEq : struct, IEq<K>
+        where TStackEntries : struct, IStack<Entry<K, V>, TStackEntries>
+        where TEntries : struct, IEntries<K, Entry<K, V>, TEq>
+    {
+        ref var e = ref map.TryGetEntryRef(key, out found);
+        if (found) return ref e.Value;
+        return ref RefTools<V>.GetNullRef();
     }
 }
 
@@ -870,10 +909,11 @@ public static class SmallMap
 /// 
 /// </summary>
 [DebuggerDisplay("{Count} of {_e0}, {_e1}, {_e2}, {_e3}, ...")]
-public struct SmallMap<K, V, TEq, TStack, TEntries>
+public struct SmallMap<K, TEntry, TEq, TStackEntries, TEntries>
+    where TEntry : struct, IEntry<K>
     where TEq : struct, IEq<K>
-    where TStack : struct, IStack<Entry<K, V>, TStack>
-    where TEntries : struct, IEntries<K, V, TEq>
+    where TStackEntries : struct, IStack<TEntry, TStackEntries>
+    where TEntries : struct, IEntries<K, TEntry, TEq>
 {
     internal byte _capacityBitShift;
     internal int _count;
@@ -890,7 +930,7 @@ public struct SmallMap<K, V, TEq, TStack, TEntries>
     internal TEntries _entries;
 #pragma warning restore IDE0044
 #pragma warning disable CS0649 // Field 'SmallMap<K, V, TEq, TStack, TEntries>.Stack' is never assigned to, and will always have its default value
-    internal TStack Stack;
+    internal TStackEntries StackEntries;
 #pragma warning restore CS0649
 
     /// <summary>Capacity bits</summary>
@@ -921,17 +961,17 @@ public struct SmallMap<K, V, TEq, TStack, TEntries>
     /// Important: it does not check the index bounds, so you need to check that the index is from 0 to map.Count-1</summary>
     [UnscopedRef]
     [MethodImpl((MethodImplOptions)256)]
-    public ref Entry<K, V> GetSurePresentEntryRef(int index)
+    public ref TEntry GetSurePresentEntryRef(int index)
     {
         Debug.Assert(index >= 0);
         Debug.Assert(index < _count);
-        if (index >= Stack.Capacity)
-            return ref _entries.GetSurePresentEntryRef(index - Stack.Capacity);
-        return ref Stack.GetSurePresentItemRef(index);
+        if (index >= StackEntries.Capacity)
+            return ref _entries.GetSurePresentEntryRef(index - StackEntries.Capacity);
+        return ref StackEntries.GetSurePresentItemRef(index);
     }
 
     [UnscopedRef]
-    private ref V AddOrGetValueRefInEntries(K key, out bool found)
+    private ref TEntry AddOrGetRefInEntries(K key, out bool found)
     {
         // if the free space is less than 1/8 of capacity (12.5%) then Resize
         var indexMask = (1 << _capacityBitShift) - 1;
@@ -959,7 +999,7 @@ public struct SmallMap<K, V, TEq, TStack, TEntries>
             {
                 ref var e = ref GetSurePresentEntryRef(h & indexMask);
                 if (found = default(TEq).Equals(e.Key, key))
-                    return ref e.Value;
+                    return ref e;
             }
             h = ref GetHashRef(ref hashesAndIndexes, ++hashIndex & indexMask);
             ++probes;
@@ -985,7 +1025,7 @@ public struct SmallMap<K, V, TEq, TStack, TEntries>
             }
         }
 
-        return ref _entries.AddKeyAndGetValueRef(key, (_count++) - Stack.Capacity);
+        return ref _entries.AddKeyAndGetEntryRef(key, (_count++) - StackEntries.Capacity);
     }
 
     private void AddJustHashAndEntryIndexWithoutResizing(int hash, int index)
@@ -1026,13 +1066,13 @@ public struct SmallMap<K, V, TEq, TStack, TEntries>
         }
     }
 
-    /// <summary>Gets the reference to the existing value by the provided key (found == true),
-    /// or adds a new key-value pair (found == false) and allows to set the returned value.</summary>
+    /// <summary>Gets the ref to the existing entry by the provided key (found == true),
+    /// or adds a new entry (found == false) and returns it by ref</summary>
     [UnscopedRef]
-    public ref V AddOrGetValueRef(K key, out bool found)
+    public ref TEntry AddOrGetEntryRef(K key, out bool found)
     {
-        if (_count > Stack.Capacity)
-            return ref AddOrGetValueRefInEntries(key, out found);
+        if (_count > StackEntries.Capacity)
+            return ref AddOrGetRefInEntries(key, out found);
 
         // Linear search in stack (which has a few items) by comparing the keys without calculating the hashes
         // Saving on the hash calculation. Losing on the bigger number of comparisons.
@@ -1040,17 +1080,17 @@ public struct SmallMap<K, V, TEq, TStack, TEntries>
         {
             ref var e = ref GetSurePresentEntryRef(i);
             if (found = default(TEq).Equals(e.Key, key))
-                return ref e.Value;
+                return ref e;
         }
         found = false;
 
         // Add the new entry to the stack if there is still space in stack
-        if (_count < Stack.Capacity)
+        if (_count < StackEntries.Capacity)
         {
             var newIndex = _count++;
-            ref var newEntry = ref Stack.GetSurePresentItemRef(newIndex);
+            ref var newEntry = ref StackEntries.GetSurePresentItemRef(newIndex);
             newEntry.Key = key;
-            return ref newEntry.Value;
+            return ref newEntry;
         }
 
         // Now all capacity of the stack is used.
@@ -1065,18 +1105,18 @@ public struct SmallMap<K, V, TEq, TStack, TEntries>
         _capacityBitShift = MinHashesCapacityBitShift;
         _packedHashesAndIndexes = new int[1 << MinHashesCapacityBitShift];
 
-        for (var i = 0; i < Stack.Capacity; ++i)
+        for (var i = 0; i < StackEntries.Capacity; ++i)
             AddJustHashAndEntryIndexWithoutResizing(default(TEq).GetHashCode(GetSurePresentEntryRef(i).Key), i);
 
-        AddJustHashAndEntryIndexWithoutResizing(default(TEq).GetHashCode(key), Stack.Capacity);
+        AddJustHashAndEntryIndexWithoutResizing(default(TEq).GetHashCode(key), StackEntries.Capacity);
 
-        _count = Stack.Capacity + 1; // +1 because we added the new key
-        _entries.Init(Stack.Capacity); // Give the heap entries the same initial capcity as Stack, effectively doubling the capacity
-        return ref _entries.AddKeyAndGetValueRef(key, 0); // add the new key to the entries with the 0 index in the entries
+        _count = StackEntries.Capacity + 1; // +1 because we added the new key
+        _entries.Init(StackEntries.Capacity); // Give the heap entries the same initial capcity as Stack, effectively doubling the capacity
+        return ref _entries.AddKeyAndGetEntryRef(key, 0); // add the new key to the entries with the 0 index in the entries
     }
 
     [UnscopedRef]
-    private ref V AddSureAbsentDefaultAndGetRefInEntries(K key)
+    private ref TEntry AddSureAbsentDefaultAndGetRefInEntries(K key)
     {
         // if the free space is less than 1/8 of capacity (12.5%) then Resize
         var indexMask = (1 << _capacityBitShift) - 1;
@@ -1120,48 +1160,48 @@ public struct SmallMap<K, V, TEq, TStack, TEntries>
             }
         }
 
-        return ref _entries.AddKeyAndGetValueRef(key, (_count++) - Stack.Capacity);
+        return ref _entries.AddKeyAndGetEntryRef(key, (_count++) - StackEntries.Capacity);
     }
 
-    /// <summary>Adds a sure absent key entry. 
+    /// <summary>Adds an entry for sure absent key.
     /// Provides the performance in scenarios where you look for the present key, and using it, and if ABSENT then add the new one.
     /// So this method optimized NOT to look for the present item for the second time</summary>
     [UnscopedRef]
     [MethodImpl((MethodImplOptions)256)]
-    public ref V AddSureAbsentDefaultAndGetRef(K key)
+    public ref TEntry AddSureAbsentDefaultEntryAndGetRef(K key)
     {
-        if (_count > Stack.Capacity)
+        if (_count > StackEntries.Capacity)
             return ref AddSureAbsentDefaultAndGetRefInEntries(key);
 
         // Add the new entry to the stack if there is still space in stack
-        if (_count < Stack.Capacity)
+        if (_count < StackEntries.Capacity)
         {
             var newIndex = _count++;
-            ref var newEntry = ref Stack.GetSurePresentItemRef(newIndex);
+            ref var newEntry = ref StackEntries.GetSurePresentItemRef(newIndex);
             newEntry.Key = key;
-            return ref newEntry.Value;
+            return ref newEntry;
         }
 
         _capacityBitShift = MinHashesCapacityBitShift;
         _packedHashesAndIndexes = new int[1 << MinHashesCapacityBitShift];
 
-        for (var i = 0; i < Stack.Capacity; ++i)
+        for (var i = 0; i < StackEntries.Capacity; ++i)
             AddJustHashAndEntryIndexWithoutResizing(default(TEq).GetHashCode(GetSurePresentEntryRef(i).Key), i);
 
-        AddJustHashAndEntryIndexWithoutResizing(default(TEq).GetHashCode(key), Stack.Capacity);
+        AddJustHashAndEntryIndexWithoutResizing(default(TEq).GetHashCode(key), StackEntries.Capacity);
 
-        _count = Stack.Capacity + 1; // +1 because we added the new key
-        _entries.Init(Stack.Capacity); // Give the heap entries the same initial capcity as Stack, effectively doubling the capacity
-        return ref _entries.AddKeyAndGetValueRef(key, 0); // add the new key to the entries with the 0 index in the entries
+        _count = StackEntries.Capacity + 1; // +1 because we added the new key
+        _entries.Init(StackEntries.Capacity); // Give the heap entries the same initial capcity as Stack, effectively doubling the capacity
+        return ref _entries.AddKeyAndGetEntryRef(key, 0); // add the new key to the entries with the 0 index in the entries
     }
 
-    /// <summary>Finds the stored value by key. If found returns ref to the value it can be modified in place.</summary>
+    /// <summary>Lookups for the stored key. If found true, otherwise false</summary>
     [MethodImpl((MethodImplOptions)256)]
     public bool ContainsKey(K key)
     {
-        if (_count > Stack.Capacity)
+        if (_count > StackEntries.Capacity)
         {
-            TryGetValueRefInEntries(key, out var found);
+            TryGetRefInEntries(key, out var found);
             return found;
         }
 
@@ -1174,7 +1214,7 @@ public struct SmallMap<K, V, TEq, TStack, TEntries>
 
     [UnscopedRef]
     [MethodImpl((MethodImplOptions)256)]
-    internal ref V TryGetValueRefInEntries(K key, out bool found)
+    internal ref TEntry TryGetRefInEntries(K key, out bool found)
     {
         var hash = default(TEq).GetHashCode(key);
 
@@ -1200,7 +1240,7 @@ public struct SmallMap<K, V, TEq, TStack, TEntries>
             {
                 ref var e = ref GetSurePresentEntryRef(h & indexMask);
                 if (found = default(TEq).Equals(e.Key, key))
-                    return ref e.Value;
+                    return ref e;
             }
 
             h = GetHash(ref hashesAndIndexes, ++hashIndex & indexMask);
@@ -1208,26 +1248,26 @@ public struct SmallMap<K, V, TEq, TStack, TEntries>
         }
 
         found = false;
-        return ref RefTools<V>.GetNullRef();
+        return ref RefTools<TEntry>.GetNullRef();
     }
 
-    /// <summary>Finds the stored value by key. Returns the reference to the found value or the null entry</summary>
+    /// <summary>Lookups for the stored entry by key. Returns the ref to the found entry or the null ref</summary>
     [UnscopedRef]
     [MethodImpl((MethodImplOptions)256)]
-    public ref V TryGetValueRef(K key, out bool found)
+    public ref TEntry TryGetEntryRef(K key, out bool found)
     {
-        if (_count > Stack.Capacity)
-            return ref TryGetValueRefInEntries(key, out found);
+        if (_count > StackEntries.Capacity)
+            return ref TryGetRefInEntries(key, out found);
 
         for (var i = 0; i < _count; ++i)
         {
             ref var e = ref GetSurePresentEntryRef(i);
             if (found = default(TEq).Equals(key, e.Key))
-                return ref e.Value;
+                return ref e;
         }
 
         found = false;
-        return ref RefTools<V>.GetNullRef();
+        return ref RefTools<TEntry>.GetNullRef();
     }
 
     internal int ResizeHashes(int indexMask)
@@ -1285,21 +1325,21 @@ public struct SmallMap<K, V, TEq, TStack, TEntries>
 public struct SmallMap4<K, V, TEq>() where TEq : struct, IEq<K>
 {
     /// <summary>Map with 4 elements on stack and entries baked by the single array</summary> 
-    public SmallMap<K, V, TEq, Stack4<SmallMap.Entry<K, V>>, SmallMap.SingleArrayEntries<K, V, TEq>> Map;
+    public SmallMap<K, SmallMap.Entry<K, V>, TEq, Stack4<SmallMap.Entry<K, V>>, SmallMap.SingleArrayEntries<K, SmallMap.Entry<K, V>, TEq>> Map;
 }
 
 /// <summary>Type wrapper to minimize the number of generic args to be specified by the end-user</summary>
 public struct SmallMap8<K, V, TEq>() where TEq : struct, IEq<K>
 {
     /// <summary>Map with 8 elements on stack and entries baked by the single array</summary> 
-    public SmallMap<K, V, TEq, Stack8<SmallMap.Entry<K, V>>, SmallMap.SingleArrayEntries<K, V, TEq>> Map;
+    public SmallMap<K, SmallMap.Entry<K, V>, TEq, Stack8<SmallMap.Entry<K, V>>, SmallMap.SingleArrayEntries<K, SmallMap.Entry<K, V>, TEq>> Map;
 }
 
 /// <summary>Type wrapper to minimize the number of generic args to be specified by the end-user</summary>
 public struct SmallMap16<K, V, TEq>() where TEq : struct, IEq<K>
 {
     /// <summary>Map with 16 elements on stack and entries baked by the single array</summary> 
-    public SmallMap<K, V, TEq, Stack16<SmallMap.Entry<K, V>>, SmallMap.SingleArrayEntries<K, V, TEq>> Map;
+    public SmallMap<K, SmallMap.Entry<K, V>, TEq, Stack16<SmallMap.Entry<K, V>>, SmallMap.SingleArrayEntries<K, SmallMap.Entry<K, V>, TEq>> Map;
 }
 
 #nullable restore

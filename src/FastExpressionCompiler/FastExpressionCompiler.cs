@@ -1368,7 +1368,7 @@ namespace FastExpressionCompiler
                             if (hasComplexExpression)
                             {
                                 closure.HasComplexExpression = true;
-                                closure.ArgsContainingComplexExpression.Map.AddOrGetValueRef(newExpr, out _);
+                                closure.ArgsContainingComplexExpression.Map.AddOrGetEntryRef(newExpr, out _);
                             }
 
                             return r;
