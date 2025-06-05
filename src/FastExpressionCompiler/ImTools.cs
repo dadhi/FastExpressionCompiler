@@ -790,21 +790,32 @@ public static class SmallMap
         }
     }
 
+    /// <summary>The entry with just a key.
+    /// When used with the SmallMap it may represent a Set without wasting the space for the absent value</summary>
+    [DebuggerDisplay("{Key?.ToString()}")]
+    public struct Entry<K> : IEntry<K>
+    {
+        /// <summary>The readonly key</summary>
+        public K Key { get; set; }
+        /// <summary>Construct with the key and default value</summary>
+        public Entry(K key) => Key = key;
+    }
+
     /// <summary>Binary representation of the `int`</summary>
     public static string ToB(int x) => System.Convert.ToString(x, 2).PadLeft(32, '0');
 
     [MethodImpl((MethodImplOptions)256)]
 #if NET7_0_OR_GREATER
-    internal static ref int GetHashRef(ref int start, int distance) => ref Unsafe.Add(ref start, distance);
+    internal static ref int NextHashRef(ref int start, int distance) => ref Unsafe.Add(ref start, distance);
 #else
-    internal static ref int GetHashRef(ref int[] start, int distance) => ref start[distance];
+    internal static ref int NextHashRef(ref int[] start, int distance) => ref start[distance];
 #endif
 
     [MethodImpl((MethodImplOptions)256)]
 #if NET7_0_OR_GREATER
-    internal static int GetHash(ref int start, int distance) => Unsafe.Add(ref start, distance);
+    internal static int NextHash(ref int start, int distance) => Unsafe.Add(ref start, distance);
 #else
-    internal static int GetHash(ref int[] start, int distance) => start[distance];
+    internal static int NextHash(ref int[] start, int distance) => start[distance];
 #endif
 
     /// <summary>Abstraction to configure your own entries data structure. Check the derived types for the examples</summary>
@@ -988,7 +999,7 @@ public struct SmallMap<K, TEntry, TEq, TStackEntries, TEntries>
 #else
         var hashesAndIndexes = _packedHashesAndIndexes;
 #endif
-        ref var h = ref GetHashRef(ref hashesAndIndexes, hashIndex);
+        ref var h = ref NextHashRef(ref hashesAndIndexes, hashIndex);
 
         // 1. Skip over hashes with the bigger and equal probes. The hashes with bigger probes overlapping from the earlier ideal positions
         var probes = 1;
@@ -1001,7 +1012,7 @@ public struct SmallMap<K, TEntry, TEq, TStackEntries, TEntries>
                 if (found = default(TEq).Equals(e.Key, key))
                     return ref e;
             }
-            h = ref GetHashRef(ref hashesAndIndexes, ++hashIndex & indexMask);
+            h = ref NextHashRef(ref hashesAndIndexes, ++hashIndex & indexMask);
             ++probes;
         }
         found = false;
@@ -1015,7 +1026,7 @@ public struct SmallMap<K, TEntry, TEq, TStackEntries, TEntries>
         probes = hRobinHooded >>> ProbeCountShift;
         while (hRobinHooded != 0)
         {
-            h = ref GetHashRef(ref hashesAndIndexes, ++hashIndex & indexMask);
+            h = ref NextHashRef(ref hashesAndIndexes, ++hashIndex & indexMask);
             if ((h >>> ProbeCountShift) < ++probes)
             {
                 var tmp = h;
@@ -1038,11 +1049,11 @@ public struct SmallMap<K, TEntry, TEq, TStackEntries, TEntries>
         var hashesAndIndexes = _packedHashesAndIndexes;
 #endif
         // 1. Skip over hashes with the bigger and equal probes. The hashes with bigger probes overlapping from the earlier ideal positions
-        ref var h = ref GetHashRef(ref hashesAndIndexes, hashIndex);
+        ref var h = ref NextHashRef(ref hashesAndIndexes, hashIndex);
         var probes = 1;
         while ((h >>> ProbeCountShift) >= probes)
         {
-            h = ref GetHashRef(ref hashesAndIndexes, ++hashIndex & IndexMask);
+            h = ref NextHashRef(ref hashesAndIndexes, ++hashIndex & IndexMask);
             ++probes;
         }
 
@@ -1055,7 +1066,7 @@ public struct SmallMap<K, TEntry, TEq, TStackEntries, TEntries>
         probes = hRobinHooded >>> ProbeCountShift;
         while (hRobinHooded != 0)
         {
-            h = ref GetHashRef(ref hashesAndIndexes, ++hashIndex & IndexMask);
+            h = ref NextHashRef(ref hashesAndIndexes, ++hashIndex & IndexMask);
             if ((h >>> ProbeCountShift) < ++probes)
             {
                 var tmp = h;
@@ -1131,13 +1142,13 @@ public struct SmallMap<K, TEntry, TEq, TStackEntries, TEntries>
 #else
         var hashesAndIndexes = _packedHashesAndIndexes;
 #endif
-        ref var h = ref GetHashRef(ref hashesAndIndexes, hashIndex);
+        ref var h = ref NextHashRef(ref hashesAndIndexes, hashIndex);
 
         // 1. Skip over hashes with the bigger and equal probes. The hashes with bigger probes overlapping from the earlier ideal positions
         var probes = 1;
         while ((h >>> ProbeCountShift) >= probes)
         {
-            h = ref GetHashRef(ref hashesAndIndexes, ++hashIndex & indexMask);
+            h = ref NextHashRef(ref hashesAndIndexes, ++hashIndex & indexMask);
             ++probes;
         }
 
@@ -1150,7 +1161,7 @@ public struct SmallMap<K, TEntry, TEq, TStackEntries, TEntries>
         probes = hRobinHooded >>> ProbeCountShift;
         while (hRobinHooded != 0)
         {
-            h = ref GetHashRef(ref hashesAndIndexes, ++hashIndex & indexMask);
+            h = ref NextHashRef(ref hashesAndIndexes, ++hashIndex & indexMask);
             if ((h >>> ProbeCountShift) < ++probes)
             {
                 var tmp = h;
@@ -1229,7 +1240,7 @@ public struct SmallMap<K, TEntry, TEq, TStackEntries, TEntries>
         var hashesAndIndexes = _packedHashesAndIndexes;
 #endif
 
-        var h = GetHash(ref hashesAndIndexes, hashIndex);
+        var h = NextHash(ref hashesAndIndexes, hashIndex);
 
         // 1. Skip over hashes with the bigger and equal probes. The hashes with bigger probes overlapping from the earlier ideal positions
         var probes = 1;
@@ -1243,7 +1254,7 @@ public struct SmallMap<K, TEntry, TEq, TStackEntries, TEntries>
                     return ref e;
             }
 
-            h = GetHash(ref hashesAndIndexes, ++hashIndex & indexMask);
+            h = NextHash(ref hashesAndIndexes, ++hashIndex & indexMask);
             ++probes;
         }
 
@@ -1290,7 +1301,7 @@ public struct SmallMap<K, TEntry, TEq, TStackEntries, TEntries>
         // Overflow segment is wrapped-around hashes and! the hashes at the beginning robin hooded by the wrapped-around hashes
         var i = 0;
         while ((oldHash >>> ProbeCountShift) > 1)
-            oldHash = GetHash(ref oldHashes, ++i);
+            oldHash = NextHash(ref oldHashes, ++i);
 
         var oldCapacityWithOverflowSegment = i + oldCapacity;
         while (true)
@@ -1302,10 +1313,10 @@ public struct SmallMap<K, TEntry, TEq, TStackEntries, TEntries>
 
                 // no need for robin-hooding because we already did it for the old hashes and now just filling the hashes into the new array which are already in order
                 var probes = 1;
-                ref var newHash = ref GetHashRef(ref newHashes, indexWithNextBit);
+                ref var newHash = ref NextHashRef(ref newHashes, indexWithNextBit);
                 while (newHash != 0)
                 {
-                    newHash = ref GetHashRef(ref newHashes, ++indexWithNextBit & newIndexMask);
+                    newHash = ref NextHashRef(ref newHashes, ++indexWithNextBit & newIndexMask);
                     ++probes;
                 }
                 newHash = (probes << ProbeCountShift) | (oldHash & newHashAndIndexMask);
@@ -1313,7 +1324,7 @@ public struct SmallMap<K, TEntry, TEq, TStackEntries, TEntries>
             if (++i >= oldCapacityWithOverflowSegment)
                 break;
 
-            oldHash = GetHash(ref oldHashes, i & indexMask);
+            oldHash = NextHash(ref oldHashes, i & indexMask);
         }
         ++_capacityBitShift;
         _packedHashesAndIndexes = newHashesAndIndexes;
@@ -1321,25 +1332,46 @@ public struct SmallMap<K, TEntry, TEq, TStackEntries, TEntries>
     }
 }
 
-/// <summary>Type wrapper to minimize the number of generic args to be specified by the end-user</summary>
+/// <summary>Holds the Map with 4 items on stack. Minimizes the number of type arguments required to be specified</summary>
 public struct SmallMap4<K, V, TEq>() where TEq : struct, IEq<K>
 {
     /// <summary>Map with 4 elements on stack and entries baked by the single array</summary> 
     public SmallMap<K, SmallMap.Entry<K, V>, TEq, Stack4<SmallMap.Entry<K, V>>, SmallMap.SingleArrayEntries<K, SmallMap.Entry<K, V>, TEq>> Map;
 }
 
-/// <summary>Type wrapper to minimize the number of generic args to be specified by the end-user</summary>
+/// <summary>Holds the Map with 8 items on stack. Minimizes the number of type arguments required to be specified</summary>
 public struct SmallMap8<K, V, TEq>() where TEq : struct, IEq<K>
 {
     /// <summary>Map with 8 elements on stack and entries baked by the single array</summary> 
     public SmallMap<K, SmallMap.Entry<K, V>, TEq, Stack8<SmallMap.Entry<K, V>>, SmallMap.SingleArrayEntries<K, SmallMap.Entry<K, V>, TEq>> Map;
 }
 
-/// <summary>Type wrapper to minimize the number of generic args to be specified by the end-user</summary>
+/// <summary>Holds the Map with 16 items on stack. Minimizes the number of type arguments required to be specified</summary>
 public struct SmallMap16<K, V, TEq>() where TEq : struct, IEq<K>
 {
     /// <summary>Map with 16 elements on stack and entries baked by the single array</summary> 
     public SmallMap<K, SmallMap.Entry<K, V>, TEq, Stack16<SmallMap.Entry<K, V>>, SmallMap.SingleArrayEntries<K, SmallMap.Entry<K, V>, TEq>> Map;
+}
+
+/// <summary>Holds the Set with 4 items on stack. Minimizes the number of type arguments required to be specified</summary>
+public struct SmallSet4<K, TEq>() where TEq : struct, IEq<K>
+{
+    /// <summary>Set with 4 keys on stack and entries baked by the single array</summary> 
+    public SmallMap<K, SmallMap.Entry<K>, TEq, Stack4<SmallMap.Entry<K>>, SmallMap.SingleArrayEntries<K, SmallMap.Entry<K>, TEq>> Set;
+}
+
+/// <summary>Holds the Set with 8 items on stack. Minimizes the number of type arguments required to be specified</summary>
+public struct SmallSet8<K, TEq>() where TEq : struct, IEq<K>
+{
+    /// <summary>Set with 8 keys on stack and entries baked by the single array</summary> 
+    public SmallMap<K, SmallMap.Entry<K>, TEq, Stack8<SmallMap.Entry<K>>, SmallMap.SingleArrayEntries<K, SmallMap.Entry<K>, TEq>> Set;
+}
+
+/// <summary>Holds the Set with 16 items on stack. Minimizes the number of type arguments required to be specified</summary>
+public struct SmallSet16<K, TEq>() where TEq : struct, IEq<K>
+{
+    /// <summary>Set with 16 keys on stack and entries baked by the single array</summary> 
+    public SmallMap<K, SmallMap.Entry<K>, TEq, Stack16<SmallMap.Entry<K>>, SmallMap.SingleArrayEntries<K, SmallMap.Entry<K>, TEq>> Set;
 }
 
 #nullable restore
