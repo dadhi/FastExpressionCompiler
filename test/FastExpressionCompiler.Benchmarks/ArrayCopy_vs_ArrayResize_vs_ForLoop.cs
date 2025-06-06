@@ -220,12 +220,12 @@ public class StackSearch
         var sum = 0;
         for (var i = 12; i >= -4; --i)
         {
-            ref var e = ref entries.TryGetEntryRef(
+            ref var e = ref entries.TryGetEntryRef_loop(
                 ref hashes,
                 i,
                 out var found,
                 default(IntEq),
-                default(Infer<SmallMap.Entry<int>>));
+                default(Use<SmallMap.Entry<int>>));
             if (found)
                 sum += e.Key;
         }
@@ -248,12 +248,12 @@ public class StackSearch
         var sum = 0;
         for (var i = 12; i >= -4; --i)
         {
-            ref var e = ref entries.TryGetEntryRef4(
+            ref var e = ref entries.TryGetEntryRef_ILP(
                 ref hashes,
                 i,
                 out var found,
                 default(IntEq),
-                default(Infer<SmallMap.Entry<int>>));
+                default(Use<SmallMap.Entry<int>>));
             if (found)
                 sum += e.Key;
         }
@@ -276,12 +276,12 @@ public class StackSearch
         var sum = 0;
         for (var i = 12; i >= -4; --i)
         {
-            ref var e = ref entries.TryGetEntryRef8Plus(
+            ref var e = ref entries.TryGetEntryRef(
                 ref hashes,
                 i,
                 out var found,
                 default(IntEq),
-                default(Infer<SmallMap.Entry<int>>));
+                default(Use<SmallMap.Entry<int>>));
             if (found)
                 sum += e.Key;
         }

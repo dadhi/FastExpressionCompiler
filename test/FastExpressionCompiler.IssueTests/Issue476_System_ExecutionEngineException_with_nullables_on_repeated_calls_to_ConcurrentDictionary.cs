@@ -16,7 +16,8 @@ public struct Issue476_System_ExecutionEngineException_with_nullables_on_repeate
 {
     public void Run(TestRun t)
     {
-        TestSmallMap(t);
+        TestSmallMap_Lookup_ILP(t);
+        TestSmallMap_Lookup_loop(t);
         TestSmallList(t);
         Original_case(t);
     }
@@ -64,7 +65,7 @@ public struct Issue476_System_ExecutionEngineException_with_nullables_on_repeate
         t.AreEqual(56, doubleSum);
     }
 
-    public void TestSmallMap(TestContext t)
+    public void TestSmallMap_Lookup_loop(TestContext t)
     {
         Stack8<int> hashes = default;
         Stack8<SmallMap.Entry<int>> entries = default;
@@ -78,12 +79,33 @@ public struct Issue476_System_ExecutionEngineException_with_nullables_on_repeate
         var sum = 0;
         for (var i = 12; i >= -4; --i)
         {
-            ref var e = ref entries.TryGetEntryRef(
-                ref hashes,
-                i,
-                out var found,
-                default(IntEq),
-                default(Infer<SmallMap.Entry<int>>));
+            ref var e = ref entries.TryGetEntryRef_loop(
+                ref hashes, i, out var found, default(IntEq),
+                default(Use<SmallMap.Entry<int>>));
+            if (found)
+                sum += e.Key;
+        }
+
+        t.AreEqual(28, sum);
+    }
+
+    public void TestSmallMap_Lookup_ILP(TestContext t)
+    {
+        Stack8<int> hashes = default;
+        Stack8<SmallMap.Entry<int>> entries = default;
+
+        for (var n = 0; n < 8; ++n)
+        {
+            hashes.GetSurePresentItemRef(n) = default(IntEq).GetHashCode(n);
+            entries.GetSurePresentItemRef(n) = new SmallMap.Entry<int>(n);
+        }
+
+        var sum = 0;
+        for (var i = 12; i >= -4; --i)
+        {
+            ref var e = ref entries.TryGetEntryRef_ILP(
+                ref hashes, i, out var found, default(IntEq),
+                default(Use<SmallMap.Entry<int>>));
             if (found)
                 sum += e.Key;
         }

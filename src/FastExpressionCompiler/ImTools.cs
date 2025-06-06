@@ -241,29 +241,29 @@ public interface IStack<T, TStack>
 }
 
 // todo: @wip
-// /// <summary>Base marker for collection or container holding some number of items</summary>
-// public interface ISize { }
-// /// <summary>Marker for collection or container holding 2 or items</summary>
-// public interface ISize2Plus : ISize { }
-// /// <summary>Marker for collection or container holding 4 or more items</summary>
-// public interface ISize4Plus : ISize2Plus { }
-// /// <summary>Marker for collection or container holding 8 or more items</summary>
-// public interface ISize8Plus : ISize4Plus { }
-// /// <summary>Marker for collection or container holding 16 or more items</summary>
-// public interface ISize16Plus : ISize8Plus { }
+/// <summary>Base marker for collection or container holding some number of items</summary>
+public interface ISize { }
+/// <summary>Marker for collection or container holding 2 or items</summary>
+public interface ISize2Plus : ISize { }
+/// <summary>Marker for collection or container holding 4 or more items</summary>
+public interface ISize4Plus : ISize2Plus { }
+/// <summary>Marker for collection or container holding 8 or more items</summary>
+public interface ISize8Plus : ISize4Plus { }
+/// <summary>Marker for collection or container holding 16 or more items</summary>
+public interface ISize16Plus : ISize8Plus { }
 
-// /// <summary>Marker for collection or container holding 4 items</summary>
-// public interface ISize2 : ISize2Plus { }
-// /// <summary>Marker for collection or container holding 4 items</summary>
-// public interface ISize4 : ISize4Plus { }
-// /// <summary>Marker for collection or container holding 8 items</summary>
-// public interface ISize8 : ISize8Plus { }
-// /// <summary>Marker for collection or container holding 16 items</summary>
-// public interface ISize16 : ISize16Plus { }
+/// <summary>Marker for collection or container holding 4 items</summary>
+public interface ISize2 : ISize2Plus { }
+/// <summary>Marker for collection or container holding 4 items</summary>
+public interface ISize4 : ISize4Plus { }
+/// <summary>Marker for collection or container holding 8 items</summary>
+public interface ISize8 : ISize8Plus { }
+/// <summary>Marker for collection or container holding 16 items</summary>
+public interface ISize16 : ISize16Plus { }
 
 /// <summary>Implementation of `IStack` for 2 items on stack</summary>
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
-public struct Stack2<T> : IStack<T, Stack2<T>>
+public struct Stack2<T> : IStack<T, Stack2<T>>, ISize2
 {
     /// <inheritdoc/>
     public int Capacity => 2;
@@ -308,7 +308,7 @@ public struct Stack2<T> : IStack<T, Stack2<T>>
 
 /// <summary>Implementation of `IStack` for 4 items on stack</summary>
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
-public struct Stack4<T> : IStack<T, Stack4<T>>
+public struct Stack4<T> : IStack<T, Stack4<T>>, ISize4
 {
     /// <inheritdoc/>
     public int Capacity => 4;
@@ -355,7 +355,7 @@ public struct Stack4<T> : IStack<T, Stack4<T>>
 
 /// <summary>Implementation of `IStack` for 8 items on stack</summary>
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
-public struct Stack8<T> : IStack<T, Stack8<T>>
+public struct Stack8<T> : IStack<T, Stack8<T>>, ISize8
 {
     /// <inheritdoc/>
     public int Capacity => 8;
@@ -406,7 +406,7 @@ public struct Stack8<T> : IStack<T, Stack8<T>>
 
 /// <summary>Implementation of `IStack` for 16 items on stack</summary>
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
-public struct Stack16<T> : IStack<T, Stack16<T>>
+public struct Stack16<T> : IStack<T, Stack16<T>>, ISize16
 {
     /// <inheritdoc/>
     public int Capacity => 16;
@@ -791,7 +791,7 @@ public struct RefEq<A, B, C> : IEq<(A, B, C)>
 
 /// <summary>Add the Infer parameter to `T Method<T>(..., Infer{T} _)` to enable type inference for T,
 /// by calling it as `var t = Method(..., default(Infer{T}))`</summary>
-public interface Infer<T> { }
+public interface Use<T> { }
 
 /// <summary>Configuration and the tools for the SmallMap and friends</summary>
 public static class SmallMap
@@ -917,9 +917,9 @@ public static class SmallMap
 
     // todo: @perf optimize with SIMD, ILP, loop-unrolling, etc.
     /// <summary>Lookup for the K in the TStackEntries, first by calculating it hash with TEq and searching the hash in the TStackHashes</summary>
-    public static ref TEntry TryGetEntryRef<K, TEntry, TEq, TStackHashes, TStackEntries>(
+    public static ref TEntry TryGetEntryRef_loop<K, TEntry, TEq, TStackHashes, TStackEntries>(
         this ref TStackEntries entries, ref TStackHashes hashes, K key, out bool found,
-        TEq eq = default, Infer<TEntry> _ = default)
+        TEq eq = default, Use<TEntry> _ = default)
         where TEntry : struct, IEntry<K>
         where TEq : struct, IEq<K>
         where TStackHashes : struct, IStack<int, TStackHashes>
@@ -946,13 +946,14 @@ public static class SmallMap
     }
 
     /// <summary>Lookup for the K in the TStackEntries, first by calculating it hash with TEq and searching the hash in the TStackHashes</summary>
-    public static ref TEntry TryGetEntryRef4<K, TEntry, TEq, TStackHashes, TStackEntries>(
+    public static ref TEntry TryGetEntryRef_ILP<K, TEntry, TEq, TStackHashes, TStackEntries>(
         this ref TStackEntries entries, ref TStackHashes hashes, K key, out bool found,
-        TEq eq = default, Infer<TEntry> _ = default)
+        TEq eq = default, Use<TEntry> _ = default)//, Use<TCap> _cap = default)
         where TEntry : struct, IEntry<K>
         where TEq : struct, IEq<K>
-        where TStackHashes : struct, IStack<int, TStackHashes>
-        where TStackEntries : struct, IStack<TEntry, TStackEntries>
+        where TStackHashes : struct, IStack<int, TStackHashes>//, TCap
+        where TStackEntries : struct, IStack<TEntry, TStackEntries>//, TCap
+        // where TCap : ISize4Plus
     {
         Debug.Assert(hashes.Capacity == entries.Capacity,
             "Expecting that the hashes and entries stacks have the same capacity");
@@ -1008,9 +1009,9 @@ public static class SmallMap
     }
 
     /// <summary>Lookup for the K in the TStackEntries, first by calculating it hash with TEq and searching the hash in the TStackHashes</summary>
-    public static ref TEntry TryGetEntryRef8Plus<K, TEntry, TEq, TStackHashes, TStackEntries>(
+    public static ref TEntry TryGetEntryRef<K, TEntry, TEq, TStackHashes, TStackEntries>(
         this ref TStackEntries entries, ref TStackHashes hashes, K key, out bool found,
-        TEq eq = default, Infer<TEntry> _ = default)
+        TEq eq = default, Use<TEntry> _ = default)
         where TEntry : struct, IEntry<K>
         where TEq : struct, IEq<K>
         where TStackHashes : struct, IStack<int, TStackHashes>
