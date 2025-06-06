@@ -945,96 +945,6 @@ public static class SmallMap
         }
     }
 
-    // todo: @perf optimize with SIMD, ILP, loop-unrolling, etc.
-    /// <summary>Lookup for the K in the TStackEntries, first by calculating it hash with TEq and searching the hash in the TStackHashes</summary>
-    public static ref TEntry TryGetEntryRef_loop<K, TEntry, TEq, TStackHashes, TStackEntries>(
-        this ref TStackEntries entries, ref TStackHashes hashes, K key, out bool found,
-        TEq eq = default, Use<TEntry> _ = default)
-        where TEntry : struct, IEntry<K>
-        where TEq : struct, IEq<K>
-        where TStackHashes : struct, IStack<int, TStackHashes>
-        where TStackEntries : struct, IStack<TEntry, TStackEntries>
-    {
-        Debug.Assert(hashes.Capacity == entries.Capacity,
-            "Expecting that the hashes and entries stacks have the same capacity");
-
-        var hash = eq.GetHashCode(key);
-
-        for (var i = 0; i < hashes.Capacity; ++i)
-        {
-            var h = hashes.GetSurePresentItemRef(i);
-            if (h == hash)
-            {
-                ref var entry = ref entries.GetSurePresentItemRef(i);
-                if (found = eq.Equals(entry.Key, key))
-                    return ref entry;
-            }
-        }
-
-        found = false;
-        return ref RefTools<TEntry>.GetNullRef();
-    }
-
-    /// <summary>Lookup for the K in the TStackEntries, first by calculating it hash with TEq and searching the hash in the TStackHashes</summary>
-    public static ref TEntry TryGetEntryRef_ILP<K, TEntry, TEq, TStackHashes, TStackEntries, TCap>(
-        this ref TStackEntries entries, ref TStackHashes hashes, K key, out bool found,
-        TEq eq = default, TCap cap = default, Use<TEntry> _ = default)
-        where TEntry : struct, IEntry<K>
-        where TEq : struct, IEq<K>
-        where TStackHashes : struct, IStack<int, TCap, TStackHashes>
-        where TStackEntries : struct, IStack<TEntry, TCap, TStackEntries>
-        where TCap : struct, ISize4Plus
-    {
-        var hash = eq.GetHashCode(key);
-
-        for (var i = 0; i < cap.Size; i += 4)
-        {
-            ref var h0 = ref hashes.GetSurePresentItemRef(i);
-            ref var h1 = ref hashes.GetSurePresentItemRef(i + 1);
-            ref var h2 = ref hashes.GetSurePresentItemRef(i + 2);
-            ref var h3 = ref hashes.GetSurePresentItemRef(i + 3);
-
-            var match0 = h0 == hash;
-            var match1 = h1 == hash;
-            var match2 = h2 == hash;
-            var match3 = h3 == hash;
-
-            if (!(match0 | match1 | match2 | match3))
-                continue;
-
-            if (match0)
-            {
-                ref var entry0 = ref entries.GetSurePresentItemRef(i);
-                if (found = eq.Equals(entry0.Key, key))
-                    return ref entry0;
-            }
-
-            if (match1)
-            {
-                ref var entry1 = ref entries.GetSurePresentItemRef(i + 1);
-                if (found = eq.Equals(entry1.Key, key))
-                    return ref entry1;
-            }
-
-            if (match2)
-            {
-                ref var entry2 = ref entries.GetSurePresentItemRef(i + 2);
-                if (found = eq.Equals(entry2.Key, key))
-                    return ref entry2;
-            }
-
-            if (match3)
-            {
-                ref var entry3 = ref entries.GetSurePresentItemRef(i + 3);
-                if (found = eq.Equals(entry3.Key, key))
-                    return ref entry3;
-            }
-        }
-
-        found = false;
-        return ref RefTools<TEntry>.GetNullRef();
-    }
-
     /// <summary>Lookup for the K in the TStackEntries, first by calculating it hash with TEq and searching the hash in the TStackHashes</summary>
     public static ref TEntry TryGetEntryRef<K, TEntry, TEq, TCap, TStackHashes, TStackEntries>(
         this ref TStackEntries entries, ref TStackHashes hashes, K key, out bool found,
@@ -1078,67 +988,14 @@ public static class SmallMap
         }
 #endif
 
-        if (cap.Size >= 4)
+        for (var i = 0; i < hashes.Capacity; ++i)
         {
-            for (var i = 0; i < hashes.Capacity; i += 4)
+            var h = hashes.GetSurePresentItemRef(i);
+            if (h == hash)
             {
-                ref var h0 = ref hashes.GetSurePresentItemRef(i);
-                ref var h1 = ref hashes.GetSurePresentItemRef(i + 1);
-                ref var h2 = ref hashes.GetSurePresentItemRef(i + 2);
-                ref var h3 = ref hashes.GetSurePresentItemRef(i + 3);
-
-                var match0 = h0 == hash;
-                var match1 = h1 == hash;
-                var match2 = h2 == hash;
-                var match3 = h3 == hash;
-
-                if (!(match0 | match1 | match2 | match3))
-                    continue;
-
-                if (match0)
-                {
-                    ref var entry0 = ref entries.GetSurePresentItemRef(i);
-                    if (found = eq.Equals(entry0.Key, key))
-                        return ref entry0;
-                }
-
-                if (match1)
-                {
-                    ref var entry1 = ref entries.GetSurePresentItemRef(i + 1);
-                    if (found = eq.Equals(entry1.Key, key))
-                        return ref entry1;
-                }
-
-                if (match2)
-                {
-                    ref var entry2 = ref entries.GetSurePresentItemRef(i + 2);
-                    if (found = eq.Equals(entry2.Key, key))
-                        return ref entry2;
-                }
-
-                if (match3)
-                {
-                    ref var entry3 = ref entries.GetSurePresentItemRef(i + 3);
-                    if (found = eq.Equals(entry3.Key, key))
-                        return ref entry3;
-                }
-            }
-        }
-        else
-        {
-            ref var h0 = ref hashes.GetSurePresentItemRef(0);
-            ref var h1 = ref hashes.GetSurePresentItemRef(1);
-            if (h0 == hash)
-            {
-                ref var entry0 = ref entries.GetSurePresentItemRef(0);
-                if (found = eq.Equals(entry0.Key, key))
-                    return ref entry0;
-            }
-            if (h1 == hash)
-            {
-                ref var entry1 = ref entries.GetSurePresentItemRef(1);
-                if (found = eq.Equals(entry1.Key, key))
-                    return ref entry1;
+                ref var entry = ref entries.GetSurePresentItemRef(i);
+                if (found = eq.Equals(entry.Key, key))
+                    return ref entry;
             }
         }
 
@@ -1150,10 +1007,12 @@ public static class SmallMap
     /// or adds a new entry (found == false) and returns it.Value by ref. 
     /// So the method always return a non-null ref to the value, either existing or added</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref V AddOrGetValueRef<K, V, TEq, TStackEntries, TEntries>(
-        this ref SmallMap<K, Entry<K, V>, TEq, TStackEntries, TEntries> map, K key, out bool found)
+    public static ref V AddOrGetValueRef<K, V, TEq, TStackCap, TStackHashes, TStackEntries, TEntries>(
+        this ref SmallMap<K, Entry<K, V>, TEq, TStackCap, TStackHashes, TStackEntries, TEntries> map, K key, out bool found)
         where TEq : struct, IEq<K>
-        where TStackEntries : struct, IStack<Entry<K, V>, TStackEntries>
+        where TStackCap : struct, ISize2Plus
+        where TStackHashes : struct, IStack<int, TStackCap, TStackHashes>
+        where TStackEntries : struct, IStack<Entry<K, V>, TStackCap, TStackEntries>
         where TEntries : struct, IEntries<K, Entry<K, V>, TEq> =>
         ref map.AddOrGetEntryRef(key, out found).Value;
 
@@ -1161,19 +1020,23 @@ public static class SmallMap
     /// Provides the performance in scenarios where you look for the present key, and using it, and if ABSENT then add the new one.
     /// So this method optimized NOT to look for the present item for the second time</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref V AddSureAbsentDefaultAndGetRef<K, V, TEq, TStackEntries, TEntries>(
-        this ref SmallMap<K, Entry<K, V>, TEq, TStackEntries, TEntries> map, K key)
+    public static ref V AddSureAbsentDefaultAndGetRef<K, V, TEq, TStackCap, TStackHashes, TStackEntries, TEntries>(
+        this ref SmallMap<K, Entry<K, V>, TEq, TStackCap, TStackHashes, TStackEntries, TEntries> map, K key)
         where TEq : struct, IEq<K>
-        where TStackEntries : struct, IStack<Entry<K, V>, TStackEntries>
+        where TStackCap : struct, ISize2Plus
+        where TStackHashes : struct, IStack<int, TStackCap, TStackHashes>
+        where TStackEntries : struct, IStack<Entry<K, V>, TStackCap, TStackEntries>
         where TEntries : struct, IEntries<K, Entry<K, V>, TEq>
         => ref map.AddSureAbsentDefaultEntryAndGetRef(key).Value;
 
     /// <summary>Lookups for the stored entry by key. Returns the ref to the found entry.Value or the null ref</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref V TryGetValueRef<K, V, TEq, TStackEntries, TEntries>(
-        this ref SmallMap<K, Entry<K, V>, TEq, TStackEntries, TEntries> map, K key, out bool found)
+    public static ref V TryGetValueRef<K, V, TEq, TStackCap, TStackHashes, TStackEntries, TEntries>(
+        this ref SmallMap<K, Entry<K, V>, TEq, TStackCap, TStackHashes, TStackEntries, TEntries> map, K key, out bool found)
         where TEq : struct, IEq<K>
-        where TStackEntries : struct, IStack<Entry<K, V>, TStackEntries>
+        where TStackCap : struct, ISize2Plus
+        where TStackHashes : struct, IStack<int, TStackCap, TStackHashes>
+        where TStackEntries : struct, IStack<Entry<K, V>, TStackCap, TStackEntries>
         where TEntries : struct, IEntries<K, Entry<K, V>, TEq>
     {
         ref var e = ref map.TryGetEntryRef(key, out found);
@@ -1198,10 +1061,12 @@ public static class SmallMap
 /// 
 /// </summary>
 [DebuggerDisplay("{Count} of {_e0}, {_e1}, {_e2}, {_e3}, ...")]
-public struct SmallMap<K, TEntry, TEq, TStackEntries, TEntries>
+public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, TEntries>
     where TEntry : struct, IEntry<K>
     where TEq : struct, IEq<K>
-    where TStackEntries : struct, IStack<TEntry, TStackEntries>
+    where TStackCap : struct, ISize2Plus
+    where TStackHashes : struct, IStack<int, TStackCap, TStackHashes>
+    where TStackEntries : struct, IStack<TEntry, TStackCap, TStackEntries>
     where TEntries : struct, IEntries<K, TEntry, TEq>
 {
     internal byte _capacityBitShift;
@@ -1219,6 +1084,7 @@ public struct SmallMap<K, TEntry, TEq, TStackEntries, TEntries>
     internal TEntries _entries;
 #pragma warning restore IDE0044
 #pragma warning disable CS0649 // Field 'SmallMap<K, V, TEq, TStack, TEntries>.Stack' is never assigned to, and will always have its default value
+    internal TStackHashes StackHashes;
     internal TStackEntries StackEntries;
 #pragma warning restore CS0649
 
@@ -1614,42 +1480,42 @@ public struct SmallMap<K, TEntry, TEq, TStackEntries, TEntries>
 public struct SmallMap4<K, V, TEq>() where TEq : struct, IEq<K>
 {
     /// <summary>Map with 4 elements on stack and entries baked by the single array</summary> 
-    public SmallMap<K, SmallMap.Entry<K, V>, TEq, Stack4<SmallMap.Entry<K, V>>, SmallMap.SingleArrayEntries<K, SmallMap.Entry<K, V>, TEq>> Map;
+    public SmallMap<K, SmallMap.Entry<K, V>, TEq, Size4, Stack4<int>, Stack4<SmallMap.Entry<K, V>>, SmallMap.SingleArrayEntries<K, SmallMap.Entry<K, V>, TEq>> Map;
 }
 
 /// <summary>Holds the Map with 8 items on stack. Minimizes the number of type arguments required to be specified</summary>
 public struct SmallMap8<K, V, TEq>() where TEq : struct, IEq<K>
 {
     /// <summary>Map with 8 elements on stack and entries baked by the single array</summary> 
-    public SmallMap<K, SmallMap.Entry<K, V>, TEq, Stack8<SmallMap.Entry<K, V>>, SmallMap.SingleArrayEntries<K, SmallMap.Entry<K, V>, TEq>> Map;
+    public SmallMap<K, SmallMap.Entry<K, V>, TEq, Size8, Stack8<int>, Stack8<SmallMap.Entry<K, V>>, SmallMap.SingleArrayEntries<K, SmallMap.Entry<K, V>, TEq>> Map;
 }
 
 /// <summary>Holds the Map with 16 items on stack. Minimizes the number of type arguments required to be specified</summary>
 public struct SmallMap16<K, V, TEq>() where TEq : struct, IEq<K>
 {
     /// <summary>Map with 16 elements on stack and entries baked by the single array</summary> 
-    public SmallMap<K, SmallMap.Entry<K, V>, TEq, Stack16<SmallMap.Entry<K, V>>, SmallMap.SingleArrayEntries<K, SmallMap.Entry<K, V>, TEq>> Map;
+    public SmallMap<K, SmallMap.Entry<K, V>, TEq, Size16, Stack16<int>, Stack16<SmallMap.Entry<K, V>>, SmallMap.SingleArrayEntries<K, SmallMap.Entry<K, V>, TEq>> Map;
 }
 
 /// <summary>Holds the Set with 4 items on stack. Minimizes the number of type arguments required to be specified</summary>
 public struct SmallSet4<K, TEq>() where TEq : struct, IEq<K>
 {
     /// <summary>Set with 4 keys on stack and entries baked by the single array</summary> 
-    public SmallMap<K, SmallMap.Entry<K>, TEq, Stack4<SmallMap.Entry<K>>, SmallMap.SingleArrayEntries<K, SmallMap.Entry<K>, TEq>> Set;
+    public SmallMap<K, SmallMap.Entry<K>, TEq, Size4, Stack4<int>, Stack4<SmallMap.Entry<K>>, SmallMap.SingleArrayEntries<K, SmallMap.Entry<K>, TEq>> Set;
 }
 
 /// <summary>Holds the Set with 8 items on stack. Minimizes the number of type arguments required to be specified</summary>
 public struct SmallSet8<K, TEq>() where TEq : struct, IEq<K>
 {
     /// <summary>Set with 8 keys on stack and entries baked by the single array</summary> 
-    public SmallMap<K, SmallMap.Entry<K>, TEq, Stack8<SmallMap.Entry<K>>, SmallMap.SingleArrayEntries<K, SmallMap.Entry<K>, TEq>> Set;
+    public SmallMap<K, SmallMap.Entry<K>, TEq, Size8, Stack8<int>, Stack8<SmallMap.Entry<K>>, SmallMap.SingleArrayEntries<K, SmallMap.Entry<K>, TEq>> Set;
 }
 
 /// <summary>Holds the Set with 16 items on stack. Minimizes the number of type arguments required to be specified</summary>
 public struct SmallSet16<K, TEq>() where TEq : struct, IEq<K>
 {
     /// <summary>Set with 16 keys on stack and entries baked by the single array</summary> 
-    public SmallMap<K, SmallMap.Entry<K>, TEq, Stack16<SmallMap.Entry<K>>, SmallMap.SingleArrayEntries<K, SmallMap.Entry<K>, TEq>> Set;
+    public SmallMap<K, SmallMap.Entry<K>, TEq, Size16, Stack16<int>, Stack16<SmallMap.Entry<K>>, SmallMap.SingleArrayEntries<K, SmallMap.Entry<K>, TEq>> Set;
 }
 
 #nullable restore

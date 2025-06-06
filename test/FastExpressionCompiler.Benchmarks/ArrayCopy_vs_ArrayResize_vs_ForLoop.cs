@@ -210,65 +210,65 @@ public class StackSearch
     DefaultJob : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
 
 
-    | Method           | Mean     | Error    | StdDev   | Median   | Ratio | RatioSD | Rank | BranchInstructions/Op | BranchMispredictions/Op | CacheMisses/Op | Allocated | Alloc Ratio |
-    |----------------- |---------:|---------:|---------:|---------:|------:|--------:|-----:|----------------------:|------------------------:|---------------:|----------:|------------:|
-    | Search_SIMD_loop | 46.65 ns | 0.763 ns | 0.637 ns | 46.84 ns |  1.00 |    0.02 |    1 |                   103 |                       0 |              0 |         - |          NA |
-    | Search_ILP_4     | 91.72 ns | 1.227 ns | 1.088 ns | 91.91 ns |  1.97 |    0.03 |    2 |                   138 |                       0 |              0 |         - |          NA |
-    | Search_loop      | 96.71 ns | 1.975 ns | 4.499 ns | 94.53 ns |  2.07 |    0.10 |    2 |                   274 |                       0 |              0 |         - |          NA |
+    | Method        | Mean     | Error    | StdDev   | Median   | Ratio | RatioSD | Rank | BranchInstructions/Op | BranchMispredictions/Op | CacheMisses/Op | Allocated | Alloc Ratio |
+    |-------------- |---------:|---------:|---------:|---------:|------:|--------:|-----:|----------------------:|------------------------:|---------------:|----------:|------------:|
+    | Search_SIMD   | 46.65 ns | 0.763 ns | 0.637 ns | 46.84 ns |  1.00 |    0.02 |    1 |                   103 |                       0 |              0 |         - |          NA |
+    | Search_ILP_4  | 91.72 ns | 1.227 ns | 1.088 ns | 91.91 ns |  1.97 |    0.03 |    2 |                   138 |                       0 |              0 |         - |          NA |
+    | Search_loop   | 96.71 ns | 1.975 ns | 4.499 ns | 94.53 ns |  2.07 |    0.10 |    2 |                   274 |                       0 |              0 |         - |          NA |
     */
 
-    [Benchmark]
-    public int Search_loop()
-    {
-        Stack8<int> hashes = default;
-        Stack8<SmallMap.Entry<int>> entries = default;
+    // [Benchmark]
+    // public int Search_loop()
+    // {
+    //     Stack8<int> hashes = default;
+    //     Stack8<SmallMap.Entry<int>> entries = default;
 
-        for (var n = 0; n < 8; ++n)
-        {
-            hashes.GetSurePresentItemRef(n) = default(IntEq).GetHashCode(n);
-            entries.GetSurePresentItemRef(n) = new SmallMap.Entry<int>(n);
-        }
+    //     for (var n = 0; n < 8; ++n)
+    //     {
+    //         hashes.GetSurePresentItemRef(n) = default(IntEq).GetHashCode(n);
+    //         entries.GetSurePresentItemRef(n) = new SmallMap.Entry<int>(n);
+    //     }
 
-        var sum = 0;
-        for (var i = 12; i >= -4; --i)
-        {
-            ref var e = ref entries.TryGetEntryRef_loop(
-                ref hashes, i, out var found,
-                default(IntEq), default(Use<SmallMap.Entry<int>>));
-            if (found)
-                sum += e.Key;
-        }
+    //     var sum = 0;
+    //     for (var i = 12; i >= -4; --i)
+    //     {
+    //         ref var e = ref entries.TryGetEntryRef_loop(
+    //             ref hashes, i, out var found,
+    //             default(IntEq), default(Use<SmallMap.Entry<int>>));
+    //         if (found)
+    //             sum += e.Key;
+    //     }
 
-        return sum;
-    }
+    //     return sum;
+    // }
 
-    [Benchmark]
-    public int Search_ILP_4()
-    {
-        Stack8<int> hashes = default;
-        Stack8<SmallMap.Entry<int>> entries = default;
+    // [Benchmark]
+    // public int Search_ILP_4()
+    // {
+    //     Stack8<int> hashes = default;
+    //     Stack8<SmallMap.Entry<int>> entries = default;
 
-        for (var n = 0; n < 8; ++n)
-        {
-            hashes.GetSurePresentItemRef(n) = default(IntEq).GetHashCode(n);
-            entries.GetSurePresentItemRef(n) = new SmallMap.Entry<int>(n);
-        }
+    //     for (var n = 0; n < 8; ++n)
+    //     {
+    //         hashes.GetSurePresentItemRef(n) = default(IntEq).GetHashCode(n);
+    //         entries.GetSurePresentItemRef(n) = new SmallMap.Entry<int>(n);
+    //     }
 
-        var sum = 0;
-        for (var i = 12; i >= -4; --i)
-        {
-            ref var e = ref entries.TryGetEntryRef_ILP(
-                ref hashes, i, out var found,
-                default(IntEq), default(Size8), default(Use<SmallMap.Entry<int>>));
-            if (found)
-                sum += e.Key;
-        }
+    //     var sum = 0;
+    //     for (var i = 12; i >= -4; --i)
+    //     {
+    //         ref var e = ref entries.TryGetEntryRef_ILP(
+    //             ref hashes, i, out var found,
+    //             default(IntEq), default(Size8), default(Use<SmallMap.Entry<int>>));
+    //         if (found)
+    //             sum += e.Key;
+    //     }
 
-        return sum;
-    }
+    //     return sum;
+    // }
 
     [Benchmark(Baseline = true)]
-    public int Search_SIMD_loop()
+    public int Search_SIMD()
     {
         Stack8<int> hashes = default;
         Stack8<SmallMap.Entry<int>> entries = default;
