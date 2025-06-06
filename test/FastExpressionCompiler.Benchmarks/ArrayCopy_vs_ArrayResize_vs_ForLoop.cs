@@ -197,12 +197,24 @@ public class SmallList_Switch_vs_AsSpan_ByRef_Add
 }
 
 [MemoryDiagnoser, RankColumn, Orderer(BenchmarkDotNet.Order.SummaryOrderPolicy.FastestToSlowest)]
-// [HardwareCounters(HardwareCounter.CacheMisses, HardwareCounter.BranchInstructions, HardwareCounter.BranchMispredictions)]
+[HardwareCounters(HardwareCounter.CacheMisses, HardwareCounter.BranchInstructions, HardwareCounter.BranchMispredictions)]
 public class StackSearch
 {
     /*
-    ## Strange baseline
+    ## Baseline
 
+    BenchmarkDotNet v0.15.0, Windows 11 (10.0.26100.4202/24H2/2024Update/HudsonValley)
+    Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
+    .NET SDK 9.0.203
+    [Host]     : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+    DefaultJob : .NET 9.0.4 (9.0.425.16305), X64 RyuJIT AVX2
+
+
+    | Method           | Mean     | Error    | StdDev   | Median   | Ratio | RatioSD | Rank | BranchInstructions/Op | BranchMispredictions/Op | CacheMisses/Op | Allocated | Alloc Ratio |
+    |----------------- |---------:|---------:|---------:|---------:|------:|--------:|-----:|----------------------:|------------------------:|---------------:|----------:|------------:|
+    | Search_SIMD_loop | 46.65 ns | 0.763 ns | 0.637 ns | 46.84 ns |  1.00 |    0.02 |    1 |                   103 |                       0 |              0 |         - |          NA |
+    | Search_ILP_4     | 91.72 ns | 1.227 ns | 1.088 ns | 91.91 ns |  1.97 |    0.03 |    2 |                   138 |                       0 |              0 |         - |          NA |
+    | Search_loop      | 96.71 ns | 1.975 ns | 4.499 ns | 94.53 ns |  2.07 |    0.10 |    2 |                   274 |                       0 |              0 |         - |          NA |
     */
 
     [Benchmark]
