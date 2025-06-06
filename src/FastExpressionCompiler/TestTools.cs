@@ -157,9 +157,7 @@ public static class TestTools
     {
         if (!AllowPrintIL) return;
 
-        SmallMap4<IDelegateDebugInfo, string, RefEq<IDelegateDebugInfo>,
-            SmallMap4.SingleArrayEntries<IDelegateDebugInfo, string, RefEq<IDelegateDebugInfo>>
-        > uniquePrinted = default;
+        SmallMap4<IDelegateDebugInfo, string, RefEq<IDelegateDebugInfo>> uniquePrinted = default;
         var totalNestedCount = 0;
 
         PrintIL(debugInfo, ref totalNestedCount, ref uniquePrinted, tag ?? "top");
@@ -167,14 +165,13 @@ public static class TestTools
         if (totalNestedCount > 0)
         {
             Console.WriteLine("--------------------------------------");
-            Console.WriteLine($"Nested lambdas total: {totalNestedCount}, unique: {uniquePrinted.Count}");
+            Console.WriteLine($"Nested lambdas total: {totalNestedCount}, unique: {uniquePrinted.Map.Count}");
         }
     }
 
     private static void PrintIL(IDelegateDebugInfo debugInfo,
         ref int totalNestedCount,
-        ref SmallMap4<IDelegateDebugInfo, string, RefEq<IDelegateDebugInfo>,
-            SmallMap4.SingleArrayEntries<IDelegateDebugInfo, string, RefEq<IDelegateDebugInfo>>> uniquePrinted,
+        ref SmallMap4<IDelegateDebugInfo, string, RefEq<IDelegateDebugInfo>> uniquePrinted,
         string tag)
     {
         Debug.Assert(tag != null, "tag should not be null");
@@ -184,7 +181,7 @@ public static class TestTools
         var n = 0;
         foreach (var nested in debugInfo.EnumerateNestedLambdas())
         {
-            ref var printedTag = ref uniquePrinted.AddOrGetValueRef(nested, out var printed);
+            ref var printedTag = ref uniquePrinted.Map.AddOrGetValueRef(nested, out var printed);
             if (printed)
                 PrintIL($"{printedTag}", "printed already", static (ap, s) => s.Append(ap));
             else
@@ -303,7 +300,7 @@ public static class Asserts
         // Using those 4 slots directly to represent recent 4 equal items, before the non-equal item.
         // The slots will be rotated by overriding the `a` again, when the `d` is reached, then the `b`, etc.
         ItemsCompared<T> a = default, b = default, c = default, d = default;
-        SmallList4<ItemsCompared<T>> collectedItems = default;
+        SmallList<ItemsCompared<T>, Stack4<ItemsCompared<T>>> collectedItems = default;
 
         var nonEqualItemCount = 0;
         var collectedMaxNonEqualItems = false;
@@ -401,7 +398,7 @@ public static class Asserts
                 else
                     sb.AppendLine($"first {MaxNonEqualItemCount} non equal items (and stopped searching):");
 
-                foreach (var (index, isEqual, expectedItem, actualItem) in collectedItems.Enumerate())
+                foreach (var (index, isEqual, expectedItem, actualItem) in collectedItems)
                     sb.AppendLine($"{index,4}{(isEqual ? "    " : " -> ")}{expectedItem.ToCode(),16},{actualItem.ToCode(),16}");
             }
 
@@ -686,7 +683,7 @@ public struct TestContext
         [CallerArgumentExpression(nameof(actual))] string actualName = "<actual>",
         [CallerMemberName] string testName = "<test>", [CallerLineNumber] int sourceLineNumber = -1) =>
         Equals(expected, actual) || Fail(testName, sourceLineNumber, AssertKind.AreEqual,
-            $"Expected `AreEqual(expected: {expectedName}, actual: {actualName})`,{NewLine} but found expected: `{expected.ToCode()}` and actual: `{actual.ToCode()}`");
+            $"Expected `AreEqual(expected: {expectedName}, actual: {actualName})`,{NewLine} but found expected `{expected.ToCode()}` and actual `{actual.ToCode()}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool AreSame<T>(T expected, T actual,
@@ -694,7 +691,7 @@ public struct TestContext
         [CallerArgumentExpression(nameof(actual))] string actualName = "<actual>",
         [CallerMemberName] string testName = "<test>", [CallerLineNumber] int sourceLineNumber = -1) where T : class =>
         ReferenceEquals(expected, actual) || Fail(testName, sourceLineNumber, AssertKind.AreSame,
-            $"Expected `AreSame({expectedName}, {actualName})`, but found `{expected.ToCode()}` is Not the same `{actual.ToCode()}`");
+            $"Expected `AreSame({expectedName}, {actualName})`, but found expected `{expected.ToCode()}` is Not the same as actual `{actual.ToCode()}`");
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool AreNotSame<T>(T expected, T actual,
@@ -756,7 +753,7 @@ public struct TestContext
         // Using those 4 slots directly to represent recent 4 equal items, before the non-equal item.
         // The slots will be rotated by overriding the `a` again, when the `d` is reached, then the `b`, etc.
         ItemsCompared<T> a = default, b = default, c = default, d = default;
-        SmallList4<ItemsCompared<T>> collectedItems = default;
+        SmallList<ItemsCompared<T>, Stack4<ItemsCompared<T>>> collectedItems = default;
 
         var nonEqualItemCount = 0;
         var collectedMaxNonEqualItems = false;
@@ -854,7 +851,7 @@ public struct TestContext
                 else
                     sb.AppendLine($"first {MaxNonEqualItemCount} non equal items (and stopped searching):");
 
-                foreach (var (index, isEqual, expectedItem, actualItem) in collectedItems.Enumerate())
+                foreach (var (index, isEqual, expectedItem, actualItem) in collectedItems)
                     sb.AppendLine($"{index,4}{(isEqual ? "    " : " -> ")}{expectedItem.ToCode(),16},{actualItem.ToCode(),16}");
             }
 
