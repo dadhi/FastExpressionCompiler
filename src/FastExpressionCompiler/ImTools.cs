@@ -46,8 +46,11 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Diagnostics.CodeAnalysis;
 
-using static SmallMap;
+#if NET8_0_OR_GREATER
 using System.Runtime.Intrinsics;
+#endif
+
+using static SmallMap;
 
 /// <summary>Helpers and polyfills for the missing things in the old .NET versions</summary>
 public static class RefTools<T>
@@ -216,6 +219,7 @@ public static class Stack
         throw new IndexOutOfRangeException($"Index {index} is out of range for Stack{capacity}<{typeof(T)},..>.");
 }
 
+/// <summary>Stack with the Size information to check the Capacity in the compile time</summary>
 public interface IStack<T, TSize, TStack> : IStack<T, TStack>
     where TSize : struct, ISize
     where TStack : struct, IStack<T, TSize, TStack>
@@ -248,7 +252,11 @@ public interface IStack<T, TStack>
 
 // todo: @wip
 /// <summary>Base marker for collection or container holding some number of items</summary>
-public interface ISize { }
+public interface ISize
+{
+    /// <summary>Returns the size of the collection or container</summary>
+    int Size { get; }
+}
 /// <summary>Marker for collection or container holding 2 or items</summary>
 public interface ISize2Plus : ISize { }
 /// <summary>Marker for collection or container holding 4 or more items</summary>
@@ -811,13 +819,9 @@ public struct RefEq<A, B, C> : IEq<(A, B, C)>
         Hasher.Combine(RuntimeHelpers.GetHashCode(key.Item1), Hasher.Combine(RuntimeHelpers.GetHashCode(key.Item2), RuntimeHelpers.GetHashCode(key.Item3)));
 }
 
-/// <summary>Add the Infer parameter to `T Method<T>(..., Infer{T} _)` to enable type inference for T,
-/// by calling it as `var t = Method(..., default(Infer{T}))`</summary>
-public class Use<T>
-{
-    public static readonly Use<T> It = new Use<T>();
-    private Use() { }
-}
+/// <summary>Add the Infer parameter to `T Method{T}(..., Use{T} _)` to enable type inference for T,
+/// by calling it as `var t = Method(..., default(Use{T}))`</summary>
+public interface Use<T> { }
 
 /// <summary>Configuration and the tools for the SmallMap and friends</summary>
 public static class SmallMap
@@ -974,7 +978,7 @@ public static class SmallMap
     /// <summary>Lookup for the K in the TStackEntries, first by calculating it hash with TEq and searching the hash in the TStackHashes</summary>
     public static ref TEntry TryGetEntryRef_ILP<K, TEntry, TEq, TStackHashes, TStackEntries, TCap>(
         this ref TStackEntries entries, ref TStackHashes hashes, K key, out bool found,
-        TEq eq = default, Use<TEntry> _ = default, Use<TCap> _cap = default)
+        TEq eq = default, TCap cap = default, Use<TEntry> _ = default)
         where TEntry : struct, IEntry<K>
         where TEq : struct, IEq<K>
         where TStackHashes : struct, IStack<int, TCap, TStackHashes>
@@ -983,7 +987,7 @@ public static class SmallMap
     {
         var hash = eq.GetHashCode(key);
 
-        for (var i = 0; i < hashes.Capacity; i += 4)
+        for (var i = 0; i < cap.Size; i += 4)
         {
             ref var h0 = ref hashes.GetSurePresentItemRef(i);
             ref var h1 = ref hashes.GetSurePresentItemRef(i + 1);
@@ -1032,21 +1036,19 @@ public static class SmallMap
     }
 
     /// <summary>Lookup for the K in the TStackEntries, first by calculating it hash with TEq and searching the hash in the TStackHashes</summary>
-    public static ref TEntry TryGetEntryRef<K, TEntry, TEq, TStackHashes, TStackEntries>(
+    public static ref TEntry TryGetEntryRef<K, TEntry, TEq, TCap, TStackHashes, TStackEntries>(
         this ref TStackEntries entries, ref TStackHashes hashes, K key, out bool found,
-        TEq eq = default, Use<TEntry> _ = default)
+        TEq eq = default, TCap cap = default, Use<TEntry> _ = default)
         where TEntry : struct, IEntry<K>
         where TEq : struct, IEq<K>
-        where TStackHashes : struct, IStack<int, TStackHashes>
-        where TStackEntries : struct, IStack<TEntry, TStackEntries>
+        where TStackHashes : struct, IStack<int, TCap, TStackHashes>
+        where TStackEntries : struct, IStack<TEntry, TCap, TStackEntries>
+        where TCap : struct, ISize2Plus
     {
-        Debug.Assert(hashes.Capacity == entries.Capacity,
-            "Expecting that the hashes and entries stacks have the same capacity");
-
         var hash = eq.GetHashCode(key);
 
 #if NET8_0_OR_GREATER
-        if (hashes.Capacity >= 8 & Vector256.IsHardwareAccelerated)
+        if (cap.Size >= 8 & Vector256.IsHardwareAccelerated)
         {
             var vHash = Vector256.Create(hash);
             var vHashes = MemoryMarshal.Cast<int, Vector256<int>>(hashes.AsSpan());
@@ -1076,7 +1078,7 @@ public static class SmallMap
         }
 #endif
 
-        if (hashes.Capacity >= 4)
+        if (cap.Size >= 4)
         {
             for (var i = 0; i < hashes.Capacity; i += 4)
             {
@@ -1122,7 +1124,7 @@ public static class SmallMap
                 }
             }
         }
-        else if (hashes.Capacity == 2)
+        else
         {
             ref var h0 = ref hashes.GetSurePresentItemRef(0);
             ref var h1 = ref hashes.GetSurePresentItemRef(1);
