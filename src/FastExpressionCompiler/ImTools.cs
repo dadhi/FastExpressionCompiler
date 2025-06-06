@@ -219,7 +219,7 @@ public static class Stack
         throw new IndexOutOfRangeException($"Index {index} is out of range for Stack{capacity}<{typeof(T)},..>.");
 }
 
-/// <summary>Stack with the Size information to check the Capacity in the compile time</summary>
+/// <summary>Stack with the Size information to check it at compile time</summary>
 public interface IStack<T, TSize, TStack> : IStack<T, TStack>
     where TSize : struct, ISize
     where TStack : struct, IStack<T, TSize, TStack>
@@ -269,25 +269,25 @@ public interface ISize16Plus : ISize8Plus { }
 /// <summary>Marker for collection or container holding 4 items</summary>
 public struct Size2 : ISize2Plus
 {
-    /// <summary>Returns the size of the collection or container</summary>
+    /// <inheritdoc/>
     public int Size => 2;
 }
 /// <summary>Marker for collection or container holding 4 items</summary>
 public struct Size4 : ISize4Plus
 {
-    /// <summary>Returns the size of the collection or container</summary>
+    /// <inheritdoc/>
     public int Size => 4;
 }
 /// <summary>Marker for collection or container holding 8 items</summary>
 public struct Size8 : ISize8Plus
 {
-    /// <summary>Returns the size of the collection or container</summary>
+    /// <inheritdoc/>
     public int Size => 8;
 }
 /// <summary>Marker for collection or container holding 16 items</summary>
 public struct Size16 : ISize16Plus
 {
-    /// <summary>Returns the size of the collection or container</summary>
+    /// <inheritdoc/>
     public int Size => 16;
 }
 
@@ -819,7 +819,7 @@ public struct RefEq<A, B, C> : IEq<(A, B, C)>
         Hasher.Combine(RuntimeHelpers.GetHashCode(key.Item1), Hasher.Combine(RuntimeHelpers.GetHashCode(key.Item2), RuntimeHelpers.GetHashCode(key.Item3)));
 }
 
-/// <summary>Add the Infer parameter to `T Method{T}(..., Use{T} _)` to enable type inference for T,
+/// <summary>Add the Use parameter to `T Method{T}(..., Use{T} _)` to enable type inference for T,
 /// by calling it as `var t = Method(..., default(Use{T}))`</summary>
 public interface Use<T> { }
 
@@ -836,7 +836,7 @@ public static class SmallMap
     internal const byte ProbeCountShift = 32 - ProbeBits;
     // ~0b11111000000000000000000000000000 -> 0b00000111111111111111111111111111
     internal const int HashAndIndexMask = ~(NotShiftedProbeCountMask << ProbeCountShift);
-    // Window with the hash mask wothout the lead ProbeMask and closing IndexMask 0b00000111111111111111111111110000
+    // Window with the hash mask without the lead ProbeMask and closing IndexMask 0b00000111111111111111111111110000
     internal const int HashMask = HashAndIndexMask & ~IndexMask;
 
     /// <summary>Represent a keyed entry stored in the SmallMap.
@@ -1388,7 +1388,7 @@ public struct SmallMap<K, TEntry, TEq, TStackEntries, TEntries>
         // to the usual HashMap packed hashes and indexes array for the promised O(1) lookup.
         // But the values are remaining on the Stack, and for the found index of the entry we use the GetSurePresentItemRef(index) 
         // to get the value reference either from the Stack or the Entries.
-        // So the values on the stack are guarntied to be stable from the beginning of the map creation, 
+        // So the values on the stack are guarantied to be stable from the beginning of the map creation, 
         // because they are not copied when the Entries need to Resize (depending on the TEntries implementation). 
 
         _capacityBitShift = MinHashesCapacityBitShift;
@@ -1400,7 +1400,7 @@ public struct SmallMap<K, TEntry, TEq, TStackEntries, TEntries>
         AddJustHashAndEntryIndexWithoutResizing(default(TEq).GetHashCode(key), StackEntries.Capacity);
 
         _count = StackEntries.Capacity + 1; // +1 because we added the new key
-        _entries.Init(StackEntries.Capacity); // Give the heap entries the same initial capcity as Stack, effectively doubling the capacity
+        _entries.Init(StackEntries.Capacity); // Give the heap entries the same initial capacity as Stack, effectively doubling the capacity
         return ref _entries.AddKeyAndGetEntryRef(key, 0); // add the new key to the entries with the 0 index in the entries
     }
 
@@ -1480,7 +1480,7 @@ public struct SmallMap<K, TEntry, TEq, TStackEntries, TEntries>
         AddJustHashAndEntryIndexWithoutResizing(default(TEq).GetHashCode(key), StackEntries.Capacity);
 
         _count = StackEntries.Capacity + 1; // +1 because we added the new key
-        _entries.Init(StackEntries.Capacity); // Give the heap entries the same initial capcity as Stack, effectively doubling the capacity
+        _entries.Init(StackEntries.Capacity); // Give the heap entries the same initial capacity as Stack, effectively doubling the capacity
         return ref _entries.AddKeyAndGetEntryRef(key, 0); // add the new key to the entries with the 0 index in the entries
     }
 

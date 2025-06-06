@@ -93,7 +93,7 @@ public class ArrayCopy_vs_ArrayResize_vs_ForLoop
 public class SmallList_Switch_vs_AsSpan_ByRef_Access
 {
     /*
-    ## Baseline: hmm, why AsSpan is faster even if it is utilized only by half of the acces, the other part hits the heap?
+    ## Baseline: hmm, why AsSpan is faster even if it is utilized only by half of the access, the other part hits the heap?
 
     BenchmarkDotNet v0.15.0, Windows 11 (10.0.26100.4061/24H2/2024Update/HudsonValley)
     Intel Core i9-8950HK CPU 2.90GHz (Coffee Lake), 1 CPU, 12 logical and 6 physical cores
