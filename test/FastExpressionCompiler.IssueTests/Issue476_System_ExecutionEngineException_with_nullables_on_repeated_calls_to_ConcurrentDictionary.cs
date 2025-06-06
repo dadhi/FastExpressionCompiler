@@ -105,7 +105,7 @@ public struct Issue476_System_ExecutionEngineException_with_nullables_on_repeate
         {
             ref var e = ref entries.TryGetEntryRef_ILP(
                 ref hashes, i, out var found, default(IntEq),
-                default(Use<SmallMap.Entry<int>>));
+                Use<SmallMap.Entry<int>>.It, Use<Size8>.It);
             if (found)
                 sum += e.Key;
         }

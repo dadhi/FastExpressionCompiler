@@ -216,6 +216,12 @@ public static class Stack
         throw new IndexOutOfRangeException($"Index {index} is out of range for Stack{capacity}<{typeof(T)},..>.");
 }
 
+public interface IStack<T, TSize, TStack> : IStack<T, TStack>
+    where TSize : struct, ISize
+    where TStack : struct, IStack<T, TSize, TStack>
+{
+}
+
 /// <summary>Abstracts over collection of the items on stack of the fixed Capacity,
 /// to be used as a part of the hybrid data structures which grow from stack to heap</summary>
 public interface IStack<T, TStack>
@@ -253,17 +259,33 @@ public interface ISize8Plus : ISize4Plus { }
 public interface ISize16Plus : ISize8Plus { }
 
 /// <summary>Marker for collection or container holding 4 items</summary>
-public interface ISize2 : ISize2Plus { }
+public struct Size2 : ISize2Plus
+{
+    /// <summary>Returns the size of the collection or container</summary>
+    public int Size => 2;
+}
 /// <summary>Marker for collection or container holding 4 items</summary>
-public interface ISize4 : ISize4Plus { }
+public struct Size4 : ISize4Plus
+{
+    /// <summary>Returns the size of the collection or container</summary>
+    public int Size => 4;
+}
 /// <summary>Marker for collection or container holding 8 items</summary>
-public interface ISize8 : ISize8Plus { }
+public struct Size8 : ISize8Plus
+{
+    /// <summary>Returns the size of the collection or container</summary>
+    public int Size => 8;
+}
 /// <summary>Marker for collection or container holding 16 items</summary>
-public interface ISize16 : ISize16Plus { }
+public struct Size16 : ISize16Plus
+{
+    /// <summary>Returns the size of the collection or container</summary>
+    public int Size => 16;
+}
 
 /// <summary>Implementation of `IStack` for 2 items on stack</summary>
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
-public struct Stack2<T> : IStack<T, Stack2<T>>, ISize2
+public struct Stack2<T> : IStack<T, Size2, Stack2<T>>
 {
     /// <inheritdoc/>
     public int Capacity => 2;
@@ -308,7 +330,7 @@ public struct Stack2<T> : IStack<T, Stack2<T>>, ISize2
 
 /// <summary>Implementation of `IStack` for 4 items on stack</summary>
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
-public struct Stack4<T> : IStack<T, Stack4<T>>, ISize4
+public struct Stack4<T> : IStack<T, Size4, Stack4<T>>
 {
     /// <inheritdoc/>
     public int Capacity => 4;
@@ -355,7 +377,7 @@ public struct Stack4<T> : IStack<T, Stack4<T>>, ISize4
 
 /// <summary>Implementation of `IStack` for 8 items on stack</summary>
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
-public struct Stack8<T> : IStack<T, Stack8<T>>, ISize8
+public struct Stack8<T> : IStack<T, Size8, Stack8<T>>
 {
     /// <inheritdoc/>
     public int Capacity => 8;
@@ -406,7 +428,7 @@ public struct Stack8<T> : IStack<T, Stack8<T>>, ISize8
 
 /// <summary>Implementation of `IStack` for 16 items on stack</summary>
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
-public struct Stack16<T> : IStack<T, Stack16<T>>, ISize16
+public struct Stack16<T> : IStack<T, Size16, Stack16<T>>
 {
     /// <inheritdoc/>
     public int Capacity => 16;
@@ -791,7 +813,11 @@ public struct RefEq<A, B, C> : IEq<(A, B, C)>
 
 /// <summary>Add the Infer parameter to `T Method<T>(..., Infer{T} _)` to enable type inference for T,
 /// by calling it as `var t = Method(..., default(Infer{T}))`</summary>
-public interface Use<T> { }
+public class Use<T>
+{
+    public static readonly Use<T> It = new Use<T>();
+    private Use() { }
+}
 
 /// <summary>Configuration and the tools for the SmallMap and friends</summary>
 public static class SmallMap
@@ -946,18 +972,15 @@ public static class SmallMap
     }
 
     /// <summary>Lookup for the K in the TStackEntries, first by calculating it hash with TEq and searching the hash in the TStackHashes</summary>
-    public static ref TEntry TryGetEntryRef_ILP<K, TEntry, TEq, TStackHashes, TStackEntries>(
+    public static ref TEntry TryGetEntryRef_ILP<K, TEntry, TEq, TStackHashes, TStackEntries, TCap>(
         this ref TStackEntries entries, ref TStackHashes hashes, K key, out bool found,
-        TEq eq = default, Use<TEntry> _ = default)//, Use<TCap> _cap = default)
+        TEq eq = default, Use<TEntry> _ = default, Use<TCap> _cap = default)
         where TEntry : struct, IEntry<K>
         where TEq : struct, IEq<K>
-        where TStackHashes : struct, IStack<int, TStackHashes>//, TCap
-        where TStackEntries : struct, IStack<TEntry, TStackEntries>//, TCap
-        // where TCap : ISize4Plus
+        where TStackHashes : struct, IStack<int, TCap, TStackHashes>
+        where TStackEntries : struct, IStack<TEntry, TCap, TStackEntries>
+        where TCap : struct, ISize4Plus
     {
-        Debug.Assert(hashes.Capacity == entries.Capacity,
-            "Expecting that the hashes and entries stacks have the same capacity");
-
         var hash = eq.GetHashCode(key);
 
         for (var i = 0; i < hashes.Capacity; i += 4)
