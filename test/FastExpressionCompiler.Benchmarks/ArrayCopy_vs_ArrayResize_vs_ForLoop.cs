@@ -195,3 +195,97 @@ public class SmallList_Switch_vs_AsSpan_ByRef_Add
         return sum;
     }
 }
+
+[MemoryDiagnoser, RankColumn, Orderer(BenchmarkDotNet.Order.SummaryOrderPolicy.FastestToSlowest)]
+// [HardwareCounters(HardwareCounter.CacheMisses, HardwareCounter.BranchInstructions, HardwareCounter.BranchMispredictions)]
+public class StackSearch
+{
+    /*
+    ## Strange baseline
+
+    */
+
+    [Benchmark]
+    public int Search_loop()
+    {
+        Stack8<int> hashes = default;
+        Stack8<SmallMap.Entry<int>> entries = default;
+
+        for (var n = 0; n < 8; ++n)
+        {
+            hashes.GetSurePresentItemRef(n) = default(IntEq).GetHashCode(n);
+            entries.GetSurePresentItemRef(n) = new SmallMap.Entry<int>(n);
+        }
+
+        var sum = 0;
+        for (var i = 12; i >= -4; --i)
+        {
+            ref var e = ref entries.TryGetEntryRef(
+                ref hashes,
+                i,
+                out var found,
+                default(IntEq),
+                default(Infer<SmallMap.Entry<int>>));
+            if (found)
+                sum += e.Key;
+        }
+
+        return sum;
+    }
+
+    [Benchmark]
+    public int Search_ILP_4()
+    {
+        Stack8<int> hashes = default;
+        Stack8<SmallMap.Entry<int>> entries = default;
+
+        for (var n = 0; n < 8; ++n)
+        {
+            hashes.GetSurePresentItemRef(n) = default(IntEq).GetHashCode(n);
+            entries.GetSurePresentItemRef(n) = new SmallMap.Entry<int>(n);
+        }
+
+        var sum = 0;
+        for (var i = 12; i >= -4; --i)
+        {
+            ref var e = ref entries.TryGetEntryRef4(
+                ref hashes,
+                i,
+                out var found,
+                default(IntEq),
+                default(Infer<SmallMap.Entry<int>>));
+            if (found)
+                sum += e.Key;
+        }
+
+        return sum;
+    }
+
+    [Benchmark(Baseline = true)]
+    public int Search_SIMD_loop()
+    {
+        Stack8<int> hashes = default;
+        Stack8<SmallMap.Entry<int>> entries = default;
+
+        for (var n = 0; n < 8; ++n)
+        {
+            hashes.GetSurePresentItemRef(n) = default(IntEq).GetHashCode(n);
+            entries.GetSurePresentItemRef(n) = new SmallMap.Entry<int>(n);
+        }
+
+        var sum = 0;
+        for (var i = 12; i >= -4; --i)
+        {
+            ref var e = ref entries.TryGetEntryRef8Plus(
+                ref hashes,
+                i,
+                out var found,
+                default(IntEq),
+                default(Infer<SmallMap.Entry<int>>));
+            if (found)
+                sum += e.Key;
+        }
+
+        return sum;
+    }
+}

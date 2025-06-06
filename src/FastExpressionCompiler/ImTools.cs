@@ -47,6 +47,7 @@ using System.Runtime.InteropServices;
 using System.Diagnostics.CodeAnalysis;
 
 using static SmallMap;
+using System.Runtime.Intrinsics;
 
 /// <summary>Helpers and polyfills for the missing things in the old .NET versions</summary>
 public static class RefTools<T>
@@ -213,14 +214,6 @@ public static class Stack
     [MethodImpl(MethodImplOptions.NoInlining)]
     internal static ref T ThrowIndexOutOfBounds<T>(int index, int capacity) =>
         throw new IndexOutOfRangeException($"Index {index} is out of range for Stack{capacity}<{typeof(T)},..>.");
-
-#if SUPPORTS_CREATE_SPAN
-    /// <summary>Creates a span over the stack items</summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public static Span<T> AsSpan<T, TStack>(this ref TStack stack)
-        where TStack : struct, IStack<T, TStack> =>
-        MemoryMarshal.CreateSpan(ref Unsafe.As<TStack, T>(ref stack), stack.Capacity);
-#endif
 }
 
 /// <summary>Abstracts over collection of the items on stack of the fixed Capacity,
@@ -239,7 +232,34 @@ public interface IStack<T, TStack>
     /// <summary>Indexer returning the item by ref to read and write the item value</summary>
     [UnscopedRef]
     ref T this[int index] { get; }
+
+#if SUPPORTS_CREATE_SPAN
+    /// <summary>Creates a span over the stack items</summary>
+    public Span<T> AsSpan();
+#endif
+
 }
+
+// todo: @wip
+// /// <summary>Base marker for collection or container holding some number of items</summary>
+// public interface ISize { }
+// /// <summary>Marker for collection or container holding 2 or items</summary>
+// public interface ISize2Plus : ISize { }
+// /// <summary>Marker for collection or container holding 4 or more items</summary>
+// public interface ISize4Plus : ISize2Plus { }
+// /// <summary>Marker for collection or container holding 8 or more items</summary>
+// public interface ISize8Plus : ISize4Plus { }
+// /// <summary>Marker for collection or container holding 16 or more items</summary>
+// public interface ISize16Plus : ISize8Plus { }
+
+// /// <summary>Marker for collection or container holding 4 items</summary>
+// public interface ISize2 : ISize2Plus { }
+// /// <summary>Marker for collection or container holding 4 items</summary>
+// public interface ISize4 : ISize4Plus { }
+// /// <summary>Marker for collection or container holding 8 items</summary>
+// public interface ISize8 : ISize8Plus { }
+// /// <summary>Marker for collection or container holding 16 items</summary>
+// public interface ISize16 : ISize16Plus { }
 
 /// <summary>Implementation of `IStack` for 2 items on stack</summary>
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -278,6 +298,12 @@ public struct Stack2<T> : IStack<T, Stack2<T>>
             return ref Stack.ThrowIndexOutOfBounds<T>(index, Capacity);
         }
     }
+
+#if SUPPORTS_CREATE_SPAN
+    /// <inheritdoc/>
+    [MethodImpl((MethodImplOptions)256)]
+    public Span<T> AsSpan() => MemoryMarshal.CreateSpan(ref _it0, Capacity);
+#endif
 }
 
 /// <summary>Implementation of `IStack` for 4 items on stack</summary>
@@ -319,6 +345,12 @@ public struct Stack4<T> : IStack<T, Stack4<T>>
             return ref Stack.ThrowIndexOutOfBounds<T>(index, Capacity);
         }
     }
+
+#if SUPPORTS_CREATE_SPAN
+    /// <inheritdoc/>
+    [MethodImpl((MethodImplOptions)256)]
+    public Span<T> AsSpan() => MemoryMarshal.CreateSpan(ref _it0, Capacity);
+#endif
 }
 
 /// <summary>Implementation of `IStack` for 8 items on stack</summary>
@@ -364,6 +396,12 @@ public struct Stack8<T> : IStack<T, Stack8<T>>
             return ref Stack.ThrowIndexOutOfBounds<T>(index, Capacity);
         }
     }
+
+#if SUPPORTS_CREATE_SPAN
+    /// <inheritdoc/>
+    [MethodImpl((MethodImplOptions)256)]
+    public Span<T> AsSpan() => MemoryMarshal.CreateSpan(ref _it0, Capacity);
+#endif
 }
 
 /// <summary>Implementation of `IStack` for 16 items on stack</summary>
@@ -418,6 +456,12 @@ public struct Stack16<T> : IStack<T, Stack16<T>>
             return ref Stack.ThrowIndexOutOfBounds<T>(index, Capacity);
         }
     }
+
+#if SUPPORTS_CREATE_SPAN
+    /// <inheritdoc/>
+    [MethodImpl((MethodImplOptions)256)]
+    public Span<T> AsSpan() => MemoryMarshal.CreateSpan(ref _it0, Capacity);
+#endif
 }
 
 /// <summary>Generic version of SmallList abstracted for how much items are on the stack</summary>
@@ -745,6 +789,9 @@ public struct RefEq<A, B, C> : IEq<(A, B, C)>
         Hasher.Combine(RuntimeHelpers.GetHashCode(key.Item1), Hasher.Combine(RuntimeHelpers.GetHashCode(key.Item2), RuntimeHelpers.GetHashCode(key.Item3)));
 }
 
+/// <summary>Add the Infer parameter to `T Method<T>(..., Infer{T} _)` to enable type inference for T,
+/// by calling it as `var t = Method(..., default(Infer{T}))`</summary>
+public interface Infer<T> { }
 
 /// <summary>Configuration and the tools for the SmallMap and friends</summary>
 public static class SmallMap
@@ -868,11 +915,216 @@ public static class SmallMap
         }
     }
 
+    // todo: @perf optimize with SIMD, ILP, loop-unrolling, etc.
+    /// <summary>Lookup for the K in the TStackEntries, first by calculating it hash with TEq and searching the hash in the TStackHashes</summary>
+    public static ref TEntry TryGetEntryRef<K, TEntry, TEq, TStackHashes, TStackEntries>(
+        this ref TStackEntries entries, ref TStackHashes hashes, K key, out bool found,
+        TEq eq = default, Infer<TEntry> _ = default)
+        where TEntry : struct, IEntry<K>
+        where TEq : struct, IEq<K>
+        where TStackHashes : struct, IStack<int, TStackHashes>
+        where TStackEntries : struct, IStack<TEntry, TStackEntries>
+    {
+        Debug.Assert(hashes.Capacity == entries.Capacity,
+            "Expecting that the hashes and entries stacks have the same capacity");
+
+        var hash = eq.GetHashCode(key);
+
+        for (var i = 0; i < hashes.Capacity; ++i)
+        {
+            var h = hashes.GetSurePresentItemRef(i);
+            if (h == hash)
+            {
+                ref var entry = ref entries.GetSurePresentItemRef(i);
+                if (found = eq.Equals(entry.Key, key))
+                    return ref entry;
+            }
+        }
+
+        found = false;
+        return ref RefTools<TEntry>.GetNullRef();
+    }
+
+    /// <summary>Lookup for the K in the TStackEntries, first by calculating it hash with TEq and searching the hash in the TStackHashes</summary>
+    public static ref TEntry TryGetEntryRef4<K, TEntry, TEq, TStackHashes, TStackEntries>(
+        this ref TStackEntries entries, ref TStackHashes hashes, K key, out bool found,
+        TEq eq = default, Infer<TEntry> _ = default)
+        where TEntry : struct, IEntry<K>
+        where TEq : struct, IEq<K>
+        where TStackHashes : struct, IStack<int, TStackHashes>
+        where TStackEntries : struct, IStack<TEntry, TStackEntries>
+    {
+        Debug.Assert(hashes.Capacity == entries.Capacity,
+            "Expecting that the hashes and entries stacks have the same capacity");
+
+        var hash = eq.GetHashCode(key);
+
+        for (var i = 0; i < hashes.Capacity; i += 4)
+        {
+            ref var h0 = ref hashes.GetSurePresentItemRef(i);
+            ref var h1 = ref hashes.GetSurePresentItemRef(i + 1);
+            ref var h2 = ref hashes.GetSurePresentItemRef(i + 2);
+            ref var h3 = ref hashes.GetSurePresentItemRef(i + 3);
+
+            var match0 = h0 == hash;
+            var match1 = h1 == hash;
+            var match2 = h2 == hash;
+            var match3 = h3 == hash;
+
+            if (!(match0 | match1 | match2 | match3))
+                continue;
+
+            if (match0)
+            {
+                ref var entry0 = ref entries.GetSurePresentItemRef(i);
+                if (found = eq.Equals(entry0.Key, key))
+                    return ref entry0;
+            }
+
+            if (match1)
+            {
+                ref var entry1 = ref entries.GetSurePresentItemRef(i + 1);
+                if (found = eq.Equals(entry1.Key, key))
+                    return ref entry1;
+            }
+
+            if (match2)
+            {
+                ref var entry2 = ref entries.GetSurePresentItemRef(i + 2);
+                if (found = eq.Equals(entry2.Key, key))
+                    return ref entry2;
+            }
+
+            if (match3)
+            {
+                ref var entry3 = ref entries.GetSurePresentItemRef(i + 3);
+                if (found = eq.Equals(entry3.Key, key))
+                    return ref entry3;
+            }
+        }
+
+        found = false;
+        return ref RefTools<TEntry>.GetNullRef();
+    }
+
+    /// <summary>Lookup for the K in the TStackEntries, first by calculating it hash with TEq and searching the hash in the TStackHashes</summary>
+    public static ref TEntry TryGetEntryRef8Plus<K, TEntry, TEq, TStackHashes, TStackEntries>(
+        this ref TStackEntries entries, ref TStackHashes hashes, K key, out bool found,
+        TEq eq = default, Infer<TEntry> _ = default)
+        where TEntry : struct, IEntry<K>
+        where TEq : struct, IEq<K>
+        where TStackHashes : struct, IStack<int, TStackHashes>
+        where TStackEntries : struct, IStack<TEntry, TStackEntries>
+    {
+        Debug.Assert(hashes.Capacity == entries.Capacity,
+            "Expecting that the hashes and entries stacks have the same capacity");
+
+        var hash = eq.GetHashCode(key);
+
+#if NET8_0_OR_GREATER
+        if (hashes.Capacity >= 8 & Vector256.IsHardwareAccelerated)
+        {
+            var vHash = Vector256.Create(hash);
+            var vHashes = MemoryMarshal.Cast<int, Vector256<int>>(hashes.AsSpan());
+            var i = 0;
+            foreach (var vCurr in vHashes)
+            {
+                var vMatches = Vector256.Equals(vCurr, vHash);
+                var matches = Vector256.ExtractMostSignificantBits(vMatches);
+                while (matches != 0)
+                {
+                    var matchIndex = System.Numerics.BitOperations.TrailingZeroCount(matches);
+
+                    ref var entry = ref entries.GetSurePresentItemRef(i + matchIndex);
+                    if (found = eq.Equals(entry.Key, key))
+                        return ref entry;
+
+                    // Clear lower bits up to and including the first set bit, afaik it can be hw accelerated 
+                    // 0b0001_1000 & (0b0001_1000 - 1) -> & 0b0001_1000 & 0b0001_0111 -> 0b0001_0000 
+                    matches &= matches - 1;
+                }
+
+                i += Vector256<int>.Count;
+            }
+
+            found = false;
+            return ref RefTools<TEntry>.GetNullRef();
+        }
+#endif
+
+        if (hashes.Capacity >= 4)
+        {
+            for (var i = 0; i < hashes.Capacity; i += 4)
+            {
+                ref var h0 = ref hashes.GetSurePresentItemRef(i);
+                ref var h1 = ref hashes.GetSurePresentItemRef(i + 1);
+                ref var h2 = ref hashes.GetSurePresentItemRef(i + 2);
+                ref var h3 = ref hashes.GetSurePresentItemRef(i + 3);
+
+                var match0 = h0 == hash;
+                var match1 = h1 == hash;
+                var match2 = h2 == hash;
+                var match3 = h3 == hash;
+
+                if (!(match0 | match1 | match2 | match3))
+                    continue;
+
+                if (match0)
+                {
+                    ref var entry0 = ref entries.GetSurePresentItemRef(i);
+                    if (found = eq.Equals(entry0.Key, key))
+                        return ref entry0;
+                }
+
+                if (match1)
+                {
+                    ref var entry1 = ref entries.GetSurePresentItemRef(i + 1);
+                    if (found = eq.Equals(entry1.Key, key))
+                        return ref entry1;
+                }
+
+                if (match2)
+                {
+                    ref var entry2 = ref entries.GetSurePresentItemRef(i + 2);
+                    if (found = eq.Equals(entry2.Key, key))
+                        return ref entry2;
+                }
+
+                if (match3)
+                {
+                    ref var entry3 = ref entries.GetSurePresentItemRef(i + 3);
+                    if (found = eq.Equals(entry3.Key, key))
+                        return ref entry3;
+                }
+            }
+        }
+        else if (hashes.Capacity == 2)
+        {
+            ref var h0 = ref hashes.GetSurePresentItemRef(0);
+            ref var h1 = ref hashes.GetSurePresentItemRef(1);
+            if (h0 == hash)
+            {
+                ref var entry0 = ref entries.GetSurePresentItemRef(0);
+                if (found = eq.Equals(entry0.Key, key))
+                    return ref entry0;
+            }
+            if (h1 == hash)
+            {
+                ref var entry1 = ref entries.GetSurePresentItemRef(1);
+                if (found = eq.Equals(entry1.Key, key))
+                    return ref entry1;
+            }
+        }
+
+        found = false;
+        return ref RefTools<TEntry>.GetNullRef();
+    }
+
     /// <summary>Gets the ref to the existing entry.Value by the provided key (found == true),
     /// or adds a new entry (found == false) and returns it.Value by ref. 
     /// So the method always return a non-null ref to the value, either existing or added</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref V AddOrGetValueRef<K, V, TStackEntries, TEq, TEntries>(
+    public static ref V AddOrGetValueRef<K, V, TEq, TStackEntries, TEntries>(
         this ref SmallMap<K, Entry<K, V>, TEq, TStackEntries, TEntries> map, K key, out bool found)
         where TEq : struct, IEq<K>
         where TStackEntries : struct, IStack<Entry<K, V>, TStackEntries>
@@ -883,7 +1135,7 @@ public static class SmallMap
     /// Provides the performance in scenarios where you look for the present key, and using it, and if ABSENT then add the new one.
     /// So this method optimized NOT to look for the present item for the second time</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref V AddSureAbsentDefaultAndGetRef<K, V, TStackEntries, TEq, TEntries>(
+    public static ref V AddSureAbsentDefaultAndGetRef<K, V, TEq, TStackEntries, TEntries>(
         this ref SmallMap<K, Entry<K, V>, TEq, TStackEntries, TEntries> map, K key)
         where TEq : struct, IEq<K>
         where TStackEntries : struct, IStack<Entry<K, V>, TStackEntries>
@@ -892,7 +1144,7 @@ public static class SmallMap
 
     /// <summary>Lookups for the stored entry by key. Returns the ref to the found entry.Value or the null ref</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref V TryGetValueRef<K, V, TStackEntries, TEq, TEntries>(
+    public static ref V TryGetValueRef<K, V, TEq, TStackEntries, TEntries>(
         this ref SmallMap<K, Entry<K, V>, TEq, TStackEntries, TEntries> map, K key, out bool found)
         where TEq : struct, IEq<K>
         where TStackEntries : struct, IStack<Entry<K, V>, TStackEntries>
