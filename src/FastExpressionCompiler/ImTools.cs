@@ -841,8 +841,9 @@ public interface Use<T> { }
 public static class SmallMap
 {
     internal const byte MinFreeCapacityShift = 3; // e.g. for the capacity 16: 16 >> 3 => 2, 12.5% of the free hash slots (it does not mean the entries free slot)
-    internal const byte MinHashesCapacityBitShift = 4; // 1 << 4 == 16
-    internal const int IndexMask = (1 << MinHashesCapacityBitShift) - 1; // 0b00000000000000000000000000001111
+    internal const byte MinHashesCapacityBitShift = 3; // 1 << 3 == 8
+    internal const byte DefaultHashesCapacityBitShift = 4; // 1 << 4 == 16, means the default capacity is 16 int hashes
+    internal const int IndexMask = (1 << DefaultHashesCapacityBitShift) - 1; // 0b00000000000000000000000000001111
     /// <summary>Upper hash bits spent on storing the probes, e.g. 5 bits mean 31 probes max.</summary>
     public const byte ProbeBits = 5;
     internal const byte NotShiftedProbeCountMask = (1 << ProbeBits) - 1; // 0b00000000000000000000000000011111
@@ -894,20 +895,6 @@ public static class SmallMap
 
     /// <summary>Binary representation of the `int`</summary>
     public static string ToB(int x) => System.Convert.ToString(x, 2).PadLeft(32, '0');
-
-    //     [MethodImpl((MethodImplOptions)256)]
-    // #if NET7_0_OR_GREATER
-    //     internal static ref int NextHashRef(ref int start, int distance) => ref Unsafe.Add(ref start, distance);
-    // #else
-    //     internal static ref int NextHashRef(ref int[] start, int distance) => ref start[distance];
-    // #endif
-
-    //     [MethodImpl((MethodImplOptions)256)]
-    // #if NET7_0_OR_GREATER
-    //     internal static int NextHash(ref int start, int distance) => Unsafe.Add(ref start, distance);
-    // #else
-    //     internal static int NextHash(ref int[] start, int distance) => start[distance];
-    // #endif
 
     /// <summary>Abstraction to configure your own entries data structure. Check the derived types for the examples</summary>
     public interface IEntries<K, TEntry, TEq>
@@ -1098,12 +1085,12 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
     internal int[] _packedHashesAndIndexes;
 
 #pragma warning disable IDE0044 // it tries to make entries readonly but they should stay modify-able to prevent its defensive struct copying
+#pragma warning disable CS0649 // field is never assigned to, and will always have its default value
     internal TEntries _entries;
-#pragma warning restore IDE0044
-#pragma warning disable CS0649 // Field 'SmallMap<K, V, TEq, TStack, TEntries>.Stack' is never assigned to, and will always have its default value
     internal TStackHashes _stackHashes;
     internal TStackEntries StackEntries;
 #pragma warning restore CS0649
+#pragma warning restore IDE0044
 
     /// <summary>Capacity bits</summary>
     public int CapacityBitShift => _capacityBitShift;
@@ -1120,12 +1107,12 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
     /// <summary>Capacity calculates as `1 leftShift capacityBitShift`</summary>
     public SmallMap(byte capacityBitShift)
     {
-        _capacityBitShift = capacityBitShift;
+        // Keep the capacity at least 8 for SIMD Vector256, etc., etc, if you need less space use Stack for that
+        _capacityBitShift = capacityBitShift < MinHashesCapacityBitShift ? MinHashesCapacityBitShift : capacityBitShift;
 
-        // the overflow tail to the hashes is the size of log2N where N==capacityBitShift, 
+        // The overflow tail to the hashes is the size of log2N where N==capacityBitShift, 
         // it is probably fine to have the check for the overflow of capacity because it will be mis-predicted only once at the end of loop (it even rarely for the lookup)
         _packedHashesAndIndexes = new int[1 << capacityBitShift];
-        _entries = default;
         _entries.Init(capacityBitShift);
     }
 
@@ -1270,8 +1257,8 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
         // So the values on the stack are guarantied to be stable from the beginning of the map creation, 
         // because they are not copied when the Entries need to Resize (depending on the TEntries implementation). 
 
-        _capacityBitShift = MinHashesCapacityBitShift;
-        _packedHashesAndIndexes = new int[1 << MinHashesCapacityBitShift];
+        _capacityBitShift = DefaultHashesCapacityBitShift;
+        _packedHashesAndIndexes = new int[1 << DefaultHashesCapacityBitShift];
 
         for (var i = 0; i < StackEntries.Capacity; ++i)
             AddJustHashAndEntryIndexWithoutResizing(default(TEq).GetHashCode(GetSurePresentEntryRef(i).Key), i);
@@ -1350,8 +1337,8 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
             return ref newEntry;
         }
 
-        _capacityBitShift = MinHashesCapacityBitShift;
-        _packedHashesAndIndexes = new int[1 << MinHashesCapacityBitShift];
+        _capacityBitShift = DefaultHashesCapacityBitShift;
+        _packedHashesAndIndexes = new int[1 << DefaultHashesCapacityBitShift];
 
         for (var i = 0; i < StackEntries.Capacity; ++i)
             AddJustHashAndEntryIndexWithoutResizing(default(TEq).GetHashCode(GetSurePresentEntryRef(i).Key), i);
