@@ -149,31 +149,27 @@ public static class SmallList
 
     /// <summary>Returns surely present item ref by its index without boundary checks</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref T GetSurePresentItemRef<T>(this T[] items, int index)
-    {
+    public static ref T GetSurePresentItemRef<T>(this T[] source, int index) =>
 #if SUPPORTS_UNSAFE
-        return ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(items), index);
+        ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(source), index);
 #else
-        return ref items[index];
+        ref source[index];
 #endif
-    }
 
+#if NET7_0_OR_GREATER
     /// <summary>Get the item by-ref without bounds check</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref T GetItemRef<T>(
-#if NET7_0_OR_GREATER
-        this ref T first, int index) where T : struct => ref Unsafe.Add(ref first, index);
-#else
-        this T[] first, int index) where T : struct => ref first[index];
+    public static ref T GetSurePresentItemRef<T>(this ref T source, int index) where T : struct =>
+        ref Unsafe.Add(ref source, index);
 #endif
 
     /// <summary>Get the item without bounds check</summary>
     [MethodImpl((MethodImplOptions)256)]
-    internal static T GetItem<T>(
+    internal static T GetSurePresentItem<T>(
 #if NET7_0_OR_GREATER
-        this ref T start, int index) where T : struct => Unsafe.Add(ref start, index);
+        this ref T source, int index) where T : struct => Unsafe.Add(ref source, index);
 #else
-        this T[] start, int index) => start[index];
+        this T[] source, int index) => source[index];
 #endif
 
     // todo: @perf add the not null variant
@@ -964,6 +960,7 @@ public static class SmallMap
     }
 
     /// <summary>Lookup for the K in the TStackEntries, first by calculating it hash with TEq and searching the hash in the TStackHashes</summary>
+    [MethodImpl((MethodImplOptions)256)]
     public static ref TEntry TryGetEntryRef<K, TEntry, TEq, TCap, TStackHashes, TStackEntries>(
         this ref TStackEntries entries, ref TStackHashes hashes, int count, K key, out bool found,
         TEq eq = default, TCap cap = default, Use<TEntry> _ = default)
@@ -1161,9 +1158,9 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
 #if NET7_0_OR_GREATER
         ref var hashesAndIndexes = ref MemoryMarshal.GetArrayDataReference(_packedHashesAndIndexes);
 #else
-        var hashesAndIndexes = _packedHashesAndIndexes;
+        ref var hashesAndIndexes = ref _packedHashesAndIndexes;
 #endif
-        ref var h = ref hashesAndIndexes.GetItemRef(hashIndex);
+        ref var h = ref hashesAndIndexes.GetSurePresentItemRef(hashIndex);
 
         // 1. Skip over hashes with the bigger and equal probes. The hashes with bigger probes overlapping from the earlier ideal positions
         var probes = 1;
@@ -1176,7 +1173,7 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
                 if (found = default(TEq).Equals(e.Key, key))
                     return ref e;
             }
-            h = ref hashesAndIndexes.GetItemRef(++hashIndex & indexMask);
+            h = ref hashesAndIndexes.GetSurePresentItemRef(++hashIndex & indexMask);
             ++probes;
         }
         found = false;
@@ -1190,7 +1187,7 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
         probes = hRobinHooded >>> ProbeCountShift;
         while (hRobinHooded != 0)
         {
-            h = ref hashesAndIndexes.GetItemRef(++hashIndex & indexMask);
+            h = ref hashesAndIndexes.GetSurePresentItemRef(++hashIndex & indexMask);
             if ((h >>> ProbeCountShift) < ++probes)
             {
                 var tmp = h;
@@ -1213,11 +1210,11 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
         var hashesAndIndexes = _packedHashesAndIndexes;
 #endif
         // 1. Skip over hashes with the bigger and equal probes. The hashes with bigger probes overlapping from the earlier ideal positions
-        ref var h = ref hashesAndIndexes.GetItemRef(hashIndex);
+        ref var h = ref hashesAndIndexes.GetSurePresentItemRef(hashIndex);
         var probes = 1;
         while ((h >>> ProbeCountShift) >= probes)
         {
-            h = ref hashesAndIndexes.GetItemRef(++hashIndex & IndexMask);
+            h = ref hashesAndIndexes.GetSurePresentItemRef(++hashIndex & IndexMask);
             ++probes;
         }
 
@@ -1230,7 +1227,7 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
         probes = hRobinHooded >>> ProbeCountShift;
         while (hRobinHooded != 0)
         {
-            h = ref hashesAndIndexes.GetItemRef(++hashIndex & IndexMask);
+            h = ref hashesAndIndexes.GetSurePresentItemRef(++hashIndex & IndexMask);
             if ((h >>> ProbeCountShift) < ++probes)
             {
                 var tmp = h;
@@ -1302,13 +1299,13 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
 #else
         var hashesAndIndexes = _packedHashesAndIndexes;
 #endif
-        ref var h = ref hashesAndIndexes.GetItemRef(hashIndex);
+        ref var h = ref hashesAndIndexes.GetSurePresentItemRef(hashIndex);
 
         // 1. Skip over hashes with the bigger and equal probes. The hashes with bigger probes overlapping from the earlier ideal positions
         var probes = 1;
         while ((h >>> ProbeCountShift) >= probes)
         {
-            h = ref hashesAndIndexes.GetItemRef(++hashIndex & indexMask);
+            h = ref hashesAndIndexes.GetSurePresentItemRef(++hashIndex & indexMask);
             ++probes;
         }
 
@@ -1321,7 +1318,7 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
         probes = hRobinHooded >>> ProbeCountShift;
         while (hRobinHooded != 0)
         {
-            h = ref hashesAndIndexes.GetItemRef(++hashIndex & indexMask);
+            h = ref hashesAndIndexes.GetSurePresentItemRef(++hashIndex & indexMask);
             if ((h >>> ProbeCountShift) < ++probes)
             {
                 var tmp = h;
@@ -1338,7 +1335,6 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
     /// Provides the performance in scenarios where you look for the present key, and using it, and if ABSENT then add the new one.
     /// So this method optimized NOT to look for the present item for the second time</summary>
     [UnscopedRef]
-    [MethodImpl((MethodImplOptions)256)]
     public ref TEntry AddSureAbsentDefaultEntryAndGetRef(K key)
     {
         if (_count > StackEntries.Capacity)
@@ -1348,6 +1344,7 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
         if (_count < StackEntries.Capacity)
         {
             var newIndex = _count++;
+            _stackHashes.GetSurePresentItemRef(newIndex) = default(TEq).GetHashCode(key);
             ref var newEntry = ref StackEntries.GetSurePresentItemRef(newIndex);
             newEntry.Key = key;
             return ref newEntry;
@@ -1367,20 +1364,19 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
     }
 
     /// <summary>Lookups for the stored key. If found true, otherwise false</summary>
-    [MethodImpl((MethodImplOptions)256)]
     public bool ContainsKey(K key)
     {
         if (_count > StackEntries.Capacity)
         {
-            TryGetRefInEntries(key, out var found);
+            _ = TryGetRefInEntries(key, out var found);
             return found;
         }
-
-        for (var i = 0; i < _count; ++i)
-            if (default(TEq).Equals(key, GetSurePresentEntryRef(i).Key))
-                return true;
-
-        return false;
+        else
+        {
+            _ = ref StackEntries.TryGetEntryRef(ref _stackHashes, _count, key, out var found,
+                default(TEq), default(TStackCap), default(Use<TEntry>));
+            return found;
+        }
     }
 
     [UnscopedRef]
@@ -1400,7 +1396,7 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
         var hashesAndIndexes = _packedHashesAndIndexes;
 #endif
 
-        var h = hashesAndIndexes.GetItem(hashIndex);
+        var h = hashesAndIndexes.GetSurePresentItem(hashIndex);
 
         // 1. Skip over hashes with the bigger and equal probes. The hashes with bigger probes overlapping from the earlier ideal positions
         var probes = 1;
@@ -1414,7 +1410,7 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
                     return ref e;
             }
 
-            h = hashesAndIndexes.GetItem(++hashIndex & indexMask);
+            h = hashesAndIndexes.GetSurePresentItem(++hashIndex & indexMask);
             ++probes;
         }
 
@@ -1424,21 +1420,13 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
 
     /// <summary>Lookups for the stored entry by key. Returns the ref to the found entry or the null ref</summary>
     [UnscopedRef]
-    [MethodImpl((MethodImplOptions)256)]
     public ref TEntry TryGetEntryRef(K key, out bool found)
     {
         if (_count > StackEntries.Capacity)
             return ref TryGetRefInEntries(key, out found);
 
-        for (var i = 0; i < _count; ++i)
-        {
-            ref var e = ref GetSurePresentEntryRef(i);
-            if (found = default(TEq).Equals(key, e.Key))
-                return ref e;
-        }
-
-        found = false;
-        return ref RefTools<TEntry>.GetNullRef();
+        return ref StackEntries.TryGetEntryRef(ref _stackHashes, _count, key, out found,
+            default(TEq), default(TStackCap), default(Use<TEntry>));
     }
 
     internal int ResizeHashes(int indexMask)
@@ -1461,7 +1449,7 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
         // Overflow segment is wrapped-around hashes and! the hashes at the beginning robin hooded by the wrapped-around hashes
         var i = 0;
         while ((oldHash >>> ProbeCountShift) > 1)
-            oldHash = oldHashes.GetItem(++i);
+            oldHash = oldHashes.GetSurePresentItem(++i);
 
         var oldCapacityWithOverflowSegment = i + oldCapacity;
         while (true)
@@ -1473,10 +1461,10 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
 
                 // no need for robin-hooding because we already did it for the old hashes and now just filling the hashes into the new array which are already in order
                 var probes = 1;
-                ref var newHash = ref newHashes.GetItemRef(indexWithNextBit);
+                ref var newHash = ref newHashes.GetSurePresentItemRef(indexWithNextBit);
                 while (newHash != 0)
                 {
-                    newHash = ref newHashes.GetItemRef(++indexWithNextBit & newIndexMask);
+                    newHash = ref newHashes.GetSurePresentItemRef(++indexWithNextBit & newIndexMask);
                     ++probes;
                 }
                 newHash = (probes << ProbeCountShift) | (oldHash & newHashAndIndexMask);
@@ -1484,7 +1472,7 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
             if (++i >= oldCapacityWithOverflowSegment)
                 break;
 
-            oldHash = oldHashes.GetItem(i & indexMask);
+            oldHash = oldHashes.GetSurePresentItem(i & indexMask);
         }
         ++_capacityBitShift;
         _packedHashesAndIndexes = newHashesAndIndexes;
