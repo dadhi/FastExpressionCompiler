@@ -1270,6 +1270,43 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
         return ref _entries.AddKeyAndGetEntryRef(key, 0); // add the new key to the entries with the 0 index in the entries
     }
 
+    /*
+    Insertion step by step:
+
+    1. Initially the map is empty. Its capacity mask is 7:
+
+    Index:  0    1    2    3    4    5    6    7
+    Hash:  [0]  [0]  [0]  [0]  [0]  [0]  [0]  [0]
+
+    2. Insert that key A with the hash 13, which is 0b0011_0101. 13 & 7 Mask = 5, so the index is 5.
+
+    Index:  0    1    2    3    4    5    6    7
+    Hash:  [0]  [0]  [0]  [0]  [0]  [13] [0]  [0]
+    Probe:                           1A
+
+    3. Insert that key B with the hash 5, which is 0b0000_1011. 5 & 7 Mask = 5, so the index is again 5.
+
+    Index:  0    1    2    3    4    5    6    7
+    Hash:  [0]  [0]  [0]  [0]  [0]  [13] [5]  [0]
+    Probe                            1A   2B
+
+    4. Insert that key C with the hash 7, which is 0b0010_0101. 7 & 7 Mask = 7, so the index is 7.
+
+    Index:  0    1    2    3    4    5    6    7
+    Hash:  [0]  [0]  [0]  [0]  [0]  [13] [5]  [7]
+    Probe:                           1A   2B   1C
+
+    5. Insert that key D with the hash 21, which is 0b0101_0101. 21 & 7 Mask = 5, so the index is again again 5.
+
+    Index:  0    1    2    3    4    5    6    7
+    Hash:  [7]  [0]  [0]  [0]  [0]  [13] [5]  [21]
+    Probe:  2C                       1A   2B   3D
+    // todo: @perf @wip just an idea
+    5 (with padding):
+    Index:  0    1    2    3    4    5    6    7  |  8    9    10    11
+    Hash:  [7]  [0]  [0]  [0]  [0]  [13] [5]  [21]| [7]  [0]   [0]   [0]
+    Probe:  2C                       1A   2B   3D |  2C
+    */
     [UnscopedRef]
     private ref TEntry AddSureAbsentDefaultAndGetRefInEntries(K key)
     {
@@ -1405,13 +1442,53 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
         return ref RefTools<TEntry>.GetNullRef();
     }
 
-    /// <summary>Lookups for the stored entry by key. Returns the ref to the found entry or the null ref</summary>
+    // todo: @wip
+    [UnscopedRef]
+    [MethodImpl((MethodImplOptions)256)]
+    internal ref TEntry TryGetRefInEntries2(K key, out bool found)
+    {
+        var hash = default(TEq).GetHashCode(key);
+
+        var indexMask = (1 << _capacityBitShift) - 1;
+        var hashMiddleMask = HashAndIndexMask & ~indexMask;
+        var hashMiddle = hash & hashMiddleMask;
+        var hashIndex = hash & indexMask;
+
+#if NET7_0_OR_GREATER
+        ref var hashesAndIndexes = ref MemoryMarshal.GetArrayDataReference(_packedHashesAndIndexes);
+#else
+        var hashesAndIndexes = _packedHashesAndIndexes;
+#endif
+
+        var h = hashesAndIndexes.GetSurePresentItem(hashIndex);
+
+        // 1. Skip over hashes with the bigger and equal probes. The hashes with bigger probes overlapping from the earlier ideal positions
+        var probes = 1;
+
+        while ((h >>> ProbeCountShift) >= probes)
+        {
+            // 2. For the equal probes check for equality the hash middle part, then check the entry
+            if (((h >>> ProbeCountShift) == probes) & ((h & hashMiddleMask) == hashMiddle))
+            {
+                ref var e = ref GetSurePresentEntryRef(h & indexMask);
+                if (found = default(TEq).Equals(e.Key, key))
+                    return ref e;
+            }
+
+            h = hashesAndIndexes.GetSurePresentItem(++hashIndex & indexMask);
+            ++probes;
+        }
+
+        found = false;
+        return ref RefTools<TEntry>.GetNullRef();
+    }
+
+    /// <summary>Lookup for the stored entry by key. Returns the ref to the found entry or the null ref</summary>
     [UnscopedRef]
     public ref TEntry TryGetEntryRef(K key, out bool found)
     {
         if (_count > StackEntries.Capacity)
             return ref TryGetRefInEntries(key, out found);
-
         return ref StackEntries.TryGetEntryRef(ref _stackHashes, _count, key, out found,
             default(TEq), default(TStackCap), default(Use<TEntry>));
     }
