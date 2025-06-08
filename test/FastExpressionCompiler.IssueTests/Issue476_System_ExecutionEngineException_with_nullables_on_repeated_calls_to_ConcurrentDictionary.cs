@@ -79,7 +79,7 @@ public struct Issue476_System_ExecutionEngineException_with_nullables_on_repeate
         for (var i = 12; i >= -4; --i)
         {
             ref var e = ref entries.TryGetEntryRef(
-                ref hashes, i, out var found,
+                ref hashes, 8, i, out var found,
                 default(IntEq), default(Size8), default(Use<SmallMap.Entry<int>>));
             if (found)
                 sum += e.Key;
