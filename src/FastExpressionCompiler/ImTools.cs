@@ -982,6 +982,8 @@ public static class SmallMap
                 }
 
                 i += Vector256<int>.Count;
+                if (i >= count)
+                    break;
             }
 
             found = false;
