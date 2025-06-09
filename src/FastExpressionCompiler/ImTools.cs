@@ -165,11 +165,10 @@ public static class SmallList
 
     /// <summary>Get the item without bounds check</summary>
     [MethodImpl((MethodImplOptions)256)]
-    internal static T GetSurePresentItem<T>(
 #if NET7_0_OR_GREATER
-        this ref T source, int index) where T : struct => Unsafe.Add(ref source, index);
+    internal static T GetSurePresentItem<T>(this ref T source, int index) where T : struct => Unsafe.Add(ref source, index);
 #else
-        this T[] source, int index) => source[index];
+    internal static T GetSurePresentItem<T>(this T[] source, int index) => source[index];
 #endif
 
     // todo: @perf add the not null variant
@@ -261,10 +260,8 @@ public interface IStack<T, TStack>
     /// <summary>Creates a span over the stack items</summary>
     public Span<T> AsSpan();
 #endif
-
 }
 
-// todo: @wip
 /// <summary>Base marker for collection or container holding some number of items</summary>
 public interface ISize
 {
@@ -1301,11 +1298,6 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
     Index:  0    1    2    3    4    5    6    7
     Hash:  [7]  [0]  [0]  [0]  [0]  [13] [5]  [21]
     Probe:  2C                       1A   2B   3D
-    // todo: @perf @wip just an idea
-    5 (with padding):
-    Index:  0    1    2    3    4    5    6    7  |  8    9    10    11
-    Hash:  [7]  [0]  [0]  [0]  [0]  [13] [5]  [21]| [7]  [0]   [0]   [0]
-    Probe:  2C                       1A   2B   3D |  2C
     */
     [UnscopedRef]
     private ref TEntry AddSureAbsentDefaultAndGetRefInEntries(K key)
@@ -1442,7 +1434,7 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
         return ref RefTools<TEntry>.GetNullRef();
     }
 
-    // todo: @wip
+    // todo: @wip @remove
     [UnscopedRef]
     [MethodImpl((MethodImplOptions)256)]
     internal ref TEntry TryGetRefInEntries2(K key, out bool found)
