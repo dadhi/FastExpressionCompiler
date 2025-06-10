@@ -96,10 +96,8 @@ public static class SmallList
     internal const int DefaultInitialCapacity = 4;
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    internal static ref T ThrowIndexOutOfBounds<T>(int index, int count)
-    {
+    internal static ref T ThrowIndexOutOfBounds<T>(int index, int count) =>
         throw new IndexOutOfRangeException($"Index {index} is out of range of count {count} for SmallList<{typeof(T)},..>.");
-    }
 
     [MethodImpl((MethodImplOptions)256)]
     internal static void Expand<T>(ref T[] items)
@@ -998,7 +996,7 @@ public static class SmallMap
         }
 #endif
 
-        for (var i = 0; i < hashes.Capacity; ++i)
+        for (var i = 0; i < count; ++i)
         {
             var h = hashes.GetSurePresentItemRef(i);
             if (h == hash)
