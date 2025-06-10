@@ -277,6 +277,13 @@ public interface ISize8Plus : ISize4Plus { }
 /// <summary>Marker for collection or container holding 16 or more items</summary>
 public interface ISize16Plus : ISize8Plus { }
 
+/// <summary>Marker for collection or container holding 0 items</summary>
+public struct Size0 : ISize
+{
+    /// <inheritdoc/>
+    public int Size => 0;
+}
+
 /// <summary>Marker for collection or container holding 4 items</summary>
 public struct Size2 : ISize2Plus
 {
