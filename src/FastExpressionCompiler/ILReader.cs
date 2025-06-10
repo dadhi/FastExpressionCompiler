@@ -328,6 +328,7 @@ public abstract class ILInstruction
     }
 }
 
+//todo: @wip APL/DOA like modeling of IL instructions
 // internal struct BaseIL
 // {
 //     public OperandType OperandType;
@@ -351,7 +352,6 @@ public abstract class ILInstruction
 //     public int ExtraOpItemIndex;
 // }
 
-//todo: @wip
 ///<summary>Data-oriented structure SOA of IL instructions.</summary>
 // internal struct ILs
 // {
