@@ -13,8 +13,10 @@ using System.Runtime.CompilerServices;
 using System.Linq;
 
 #if LIGHT_EXPRESSION
+using FastExpressionCompiler.LightExpression.ImTools;
 namespace FastExpressionCompiler.LightExpression.ILDecoder;
 #else
+using FastExpressionCompiler.ImTools;
 namespace FastExpressionCompiler.ILDecoder;
 #endif
 
@@ -83,15 +85,24 @@ public static class ILReaderFactory
             try
             {
                 s = line++ > 0 ? s.AppendLine() : s;
-                s.Append($"{il.Offset,-4}{il.OpCode}");
+                ILFormatter.Label(s, il.Offset).Append(": ").Append(il.OpCode);
                 switch (il.OperandType)
                 {
+                    case OperandType.InlineBrTarget:
+                        ILFormatter.Label(s.Append(' '), ((InlineBrTargetInstruction)il).TargetOffset);
+                        break;
+                    case OperandType.InlineI:
+                        s.Append(' ').Append(((InlineIInstruction)il).Int32);
+                        break;
                     case OperandType.InlineField:
                         var f = (InlineFieldInstruction)il;
                         s.Append(' ')
                             .AppendTypeName(f.Field.FieldType).Append(' ')
                             .AppendTypeName(f.Field.DeclaringType).Append('.')
                             .Append(f.Field.Name);
+                        break;
+                    case OperandType.InlineI8:
+                        s.Append(' ').Append(((InlineI8Instruction)il).Int64);
                         break;
                     case OperandType.InlineMethod:
                         var m = (InlineMethodInstruction)il;
@@ -112,59 +123,40 @@ public static class ILReaderFactory
                         else
                             s.Append(' ').AppendTypeName(m.Method.DeclaringType).Append('.').Append(sig);
                         break;
-                    case OperandType.InlineType:
-                        var t = (InlineTypeInstruction)il;
-                        s.Append(' ').AppendTypeName(t.Type);
-                        break;
-                    case OperandType.InlineTok:
-                        var tok = (InlineTokInstruction)il;
-                        s.Append(' ').Append(tok.Member.Name);
-                        break;
-                    case OperandType.InlineBrTarget:
-                        var br = (InlineBrTargetInstruction)il;
-                        s.Append(' ').Append(br.TargetOffset);
-                        break;
-                    case OperandType.InlineSwitch:
-                        var sw = (InlineSwitchInstruction)il;
-                        s.Append(' ');
-                        foreach (var offset in sw.TargetOffsets)
-                            s.Append(offset).Append(',');
-                        break;
-                    case OperandType.ShortInlineBrTarget:
-                        var sbr = (ShortInlineBrTargetInstruction)il;
-                        s.Append(' ').Append(sbr.TargetOffset);
-                        break;
-                    case OperandType.InlineString:
-                        var si = (InlineStringInstruction)il;
-                        s.Append(" \"").Append(si.String).Append('"');
-                        break;
-                    case OperandType.ShortInlineI:
-                        var sii = (ShortInlineIInstruction)il;
-                        s.Append(' ').Append(sii.Byte);
-                        break;
-                    case OperandType.InlineI:
-                        var ii = (InlineIInstruction)il;
-                        s.Append(' ').Append(ii.Int32);
-                        break;
-                    case OperandType.InlineI8:
-                        var i8 = (InlineI8Instruction)il;
-                        s.Append(' ').Append(i8.Int64);
-                        break;
-                    case OperandType.ShortInlineR:
-                        var sir = (ShortInlineRInstruction)il;
-                        s.Append(' ').Append(sir.Single);
+                    case OperandType.InlineNone:
                         break;
                     case OperandType.InlineR:
-                        var ir = (InlineRInstruction)il;
-                        s.Append(' ').Append(ir.Double);
+                        s.Append(' ').Append(((InlineRInstruction)il).Double);
+                        break;
+                    case OperandType.InlineSig:
+                        ILFormatter.SigByteArrayToString(s.Append(' '), ((InlineSigInstruction)il).Signature);
+                        break;
+                    case OperandType.InlineString:
+                        ILFormatter.EscapedString(s.Append(' '), ((InlineStringInstruction)il).String);
+                        break;
+                    case OperandType.InlineSwitch:
+                        ILFormatter.MultipleLabels(s.Append(" switch "), ((InlineSwitchInstruction)il).TargetOffsets);
+                        break;
+                    case OperandType.InlineTok:
+                        s.Append(' ').Append(((InlineTokInstruction)il).Member.Name);
+                        break;
+                    case OperandType.InlineType:
+                        s.Append(' ').AppendTypeName(((InlineTypeInstruction)il).Type);
                         break;
                     case OperandType.InlineVar:
-                        var iv = (InlineVarInstruction)il;
-                        s.Append(' ').Append(iv.Ordinal);
+                        ILFormatter.Argument(s.Append(' '), ((InlineVarInstruction)il).Ordinal);
+                        break;
+                    case OperandType.ShortInlineBrTarget:
+                        s.Append(' ').Append(((ShortInlineBrTargetInstruction)il).TargetOffset);
+                        break;
+                    case OperandType.ShortInlineI:
+                        s.Append(' ').Append(((ShortInlineIInstruction)il).Byte);
+                        break;
+                    case OperandType.ShortInlineR:
+                        s.Append(' ').Append(((ShortInlineRInstruction)il).Single);
                         break;
                     case OperandType.ShortInlineVar:
-                        var siv = (ShortInlineVarInstruction)il;
-                        s.Append(' ').Append(siv.Ordinal);
+                        ILFormatter.Argument(s.Append(' '), ((ShortInlineVarInstruction)il).Ordinal);
                         break;
                     default:
                         break;
@@ -190,14 +182,15 @@ public sealed class ILReader : IEnumerable<ILInstruction>
 
     static ILReader()
     {
+        // Populate the one-byte and two-byte OpCode arrays
         foreach (var fi in typeof(OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static))
         {
             var opCode = (OpCode)fi.GetValue(null);
             var value = (ushort)opCode.Value;
 
-            if (value < 0x100)
+            if (value < 0x100) // 0x100 - 256, 0b0000_0000_0000_0000
                 _oneByteOpCodes[value] = opCode;
-            else if ((value & 0xff00) == 0xfe00)
+            else if ((value & 0xff00) == 0xfe00) // 0xFF00 - 0b1111_1111_0000_0000, 0xFE00 - 0b1111_1110_0000_0000
                 _twoByteOpCodes[value & 0xff] = opCode;
         }
     }
@@ -234,50 +227,51 @@ public sealed class ILReader : IEnumerable<ILInstruction>
             ? _oneByteOpCodes[code]
             : _twoByteOpCodes[ReadByte(ref position)];
 
+        int token;
         return opCode.OperandType switch
         {
-            OperandType.InlineNone => new InlineNoneInstruction(offset, opCode),
-            // 8-bit integer branch target
-            OperandType.ShortInlineBrTarget => new ShortInlineBrTargetInstruction(offset, opCode, ReadSByte(ref position)),
             // 32-bit integer branch target
             OperandType.InlineBrTarget => new InlineBrTargetInstruction(offset, opCode, ReadInt32(ref position)),
-            // 8-bit integer: 001F  ldc.i4.s, FE12  unaligned.
-            OperandType.ShortInlineI => new ShortInlineIInstruction(offset, opCode, ReadByte(ref position)),
+            // 32-bit metadata token
+            OperandType.InlineField => new InlineFieldInstruction(offset, opCode, token = ReadInt32(ref position), _resolver.AsField(token)),
             // 32-bit integer
             OperandType.InlineI => new InlineIInstruction(offset, opCode, ReadInt32(ref position)),
             // 64-bit integer
             OperandType.InlineI8 => new InlineI8Instruction(offset, opCode, ReadInt64(ref position)),
-            // 32-bit IEEE floating point number
-            OperandType.ShortInlineR => new ShortInlineRInstruction(offset, opCode, ReadSingle(ref position)),
+            // 32-bit metadata token
+            OperandType.InlineMethod => new InlineMethodInstruction(offset, opCode, token = ReadInt32(ref position), _resolver.AsMethod(token)),
+            OperandType.InlineNone => new InlineNoneInstruction(offset, opCode),
             // 64-bit IEEE floating point number
             OperandType.InlineR => new InlineRInstruction(offset, opCode, ReadDouble(ref position)),
-            // 8-bit integer containing the ordinal of a local variable or an argument
-            OperandType.ShortInlineVar => new ShortInlineVarInstruction(offset, opCode, ReadByte(ref position)),
-            // 16-bit integer containing the ordinal of a local variable or an argument
-            OperandType.InlineVar => new InlineVarInstruction(offset, opCode, ReadUInt16(ref position)),
-            // 32-bit metadata string token
-            OperandType.InlineString => new InlineStringInstruction(offset, opCode, ReadInt32(ref position), _resolver),
             // 32-bit metadata signature token
-            OperandType.InlineSig => new InlineSigInstruction(offset, opCode, ReadInt32(ref position), _resolver),
-            // 32-bit metadata token
-            OperandType.InlineMethod => new InlineMethodInstruction(offset, opCode, ReadInt32(ref position), _resolver),
-            // 32-bit metadata token
-            OperandType.InlineField => new InlineFieldInstruction(_resolver, offset, opCode, ReadInt32(ref position)),
-            // 32-bit metadata token
-            OperandType.InlineType => new InlineTypeInstruction(offset, opCode, ReadInt32(ref position), _resolver),
-            // FieldRef, MethodRef, or TypeRef token
-            OperandType.InlineTok => new InlineTokInstruction(offset, opCode, ReadInt32(ref position), _resolver),
+            OperandType.InlineSig => new InlineSigInstruction(offset, opCode, token = ReadInt32(ref position), _resolver.AsSignature(token)),
+            // 32-bit metadata string token
+            OperandType.InlineString => new InlineStringInstruction(offset, opCode, token = ReadInt32(ref position), _resolver.AsString(token)),
             // 32-bit integer argument to a switch instruction
             OperandType.InlineSwitch => new InlineSwitchInstruction(offset, opCode, ReadDeltas(ref position)),
+            // FieldRef, MethodRef, or TypeRef token
+            OperandType.InlineTok => new InlineTokInstruction(offset, opCode, token = ReadInt32(ref position), _resolver.AsMember(token)),
+            // 32-bit metadata token
+            OperandType.InlineType => new InlineTypeInstruction(offset, opCode, token = ReadInt32(ref position), _resolver.AsType(token)),
+            // 16-bit integer containing the ordinal of a local variable or an argument
+            OperandType.InlineVar => new InlineVarInstruction(offset, opCode, ReadUInt16(ref position)),
+            // 8-bit integer branch target
+            OperandType.ShortInlineBrTarget => new ShortInlineBrTargetInstruction(offset, opCode, ReadSByte(ref position)),
+            // 8-bit integer: 001F  ldc.i4.s, FE12  unaligned.
+            OperandType.ShortInlineI => new ShortInlineIInstruction(offset, opCode, ReadByte(ref position)),
+            // 32-bit IEEE floating point number
+            OperandType.ShortInlineR => new ShortInlineRInstruction(offset, opCode, ReadSingle(ref position)),
+            // 8-bit integer containing the ordinal of a local variable or an argument
+            OperandType.ShortInlineVar => new ShortInlineVarInstruction(offset, opCode, ReadByte(ref position)),
             _ => throw new NotSupportedException($"Unsupported operand type: {opCode.OperandType}"),
         };
     }
 
     private int[] ReadDeltas(ref int position)
     {
-        var cases = ReadInt32(ref position);
-        var deltas = new int[cases];
-        for (var i = 0; i < cases; i++)
+        var caseCount = ReadInt32(ref position);
+        var deltas = new int[caseCount];
+        for (var i = 0; i < caseCount; i++)
             deltas[i] = ReadInt32(ref position);
         return deltas;
     }
@@ -334,10 +328,41 @@ public abstract class ILInstruction
     }
 }
 
+//todo: @wip APL/DOA like modeling of IL instructions
+// internal struct BaseIL
+// {
+//     public OperandType OperandType;
+//     public int Offset;
+//     public OpCode OpCode;
+
+//     // List of possible extras:
+//     // - InlineNoneInstruction does not have an extra
+//     //
+//     // - Stores `int` for 
+//     // OperandType.InlineBrTarget->Delta, 
+//     // OperandType.ShortInlineBrTarget->Delta, 
+//     // OperandType.InlineI->Int32
+//     // todo: may be store delta inline as ExtraOpArrayIndex itself
+//     public const int ExtraDeltasArrayIndex = 1;
+
+//     // This is for OperandType.InlineSwitch
+//     public const int ExtraSwitchesArrayIndex = 2;
+
+//     public int ExtraOpArrayIndex;
+//     public int ExtraOpItemIndex;
+// }
+
+///<summary>Data-oriented structure SOA of IL instructions.</summary>
+// internal struct ILs
+// {
+//     public SmallList<BaseIL, Stack16<BaseIL>> BaseILs;
+//     public SmallList<int, Stack16<int>> Deltas;
+//     public SmallList<(int[] Deltas, int[] TargetOffsets), Stack2<(int[] Deltas, int[] TargetOffsets)>> Switches;
+// }
+
 public sealed class InlineNoneInstruction : ILInstruction
 {
     public override OperandType OperandType => OperandType.InlineNone;
-
     internal InlineNoneInstruction(int offset, OpCode opCode)
         : base(offset, opCode) { }
 }
@@ -345,9 +370,8 @@ public sealed class InlineNoneInstruction : ILInstruction
 public sealed class InlineBrTargetInstruction : ILInstruction
 {
     public override OperandType OperandType => OperandType.InlineBrTarget;
-    public int Delta { get; }
+    public readonly int Delta;
     public int TargetOffset => Offset + Delta + 1 + 4;
-
     internal InlineBrTargetInstruction(int offset, OpCode opCode, int delta)
         : base(offset, opCode) => Delta = delta;
 }
@@ -355,7 +379,7 @@ public sealed class InlineBrTargetInstruction : ILInstruction
 public sealed class ShortInlineBrTargetInstruction : ILInstruction
 {
     public override OperandType OperandType => OperandType.ShortInlineBrTarget;
-    public sbyte Delta { get; }
+    public readonly sbyte Delta;
     public int TargetOffset => Offset + Delta + 1 + 1;
     internal ShortInlineBrTargetInstruction(int offset, OpCode opCode, sbyte delta)
         : base(offset, opCode) => Delta = delta;
@@ -364,35 +388,27 @@ public sealed class ShortInlineBrTargetInstruction : ILInstruction
 public sealed class InlineSwitchInstruction : ILInstruction
 {
     public override OperandType OperandType => OperandType.InlineSwitch;
-    private readonly int[] _deltas;
-    private int[] _targetOffsets;
-
+    public readonly int[] Deltas;
+    public readonly int[] TargetOffsets;
     internal InlineSwitchInstruction(int offset, OpCode opCode, int[] deltas)
-        : base(offset, opCode) => _deltas = deltas;
-
-    public int[] Deltas => (int[])_deltas.Clone();
-
-    public int[] TargetOffsets
+        : base(offset, opCode)
     {
-        get
-        {
-            if (_targetOffsets == null)
-            {
-                var cases = _deltas.Length;
-                var itself = 1 + 4 + 4 * cases;
-                _targetOffsets = new int[cases];
-                for (var i = 0; i < cases; i++)
-                    _targetOffsets[i] = Offset + _deltas[i] + itself;
-            }
-            return _targetOffsets;
-        }
+        Deltas = deltas;
+
+        var caseCount = deltas.Length;
+        var itself = 1 + 4 + 4 * caseCount;
+        var targetOffsets = new int[caseCount];
+        for (var i = 0; i < caseCount; i++)
+            targetOffsets[i] = Offset + deltas[i] + itself;
+
+        TargetOffsets = targetOffsets;
     }
 }
 
 public sealed class InlineIInstruction : ILInstruction
 {
     public override OperandType OperandType => OperandType.InlineI;
-    public int Int32 { get; }
+    public readonly int Int32;
     internal InlineIInstruction(int offset, OpCode opCode, int value)
         : base(offset, opCode) => Int32 = value;
 }
@@ -400,8 +416,7 @@ public sealed class InlineIInstruction : ILInstruction
 public sealed class InlineI8Instruction : ILInstruction
 {
     public override OperandType OperandType => OperandType.InlineI8;
-    public long Int64 { get; }
-
+    public readonly long Int64;
     internal InlineI8Instruction(int offset, OpCode opCode, long value)
         : base(offset, opCode) => Int64 = value;
 }
@@ -409,8 +424,7 @@ public sealed class InlineI8Instruction : ILInstruction
 public sealed class ShortInlineIInstruction : ILInstruction
 {
     public override OperandType OperandType => OperandType.ShortInlineI;
-    public byte Byte { get; }
-
+    public readonly byte Byte;
     internal ShortInlineIInstruction(int offset, OpCode opCode, byte value)
         : base(offset, opCode) => Byte = value;
 }
@@ -418,8 +432,7 @@ public sealed class ShortInlineIInstruction : ILInstruction
 public class InlineRInstruction : ILInstruction
 {
     public override OperandType OperandType => OperandType.InlineR;
-    public double Double { get; }
-
+    public readonly double Double;
     internal InlineRInstruction(int offset, OpCode opCode, double value)
         : base(offset, opCode) => Double = value;
 }
@@ -427,8 +440,7 @@ public class InlineRInstruction : ILInstruction
 public sealed class ShortInlineRInstruction : ILInstruction
 {
     public override OperandType OperandType => OperandType.ShortInlineR;
-    public float Single { get; }
-
+    public readonly float Single;
     internal ShortInlineRInstruction(int offset, OpCode opCode, float value)
         : base(offset, opCode) => Single = value;
 }
@@ -436,62 +448,51 @@ public sealed class ShortInlineRInstruction : ILInstruction
 public sealed class InlineFieldInstruction : ILInstruction
 {
     public override OperandType OperandType => OperandType.InlineField;
-    private readonly ITokenResolver _resolver;
-    public int Token { get; }
-    private FieldInfo _field;
-    public FieldInfo Field => _field ??= _resolver.AsField(Token);
-    internal InlineFieldInstruction(ITokenResolver resolver, int offset, OpCode opCode, int token)
+    public readonly int Token;
+    public readonly FieldInfo Field;
+    internal InlineFieldInstruction(int offset, OpCode opCode, int token, FieldInfo field)
         : base(offset, opCode)
     {
-        _resolver = resolver;
         Token = token;
+        Field = field;
     }
 }
 
 public sealed class InlineMethodInstruction : ILInstruction
 {
     public override OperandType OperandType => OperandType.InlineMethod;
-    private readonly ITokenResolver _resolver;
-    public int Token { get; }
-    private MethodBase _method;
-    public MethodBase Method => _method ??= _resolver.AsMethod(Token);
-
-    internal InlineMethodInstruction(int offset, OpCode opCode, int token, ITokenResolver resolver)
+    public readonly int Token;
+    public readonly MethodBase Method;
+    internal InlineMethodInstruction(int offset, OpCode opCode, int token, MethodBase method)
         : base(offset, opCode)
     {
-        _resolver = resolver;
         Token = token;
+        Method = method;
     }
 }
 
 public sealed class InlineTypeInstruction : ILInstruction
 {
     public override OperandType OperandType => OperandType.InlineType;
-    private readonly ITokenResolver _resolver;
-    public int Token { get; }
-    private Type _type;
-    public Type Type => _type ??= _resolver.AsType(Token);
-
-    internal InlineTypeInstruction(int offset, OpCode opCode, int token, ITokenResolver resolver)
+    public readonly int Token;
+    public readonly Type Type;
+    internal InlineTypeInstruction(int offset, OpCode opCode, int token, Type type)
         : base(offset, opCode)
     {
-        _resolver = resolver;
         Token = token;
+        Type = type;
     }
 }
 
 public sealed class InlineSigInstruction : ILInstruction
 {
     public override OperandType OperandType => OperandType.InlineSig;
-    private readonly ITokenResolver _resolver;
-    public int Token { get; }
-    private byte[] _signature;
-    public byte[] Signature => _signature ??= _resolver.AsSignature(Token);
-
-    internal InlineSigInstruction(int offset, OpCode opCode, int token, ITokenResolver resolver)
+    public readonly int Token;
+    public readonly byte[] Signature;
+    internal InlineSigInstruction(int offset, OpCode opCode, int token, byte[] signature)
         : base(offset, opCode)
     {
-        _resolver = resolver;
+        Signature = signature;
         Token = token;
     }
 }
@@ -499,31 +500,25 @@ public sealed class InlineSigInstruction : ILInstruction
 public sealed class InlineTokInstruction : ILInstruction
 {
     public override OperandType OperandType => OperandType.InlineTok;
-    private readonly ITokenResolver _resolver;
-    public int Token { get; }
-    private MemberInfo _member;
-    public MemberInfo Member => _member ??= _resolver.AsMember(Token);
-
-    internal InlineTokInstruction(int offset, OpCode opCode, int token, ITokenResolver resolver)
+    public readonly int Token;
+    public readonly MemberInfo Member;
+    internal InlineTokInstruction(int offset, OpCode opCode, int token, MemberInfo member)
         : base(offset, opCode)
     {
-        _resolver = resolver;
         Token = token;
+        Member = member;
     }
 }
 
 public sealed class InlineStringInstruction : ILInstruction
 {
     public override OperandType OperandType => OperandType.InlineString;
-    private readonly ITokenResolver _resolver;
-    public int Token { get; }
-    private string _string;
-    public string String => _string ??= _resolver.AsString(Token);
-
-    internal InlineStringInstruction(int offset, OpCode opCode, int token, ITokenResolver resolver)
+    public readonly int Token;
+    public readonly string String;
+    internal InlineStringInstruction(int offset, OpCode opCode, int token, string s)
         : base(offset, opCode)
     {
-        _resolver = resolver;
+        String = s;
         Token = token;
     }
 }
@@ -531,7 +526,7 @@ public sealed class InlineStringInstruction : ILInstruction
 public sealed class InlineVarInstruction : ILInstruction
 {
     public override OperandType OperandType => OperandType.InlineVar;
-    public ushort Ordinal { get; }
+    public readonly ushort Ordinal;
     internal InlineVarInstruction(int offset, OpCode opCode, ushort ordinal)
         : base(offset, opCode) => Ordinal = ordinal;
 }
@@ -539,8 +534,7 @@ public sealed class InlineVarInstruction : ILInstruction
 public sealed class ShortInlineVarInstruction : ILInstruction
 {
     public override OperandType OperandType => OperandType.ShortInlineVar;
-    public byte Ordinal { get; }
-
+    public readonly byte Ordinal;
     internal ShortInlineVarInstruction(int offset, OpCode opCode, byte ordinal)
         : base(offset, opCode) => Ordinal = ordinal;
 }
@@ -556,8 +550,7 @@ public class MethodBaseILProvider : IILProvider
     private static readonly Type _runtimeMethodInfoType = Type.GetType("System.Reflection.RuntimeMethodInfo");
     private static readonly Type _runtimeConstructorInfoType = Type.GetType("System.Reflection.RuntimeConstructorInfo");
 
-    private readonly MethodBase _method;
-    private byte[] _byteArray;
+    private readonly byte[] _byteArray;
 
     public MethodBaseILProvider(MethodBase method)
     {
@@ -568,13 +561,10 @@ public class MethodBaseILProvider : IILProvider
         if (methodType != _runtimeMethodInfoType & methodType != _runtimeConstructorInfoType)
             throw new ArgumentException("Must have type RuntimeMethodInfo or RuntimeConstructorInfo.", nameof(method));
 
-        _method = method;
+        _byteArray = method.GetMethodBody()?.GetILAsByteArray() ?? [];
     }
 
-    public byte[] GetByteArray()
-    {
-        return _byteArray ??= _method.GetMethodBody()?.GetILAsByteArray() ?? [];
-    }
+    public byte[] GetByteArray() => _byteArray;
 }
 
 [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Uses reflection on internal types and is not trim-compatible.")]
@@ -599,68 +589,49 @@ public class DynamicMethodILProvider : IILProvider
     private static readonly MethodInfo _miBakeByteArray =
         _runtimeILGeneratorType.GetMethod("BakeByteArray", BindingFlags.NonPublic | BindingFlags.Instance);
 
-    private readonly DynamicMethod _method;
-    private byte[] _byteArray;
+    private readonly byte[] _byteArray;
 
-    public DynamicMethodILProvider(DynamicMethod method) => _method = method;
-
-    public byte[] GetByteArray()
+    public DynamicMethodILProvider(DynamicMethod method)
     {
-        if (_byteArray == null)
+        var ilgen = method.GetILGenerator();
+        try
         {
-            var ilgen = _method.GetILGenerator();
-            try
-            {
-                _byteArray = (byte[])_miBakeByteArray.Invoke(ilgen, null) ?? [];
-            }
-            catch (TargetInvocationException)
-            {
-                var length = (int)_fiLen.GetValue(ilgen);
-                _byteArray = new byte[length];
-                Array.Copy((byte[])_fiStream.GetValue(ilgen), _byteArray, length);
-            }
+            _byteArray = (byte[])_miBakeByteArray.Invoke(ilgen, null) ?? [];
         }
-        return _byteArray;
+        catch (TargetInvocationException)
+        {
+            var length = (int)_fiLen.GetValue(ilgen);
+            _byteArray = new byte[length];
+            Array.Copy((byte[])_fiStream.GetValue(ilgen), _byteArray, length);
+        }
     }
+
+    public byte[] GetByteArray() => _byteArray;
 }
 
-public interface IFormatter
+public static class ILFormatter
 {
-    string Int32ToHex(int int32);
-    string Int16ToHex(int int16);
-    string Int8ToHex(int int8);
-    string Argument(int ordinal);
-    string EscapedString(string str);
-    string Label(int offset);
-    string MultipleLabels(int[] offsets);
-    string SigByteArrayToString(byte[] sig);
-}
+    public static StringBuilder Int32ToHex(StringBuilder sb, int int32) => sb.Append(int32.ToString("X8"));
+    public static StringBuilder Int16ToHex(StringBuilder sb, int int16) => sb.Append(int16.ToString("X4"));
+    public static StringBuilder Int8ToHex(StringBuilder sb, int int8) => sb.Append(int8.ToString("X2"));
+    public static StringBuilder Argument(StringBuilder sb, int ordinal) => sb.Append($"V_{ordinal}");
+    public static StringBuilder Label(StringBuilder sb, int offset) => sb.Append($"IL_{offset:D4}");
 
-public struct DefaultFormatter : IFormatter
-{
-    public string Int32ToHex(int int32) => int32.ToString("X8");
-    public string Int16ToHex(int int16) => int16.ToString("X4");
-    public string Int8ToHex(int int8) => int8.ToString("X2");
-    public string Argument(int ordinal) => $"V_{ordinal}";
-    public string Label(int offset) => $"IL_{offset:x4}";
-
-    public string MultipleLabels(int[] offsets)
+    public static StringBuilder MultipleLabels(StringBuilder sb, int[] offsets)
     {
-        var sb = new StringBuilder();
         var length = offsets.Length;
         for (var i = 0; i < length; i++)
         {
             sb.AppendFormat(i == 0 ? "(" : ", ");
-            sb.Append(Label(offsets[i]));
+            sb.Append(Label(sb, offsets[i]));
         }
         sb.AppendFormat(")");
-        return sb.ToString();
+        return sb;
     }
 
-    public string EscapedString(string str)
+    public static StringBuilder EscapedString(StringBuilder sb, string str)
     {
         var length = str.Length;
-        var sb = new StringBuilder(length * 2);
 
         sb.Append('"');
         for (var i = 0; i < length; i++)
@@ -682,212 +653,19 @@ public struct DefaultFormatter : IFormatter
                 sb.Append(ch);
         }
         sb.Append('"');
-        return sb.ToString();
+        return sb;
     }
 
-    public string SigByteArrayToString(byte[] sig)
+    public static StringBuilder SigByteArrayToString(StringBuilder sb, byte[] sig)
     {
-        var sb = new StringBuilder();
         var length = sig.Length;
         for (var i = 0; i < length; i++)
         {
             sb.AppendFormat(i == 0 ? "SIG [" : " ");
-            sb.Append(Int8ToHex(sig[i]));
+            sb.Append(Int8ToHex(sb, sig[i]));
         }
         sb.AppendFormat("]");
-        return sb.ToString();
-    }
-}
-
-// todo: @feat waiting for C# support of the default/optional generic parameters, e.g. for `ReadableILStringProcessor<TFormatter = DefaultFormatter>`
-public sealed class ReadableILStringProcessor<TFormatter> where TFormatter : struct, IFormatter
-{
-    private static readonly TFormatter _formatProvider = default;
-    readonly TextWriter _writer;
-
-    public ReadableILStringProcessor(TextWriter writer) => _writer = writer;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void Write(ILInstruction i, string operandString) =>
-        _writer.WriteLine("IL_{0:x4}: {1,-10} {2}", i.Offset, i.OpCode.Name, operandString);
-
-    public void ProcessInstruction(ILInstruction i)
-    {
-        switch (i.OperandType)
-        {
-            case OperandType.InlineBrTarget:
-                Write(i, _formatProvider.Label(((InlineBrTargetInstruction)i).TargetOffset));
-                break;
-            case OperandType.InlineField:
-                var inlineField = (InlineFieldInstruction)i;
-                string field;
-                try
-                {
-                    field = inlineField.Field + "/" + inlineField.Field.DeclaringType;
-                }
-                catch (Exception ex)
-                {
-                    field = "!" + ex.Message + "!";
-                }
-                Write(i, field);
-                break;
-            case OperandType.InlineI:
-                Write(i, ((InlineIInstruction)i).Int32.ToString());
-                break;
-            case OperandType.InlineI8:
-                Write(i, ((InlineI8Instruction)i).Int64.ToString());
-                break;
-            case OperandType.InlineMethod:
-                var inlineMethod = (InlineMethodInstruction)i;
-                string method;
-                try
-                {
-                    method = inlineMethod.Method + "/" + inlineMethod.Method.DeclaringType;
-                }
-                catch (Exception ex)
-                {
-                    method = "!" + ex.Message + "!";
-                }
-                Write(i, method);
-                break;
-            case OperandType.InlineNone:
-                Write(i, string.Empty);
-                break;
-            case OperandType.InlineR:
-                Write(i, ((InlineRInstruction)i).Double.ToString());
-                break;
-            case OperandType.InlineSig:
-                Write(i, _formatProvider.SigByteArrayToString(((InlineSigInstruction)i).Signature));
-                break;
-            case OperandType.InlineString:
-                Write(i, _formatProvider.EscapedString(((InlineStringInstruction)i).String));
-                break;
-            case OperandType.InlineSwitch:
-                var inlineSwitch = (InlineSwitchInstruction)i;
-                Write(i, _formatProvider.MultipleLabels(inlineSwitch.TargetOffsets));
-                break;
-            case OperandType.InlineTok:
-                var inlineTok = (InlineTokInstruction)i;
-                string member;
-                try
-                {
-                    member = inlineTok.Member + "/" + inlineTok.Member.DeclaringType;
-                }
-                catch (Exception ex)
-                {
-                    member = "!" + ex.Message + "!";
-                }
-                Write(i, member);
-                break;
-            case OperandType.InlineType:
-                var inlineType = (InlineTypeInstruction)i;
-                string type;
-                try
-                {
-                    type = inlineType.Type.ToString();
-                }
-                catch (Exception ex)
-                {
-                    type = "!" + ex.Message + "!";
-                }
-                Write(i, type);
-                break;
-            case OperandType.InlineVar:
-                var inlineVar = (InlineVarInstruction)i;
-                Write(i, _formatProvider.Argument(inlineVar.Ordinal));
-                break;
-            case OperandType.ShortInlineBrTarget:
-                var shortInlineBrTarget = (ShortInlineBrTargetInstruction)i;
-                Write(i, _formatProvider.Label(shortInlineBrTarget.TargetOffset));
-                break;
-            case OperandType.ShortInlineI:
-                Write(i, ((ShortInlineIInstruction)i).Byte.ToString());
-                break;
-            case OperandType.ShortInlineR:
-                Write(i, ((ShortInlineRInstruction)i).Single.ToString());
-                break;
-            case OperandType.ShortInlineVar:
-                var shortInlineVar = (ShortInlineVarInstruction)i;
-                Write(i, _formatProvider.Argument(shortInlineVar.Ordinal));
-                break;
-            default:
-                Debug.Fail("all cases are covered above, so it is not expected to reach here");
-                break;
-        }
-    }
-}
-
-public sealed class RawILStringProcessor<TFormatter> where TFormatter : struct, IFormatter
-{
-    static readonly TFormatter _formatter = default;
-    readonly ReadableILStringProcessor<TFormatter> _fallbackProcessor;
-    readonly TextWriter _writer;
-
-    public RawILStringProcessor(TextWriter writer)
-    {
-        _fallbackProcessor = new ReadableILStringProcessor<TFormatter>(writer);
-        _writer = writer;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void Write(ILInstruction i, string operandString) =>
-        _writer.WriteLine("IL_{0:x4}: {1,-4:x2}| {2, -8}", i.Offset, i.OpCode.Value, operandString);
-
-    public void ProcessInstruction(ILInstruction i)
-    {
-        switch (i.OperandType)
-        {
-            case OperandType.InlineBrTarget:
-                Write(i, _formatter.Int32ToHex(((InlineBrTargetInstruction)i).TargetOffset));
-                break;
-            case OperandType.InlineField:
-                Write(i, _formatter.Int32ToHex(((InlineFieldInstruction)i).Token));
-                break;
-            case OperandType.InlineI:
-            case OperandType.InlineI8:
-                _fallbackProcessor.ProcessInstruction(i);
-                break;
-            case OperandType.InlineMethod:
-                Write(i, _formatter.Int32ToHex(((InlineMethodInstruction)i).Token));
-                break;
-            case OperandType.InlineNone:
-            case OperandType.InlineR:
-                _fallbackProcessor.ProcessInstruction(i);
-                break;
-            case OperandType.InlineSig:
-                Write(i, _formatter.Int32ToHex(((InlineSigInstruction)i).Token));
-                break;
-            case OperandType.InlineString:
-                Write(i, _formatter.Int32ToHex(((InlineStringInstruction)i).Token));
-                break;
-            case OperandType.InlineSwitch:
-                Write(i, "...");
-                break;
-            case OperandType.InlineTok:
-                Write(i, _formatter.Int32ToHex(((InlineTokInstruction)i).Token));
-                break;
-            case OperandType.InlineType:
-                Write(i, _formatter.Int32ToHex(((InlineTypeInstruction)i).Token));
-                break;
-            case OperandType.InlineVar:
-                Write(i, _formatter.Int16ToHex(((InlineVarInstruction)i).Ordinal));
-                break;
-            case OperandType.ShortInlineBrTarget:
-                Write(i, _formatter.Int8ToHex(((ShortInlineBrTargetInstruction)i).Delta));
-                break;
-            case OperandType.ShortInlineI:
-                Write(i, _formatter.Int8ToHex(((ShortInlineIInstruction)i).Byte));
-                break;
-            case OperandType.ShortInlineR:
-                _fallbackProcessor.ProcessInstruction(i);
-                break;
-            case OperandType.ShortInlineVar:
-                Write(i, _formatter.Int8ToHex(((ShortInlineVarInstruction)i).Ordinal));
-                break;
-            default:
-                Debug.Fail("all cases are covered above, so it is not expected to reach here");
-                break;
-        }
+        return sb;
     }
 }
 
