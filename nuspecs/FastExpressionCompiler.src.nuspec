@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata minClientVersion="3.3.0">
         <id>FastExpressionCompiler.src</id>
-        <version>5.2.0</version>
+        <version>5.3.0</version>
         <authors>Maksim Volkau</authors>
         <copyright>Copyright © 2016-2025 Maksim Volkau</copyright>
         <projectUrl>https://github.com/dadhi/FastExpressionCompiler</projectUrl>
@@ -12,6 +12,16 @@
         <tags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</tags>
         <icon>logo.png</icon>
         <releaseNotes><![CDATA[
+## v5.3.0 Feature release
+
+- feat: [performance] Reuse the ILGenerator used by the nested lambda compilation 
+- feat: [performance] Reuse DynamicMethod if possible
+- feat: Add debug diagnostics to the nested lambdas
+- fix: System.ExecutionEngineException with nullables on repeated calls to ConcurrentDictionary
+
+**Full Changelog**: https://github.com/dadhi/FastExpressionCompiler/compare/v5.2.0...v5.3.0
+
+
 ## v5.2.0 Feature release
 
 - feat: #466 Simplify creation of the updateable value that can be put into Closure with the Expression.ConstantRef
