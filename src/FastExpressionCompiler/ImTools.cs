@@ -1154,37 +1154,37 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
         ref var h = ref hashesAndIndexes.GetSurePresentItemRef(hashIndex);
 
         // 1. Skip over hashes with the bigger and equal probes. The hashes with bigger probes overlapping from the earlier ideal positions
-        var probes = 1;
-        while ((h >>> ProbeCountShift) >= probes)
+        var probe = 1;
+        while ((h >>> ProbeCountShift) >= probe)
         {
             // 2. For the equal probes check for equality the hash middle part, and update the entry if the keys are equal too 
-            if (((h >>> ProbeCountShift) == probes) & ((h & hashMiddleMask) == hashMiddle))
+            if (((h >>> ProbeCountShift) == probe) & ((h & hashMiddleMask) == hashMiddle))
             {
                 ref var e = ref GetSurePresentEntryRef(h & indexMask);
                 if (found = default(TEq).Equals(e.Key, key))
                     return ref e;
             }
             h = ref hashesAndIndexes.GetSurePresentItemRef(++hashIndex & indexMask);
-            ++probes;
+            ++probe;
         }
         found = false;
 
         // 3. We did not find the hash and therefore the key, so insert the new entry
         var hRobinHooded = h;
-        h = (probes << ProbeCountShift) | hashMiddle | _count;
+        h = (probe << ProbeCountShift) | hashMiddle | _count;
 
         // 4. If the robin hooded hash is empty then we stop
         // 5. Otherwise we steal the slot with the smaller probes
-        probes = hRobinHooded >>> ProbeCountShift;
+        probe = hRobinHooded >>> ProbeCountShift;
         while (hRobinHooded != 0)
         {
             h = ref hashesAndIndexes.GetSurePresentItemRef(++hashIndex & indexMask);
-            if ((h >>> ProbeCountShift) < ++probes)
+            if ((h >>> ProbeCountShift) < ++probe)
             {
                 var tmp = h;
-                h = (probes << ProbeCountShift) | (hRobinHooded & HashAndIndexMask);
+                h = (probe << ProbeCountShift) | (hRobinHooded & HashAndIndexMask);
                 hRobinHooded = tmp;
-                probes = hRobinHooded >>> ProbeCountShift;
+                probe = hRobinHooded >>> ProbeCountShift;
             }
         }
 
@@ -1202,29 +1202,29 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
 #endif
         // 1. Skip over hashes with the bigger and equal probes. The hashes with bigger probes overlapping from the earlier ideal positions
         ref var h = ref hashesAndIndexes.GetSurePresentItemRef(hashIndex);
-        var probes = 1;
-        while ((h >>> ProbeCountShift) >= probes)
+        var probe = 1;
+        while ((h >>> ProbeCountShift) >= probe)
         {
             h = ref hashesAndIndexes.GetSurePresentItemRef(++hashIndex & IndexMask);
-            ++probes;
+            ++probe;
         }
 
         // 3. We did not find the hash and therefore the key, so insert the new entry
         var hRobinHooded = h;
-        h = (probes << ProbeCountShift) | (hash & HashMask) | index;
+        h = (probe << ProbeCountShift) | (hash & HashMask) | index;
 
         // 4. If the robin hooded hash is empty then we stop
         // 5. Otherwise we steal the slot with the smaller probes
-        probes = hRobinHooded >>> ProbeCountShift;
+        probe = hRobinHooded >>> ProbeCountShift;
         while (hRobinHooded != 0)
         {
             h = ref hashesAndIndexes.GetSurePresentItemRef(++hashIndex & IndexMask);
-            if ((h >>> ProbeCountShift) < ++probes)
+            if ((h >>> ProbeCountShift) < ++probe)
             {
                 var tmp = h;
-                h = (probes << ProbeCountShift) | (hRobinHooded & HashAndIndexMask);
+                h = (probe << ProbeCountShift) | (hRobinHooded & HashAndIndexMask);
                 hRobinHooded = tmp;
-                probes = hRobinHooded >>> ProbeCountShift;
+                probe = hRobinHooded >>> ProbeCountShift;
             }
         }
     }
@@ -1282,25 +1282,25 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
     Index:  0    1    2    3    4    5    6    7
     Hash:  [0]  [0]  [0]  [0]  [0]  [0]  [0]  [0]
 
-    2. Insert that key A with the hash 13, which is 0b0011_0101. 13 & 7 Mask = 5, so the index is 5.
+    2. Insert the key A with the hash 13, which is 0b0011_0101. 13 & 7 Mask = 5, so the index is 5.
 
     Index:  0    1    2    3    4    5    6    7
     Hash:  [0]  [0]  [0]  [0]  [0]  [13] [0]  [0]
     Probe:                           1A
 
-    3. Insert that key B with the hash 5, which is 0b0000_1011. 5 & 7 Mask = 5, so the index is again 5.
+    3. Insert the key B with the hash 5, which is 0b0000_1011. 5 & 7 Mask = 5, so the index is again 5.
 
     Index:  0    1    2    3    4    5    6    7
     Hash:  [0]  [0]  [0]  [0]  [0]  [13] [5]  [0]
     Probe                            1A   2B
 
-    4. Insert that key C with the hash 7, which is 0b0010_0101. 7 & 7 Mask = 7, so the index is 7.
+    4. Insert the key C with the hash 7, which is 0b0010_0101. 7 & 7 Mask = 7, so the index is 7.
 
     Index:  0    1    2    3    4    5    6    7
     Hash:  [0]  [0]  [0]  [0]  [0]  [13] [5]  [7]
     Probe:                           1A   2B   1C
 
-    5. Insert that key D with the hash 21, which is 0b0101_0101. 21 & 7 Mask = 5, so the index is again again 5.
+    5. Insert the key D with the hash 21, which is 0b0101_0101. 21 & 7 Mask = 5, so the index is again again 5.
 
     Index:  0    1    2    3    4    5    6    7
     Hash:  [7]  [0]  [0]  [0]  [0]  [13] [5]  [21]
@@ -1325,29 +1325,29 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
         ref var h = ref hashesAndIndexes.GetSurePresentItemRef(hashIndex);
 
         // 1. Skip over hashes with the bigger and equal probes. The hashes with bigger probes overlapping from the earlier ideal positions
-        var probes = 1;
-        while ((h >>> ProbeCountShift) >= probes)
+        var probe = 1;
+        while ((h >>> ProbeCountShift) >= probe)
         {
             h = ref hashesAndIndexes.GetSurePresentItemRef(++hashIndex & indexMask);
-            ++probes;
+            ++probe;
         }
 
         // 3. We did not find the hash and therefore the key, so insert the new entry
         var hRobinHooded = h;
-        h = (probes << ProbeCountShift) | (hash & HashAndIndexMask & ~indexMask) | _count;
+        h = (probe << ProbeCountShift) | (hash & HashAndIndexMask & ~indexMask) | _count;
 
         // 4. If the robin hooded hash is empty then we stop
         // 5. Otherwise we steal the slot with the smaller probes
-        probes = hRobinHooded >>> ProbeCountShift;
+        probe = hRobinHooded >>> ProbeCountShift;
         while (hRobinHooded != 0)
         {
             h = ref hashesAndIndexes.GetSurePresentItemRef(++hashIndex & indexMask);
-            if ((h >>> ProbeCountShift) < ++probes)
+            if ((h >>> ProbeCountShift) < ++probe)
             {
                 var tmp = h;
-                h = (probes << ProbeCountShift) | (hRobinHooded & HashAndIndexMask);
+                h = (probe << ProbeCountShift) | (hRobinHooded & HashAndIndexMask);
                 hRobinHooded = tmp;
-                probes = hRobinHooded >>> ProbeCountShift;
+                probe = hRobinHooded >>> ProbeCountShift;
             }
         }
 
@@ -1422,11 +1422,11 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
         var h = hashesAndIndexes.GetSurePresentItem(hashIndex);
 
         // 1. Skip over hashes with the bigger and equal probes. The hashes with bigger probes overlapping from the earlier ideal positions
-        var probes = 1;
-        while ((h >>> ProbeCountShift) >= probes)
+        var probe = 1;
+        while ((h >>> ProbeCountShift) >= probe)
         {
             // 2. For the equal probes check for equality the hash middle part, and update the entry if the keys are equal too 
-            if (((h >>> ProbeCountShift) == probes) & ((h & hashMiddleMask) == hashMiddle))
+            if (((h >>> ProbeCountShift) == probe) & ((h & hashMiddleMask) == hashMiddle))
             {
                 ref var e = ref GetSurePresentEntryRef(h & indexMask);
                 if (found = default(TEq).Equals(e.Key, key))
@@ -1434,7 +1434,7 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
             }
 
             h = hashesAndIndexes.GetSurePresentItem(++hashIndex & indexMask);
-            ++probes;
+            ++probe;
         }
 
         found = false;
@@ -1462,12 +1462,12 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
         var h = hashesAndIndexes.GetSurePresentItem(hashIndex);
 
         // 1. Skip over hashes with the bigger and equal probes. The hashes with bigger probes overlapping from the earlier ideal positions
-        var probes = 1;
+        var probe = 1;
 
-        while ((h >>> ProbeCountShift) >= probes)
+        while ((h >>> ProbeCountShift) >= probe)
         {
             // 2. For the equal probes check for equality the hash middle part, then check the entry
-            if (((h >>> ProbeCountShift) == probes) & ((h & hashMiddleMask) == hashMiddle))
+            if (((h >>> ProbeCountShift) == probe) & ((h & hashMiddleMask) == hashMiddle))
             {
                 ref var e = ref GetSurePresentEntryRef(h & indexMask);
                 if (found = default(TEq).Equals(e.Key, key))
@@ -1475,7 +1475,7 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
             }
 
             h = hashesAndIndexes.GetSurePresentItem(++hashIndex & indexMask);
-            ++probes;
+            ++probe;
         }
 
         found = false;
@@ -1523,14 +1523,14 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
                 var indexWithNextBit = (oldHash & oldCapacity) | (((i + 1) - (oldHash >>> ProbeCountShift)) & indexMask);
 
                 // no need for robin-hooding because we already did it for the old hashes and now just filling the hashes into the new array which are already in order
-                var probes = 1;
+                var probe = 1;
                 ref var newHash = ref newHashes.GetSurePresentItemRef(indexWithNextBit);
                 while (newHash != 0)
                 {
                     newHash = ref newHashes.GetSurePresentItemRef(++indexWithNextBit & newIndexMask);
-                    ++probes;
+                    ++probe;
                 }
-                newHash = (probes << ProbeCountShift) | (oldHash & newHashAndIndexMask);
+                newHash = (probe << ProbeCountShift) | (oldHash & newHashAndIndexMask);
             }
             if (++i >= oldCapacityWithOverflowSegment)
                 break;

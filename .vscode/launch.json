@@ -3,11 +3,6 @@
     // Use hover for the description of the existing attributes
     // For further information visit https://github.com/OmniSharp/omnisharp-vscode/blob/master/debugger-launchjson.md
     "version": "0.2.0",
-    "sourceFileMap": {
-        "/_/src/FastExpressionCompiler/FastExpressionCompiler.cs": "E:\\Dev\\FastExpressionCompiler\\src\\FastExpressionCompiler\\FastExpressionCompiler.cs",
-        "/_/src/FastExpressionCompiler.LightExpression/FastExpressionCompiler.cs": "E:\\Dev\\FastExpressionCompiler\\src\\FastExpressionCompiler\\FastExpressionCompiler.cs",
-        "/_/src/FastExpressionCompiler.LightExpression/Expression.cs": "E:\\Dev\\FastExpressionCompiler\\src\\FastExpressionCompiler.LightExpression\\Expression.cs"
-    },
     "configurations": [
         {
             "name": "TestsRunner",
@@ -16,7 +11,9 @@
             "preLaunchTask": "build_testsrunner",
             // If you have changed target frameworks, make sure to update the program path.
             "program": "${workspaceFolder}/test/FastExpressionCompiler.TestsRunner/bin/Debug/net9.0/FastExpressionCompiler.TestsRunner.dll",
-            "args": [],
+            "args": [
+                "/p:UseSourceLink=false"
+            ],
             "cwd": "${workspaceFolder}/test/FastExpressionCompiler.TestsRunner",
             // For more information about the 'console' field, see https://github.com/OmniSharp/omnisharp-vscode/blob/master/debugger-launchjson.md#console-terminal-window
             "console": "internalConsole",
