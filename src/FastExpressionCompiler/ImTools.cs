@@ -1068,7 +1068,6 @@ public static class SmallMap
 /// For instance, for the `RefEq` the tombstone is <see langword="null"/>. You may redefine it in the `IEq{K}.GetTombstone()` implementation.
 /// 
 /// </summary>
-[DebuggerDisplay("{Count} of {_e0}, {_e1}, {_e2}, {_e3}, ...")]
 public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, TEntries>
     where TEntry : struct, IEntry<K>
     where TEq : struct, IEq<K>

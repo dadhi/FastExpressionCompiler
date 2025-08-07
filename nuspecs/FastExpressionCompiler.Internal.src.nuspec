@@ -107,13 +107,20 @@
         <file src="_._" target="lib\net472\" />
         <file src="_._" target="lib\netstandard2.0\" />
 
-        <file src="..\src\FastExpressionCompiler.Internal\FastExpressionCompiler.cs" target="contentFiles\cs\net472\FastExpressionCompiler" />
-        <file src="..\src\FastExpressionCompiler.Internal\ImTools.cs" target="contentFiles\cs\net472\FastExpressionCompiler" />
+        <file src="..\src\FastExpressionCompiler.Internal\FastExpressionCompiler.cs" target="contentFiles\cs\net472\FastExpressionCompiler.Internal" />
+        <file src="..\src\FastExpressionCompiler.Internal\ImTools.cs" target="contentFiles\cs\net472\FastExpressionCompiler.Internal" />
+        <file src="..\src\FastExpressionCompiler.Internal\ILReader.cs" target="contentFiles\cs\net472\FastExpressionCompiler.Internal" />
+        <file src="..\src\FastExpressionCompiler.Internal\TestTools.cs" target="contentFiles\cs\net472\FastExpressionCompiler.Internal" />
 
         <file src="..\src\FastExpressionCompiler.Internal\FastExpressionCompiler.cs" target="contentFiles\cs\netstandard2.0\FastExpressionCompiler" />
-        <file src="..\src\FastExpressionCompiler.Internal\ImTools.cs" target="contentFiles\cs\netstandard2.0\FastExpressionCompiler" />
+        <file src="..\src\FastExpressionCompiler.Internal\ImTools.cs" target="contentFiles\cs\netstandard2.0\FastExpressionCompiler.Internal" />
+        <file src="..\src\FastExpressionCompiler.Internal\ILReader.cs" target="contentFiles\cs\netstandard2.0\FastExpressionCompiler.Internal" />
+        <file src="..\src\FastExpressionCompiler.Internal\TestTools.cs" target="contentFiles\cs\netstandard2.0\FastExpressionCompiler.Internal" />
 
-        <file src="..\src\FastExpressionCompiler.Internal\FastExpressionCompiler.cs" target="contentFiles\cs\net8.0\FastExpressionCompiler" />
-        <file src="..\src\FastExpressionCompiler.Internal\ImTools.cs" target="contentFiles\cs\net8.0\FastExpressionCompiler" />
+        <file src="..\src\FastExpressionCompiler.Internal\FastExpressionCompiler.cs" target="contentFiles\cs\net8.0\FastExpressionCompiler.Internal" />
+        <file src="..\src\FastExpressionCompiler.Internal\ImTools.cs" target="contentFiles\cs\net8.0\FastExpressionCompiler.Internal" />
+        <file src="..\src\FastExpressionCompiler.Internal\ILReader.cs" target="contentFiles\cs\net8.0\FastExpressionCompiler.Internal" />
+        <file src="..\src\FastExpressionCompiler.Internal\TestTools.cs" target="contentFiles\cs\net8.0\FastExpressionCompiler.Internal" />
+
     </files>
 </package>
