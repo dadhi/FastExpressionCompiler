@@ -8282,6 +8282,16 @@ namespace FastExpressionCompiler
             Debug.WriteLine($"{opcode} {valueName ?? value.ToString()}  -- {emitterName}:{emitterLine}");
         }
 
+        // e.g. OpCodes.Switch
+        [MethodImpl((MethodImplOptions)256)]
+        public static void Demit(this ILGenerator il, OpCode opcode, Label[] values,
+            [CallerArgumentExpression("values")] string valueName = null, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
+        {
+            il.Emit(opcode, values);
+            if (DisableDemit) return;
+            Debug.WriteLine($"{opcode} {valueName ?? values.Join(",").ToString()}  -- {emitterName}:{emitterLine}");
+        }
+
         [MethodImpl((MethodImplOptions)256)]
         public static void DmarkLabel(this ILGenerator il, Label value,
             [CallerArgumentExpression("value")] string valueName = null, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
@@ -8355,7 +8365,7 @@ namespace FastExpressionCompiler
             Debug.WriteLine($"{opcode} {value}  -- {emitterName}:{emitterLine}");
         }
 
-#else // not DEMIT :)
+#else // no DEMIT! :-)
 
         [MethodImpl((MethodImplOptions)256)]
         public static void Demit(this ILGenerator il, OpCode opcode) => il.Emit(opcode);
@@ -8374,6 +8384,10 @@ namespace FastExpressionCompiler
 
         [MethodImpl((MethodImplOptions)256)]
         public static void Demit(this ILGenerator il, OpCode opcode, Label value) => il.Emit(opcode, value);
+
+        // e.g. OpCodes.Switch
+        [MethodImpl((MethodImplOptions)256)]
+        public static void Demit(this ILGenerator il, OpCode opcode, Label[] values) => il.Emit(opcode, values);
 
         [MethodImpl((MethodImplOptions)256)]
         public static void DmarkLabel(this ILGenerator il, Label value) => il.MarkLabel(value);
