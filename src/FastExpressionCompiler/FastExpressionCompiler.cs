@@ -5333,7 +5333,7 @@ namespace FastExpressionCompiler
                 CompilerFlags setup, ParentFlags parent)
 #endif
             {
-                // todo: @perf #398 use switch statement for int comparison, e.g. if int difference is less or equal 3 -> use IL switch
+                // todo: @wip @perf #398 use switch statement for int comparison, e.g. if int difference is less or equal 3 -> use IL switch
                 var switchValueExpr = expr.SwitchValue;
                 var customEqualMethod = expr.Comparison;
                 var cases = expr.Cases;
@@ -5410,13 +5410,13 @@ namespace FastExpressionCompiler
                 var switchValueVar = EmitStoreLocalVariable(il, switchValueType);
 
                 var switchEndLabel = il.DefineLabel();
-                var caseLabels = new Label[caseCount];
+                SmallList<Label, Stack16<Label>> caseLabels = default; // todo: @wip
 
-                for (var caseIndex = 0; caseIndex < caseLabels.Length; ++caseIndex)
+                for (var caseIndex = 0; caseIndex < caseCount; ++caseIndex)
                 {
                     var cs = cases[caseIndex];
                     var caseBodyLabel = il.DefineLabel();
-                    caseLabels[caseIndex] = caseBodyLabel;
+                    caseLabels.Add(caseBodyLabel);
 
                     foreach (var caseTestValue in cs.TestValues)
                     {
@@ -5496,7 +5496,7 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Br, switchEndLabel);
                 }
 
-                for (var caseIndex = 0; caseIndex < caseLabels.Length; ++caseIndex)
+                for (var caseIndex = 0; caseIndex < caseCount; ++caseIndex)
                 {
                     il.DmarkLabel(caseLabels[caseIndex]);
                     var cs = cases[caseIndex];
