@@ -85,11 +85,11 @@ public static class ILReaderFactory
             try
             {
                 s = line++ > 0 ? s.AppendLine() : s;
-                ILFormatter.Label(s, il.Offset).Append(": ").Append(il.OpCode);
+                ILFormatter.AppendLabelOffset(s, il.Offset).Append(": ").Append(il.OpCode);
                 switch (il.OperandType)
                 {
                     case OperandType.InlineBrTarget:
-                        ILFormatter.Label(s.Append(' '), ((InlineBrTargetInstruction)il).TargetOffset);
+                        ILFormatter.AppendLabelOffset(s.Append(' '), ((InlineBrTargetInstruction)il).TargetOffset);
                         break;
                     case OperandType.InlineI:
                         s.Append(' ').Append(((InlineIInstruction)il).Int32);
@@ -144,7 +144,7 @@ public static class ILReaderFactory
                         s.Append(' ').AppendTypeName(((InlineTypeInstruction)il).Type);
                         break;
                     case OperandType.InlineVar:
-                        ILFormatter.Argument(s.Append(' '), ((InlineVarInstruction)il).Ordinal);
+                        ILFormatter.AppendArgumentOrdinal(s.Append(' '), ((InlineVarInstruction)il).Ordinal);
                         break;
                     case OperandType.ShortInlineBrTarget:
                         s.Append(' ').Append(((ShortInlineBrTargetInstruction)il).TargetOffset);
@@ -156,7 +156,7 @@ public static class ILReaderFactory
                         s.Append(' ').Append(((ShortInlineRInstruction)il).Single);
                         break;
                     case OperandType.ShortInlineVar:
-                        ILFormatter.Argument(s.Append(' '), ((ShortInlineVarInstruction)il).Ordinal);
+                        ILFormatter.AppendArgumentOrdinal(s.Append(' '), ((ShortInlineVarInstruction)il).Ordinal);
                         break;
                     default:
                         break;
@@ -611,11 +611,11 @@ public class DynamicMethodILProvider : IILProvider
 
 public static class ILFormatter
 {
-    public static StringBuilder Int32ToHex(StringBuilder sb, int int32) => sb.Append(int32.ToString("X8"));
-    public static StringBuilder Int16ToHex(StringBuilder sb, int int16) => sb.Append(int16.ToString("X4"));
-    public static StringBuilder Int8ToHex(StringBuilder sb, int int8) => sb.Append(int8.ToString("X2"));
-    public static StringBuilder Argument(StringBuilder sb, int ordinal) => sb.Append($"V_{ordinal}");
-    public static StringBuilder Label(StringBuilder sb, int offset) => sb.Append($"IL_{offset:D4}");
+    public static StringBuilder AppendInt32ToHex(StringBuilder sb, int int32) => sb.Append(int32.ToString("X8"));
+    public static StringBuilder AppendInt16ToHex(StringBuilder sb, int int16) => sb.Append(int16.ToString("X4"));
+    public static StringBuilder AppendInt8ToHex(StringBuilder sb, int int8) => sb.Append(int8.ToString("X2"));
+    public static StringBuilder AppendArgumentOrdinal(StringBuilder sb, int ordinal) => sb.Append($"V_{ordinal}");
+    public static StringBuilder AppendLabelOffset(StringBuilder sb, int offset) => sb.Append($"IL_{offset:D4}");
 
     public static StringBuilder MultipleLabels(StringBuilder sb, int[] offsets)
     {
@@ -623,7 +623,7 @@ public static class ILFormatter
         for (var i = 0; i < length; i++)
         {
             sb.AppendFormat(i == 0 ? "(" : ", ");
-            sb.Append(Label(sb, offsets[i]));
+            AppendLabelOffset(sb, offsets[i]);
         }
         sb.AppendFormat(")");
         return sb;
@@ -662,7 +662,7 @@ public static class ILFormatter
         for (var i = 0; i < length; i++)
         {
             sb.AppendFormat(i == 0 ? "SIG [" : " ");
-            sb.Append(Int8ToHex(sb, sig[i]));
+            AppendInt8ToHex(sb, sig[i]);
         }
         sb.AppendFormat("]");
         return sb;
