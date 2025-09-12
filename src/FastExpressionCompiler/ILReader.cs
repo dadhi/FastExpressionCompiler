@@ -135,7 +135,7 @@ public static class ILReaderFactory
                         ILFormatter.EscapedString(s.Append(' '), ((InlineStringInstruction)il).String);
                         break;
                     case OperandType.InlineSwitch:
-                        ILFormatter.MultipleLabels(s.Append(" switch "), ((InlineSwitchInstruction)il).TargetOffsets);
+                        ILFormatter.MultipleLabels(s.Append(' '), ((InlineSwitchInstruction)il).TargetOffsets);
                         break;
                     case OperandType.InlineTok:
                         s.Append(' ').Append(((InlineTokInstruction)il).Member.Name);
