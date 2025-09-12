@@ -5,9 +5,6 @@ using System.Diagnostics;
 using System.Collections.Generic;
 using System.Threading;
 
-
-
-
 #if LIGHT_EXPRESSION
 using ExpressionType = System.Linq.Expressions.ExpressionType;
 using static FastExpressionCompiler.LightExpression.Expression;

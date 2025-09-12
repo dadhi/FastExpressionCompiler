@@ -1,6 +1,5 @@
 using System;
 
-
 #if LIGHT_EXPRESSION
 using FastExpressionCompiler.LightExpression.ImTools;
 using static FastExpressionCompiler.LightExpression.Expression;
