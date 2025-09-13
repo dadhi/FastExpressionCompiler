@@ -8289,7 +8289,7 @@ namespace FastExpressionCompiler
         {
             il.Emit(opcode, values);
             if (DisableDemit) return;
-            Debug.WriteLine($"{opcode} {valueName ?? values.Join(",").ToString()}  -- {emitterName}:{emitterLine}");
+            Debug.WriteLine($"{opcode} {valueName ?? string.Join(",", values).ToString()}  -- {emitterName}:{emitterLine}");
         }
 
         [MethodImpl((MethodImplOptions)256)]

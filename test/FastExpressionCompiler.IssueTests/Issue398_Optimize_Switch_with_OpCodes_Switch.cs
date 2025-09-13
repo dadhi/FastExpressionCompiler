@@ -18,6 +18,7 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
     {
         Test_switch_for_all_integer_types_with_cases_starting_from_0(t);
         Test_switch_for_all_integer_types_with_cases_starting_from_Not_0(t);
+        Test_switch_for_nullable_integer_types(t);
     }
 
     public void Test_switch_for_all_integer_types_with_cases_starting_from_0(TestContext t)
@@ -38,11 +39,10 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
                 // SwitchCase(
                 //     Constant(2),
                 //     Constant(2)),
+                // 2 cases and a single body
                 SwitchCase(
                     Constant(3),
-                    Constant(3)),
-                SwitchCase(
-                    Constant(4),
+                    Constant(3),
                     Constant(4)),
                 SwitchCase(
                     Constant(5),
@@ -74,8 +74,6 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
             OpCodes.Ldc_I4_1,
             OpCodes.Br,
             OpCodes.Ldc_I4_3,
-            OpCodes.Br,
-            OpCodes.Ldc_I4_4,
             OpCodes.Br,
             OpCodes.Ldc_I4_5,
             OpCodes.Br,
@@ -135,5 +133,51 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
 
         t.IsNotNull(ff);
         t.AreEqual(5, ff(5));
+    }
+
+    public void Test_switch_for_nullable_integer_types(TestContext t)
+    {
+        var p = Parameter(typeof(int?));
+
+        var expr = Lambda<Func<int?, int>>(
+            Switch(
+                p,
+                Constant(-1),
+                SwitchCase(
+                    Constant(0),
+                    Constant(null, typeof(int?))),
+                SwitchCase(
+                    Constant(0),
+                    Constant(0, typeof(int?))),
+                SwitchCase(
+                    Constant(1),
+                    Constant(1, typeof(int?))),
+                SwitchCase(
+                    Constant(2),
+                    Constant(2, typeof(int?))),
+                SwitchCase(
+                    Constant(3),
+                    Constant(3, typeof(int?))),
+                SwitchCase(
+                    Constant(4),
+                    Constant(4, typeof(int?))),
+                SwitchCase(
+                    Constant(5),
+                    Constant(5, typeof(int?)))),
+            p);
+
+        expr.PrintCSharp();
+
+        var fs = expr.CompileSys();
+        fs.PrintIL();
+
+        t.IsNotNull(fs);
+        t.AreEqual(0, fs(null));
+
+        var ff = expr.CompileFast(false);
+        ff.PrintIL();
+
+        t.IsNotNull(ff);
+        t.AreEqual(0, ff(null));
     }
 }
