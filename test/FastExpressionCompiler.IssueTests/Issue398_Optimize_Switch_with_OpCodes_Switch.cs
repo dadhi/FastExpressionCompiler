@@ -16,12 +16,13 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
 {
     public void Run(TestRun t)
     {
-        Test_switch_for_all_integer_types_with_cases_starting_from_0(t);
-        Test_switch_for_all_integer_types_with_cases_starting_from_Not_0(t);
+        Test_switch_for_the_enums(t);
+        Test_switch_for_all_integer_cases_starting_from_0(t);
+        Test_switch_for_integer_cases_starting_from_Not_0(t);
         Test_switch_for_nullable_integer_types(t);
     }
 
-    public void Test_switch_for_all_integer_types_with_cases_starting_from_0(TestContext t)
+    public void Test_switch_for_all_integer_cases_starting_from_0(TestContext t)
     {
         var p = Parameter(typeof(int));
 
@@ -35,21 +36,25 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
                 SwitchCase(
                     Constant(1),
                     Constant(1)),
+
                 // Adding the hole in the table to see how it handled by the generated IL
                 // SwitchCase(
                 //     Constant(2),
                 //     Constant(2)),
-                // 2 cases and a single body
+
+                // 2 cases and a single body, reordered two
                 SwitchCase(
                     Constant(3),
-                    Constant(3),
-                    Constant(4)),
-                SwitchCase(
-                    Constant(5),
-                    Constant(5)),
+                    Constant(4),
+                    Constant(3)),
+
+                // Reordered cases
                 SwitchCase(
                     Constant(6),
-                    Constant(6))),
+                    Constant(6)),
+                SwitchCase(
+                    Constant(5),
+                    Constant(5))),
             p);
 
         expr.PrintCSharp();
@@ -60,7 +65,7 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
         t.IsNotNull(fs);
         t.AreEqual(5, fs(5));
 
-        var ff = expr.CompileFast(false);
+        var ff = expr.CompileFast();
         ff.PrintIL();
         // todo: @wip should be this if fs changed to ff
         fs.AssertOpCodes(
@@ -75,9 +80,9 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
             OpCodes.Br,
             OpCodes.Ldc_I4_3,
             OpCodes.Br,
-            OpCodes.Ldc_I4_5,
-            OpCodes.Br,
             OpCodes.Ldc_I4_6,
+            OpCodes.Br,
+            OpCodes.Ldc_I4_5,
             OpCodes.Br,
             OpCodes.Ldc_I4_M1,
             OpCodes.Ret
@@ -87,7 +92,7 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
         t.AreEqual(5, ff(5));
     }
 
-    public void Test_switch_for_all_integer_types_with_cases_starting_from_Not_0(TestContext t)
+    public void Test_switch_for_integer_cases_starting_from_Not_0(TestContext t)
     {
         var p = Parameter(typeof(int));
 
@@ -128,11 +133,70 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
         t.IsNotNull(fs);
         t.AreEqual(5, fs(5));
 
-        var ff = expr.CompileFast(false);
+        var ff = expr.CompileFast();
         ff.PrintIL();
 
         t.IsNotNull(ff);
         t.AreEqual(5, ff(5));
+    }
+
+    enum IntEnum : int
+    {
+        Zero = 0,
+        One,
+        Two,
+        Three,
+        Four,
+        Five,
+        Six
+    }
+
+    public void Test_switch_for_the_enums(TestContext t)
+    {
+        var p = Parameter(typeof(IntEnum));
+
+        var expr = Lambda<Func<IntEnum, int>>(
+            Switch(
+                p,
+                Constant(-1),
+                // Specifically starting from 1 instead of 0 to see how OpCodes.Switch handles it
+                // SwitchCase(
+                //     Constant(0),
+                //     Constant(0)),
+                SwitchCase(
+                    Constant(1),
+                    Constant(IntEnum.One)),
+                // Adding the hole in the table to see how it handled by the generated IL
+                // SwitchCase(
+                //     Constant(2),
+                //     Constant(2)),
+                SwitchCase(
+                    Constant(3),
+                    Constant(IntEnum.Three)),
+                SwitchCase(
+                    Constant(4),
+                    Constant(IntEnum.Four)),
+                SwitchCase(
+                    Constant(5),
+                    Constant(IntEnum.Five)),
+                SwitchCase(
+                    Constant(6),
+                    Constant(IntEnum.Six))),
+            p);
+
+        expr.PrintCSharp();
+
+        var fs = expr.CompileSys();
+        fs.PrintIL();
+
+        t.IsNotNull(fs);
+        t.AreEqual(5, fs(IntEnum.Five));
+
+        var ff = expr.CompileFast();
+        ff.PrintIL();
+
+        t.IsNotNull(ff);
+        t.AreEqual(5, ff(IntEnum.Five));
     }
 
     public void Test_switch_for_nullable_integer_types(TestContext t)
@@ -174,7 +238,7 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
         t.IsNotNull(fs);
         t.AreEqual(0, fs(null));
 
-        var ff = expr.CompileFast(false);
+        var ff = expr.CompileFast();
         ff.PrintIL();
 
         t.IsNotNull(ff);
