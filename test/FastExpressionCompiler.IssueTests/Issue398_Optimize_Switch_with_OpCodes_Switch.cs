@@ -208,10 +208,10 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
             Switch(
                 p,
                 Constant(-1),
-                // The -5 case is handled separately before the switch
+                // The -3 case is handled separately before the switch table, but -2 is included into the switch table
                 SwitchCase(
-                    Constant(-5),
-                    Constant((sbyte)-5, typeof(sbyte))),
+                    Constant(-3),
+                    Constant((sbyte)-3, typeof(sbyte))),
                 SwitchCase(
                     Constant(3),
                     Constant((sbyte)3, typeof(sbyte))),
@@ -232,13 +232,13 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
         fs.PrintIL();
 
         t.IsNotNull(fs);
-        t.AreEqual(-5, fs(-5));
+        t.AreEqual(-3, fs(-3));
 
         var ff = expr.CompileFast();
         ff.PrintIL();
 
         t.IsNotNull(ff);
-        t.AreEqual(-5, ff(-5));
+        t.AreEqual(-3, ff(-3));
     }
 
     public void Test_switch_for_nullable_integer_types(TestContext t)
