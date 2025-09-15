@@ -16,6 +16,7 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
 {
     public void Run(TestRun t)
     {
+        Test_switch_for_the_bytes(t);
         Test_switch_for_the_enums(t);
         Test_switch_for_all_integer_cases_starting_from_0(t);
         Test_switch_for_integer_cases_starting_from_Not_0(t);
@@ -197,6 +198,47 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
 
         t.IsNotNull(ff);
         t.AreEqual(5, ff(IntEnum.Five));
+    }
+
+    public void Test_switch_for_the_bytes(TestContext t)
+    {
+        var p = Parameter(typeof(sbyte));
+
+        var expr = Lambda<Func<sbyte, int>>(
+            Switch(
+                p,
+                Constant(-1),
+                // The -5 case is handled separately before the switch
+                SwitchCase(
+                    Constant(-5),
+                    Constant((sbyte)-5, typeof(sbyte))),
+                SwitchCase(
+                    Constant(3),
+                    Constant((sbyte)3, typeof(sbyte))),
+                SwitchCase(
+                    Constant(4),
+                    Constant((sbyte)4, typeof(sbyte))),
+                SwitchCase(
+                    Constant(5),
+                    Constant((sbyte)5, typeof(sbyte))),
+                SwitchCase(
+                    Constant(6),
+                    Constant((sbyte)6, typeof(sbyte)))),
+            p);
+
+        expr.PrintCSharp();
+
+        var fs = expr.CompileSys();
+        fs.PrintIL();
+
+        t.IsNotNull(fs);
+        t.AreEqual(-5, fs(-5));
+
+        var ff = expr.CompileFast();
+        ff.PrintIL();
+
+        t.IsNotNull(ff);
+        t.AreEqual(-5, ff(-5));
     }
 
     public void Test_switch_for_nullable_integer_types(TestContext t)
