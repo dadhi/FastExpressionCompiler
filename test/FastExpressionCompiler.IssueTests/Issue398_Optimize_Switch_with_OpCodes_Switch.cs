@@ -16,6 +16,7 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
 {
     public void Run(TestRun t)
     {
+        Test_switch_for_the_bytes_two_ranges(t);
         Test_switch_for_the_bytes(t);
         Test_switch_for_the_enums(t);
         Test_switch_for_all_integer_cases_starting_from_0(t);
@@ -223,7 +224,11 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
                     Constant((sbyte)5, typeof(sbyte))),
                 SwitchCase(
                     Constant(6),
-                    Constant((sbyte)6, typeof(sbyte)))),
+                    Constant((sbyte)6, typeof(sbyte))),
+                SwitchCase(
+                    Constant(12),
+                    Constant((sbyte)12, typeof(sbyte)))
+                ),
             p);
 
         expr.PrintCSharp();
@@ -239,6 +244,56 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
 
         t.IsNotNull(ff);
         t.AreEqual(-3, ff(-3));
+    }
+
+    public void Test_switch_for_the_bytes_two_ranges(TestContext t)
+    {
+        var p = Parameter(typeof(sbyte));
+
+        var expr = Lambda<Func<sbyte, int>>(
+            Switch(
+                p,
+                Constant(-1),
+                SwitchCase(
+                    Constant(3),
+                    Constant((sbyte)3, typeof(sbyte))),
+                SwitchCase(
+                    Constant(4),
+                    Constant((sbyte)4, typeof(sbyte))),
+                SwitchCase(
+                    Constant(5),
+                    Constant((sbyte)5, typeof(sbyte))),
+                SwitchCase(
+                    Constant(6),
+                    Constant((sbyte)6, typeof(sbyte))),
+                SwitchCase(
+                    Constant(15), // boundary case to split single range into 2 ranges (seems like the diff should be >= range1 + range2)
+                    Constant((sbyte)15, typeof(sbyte))),
+                SwitchCase(
+                    Constant(16),
+                    Constant((sbyte)16, typeof(sbyte))),
+                SwitchCase(
+                    Constant(17),
+                    Constant((sbyte)17, typeof(sbyte))),
+                SwitchCase(
+                    Constant(18),
+                    Constant((sbyte)18, typeof(sbyte)))
+                ),
+            p);
+
+        expr.PrintCSharp();
+
+        var fs = expr.CompileSys();
+        fs.PrintIL();
+
+        t.IsNotNull(fs);
+        t.AreEqual(13, fs(13));
+
+        var ff = expr.CompileFast();
+        ff.PrintIL();
+
+        t.IsNotNull(ff);
+        t.AreEqual(13, ff(13));
     }
 
     public void Test_switch_for_nullable_integer_types(TestContext t)
