@@ -287,15 +287,46 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
 
         var fs = expr.CompileSys();
         fs.PrintIL(format: ILFormat.AssertOpCodes);
+        fs.AssertOpCodes(
+            OpCodes.Ldarg_1, //        at IL_0000
+            OpCodes.Stloc_0, //        at IL_0001
+            OpCodes.Ldloc_0, //        at IL_0002
+            OpCodes.Ldc_I4_3, //       at IL_0003
+            OpCodes.Sub, //            at IL_0004
+            OpCodes.Switch, // (IL_0056, IL_0062, IL_0068, IL_0074) at IL_0005
+            OpCodes.Ldloc_0, //        at IL_0026
+            OpCodes.Ldc_I4_S, // 15    at IL_0027
+            OpCodes.Sub, //            at IL_0029
+            OpCodes.Switch, // (IL_0080, IL_0087, IL_0094, IL_0101) at IL_0030
+            OpCodes.Br, // IL_0108     at IL_0051
+            OpCodes.Ldc_I4_3, //       at IL_0056
+            OpCodes.Br, // IL_0109     at IL_0057
+            OpCodes.Ldc_I4_4, //       at IL_0062
+            OpCodes.Br, // IL_0109     at IL_0063
+            OpCodes.Ldc_I4_5, //       at IL_0068
+            OpCodes.Br, // IL_0109     at IL_0069
+            OpCodes.Ldc_I4_6, //       at IL_0074
+            OpCodes.Br, // IL_0109     at IL_0075
+            OpCodes.Ldc_I4_S, // 15    at IL_0080
+            OpCodes.Br, // IL_0109     at IL_0082
+            OpCodes.Ldc_I4_S, // 16    at IL_0087
+            OpCodes.Br, // IL_0109     at IL_0089
+            OpCodes.Ldc_I4_S, // 17    at IL_0094
+            OpCodes.Br, // IL_0109     at IL_0096
+            OpCodes.Ldc_I4_S, // 18    at IL_0101
+            OpCodes.Br, // IL_0109     at IL_0103
+            OpCodes.Ldc_I4_M1, //      at IL_0108
+            OpCodes.Ret  //            at IL_0109
+        );
 
         t.IsNotNull(fs);
-        t.AreEqual(13, fs(13));
+        t.AreEqual(16, fs(16));
 
         var ff = expr.CompileFast();
         ff.PrintIL();
 
         t.IsNotNull(ff);
-        t.AreEqual(13, ff(13));
+        t.AreEqual(16, ff(16));
     }
 
     public void Test_switch_for_nullable_integer_types(TestContext t)
