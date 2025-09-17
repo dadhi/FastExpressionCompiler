@@ -2,11 +2,13 @@ using System;
 using System.Reflection.Emit;
 
 #if LIGHT_EXPRESSION
+using FastExpressionCompiler.LightExpression.ILDecoder;
 using FastExpressionCompiler.LightExpression.ImTools;
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.IssueTests;
 #else
 using System.Linq.Expressions;
+using FastExpressionCompiler.ILDecoder;
 using FastExpressionCompiler.ImTools;
 using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
@@ -284,7 +286,7 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
         expr.PrintCSharp();
 
         var fs = expr.CompileSys();
-        fs.PrintIL();
+        fs.PrintIL(format: ILFormat.AssertOpCodes);
 
         t.IsNotNull(fs);
         t.AreEqual(13, fs(13));

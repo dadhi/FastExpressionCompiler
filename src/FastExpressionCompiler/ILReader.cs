@@ -22,6 +22,13 @@ namespace FastExpressionCompiler.ILDecoder;
 
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
+/// <summary>AssertOpCodes outputs just the OpCodes.FooBar for copy pasting into AssertOpCodes method</summary>
+public enum ILFormat
+{
+    Default,
+    AssertOpCodes,
+}
+
 [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Uses reflection on internal types and is not trim-compatible.")]
 public static class ILReaderFactory
 {
@@ -65,27 +72,66 @@ public static class ILReaderFactory
         return null;
     }
 
-    public static StringBuilder ToILString(this MethodInfo method, StringBuilder s = null)
+    public static StringBuilder ToILString(this MethodInfo method, ILFormat format = ILFormat.Default, StringBuilder s = null)
     {
         var il = GetILReaderOrNull(method);
         return il != null
-            ? il.ToILString(s)
+            ? il.ToILString(format, s)
             : (s ?? new StringBuilder()).AppendLine($"ILReader for {method} is not supported");
     }
 
     public static ILInstruction[] ReadAllInstructions(this MethodBase source) =>
         GetILReaderOrNull(source)?.ToArray() ?? [];
 
-    public static StringBuilder ToILString(this IEnumerable<ILInstruction> ilInstructions, StringBuilder s = null)
+    public static StringBuilder ToILString(this IEnumerable<ILInstruction> ilInstructions, ILFormat format = ILFormat.Default, StringBuilder s = null)
     {
         s ??= new StringBuilder();
-        var line = 0;
+        if (format == ILFormat.AssertOpCodes)
+            s.AppendLine("AssertOpCodes(");
+
+        StringBuilder opCodeNameBuilder = null;
+        var firstLine = true;
+        var lineStartAt = 0;
         foreach (var il in ilInstructions)
         {
             try
             {
-                s = line++ > 0 ? s.AppendLine() : s;
-                ILFormatter.AppendLabelOffset(s, il.Offset).Append(": ").Append(il.OpCode);
+                if (format == ILFormat.AssertOpCodes)
+                {
+                    s = firstLine ? s : s.AppendLine();
+
+                    var opCodeName = il.OpCode.Name;
+                    opCodeNameBuilder ??= new StringBuilder(opCodeName.Length * 2);
+                    var toCapitalize = true;
+                    foreach (var ch in opCodeName)
+                    {
+                        if (ch == '.')
+                        {
+                            opCodeNameBuilder.Append('_');
+                            toCapitalize = true;
+                        }
+                        else if (toCapitalize)
+                        {
+
+                            opCodeNameBuilder.Append(char.ToUpperInvariant(ch));
+                            toCapitalize = false;
+                        }
+                        else
+                            opCodeNameBuilder.Append(ch);
+                    }
+                    opCodeName = opCodeNameBuilder.ToString();
+                    opCodeNameBuilder.Clear();
+
+                    lineStartAt = s.Length;
+                    s.Append("   OpCodes.").Append(opCodeName).Append(", //");
+                }
+                else
+                {
+                    s = firstLine ? s : s.AppendLine();
+                    ILFormatter.AppendLabelOffset(s, il.Offset).Append(": ").Append(il.OpCode);
+                }
+
+                firstLine = false;
                 switch (il.OperandType)
                 {
                     case OperandType.InlineBrTarget:
@@ -166,6 +212,27 @@ public static class ILReaderFactory
             {
                 s.AppendLine().AppendLine("EXCEPTION_IN_IL_PRINT: " + ex.Message).AppendLine();
             }
+
+            if (format == ILFormat.AssertOpCodes)
+            {
+                var lineLength = s.Length - lineStartAt;
+                var padSpacesBeforeILOffset = lineLength > 30 ? 1 : 30 - lineLength;
+                s.Append(' ', padSpacesBeforeILOffset);
+                ILFormatter.AppendLabelOffset(s.Append("at "), il.Offset);
+            }
+        }
+        if (format == ILFormat.AssertOpCodes)
+        {
+            // remove the last dangling comma
+            for (var i = s.Length - 1; i >= 0; i--)
+            {
+                if (s[i] == ',')
+                {
+                    s[i] = ' ';
+                    break;
+                }
+            }
+            s.AppendLine().Append(");");
         }
         return s;
     }

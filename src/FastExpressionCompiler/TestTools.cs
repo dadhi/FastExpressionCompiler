@@ -140,27 +140,27 @@ public static class TestTools
         [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "") =>
         debugInfo.Expression.PrintCSharp(completeTypeNames, caller, filePath);
 
-    public static void PrintIL(this Delegate dlg, [CallerMemberName] string tag = null)
+    public static void PrintIL(this Delegate dlg, [CallerMemberName] string tag = null, ILFormat format = ILFormat.Default)
     {
         if (!AllowPrintIL) return;
         if (dlg.Target is IDelegateDebugInfo debugInfo)
-            debugInfo.PrintIL(tag);
+            debugInfo.PrintIL(tag, format);
         else
-            dlg.Method.PrintIL(tag);
+            dlg.Method.PrintIL(tag, format);
     }
 
-    public static void PrintIL(this MethodInfo method, [CallerMemberName] string tag = null) =>
-        PrintIL(tag, method, static (m, s) => m.ToILString(s));
+    public static void PrintIL(this MethodInfo method, [CallerMemberName] string tag = null, ILFormat format = ILFormat.Default) =>
+        PrintIL(format, tag, method, static (f, m, s) => m.ToILString(f, s));
 
     /// <summary>Prints the IL instructions of the delegate debug info, including nested lambdas.</summary>
-    public static void PrintIL(this IDelegateDebugInfo debugInfo, [CallerMemberName] string tag = null)
+    public static void PrintIL(this IDelegateDebugInfo debugInfo, [CallerMemberName] string tag = null, ILFormat format = ILFormat.Default)
     {
         if (!AllowPrintIL) return;
 
         SmallMap4<IDelegateDebugInfo, string, RefEq<IDelegateDebugInfo>> uniquePrinted = default;
         var totalNestedCount = 0;
 
-        PrintIL(debugInfo, ref totalNestedCount, ref uniquePrinted, tag ?? "top");
+        PrintIL(debugInfo, format, ref totalNestedCount, ref uniquePrinted, tag ?? "top");
 
         if (totalNestedCount > 0)
         {
@@ -170,36 +170,37 @@ public static class TestTools
     }
 
     private static void PrintIL(IDelegateDebugInfo debugInfo,
+        ILFormat format,
         ref int totalNestedCount,
         ref SmallMap4<IDelegateDebugInfo, string, RefEq<IDelegateDebugInfo>> uniquePrinted,
         string tag)
     {
         Debug.Assert(tag != null, "tag should not be null");
 
-        PrintIL(tag, debugInfo.ILInstructions, static (il, s) => il.ToILString(s));
+        PrintIL(format, tag, debugInfo.ILInstructions, static (format, il, s) => il.ToILString(format, s));
 
         var n = 0;
         foreach (var nested in debugInfo.EnumerateNestedLambdas())
         {
             ref var printedTag = ref uniquePrinted.Map.AddOrGetValueRef(nested, out var printed);
             if (printed)
-                PrintIL($"{printedTag}", "printed already", static (ap, s) => s.Append(ap));
+                PrintIL(format, $"{printedTag}", "printed already", static (_, ap, s) => s.Append(ap));
             else
             {
                 printedTag = $"{n}_nested_in_{tag}";
-                PrintIL(nested, ref totalNestedCount, ref uniquePrinted, printedTag);
+                PrintIL(nested, format, ref totalNestedCount, ref uniquePrinted, printedTag);
             }
             ++n;
             ++totalNestedCount;
         }
     }
 
-    private static void PrintIL<A>(string tag, A state, Action<A, StringBuilder> printIL)
+    private static void PrintIL<S>(ILFormat format, string tag, S state, Action<ILFormat, S, StringBuilder> printIL)
     {
         if (!AllowPrintIL) return;
         var s = new StringBuilder();
         s.Append(tag == null ? "<il>" : "<" + tag + ">").AppendLine();
-        printIL(state, s);
+        printIL(format, state, s);
         s.AppendLine().Append(tag == null ? "</il>" : "</" + tag + ">");
         Console.WriteLine(s);
     }
