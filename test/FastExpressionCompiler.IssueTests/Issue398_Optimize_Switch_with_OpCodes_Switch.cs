@@ -18,12 +18,50 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
 {
     public void Run(TestRun t)
     {
+        Test_switch_for_minimal_number_of_cases_enabling_OpCodesSwitch_and_no_default_case(t);
+        Test_switch_for_all_integer_cases_starting_from_0(t);
         Test_switch_for_the_bytes_two_ranges(t);
         Test_switch_for_the_bytes(t);
         Test_switch_for_the_enums(t);
-        Test_switch_for_all_integer_cases_starting_from_0(t);
         Test_switch_for_integer_cases_starting_from_Not_0(t);
         Test_switch_for_nullable_integer_types(t);
+    }
+
+    public void Test_switch_for_minimal_number_of_cases_enabling_OpCodesSwitch_and_no_default_case(TestContext t)
+    {
+        var p = Parameter(typeof(int));
+
+        var expr = Lambda<Func<int, int>>(
+            Block(typeof(int),
+                Switch(
+                    p,
+                    SwitchCase(
+                        Assign(p, Constant(42)),
+                        Constant(0)),
+                    SwitchCase(
+                        Assign(p, Constant(1)),
+                        Constant(1)),
+                    SwitchCase(
+                        Assign(p, Constant(3)),
+                        Constant(3), Constant(2))
+                    ),
+                    p
+                ),
+            p);
+
+        expr.PrintCSharp();
+
+        var fs = expr.CompileSys();
+        fs.PrintIL(format: ILFormat.AssertOpCodes);
+
+        t.IsNotNull(fs);
+        t.AreEqual(5, fs(5));
+
+        var ff = expr.CompileFast();
+        ff.PrintIL(format: ILFormat.AssertOpCodes);
+
+        t.IsNotNull(ff);
+        t.AreEqual(5, ff(5));
     }
 
     public void Test_switch_for_all_integer_cases_starting_from_0(TestContext t)
@@ -46,11 +84,10 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
                 //     Constant(2),
                 //     Constant(2)),
 
-                // 2 cases and a single body, reordered two
+                // 2 cases and a single body, reordered too
                 SwitchCase(
                     Constant(3),
-                    Constant(4),
-                    Constant(3)),
+                    Constant(4), Constant(3)),
 
                 // Reordered cases
                 SwitchCase(
@@ -64,33 +101,33 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
         expr.PrintCSharp();
 
         var fs = expr.CompileSys();
-        fs.PrintIL();
+        fs.PrintIL(format: ILFormat.AssertOpCodes);
+        fs.AssertOpCodes(
+            OpCodes.Ldarg_1, //        at IL_0000
+            OpCodes.Stloc_0, //        at IL_0001
+            OpCodes.Ldloc_0, //        at IL_0002
+            OpCodes.Switch, // (IL_0041, IL_0047, IL_0071, IL_0053, IL_0053, IL_0065, IL_0059) at IL_0003
+            OpCodes.Br, // IL_0071     at IL_0036
+            OpCodes.Ldc_I4_0, //       at IL_0041
+            OpCodes.Br, // IL_0072     at IL_0042
+            OpCodes.Ldc_I4_1, //       at IL_0047
+            OpCodes.Br, // IL_0072     at IL_0048
+            OpCodes.Ldc_I4_3, //       at IL_0053
+            OpCodes.Br, // IL_0072     at IL_0054
+            OpCodes.Ldc_I4_6, //       at IL_0059
+            OpCodes.Br, // IL_0072     at IL_0060
+            OpCodes.Ldc_I4_5, //       at IL_0065
+            OpCodes.Br, // IL_0072     at IL_0066
+            OpCodes.Ldc_I4_M1, //      at IL_0071
+            OpCodes.Ret  //            at IL_0072
+        );
 
         t.IsNotNull(fs);
         t.AreEqual(5, fs(5));
 
         var ff = expr.CompileFast();
-        ff.PrintIL();
-        // todo: @wip should be this if fs changed to ff
-        fs.AssertOpCodes(
-            OpCodes.Ldarg_1,
-            OpCodes.Stloc_0,
-            OpCodes.Ldloc_0,
-            OpCodes.Switch, // (IL_0041, IL_0047, IL_0077, IL_0053, IL_0059, IL_0065, IL_0071),
-            OpCodes.Br,
-            OpCodes.Ldc_I4_0,
-            OpCodes.Br,
-            OpCodes.Ldc_I4_1,
-            OpCodes.Br,
-            OpCodes.Ldc_I4_3,
-            OpCodes.Br,
-            OpCodes.Ldc_I4_6,
-            OpCodes.Br,
-            OpCodes.Ldc_I4_5,
-            OpCodes.Br,
-            OpCodes.Ldc_I4_M1,
-            OpCodes.Ret
-        );
+        ff.PrintIL(format: ILFormat.AssertOpCodes);
+
 
         t.IsNotNull(ff);
         t.AreEqual(5, ff(5));

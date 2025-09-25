@@ -5333,12 +5333,13 @@ namespace FastExpressionCompiler
                 CompilerFlags setup, ParentFlags parent)
 #endif
             {
-                // todo: @wip @perf #398 use switch statement for int comparison, e.g. if int difference is less or equal 3 -> use IL switch
+                // todo: @perf #398 use switch opcode for int comparison, check the Issue398_Optimize_Switch_with_OpCodes_Switch for the cases to be addressed
                 var switchValueExpr = expr.SwitchValue;
                 var customEqualMethod = expr.Comparison;
                 var cases = expr.Cases;
                 var caseCount = cases.Count;
-                if (caseCount == 1 && expr.DefaultBody != null)
+                var defaultBody = expr.DefaultBody;
+                if (caseCount == 1 && defaultBody != null)
                 {
                     // optimization for the single case
                     // todo: @perf make a similar one for the two cases, probably use the two IfThenElses emit
@@ -5351,16 +5352,49 @@ namespace FastExpressionCompiler
                             // todo: @perf avoid creation of the additional expression
                             testExpr = Equal(switchValueExpr, cs0.TestValues[0]);
                             if (Interpreter.TryInterpretBool(out var testResult, testExpr, setup))
-                                return TryEmit(testResult ? cs0.Body : expr.DefaultBody, paramExprs, il, ref closure, setup, parent);
+                                return TryEmit(testResult ? cs0.Body : defaultBody, paramExprs, il, ref closure, setup, parent);
                         }
                         else
                             testExpr = Call(customEqualMethod, switchValueExpr, cs0.TestValues[0]);
 
-                        return TryEmitConditional(testExpr, cs0.Body, expr.DefaultBody, paramExprs, il, ref closure, setup, parent);
+                        return TryEmitConditional(testExpr, cs0.Body, defaultBody, paramExprs, il, ref closure, setup, parent);
                     }
                 }
 
                 var switchValueType = switchValueExpr.Type;
+
+                // Check when the OpCodes.Switch can be used, see #398
+                if (caseCount > 3 && customEqualMethod == null &&
+                    switchValueType.IsPrimitive && switchValueType.IsInteger() ||
+                    switchValueType.IsEnum && Enum.GetUnderlyingType(switchValueType).IsInteger())
+                {
+                    var swithValueParent = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
+                    if (!TryEmit(switchValueExpr, paramExprs, il, ref closure, setup, swithValueParent, -1))
+                        return false;
+
+                    var gotoLabels = new Label[caseCount];
+                    for (var i = 0; i < caseCount; ++i)
+                        gotoLabels[i] = il.DefineLabel();
+                    il.DemitSwitch(gotoLabels);
+
+                    var endLabel = il.DefineLabel();
+                    if (defaultBody != null && !TryEmit(defaultBody, paramExprs, il, ref closure, setup, parent))
+                        return false;
+                    il.Demit(OpCodes.Br, endLabel);
+
+                    for (var i = 0; i < caseCount; ++i)
+                    {
+                        var cs = cases[i];
+                        il.DmarkLabel(gotoLabels[i]);
+                        if (!TryEmit(cs.Body, paramExprs, il, ref closure, setup, parent))
+                            return false;
+                        il.Demit(OpCodes.Br, endLabel);
+                    }
+
+                    il.DmarkLabel(endLabel);
+                    return true;
+                }
+
                 var switchValueIsNullable = switchValueType.IsNullable();
                 Type switchNullableUnderlyingValueType = null;
                 MethodInfo switchNullableHasValueMethod = null;
@@ -5403,8 +5437,8 @@ namespace FastExpressionCompiler
                 if (caseCount == 0) // see #440
                 {
                     il.Demit(OpCodes.Pop); // remove the switch value result
-                    return expr.DefaultBody == null ||
-                        TryEmit(expr.DefaultBody, paramExprs, il, ref closure, setup, parent);
+                    return defaultBody == null ||
+                        TryEmit(defaultBody, paramExprs, il, ref closure, setup, parent);
                 }
 
                 var switchValueVar = EmitStoreLocalVariable(il, switchValueType);
@@ -5482,19 +5516,9 @@ namespace FastExpressionCompiler
                     }
                 }
 
-                var defaultBody = expr.DefaultBody;
-                if (defaultBody == null)
-                {
-                    // hop over the cases bodies right to the end of switch
-                    il.Demit(OpCodes.Br, switchEndLabel);
-                }
-                else
-                {
-                    if (!TryEmit(defaultBody, paramExprs, il, ref closure, setup, parent))
-                        return false;
-                    // as we are at the end, no need to jump to it
-                    il.Demit(OpCodes.Br, switchEndLabel);
-                }
+                if (defaultBody != null && !TryEmit(defaultBody, paramExprs, il, ref closure, setup, parent))
+                    return false;
+                il.Demit(OpCodes.Br, switchEndLabel);
 
                 for (var caseIndex = 0; caseIndex < caseCount; ++caseIndex)
                 {
@@ -5509,7 +5533,6 @@ namespace FastExpressionCompiler
                 il.DmarkLabel(switchEndLabel);
                 return true;
             }
-
 
             // todo: @perf cache found method, because for some cases there many methods to search from, e.g. 157 methods in BigInteger
             private static MethodInfo FindBinaryOperandMethod(
@@ -7814,6 +7837,21 @@ namespace FastExpressionCompiler
             type == typeof(float) ||
             type == typeof(double);
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static bool IsInteger(this Type type) => Type.GetTypeCode(type) switch
+        {
+            TypeCode.Char => true,
+            TypeCode.SByte => true,
+            TypeCode.Byte => true,
+            TypeCode.Int16 => true,
+            TypeCode.UInt16 => true,
+            TypeCode.Int32 => true,
+            TypeCode.UInt32 => true,
+            TypeCode.Int64 => true,
+            TypeCode.UInt64 => true,
+            _ => false
+        };
+
         internal static bool IsPrimitiveWithZeroDefaultExceptDecimal(this Type type)
         {
             switch (Type.GetTypeCode(type))
@@ -8282,14 +8320,13 @@ namespace FastExpressionCompiler
             Debug.WriteLine($"{opcode} {valueName ?? value.ToString()}  -- {emitterName}:{emitterLine}");
         }
 
-        // e.g. OpCodes.Switch
         [MethodImpl((MethodImplOptions)256)]
-        public static void Demit(this ILGenerator il, OpCode opcode, Label[] values,
-            [CallerArgumentExpression("values")] string valueName = null, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
+        public static void DemitSwitch(this ILGenerator il, Label[] gotoLabels,
+            [CallerArgumentExpression("gotoLabels")] string valueName = null, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
-            il.Emit(opcode, values);
+            il.Emit(OpCodes.Switch, gotoLabels);
             if (DisableDemit) return;
-            Debug.WriteLine($"{opcode} {valueName ?? string.Join(",", values).ToString()}  -- {emitterName}:{emitterLine}");
+            Debug.WriteLine($"{OpCodes.Switch} {valueName ?? string.Join(",", gotoLabels).ToString()}  -- {emitterName}:{emitterLine}");
         }
 
         [MethodImpl((MethodImplOptions)256)]
@@ -8385,9 +8422,8 @@ namespace FastExpressionCompiler
         [MethodImpl((MethodImplOptions)256)]
         public static void Demit(this ILGenerator il, OpCode opcode, Label value) => il.Emit(opcode, value);
 
-        // e.g. OpCodes.Switch
         [MethodImpl((MethodImplOptions)256)]
-        public static void Demit(this ILGenerator il, OpCode opcode, Label[] values) => il.Emit(opcode, values);
+        public static void DemitSwitch(this ILGenerator il, Label[] gotoLabels) => il.Emit(OpCodes.Switch, gotoLabels);
 
         [MethodImpl((MethodImplOptions)256)]
         public static void DmarkLabel(this ILGenerator il, Label value) => il.MarkLabel(value);
@@ -10219,8 +10255,11 @@ namespace FastExpressionCompiler
                                 }
                             }
                             else
+                            {
                                 caseBody.ToCSharpString(sb, enclosedIn, ref named,
                                     caseBodyIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).AppendSemicolonOnce();
+                                sb.NewLineIndent(caseBodyIndent).AppendLine("break;").NewLineIndent(caseBodyIndent);
+                            }
                         }
 
                         if (x.DefaultBody != null)
@@ -10241,8 +10280,11 @@ namespace FastExpressionCompiler
                                 }
                             }
                             else
+                            {
                                 defaultBody.ToCSharpString(sb, enclosedIn, ref named,
                                     caseBodyIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).AppendSemicolonOnce();
+                                sb.NewLineIndent(caseBodyIndent).AppendLine("break;");
+                            }
                         }
 
                         return sb.NewLineIndent(lineIndent).Append("}");

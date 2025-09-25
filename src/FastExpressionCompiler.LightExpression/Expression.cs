@@ -2051,7 +2051,7 @@ public abstract class Expression
 
     public static SwitchExpression Switch(Type type, Expression switchValue, Expression defaultBody, MethodInfo comparison, params SwitchCase[] cases)
     {
-        type = type ?? (cases.Length != 0 ? cases[0].Body.Type : defaultBody?.Type ?? typeof(void));
+        type ??= cases.Length != 0 ? cases[0].Body.Type : defaultBody?.Type ?? typeof(void);
         return comparison == null
             ? new SwitchExpression(type, switchValue, defaultBody, cases)
             : new WithComparisonSwitchExpression(type, switchValue, defaultBody, cases, comparison);
@@ -5485,8 +5485,10 @@ public class SwitchExpression : Expression // todo: @perf implement IArgumentPro
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitSwitch(this);
 #endif
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
-        SysExpr.Switch(SwitchValue.ToExpression(ref exprsConverted),
-            DefaultBody?.ToExpression(ref exprsConverted), Comparison,
+        SysExpr.Switch(Type,
+            SwitchValue.ToExpression(ref exprsConverted),
+            DefaultBody?.ToExpression(ref exprsConverted),
+            Comparison,
             ToSwitchCaseExpressions(_cases, ref exprsConverted));
 
     internal static System.Linq.Expressions.SwitchCase ToSwitchCase(ref SwitchCase sw, ref SmallList<LightAndSysExpr> exprsConverted) =>
