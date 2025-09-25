@@ -5333,16 +5333,15 @@ namespace FastExpressionCompiler
                 CompilerFlags setup, ParentFlags parent)
 #endif
             {
-                // todo: @perf #398 use switch opcode for int comparison, check the Issue398_Optimize_Switch_with_OpCodes_Switch for the cases to be addressed
                 var switchValueExpr = expr.SwitchValue;
                 var customEqualMethod = expr.Comparison;
                 var cases = expr.Cases;
                 var caseCount = cases.Count;
                 var defaultBody = expr.DefaultBody;
+
+                // Optimization for the single case
                 if (caseCount == 1 && defaultBody != null)
                 {
-                    // optimization for the single case
-                    // todo: @perf make a similar one for the two cases, probably use the two IfThenElses emit
                     var cs0 = cases[0];
                     if (cs0.TestValues.Count == 1)
                     {
@@ -5363,8 +5362,8 @@ namespace FastExpressionCompiler
 
                 var switchValueType = switchValueExpr.Type;
 
-                // Check when the OpCodes.Switch can be used, see #398
-                if (caseCount > 3 && customEqualMethod == null &&
+                // Check the conditions and emit OpCodes.Switch if possible, see #398
+                if (customEqualMethod == null && caseCount > 2 &&
                     switchValueType.IsPrimitive && switchValueType.IsInteger() ||
                     switchValueType.IsEnum && Enum.GetUnderlyingType(switchValueType).IsInteger())
                 {
