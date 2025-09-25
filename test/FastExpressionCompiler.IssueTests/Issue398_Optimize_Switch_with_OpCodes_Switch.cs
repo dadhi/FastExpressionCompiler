@@ -31,6 +31,7 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
     {
         var p = Parameter(typeof(int));
 
+        // OpCodes.Switch will always be generated even for 2 cases. I think it maybe Jit to decide to use jump table or not.
         var expr = Lambda<Func<int, int>>(
             Block(typeof(int),
                 Switch(
@@ -43,7 +44,8 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
                         Constant(1)),
                     SwitchCase(
                         Assign(p, Constant(3)),
-                        Constant(3), Constant(2))
+                        Constant(3),
+                        Constant(2))
                     ),
                     p
                 ),
@@ -53,6 +55,24 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
 
         var fs = expr.CompileSys();
         fs.PrintIL(format: ILFormat.AssertOpCodes);
+
+        fs.AssertOpCodes(
+            OpCodes.Ldarg_1, //        at IL_0000
+            OpCodes.Stloc_0, //        at IL_0001
+            OpCodes.Ldloc_0, //        at IL_0002
+            OpCodes.Switch, // (IL_0029, IL_0038, IL_0046, IL_0046) at IL_0003
+            OpCodes.Br, // IL_0049     at IL_0024
+            OpCodes.Ldc_I4_S, // 42    at IL_0029
+            OpCodes.Starg_S, // V_1    at IL_0031
+            OpCodes.Br, // IL_0049     at IL_0033
+            OpCodes.Ldc_I4_1, //       at IL_0038
+            OpCodes.Starg_S, // V_1    at IL_0039
+            OpCodes.Br, // IL_0049     at IL_0041
+            OpCodes.Ldc_I4_3, //       at IL_0046
+            OpCodes.Starg_S, // V_1    at IL_0047
+            OpCodes.Ldarg_1, //        at IL_0049
+            OpCodes.Ret  //            at IL_0050
+        );
 
         t.IsNotNull(fs);
         t.AreEqual(5, fs(5));

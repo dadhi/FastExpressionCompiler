@@ -10258,7 +10258,7 @@ namespace FastExpressionCompiler
                             {
                                 caseBody.ToCSharpString(sb, enclosedIn, ref named,
                                     caseBodyIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).AppendSemicolonOnce();
-                                sb.NewLineIndent(caseBodyIndent).AppendLine("break;").NewLineIndent(caseBodyIndent);
+                                sb.NewLineIndent(caseBodyIndent).Append("break;");
                             }
                         }
 
@@ -10283,7 +10283,7 @@ namespace FastExpressionCompiler
                             {
                                 defaultBody.ToCSharpString(sb, enclosedIn, ref named,
                                     caseBodyIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).AppendSemicolonOnce();
-                                sb.NewLineIndent(caseBodyIndent).AppendLine("break;");
+                                sb.NewLineIndent(caseBodyIndent).Append("break;");
                             }
                         }
 

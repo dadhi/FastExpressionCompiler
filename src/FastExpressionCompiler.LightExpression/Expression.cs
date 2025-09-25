@@ -2072,11 +2072,12 @@ public abstract class Expression
     public static SwitchExpression Switch(Expression switchValue, Expression defaultBody, MethodInfo comparison, IEnumerable<SwitchCase> cases) =>
         Switch(null, switchValue, defaultBody, comparison, cases.AsArray());
 
+    // The type of the whole switch epxression is void if no default body provided, because what should we return in default case then?
     public static SwitchExpression Switch(Expression switchValue, params SwitchCase[] cases) =>
-        Switch(null, switchValue, null, null, cases);
+        Switch(typeof(void), switchValue, null, null, cases);
 
     public static SwitchExpression Switch(Expression switchValue, IEnumerable<SwitchCase> cases) =>
-        Switch(null, switchValue, null, null, cases.AsArray());
+        Switch(typeof(void), switchValue, null, null, cases.AsArray());
 
     public static SwitchCase SwitchCase(Expression body, IEnumerable<Expression> testValues) =>
         new SwitchCase(body, testValues);
