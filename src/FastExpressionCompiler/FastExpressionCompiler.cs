@@ -5369,48 +5369,48 @@ namespace FastExpressionCompiler
                     switchValueType.IsPrimitive && switchValueType.IsInteger() ||
                     switchValueType.IsEnum && Enum.GetUnderlyingType(switchValueType).IsInteger())
                 {
-//                     var swithValueParent = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
-//                     if (!TryEmit(switchValueExpr, paramExprs, il, ref closure, setup, swithValueParent, -1))
-//                         return false;
+                    //                     var swithValueParent = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
+                    //                     if (!TryEmit(switchValueExpr, paramExprs, il, ref closure, setup, swithValueParent, -1))
+                    //                         return false;
 
-// #if DEBUG
-//                     SmallList<Label, Stack2<Label>, ProvidedArrayPool<Label, ClearItemsNo<Label>>> labels = default;
-// #else
-//                     SmallList<Label, Stack16<Label>, Size16, ProvidedArrayPool<Label, ClearItemsNo<Label>>> labels = default;
-// #endif
-//                     labels.Pool.Init(_labelPool);
+                    // #if DEBUG
+                    //                     SmallList<Label, Stack2<Label>, ProvidedArrayPool<Label, ClearItemsNo<Label>>> labels = default;
+                    // #else
+                    //                     SmallList<Label, Stack16<Label>, Size16, ProvidedArrayPool<Label, ClearItemsNo<Label>>> labels = default;
+                    // #endif
+                    //                     labels.Pool.Init(_labelPool);
 
-//                     for (var i = 0; i < caseCount; ++i)
-//                     {
-//                         var testValues = cases[i].TestValues;
-//                         var testCount = testValues.Count;
-//                         for (var j = 0; j < testCount; ++j)
-//                             labels.Add(il.DefineLabel());
-//                     }
+                    //                     for (var i = 0; i < caseCount; ++i)
+                    //                     {
+                    //                         var testValues = cases[i].TestValues;
+                    //                         var testCount = testValues.Count;
+                    //                         for (var j = 0; j < testCount; ++j)
+                    //                             labels.Add(il.DefineLabel());
+                    //                     }
 
-//                     var gotoLabels = labels.CopyToArray();
-//                     labels.FreePooled();
+                    //                     var gotoLabels = labels.CopyToArray();
+                    //                     labels.FreePooled();
 
-//                     for (var i = 0; i < caseCount; ++i)
-//                         gotoLabels[i] = il.DefineLabel();
-//                     il.DemitSwitch(gotoLabels);
+                    //                     for (var i = 0; i < caseCount; ++i)
+                    //                         gotoLabels[i] = il.DefineLabel();
+                    //                     il.DemitSwitch(gotoLabels);
 
-//                     var endLabel = il.DefineLabel();
-//                     if (defaultBody != null && !TryEmit(defaultBody, paramExprs, il, ref closure, setup, parent))
-//                         return false;
-//                     il.Demit(OpCodes.Br, endLabel);
+                    //                     var endLabel = il.DefineLabel();
+                    //                     if (defaultBody != null && !TryEmit(defaultBody, paramExprs, il, ref closure, setup, parent))
+                    //                         return false;
+                    //                     il.Demit(OpCodes.Br, endLabel);
 
-//                     for (var i = 0; i < caseCount; ++i)
-//                     {
-//                         var cs = cases[i];
-//                         il.DmarkLabel(gotoLabels[i]);
-//                         if (!TryEmit(cs.Body, paramExprs, il, ref closure, setup, parent))
-//                             return false;
-//                         il.Demit(OpCodes.Br, endLabel);
-//                     }
+                    //                     for (var i = 0; i < caseCount; ++i)
+                    //                     {
+                    //                         var cs = cases[i];
+                    //                         il.DmarkLabel(gotoLabels[i]);
+                    //                         if (!TryEmit(cs.Body, paramExprs, il, ref closure, setup, parent))
+                    //                             return false;
+                    //                         il.Demit(OpCodes.Br, endLabel);
+                    //                     }
 
-//                     il.DmarkLabel(endLabel);
-//                     return true;
+                    //                     il.DmarkLabel(endLabel);
+                    //                     return true;
                 }
 
                 var switchValueIsNullable = switchValueType.IsNullable();
@@ -5462,7 +5462,12 @@ namespace FastExpressionCompiler
 
                 var switchEndLabel = il.DefineLabel();
 
+#if DEBUG
+                // Check the heap/pool part of the labels in debug mode
+                SmallList<Label, Stack2<Label>, ProvidedArrayPool<Label, ClearItemsNo<Label>>> caseLabels = default;
+#else
                 SmallList<Label, Stack16<Label>, ProvidedArrayPool<Label, ClearItemsNo<Label>>> caseLabels = default;
+#endif
                 caseLabels.Pool.Init(_labelPool);
 
                 for (var caseIndex = 0; caseIndex < caseCount; ++caseIndex)

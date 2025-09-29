@@ -35,7 +35,6 @@ namespace FastExpressionCompiler.IssueTests
             return 16;
         }
 
-
         public void SwitchIsSupported1()
         {
             var eVar = Parameter(typeof(int));
@@ -69,7 +68,6 @@ namespace FastExpressionCompiler.IssueTests
         {
             A, B, C
         }
-
 
         public void Switch_nullable_enum_value_equals_to_nullable_cases()
         {
