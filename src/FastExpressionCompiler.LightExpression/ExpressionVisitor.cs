@@ -65,11 +65,11 @@ public abstract class ExpressionVisitor
         return newNodes ?? nodes;
     }
 
-    public IReadOnlyList<Expression> Visit(SmallList<Expression, Stack2<Expression>> nodes)
+    public IReadOnlyList<Expression> Visit(SmallList<Expression, Stack2<Expression>, NoArrayPool<Expression>> nodes)
     {
         var newNodes = new Expression[nodes.Count];
         for (var i = 0; i < nodes.Count; ++i)
-            newNodes[i] = Visit(nodes.GetSurePresentItemRef(i));
+            newNodes[i] = Visit(nodes.GetSurePresentRef(i));
         return newNodes;
     }
 

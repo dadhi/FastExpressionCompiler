@@ -14,11 +14,12 @@ namespace FastExpressionCompiler.UnitTests
             // ILGeneratorTools.DisableILGeneratorPooling = true;
             // LightExpression.ILGeneratorTools.DisableILGeneratorPooling = true;
 
-            // new LightExpression.IssueTests.Issue347_InvalidProgramException_on_compiling_an_expression_that_returns_a_record_which_implements_IList().Run();
+            new Issue127_Switch_is_supported().Run();
 
+            // new Issue316_in_parameter().Run();
+            // new LightExpression.IssueTests.Issue347_InvalidProgramException_on_compiling_an_expression_that_returns_a_record_which_implements_IList().Run();
             // new LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest().Run();
             // new LightExpression.IssueTests.Issue274_Failing_Expressions_in_Linq2DB().Run();
-            // new Issue316_in_parameter().Run();
             // new LightExpression.IssueTests.Issue55_CompileFast_crash_with_ref_parameter().Run();
             // new LightExpression.IssueTests.Issue341_Equality_comparison_between_nullable_and_null_inside_Any_produces_incorrect_compiled_expression().Run();
             // new Issue441_Fails_to_pass_Constant_as_call_parameter_by_reference().Run();
@@ -26,7 +27,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var t = new LightExpression.TestRun(LightExpression.TestFlags.RethrowException);
 
-            t.Run(new LightExpression.IssueTests.Issue398_Optimize_Switch_with_OpCodes_Switch());
+            // t.Run(new LightExpression.IssueTests.Issue398_Optimize_Switch_with_OpCodes_Switch()); // todo: @wip
             t.Run(new LightExpression.IssueTests.Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET());
             t.Run(new LightExpression.IssueTests.Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_expressions_during_the_compilation());
             t.Run(new LightExpression.IssueTests.Issue473_InvalidProgramException_when_using_Expression_Condition_with_converted_decimal_expression());

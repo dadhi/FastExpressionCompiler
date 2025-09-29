@@ -116,7 +116,7 @@ public class SmallList_Switch_vs_AsSpan_ByRef_Access
     | Double_and_Sum_AsSpan  | 22.10 ns | 0.311 ns | 0.275 ns |  1.28 |    0.03 |    2 |                    57 |                       0 |              0 |         - |          NA |
 
 
-    ## Indexer using Rest[] vs. Rest.GetSurePresentItemRef(i)
+    ## Indexer using Rest[] vs. Rest.GetSurePresentRef(i)
 
     | Method                 | Mean     | Error    | StdDev   | Ratio | RatioSD | Rank | BranchInstructions/Op | BranchMispredictions/Op | CacheMisses/Op | Allocated | Alloc Ratio |
     |----------------------- |---------:|---------:|---------:|------:|--------:|-----:|----------------------:|------------------------:|---------------:|----------:|------------:|
@@ -125,7 +125,7 @@ public class SmallList_Switch_vs_AsSpan_ByRef_Access
 
     */
 
-    SmallList<int, Stack8<int>> _list;
+    SmallList<int, Stack8<int>, NoArrayPool<int>> _list;
 
     [GlobalSetup]
     public void Init()
@@ -141,7 +141,7 @@ public class SmallList_Switch_vs_AsSpan_ByRef_Access
         var sum = 0;
         for (var i = 0; i < _list.Count; i++)
         {
-            ref var n = ref _list.GetSurePresentItemRef(i);
+            ref var n = ref _list.GetSurePresentRef(i);
             n += n;
             sum += n;
         }
@@ -154,7 +154,7 @@ public class SmallList_Switch_vs_AsSpan_ByRef_Access
     //     var sum = 0;
     //     for (var i = 0; i < _list.Count; i++)
     //     {
-    //         ref var n = ref _list.GetSurePresentItemRef2(i);
+    //         ref var n = ref _list.GetSurePresentRef2(i);
     //         n += n;
     //         sum += n;
     //     }
@@ -184,7 +184,7 @@ public class SmallList_Switch_vs_AsSpan_ByRef_Add
     [Benchmark(Baseline = true)]
     public int Add_BySpan()
     {
-        SmallList<int, Stack4<int>> list = default;
+        SmallList<int, Stack4<int>, NoArrayPool<int>> list = default;
 
         for (var n = 8; n > 0; --n)
             list.Add(n + 3);
@@ -225,8 +225,8 @@ public class StackSearch
 
     //     for (var n = 0; n < 8; ++n)
     //     {
-    //         hashes.GetSurePresentItemRef(n) = default(IntEq).GetHashCode(n);
-    //         entries.GetSurePresentItemRef(n) = new SmallMap.Entry<int>(n);
+    //         hashes.GetSurePresentRef(n) = default(IntEq).GetHashCode(n);
+    //         entries.GetSurePresentRef(n) = new SmallMap.Entry<int>(n);
     //     }
 
     //     var sum = 0;
@@ -250,8 +250,8 @@ public class StackSearch
 
     //     for (var n = 0; n < 8; ++n)
     //     {
-    //         hashes.GetSurePresentItemRef(n) = default(IntEq).GetHashCode(n);
-    //         entries.GetSurePresentItemRef(n) = new SmallMap.Entry<int>(n);
+    //         hashes.GetSurePresentRef(n) = default(IntEq).GetHashCode(n);
+    //         entries.GetSurePresentRef(n) = new SmallMap.Entry<int>(n);
     //     }
 
     //     var sum = 0;
@@ -275,8 +275,8 @@ public class StackSearch
 
         for (var n = 0; n < 8; ++n)
         {
-            hashes.GetSurePresentItemRef(n) = default(IntEq).GetHashCode(n);
-            entries.GetSurePresentItemRef(n) = new SmallMap.Entry<int>(n);
+            hashes.GetSurePresentRef(n) = default(IntEq).GetHashCode(n);
+            entries.GetSurePresentRef(n) = new SmallMap.Entry<int>(n);
         }
 
         var sum = 0;

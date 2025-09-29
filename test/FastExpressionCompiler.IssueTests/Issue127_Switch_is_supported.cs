@@ -136,7 +136,6 @@ namespace FastExpressionCompiler.IssueTests
 
         public static bool MyEnumEqualsNonNullable(MyEnum y, MyEnum x) => y == x;
 
-
         public void Switch_nullable_enum_value_equals_via_comparison_method_with_non_nullable_parameters()
         {
             var eVar = Parameter(typeof(MyEnum?));
@@ -167,7 +166,6 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual("Z", fs(null));
         }
 
-
         public void SwitchIsSupported_nullable_enum_comparing_with_null()
         {
             var eVar = Parameter(typeof(MyEnum));
@@ -191,7 +189,6 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(null, f(MyEnum.C));
         }
 
-
         public void SwitchIsSupported11()
         {
             var eVar = Parameter(typeof(int));
@@ -211,7 +208,6 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual("B", f(2));
         }
 
-
         public void SwitchIsSupported12()
         {
             var eVar = Parameter(typeof(int));
@@ -228,8 +224,6 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.IsNotNull(fastCompiled);
             Asserts.AreEqual("B", fastCompiled(2));
         }
-
-
 
         public void SwitchIsSupported2()
         {
@@ -248,7 +242,6 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual("B", fastCompiled(2));
         }
 
-
         public void SwitchIsSupported30()
         {
             var eVar = Parameter(typeof(int?));
@@ -260,7 +253,6 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(true, fastCompiled(94));
         }
 
-
         public void SwitchIsSupported33()
         {
             var blockExpr = Convert(Constant(94), typeof(int?));
@@ -270,7 +262,6 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.IsNotNull(fastCompiled);
             Asserts.AreEqual(94, fastCompiled());
         }
-
 
         public void SwitchIsSupported3()
         {
@@ -288,7 +279,6 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.IsNotNull(fastCompiled);
             Asserts.AreEqual("B", fastCompiled(96));
         }
-
 
         public void SwitchIsSupported31()
         {
@@ -313,7 +303,6 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual("Z", ff(42));
         }
 
-
         public void SwitchIsSupported_bool_value()
         {
             var eVar = Parameter(typeof(bool));
@@ -337,7 +326,6 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual("A", ff(true));
             Asserts.AreEqual("B", ff(false));
         }
-
 
         public void SwitchIsSupported_string()
         {
@@ -367,7 +355,6 @@ namespace FastExpressionCompiler.IssueTests
 
         public static bool StringCompareOrdinalIgnoreCase(string x, string y) =>
             StringComparer.OrdinalIgnoreCase.Equals(x, y);
-
 
         public void SwitchIsSupported_string_with_comparison_method()
         {
@@ -400,7 +387,6 @@ namespace FastExpressionCompiler.IssueTests
         {
             public string V { get; set; }
         }
-
 
         public void SwitchIsSupported6()
         {

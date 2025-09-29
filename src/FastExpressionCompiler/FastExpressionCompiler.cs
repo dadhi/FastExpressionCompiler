@@ -737,7 +737,7 @@ namespace FastExpressionCompiler
             /// <summary>Tracks the use of the variables in the blocks stack per variable, 
             /// (uint) contains (ushort) BlockIndex in the upper bits and (ushort) VarIndex in the lower bits.
             /// to determine if variable is the local variable and in what block it's defined</summary>
-            private SmallMap4<PE, SmallList<uint, Stack4<uint>>, RefEq<PE>> _varInBlock;
+            private SmallMap4<PE, SmallList<uint, Stack4<uint>, NoArrayPool<uint>>, RefEq<PE>> _varInBlock;
 
             /// The map of inlined invocations collected in TryCollect and then used in TryEmit
             internal SmallMap4<InvocationExpression, Expression, RefEq<InvocationExpression>> InlinedLambdaInvocation;
@@ -748,7 +748,7 @@ namespace FastExpressionCompiler
             internal bool HasComplexExpression;
 
             /// The stack for the lambda invocation and the labels bound to them
-            internal SmallList<LabelInfo, Stack4<LabelInfo>> LambdaInvokeStackLabels;
+            internal SmallList<LabelInfo, Stack4<LabelInfo>, NoArrayPool<LabelInfo>> LambdaInvokeStackLabels;
 
             /// Tracks of how many gotos, labels referencing the specific target, they may be the same gotos expression,
             /// because the gotos may be reused multiple times in the big expression
@@ -765,7 +765,7 @@ namespace FastExpressionCompiler
 
             /// Constant usage count and variable index.
             /// It is a separate collection from the Constants because we directly convert later into the closure array
-            public SmallList<short, Stack2<short>> ConstantUsageThenVarIndex;
+            public SmallList<short, Stack2<short>, NoArrayPool<short>> ConstantUsageThenVarIndex;
 
             /// <summary>Parameters not passed through lambda parameter list But used inside lambda body.
             /// The top expression should Not contain not passed parameters.</summary>
@@ -813,7 +813,7 @@ namespace FastExpressionCompiler
                 }
                 else
                 {
-                    ++ConstantUsageThenVarIndex.GetSurePresentItemRef(constIndex);
+                    ++ConstantUsageThenVarIndex.GetSurePresentRef(constIndex);
                 }
             }
 
@@ -836,7 +836,7 @@ namespace FastExpressionCompiler
             {
                 var count = LambdaInvokeStackLabels.Count;
                 for (var i = 0; i < count; ++i)
-                    if (LambdaInvokeStackLabels.GetSurePresentItemRef(i).Target == e)
+                    if (LambdaInvokeStackLabels.GetSurePresentRef(i).Target == e)
                         return (short)i;
 
                 ref var label = ref LambdaInvokeStackLabels.AddDefaultAndGetRef();
@@ -944,13 +944,13 @@ namespace FastExpressionCompiler
             }
         }
 
-        internal static ref LabelInfo GetLabelOrInvokeIndexByTarget(
-            ref this SmallList<LabelInfo, Stack4<LabelInfo>> labels, object labelTarget, out bool found)
+        internal static ref LabelInfo GetLabelOrInvokeIndexByTarget<TLabels>(ref this TLabels labels, object labelTarget, out bool found)
+            where TLabels : struct, IIndexed<LabelInfo>
         {
             var count = labels.Count;
-            for (var i = 0; i < count; ++i) // todo: @perf make this loop into the SmallList method to avoid index check on each item
+            for (var i = 0; i < count; ++i)
             {
-                ref var label = ref labels[i];
+                ref var label = ref labels.GetSurePresentRef(i);
                 if (label.Target == labelTarget)
                 {
                     found = true;
@@ -1678,9 +1678,9 @@ namespace FastExpressionCompiler
 #else
             var lambdaPars = lambdaExpr.Parameters;
 #endif
-            SmallList<Expression, Stack2<Expression>> inlinedBlockExprs = default;
-            SmallList<ParameterExpression, Stack2<ParameterExpression>> savedVars = default;
-            SmallList<Expression, Stack2<Expression>> savedVarsBlockExprs = default;
+            SmallList<Expression, Stack2<Expression>, NoArrayPool<Expression>> inlinedBlockExprs = default;
+            SmallList<PE, Stack2<PE>, NoArrayPool<PE>> savedVars = default;
+            SmallList<Expression, Stack2<Expression>, NoArrayPool<Expression>> savedVarsBlockExprs = default;
 
             for (var i = 0; i < invokeArgCount; i++)
             {
@@ -1744,7 +1744,7 @@ namespace FastExpressionCompiler
             // But having the non-passed parameter in the root expression (nestedLambda == null) is invalid, and results in false.
             for (var i = 0; i < nestedNonPassedParams.Count; i++)
             {
-                var nestedNonPassedParam = nestedNonPassedParams.GetSurePresentItemRef(i);
+                var nestedNonPassedParam = nestedNonPassedParams.GetSurePresentRef(i);
 
                 var isInNestedLambda = false;
                 if (nestedLambdaParamExprCount != 0)
@@ -2341,7 +2341,7 @@ namespace FastExpressionCompiler
                                                         ref var foundLabel = ref closure.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(gt.Target, out var labelFound);
                                                         if (!labelFound || foundLabel.InlinedLambdaInvokeIndex == -1)
                                                             return false;
-                                                        EmitGotoToReturnLabel(ref closure.LambdaInvokeStackLabels.GetSurePresentItemRef(foundLabel.InlinedLambdaInvokeIndex), il, gtOrLabelValue, OpCodes.Br);
+                                                        EmitGotoToReturnLabel(ref closure.LambdaInvokeStackLabels.GetSurePresentRef(foundLabel.InlinedLambdaInvokeIndex), il, gtOrLabelValue, OpCodes.Br);
                                                     }
                                                     else
                                                     {
@@ -2460,7 +2460,7 @@ namespace FastExpressionCompiler
                         }
                         else
                         {
-                            SmallList<int, Stack8<int>> argVars = default;
+                            SmallList<int, Stack8<int>, NoArrayPool<int>> argVars = default;
                             for (var i = 0; i < argCount; ++i)
                             {
                                 var argExpr = argExprs.GetArgument(i);
@@ -2662,7 +2662,7 @@ namespace FastExpressionCompiler
                                 var invokeIndex = labelInfo.InlinedLambdaInvokeIndex;
                                 if (invokeIndex == -1)
                                     return false;
-                                EmitGotoToReturnLabel(ref closure.LambdaInvokeStackLabels.GetSurePresentItemRef(invokeIndex), il, gotoValue, OpCodes.Br);
+                                EmitGotoToReturnLabel(ref closure.LambdaInvokeStackLabels.GetSurePresentRef(invokeIndex), il, gotoValue, OpCodes.Br);
                             }
                         }
                         else
@@ -3772,7 +3772,7 @@ namespace FastExpressionCompiler
                 short varIndex;
                 for (var i = 0; i < constCount; i++)
                 {
-                    ref var constUsage = ref closure.ConstantUsageThenVarIndex.GetSurePresentItemRef(i);
+                    ref var constUsage = ref closure.ConstantUsageThenVarIndex.GetSurePresentRef(i);
                     if (constUsage > 1) // todo: @perf should we proceed to do this or simplify and remove the usages for the closure info?
                     {
                         EmitLoadClosureArrayItem(il, i);
@@ -4970,7 +4970,7 @@ namespace FastExpressionCompiler
                         // don't forget to store the object into the variable first, before emitting the arguments
                         var objVar = objExpr == null ? -1 : EmitStoreLocalVariable(il, objExpr.Type);
 
-                        SmallList<int, Stack8<int>> argVars = default;
+                        SmallList<int, Stack8<int>, NoArrayPool<int>> argVars = default;
                         for (var i = 0; i < methodParams.Length; i++)
                         {
                             var argExpr = callArgs.GetArgument(i);
@@ -5178,7 +5178,7 @@ namespace FastExpressionCompiler
                     EmitLoadLocalVariable(il, nonPassedParamsVarIndex);
                     EmitLoadConstantInt(il, nestedParamIndex);
 
-                    var nestedParam = nonPassedParams.GetSurePresentItemRef(nestedParamIndex);
+                    var nestedParam = nonPassedParams.GetSurePresentRef(nestedParamIndex);
                     var outerParamIndex = outerParamExprCount - 1;
                     while (outerParamIndex != -1 && !ReferenceEquals(outerParamExprs.GetParameter(outerParamIndex), nestedParam))
                         --outerParamIndex;
@@ -5325,6 +5325,8 @@ namespace FastExpressionCompiler
                 return true;
             }
 
+            private static readonly Label[][] _labelPool = null;
+
 #if LIGHT_EXPRESSION
             private static bool TryEmitSwitch(SwitchExpression expr, IParameterProvider paramExprs, ILGenerator il, ref ClosureInfo closure,
                 CompilerFlags setup, ParentFlags parent)
@@ -5367,31 +5369,48 @@ namespace FastExpressionCompiler
                     switchValueType.IsPrimitive && switchValueType.IsInteger() ||
                     switchValueType.IsEnum && Enum.GetUnderlyingType(switchValueType).IsInteger())
                 {
-                    var swithValueParent = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
-                    if (!TryEmit(switchValueExpr, paramExprs, il, ref closure, setup, swithValueParent, -1))
-                        return false;
+//                     var swithValueParent = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
+//                     if (!TryEmit(switchValueExpr, paramExprs, il, ref closure, setup, swithValueParent, -1))
+//                         return false;
 
-                    var gotoLabels = new Label[caseCount];
-                    for (var i = 0; i < caseCount; ++i)
-                        gotoLabels[i] = il.DefineLabel();
-                    il.DemitSwitch(gotoLabels);
+// #if DEBUG
+//                     SmallList<Label, Stack2<Label>, ProvidedArrayPool<Label, ClearItemsNo<Label>>> labels = default;
+// #else
+//                     SmallList<Label, Stack16<Label>, Size16, ProvidedArrayPool<Label, ClearItemsNo<Label>>> labels = default;
+// #endif
+//                     labels.Pool.Init(_labelPool);
 
-                    var endLabel = il.DefineLabel();
-                    if (defaultBody != null && !TryEmit(defaultBody, paramExprs, il, ref closure, setup, parent))
-                        return false;
-                    il.Demit(OpCodes.Br, endLabel);
+//                     for (var i = 0; i < caseCount; ++i)
+//                     {
+//                         var testValues = cases[i].TestValues;
+//                         var testCount = testValues.Count;
+//                         for (var j = 0; j < testCount; ++j)
+//                             labels.Add(il.DefineLabel());
+//                     }
 
-                    for (var i = 0; i < caseCount; ++i)
-                    {
-                        var cs = cases[i];
-                        il.DmarkLabel(gotoLabels[i]);
-                        if (!TryEmit(cs.Body, paramExprs, il, ref closure, setup, parent))
-                            return false;
-                        il.Demit(OpCodes.Br, endLabel);
-                    }
+//                     var gotoLabels = labels.CopyToArray();
+//                     labels.FreePooled();
 
-                    il.DmarkLabel(endLabel);
-                    return true;
+//                     for (var i = 0; i < caseCount; ++i)
+//                         gotoLabels[i] = il.DefineLabel();
+//                     il.DemitSwitch(gotoLabels);
+
+//                     var endLabel = il.DefineLabel();
+//                     if (defaultBody != null && !TryEmit(defaultBody, paramExprs, il, ref closure, setup, parent))
+//                         return false;
+//                     il.Demit(OpCodes.Br, endLabel);
+
+//                     for (var i = 0; i < caseCount; ++i)
+//                     {
+//                         var cs = cases[i];
+//                         il.DmarkLabel(gotoLabels[i]);
+//                         if (!TryEmit(cs.Body, paramExprs, il, ref closure, setup, parent))
+//                             return false;
+//                         il.Demit(OpCodes.Br, endLabel);
+//                     }
+
+//                     il.DmarkLabel(endLabel);
+//                     return true;
                 }
 
                 var switchValueIsNullable = switchValueType.IsNullable();
@@ -5436,14 +5455,15 @@ namespace FastExpressionCompiler
                 if (caseCount == 0) // see #440
                 {
                     il.Demit(OpCodes.Pop); // remove the switch value result
-                    return defaultBody == null ||
-                        TryEmit(defaultBody, paramExprs, il, ref closure, setup, parent);
+                    return defaultBody == null || TryEmit(defaultBody, paramExprs, il, ref closure, setup, parent);
                 }
 
                 var switchValueVar = EmitStoreLocalVariable(il, switchValueType);
 
                 var switchEndLabel = il.DefineLabel();
-                SmallList<Label, Stack16<Label>> caseLabels = default; // todo: @wip
+
+                SmallList<Label, Stack16<Label>, ProvidedArrayPool<Label, ClearItemsNo<Label>>> caseLabels = default;
+                caseLabels.Pool.Init(_labelPool);
 
                 for (var caseIndex = 0; caseIndex < caseCount; ++caseIndex)
                 {
@@ -9168,7 +9188,7 @@ namespace FastExpressionCompiler
         {
             if (paramsExprs.TryGetIndex(out var i, pe, paramsExprs.Count, default(RefEq<PE>)))
             {
-                SmallList<NamedWithIndex, Stack4<NamedWithIndex>> named = default;
+                SmallList<NamedWithIndex, Stack4<NamedWithIndex>, NoArrayPool<NamedWithIndex>> named = default;
                 return sb
                     .Append("p[").Append(i)
                     .Append(" // (")
@@ -9189,7 +9209,7 @@ namespace FastExpressionCompiler
         {
             if (labelTargets.TryGetIndex(out var i, lt, labelTargets.Count, default(RefEq<LabelTarget>)))
             {
-                SmallList<NamedWithIndex, Stack4<NamedWithIndex>> named = default;
+                SmallList<NamedWithIndex, Stack4<NamedWithIndex>, NoArrayPool<NamedWithIndex>> named = default;
                 return sb.Append("l[").Append(i)
                     .Append(" // (").AppendName(lt, lt.Name, lt.Type.ToCode(stripNamespace, printType), ref named, lt.GetHashCode()).Append(')')
                     .NewLineIndent(lineIndent).Append(']');
@@ -9653,7 +9673,7 @@ namespace FastExpressionCompiler
         public static StringBuilder ToCSharpString(this Expression e, StringBuilder sb,
             int lineIndent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4, ObjectToCode notRecognizedToCode = null)
         {
-            SmallList<NamedWithIndex, Stack4<NamedWithIndex>> named = default;
+            SmallList<NamedWithIndex, Stack4<NamedWithIndex>, NoArrayPool<NamedWithIndex>> named = default;
             return e.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
                 lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
         }
@@ -9692,10 +9712,10 @@ namespace FastExpressionCompiler
                 ? sb.Insert(0, "T __f<T>(System.Func<T> f) => f();\n")
                 : sb;
 
-        internal static StringBuilder ToCSharpString(this Expression e,
-            StringBuilder sb, EnclosedIn enclosedIn, ref SmallList<NamedWithIndex, Stack4<NamedWithIndex>> named,
+        internal static StringBuilder ToCSharpString<TNamed>(this Expression e, StringBuilder sb, EnclosedIn enclosedIn, ref TNamed named,
             int lineIndent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4,
             ObjectToCode notRecognizedToCode = null, bool isReturnByRef = false)
+            where TNamed : struct, ISmallList<NamedWithIndex>
         {
 #if LIGHT_EXPRESSION
             if (e.IsCustomToCSharpString)
@@ -10109,7 +10129,7 @@ namespace FastExpressionCompiler
                         lineIndent = sb.GetRealLineIndent(lineIndent);
 
                         var returnsValue = e.Type != typeof(void);
-                        void PrintPart(Expression part, ref SmallList<NamedWithIndex, Stack4<NamedWithIndex>> named)
+                        void PrintPart(Expression part, ref TNamed named)
                         {
                             var incIndent = lineIndent + indentSpaces;
                             if (part is BlockExpression pb)
@@ -10519,8 +10539,9 @@ namespace FastExpressionCompiler
             enclosedIn == EnclosedIn.Block | // statement in a block don't need the parens as well
             enclosedIn == EnclosedIn.Return;
 
-        private static StringBuilder ToCSharpBlock(this Expression expr, StringBuilder sb, ref SmallList<NamedWithIndex, Stack4<NamedWithIndex>> named,
+        private static StringBuilder ToCSharpBlock<TNamed>(this Expression expr, StringBuilder sb, ref TNamed named,
             int lineIndent, bool stripNamespace, Func<Type, string, string> printType, int indentSpaces, ObjectToCode notRecognizedToCode)
+            where TNamed : struct, ISmallList<NamedWithIndex>
         {
             sb.NewLineIndent(lineIndent).Append('{');
             if (expr is BlockExpression fb)
@@ -10536,9 +10557,10 @@ namespace FastExpressionCompiler
             return sb.NewLineIndent(lineIndent).Append('}');
         }
 
-        private static StringBuilder ToCSharpExpression(this Expression expr,
-            StringBuilder sb, EnclosedIn enclosedIn, ref SmallList<NamedWithIndex, Stack4<NamedWithIndex>> named, bool newLineExpr,
-            int lineIndent, bool stripNamespace, Func<Type, string, string> printType, int indentSpaces, ObjectToCode notRecognizedToCode)
+        private static StringBuilder ToCSharpExpression<TNamed>(this Expression expr,
+            StringBuilder sb, EnclosedIn enclosedIn, ref TNamed named,
+            bool newLineExpr, int lineIndent, bool stripNamespace, Func<Type, string, string> printType, int indentSpaces, ObjectToCode notRecognizedToCode)
+            where TNamed : struct, ISmallList<NamedWithIndex>
         {
             if (!expr.NodeType.IsBlockLike())
             {
@@ -10607,9 +10629,10 @@ namespace FastExpressionCompiler
 
         private const string NotSupportedExpression = "// NOT_SUPPORTED_EXPRESSION: ";
 
-        private static StringBuilder ToCSharpString(this IReadOnlyList<MemberBinding> bindings,
-            StringBuilder sb, EnclosedIn enclosedIn, ref SmallList<NamedWithIndex, Stack4<NamedWithIndex>> named,
+        private static StringBuilder ToCSharpString<TNamed>(this IReadOnlyList<MemberBinding> bindings,
+            StringBuilder sb, EnclosedIn enclosedIn, ref TNamed named,
             int lineIndent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4, ObjectToCode notRecognizedToCode = null)
+            where TNamed : struct, ISmallList<NamedWithIndex>
         {
             var count = bindings.Count;
             for (var i = 0; i < count; i++)
@@ -10664,12 +10687,11 @@ namespace FastExpressionCompiler
             return sb;
         }
 
-        private static StringBuilder BlockToCSharpString(this BlockExpression b, StringBuilder sb,
-            ref SmallList<NamedWithIndex, Stack4<NamedWithIndex>> named,
+        private static StringBuilder BlockToCSharpString<TNamed>(this BlockExpression b, StringBuilder sb, ref TNamed named,
             int lineIndent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4,
             ObjectToCode notRecognizedToCode = null, bool inTheLastBlock = false, BinaryExpression blockResultAssignment = null,
             bool containerIgnoresResult = false // in case of the container is lambda which is the Action/void delegate and ignores result, we don't need the `return` - it will be invalid c#
-        )
+        ) where TNamed : struct, ISmallList<NamedWithIndex>
         {
             var vars = b.Variables.AsList();
             var exprs = b.Expressions;
@@ -10965,9 +10987,8 @@ namespace FastExpressionCompiler
             public int Index;
         }
 
-        internal static StringBuilder AppendName(this StringBuilder sb, object parOrTarget, string name, string typeCode,
-            ref SmallList<NamedWithIndex, Stack4<NamedWithIndex>> named,
-            int noNameIndex = 0)
+        internal static StringBuilder AppendName<TNamed>(this StringBuilder sb, object parOrTarget, string name, string typeCode, ref TNamed named, int noNameIndex = 0)
+            where TNamed : ISmallList<NamedWithIndex>
         {
             var nameIndex = 0;
             if (noNameIndex == 0)
@@ -11006,8 +11027,8 @@ namespace FastExpressionCompiler
             return sb.Append(validTypeIdent).Append('_').Append(noNameIndex);
         }
 
-        internal static StringBuilder AppendLabelName(this StringBuilder sb, LabelTarget target,
-            ref SmallList<NamedWithIndex, Stack4<NamedWithIndex>> named) =>
+        internal static StringBuilder AppendLabelName<TNamed>(this StringBuilder sb, LabelTarget target, ref TNamed named)
+            where TNamed : struct, ISmallList<NamedWithIndex> =>
             sb.AppendName(target, target.Name, target.Type.ToCode(stripNamespace: true), ref named);
 
         /// <summary>Returns the standard name (alias) for the well-known primitive type, e.g. Int16 -> short</summary>
@@ -11338,29 +11359,16 @@ namespace FastExpressionCompiler
                 lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode) ?? sb.Append("null");
         }
 
-        internal static StringBuilder NewLineIndentArgumentExprs<T>(this StringBuilder sb, IReadOnlyList<T> exprs,
+        internal static StringBuilder NewLineIndentArgumentExprs<T>(this StringBuilder sb, IEnumerable<T> exprs,
             List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
             int lineIndent, bool stripNamespace, Func<Type, string, string> printType, int indentSpaces, ObjectToCode notRecognizedToCode)
             where T : Expression
         {
-            if (exprs.Count == 0)
+            if (exprs == null || !exprs.Any())
                 return sb.Append(" new ").Append(typeof(T).ToCode(true)).Append("[0]");
-            for (var i = 0; i < exprs.Count; i++)
-                (i > 0 ? sb.Append(", ") : sb).NewLineIndentExpr(exprs[i],
-                    paramsExprs, uniqueExprs, lts, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
-            return sb;
-        }
-
-        // todo: @improve figure how to avoid the duplication with the method above IReadOnlyList<T> exprs
-        internal static StringBuilder NewLineIndentArgumentExprs<T>(this StringBuilder sb, SmallList<T, Stack2<T>> exprs,
-            List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
-            int lineIndent, bool stripNamespace, Func<Type, string, string> printType, int indentSpaces, ObjectToCode notRecognizedToCode)
-            where T : Expression
-        {
-            if (exprs.Count == 0)
-                return sb.Append(" new ").Append(typeof(T).ToCode(true)).Append("[0]");
-            for (var i = 0; i < exprs.Count; i++)
-                (i > 0 ? sb.Append(", ") : sb).NewLineIndentExpr(exprs.GetSurePresentItemRef(i),
+            var i = 0;
+            foreach (var e in exprs)
+                (i++ > 0 ? sb.Append(", ") : sb).NewLineIndentExpr(e,
                     paramsExprs, uniqueExprs, lts, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
             return sb;
         }

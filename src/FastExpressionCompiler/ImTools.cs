@@ -42,6 +42,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
+using System.Threading;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Diagnostics.CodeAnalysis;
@@ -68,12 +69,29 @@ public static class RefTools<T>
 }
 
 /// <summary>Wrapper for the array of the specific capacity and a separate count less or equal to this capacity </summary>
-public struct SmallList<T>
+public struct SmallList<T> : IIndexed<T>
 {
     /// <summary>Array of items</summary>
     public T[] Items;
+
     /// <summary>The count of used items</summary>
-    public int Count;
+    public int Count { get; set; }
+
+    /// <inheritdoc/>
+    [MethodImpl((MethodImplOptions)256)]
+    public ref T GetSurePresentRef(int index) => ref Items.GetSurePresentRef(index);
+
+    /// <inheritdoc/>
+    public ref T this[int index]
+    {
+        [MethodImpl((MethodImplOptions)256)]
+        get
+        {
+            if (index >= 0 & index < Count)
+                return ref Items.GetSurePresentRef(index);
+            return ref SmallList.ThrowIndexOutOfBounds<T>(index, Count);
+        }
+    }
 
     /// <summary>Creating this stuff</summary>
     public SmallList(T[] items, int count)
@@ -97,13 +115,13 @@ public static class SmallList
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     internal static ref T ThrowIndexOutOfBounds<T>(int index, int count) =>
-        throw new IndexOutOfRangeException($"Index {index} is out of range of count {count} for SmallList<{typeof(T)},..>.");
+        throw new IndexOutOfRangeException($"Index {index} is out of range of count {count} for  {typeof(T)},..>.");
 
     [MethodImpl((MethodImplOptions)256)]
-    internal static void Expand<T>(ref T[] items)
+    internal static void Expand<T>(ref T[] items, T[] newItems)
     {
-        // `| 1` is for the case when the length is 0
-        var newItems = new T[(items.Length << 1) | 1]; // have fun to guess the new length, ha-ha ;-P
+        Debug.Assert(newItems != null, "New items length should be more than the current items length");
+        Debug.Assert(newItems.Length > items.Length, "New items length should be more than the current items length");
         if (items.Length > ForLoopCopyCount)
             Array.Copy(items, newItems, items.Length);
         else
@@ -119,7 +137,10 @@ public static class SmallList
     {
         Debug.Assert(index <= items.Length);
         if (index == items.Length)
-            Expand(ref items);
+        {
+            var newCount = (items.Length << 1) | 1; // 1 is to account for the empty array, have fun to guess the new length, ha-ha ;-P
+            Expand(ref items, new T[newCount]);
+        }
         return ref items[index];
     }
 
@@ -136,18 +157,41 @@ public static class SmallList
 
         Debug.Assert(index <= items.Length);
         if (index == items.Length)
-            Expand(ref items);
+        {
+            var newCount = (items.Length << 1) | 1; // 1 is to account for the empty array, have fun to guess the new length, ha-ha ;-P
+            Expand(ref items, new T[newCount]);
+        }
         return ref items[index];
     }
 
-    /// <summary>Returns surely present item ref by its index</summary>
+    /// <summary>Appends the new default item at the end of the items. Assumes that `index lte items.Length`, `items` may be null</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref T GetSurePresentItemRef<T>(this ref SmallList<T> source, int index) =>
-        ref source.Items[index];
+    public static ref T AddDefaultAndGetRef<T, TPool>(ref T[] items, TPool pool, int index, int initialCapacity = DefaultInitialCapacity)
+        where TPool : struct, ISmallArrayPool<T>
+    {
+        if (items == null)
+        {
+            Debug.Assert(index == 0);
+            items = pool.RentOrNew(initialCapacity);
+            return ref items[index];
+        }
+
+        Debug.Assert(index <= items.Length);
+        if (index == items.Length)
+        {
+            var newCount = (items.Length << 1) | 1; // 1 is to account for the empty array, have fun to guess the new length, ha-ha ;-P
+            var newItems = pool.RentOrNew(newCount);
+            Debug.Assert(newItems != null);
+            var oldItems = items;
+            Expand(ref items, newItems);
+            pool.ReuseIfPossible(oldItems);
+        }
+        return ref items[index];
+    }
 
     /// <summary>Returns surely present item ref by its index without boundary checks</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref T GetSurePresentItemRef<T>(this T[] source, int index) =>
+    public static ref T GetSurePresentRef<T>(this T[] source, int index) =>
 #if SUPPORTS_UNSAFE
         ref Unsafe.Add(ref MemoryMarshal.GetArrayDataReference(source), index);
 #else
@@ -157,16 +201,16 @@ public static class SmallList
 #if NET7_0_OR_GREATER
     /// <summary>Get the item by-ref without bounds check</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref T GetSurePresentItemRef<T>(this ref T source, int index) where T : struct =>
+    public static ref T GetSurePresentRef<T>(this ref T source, int index) where T : struct =>
         ref Unsafe.Add(ref source, index);
 #endif
 
     /// <summary>Get the item without bounds check</summary>
     [MethodImpl((MethodImplOptions)256)]
 #if NET7_0_OR_GREATER
-    internal static T GetSurePresentItem<T>(this ref T source, int index) where T : struct => Unsafe.Add(ref source, index);
+    internal static T GetSurePresent<T>(this ref T source, int index) where T : struct => Unsafe.Add(ref source, index);
 #else
-    internal static T GetSurePresentItem<T>(this T[] source, int index) => source[index];
+    internal static T GetSurePresent<T>(this T[] source, int index) => source[index];
 #endif
 
     // todo: @perf add the not null variant
@@ -230,34 +274,41 @@ public static class Stack
         throw new IndexOutOfRangeException($"Index {index} is out of range for Stack{capacity}<{typeof(T)},..>.");
 }
 
-/// <summary>Stack with the Size information to check it at compile time</summary>
-public interface IStack<T, TSize, TStack> : IStack<T, TStack>
-    where TSize : struct, ISize
-    where TStack : struct, IStack<T, TSize, TStack>
-{
-}
-
 /// <summary>Abstracts over collection of the items on stack of the fixed Capacity,
 /// to be used as a part of the hybrid data structures which grow from stack to heap</summary>
-public interface IStack<T, TStack>
-    where TStack : struct, IStack<T, TStack>
+public interface IIndexed<T>
 {
-    /// <summary>Maximum count of items hold on stack</summary>
-    int Capacity { get; }
+    /// <summary>Count of items to be indexed</summary>
+    int Count { get; }
 
     /// <summary>Returns the item by ref to read and write the item value,
     /// but does not check the index bounds comparing to the `this[index]`</summary>
     [UnscopedRef]
-    ref T GetSurePresentItemRef(int index);
+    ref T GetSurePresentRef(int index);
 
     /// <summary>Indexer returning the item by ref to read and write the item value</summary>
     [UnscopedRef]
     ref T this[int index] { get; }
+}
+
+/// <summary>Stack with the Size information to check it at compile time</summary>
+public interface IStack<T, TStack> : IIndexed<T>
+    where TStack : struct, IStack<T, TStack>
+{
+    /// <summary>Maximum count of items hold in stack</summary>
+    int Capacity { get; }
 
 #if SUPPORTS_CREATE_SPAN
     /// <summary>Creates a span over the stack items</summary>
     public Span<T> AsSpan();
 #endif
+}
+
+/// <summary>Stack with the Size information to check it at compile time</summary>
+public interface IStack<T, TSize, TStack> : IStack<T, TStack>
+    where TSize : struct, ISize
+    where TStack : struct, IStack<T, TSize, TStack>
+{
 }
 
 /// <summary>Base marker for collection or container holding some number of items</summary>
@@ -313,13 +364,14 @@ public struct Stack2<T> : IStack<T, Size2, Stack2<T>>
 {
     /// <inheritdoc/>
     public int Capacity => 2;
+    int IIndexed<T>.Count => Capacity;
 
     internal T _it0, _it1;
 
     /// <inheritdoc/>
     [UnscopedRef]
     [MethodImpl((MethodImplOptions)256)]
-    public ref T GetSurePresentItemRef(int index)
+    public ref T GetSurePresentRef(int index)
     {
 #if SUPPORTS_UNSAFE
         return ref Unsafe.Add(ref _it0, index);
@@ -340,7 +392,7 @@ public struct Stack2<T> : IStack<T, Size2, Stack2<T>>
         get
         {
             if (index >= 0 & index < Capacity)
-                return ref GetSurePresentItemRef(index);
+                return ref GetSurePresentRef(index);
             return ref Stack.ThrowIndexOutOfBounds<T>(index, Capacity);
         }
     }
@@ -358,13 +410,14 @@ public struct Stack4<T> : IStack<T, Size4, Stack4<T>>
 {
     /// <inheritdoc/>
     public int Capacity => 4;
+    int IIndexed<T>.Count => Capacity;
 
     internal T _it0, _it1, _it2, _it3;
 
     /// <inheritdoc/>
     [UnscopedRef]
     [MethodImpl((MethodImplOptions)256)]
-    public ref T GetSurePresentItemRef(int index)
+    public ref T GetSurePresentRef(int index)
     {
 #if SUPPORTS_UNSAFE
         return ref Unsafe.Add(ref _it0, index);
@@ -387,7 +440,7 @@ public struct Stack4<T> : IStack<T, Size4, Stack4<T>>
         get
         {
             if (index >= 0 & index < Capacity)
-                return ref GetSurePresentItemRef(index);
+                return ref GetSurePresentRef(index);
             return ref Stack.ThrowIndexOutOfBounds<T>(index, Capacity);
         }
     }
@@ -405,13 +458,14 @@ public struct Stack8<T> : IStack<T, Size8, Stack8<T>>
 {
     /// <inheritdoc/>
     public int Capacity => 8;
+    int IIndexed<T>.Count => Capacity;
 
     internal T _it0, _it1, _it2, _it3, _it4, _it5, _it6, _it7;
 
     /// <inheritdoc/>
     [UnscopedRef]
     [MethodImpl((MethodImplOptions)256)]
-    public ref T GetSurePresentItemRef(int index)
+    public ref T GetSurePresentRef(int index)
     {
 #if SUPPORTS_UNSAFE
         return ref Unsafe.Add(ref _it0, index);
@@ -438,7 +492,7 @@ public struct Stack8<T> : IStack<T, Size8, Stack8<T>>
         get
         {
             if (index >= 0 & index < Capacity)
-                return ref GetSurePresentItemRef(index);
+                return ref GetSurePresentRef(index);
             return ref Stack.ThrowIndexOutOfBounds<T>(index, Capacity);
         }
     }
@@ -456,6 +510,7 @@ public struct Stack16<T> : IStack<T, Size16, Stack16<T>>
 {
     /// <inheritdoc/>
     public int Capacity => 16;
+    int IIndexed<T>.Count => Capacity;
 
     internal T _it0, _it1, _it2, _it3, _it4, _it5, _it6, _it7;
     internal T _it8, _it9, _it10, _it11, _it12, _it13, _it14, _it15;
@@ -463,7 +518,7 @@ public struct Stack16<T> : IStack<T, Size16, Stack16<T>>
     /// <inheritdoc/>
     [UnscopedRef]
     [MethodImpl((MethodImplOptions)256)]
-    public ref T GetSurePresentItemRef(int index)
+    public ref T GetSurePresentRef(int index)
     {
 #if SUPPORTS_UNSAFE
         return ref Unsafe.Add(ref _it0, index);
@@ -498,7 +553,7 @@ public struct Stack16<T> : IStack<T, Size16, Stack16<T>>
         get
         {
             if (index >= 0 & index < Capacity)
-                return ref GetSurePresentItemRef(index);
+                return ref GetSurePresentRef(index);
             return ref Stack.ThrowIndexOutOfBounds<T>(index, Capacity);
         }
     }
@@ -510,12 +565,145 @@ public struct Stack16<T> : IStack<T, Size16, Stack16<T>>
 #endif
 }
 
+/// <summary>Abstraction over the small array pool to rent and return the arrays of small sizes, from 1 to N</summary>
+public interface ISmallArrayPool<T>
+{
+    /// <summary>Gets the maximum array length that can be rented from the pool.</summary>
+    int MaxArrayLength { get; }
+    /// <summary>Rents an array from the pool or creates a new one if none is available.</summary>
+    T[] RentOrNew(int exactLength);
+    /// <summary>Returns an array to the pool if it is fits the `MaxArrayLength`.</summary>
+    void ReuseIfPossible(T[] array);
+}
+
+/// <summary>Implementation of `ISmallArrayPool` which does not pool anything, just creates new arrays</summary>
+public struct NoArrayPool<T> : ISmallArrayPool<T>
+{
+    /// <inheritdoc/>
+    public int MaxArrayLength => 0;
+
+    /// <inheritdoc/>
+    [MethodImpl((MethodImplOptions)256)]
+    public T[] RentOrNew(int exactLength) => new T[exactLength];
+
+    /// <inheritdoc/>
+    [MethodImpl((MethodImplOptions)256)]
+    public void ReuseIfPossible(T[] array) { }
+}
+
+/// <summary>Abstraction over how the array is cleared before putting it back to the pool</summary>
+public interface IClearItems<T>
+{
+    /// <summary>Clears the items in the array from `startIndex` for `length` items</summary>
+    void Clear(T[] array, int startIndex, int length);
+}
+
+/// <summary>Does not clear anything</summary>
+public struct ClearItemsNo<T> : IClearItems<T>
+{
+    /// <inheritdoc/>
+    [MethodImpl((MethodImplOptions)256)]
+    public void Clear(T[] array, int startIndex, int length) { }
+}
+
+/// <summary>Clears the items using `Array.Clear`</summary>
+public struct ClearItemsFast<T> : IClearItems<T>
+{
+    /// <inheritdoc/>
+    [MethodImpl((MethodImplOptions)256)]
+    public void Clear(T[] array, int startIndex, int length) => Array.Clear(array, startIndex, length);
+}
+
+/// <summary>Implementation of `ISmallArrayPool` which provides a pool of arrays.</summary>
+public struct ProvidedArrayPool<T, TClearItems> : ISmallArrayPool<T>
+    where TClearItems : struct, IClearItems<T>
+{
+    private T[][] _pool;
+
+    /// <summary>Inits the pool with some shared array pool</summary>
+    public ProvidedArrayPool(T[][] pool) : this() => Init(pool);
+
+    /// <inheritdoc/>
+    public int MaxArrayLength
+    {
+        [MethodImpl((MethodImplOptions)256)]
+        get
+        {
+            Debug.Assert(_pool != null);
+            return _pool.Length;
+        }
+    }
+
+    /// <summary>Inits the pool with some shared array pool</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public void Init(T[][] pool)
+    {
+        Debug.Assert(pool != null);
+        _pool = pool;
+    }
+
+    /// <inheritdoc/>
+    [MethodImpl((MethodImplOptions)256)]
+    public T[] RentOrNew(int exactLength)
+    {
+        Debug.Assert(exactLength != 0);
+        if (exactLength <= _pool.Length)
+        {
+            var arr = _pool[exactLength - 1];
+            if (arr != null)
+                return Interlocked.Exchange(ref _pool[exactLength - 1], null) ?? new T[exactLength];
+        }
+        return new T[exactLength];
+    }
+
+    /// <inheritdoc/>
+    [MethodImpl((MethodImplOptions)256)]
+    public void ReuseIfPossible(T[] array)
+    {
+        if (array == null) return;
+        var arrayLength = array.Length;
+        if (arrayLength != 0 & arrayLength <= _pool.Length)
+        {
+            default(TClearItems).Clear(array, 0, arrayLength);
+            Interlocked.Exchange(ref _pool[arrayLength - 1], array);
+        }
+    }
+}
+
+/// <summary>Abstraction over the small list which keeps some items on stack and grows to heap when needed</summary>
+public interface ISmallList<T> : IIndexed<T>, IEnumerable<T>
+{
+    /// <summary>Adds a default item to the list and returns a reference to it. Basically it just ensure that list contains the slot for the new item</summary>
+    [UnscopedRef]
+    ref T AddDefaultAndGetRef();
+
+    /// <summary>Adds the item to the end of the list aka the Stack.Push. Returns the index of the added item.</summary>
+    int Add(in T item);
+
+    /// <summary>Returns the index of the found item or -1 for the absent item</summary>
+    int TryGetIndex<TEq>(in T item, TEq eq = default) where TEq : struct, IEq<T>;
+
+    /// <summary>Removes the last item from the list. List should not be empty.</summary>
+    void RemoveLastSurePresentItem();
+
+    /// <summary>Clears the list.</summary>
+    void Clear();
+
+    /// <summary>Copies the contents of the list to a new array.</summary>
+    T[] CopyToArray();
+}
+
 /// <summary>Generic version of SmallList abstracted for how much items are on the stack</summary>
-public struct SmallList<T, TStack> : IEnumerable<T>
+public struct SmallList<T, TStack, TPool> : ISmallList<T>
     where TStack : struct, IStack<T, TStack>
+    where TPool : struct, ISmallArrayPool<T>
 {
     /// <summary>Let's enable access to the Count, so you can Pop the item by --list.Count. Just don't forget to nullify the popped item if needed</summary>
-    public int Count;
+    public int Count { get => _count; set => _count = value; }
+    private int _count;
+
+    /// <summary>Exposes the pool to rent and return the arrays</summary>
+    public TPool Pool;
 
 #pragma warning disable CS0649 // it is fine `Stack` is never assigned to, and will always have its default value
     /// <summary>Let's enable access to the stack, just know what's you doing</summary>
@@ -530,13 +718,30 @@ public struct SmallList<T, TStack> : IEnumerable<T>
     public void InitCount(int count)
     {
         Debug.Assert(count > 0, "Count should be more than 0");
-        Debug.Assert(Count == 0, "Initial the count should be 0");
+        Debug.Assert(_count == 0, "Initial the count should be 0");
 
         // Add the StackCapacity empty space at the end, we may use it later for BuildToArray.
         // The actual source Capacity will be StackCapacity + count.
         if (count > Stack.Capacity)
-            Rest = new T[count];
-        Count = count;
+            Rest = Pool.RentOrNew(count);
+
+        _count = count;
+    }
+
+    /// <summary>Returns a surely present item ref by its index</summary>
+    [UnscopedRef]
+    [MethodImpl((MethodImplOptions)256)]
+    public ref T GetSurePresentRef(int index)
+    {
+        Debug.Assert(_count != 0, "SmallList.GetSurePresentRef: list should not be empty");
+        Debug.Assert(index >= 0 & index < _count, $"SmallList.GetSurePresentRef: index {index} should be less than Count {_count}");
+
+        var stackCap = Stack.Capacity;
+        if (index < stackCap)
+            return ref Stack.GetSurePresentRef(index);
+
+        Debug.Assert(Rest != null);
+        return ref Rest.GetSurePresentRef(index - stackCap);
     }
 
     /// <summary>Returns surely present item by ref</summary>
@@ -546,32 +751,16 @@ public struct SmallList<T, TStack> : IEnumerable<T>
         [MethodImpl((MethodImplOptions)256)]
         get
         {
-            if (index < 0 | index >= Count)
-                return ref SmallList.ThrowIndexOutOfBounds<T>(index, Count);
+            if (index < 0 | index >= _count)
+                return ref SmallList.ThrowIndexOutOfBounds<T>(index, _count);
 
             var stackCap = Stack.Capacity;
             if (index < stackCap)
-                return ref Stack.GetSurePresentItemRef(index);
+                return ref Stack.GetSurePresentRef(index);
 
             Debug.Assert(Rest != null, "Expecting deeper items are already existing on heap");
-            return ref Rest.GetSurePresentItemRef(index - stackCap);
+            return ref Rest.GetSurePresentRef(index - stackCap);
         }
-    }
-
-    /// <summary>Returns a surely present item ref by its index</summary>
-    [UnscopedRef]
-    [MethodImpl((MethodImplOptions)256)]
-    public ref T GetSurePresentItemRef(int index)
-    {
-        Debug.Assert(Count != 0, "SmallList.GetSurePresentItemRef: list should not be empty");
-        Debug.Assert(index >= 0 & index < Count, $"SmallList.GetSurePresentItemRef: index {index} should be less than Count {Count}");
-
-        var stackCap = Stack.Capacity;
-        if (index < stackCap)
-            return ref Stack.GetSurePresentItemRef(index);
-
-        Debug.Assert(Rest != null);
-        return ref Rest[index - stackCap];
     }
 
     /// <summary>Appends the default item to the end of the list and returns the reference to it.</summary>
@@ -579,23 +768,23 @@ public struct SmallList<T, TStack> : IEnumerable<T>
     [MethodImpl((MethodImplOptions)256)]
     public ref T AddDefaultAndGetRef()
     {
-        var index = Count++;
+        var index = _count++;
         var stackCap = Stack.Capacity;
         if (index < stackCap)
-            return ref Stack.GetSurePresentItemRef(index);
-        return ref SmallList.AddDefaultAndGetRef(ref Rest, index - stackCap);
+            return ref Stack.GetSurePresentRef(index);
+        return ref SmallList.AddDefaultAndGetRef(ref Rest, Pool, index - stackCap);
     }
 
     /// <summary>Adds the item to the end of the list aka the Stack.Push. Returns the index of the added item.</summary>
     [MethodImpl((MethodImplOptions)256)]
     public int Add(in T item)
     {
-        var index = Count++;
+        var index = _count++;
         var stackCap = Stack.Capacity;
         if (index < stackCap)
-            Stack.GetSurePresentItemRef(index) = item;
+            Stack.GetSurePresentRef(index) = item;
         else
-            SmallList.AddDefaultAndGetRef(ref Rest, index - stackCap) = item;
+            SmallList.AddDefaultAndGetRef(ref Rest, Pool, index - stackCap) = item;
         return index;
     }
 
@@ -603,7 +792,7 @@ public struct SmallList<T, TStack> : IEnumerable<T>
     [MethodImpl((MethodImplOptions)256)]
     public int TryGetIndex<TEq>(in T item, TEq eq = default) where TEq : struct, IEq<T>
     {
-        if (Count != 0)
+        if (_count != 0)
         {
             var index = 0;
             foreach (var it in this)
@@ -629,13 +818,25 @@ public struct SmallList<T, TStack> : IEnumerable<T>
     public void Clear()
     {
         Stack = default; // todo: @perf is there way to faster clear items on stack?
-        var restCount = Count - Stack.Capacity;
+        var restCount = _count - Stack.Capacity;
         if (restCount > 0)
         {
             Debug.Assert(Rest != null, "Expecting deeper items are already existing on heap");
             Array.Clear(Rest, 0, restCount);
         }
-        Count = 0;
+        _count = 0;
+    }
+
+    /// <summary>Returns the Rest of the items to the pool</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public void FreePooled()
+    {
+        if (Rest != null)
+        {
+            var oldRest = Rest;
+            Rest = null;
+            Pool.ReuseIfPossible(oldRest);
+        }
     }
 
     /// <summary>Returns last present item ref, assumes that the list is not empty!</summary>
@@ -643,22 +844,42 @@ public struct SmallList<T, TStack> : IEnumerable<T>
     [MethodImpl((MethodImplOptions)256)]
     public ref T GetLastSurePresentItem()
     {
-        Debug.Assert(Count != 0, "Expecting that the list is not empty");
-        return ref GetSurePresentItemRef(Count - 1);
+        Debug.Assert(_count != 0, "Expecting that the list is not empty");
+        return ref GetSurePresentRef(_count - 1);
     }
 
     /// <summary>Removes the last item from the list aka the Stack Pop. Assumes that the list is not empty!</summary>
     [MethodImpl((MethodImplOptions)256)]
     public void RemoveLastSurePresentItem()
     {
-        Debug.Assert(Count != 0, "SmallList.RemoveLastSurePresentItem: Expecting that the list is not empty");
-        GetSurePresentItemRef(Count - 1) = default;
-        --Count;
+        Debug.Assert(_count != 0, "SmallList.RemoveLastSurePresentItem: Expecting that the list is not empty");
+        GetSurePresentRef(_count - 1) = default;
+        --_count;
+    }
+
+    /// <inheritdoc/>
+    public T[] CopyToArray()
+    {
+        if (_count == 0)
+            return Array.Empty<T>();
+
+        var arr = Pool.RentOrNew(_count);
+
+        for (var i = 0; i < arr.Length; ++i)
+            arr[i] = Stack.GetSurePresentRef(i);
+
+        var restCount = _count - Stack.Capacity;
+        if (restCount > 0)
+        {
+            Debug.Assert(Rest != null && Rest.Length >= restCount, $"Expecting the Rest of {restCount} but found only {Rest?.Length.ToString() ?? "`null`"}");
+            Array.Copy(Rest, 0, arr, Stack.Capacity, restCount);
+        }
+        return arr;
     }
 
     /// <summary>Returns an enumerator struct</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public SmallListEnumerator<T, TStack> GetEnumerator() => new SmallListEnumerator<T, TStack>(this);
+    public SmallListEnumerator<T, TStack> GetEnumerator() => new(Stack, Rest, _count);
     IEnumerator<T> IEnumerable<T>.GetEnumerator() => GetEnumerator();
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }
@@ -667,13 +888,18 @@ public struct SmallList<T, TStack> : IEnumerable<T>
 public struct SmallListEnumerator<T, TStack> : IEnumerator<T>, IEnumerator
     where TStack : struct, IStack<T, TStack>
 {
-    private readonly SmallList<T, TStack> _list;
+    private readonly TStack _stack;
+    private readonly T[] _rest;
+    private readonly int _count;
     private int _index;
-    internal SmallListEnumerator(SmallList<T, TStack> list)
+    internal SmallListEnumerator(TStack stack, T[] rest, int count)
     {
-        _list = list;
+        _stack = stack;
+        _rest = rest;
+        _count = count;
         _index = -1;
     }
+
     private T _current;
     /// <inheritdoc />
     public T Current => _current;
@@ -683,11 +909,11 @@ public struct SmallListEnumerator<T, TStack> : IEnumerator<T>, IEnumerator
     public bool MoveNext()
     {
         var index = ++_index;
-        if (index < _list.Count)
+        if (index < _count)
         {
-            _current = index < _list.Stack.Capacity
-                ? _list.Stack.GetSurePresentItemRef(index)
-                : _list.Rest[index - _list.Stack.Capacity];
+            _current = index < _stack.Capacity
+                ? _stack.GetSurePresentRef(index)
+                : _rest.GetSurePresentRef(index - _stack.Capacity);
             return true;
         }
         return false;
@@ -933,7 +1159,7 @@ public static class SmallMap
         /// <inheritdoc/>
         [MethodImpl((MethodImplOptions)256)]
         public ref TEntry GetSurePresentEntryRef(int index) =>
-            ref _entries.GetSurePresentItemRef(index);
+            ref _entries.GetSurePresentRef(index);
 
         /// <inheritdoc/>
         [MethodImpl((MethodImplOptions)256)]
@@ -942,7 +1168,7 @@ public static class SmallMap
             if (index == _entries.Length)
                 Array.Resize(ref _entries, index << 1);
 
-            ref var e = ref _entries.GetSurePresentItemRef(index);
+            ref var e = ref _entries.GetSurePresentRef(index);
             e.Key = key;
             return ref e;
         }
@@ -977,7 +1203,7 @@ public static class SmallMap
                 {
                     var matchIndex = System.Numerics.BitOperations.TrailingZeroCount(matches);
 
-                    ref var entry = ref entries.GetSurePresentItemRef(i + matchIndex);
+                    ref var entry = ref entries.GetSurePresentRef(i + matchIndex);
                     if (found = eq.Equals(entry.Key, key))
                         return ref entry;
 
@@ -998,10 +1224,10 @@ public static class SmallMap
 
         for (var i = 0; i < count; ++i)
         {
-            var h = hashes.GetSurePresentItemRef(i);
+            var h = hashes.GetSurePresentRef(i);
             if (h == hash)
             {
-                ref var entry = ref entries.GetSurePresentItemRef(i);
+                ref var entry = ref entries.GetSurePresentRef(i);
                 if (found = eq.Equals(entry.Key, key))
                     return ref entry;
             }
@@ -1129,7 +1355,7 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
         Debug.Assert(index < _count);
         if (index >= StackEntries.Capacity)
             return ref _entries.GetSurePresentEntryRef(index - StackEntries.Capacity);
-        return ref StackEntries.GetSurePresentItemRef(index);
+        return ref StackEntries.GetSurePresentRef(index);
     }
 
     [UnscopedRef]
@@ -1150,7 +1376,7 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
 #else
         ref var hashesAndIndexes = ref _packedHashesAndIndexes;
 #endif
-        ref var h = ref hashesAndIndexes.GetSurePresentItemRef(hashIndex);
+        ref var h = ref hashesAndIndexes.GetSurePresentRef(hashIndex);
 
         // 1. Skip over hashes with the bigger and equal probes. The hashes with bigger probes overlapping from the earlier ideal positions
         var probe = 1;
@@ -1163,7 +1389,7 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
                 if (found = default(TEq).Equals(e.Key, key))
                     return ref e;
             }
-            h = ref hashesAndIndexes.GetSurePresentItemRef(++hashIndex & indexMask);
+            h = ref hashesAndIndexes.GetSurePresentRef(++hashIndex & indexMask);
             ++probe;
         }
         found = false;
@@ -1177,7 +1403,7 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
         probe = hRobinHooded >>> ProbeCountShift;
         while (hRobinHooded != 0)
         {
-            h = ref hashesAndIndexes.GetSurePresentItemRef(++hashIndex & indexMask);
+            h = ref hashesAndIndexes.GetSurePresentRef(++hashIndex & indexMask);
             if ((h >>> ProbeCountShift) < ++probe)
             {
                 var tmp = h;
@@ -1200,11 +1426,11 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
         var hashesAndIndexes = _packedHashesAndIndexes;
 #endif
         // 1. Skip over hashes with the bigger and equal probes. The hashes with bigger probes overlapping from the earlier ideal positions
-        ref var h = ref hashesAndIndexes.GetSurePresentItemRef(hashIndex);
+        ref var h = ref hashesAndIndexes.GetSurePresentRef(hashIndex);
         var probe = 1;
         while ((h >>> ProbeCountShift) >= probe)
         {
-            h = ref hashesAndIndexes.GetSurePresentItemRef(++hashIndex & IndexMask);
+            h = ref hashesAndIndexes.GetSurePresentRef(++hashIndex & IndexMask);
             ++probe;
         }
 
@@ -1217,7 +1443,7 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
         probe = hRobinHooded >>> ProbeCountShift;
         while (hRobinHooded != 0)
         {
-            h = ref hashesAndIndexes.GetSurePresentItemRef(++hashIndex & IndexMask);
+            h = ref hashesAndIndexes.GetSurePresentRef(++hashIndex & IndexMask);
             if ((h >>> ProbeCountShift) < ++probe)
             {
                 var tmp = h;
@@ -1245,8 +1471,8 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
         if (_count < StackEntries.Capacity)
         {
             var newIndex = _count++;
-            _stackHashes.GetSurePresentItemRef(newIndex) = default(TEq).GetHashCode(key);
-            ref var newEntry = ref StackEntries.GetSurePresentItemRef(newIndex);
+            _stackHashes.GetSurePresentRef(newIndex) = default(TEq).GetHashCode(key);
+            ref var newEntry = ref StackEntries.GetSurePresentRef(newIndex);
             newEntry.Key = key;
             return ref newEntry;
         }
@@ -1255,7 +1481,7 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
         // To avoid double work always going linearly through the Stack with the comparison,
         // let's calculate the hash of the keys stored on stack and put them 
         // to the usual HashMap packed hashes and indexes array for the promised O(1) lookup.
-        // But the values are remaining on the Stack, and for the found index of the entry we use the GetSurePresentItemRef(index) 
+        // But the values are remaining on the Stack, and for the found index of the entry we use the GetSurePresentRef(index) 
         // to get the value reference either from the Stack or the Entries.
         // So the values on the stack are guarantied to be stable from the beginning of the map creation, 
         // because they are not copied when the Entries need to Resize (depending on the TEntries implementation). 
@@ -1321,13 +1547,13 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
 #else
         var hashesAndIndexes = _packedHashesAndIndexes;
 #endif
-        ref var h = ref hashesAndIndexes.GetSurePresentItemRef(hashIndex);
+        ref var h = ref hashesAndIndexes.GetSurePresentRef(hashIndex);
 
         // 1. Skip over hashes with the bigger and equal probes. The hashes with bigger probes overlapping from the earlier ideal positions
         var probe = 1;
         while ((h >>> ProbeCountShift) >= probe)
         {
-            h = ref hashesAndIndexes.GetSurePresentItemRef(++hashIndex & indexMask);
+            h = ref hashesAndIndexes.GetSurePresentRef(++hashIndex & indexMask);
             ++probe;
         }
 
@@ -1340,7 +1566,7 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
         probe = hRobinHooded >>> ProbeCountShift;
         while (hRobinHooded != 0)
         {
-            h = ref hashesAndIndexes.GetSurePresentItemRef(++hashIndex & indexMask);
+            h = ref hashesAndIndexes.GetSurePresentRef(++hashIndex & indexMask);
             if ((h >>> ProbeCountShift) < ++probe)
             {
                 var tmp = h;
@@ -1366,8 +1592,8 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
         if (_count < StackEntries.Capacity)
         {
             var newIndex = _count++;
-            _stackHashes.GetSurePresentItemRef(newIndex) = default(TEq).GetHashCode(key);
-            ref var newEntry = ref StackEntries.GetSurePresentItemRef(newIndex);
+            _stackHashes.GetSurePresentRef(newIndex) = default(TEq).GetHashCode(key);
+            ref var newEntry = ref StackEntries.GetSurePresentRef(newIndex);
             newEntry.Key = key;
             return ref newEntry;
         }
@@ -1418,7 +1644,7 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
         var hashesAndIndexes = _packedHashesAndIndexes;
 #endif
 
-        var h = hashesAndIndexes.GetSurePresentItem(hashIndex);
+        var h = hashesAndIndexes.GetSurePresent(hashIndex);
 
         // 1. Skip over hashes with the bigger and equal probes. The hashes with bigger probes overlapping from the earlier ideal positions
         var probe = 1;
@@ -1432,7 +1658,7 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
                     return ref e;
             }
 
-            h = hashesAndIndexes.GetSurePresentItem(++hashIndex & indexMask);
+            h = hashesAndIndexes.GetSurePresent(++hashIndex & indexMask);
             ++probe;
         }
 
@@ -1458,7 +1684,7 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
         var hashesAndIndexes = _packedHashesAndIndexes;
 #endif
 
-        var h = hashesAndIndexes.GetSurePresentItem(hashIndex);
+        var h = hashesAndIndexes.GetSurePresent(hashIndex);
 
         // 1. Skip over hashes with the bigger and equal probes. The hashes with bigger probes overlapping from the earlier ideal positions
         var probe = 1;
@@ -1473,7 +1699,7 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
                     return ref e;
             }
 
-            h = hashesAndIndexes.GetSurePresentItem(++hashIndex & indexMask);
+            h = hashesAndIndexes.GetSurePresent(++hashIndex & indexMask);
             ++probe;
         }
 
@@ -1511,7 +1737,7 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
         // Overflow segment is wrapped-around hashes and! the hashes at the beginning robin hooded by the wrapped-around hashes
         var i = 0;
         while ((oldHash >>> ProbeCountShift) > 1)
-            oldHash = oldHashes.GetSurePresentItem(++i);
+            oldHash = oldHashes.GetSurePresent(++i);
 
         var oldCapacityWithOverflowSegment = i + oldCapacity;
         while (true)
@@ -1523,10 +1749,10 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
 
                 // no need for robin-hooding because we already did it for the old hashes and now just filling the hashes into the new array which are already in order
                 var probe = 1;
-                ref var newHash = ref newHashes.GetSurePresentItemRef(indexWithNextBit);
+                ref var newHash = ref newHashes.GetSurePresentRef(indexWithNextBit);
                 while (newHash != 0)
                 {
-                    newHash = ref newHashes.GetSurePresentItemRef(++indexWithNextBit & newIndexMask);
+                    newHash = ref newHashes.GetSurePresentRef(++indexWithNextBit & newIndexMask);
                     ++probe;
                 }
                 newHash = (probe << ProbeCountShift) | (oldHash & newHashAndIndexMask);
@@ -1534,7 +1760,7 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
             if (++i >= oldCapacityWithOverflowSegment)
                 break;
 
-            oldHash = oldHashes.GetSurePresentItem(i & indexMask);
+            oldHash = oldHashes.GetSurePresent(i & indexMask);
         }
         ++_capacityBitShift;
         _packedHashesAndIndexes = newHashesAndIndexes;

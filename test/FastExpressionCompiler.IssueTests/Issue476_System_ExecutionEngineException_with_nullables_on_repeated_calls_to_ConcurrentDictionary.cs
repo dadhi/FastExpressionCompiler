@@ -49,7 +49,7 @@ public struct Issue476_System_ExecutionEngineException_with_nullables_on_repeate
         t.IsFalse(ff(aNull));
     }
 
-    SmallList<int, Stack4<int>> _smallList;
+    SmallList<int, Stack4<int>, NoArrayPool<int>> _smallList;
 
     public void TestSmallList(TestContext t)
     {
@@ -70,8 +70,8 @@ public struct Issue476_System_ExecutionEngineException_with_nullables_on_repeate
 
         for (var n = 0; n < 8; ++n)
         {
-            hashes.GetSurePresentItemRef(n) = default(IntEq).GetHashCode(n);
-            entries.GetSurePresentItemRef(n) = new SmallMap.Entry<int>(n);
+            hashes.GetSurePresentRef(n) = default(IntEq).GetHashCode(n);
+            entries.GetSurePresentRef(n) = new SmallMap.Entry<int>(n);
         }
 
         var sum = 0;

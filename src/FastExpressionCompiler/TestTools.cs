@@ -301,7 +301,7 @@ public static class Asserts
         // Using those 4 slots directly to represent recent 4 equal items, before the non-equal item.
         // The slots will be rotated by overriding the `a` again, when the `d` is reached, then the `b`, etc.
         ItemsCompared<T> a = default, b = default, c = default, d = default;
-        SmallList<ItemsCompared<T>, Stack4<ItemsCompared<T>>> collectedItems = default;
+        SmallList<ItemsCompared<T>, Stack4<ItemsCompared<T>>, NoArrayPool<ItemsCompared<T>>> collectedItems = default;
 
         var nonEqualItemCount = 0;
         var collectedMaxNonEqualItems = false;
@@ -754,7 +754,7 @@ public struct TestContext
         // Using those 4 slots directly to represent recent 4 equal items, before the non-equal item.
         // The slots will be rotated by overriding the `a` again, when the `d` is reached, then the `b`, etc.
         ItemsCompared<T> a = default, b = default, c = default, d = default;
-        SmallList<ItemsCompared<T>, Stack4<ItemsCompared<T>>> collectedItems = default;
+        SmallList<ItemsCompared<T>, Stack4<ItemsCompared<T>>, NoArrayPool<ItemsCompared<T>>> collectedItems = default;
 
         var nonEqualItemCount = 0;
         var collectedMaxNonEqualItems = false;
@@ -1054,7 +1054,7 @@ public sealed class TestRun
                     Console.WriteLine($"Test '{testsName}' failed {testFailureCount} time{(testFailureCount == 1 ? "" : "s")}:");
                     for (var i = 0; i < testFailureCount; ++i)
                     {
-                        ref var f = ref Failures.GetSurePresentItemRef(failureCount + i);
+                        ref var f = ref Failures.GetSurePresentRef(failureCount + i);
                         Console.WriteLine($"{i}. `{f.TestMethodName}` failed at line {f.SourceLineNumber}:{NewLine}{f.Message}{NewLine}");
                     }
                 }
