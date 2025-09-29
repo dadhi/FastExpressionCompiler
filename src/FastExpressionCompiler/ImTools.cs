@@ -618,42 +618,53 @@ public struct ClearItemsFast<T> : IClearItems<T>
 public struct ProvidedArrayPool<T, TClearItems> : ISmallArrayPool<T>
     where TClearItems : struct, IClearItems<T>
 {
-    private T[][] _pool;
+    private T[][] _arrays;
+    private int _maxArrayLength;
 
     /// <summary>Inits the pool with some shared array pool</summary>
-    public ProvidedArrayPool(T[][] pool) : this() => Init(pool);
-
-    /// <inheritdoc/>
-    public int MaxArrayLength
-    {
-        [MethodImpl((MethodImplOptions)256)]
-        get
-        {
-            Debug.Assert(_pool != null);
-            return _pool.Length;
-        }
-    }
+    public ProvidedArrayPool(T[][] pool, int maxArrayLength) : this() => Init(pool, maxArrayLength);
 
     /// <summary>Inits the pool with some shared array pool</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public void Init(T[][] pool)
+    public void Init(T[][] arrays, int maxArrayLength)
     {
-        Debug.Assert(pool != null);
-        _pool = pool;
+        _arrays = arrays;
+        _maxArrayLength = maxArrayLength;
     }
+
+    /// <summary>Adds the arrays from the shared pool to the target, making the target at least as large as the shared pool.</summary>
+    public void MergeInto(ref T[][] target)
+    {
+        var source = _arrays;
+        if (target == null || target.Length == 0)
+            target = source;
+        else if (source != null && source.Length != 0)
+        {
+            if (target.Length < source.Length)
+                Array.Resize(ref target, source.Length);
+            for (var i = 0; i < target.Length; ++i)
+                if (target[i] == null)
+                    target[i] = source.GetSurePresentRef(i);
+        }
+    }
+
+    /// <inheritdoc/>
+    public int MaxArrayLength => _maxArrayLength;
 
     /// <inheritdoc/>
     [MethodImpl((MethodImplOptions)256)]
     public T[] RentOrNew(int exactLength)
     {
         Debug.Assert(exactLength != 0);
-        if (exactLength <= _pool.Length)
-        {
-            var arr = _pool[exactLength - 1];
-            if (arr != null)
-                return Interlocked.Exchange(ref _pool[exactLength - 1], null) ?? new T[exactLength];
-        }
-        return new T[exactLength];
+        if (exactLength > _maxArrayLength)
+            return new T[exactLength];
+
+        if (_arrays == null)
+            _arrays = new T[_maxArrayLength][];
+        else if (_arrays.Length < _maxArrayLength)
+            Array.Resize(ref _arrays, _maxArrayLength);
+
+        return Interlocked.Exchange(ref _arrays[exactLength - 1], null) ?? new T[exactLength];
     }
 
     /// <inheritdoc/>
@@ -662,10 +673,10 @@ public struct ProvidedArrayPool<T, TClearItems> : ISmallArrayPool<T>
     {
         if (array == null) return;
         var arrayLength = array.Length;
-        if (arrayLength != 0 & arrayLength <= _pool.Length)
+        if (arrayLength != 0 & arrayLength <= _arrays.Length)
         {
             default(TClearItems).Clear(array, 0, arrayLength);
-            Interlocked.Exchange(ref _pool[arrayLength - 1], array);
+            Interlocked.Exchange(ref _arrays[arrayLength - 1], array);
         }
     }
 }

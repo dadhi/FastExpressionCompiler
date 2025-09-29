@@ -5325,7 +5325,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static readonly Label[][] _labelPool = null;
+            private static Label[][] _labelPool = null;
 
 #if LIGHT_EXPRESSION
             private static bool TryEmitSwitch(SwitchExpression expr, IParameterProvider paramExprs, ILGenerator il, ref ClosureInfo closure,
@@ -5468,7 +5468,7 @@ namespace FastExpressionCompiler
 #else
                 SmallList<Label, Stack16<Label>, ProvidedArrayPool<Label, ClearItemsNo<Label>>> caseLabels = default;
 #endif
-                caseLabels.Pool.Init(_labelPool);
+                caseLabels.Pool.Init(_labelPool, 16);
 
                 for (var caseIndex = 0; caseIndex < caseCount; ++caseIndex)
                 {
@@ -5553,6 +5553,9 @@ namespace FastExpressionCompiler
 
                     il.Demit(OpCodes.Br, switchEndLabel);
                 }
+
+                caseLabels.FreePooled();
+                caseLabels.Pool.MergeInto(ref _labelPool);
 
                 il.DmarkLabel(switchEndLabel);
                 return true;
