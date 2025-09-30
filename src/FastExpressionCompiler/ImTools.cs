@@ -166,7 +166,7 @@ public static class SmallList
 
     /// <summary>Appends the new default item at the end of the items. Assumes that `index lte items.Length`, `items` may be null</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref T AddDefaultAndGetRef<T, TPool>(ref T[] items, TPool pool, int index, int initialCapacity = DefaultInitialCapacity)
+    public static ref T AddDefaultAndGetRef<T, TPool>(ref T[] items, ref TPool pool, int index, int initialCapacity = DefaultInitialCapacity)
         where TPool : struct, ISmallArrayPool<T>
     {
         if (items == null)
@@ -796,7 +796,7 @@ public struct SmallList<T, TStack, TPool> : ISmallList<T>
         var stackCap = Stack.Capacity;
         if (index < stackCap)
             return ref Stack.GetSurePresentRef(index);
-        return ref SmallList.AddDefaultAndGetRef(ref Rest, Pool, index - stackCap);
+        return ref SmallList.AddDefaultAndGetRef(ref Rest, ref Pool, index - stackCap);
     }
 
     /// <summary>Adds the item to the end of the list aka the Stack.Push. Returns the index of the added item.</summary>
@@ -808,7 +808,7 @@ public struct SmallList<T, TStack, TPool> : ISmallList<T>
         if (index < stackCap)
             Stack.GetSurePresentRef(index) = item;
         else
-            SmallList.AddDefaultAndGetRef(ref Rest, Pool, index - stackCap) = item;
+            SmallList.AddDefaultAndGetRef(ref Rest, ref Pool, index - stackCap) = item;
         return index;
     }
 
