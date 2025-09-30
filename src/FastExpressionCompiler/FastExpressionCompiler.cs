@@ -26,7 +26,9 @@ THE SOFTWARE.
 // ReSharper disable CoVariantArrayConversion
 #nullable disable
 
-// #define LIGHT_EXPRESSION
+//#define LIGHT_EXPRESSION
+//#define INTERPRETATION_DIAGNOSTICS
+//#define TESTING
 
 #if DEBUG && NET6_0_OR_GREATER
 #define DEBUG_INFO_LOCAL_VARIABLE_USAGE
@@ -35,7 +37,7 @@ THE SOFTWARE.
 #if LIGHT_EXPRESSION
 #define SUPPORTS_ARGUMENT_PROVIDER
 #endif
-//#define INTERPRETATION_DIAGNOSTICS
+
 #if LIGHT_EXPRESSION
 namespace FastExpressionCompiler.LightExpression
 {
@@ -5373,12 +5375,12 @@ namespace FastExpressionCompiler
                     //                     if (!TryEmit(switchValueExpr, paramExprs, il, ref closure, setup, swithValueParent, -1))
                     //                         return false;
 
-                    // #if DEBUG
+                    // #if DEBUG || TESTING
                     //                     SmallList<Label, Stack2<Label>, ProvidedArrayPool<Label, ClearItemsNo<Label>>> labels = default;
                     // #else
-                    //                     SmallList<Label, Stack16<Label>, Size16, ProvidedArrayPool<Label, ClearItemsNo<Label>>> labels = default;
+                    //                     SmallList<Label, Stack8<Label>, ProvidedArrayPool<Label, ClearItemsNo<Label>>> labels = default;
                     // #endif
-                    //                     labels.Pool.Init(_labelPool);
+                    //                     labels.Pool.Init(_labelPool, 8);
 
                     //                     for (var i = 0; i < caseCount; ++i)
                     //                     {
@@ -5462,7 +5464,7 @@ namespace FastExpressionCompiler
 
                 var switchEndLabel = il.DefineLabel();
 
-#if DEBUG
+#if DEBUG || TESTING
                 // Check the heap/pool part of the labels in debug mode
                 SmallList<Label, Stack2<Label>, ProvidedArrayPool<Label, ClearItemsNo<Label>>> caseLabels = default;
 #else
