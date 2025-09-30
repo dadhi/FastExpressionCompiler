@@ -5466,9 +5466,9 @@ namespace FastExpressionCompiler
                 // Check the heap/pool part of the labels in debug mode
                 SmallList<Label, Stack2<Label>, ProvidedArrayPool<Label, ClearItemsNo<Label>>> caseLabels = default;
 #else
-                SmallList<Label, Stack16<Label>, ProvidedArrayPool<Label, ClearItemsNo<Label>>> caseLabels = default;
+                SmallList<Label, Stack8<Label>, ProvidedArrayPool<Label, ClearItemsNo<Label>>> caseLabels = default;
 #endif
-                caseLabels.Pool.Init(_labelPool, 16);
+                caseLabels.Pool.Init(_labelPool, 8);
 
                 for (var caseIndex = 0; caseIndex < caseCount; ++caseIndex)
                 {

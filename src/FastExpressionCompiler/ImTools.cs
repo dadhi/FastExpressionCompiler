@@ -644,7 +644,11 @@ public struct ProvidedArrayPool<T, TClearItems> : ISmallArrayPool<T>
                 Array.Resize(ref target, source.Length);
             for (var i = 0; i < target.Length; ++i)
                 if (target[i] == null)
-                    target[i] = source.GetSurePresentRef(i);
+                {
+                    var sourceArr = source.GetSurePresentRef(i);
+                    Debug.Assert(sourceArr == null || sourceArr.Length == i + 1, $"Expecting the source array {sourceArr.Length} to be of the right length");
+                    target[i] = sourceArr;
+                }
         }
     }
 
@@ -671,9 +675,9 @@ public struct ProvidedArrayPool<T, TClearItems> : ISmallArrayPool<T>
     [MethodImpl((MethodImplOptions)256)]
     public void ReuseIfPossible(T[] array)
     {
-        if (array == null) return;
+        if (array == null | _arrays == null) return;
         var arrayLength = array.Length;
-        if (arrayLength != 0 & arrayLength <= _arrays.Length)
+        if (arrayLength != 0 && arrayLength <= _arrays.Length)
         {
             default(TClearItems).Clear(array, 0, arrayLength);
             Interlocked.Exchange(ref _arrays[arrayLength - 1], array);

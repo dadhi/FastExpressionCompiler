@@ -101,7 +101,6 @@ namespace FastExpressionCompiler.IssueTests
         public static bool MyEnumEquals(MyEnum? y, MyEnum? x) =>
             x.GetValueOrDefault() == y.GetValueOrDefault() && x.HasValue == y.HasValue;
 
-
         public void Switch_nullable_enum_value_equals_to_non_nullable_cases_via_comparison_method_Impossible_both_should_be_nullable()
         {
             var eVar = Parameter(typeof(MyEnum?));
