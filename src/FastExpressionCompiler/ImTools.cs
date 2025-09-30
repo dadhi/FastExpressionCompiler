@@ -141,7 +141,7 @@ public static class SmallList
             var newCount = (items.Length << 1) | 1; // 1 is to account for the empty array, have fun to guess the new length, ha-ha ;-P
             Expand(ref items, new T[newCount]);
         }
-        return ref items[index];
+        return ref items.GetSurePresentRef(index);
     }
 
     /// <summary>Appends the new default item at the end of the items. Assumes that `index lte items.Length`, `items` may be null</summary>
@@ -152,7 +152,7 @@ public static class SmallList
         {
             Debug.Assert(index == 0);
             items = new T[initialCapacity];
-            return ref items[index];
+            return ref items.GetSurePresentFirstRef();
         }
 
         Debug.Assert(index <= items.Length);
@@ -161,7 +161,7 @@ public static class SmallList
             var newCount = (items.Length << 1) | 1; // 1 is to account for the empty array, have fun to guess the new length, ha-ha ;-P
             Expand(ref items, new T[newCount]);
         }
-        return ref items[index];
+        return ref items.GetSurePresentRef(index);
     }
 
     /// <summary>Appends the new default item at the end of the items. Assumes that `index lte items.Length`, `items` may be null</summary>
@@ -173,7 +173,7 @@ public static class SmallList
         {
             Debug.Assert(index == 0);
             items = pool.RentOrNew(initialCapacity);
-            return ref items[index];
+            return ref items.GetSurePresentFirstRef();
         }
 
         Debug.Assert(index <= items.Length);
@@ -186,8 +186,17 @@ public static class SmallList
             Expand(ref items, newItems);
             pool.ReuseIfPossible(oldItems);
         }
-        return ref items[index];
+        return ref items.GetSurePresentRef(index);
     }
+
+    /// <summary>Returns surely present item ref by its index without boundary checks</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public static ref T GetSurePresentFirstRef<T>(this T[] source) =>
+#if SUPPORTS_UNSAFE
+        ref MemoryMarshal.GetArrayDataReference(source);
+#else
+        ref source[0];
+#endif
 
     /// <summary>Returns surely present item ref by its index without boundary checks</summary>
     [MethodImpl((MethodImplOptions)256)]
