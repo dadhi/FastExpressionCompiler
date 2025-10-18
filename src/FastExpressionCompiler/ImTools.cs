@@ -664,6 +664,7 @@ public struct ProvidedArrayPool<T, TClearItems> : ISmallArrayPool<T>
     /// <inheritdoc/>
     public int MaxArrayLength => _maxArrayLength;
 
+    // todo: @wip @perf allow to use more flexible lengths, not only exactLength, because the array may be smaller but available in the pool
     /// <inheritdoc/>
     [MethodImpl((MethodImplOptions)256)]
     public T[] RentOrNew(int exactLength)

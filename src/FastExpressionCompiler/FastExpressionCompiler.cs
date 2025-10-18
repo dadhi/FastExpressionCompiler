@@ -5350,7 +5350,7 @@ namespace FastExpressionCompiler
                 var defaultBody = expr.DefaultBody;
 
                 // Optimization for the single case
-                if (caseCount == 1 && defaultBody != null)
+                if (caseCount == 1 & defaultBody != null)
                 {
                     var cs0 = cases[0];
                     if (cs0.TestValues.Count == 1)
@@ -5382,7 +5382,11 @@ namespace FastExpressionCompiler
                         return false;
 
                     var multipleTestValuesLabelsId = 0;
+#if TESTING || DEBUG
+                    SmallList<TestValueAndMultiTestCaseIndex, Stack2<TestValueAndMultiTestCaseIndex>, NoArrayPool<TestValueAndMultiTestCaseIndex>> switchValues = default;
+#else
                     SmallList<TestValueAndMultiTestCaseIndex, Stack8<TestValueAndMultiTestCaseIndex>, NoArrayPool<TestValueAndMultiTestCaseIndex>> switchValues = default;
+#endif
                     for (var caseIndex = 0; caseIndex < caseCount; ++caseIndex)
                     {
                         var testValues = cases[caseIndex].TestValues;
@@ -5405,18 +5409,18 @@ namespace FastExpressionCompiler
 
                             // Adding a free slot for the new or for the shifted max value
                             ref var freeValRef = ref switchValues.AddDefaultAndGetRef(); // the default value is (0,0)
-                            var valIndex = switchValues.Count - 1;
+                            var lastIndex = switchValues.Count - 1;
                             while (true)
                             {
-                                --valIndex;
-                                if (valIndex == -1)
+                                --lastIndex;
+                                if (lastIndex == -1)
                                 {
                                     freeValRef.Value = testValue;
                                     freeValRef.CaseIndexPlusOne = id;
                                     break;
                                 }
 
-                                ref var valRef = ref switchValues.GetSurePresentRef(valIndex);
+                                ref var valRef = ref switchValues.GetSurePresentRef(lastIndex);
                                 Debug.Assert(valRef.Value != testValue, "Duplicate test value in switch case");
 
                                 // Shift current value further to get space for the smaller new value
@@ -5427,16 +5431,16 @@ namespace FastExpressionCompiler
                                 }
                                 else
                                 {
-                                    valIndex = 0; // stop searching
+                                    lastIndex = 0; // stop searching
                                 }
                             }
                         }
                     }
 
                     // Let's analyze the switch values for the starting value and the gaps.
-                    // We require no more than nonContValueCountMax non-continous values and no larger gap then the minGap for the rest,
+                    // We require no more than nonContValueCountMax non-continous values and no larger gap then the valueGapMin for the rest,
                     // to consider the values for the switch table. Because otherwise the table will be filled with gaps and
-                    // become too large for the final optimization goal.
+                    // will become too large for the final optimization goal.
                     // Note that we cannot check the gaps earlier when collecting the values because the gaps may be filled at the end.
                     const int valueGapMin = 4;
                     const int nonContValueCountMax = 3;
@@ -5592,7 +5596,7 @@ namespace FastExpressionCompiler
 
                 var switchEndLabel = il.DefineLabel();
 
-#if DEBUG || TESTING
+#if TESTING || DEBUG
                 // Check the heap/pool part of the labels in debug mode
                 SmallList<Label, Stack2<Label>, ProvidedArrayPool<Label, ClearItemsNo<Label>>> caseLabels = default;
 #else
