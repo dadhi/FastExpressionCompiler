@@ -5329,6 +5329,12 @@ namespace FastExpressionCompiler
 
             private static Label[][] _labelPool = null;
 
+            private struct TestValueAndMultiTestCaseIndex
+            {
+                public int Value;
+                public int CaseIndexPlusOne; // 0 means not multi-test case, otherwise index+1
+            }
+
 #if LIGHT_EXPRESSION
             private static bool TryEmitSwitch(SwitchExpression expr, IParameterProvider paramExprs, ILGenerator il, ref ClosureInfo closure,
                 CompilerFlags setup, ParentFlags parent)
@@ -5366,53 +5372,175 @@ namespace FastExpressionCompiler
 
                 var switchValueType = switchValueExpr.Type;
 
-                // Check the conditions and emit OpCodes.Switch if possible, see #398
+                // Check the pre-requisite conditions and emit OpCodes.Switch if possible, see #398
                 if (customEqualMethod == null && caseCount > 2 &&
                     switchValueType.IsPrimitive && switchValueType.IsInteger() ||
                     switchValueType.IsEnum && Enum.GetUnderlyingType(switchValueType).IsInteger())
                 {
-                    //                     var swithValueParent = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
-                    //                     if (!TryEmit(switchValueExpr, paramExprs, il, ref closure, setup, swithValueParent, -1))
-                    //                         return false;
+                    var swithValueParent = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
+                    if (!TryEmit(switchValueExpr, paramExprs, il, ref closure, setup, swithValueParent, -1))
+                        return false;
 
-                    // #if DEBUG || TESTING
-                    //                     SmallList<Label, Stack2<Label>, ProvidedArrayPool<Label, ClearItemsNo<Label>>> labels = default;
-                    // #else
-                    //                     SmallList<Label, Stack8<Label>, ProvidedArrayPool<Label, ClearItemsNo<Label>>> labels = default;
-                    // #endif
-                    //                     labels.Pool.Init(_labelPool, 8);
+                    var multipleTestValuesLabelsId = 0;
+                    SmallList<TestValueAndMultiTestCaseIndex, Stack8<TestValueAndMultiTestCaseIndex>, NoArrayPool<TestValueAndMultiTestCaseIndex>> switchValues = default;
+                    for (var caseIndex = 0; caseIndex < caseCount; ++caseIndex)
+                    {
+                        var testValues = cases[caseIndex].TestValues;
+                        var testValueCount = testValues.Count;
+                        var id = testValueCount > 1 ? ++multipleTestValuesLabelsId : 0;
 
-                    //                     for (var i = 0; i < caseCount; ++i)
-                    //                     {
-                    //                         var testValues = cases[i].TestValues;
-                    //                         var testCount = testValues.Count;
-                    //                         for (var j = 0; j < testCount; ++j)
-                    //                             labels.Add(il.DefineLabel());
-                    //                     }
+                        for (var v = 0; v < testValueCount; ++v)
+                        {
+                            var testValExpr = testValues[v];
+                            var testValConstExpr = testValExpr as ConstantExpression;
+                            if (testValConstExpr == null)
+                            {
+                                Debug.Assert(false, $"Not supported non-constant {testValConstExpr} test value in switch with integer values");
+                                return false;
+                            }
 
-                    //                     var gotoLabels = labels.CopyToArray();
-                    //                     labels.FreePooled();
+                            // todo: @wip support for long and ulong
+                            Debug.Assert(testValConstExpr.Value is int, $"Not supported non-int {testValConstExpr.Type} test value in switch with integer values");
+                            var testValue = (int)testValConstExpr.Value;
 
-                    //                     for (var i = 0; i < caseCount; ++i)
-                    //                         gotoLabels[i] = il.DefineLabel();
-                    //                     il.DemitSwitch(gotoLabels);
+                            // Adding a free slot for the new or for the shifted max value
+                            ref var freeValRef = ref switchValues.AddDefaultAndGetRef(); // the default value is (0,0)
+                            var valIndex = switchValues.Count - 1;
+                            while (true)
+                            {
+                                --valIndex;
+                                if (valIndex == -1)
+                                {
+                                    freeValRef.Value = testValue;
+                                    freeValRef.CaseIndexPlusOne = id;
+                                    break;
+                                }
 
-                    //                     var endLabel = il.DefineLabel();
-                    //                     if (defaultBody != null && !TryEmit(defaultBody, paramExprs, il, ref closure, setup, parent))
-                    //                         return false;
-                    //                     il.Demit(OpCodes.Br, endLabel);
+                                ref var valRef = ref switchValues.GetSurePresentRef(valIndex);
+                                Debug.Assert(valRef.Value != testValue, "Duplicate test value in switch case");
 
-                    //                     for (var i = 0; i < caseCount; ++i)
-                    //                     {
-                    //                         var cs = cases[i];
-                    //                         il.DmarkLabel(gotoLabels[i]);
-                    //                         if (!TryEmit(cs.Body, paramExprs, il, ref closure, setup, parent))
-                    //                             return false;
-                    //                         il.Demit(OpCodes.Br, endLabel);
-                    //                     }
+                                // Shift current value further to get space for the smaller new value
+                                if (testValue < valRef.Value)
+                                {
+                                    freeValRef = valRef; // shift the value by coying it into the free slot
+                                    freeValRef = ref valRef; // set the free slot reference to the current value
+                                }
+                                else
+                                {
+                                    valIndex = 0; // stop searching
+                                }
+                            }
+                        }
+                    }
 
-                    //                     il.DmarkLabel(endLabel);
-                    //                     return true;
+                    // Let's analyze the switch values for the starting value and the gaps.
+                    // We require no more than nonContValueCountMax non-continous values and no larger gap then the minGap for the rest,
+                    // to consider the values for the switch table. Because otherwise the table will be filled with gaps and
+                    // become too large for the final optimization goal.
+                    // Note that we cannot check the gaps earlier when collecting the values because the gaps may be filled at the end.
+                    const int valueGapMin = 4;
+                    const int nonContValueCountMax = 3;
+                    var contValueCount = 0;
+                    var valuesConditionsMet = true;
+                    var switchTableSize = 0;
+
+                    var firstTestValue = switchValues.GetSurePresentRef(0).Value;
+                    var prevSwitchValue = firstTestValue;
+
+                    for (var i = 1; i < switchValues.Count; ++i)
+                    {
+                        var currValue = switchValues.GetSurePresentRef(i).Value;
+                        var valueGap = currValue - prevSwitchValue;
+                        Debug.Assert(valueGap > 0, $"The values should be in increased order and non-equal but found {currValue} <= {prevSwitchValue}");
+
+                        if (valueGap > valueGapMin ||
+                            valueGap > 1 && ++contValueCount > nonContValueCountMax)
+                        {
+                            valuesConditionsMet = false;
+                            break;
+                        }
+
+                        prevSwitchValue = currValue;
+                        switchTableSize += valueGap;
+                    }
+
+                    if (valuesConditionsMet)
+                    {
+                        Debug.Assert(switchTableSize >= caseCount, $"The switch table size should be at least as large as the case count, but found {switchTableSize} < {caseCount}");
+
+                        var endOrDefaultLabel = il.DefineLabel();
+
+                        SmallList<int, Stack8<int>, NoArrayPool<int>> sameCaseLabelIndexes = default;
+                        sameCaseLabelIndexes.InitCount(multipleTestValuesLabelsId); // may stay empty if id is 0
+
+                        ProvidedArrayPool<Label, ClearItemsNo<Label>> labelPool = default;
+                        labelPool.Init(_labelPool, 8);
+                        var switchTableLabels = labelPool.RentOrNew(switchTableSize);
+
+                        // let's start with the continuous values from the start
+                        prevSwitchValue = firstTestValue - 1;
+                        var switchTableIndex = 1;
+                        for (var v = 1; v < switchValues.Count; ++v)
+                        {
+                            var currSwitchVal = switchValues.GetSurePresentRef(v);
+                            var currSwitchValue = currSwitchVal.Value;
+                            var valueGap = currSwitchValue - prevSwitchValue;
+                            if (valueGap > 1)
+                            {
+                                var endOfGap = switchTableIndex + valueGap - 1;
+                                while (switchTableIndex < endOfGap)
+                                    switchTableLabels[switchTableIndex++] = endOrDefaultLabel;
+                            }
+
+                            var caseIndex = currSwitchVal.CaseIndexPlusOne - 1;
+                            if (caseIndex != -1)
+                            {
+                                Debug.Assert(caseIndex < sameCaseLabelIndexes.Count, "Invalid MultiTestCaseIndexPlusOne");
+                                ref var labelIndexPlusOneRef = ref sameCaseLabelIndexes.GetSurePresentRef(caseIndex);
+                                if (labelIndexPlusOneRef != 0)
+                                    switchTableLabels[switchTableIndex] = switchTableLabels[labelIndexPlusOneRef - 1];
+                                else
+                                {
+                                    labelIndexPlusOneRef = switchTableIndex + 1;
+                                    switchTableLabels[switchTableIndex] = il.DefineLabel();
+                                }
+                            }
+                            else
+                                switchTableLabels[switchTableIndex] = il.DefineLabel();
+
+                            prevSwitchValue = currSwitchVal.Value;
+                            ++switchTableIndex;
+                        }
+
+                        il.DemitSwitch(switchTableLabels);
+
+                        labelPool.ReuseIfPossible(switchTableLabels);
+                        labelPool.MergeInto(ref _labelPool);
+
+                        if (defaultBody != null && !TryEmit(defaultBody, paramExprs, il, ref closure, setup, parent))
+                            return false;
+                        il.Demit(OpCodes.Br, endOrDefaultLabel);
+
+                        for (var i = 0; i < caseCount; ++i)
+                        {
+                            var cs = cases[i];
+                            var testValues = cs.TestValues;
+                            var testValueCount = testValues.Count;
+                            for (var j = 0; j < testValueCount; ++j)
+                            {
+                                var testValue = (int)((ConstantExpression)testValues[j]).Value;
+                                var indexValue = testValue - firstTestValue;
+                                il.DmarkLabel(switchTableLabels[indexValue]);
+                            }
+
+                            if (!TryEmit(cs.Body, paramExprs, il, ref closure, setup, parent))
+                                return false;
+                            il.Demit(OpCodes.Br, endOrDefaultLabel);
+                        }
+
+                        il.DmarkLabel(endOrDefaultLabel);
+                        return true;
+                    }
                 }
 
                 var switchValueIsNullable = switchValueType.IsNullable();

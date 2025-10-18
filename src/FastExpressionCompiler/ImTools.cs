@@ -225,7 +225,7 @@ public static class SmallList
     // todo: @perf add the not null variant
     /// <summary>Appends the new default item to the list and returns ref to it for write or read</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref T Add<T>(this ref SmallList<T> source, int initialCapacity = DefaultInitialCapacity) =>
+    public static ref T AddDefaultAndGetRef<T>(this ref SmallList<T> source, int initialCapacity = DefaultInitialCapacity) =>
         ref AddDefaultAndGetRef(ref source.Items, source.Count++, initialCapacity);
 
     /// <summary>Appends the new item to the list</summary>
@@ -268,7 +268,7 @@ public static class SmallList
             if (index != -1)
                 return index;
         }
-        source.Add() = item;
+        source.AddDefaultAndGetRef() = item;
         return count;
     }
 }
@@ -741,7 +741,7 @@ public struct SmallList<T, TStack, TPool> : ISmallList<T>
     [MethodImpl((MethodImplOptions)256)]
     public void InitCount(int count)
     {
-        Debug.Assert(count > 0, "Count should be more than 0");
+        Debug.Assert(count >= 0, $"The input count may be 0 (which means the list is empty) or more, but not negative {count}");
         Debug.Assert(_count == 0, "Initial the count should be 0");
 
         // Add the StackCapacity empty space at the end, we may use it later for BuildToArray.
@@ -757,8 +757,8 @@ public struct SmallList<T, TStack, TPool> : ISmallList<T>
     [MethodImpl((MethodImplOptions)256)]
     public ref T GetSurePresentRef(int index)
     {
-        Debug.Assert(_count != 0, "SmallList.GetSurePresentRef: list should not be empty");
-        Debug.Assert(index >= 0 & index < _count, $"SmallList.GetSurePresentRef: index {index} should be less than Count {_count}");
+        Debug.Assert(_count != 0, "List should not be empty");
+        Debug.Assert(index >= 0 & index < _count, $"Index {index} should be less than Count {_count}");
 
         var stackCap = Stack.Capacity;
         if (index < stackCap)

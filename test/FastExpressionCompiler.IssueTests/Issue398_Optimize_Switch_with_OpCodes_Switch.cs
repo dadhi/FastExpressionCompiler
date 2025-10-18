@@ -40,11 +40,11 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
                         Assign(p, Constant(42)),
                         Constant(0)),
                     SwitchCase(
-                        Assign(p, Constant(1)),
-                        Constant(1)),
-                    SwitchCase(
                         Assign(p, Constant(3)),
                         Constant(3),
+                        Constant(1)),
+                    SwitchCase(
+                        Assign(p, Constant(2)),
                         Constant(2))
                     ),
                     p
@@ -60,15 +60,15 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
             OpCodes.Ldarg_1, //        at IL_0000
             OpCodes.Stloc_0, //        at IL_0001
             OpCodes.Ldloc_0, //        at IL_0002
-            OpCodes.Switch, // (IL_0029, IL_0038, IL_0046, IL_0046) at IL_0003
+            OpCodes.Switch, // (IL_0029, IL_0038, IL_0046, IL_0038) at IL_0003
             OpCodes.Br, // IL_0049     at IL_0024
             OpCodes.Ldc_I4_S, // 42    at IL_0029
             OpCodes.Starg_S, // V_1    at IL_0031
             OpCodes.Br, // IL_0049     at IL_0033
-            OpCodes.Ldc_I4_1, //       at IL_0038
+            OpCodes.Ldc_I4_3, //       at IL_0038
             OpCodes.Starg_S, // V_1    at IL_0039
             OpCodes.Br, // IL_0049     at IL_0041
-            OpCodes.Ldc_I4_3, //       at IL_0046
+            OpCodes.Ldc_I4_2, //       at IL_0046
             OpCodes.Starg_S, // V_1    at IL_0047
             OpCodes.Ldarg_1, //        at IL_0049
             OpCodes.Ret  //            at IL_0050

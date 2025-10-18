@@ -107,7 +107,7 @@ public abstract class Expression
 
         var sysExpr = CreateSysExpression(ref exprsConverted);
 
-        ref var item = ref exprsConverted.Add();
+        ref var item = ref exprsConverted.AddDefaultAndGetRef();
         item.LightObj = this;
         item.SysExpr = sysExpr;
         return sysExpr;
@@ -2163,7 +2163,7 @@ public static class FromSysExpressionConverter
 
         var lightExpr = ConvertLambdaToLightExpression(sysExpr, ref exprsConverted);
 
-        ref var item = ref exprsConverted.Add();
+        ref var item = ref exprsConverted.AddDefaultAndGetRef();
         item.SysExpr = sysExpr;
         item.LightObj = lightExpr;
         return lightExpr;
@@ -2237,7 +2237,7 @@ public static class FromSysExpressionConverter
 
         var lightExpr = ConvertToLightExpression(sysExpr, ref exprsConverted);
 
-        ref var item = ref exprsConverted.Add();
+        ref var item = ref exprsConverted.AddDefaultAndGetRef();
         item.SysExpr = sysExpr;
         item.LightObj = lightExpr;
         return lightExpr;
@@ -2256,7 +2256,7 @@ public static class FromSysExpressionConverter
 
         var lightTarget = Expression.Label(source.Type, source.Name);
 
-        ref var item = ref exprsConverted.Add();
+        ref var item = ref exprsConverted.AddDefaultAndGetRef();
         item.SysExpr = source;
         item.LightObj = lightTarget;
         return lightTarget;
@@ -2302,7 +2302,7 @@ public static class FromSysExpressionConverter
             lightElemInit = new ManyArgumentsElementInit(elemInit.AddMethod, convertedArgs);
         }
 
-        ref var item = ref exprsConverted.Add();
+        ref var item = ref exprsConverted.AddDefaultAndGetRef();
         item.SysExpr = elemInit;
         item.LightObj = lightElemInit;
         return lightElemInit;
@@ -2345,7 +2345,7 @@ public static class FromSysExpressionConverter
         }
         else throw new NotSupportedException($"System to LightExpression MemberBinding conversion of {sysBinding.GetType()} is not supported yet");
 
-        ref var item = ref exprsConverted.Add();
+        ref var item = ref exprsConverted.AddDefaultAndGetRef();
         item.SysExpr = sysBinding;
         item.LightObj = lightBinding;
         return lightBinding;
@@ -5302,7 +5302,7 @@ public class LabelTarget
             ? SysExpr.Label(Type)
             : SysExpr.Label(Type, Name);
 
-        ref var item = ref converted.Add();
+        ref var item = ref converted.AddDefaultAndGetRef();
         item.LightObj = this;
         item.SysExpr = sysItem;
         return sysItem;
