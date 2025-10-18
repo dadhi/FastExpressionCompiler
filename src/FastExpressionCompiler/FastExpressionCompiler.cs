@@ -5474,7 +5474,11 @@ namespace FastExpressionCompiler
 
                         var endOrDefaultLabel = il.DefineLabel();
 
+#if TESTING || DEBUG
+                        SmallList<int, Stack2<int>, NoArrayPool<int>> sameCaseLabelIndexes = default;
+#else
                         SmallList<int, Stack8<int>, NoArrayPool<int>> sameCaseLabelIndexes = default;
+#endif
                         sameCaseLabelIndexes.InitCount(multipleTestValuesLabelsId); // may stay empty if id is 0
 
                         ProvidedArrayPool<Label, ClearItemsNo<Label>> labelPool = default;
@@ -5484,7 +5488,7 @@ namespace FastExpressionCompiler
                         // let's start with the continuous values from the start
                         prevSwitchValue = firstTestValue - 1;
                         var switchTableIndex = 1;
-                        for (var v = 1; v < switchValues.Count; ++v)
+                        for (var v = 0; v < switchValues.Count; ++v)
                         {
                             var currSwitchVal = switchValues.GetSurePresentRef(v);
                             var currSwitchValue = currSwitchVal.Value;
