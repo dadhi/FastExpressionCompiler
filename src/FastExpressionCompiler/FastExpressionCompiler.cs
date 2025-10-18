@@ -5446,7 +5446,7 @@ namespace FastExpressionCompiler
                     const int nonContValueCountMax = 3;
                     var contValueCount = 0;
                     var valuesConditionsMet = true;
-                    var switchTableSize = 0;
+                    var switchTableSize = 1; // start from the 1 and then add the gaps
 
                     var firstTestValue = switchValues.GetSurePresentRef(0).Value;
                     var prevSwitchValue = firstTestValue;
@@ -5516,6 +5516,14 @@ namespace FastExpressionCompiler
                             ++switchTableIndex;
                         }
 
+                        // Before emitting switch we need to normalize the switch value to start from zero
+                        if (firstTestValue != 0)
+                        {
+                            EmitLoadConstantInt(il, firstTestValue);
+                            il.Demit(firstTestValue > 0 ? OpCodes.Sub : OpCodes.Add);
+                        }
+
+                        // Emit the switch instruction
                         il.DemitSwitch(switchTableLabels);
 
                         labelPool.ReuseIfPossible(switchTableLabels);
