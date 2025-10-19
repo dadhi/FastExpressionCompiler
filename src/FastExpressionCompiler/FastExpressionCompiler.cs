@@ -5540,17 +5540,16 @@ namespace FastExpressionCompiler
                         for (var i = 0; i < caseCount; ++i)
                         {
                             var cs = cases[i];
-                            var testValues = cs.TestValues;
-                            var testValueCount = testValues.Count;
-                            for (var j = 0; j < testValueCount; ++j)
-                            {
-                                var testValue = (int)((ConstantExpression)testValues[j]).Value;
-                                var indexValue = testValue - firstTestValue;
-                                il.DmarkLabel(switchTableLabels[indexValue]);
-                            }
+
+                            // First test value is enough to find the corresponding label in switch table to mark the case body
+                            var testValExpr = cs.TestValues[0];
+                            var testValue = (int)((ConstantExpression)testValExpr).Value;
+                            var labelIndex = testValue - firstTestValue;
+                            il.DmarkLabel(switchTableLabels[labelIndex]);
 
                             if (!TryEmit(cs.Body, paramExprs, il, ref closure, setup, parent))
                                 return false;
+
                             il.Demit(OpCodes.Br, endOrDefaultLabel);
                         }
 
