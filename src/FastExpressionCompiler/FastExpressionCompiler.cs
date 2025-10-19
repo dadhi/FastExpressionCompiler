@@ -5530,9 +5530,6 @@ namespace FastExpressionCompiler
                         // Emit the switch instruction
                         il.DemitSwitch(switchTableLabels);
 
-                        labelPool.ReuseIfPossible(switchTableLabels);
-                        labelPool.MergeInto(ref _labelPool);
-
                         if (defaultBody != null && !TryEmit(defaultBody, paramExprs, il, ref closure, setup, parent))
                             return false;
                         il.Demit(OpCodes.Br, endOrDefaultLabel);
@@ -5552,6 +5549,9 @@ namespace FastExpressionCompiler
 
                             il.Demit(OpCodes.Br, endOrDefaultLabel);
                         }
+
+                        labelPool.ReuseIfPossible(switchTableLabels);
+                        labelPool.MergeInto(ref _labelPool);
 
                         il.DmarkLabel(endOrDefaultLabel);
                         return true;
