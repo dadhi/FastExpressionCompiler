@@ -5483,7 +5483,7 @@ namespace FastExpressionCompiler
 
                         ProvidedArrayPool<Label, ClearItemsNo<Label>> labelPool = default;
                         labelPool.Init(_labelPool, 8);
-                        var switchTableLabels = labelPool.RentOrNew(switchTableSize);
+                        var switchTableLabels = labelPool.RentExactOrNew(switchTableSize);
 
                         // let's start with the continuous values from the start
                         prevSwitchValue = firstTestValue - 1;

@@ -172,7 +172,7 @@ public static class SmallList
         if (items == null)
         {
             Debug.Assert(index == 0);
-            items = pool.RentOrNew(initialCapacity);
+            items = pool.RentMinOrNew(initialCapacity);
             return ref items.GetSurePresentFirstRef();
         }
 
@@ -180,7 +180,7 @@ public static class SmallList
         if (index == items.Length)
         {
             var newCount = (items.Length << 1) | 1; // 1 is to account for the empty array, have fun to guess the new length, ha-ha ;-P
-            var newItems = pool.RentOrNew(newCount);
+            var newItems = pool.RentMinOrNew(newCount);
             Debug.Assert(newItems != null);
             var oldItems = items;
             Expand(ref items, newItems);
@@ -580,7 +580,8 @@ public interface ISmallArrayPool<T>
     /// <summary>Gets the maximum array length that can be rented from the pool.</summary>
     int MaxArrayLength { get; }
     /// <summary>Rents an array from the pool or creates a new one if none is available.</summary>
-    T[] RentOrNew(int exactLength);
+    T[] RentExactOrNew(int exactLength);
+    T[] RentMinOrNew(int minLength);
     /// <summary>Returns an array to the pool if it is fits the `MaxArrayLength`.</summary>
     void ReuseIfPossible(T[] array);
 }
@@ -593,7 +594,11 @@ public struct NoArrayPool<T> : ISmallArrayPool<T>
 
     /// <inheritdoc/>
     [MethodImpl((MethodImplOptions)256)]
-    public T[] RentOrNew(int exactLength) => new T[exactLength];
+    public T[] RentExactOrNew(int exactLength) => new T[exactLength];
+
+    /// <inheritdoc/>
+    [MethodImpl((MethodImplOptions)256)]
+    public T[] RentMinOrNew(int minLength) => new T[minLength];
 
     /// <inheritdoc/>
     [MethodImpl((MethodImplOptions)256)]
@@ -664,10 +669,9 @@ public struct ProvidedArrayPool<T, TClearItems> : ISmallArrayPool<T>
     /// <inheritdoc/>
     public int MaxArrayLength => _maxArrayLength;
 
-    // todo: @wip @perf allow to use more flexible lengths, not only exactLength, because the array may be smaller but available in the pool
     /// <inheritdoc/>
     [MethodImpl((MethodImplOptions)256)]
-    public T[] RentOrNew(int exactLength)
+    public T[] RentExactOrNew(int exactLength)
     {
         Debug.Assert(exactLength != 0);
         if (exactLength > _maxArrayLength)
@@ -679,6 +683,31 @@ public struct ProvidedArrayPool<T, TClearItems> : ISmallArrayPool<T>
             Array.Resize(ref _arrays, _maxArrayLength);
 
         return Interlocked.Exchange(ref _arrays[exactLength - 1], null) ?? new T[exactLength];
+    }
+
+    /// <inheritdoc/>
+    [MethodImpl((MethodImplOptions)256)]
+    public T[] RentMinOrNew(int minLength)
+    {
+        Debug.Assert(minLength != 0);
+        if (minLength > _maxArrayLength)
+            return new T[minLength];
+
+        if (_arrays == null)
+            _arrays = new T[_maxArrayLength][];
+        else if (_arrays.Length < _maxArrayLength)
+            Array.Resize(ref _arrays, _maxArrayLength);
+
+        var len = minLength;
+        while (len < _arrays.Length)
+        {
+            var arr = Interlocked.Exchange(ref _arrays.GetSurePresentRef(len - 1), null);
+            if (arr != null)
+                return arr;
+            ++len;
+        }
+
+        return new T[minLength];
     }
 
     /// <inheritdoc/>
@@ -714,8 +743,8 @@ public interface ISmallList<T> : IIndexed<T>, IEnumerable<T>
     /// <summary>Clears the list.</summary>
     void Clear();
 
-    /// <summary>Copies the contents of the list to a new array.</summary>
-    T[] CopyToArray();
+    /// <summary>Copies the contents of the list to the passed array.</summary>
+    void CopyToArray(T[] arr, int copyToIndex = 0);
 }
 
 /// <summary>Generic version of SmallList abstracted for how much items are on the stack</summary>
@@ -747,8 +776,9 @@ public struct SmallList<T, TStack, TPool> : ISmallList<T>
 
         // Add the StackCapacity empty space at the end, we may use it later for BuildToArray.
         // The actual source Capacity will be StackCapacity + count.
-        if (count > Stack.Capacity)
-            Rest = Pool.RentOrNew(count);
+        var heapCount = count - Stack.Capacity;
+        if (heapCount > 0)
+            Rest = Pool.RentMinOrNew(heapCount);
 
         _count = count;
     }
@@ -883,23 +913,23 @@ public struct SmallList<T, TStack, TPool> : ISmallList<T>
     }
 
     /// <inheritdoc/>
-    public T[] CopyToArray()
+    public void CopyToArray(T[] arr, int copyToIndex = 0)
     {
-        if (_count == 0)
-            return Array.Empty<T>();
+        if (_count == 0) return;
 
-        var arr = Pool.RentOrNew(_count);
+        Debug.Assert(arr != null, "Target array should not be null");
+        Debug.Assert(arr.Length - copyToIndex >= _count,
+            $"Target array is too small {arr.Length} to hold {_count} items starting from index {copyToIndex}");
 
         for (var i = 0; i < arr.Length; ++i)
-            arr[i] = Stack.GetSurePresentRef(i);
+            arr[copyToIndex + i] = Stack.GetSurePresentRef(i);
 
         var restCount = _count - Stack.Capacity;
         if (restCount > 0)
         {
             Debug.Assert(Rest != null && Rest.Length >= restCount, $"Expecting the Rest of {restCount} but found only {Rest?.Length.ToString() ?? "`null`"}");
-            Array.Copy(Rest, 0, arr, Stack.Capacity, restCount);
+            Array.Copy(Rest, 0, arr, copyToIndex + Stack.Capacity, restCount);
         }
-        return arr;
     }
 
     /// <summary>Returns an enumerator struct</summary>
