@@ -5481,6 +5481,10 @@ namespace FastExpressionCompiler
 #endif
                         sameCaseLabelIndexes.InitCount(multipleTestValuesLabelsId); // may stay empty if id is 0
 
+#if TESTING || DEBUG
+                        // Test the pool at work
+                        _labelPool ??= new Label[8][];
+#endif
                         ProvidedArrayPool<Label, ClearItemsNo<Label>> labelPool = default;
                         labelPool.Init(_labelPool, 8);
                         var switchTableLabels = labelPool.RentExactOrNew(switchTableSize);
@@ -5503,7 +5507,7 @@ namespace FastExpressionCompiler
                             var caseIndex = currSwitchVal.CaseIndexPlusOne - 1;
                             if (caseIndex != -1)
                             {
-                                Debug.Assert(caseIndex < sameCaseLabelIndexes.Count, "Invalid MultiTestCaseIndexPlusOne");
+                                Debug.Assert(caseIndex < sameCaseLabelIndexes.Count, "Invalid CaseIndexPlusOne in switch case values");
                                 ref var labelIndexPlusOneRef = ref sameCaseLabelIndexes.GetSurePresentRef(caseIndex);
                                 if (labelIndexPlusOneRef != 0)
                                     switchTableLabels[switchTableIndex] = switchTableLabels[labelIndexPlusOneRef - 1];
@@ -8498,7 +8502,7 @@ namespace FastExpressionCompiler
         {
             il.Emit(OpCodes.Switch, gotoLabels);
             if (DisableDemit) return;
-            Debug.WriteLine($"{OpCodes.Switch} {valueName ?? string.Join(",", gotoLabels).ToString()}  -- {emitterName}:{emitterLine}");
+            Debug.WriteLine($"{OpCodes.Switch} {valueName}=[{string.Join(",", gotoLabels.Select(l => l.Id)).ToString()}]  -- {emitterName}:{emitterLine}");
         }
 
         [MethodImpl((MethodImplOptions)256)]
