@@ -12,7 +12,6 @@ using static System.Environment;
 
 #if LIGHT_EXPRESSION
 namespace FastExpressionCompiler.LightExpression;
-
 using FastExpressionCompiler.LightExpression.ILDecoder;
 using FastExpressionCompiler.LightExpression.ImTools;
 #else

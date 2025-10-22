@@ -1,4 +1,6 @@
+#if DEBUG
 // #define DEBUG_INTERNALS
+#endif
 
 using System;
 using System.IO;

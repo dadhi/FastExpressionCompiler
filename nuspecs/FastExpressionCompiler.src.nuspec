@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata minClientVersion="3.3.0">
         <id>FastExpressionCompiler.src</id>
-        <version>5.3.1</version>
+        <version>5.3.2</version>
         <authors>Maksim Volkau</authors>
         <copyright>Copyright © 2016-2025 Maksim Volkau</copyright>
         <projectUrl>https://github.com/dadhi/FastExpressionCompiler</projectUrl>
@@ -12,7 +12,7 @@
         <tags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</tags>
         <icon>logo.png</icon>
         <releaseNotes><![CDATA[
-## v5.3.1 Bug-fix release (src packages only)
+## v5.3.2 Bug-fix release (src packages only)
 
 - fixed: #481 The 5.3.0 source package is broken and doesn't include all required source files
 
