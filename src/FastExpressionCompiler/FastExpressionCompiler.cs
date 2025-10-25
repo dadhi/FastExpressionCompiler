@@ -11436,4 +11436,3 @@ namespace System.Diagnostics.CodeAnalysis
     public sealed class UnscopedRefAttribute : Attribute { }
 }
 #endif
-#nullable restore
