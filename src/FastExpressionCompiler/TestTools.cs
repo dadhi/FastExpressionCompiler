@@ -1,4 +1,6 @@
-﻿using System;
+﻿#nullable disable
+
+using System;
 using System.Linq;
 using System.Text;
 using System.Reflection;
@@ -19,6 +21,7 @@ namespace FastExpressionCompiler;
 
 using FastExpressionCompiler.ILDecoder;
 using FastExpressionCompiler.ImTools;
+using System.Globalization;
 using System.Linq.Expressions;
 #endif
 
@@ -27,10 +30,10 @@ using System.Linq.Expressions;
 [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2026:RequiresUnreferencedCode", Justification = "This is used for the testing purposes only.")]
 public static class TestTools
 {
-    public static bool AllowPrintIL = false;
-    public static bool AllowPrintCS = false;
-    public static bool AllowPrintExpression = false;
-    public static bool DisableAssertOpCodes = false;
+    public static bool AllowPrintIL;
+    public static bool AllowPrintCS;
+    public static bool AllowPrintExpression;
+    public static bool DisableAssertOpCodes;
 
     static TestTools()
     {
@@ -628,9 +631,9 @@ class CallerMemberNameAttribute : Attribute { }
 class CallerLineNumberAttribute : Attribute { }
 
 [AttributeUsage(AttributeTargets.Parameter, Inherited = false)]
-class CallerArgumentExpression : Attribute
+class CallerArgumentExpressionAttribute : Attribute
 {
-    public CallerArgumentExpression(string parameterName) { }
+    public CallerArgumentExpressionAttribute(string parameterName) { }
 }
 #endif
 
@@ -1060,5 +1063,3 @@ public sealed class TestRun
         }
     }
 }
-
-#pragma warning restore CS1591
