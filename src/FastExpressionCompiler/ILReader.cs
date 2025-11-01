@@ -1,10 +1,15 @@
+#nullable disable
+
+#if DEBUG
 // #define DEBUG_INTERNALS
+#endif
 
 using System;
 using System.IO;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
@@ -688,21 +693,21 @@ public class DynamicMethodILProvider : IILProvider
 
 public static class ILFormatter
 {
-    public static StringBuilder AppendInt32ToHex(StringBuilder sb, int int32) => sb.Append(int32.ToString("X8"));
-    public static StringBuilder AppendInt16ToHex(StringBuilder sb, int int16) => sb.Append(int16.ToString("X4"));
-    public static StringBuilder AppendInt8ToHex(StringBuilder sb, int int8) => sb.Append(int8.ToString("X2"));
-    public static StringBuilder AppendArgumentOrdinal(StringBuilder sb, int ordinal) => sb.Append($"V_{ordinal}");
-    public static StringBuilder AppendLabelOffset(StringBuilder sb, int offset) => sb.Append($"IL_{offset:D4}");
+    public static StringBuilder AppendInt32ToHex(StringBuilder sb, int int32) => sb.Append(int32.ToString("X8", CultureInfo.InvariantCulture));
+    public static StringBuilder AppendInt16ToHex(StringBuilder sb, int int16) => sb.Append(int16.ToString("X4", CultureInfo.InvariantCulture));
+    public static StringBuilder AppendInt8ToHex(StringBuilder sb, int int8) => sb.Append(int8.ToString("X2", CultureInfo.InvariantCulture));
+    public static StringBuilder AppendArgumentOrdinal(StringBuilder sb, int ordinal) => sb.AppendFormat(CultureInfo.InvariantCulture, "V_{0}", ordinal);
+    public static StringBuilder AppendLabelOffset(StringBuilder sb, int offset) => sb.AppendFormat(CultureInfo.InvariantCulture, "IL_{0:D4}", offset);
 
     public static StringBuilder MultipleLabels(StringBuilder sb, int[] offsets)
     {
         var length = offsets.Length;
         for (var i = 0; i < length; i++)
         {
-            sb.AppendFormat(i == 0 ? "[" : ", ");
+            sb.Append(i == 0 ? "[" : ", ");
             AppendLabelOffset(sb, offsets[i]);
         }
-        sb.AppendFormat("]");
+        sb.Append("]");
         return sb;
     }
 
@@ -723,9 +728,9 @@ public static class ILFormatter
             else if (ch == '\"')
                 sb.Append("\\\"");
             else if (ch == '\\')
-                sb.Append("\\");
+                sb.Append('\\');
             else if (ch < 0x20 || ch >= 0x7f)
-                sb.AppendFormat("\\u{0:x4}", (int)ch);
+                sb.AppendFormat(CultureInfo.InvariantCulture, "\\u{0:x4}", (int)ch);
             else
                 sb.Append(ch);
         }
@@ -738,10 +743,10 @@ public static class ILFormatter
         var length = sig.Length;
         for (var i = 0; i < length; i++)
         {
-            sb.AppendFormat(i == 0 ? "SIG [" : " ");
+            sb.Append(i == 0 ? "SIG [" : " ");
             AppendInt8ToHex(sb, sig[i]);
         }
-        sb.AppendFormat("]");
+        sb.Append(']');
         return sb;
     }
 }
@@ -895,5 +900,3 @@ internal sealed class DynamicScopeTokenResolver : ITokenResolver
 
     public byte[] AsSignature(int token) => this[token] as byte[];
 }
-
-#pragma warning restore CS1591

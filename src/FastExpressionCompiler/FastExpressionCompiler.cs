@@ -33,7 +33,9 @@ THE SOFTWARE.
 #if DEBUG && NET6_0_OR_GREATER
 #define DEBUG_INFO_LOCAL_VARIABLE_USAGE
 #define DEMIT
+#define INTERPRETATION_DIAGNOSTICS
 #endif
+
 #if LIGHT_EXPRESSION
 #define SUPPORTS_ARGUMENT_PROVIDER
 #endif
@@ -11654,4 +11656,3 @@ namespace System.Diagnostics.CodeAnalysis
     public sealed class UnscopedRefAttribute : Attribute { }
 }
 #endif
-#nullable restore

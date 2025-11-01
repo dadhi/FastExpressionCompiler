@@ -550,5 +550,3 @@ public abstract class ExpressionVisitor
 
     protected internal virtual Expression VisitDebugInfo(DebugInfoExpression node) => node;
 }
-
-#nullable restore

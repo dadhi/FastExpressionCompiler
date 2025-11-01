@@ -1864,5 +1864,3 @@ public struct SmallSet16<K, TEq>() where TEq : struct, IEq<K>
     /// <summary>Set with 16 keys on stack and entries baked by the single array</summary> 
     public SmallMap<K, SmallMap.Entry<K>, TEq, Size16, Stack16<int>, Stack16<SmallMap.Entry<K>>, SmallMap.SingleArrayEntries<K, SmallMap.Entry<K>, TEq>> Set;
 }
-
-#nullable restore
