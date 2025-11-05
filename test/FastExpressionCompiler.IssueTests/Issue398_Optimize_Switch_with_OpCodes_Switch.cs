@@ -60,29 +60,33 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
         var fs = expr.CompileSys();
         fs.PrintIL(format: ILFormat.AssertOpCodes);
 
-        // fs.AssertOpCodes(
-        //     OpCodes.Ldarg_1, //        at IL_0000
-        //     OpCodes.Stloc_0, //        at IL_0001
-        //     OpCodes.Ldloc_0, //        at IL_0002
-        //     OpCodes.Switch, // (IL_0029, IL_0038, IL_0046, IL_0038) at IL_0003
-        //     OpCodes.Br, // IL_0049     at IL_0024
-        //     OpCodes.Ldc_I4_S, // 42    at IL_0029
-        //     OpCodes.Starg_S, // V_1    at IL_0031
-        //     OpCodes.Br, // IL_0049     at IL_0033
-        //     OpCodes.Ldc_I4_3, //       at IL_0038
-        //     OpCodes.Starg_S, // V_1    at IL_0039
-        //     OpCodes.Br, // IL_0049     at IL_0041
-        //     OpCodes.Ldc_I4_2, //       at IL_0046
-        //     OpCodes.Starg_S, // V_1    at IL_0047
-        //     OpCodes.Ldarg_1, //        at IL_0049
-        //     OpCodes.Ret  //            at IL_0050
-        // );
+        fs.AssertOpCodes(
+           OpCodes.Ldarg_1, //        at IL_0000
+           OpCodes.Stloc_0, //        at IL_0001
+           OpCodes.Ldloc_0, //        at IL_0002
+           OpCodes.Switch, // [IL_0045, IL_0054, IL_0063, IL_0054, IL_0075, IL_0075, IL_0071, IL_0071] at IL_0003
+           OpCodes.Br, // IL_0075     at IL_0040
+           OpCodes.Ldc_I4_S, // 42    at IL_0045
+           OpCodes.Starg_S, // V_1    at IL_0047
+           OpCodes.Br, // IL_0075     at IL_0049
+           OpCodes.Ldc_I4_S, // 31    at IL_0054
+           OpCodes.Starg_S, // V_1    at IL_0056
+           OpCodes.Br, // IL_0075     at IL_0058
+           OpCodes.Ldc_I4_2, //       at IL_0063
+           OpCodes.Starg_S, // V_1    at IL_0064
+           OpCodes.Br, // IL_0075     at IL_0066
+           OpCodes.Ldc_I4_S, // 67    at IL_0071
+           OpCodes.Starg_S, // V_1    at IL_0073
+           OpCodes.Ldarg_1, //        at IL_0075
+           OpCodes.Ret  //            at IL_0076
+        );
 
         t.IsNotNull(fs);
         t.AreEqual(5, fs(5));
 
         var ff = expr.CompileFast();
         ff.PrintIL(format: ILFormat.AssertOpCodes | ILFormat.SkipNop);
+
 
         t.IsNotNull(ff);
         t.AreEqual(-1, ff(-1));
