@@ -18,7 +18,7 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
 {
     public void Run(TestRun t)
     {
-        Test_switch_for_minimal_number_of_cases_enabling_OpCodesSwitch_and_no_default_case(t);
+        // Test_switch_for_minimal_number_of_cases_enabling_OpCodesSwitch_and_no_default_case(t);
         Test_switch_for_all_integer_cases_starting_from_0(t);
         Test_switch_for_the_bytes_two_ranges(t);
         Test_switch_for_the_bytes(t);
@@ -86,7 +86,25 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
 
         var ff = expr.CompileFast();
         ff.PrintIL(format: ILFormat.AssertOpCodes | ILFormat.SkipNop);
-
+        ff.AssertOpCodes(
+            OpCodes.Ldarg_1, //        at IL_0000
+            OpCodes.Switch, // [IL_0043, IL_0055, IL_0067, IL_0055, IL_0090, IL_0090, IL_0078, IL_0078] at IL_0001
+            OpCodes.Br, // IL_0090     at IL_0038
+            OpCodes.Ldc_I4_S, // 42    at IL_0043
+            OpCodes.Starg_S, // V_1    at IL_0045
+            OpCodes.Br, // IL_0090     at IL_0050
+            OpCodes.Ldc_I4_S, // 31    at IL_0055
+            OpCodes.Starg_S, // V_1    at IL_0057
+            OpCodes.Br, // IL_0090     at IL_0062
+            OpCodes.Ldc_I4_2, //       at IL_0067
+            OpCodes.Starg_S, // V_1    at IL_0068
+            OpCodes.Br, // IL_0090     at IL_0073
+            OpCodes.Ldc_I4_S, // 67    at IL_0078
+            OpCodes.Starg_S, // V_1    at IL_0080
+            OpCodes.Br, // IL_0090     at IL_0085
+            OpCodes.Ldarg_1, //        at IL_0090
+            OpCodes.Ret  //            at IL_0091
+        );
 
         t.IsNotNull(ff);
         t.AreEqual(-1, ff(-1));

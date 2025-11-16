@@ -5427,7 +5427,7 @@ namespace FastExpressionCompiler
                                 // Shift current value further to get space for the smaller new value
                                 if (testValue < valRef.Value)
                                 {
-                                    freeValRef = valRef; // shift the value by coying it into the free slot
+                                    freeValRef = valRef; // shift the value by copying it into the free slot
                                     freeValRef = ref valRef; // set the free slot reference to the current value
                                 }
                                 else
@@ -5535,9 +5535,13 @@ namespace FastExpressionCompiler
                         // Emit the switch instruction
                         il.DemitSwitch(switchTableLabels);
 
-                        if (defaultBody != null && !TryEmit(defaultBody, paramExprs, il, ref closure, setup, parent))
-                            return false;
-                        il.Demit(OpCodes.Br, endOrDefaultLabel);
+                        // Branch to default or to the end of the switch if no default body present
+                        // The default body is emitted after all case bodies and marked by the defaultBodyLabel.
+                        Label defaultBodyLabel = default;
+                        if (defaultBody != null)
+                            il.Demit(OpCodes.Br, defaultBodyLabel = il.DefineLabel());
+                        else
+                            il.Demit(OpCodes.Br, endOrDefaultLabel);
 
                         for (var i = 0; i < caseCount; ++i)
                         {
@@ -5557,6 +5561,13 @@ namespace FastExpressionCompiler
 
                         labelPool.ReuseIfPossible(switchTableLabels);
                         labelPool.MergeInto(ref _labelPool);
+
+                        if (defaultBody != null)
+                        {
+                            il.DmarkLabel(defaultBodyLabel);
+                            if (!TryEmit(defaultBody, paramExprs, il, ref closure, setup, parent))
+                                return false;
+                        }
 
                         il.DmarkLabel(endOrDefaultLabel);
                         return true;
@@ -8503,7 +8514,8 @@ namespace FastExpressionCompiler
         {
             il.Emit(OpCodes.Switch, gotoLabels);
             if (DisableDemit) return;
-            Debug.WriteLine($"{OpCodes.Switch} {valueName}=[{string.Join(",", gotoLabels.Select(l => l.Id)).ToString()}]  -- {emitterName}:{emitterLine}");
+            // Use GetHashCode to identify the labels, because it returns Id. Id is not used directly because Id is exposed since .NET 9+ only
+            Debug.WriteLine($"{OpCodes.Switch} {valueName}=[{string.Join(",", gotoLabels.Select(l => l.GetHashCode())).ToString()}]  -- {emitterName}:{emitterLine}");
         }
 
         [MethodImpl((MethodImplOptions)256)]
