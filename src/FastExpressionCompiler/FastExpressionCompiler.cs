@@ -35,6 +35,10 @@ THE SOFTWARE.
 //#define TESTING
 #endif
 
+#if NET6_0_OR_GREATER
+#define SUPPORTS_IL_GENERATOR_REUSE
+#endif
+
 #if LIGHT_EXPRESSION
 #define SUPPORTS_ARGUMENT_PROVIDER
 #endif
@@ -5372,16 +5376,13 @@ namespace FastExpressionCompiler
                 }
 
                 var switchValueType = switchValueExpr.Type;
+                var switchValueParent = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
 
                 // Check the pre-requisite conditions and emit OpCodes.Switch if possible, see #398
                 if (customEqualMethod == null && caseCount > 2 &&
                     switchValueType.IsPrimitive && switchValueType.IsInteger() ||
                     switchValueType.IsEnum && Enum.GetUnderlyingType(switchValueType).IsInteger())
-                {
-                    var swithValueParent = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
-                    if (!TryEmit(switchValueExpr, paramExprs, il, ref closure, setup, swithValueParent, -1))
-                        return false;
-
+                {                    
                     var multipleTestValuesLabelsId = 0;
 #if TESTING || DEBUG
                     SmallList<TestValueAndMultiTestCaseIndex, Stack2<TestValueAndMultiTestCaseIndex>, NoArrayPool<TestValueAndMultiTestCaseIndex>> switchValues = default;
@@ -5473,7 +5474,8 @@ namespace FastExpressionCompiler
                     {
                         Debug.Assert(switchTableSize >= caseCount, $"The switch table size should be at least as large as the case count, but found {switchTableSize} < {caseCount}");
 
-                        var endOrDefaultLabel = il.DefineLabel();
+                        var endOfSwitchLabel = il.DefineLabel();
+                        var defaultBodyLabel = defaultBody == null ? endOfSwitchLabel : il.DefineLabel(); 
 
 #if TESTING || DEBUG
                         SmallList<int, Stack2<int>, NoArrayPool<int>> sameCaseLabelIndexes = default;
@@ -5502,7 +5504,7 @@ namespace FastExpressionCompiler
                             {
                                 var endOfGap = switchTableIndex + valueGap - 1;
                                 while (switchTableIndex < endOfGap)
-                                    switchTableLabels[switchTableIndex++] = endOrDefaultLabel;
+                                    switchTableLabels[switchTableIndex++] = defaultBodyLabel; // the label will be same as endOfSwitchLabel if no default body present
                             }
 
                             var caseIndex = currSwitchVal.CaseIndexPlusOne - 1;
@@ -5525,6 +5527,10 @@ namespace FastExpressionCompiler
                             ++switchTableIndex;
                         }
 
+                        // Emit the switch value here only after we sure about proceeding with switch table
+                        if (!TryEmit(switchValueExpr, paramExprs, il, ref closure, setup, switchValueParent, -1))
+                            return false;
+
                         // Before emitting switch we need to normalize the switch value to start from zero
                         if (firstTestValue != 0)
                         {
@@ -5535,13 +5541,8 @@ namespace FastExpressionCompiler
                         // Emit the switch instruction
                         il.DemitSwitch(switchTableLabels);
 
-                        // Branch to default or to the end of the switch if no default body present
-                        // The default body is emitted after all case bodies and marked by the defaultBodyLabel.
-                        Label defaultBodyLabel = default;
-                        if (defaultBody != null)
-                            il.Demit(OpCodes.Br, defaultBodyLabel = il.DefineLabel());
-                        else
-                            il.Demit(OpCodes.Br, endOrDefaultLabel);
+                        // For the values OUTSIDE of switch table range, immediately branch to the default or to the end of the switch
+                        il.Demit(OpCodes.Br, defaultBodyLabel); // the label is the same as endOfSwitchLabel if no default body present
 
                         for (var i = 0; i < caseCount; ++i)
                         {
@@ -5556,7 +5557,7 @@ namespace FastExpressionCompiler
                             if (!TryEmit(cs.Body, paramExprs, il, ref closure, setup, parent))
                                 return false;
 
-                            il.Demit(OpCodes.Br, endOrDefaultLabel);
+                            il.Demit(OpCodes.Br, endOfSwitchLabel);
                         }
 
                         labelPool.ReuseIfPossible(switchTableLabels);
@@ -5569,7 +5570,7 @@ namespace FastExpressionCompiler
                                 return false;
                         }
 
-                        il.DmarkLabel(endOrDefaultLabel);
+                        il.DmarkLabel(endOfSwitchLabel);
                         return true;
                     }
                 }
@@ -5593,12 +5594,11 @@ namespace FastExpressionCompiler
                         ?? _objectEqualsMethod
                         : null;
 
-                var operandParent = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
                 var isEqualityMethodForUnderlyingNullable = false;
                 int param0ByRefIndex = -1, param1ByRefIndex = -1;
                 if (equalityMethod != null)
                 {
-                    operandParent |= ParentFlags.Call;
+                    switchValueParent |= ParentFlags.Call;
                     var paramInfos = equalityMethod.GetParameters();
                     Debug.Assert(paramInfos.Length == 2);
                     var paramType = paramInfos[0].ParameterType;
@@ -5610,7 +5610,7 @@ namespace FastExpressionCompiler
                 }
 
                 // Emit the switch value once and store it in the local variable for comparison in cases below
-                if (!TryEmit(switchValueExpr, paramExprs, il, ref closure, setup, operandParent, param0ByRefIndex))
+                if (!TryEmit(switchValueExpr, paramExprs, il, ref closure, setup, switchValueParent, param0ByRefIndex))
                     return false;
 
                 if (caseCount == 0) // see #440
@@ -5642,7 +5642,7 @@ namespace FastExpressionCompiler
                         if (!switchValueIsNullable)
                         {
                             EmitLoadLocalVariable(il, switchValueVar);
-                            if (!TryEmit(caseTestValue, paramExprs, il, ref closure, setup, operandParent, param1ByRefIndex))
+                            if (!TryEmit(caseTestValue, paramExprs, il, ref closure, setup, switchValueParent, param1ByRefIndex))
                                 return false;
                             if (equalityMethod == null)
                             {
@@ -5659,7 +5659,7 @@ namespace FastExpressionCompiler
                         if (equalityMethod != null & !isEqualityMethodForUnderlyingNullable)
                         {
                             EmitLoadLocalVariable(il, switchValueVar);
-                            if (!TryEmit(caseTestValue, paramExprs, il, ref closure, setup, operandParent, param1ByRefIndex) ||
+                            if (!TryEmit(caseTestValue, paramExprs, il, ref closure, setup, switchValueParent, param1ByRefIndex) ||
                                 !EmitMethodCall(il, equalityMethod))
                                 return false;
                             il.Demit(OpCodes.Brtrue, caseBodyLabel);
@@ -5681,7 +5681,7 @@ namespace FastExpressionCompiler
                         // Compare the switch value with the case value via Ceq or comparison method and then compare the HasValue of both
                         EmitLoadLocalVariableAddress(il, switchValueVar);
                         il.Demit(OpCodes.Ldfld, switchNullableUnsafeValueField);
-                        if (!TryEmit(caseTestValue, paramExprs, il, ref closure, setup, operandParent, param1ByRefIndex))
+                        if (!TryEmit(caseTestValue, paramExprs, il, ref closure, setup, switchValueParent, param1ByRefIndex))
                             return false;
                         var caseValueVar = EmitStoreAndLoadLocalVariableAddress(il, switchValueType);
                         il.Demit(OpCodes.Ldfld, switchNullableUnsafeValueField);
@@ -8524,7 +8524,7 @@ namespace FastExpressionCompiler
         {
             il.MarkLabel(value);
             if (DisableDemit) return;
-            Debug.WriteLine($"{valueName ?? value.ToString()}  -- {emitterName}:{emitterLine}: ");
+            Debug.WriteLine($"{valueName ?? value.ToString()}  -- {emitterName}:{emitterLine}");
         }
 
         [MethodImpl((MethodImplOptions)256)]
@@ -8650,7 +8650,7 @@ namespace FastExpressionCompiler
         [ThreadStatic]
         internal static ILGenerator _pooledILGenerator;
 
-#if NET6_0_OR_GREATER
+#if SUPPORTS_IL_GENERATOR_REUSE
         /// <summary>Get new or pool and configure existing DynamicILGenerator</summary>
         [MethodImpl((MethodImplOptions)256)]
         public static ILGenerator RentPooledOrNewILGenerator(DynamicMethod dynMethod, Type returnType, Type[] paramTypes,

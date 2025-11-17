@@ -581,6 +581,7 @@ public interface ISmallArrayPool<T>
     int MaxArrayLength { get; }
     /// <summary>Rents an array from the pool or creates a new one if none is available.</summary>
     T[] RentExactOrNew(int exactLength);
+    /// <summary>Rent at least minLength of larger array</summary>
     T[] RentMinOrNew(int minLength);
     /// <summary>Returns an array to the pool if it is fits the `MaxArrayLength`.</summary>
     void ReuseIfPossible(T[] array);

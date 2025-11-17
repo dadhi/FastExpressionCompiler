@@ -63,7 +63,12 @@ public static class TestTools
     {
 #if NET8_0_OR_GREATER
         if (DisableAssertOpCodes) return;
-        Asserts.AreEqual(expectedCodes, il?.Select(x => x.OpCode) ?? []);
+        // todo: @perf replace the linq with explicit loop for better perf
+        Asserts.AreEqual(expectedCodes, il?
+            .Select(x => x.OpCode)
+            // todo: @wip add explicit ILFormat.SkipNop option (set by default)
+            .Where(op => op != OpCodes.Nop)
+            ?? []);
 #endif
     }
 

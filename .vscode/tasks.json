@@ -28,6 +28,13 @@
                 "kind": "build",
                 "isDefault": true
             }
+        },
+        {
+            "type": "dotnet",
+            "task": "watch FastExpressionCompiler.TestsRunner",
+            "file": "/workspaces/FastExpressionCompiler/test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj",
+            "problemMatcher": [],
+            "label": "dotnet: watch FastExpressionCompiler.TestsRunner"
         }
     ]
 }

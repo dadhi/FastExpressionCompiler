@@ -18,7 +18,7 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
 {
     public void Run(TestRun t)
     {
-        // Test_switch_for_minimal_number_of_cases_enabling_OpCodesSwitch_and_no_default_case(t);
+        Test_switch_for_minimal_number_of_cases_enabling_OpCodesSwitch_and_no_default_case(t);
         Test_switch_for_all_integer_cases_starting_from_0(t);
         Test_switch_for_the_bytes_two_ranges(t);
         Test_switch_for_the_bytes(t);
@@ -180,9 +180,15 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
         var ff = expr.CompileFast();
         ff.PrintIL(format: ILFormat.AssertOpCodes);
 
-
         t.IsNotNull(ff);
+        t.AreEqual(0, ff(0));
+        t.AreEqual(1, ff(1));
+        t.AreEqual(3, ff(3));
+        t.AreEqual(3, ff(4));
         t.AreEqual(5, ff(5));
+        t.AreEqual(6, ff(6));
+        t.AreEqual(-1, ff(2));
+        t.AreEqual(-1, ff(42));
     }
 
     public void Test_switch_for_integer_cases_starting_from_Not_0(TestContext t)
