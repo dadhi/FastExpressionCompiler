@@ -28,11 +28,13 @@ THE SOFTWARE.
 
 //#define LIGHT_EXPRESSION
 
+// todo: @wip disable for the published version!
+// #define TESTING // allows to test in Release in addition to the Debug
+
 #if DEBUG && NET6_0_OR_GREATER
 #define DEBUG_INFO_LOCAL_VARIABLE_USAGE
 #define DEMIT
 #define INTERPRETATION_DIAGNOSTICS
-//#define TESTING
 #endif
 
 #if NET6_0_OR_GREATER
