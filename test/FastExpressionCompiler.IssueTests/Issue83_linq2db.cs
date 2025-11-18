@@ -801,7 +801,6 @@ namespace FastExpressionCompiler.IssueTests
             return n;
         }
 
-
         public void linq2db_InvalidProgramException3()
         {
             var a3 = Parameter(typeof(IDataReader), "rd");

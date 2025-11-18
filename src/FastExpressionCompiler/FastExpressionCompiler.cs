@@ -390,7 +390,7 @@ namespace FastExpressionCompiler
 #endif
             lambdaExpr.ReturnType, flags);
 
-        /// <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/> 
+        /// <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/>
         /// with the provided closure object and constant expressions (or lack there of) -
         /// Constant expression should be the in order of Fields in closure object!
         /// Note 1: Use it on your own risk - FEC won't verify the expression is compile-able with passed closure, it is up to you!
@@ -400,7 +400,7 @@ namespace FastExpressionCompiler
             params ConstantExpression[] closureConstantsExprs) where TDelegate : class =>
             lambdaExpr.TryCompileWithPreCreatedClosure<TDelegate>(closureConstantsExprs, CompilerFlags.Default);
 
-        /// <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/> 
+        /// <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/>
         /// with the provided closure object and constant expressions (or lack there of)</summary>
         public static TDelegate TryCompileWithPreCreatedClosure<TDelegate>(this LambdaExpression lambdaExpr,
             ConstantExpression[] closureConstantsExprs, CompilerFlags flags)
@@ -503,8 +503,8 @@ namespace FastExpressionCompiler
         internal static object TryCompileBoundToFirstClosureParam(Type delegateType, Expression bodyExpr, IParameterProvider paramExprs,
             Type returnType, CompilerFlags flags)
         {
-            // There is no Return of the pooled parameter types here, 
-            // because in the rarest case with the unused lambda arguments we may just exhaust the pooled instance 
+            // There is no Return of the pooled parameter types here,
+            // because in the rarest case with the unused lambda arguments we may just exhaust the pooled instance
             var closureAndParamTypes = RentPooledOrNewClosureTypeToParamTypes(paramExprs);
             if (bodyExpr is NoArgsNewClassIntrinsicExpression newExpr)
                 return CompileNoArgsNew(newExpr, delegateType, closureAndParamTypes, returnType, flags);
@@ -741,7 +741,7 @@ namespace FastExpressionCompiler
             // Tracks the current block nesting count in the stack of blocks in Collect and Emit phase
             private ushort _blockCount;
 
-            /// <summary>Tracks the use of the variables in the blocks stack per variable, 
+            /// <summary>Tracks the use of the variables in the blocks stack per variable,
             /// (uint) contains (ushort) BlockIndex in the upper bits and (ushort) VarIndex in the lower bits.
             /// to determine if variable is the local variable and in what block it's defined</summary>
             private SmallMap4<PE, SmallList<uint, Stack4<uint>, NoArrayPool<uint>>, RefEq<PE>> _varInBlock;
@@ -1371,7 +1371,7 @@ namespace FastExpressionCompiler
                                 hasComplexExpression |= closure.HasComplexExpression;
                             }
 
-                            // pop the value up the stack 
+                            // pop the value up the stack
                             if (hasComplexExpression)
                             {
                                 closure.HasComplexExpression = true;
@@ -1670,7 +1670,7 @@ namespace FastExpressionCompiler
             int invokeArgCount, LambdaExpression lambdaExpr)
         {
             // Check the actual lambda return type in case it differs from the Body type,
-            // e.g. often case for the Action lambdas where the Body type is ignored in favor of `void`. 
+            // e.g. often case for the Action lambdas where the Body type is ignored in favor of `void`.
             var lambdaReturnType = lambdaExpr.ReturnType;
             var lambdaBodyExpr = lambdaExpr.Body;
             if (invokeArgCount == 0)
@@ -1678,7 +1678,7 @@ namespace FastExpressionCompiler
                 lambdaReturnType == typeof(void) ? Block(typeof(void), lambdaBodyExpr) :
                 Convert(lambdaBodyExpr, lambdaReturnType);
 
-            // To inline the lambda we will wrap its body into a block, parameters into the block variables, 
+            // To inline the lambda we will wrap its body into a block, parameters into the block variables,
             // and the invocation arguments into the variable assignments, see #278.
 #if LIGHT_EXPRESSION
             var lambdaPars = (IParameterProvider)lambdaExpr;
@@ -1694,7 +1694,7 @@ namespace FastExpressionCompiler
                 var lambdaPar = lambdaPars.GetParameter(i);
                 var invokeArg = invokeArgs.GetArgument(i);
 
-                // The case of reusing the parameters or variables in the different lambdas, 
+                // The case of reusing the parameters or variables in the different lambdas,
                 // see the test `NestedLambdaTests.Hmm_I_can_use_the_same_parameter_for_outer_and_nested_lambda`
                 // and the `Issue401_What_happens_if_inlined_invocation_of_lambda_overrides_the_same_parameter`.
                 if (lambdaPar == invokeArg)
@@ -2019,7 +2019,7 @@ namespace FastExpressionCompiler
             IndexAccess = 1 << 10,
             /// Invoking the inlined lambda (the default System.Expression behavior)
             InlinedLambdaInvoke = 1 << 11,
-            /// <summary>Indicate if the part AT LEAST participates in the assignment on the left side, 
+            /// <summary>Indicate if the part AT LEAST participates in the assignment on the left side,
             /// it may also participate in the right side, e.g. ++x.Bar</summary>
             AssignmentLeftValue = 1 << 12,
             /// <summary>Indicates the ONLY right value of assignment, e.g. `p` in `foo.Bar += p` </summary>
@@ -2354,7 +2354,7 @@ namespace FastExpressionCompiler
                                                     {
                                                         // @hack (related to #237) if `IgnoreResult` set, that means the external/calling code won't planning on returning and
                                                         // emitting the double `OpCodes.Ret` (usually for not the last statement in block), so we can safely emit our own `Ret` here.
-                                                        // And vice-versa, if `IgnoreResult` not set then the external code planning to emit `Ret` (the last block statement), 
+                                                        // And vice-versa, if `IgnoreResult` not set then the external code planning to emit `Ret` (the last block statement),
                                                         // so we should avoid it on our side.
                                                         if ((parent & ParentFlags.IgnoreResult) != 0)
                                                             il.Demit(OpCodes.Ret);
@@ -2449,7 +2449,7 @@ namespace FastExpressionCompiler
                     var pars = ctor.GetParameters();
 
                     // If we have complex arguments then it is better to store them in the variables, then load them before calling ctor.
-                    // Otherwise the stack may be broken by the long emit chain, and the previous argument result on stack 
+                    // Otherwise the stack may be broken by the long emit chain, and the previous argument result on stack
                     // may be hidden by the next argument interim stack additions,
                     // see the #488 for the details.
                     if (argCount == 1)
@@ -2835,7 +2835,7 @@ namespace FastExpressionCompiler
 #endif
                     if (exVarExpr != null)
                     {
-                        // first, check if the exception variable was used before and supposed to be reused in the new catch 
+                        // first, check if the exception variable was used before and supposed to be reused in the new catch
                         // (this is decided by creator of expression)
                         var exVarIndex = closure.GetDefinedLocalVarOrDefault(exVarExpr);
                         if (exVarIndex == -1)
@@ -2904,7 +2904,7 @@ namespace FastExpressionCompiler
                 var isPassedRef = byRefIndex != -1;
 
                 // Parameter may represent a variable, so first look if this is the case,
-                // and the variable is defined in the current block 
+                // and the variable is defined in the current block
                 var varIndex = closure.GetDefinedLocalVarOrDefault(paramExpr);
                 if (varIndex != -1)
                 {
@@ -3059,7 +3059,7 @@ namespace FastExpressionCompiler
 
                 if (isParamOrVarByRef)
                 {
-                    EmitLoadLocalVariableAddress(il, byRefIndex); // todo: @bug? `closure.LastEmitIsAddress = true;` should we do it too as in above code with the variable 
+                    EmitLoadLocalVariableAddress(il, byRefIndex); // todo: @bug? `closure.LastEmitIsAddress = true;` should we do it too as in above code with the variable
                     return true;
                 }
 
@@ -3291,8 +3291,8 @@ namespace FastExpressionCompiler
                         return il.EmitPopIfIgnoreResult(parent);
                     }
 
-                    // At least just check the assignability of the source to the target type, 
-                    // check only after the checks above for the ValueType or object Type, 
+                    // At least just check the assignability of the source to the target type,
+                    // check only after the checks above for the ValueType or object Type,
                     // because their require additional boxing/unboxing operations
                     if (targetType.IsAssignableFrom(sourceType))
                     {
@@ -3340,7 +3340,7 @@ namespace FastExpressionCompiler
                             if (!m.IsSpecialName)
                                 continue;
 
-                            // Method return type should be convertible to target type, 
+                            // Method return type should be convertible to target type,
                             // and therefore it does not check for the method return type of Nullable<targetType>
                             // because it cannot be coalesced to targetType without loss of information
                             methodReturnType = m.ReturnType;
@@ -3630,7 +3630,7 @@ namespace FastExpressionCompiler
                             il.Demit(OpCodes.Unbox_Any, constType);
 #if NETFRAMEWORK
                         else
-                            // The cast is probably required only for the Full CLR, 
+                            // The cast is probably required only for the Full CLR,
                             // e.g. `Test_283_Case6_MappingSchemaTests_CultureInfo_VerificationException`.
                             // .NET Core does not seem to care about verifiability and it's faster without the explicit cast.
                             il.Demit(OpCodes.Castclass, constType);
@@ -3736,7 +3736,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            // todo: @perf optimize using Type.TypeCode 
+            // todo: @perf optimize using Type.TypeCode
             internal static bool TryEmitNumberOne(ILGenerator il, Type type)
             {
                 if (type == typeof(int) || type == typeof(char) || type == typeof(short) ||
@@ -3771,7 +3771,7 @@ namespace FastExpressionCompiler
                 il.Demit(OpCodes.Ldfld, ArrayClosureArrayField);
                 EmitStoreLocalVariable(il, il.GetNextLocalVarIndex(typeof(object[]))); // always does Stloc_0, because it is done at start of the lambda emit
 
-                // important that the constant will contain the nested lambdas as well in the same array after the actual constants, 
+                // important that the constant will contain the nested lambdas as well in the same array after the actual constants,
                 // so the Count indicates where the constants end
                 var constItems = closure.Constants.Items;
                 var constCount = closure.Constants.Count;
@@ -4431,7 +4431,7 @@ namespace FastExpressionCompiler
                         var leftIsNullable = leftType.IsNullable();
                         if (!leftIsNullable)
                         {
-                            if (right == null) // optimization for the common increment/decrement case, indicated by using the null for the right argument 
+                            if (right == null) // optimization for the common increment/decrement case, indicated by using the null for the right argument
                             {
                                 if (resultVar != -1 & isPost)
                                     EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value before doing any operation on it
@@ -5050,7 +5050,7 @@ namespace FastExpressionCompiler
                             il.Demit(OpCodes.Dup);
                         else
                             // Value type special treatment to load address of value instance in order to call a method.
-                            // For the parameters, we will skip the address loading because the `LastEmitIsAddress == true` for `Ldarga`, 
+                            // For the parameters, we will skip the address loading because the `LastEmitIsAddress == true` for `Ldarga`,
                             // so the condition here will be skipped
                             if (!closure.LastEmitIsAddress && objExpr.Type.IsValueType)
                             EmitStoreAndLoadLocalVariableAddress(il, objExpr.Type);
@@ -5169,7 +5169,7 @@ namespace FastExpressionCompiler
                 nestedLambdaInfo.NonPassedParamsVarIndex = (short)nonPassedParamsVarIndex;
 
                 // Store the NonPassedParams back into the NestedLambda wrapper for the #437.
-                // Also, it is needed to be able to assign the closed variable after the closure is passed to the lambda, 
+                // Also, it is needed to be able to assign the closed variable after the closure is passed to the lambda,
                 // e.g. `var x = 1; var f = () => x + 1; x = 2; f();` expects 3, not 2
                 il.Demit(OpCodes.Stfld, NestedLambdaForNonPassedParams.NonPassedParamsField);
 
@@ -5311,7 +5311,7 @@ namespace FastExpressionCompiler
 
                 //if (lambda is ConstantExpression lambdaConst) // todo: @perf opportunity to optimize
                 //    delegateInvokeMethod = ((Delegate)lambdaConst.Value).GetMethodInfo();
-                //else 
+                //else
                 var delegateInvokeMethod = invokedExpr.Type.FindDelegateInvokeMethod(); // todo: @perf bad thingy
                 if (argCount != 0)
                 {
@@ -5379,10 +5379,8 @@ namespace FastExpressionCompiler
                 var switchValueParent = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
 
                 // Check the pre-requisite conditions and emit OpCodes.Switch if possible, see #398
-                if (customEqualMethod == null && caseCount > 2 &&
-                    switchValueType.IsPrimitive && switchValueType.IsInteger() ||
-                    switchValueType.IsEnum && Enum.GetUnderlyingType(switchValueType).IsInteger())
-                {                    
+                if (customEqualMethod == null && caseCount > 2 && switchValueType.IsIntegerOrUnderlyingInteger())
+                {
                     var multipleTestValuesLabelsId = 0;
 #if TESTING || DEBUG
                     SmallList<TestValueAndMultiTestCaseIndex, Stack2<TestValueAndMultiTestCaseIndex>, NoArrayPool<TestValueAndMultiTestCaseIndex>> switchValues = default;
@@ -5398,16 +5396,34 @@ namespace FastExpressionCompiler
                         for (var v = 0; v < testValueCount; ++v)
                         {
                             var testValExpr = testValues[v];
-                            var testValConstExpr = testValExpr as ConstantExpression;
-                            if (testValConstExpr == null)
+                            var testValue = 0;
+                            if (testValExpr is ConstantExpression constExpr)
                             {
-                                Debug.Assert(false, $"Not supported non-constant {testValConstExpr} test value in switch with integer values");
+                                var constValue = constExpr.Value;
+                                Debug.Assert(constValue != null);
+                                var constValueType = constValue.GetType();
+                                if (constValueType.IsEnum)
+                                    constValueType = Enum.GetUnderlyingType(constValueType);
+                                // todo: @wip what about long and ulong?
+                                testValue = Type.GetTypeCode(constValueType) switch
+                                {
+                                    TypeCode.Char => (int)(char)constValue,
+                                    TypeCode.SByte => (int)(sbyte)constValue,
+                                    TypeCode.Byte => (int)(byte)constValue,
+                                    TypeCode.Int16 => (int)(short)constValue,
+                                    TypeCode.UInt16 => (int)(ushort)constValue,
+                                    TypeCode.Int32 => (int)constValue,
+                                    TypeCode.UInt32 => (int)(uint)constValue,
+                                    _ => 0 // unreachable
+                                };
+                            }
+                            else if (testValExpr is DefaultExpression testValDefaultExpr)
+                                testValue = 0;
+                            else
+                            {
+                                Debug.Assert(false, $"Not supported non-constant,non-default siwtch case value expression: `{testValExpr}`");
                                 return false;
                             }
-
-                            // todo: @wip support for long and ulong
-                            Debug.Assert(testValConstExpr.Value is int, $"Not supported non-int {testValConstExpr.Type} test value in switch with integer values");
-                            var testValue = (int)testValConstExpr.Value;
 
                             // Adding a free slot for the new or for the shifted max value
                             ref var freeValRef = ref switchValues.AddDefaultAndGetRef(); // the default value is (0,0)
@@ -5467,7 +5483,7 @@ namespace FastExpressionCompiler
                         }
 
                         prevSwitchValue = currValue;
-                        switchTableSize += valueGap;
+                        switchTableSize += (int)valueGap;
                     }
 
                     if (valuesConditionsMet)
@@ -5475,7 +5491,7 @@ namespace FastExpressionCompiler
                         Debug.Assert(switchTableSize >= caseCount, $"The switch table size should be at least as large as the case count, but found {switchTableSize} < {caseCount}");
 
                         var endOfSwitchLabel = il.DefineLabel();
-                        var defaultBodyLabel = defaultBody == null ? endOfSwitchLabel : il.DefineLabel(); 
+                        var defaultBodyLabel = defaultBody == null ? endOfSwitchLabel : il.DefineLabel();
 
 #if TESTING || DEBUG
                         SmallList<int, Stack2<int>, NoArrayPool<int>> sameCaseLabelIndexes = default;
@@ -5534,7 +5550,7 @@ namespace FastExpressionCompiler
                         // Before emitting switch we need to normalize the switch value to start from zero
                         if (firstTestValue != 0)
                         {
-                            EmitLoadConstantInt(il, firstTestValue);
+                            EmitLoadConstantInt(il, (int)firstTestValue);
                             il.Demit(firstTestValue > 0 ? OpCodes.Sub : OpCodes.Add);
                         }
 
@@ -6439,12 +6455,12 @@ namespace FastExpressionCompiler
                 return (method.CallingConvention & CallingConventions.VarArgs) == 0;
             }
 
-            /// Same as EmitMethodCall which checks the method for null first, and returns false if it is null. 
+            /// Same as EmitMethodCall which checks the method for null first, and returns false if it is null.
             [MethodImpl((MethodImplOptions)256)]
             public static bool EmitMethodCallCheckForNull(ILGenerator il, MethodInfo method) =>
                 method != null && EmitMethodCall(il, method);
 
-            /// Same as EmitMethodCallOrVirtualCall which checks the method for null first, and returns false if it is null. 
+            /// Same as EmitMethodCallOrVirtualCall which checks the method for null first, and returns false if it is null.
             [MethodImpl((MethodImplOptions)256)]
             public static bool EmitMethodCallOrVirtualCallCheckForNull(ILGenerator il, MethodInfo method) =>
                 method != null && EmitMethodCallOrVirtualCall(il, method);
@@ -6606,22 +6622,22 @@ namespace FastExpressionCompiler
                     // InternalEmit(opcode);
                     // m_ILStream[m_length++] = (byte)arg;
                     //
-                    // which translates to -> 
+                    // which translates to ->
                     //
                     // if (m_length + 7 >= m_ILStream.Length)
                     //     IncreaseCapacity(7);
                     // // No stack change here cause 1st op decrease stack by 1 and second increase by 1
                     // m_ILStream[m_length++] = (byte)OpCodes.Stloc_0.Value;
                     // m_ILStream[m_length++] = (byte)OpCodes.Ldloca_S.Value;
-                    // m_ILStream[m_length++] = (byte)0; // we may no need it 
+                    // m_ILStream[m_length++] = (byte)0; // we may no need it
                     //
                     il.Demit(OpCodes.Stloc_0);
                     il.Demit(OpCodes.Ldloca_S, (byte)0);
                 }
                 else if (location == 1)
                 {
-                    // todo: @perf we may introduce the EmitOne, EmitBatchNonStackModified(OpCode store, OpCode load, byte value), etc. method overloads 
-                    // 
+                    // todo: @perf we may introduce the EmitOne, EmitBatchNonStackModified(OpCode store, OpCode load, byte value), etc. method overloads
+                    //
                     // if (ilLength + 7 < ilStream.Length)
                     // {
                     //     ilStream[ilLength++] = (byte)OpCodes.Stloc_1.Value;
@@ -7100,7 +7116,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            // todo: @perf think how to avoid this boxing thing altogether, maybe do not expose it at all to force client to handle the union values 
+            // todo: @perf think how to avoid this boxing thing altogether, maybe do not expose it at all to force client to handle the union values
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             internal static object BoxPrimitiveValue(ref PValue value, TypeCode code) => code switch
             {
@@ -7914,7 +7930,7 @@ namespace FastExpressionCompiler
 
                     PValue rightVal = default;
                     var right = binaryExpr.Right;
-                    // Using the leftCode to interpret the right part of the binary expression, 
+                    // Using the leftCode to interpret the right part of the binary expression,
                     // because for supported operations left and right types are the same
                     if (right is ConstantExpression rc && !TryUnboxToPrimitiveValue(ref rightVal, rc.Value, leftCode) ||
                         !TryInterpretPrimitiveValue(ref rightVal, right, leftCode, right.NodeType))
@@ -7993,7 +8009,7 @@ namespace FastExpressionCompiler
     }
 
     /// <summary>
-    /// Helpers targeting the performance. Extensions method names may be a bit funny (non standard), 
+    /// Helpers targeting the performance. Extensions method names may be a bit funny (non standard),
     /// in order to prevent conflicts with YOUR helpers with standard names
     /// </summary>
     public static class Tools
@@ -8035,10 +8051,13 @@ namespace FastExpressionCompiler
             TypeCode.UInt16 => true,
             TypeCode.Int32 => true,
             TypeCode.UInt32 => true,
-            TypeCode.Int64 => true,
-            TypeCode.UInt64 => true,
             _ => false
         };
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static bool IsIntegerOrUnderlyingInteger(this Type type) =>
+            type.IsPrimitive && type.IsInteger() ||
+            type.IsEnum && Enum.GetUnderlyingType(type).IsInteger();
 
         internal static bool IsPrimitiveWithZeroDefaultExceptDecimal(this Type type)
         {
@@ -8253,7 +8272,7 @@ namespace FastExpressionCompiler
             if (sourceType == typeof(object) | targetType == typeof(object))
                 return null;
 
-            // conversion operators should be declared as static and public 
+            // conversion operators should be declared as static and public
             var methods = inType.GetMethods(BindingFlags.Static | BindingFlags.Public);
             foreach (var m in methods)
                 if (m.IsSpecialName && m.ReturnType == targetType)
@@ -8884,15 +8903,15 @@ namespace FastExpressionCompiler
                     {
                         SignatureHelper sigHelp;
                         MdSigCallingConvention intCall;
-            
+
                         // not needed, always provided
                         returnType ??= typeof(void);
-            
+
                         // not needed, always CallingConventions.Standard
                         intCall = MdSigCallingConvention.Default;
                         if ((callingConvention & CallingConventions.VarArgs) == CallingConventions.VarArgs)
                             intCall = MdSigCallingConvention.Vararg;
-            
+
                         // not needed, always 0
                         if (cGenericParam > 0)
                         {
@@ -8905,16 +8924,16 @@ namespace FastExpressionCompiler
 
                         sigHelp = new SignatureHelper(scope, intCall, cGenericParam, returnType,
                             requiredReturnTypeCustomModifiers, optionalReturnTypeCustomModifiers);
-            
+
                         // m_signature = new byte[32];
                         // m_currSig = 0;
                         // m_module = mod as ModuleBuilder;
                         // m_argCount = 0;
                         // m_sigDone = false;
                         // m_sizeLoc = NO_SIZE_IN_SIG;
-            
+
                         sigHelp.AddArguments(parameterTypes, requiredParameterTypeCustomModifiers, optionalParameterTypeCustomModifiers);
-            
+
                         return sigHelp;
                     }
                 */
@@ -9051,7 +9070,7 @@ namespace FastExpressionCompiler
                             SetNumberOfSignatureElements(true);
                             m_sigDone = true;
                         }
-            
+
                         // This case will only happen if the user got the signature through
                         // InternalGetSignature first and then called GetSignature.
                         if (m_signature.Length > m_currSig)
@@ -9060,7 +9079,7 @@ namespace FastExpressionCompiler
                             Array.Copy(m_signature, temp, m_currSig);
                             m_signature = temp;
                         }
-            
+
                         return m_signature;
                     }
                 */
@@ -9079,7 +9098,7 @@ namespace FastExpressionCompiler
                 ExpressionCompiler.EmittingVisitor.EmitLoadLocalVariable(il, scopeVar);
                 il.Emit(OpCodes.Stfld, DynamicILGeneratorScopeField);
 
-                // store the reused ILGenerator to 
+                // store the reused ILGenerator to
                 il.Emit(OpCodes.Ldarg_1);
                 il.Emit(OpCodes.Ldarg_2);
                 il.Emit(OpCodes.Stfld, ILGeneratorField);
@@ -9175,7 +9194,7 @@ namespace FastExpressionCompiler
             // ## 3 TBD
             //
             // todo: @perf do batch Emit by manually calling `EnsureCapacity` once then `InternalEmit` multiple times
-            // todo: @perf Replace the `Emit(opcode, int)` with the more specialized `Emit(opcode)`, `Emit(opcode, byte)` or `Emit(opcode, short)` 
+            // todo: @perf Replace the `Emit(opcode, int)` with the more specialized `Emit(opcode)`, `Emit(opcode, byte)` or `Emit(opcode, short)`
             // avoiding internal check for Ldc_I4, Ldarg, Ldarga, Starg then call `PutInteger4` only if needed see https://source.dot.net/#System.Private.CoreLib/src/System/Reflection/Emit/ILGenerator.cs,690f350859394132
             // var ensureCapacityMethod = ilGenTypeInfo.GetDeclaredMethod("EnsureCapacity");
             // var internalEmitMethod   = ilGenTypeInfo.GetDeclaredMethod("InternalEmit");
@@ -9276,7 +9295,7 @@ namespace FastExpressionCompiler
             if (m_length + size >= m_ILStream.Length)
                 IncreaseCapacity(7);
 
-            m_ILStream[m_length++] = (byte)opcode.Value; 
+            m_ILStream[m_length++] = (byte)opcode.Value;
             UpdateStackSize(opcode, 0);
 
             int stackchange = 0;
@@ -9298,7 +9317,7 @@ namespace FastExpressionCompiler
     public static class ToExpressionPrinter
     {
         /// <summary>
-        /// Prints the expression in its constructing syntax - 
+        /// Prints the expression in its constructing syntax -
         /// helpful to get the expression from the debug session and put into it the code for the test.
         /// </summary>
         public static string ToExpressionString(this Expression expr, ObjectToCode notRecognizedToCode = null) =>
@@ -9306,9 +9325,9 @@ namespace FastExpressionCompiler
 
         // todo: @api There should be a version returning StringBuilder the same as for ToCSharpString
         /// <summary>
-        /// Prints the expression in its constructing syntax - 
+        /// Prints the expression in its constructing syntax -
         /// helpful to get the expression from the debug session and put into it the code for the test.
-        /// In addition, returns the gathered expressions, parameters ad labels. 
+        /// In addition, returns the gathered expressions, parameters ad labels.
         /// </summary>
         public static string ToExpressionString(this Expression expr,
             out List<ParameterExpression> paramsExprs, out List<Expression> uniqueExprs, out List<LabelTarget> lts,
@@ -9331,7 +9350,7 @@ namespace FastExpressionCompiler
             return sb.ToString();
         }
 
-        // Searches first for the expression reference in the `uniqueExprs` and adds the reference to expression by index, 
+        // Searches first for the expression reference in the `uniqueExprs` and adds the reference to expression by index,
         // otherwise delegates to `CreateExpressionCodeString`
         internal static StringBuilder ToExpressionString(this Expression expr, StringBuilder sb,
             List<ParameterExpression> paramsExprs, List<Expression> uniqueExprs, List<LabelTarget> lts,
@@ -10111,7 +10130,7 @@ namespace FastExpressionCompiler
                         // The result should be something like this (taken from the #237)
                         //
                         // `(DeserializerDlg<Word>)((ref ReadOnlySequence<Byte> input, Word value, out Int64 bytesRead) => {...})`
-                        // 
+                        //
                         sb.Append('(').Append(e.Type.ToCode(stripNamespace, printType)).Append(")((");
                         var lambdaMethod = x.Type.FindDelegateInvokeMethod();
                         var count = x.Parameters.Count;
@@ -10184,7 +10203,7 @@ namespace FastExpressionCompiler
                         if (encloseInParens)
                             sb.Append(')');
 
-                        // Indicates the lambda invocation more explicitly with the new line, 
+                        // Indicates the lambda invocation more explicitly with the new line,
                         // Keep Invoke indentation the same as the lambda closing brace indicating their bond
                         if (x.Expression.NodeType == ExpressionType.Lambda)
                             sb.NewLineIndent(lineIndent);
@@ -10622,7 +10641,7 @@ namespace FastExpressionCompiler
                                     return avoidParens ? sb : sb.Append(')');
 
                                 default:
-                                    return sb.Append(e.ToString()); // falling back ro ToString as a closest to C# code output 
+                                    return sb.Append(e.ToString()); // falling back ro ToString as a closest to C# code output
                             }
                         }
 
@@ -10642,7 +10661,7 @@ namespace FastExpressionCompiler
 
                             if (nodeType.IsAssignNodeType())
                             {
-                                // todo: @perf handle the right part is condition with the blocks for If and/or Else, e.g. see #261 test `Serialize_the_nullable_struct_array` 
+                                // todo: @perf handle the right part is condition with the blocks for If and/or Else, e.g. see #261 test `Serialize_the_nullable_struct_array`
                                 if (b.Right is BlockExpression rightBlock) // it is valid to assign the block and it is used to my surprise
                                 {
                                     sb.Append("// { The block result will be assigned to `")
@@ -10698,7 +10717,7 @@ namespace FastExpressionCompiler
                             return !avoidParens ? sb.Append(')') : sb;
                         }
 
-                        return sb.Append(e.ToString()); // falling back ToString and hoping for the best 
+                        return sb.Append(e.ToString()); // falling back ToString and hoping for the best
                     }
             }
         }
@@ -10776,7 +10795,7 @@ namespace FastExpressionCompiler
             return sb.Append(NewLine);
         }
 
-        // Returns the number of consecutive spaces from the current position, 
+        // Returns the number of consecutive spaces from the current position,
         // or from the first non-space character to the prev newline.
         // e.g. for `\n    foo.Bar = ` and for `\n    ` indent is 4
         internal static int GetRealLineIndent(this StringBuilder sb, int defaultIndent)
@@ -10951,7 +10970,7 @@ namespace FastExpressionCompiler
                     inTheLastBlock, // the last block is marked so if only it is itself in the last block
                     blockResultAssignment);
 
-            // todo: @improve the label is already used by the Return GoTo we should skip it output here OR we need to replace the Return Goto `return` with `goto`  
+            // todo: @improve the label is already used by the Return GoTo we should skip it output here OR we need to replace the Return Goto `return` with `goto`
             if (lastExpr is LabelExpression) // keep the last label on the same vertical line
             {
                 lastExpr.ToCSharpString(sb, EnclosedIn.Block, ref named,
@@ -11393,7 +11412,7 @@ namespace FastExpressionCompiler
         private static Type[] GetGenericTypeParametersOrArguments(this TypeInfo typeInfo) =>
             typeInfo.IsGenericTypeDefinition ? typeInfo.GenericTypeParameters : typeInfo.GenericTypeArguments;
 
-        /// <summary>Custom handler for output the object in valid C#. 
+        /// <summary>Custom handler for output the object in valid C#.
         /// Note, the `printGenericTypeArgs` is excluded because it cannot be a open-generic object.
         /// This handler is also used to allow user to fully control a Constant expression output</summary>
         public delegate string ObjectToCode(object x, bool stripNamespace = false, Func<Type, string, string> printType = null);
@@ -11485,7 +11504,7 @@ namespace FastExpressionCompiler
             var xType = x.GetType();
             var xTypeInfo = xType.GetTypeInfo();
 
-            // check if item is implemented by array and then use the array initializer only for these types, 
+            // check if item is implemented by array and then use the array initializer only for these types,
             // otherwise we may produce the array initializer but it will be incompatible with e.g. `List<T>`
             if (xTypeInfo.IsArray ||
                 xTypeInfo.IsGenericType && TypesImplementedByArray.Contains(xType.GetGenericTypeDefinition()))
