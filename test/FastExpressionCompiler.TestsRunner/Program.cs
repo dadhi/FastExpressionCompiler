@@ -98,6 +98,8 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new LightExpression.UnitTests.ConvertOperatorsTests().Run);
                 Run(new DefaultTests().Run);
                 Run(new LightExpression.UnitTests.DefaultTests().Run);
+                Run(new ConstructorCallTests().Run);
+                Run(new LightExpression.UnitTests.ConstructorCallTests().Run);
                 Run(new EqualityOperatorsTests().Run);
                 Run(new LightExpression.UnitTests.EqualityOperatorsTests().Run);
                 Run(new GotoTests().Run);
