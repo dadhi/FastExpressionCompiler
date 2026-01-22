@@ -5342,6 +5342,26 @@ namespace FastExpressionCompiler
                 public int CaseIndexPlusOne; // 0 means not multi-test case, otherwise index+1
             }
 
+            private static long ConvertValueObjectToLong(object valObj)
+            {
+                Debug.Assert(valObj != null);
+                var type = valObj.GetType();
+                type = type.IsEnum ? Enum.GetUnderlyingType(type) : type;
+                return Type.GetTypeCode(type) switch
+                {
+                    TypeCode.Char => (long)(char)valObj,
+                    TypeCode.SByte => (long)(sbyte)valObj,
+                    TypeCode.Byte => (long)(byte)valObj,
+                    TypeCode.Int16 => (long)(short)valObj,
+                    TypeCode.UInt16 => (long)(ushort)valObj,
+                    TypeCode.Int32 => (long)(int)valObj,
+                    TypeCode.UInt32 => (long)(uint)valObj,
+                    TypeCode.Int64 => (long)valObj,
+                    TypeCode.UInt64 => (long)(ulong)valObj,
+                    _ => 0 // unreachable
+                };
+            }
+
 #if LIGHT_EXPRESSION
             private static bool TryEmitSwitch(SwitchExpression expr, IParameterProvider paramExprs, ILGenerator il, ref ClosureInfo closure,
                 CompilerFlags setup, ParentFlags parent)
@@ -5398,36 +5418,12 @@ namespace FastExpressionCompiler
                         for (var v = 0; v < testValueCount; ++v)
                         {
                             var testValExpr = testValues[v];
-                            var testValueLong = 0L;
-                            if (testValExpr is ConstantExpression constExpr)
-                            {
-                                var constValue = constExpr.Value;
-                                Debug.Assert(constValue != null);
-                                var constValueType = constValue.GetType();
-                                if (constValueType.IsEnum)
-                                    constValueType = Enum.GetUnderlyingType(constValueType);
-
-                                testValueLong = Type.GetTypeCode(constValueType) switch
-                                {
-                                    TypeCode.Char => (long)(char)constValue,
-                                    TypeCode.SByte => (long)(sbyte)constValue,
-                                    TypeCode.Byte => (long)(byte)constValue,
-                                    TypeCode.Int16 => (long)(short)constValue,
-                                    TypeCode.UInt16 => (long)(ushort)constValue,
-                                    TypeCode.Int32 => (long)constValue,
-                                    TypeCode.UInt32 => (long)(uint)constValue,
-                                    TypeCode.Int64 => (long)constValue,
-                                    TypeCode.UInt64 => (long)(ulong)constValue,
-                                    _ => 0 // unreachable
-                                };
-                            }
-                            else if (testValExpr is DefaultExpression testValDefaultExpr)
-                                testValueLong = 0L;
-                            else
+                            if (testValExpr is not ConstantExpression && testValExpr is not DefaultExpression)
                             {
                                 Debug.Assert(false, $"Not supported non-constant,non-default switch case value expression: `{testValExpr}`");
                                 return false;
                             }
+                            var testValueLong = testValExpr is ConstantExpression constExpr ? ConvertValueObjectToLong(constExpr.Value) : 0L;
 
                             // Adding a free slot for the new or for the shifted max value
                             ref var freeValRef = ref switchValues.AddDefaultAndGetRef(); // the default value is (0,0)
@@ -5570,7 +5566,7 @@ namespace FastExpressionCompiler
 
                             // First test value is enough to find the corresponding label in switch table to mark the case body
                             var testValExpr = cs.TestValues[0];
-                            var testValue = (long)((ConstantExpression)testValExpr).Value;
+                            var testValue = testValExpr is ConstantExpression constExpr ? ConvertValueObjectToLong(constExpr.Value) : 0L;
                             var labelIndex = (int)(testValue - firstTestValue);
                             il.DmarkLabel(switchTableLabels[labelIndex]);
 
