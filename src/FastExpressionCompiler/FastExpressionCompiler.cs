@@ -5338,7 +5338,7 @@ namespace FastExpressionCompiler
 
             private struct TestValueAndMultiTestCaseIndex
             {
-                public int Value;
+                public long Value;
                 public int CaseIndexPlusOne; // 0 means not multi-test case, otherwise index+1
             }
 
@@ -5398,7 +5398,7 @@ namespace FastExpressionCompiler
                         for (var v = 0; v < testValueCount; ++v)
                         {
                             var testValExpr = testValues[v];
-                            var testValue = 0;
+                            var testValueLong = 0L;
                             if (testValExpr is ConstantExpression constExpr)
                             {
                                 var constValue = constExpr.Value;
@@ -5406,24 +5406,26 @@ namespace FastExpressionCompiler
                                 var constValueType = constValue.GetType();
                                 if (constValueType.IsEnum)
                                     constValueType = Enum.GetUnderlyingType(constValueType);
-                                // todo: @wip what about long and ulong?
-                                testValue = Type.GetTypeCode(constValueType) switch
+
+                                testValueLong = Type.GetTypeCode(constValueType) switch
                                 {
-                                    TypeCode.Char => (int)(char)constValue,
-                                    TypeCode.SByte => (int)(sbyte)constValue,
-                                    TypeCode.Byte => (int)(byte)constValue,
-                                    TypeCode.Int16 => (int)(short)constValue,
-                                    TypeCode.UInt16 => (int)(ushort)constValue,
-                                    TypeCode.Int32 => (int)constValue,
-                                    TypeCode.UInt32 => (int)(uint)constValue,
+                                    TypeCode.Char => (long)(char)constValue,
+                                    TypeCode.SByte => (long)(sbyte)constValue,
+                                    TypeCode.Byte => (long)(byte)constValue,
+                                    TypeCode.Int16 => (long)(short)constValue,
+                                    TypeCode.UInt16 => (long)(ushort)constValue,
+                                    TypeCode.Int32 => (long)constValue,
+                                    TypeCode.UInt32 => (long)(uint)constValue,
+                                    TypeCode.Int64 => (long)constValue,
+                                    TypeCode.UInt64 => (long)(ulong)constValue,
                                     _ => 0 // unreachable
                                 };
                             }
                             else if (testValExpr is DefaultExpression testValDefaultExpr)
-                                testValue = 0;
+                                testValueLong = 0L;
                             else
                             {
-                                Debug.Assert(false, $"Not supported non-constant,non-default siwtch case value expression: `{testValExpr}`");
+                                Debug.Assert(false, $"Not supported non-constant,non-default switch case value expression: `{testValExpr}`");
                                 return false;
                             }
 
@@ -5435,16 +5437,16 @@ namespace FastExpressionCompiler
                                 --lastIndex;
                                 if (lastIndex == -1)
                                 {
-                                    freeValRef.Value = testValue;
+                                    freeValRef.Value = testValueLong;
                                     freeValRef.CaseIndexPlusOne = id;
                                     break;
                                 }
 
                                 ref var valRef = ref switchValues.GetSurePresentRef(lastIndex);
-                                Debug.Assert(valRef.Value != testValue, "Duplicate test value in switch case");
+                                Debug.Assert(valRef.Value != testValueLong, "Duplicate test value in switch case");
 
                                 // Shift current value further to get space for the smaller new value
-                                if (testValue < valRef.Value)
+                                if (testValueLong < valRef.Value)
                                 {
                                     freeValRef = valRef; // shift the value by copying it into the free slot
                                     freeValRef = ref valRef; // set the free slot reference to the current value
@@ -5458,7 +5460,7 @@ namespace FastExpressionCompiler
                     }
 
                     // Let's analyze the switch values for the starting value and the gaps.
-                    // We require no more than nonContValueCountMax non-continous values and no larger gap then the valueGapMin for the rest,
+                    // We require no more than nonContValueCountMax non-continous values and no larger gap than the valueGapMin for the rest,
                     // to consider the values for the switch table. Because otherwise the table will be filled with gaps and
                     // will become too large for the final optimization goal.
                     // Note that we cannot check the gaps earlier when collecting the values because the gaps may be filled at the end.
@@ -5552,7 +5554,7 @@ namespace FastExpressionCompiler
                         // Before emitting switch we need to normalize the switch value to start from zero
                         if (firstTestValue != 0)
                         {
-                            EmitLoadConstantInt(il, (int)firstTestValue);
+                            EmitLoadConstantLong(il, firstTestValue);
                             il.Demit(firstTestValue > 0 ? OpCodes.Sub : OpCodes.Add);
                         }
 
@@ -5568,8 +5570,8 @@ namespace FastExpressionCompiler
 
                             // First test value is enough to find the corresponding label in switch table to mark the case body
                             var testValExpr = cs.TestValues[0];
-                            var testValue = (int)((ConstantExpression)testValExpr).Value;
-                            var labelIndex = testValue - firstTestValue;
+                            var testValue = (long)((ConstantExpression)testValExpr).Value;
+                            var labelIndex = (int)(testValue - firstTestValue);
                             il.DmarkLabel(switchTableLabels[labelIndex]);
 
                             if (!TryEmit(cs.Body, paramExprs, il, ref closure, setup, parent))
@@ -6490,6 +6492,16 @@ namespace FastExpressionCompiler
                             il.Demit(OpCodes.Ldc_I4, i);
                         break;
                 }
+            }
+
+            /// Efficiently emit the long constant based on its value as int or long
+            [MethodImpl((MethodImplOptions)256)]
+            public static void EmitLoadConstantLong(ILGenerator il, long i)
+            {
+                if (i >= int.MinValue && i <= int.MaxValue)
+                    EmitLoadConstantInt(il, (int)i);
+                else
+                    il.Demit(OpCodes.Ldc_I8, i);
             }
 
             [MethodImpl((MethodImplOptions)256)]
@@ -8053,6 +8065,8 @@ namespace FastExpressionCompiler
             TypeCode.UInt16 => true,
             TypeCode.Int32 => true,
             TypeCode.UInt32 => true,
+            TypeCode.Int64 => true,
+            TypeCode.UInt64 => true,
             _ => false
         };
 

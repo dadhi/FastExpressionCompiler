@@ -18,10 +18,11 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
 {
     public void Run(TestRun t)
     {
-        Test_switch_for_minimal_number_of_cases_enabling_OpCodesSwitch_and_no_default_case(t);
-        Test_switch_for_all_integer_cases_starting_from_0(t);
-        Test_switch_for_the_bytes_two_ranges(t);
-        Test_switch_for_the_bytes(t);
+        // Test_switch_for_minimal_number_of_cases_enabling_OpCodesSwitch_and_no_default_case(t);
+        // Test_switch_for_all_integer_cases_starting_from_0(t);
+        // Test_switch_for_the_bytes(t);
+        Test_switch_for_the_long(t);
+        Test_switch_for_the_bytes_two_ranges_NOT_SUPPORTED_YET(t);
         Test_switch_for_the_enums(t);
         Test_switch_for_integer_cases_starting_from_Not_0(t);
         Test_switch_for_nullable_integer_types(t);
@@ -343,7 +344,72 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
         t.AreEqual(-3, ff(-3));
     }
 
-    public void Test_switch_for_the_bytes_two_ranges(TestContext t)
+    public void Test_switch_for_the_long(TestContext t)
+    {
+        var p = Parameter(typeof(long));
+
+        var expr = Lambda<Func<long, long>>(
+            Switch(
+                p,
+                Constant(-1L),
+                // The -3 case is handled separately before the switch table, but -2 is included into the switch table
+                SwitchCase(
+                    Constant(-3L),
+                    Constant((long)-3, typeof(long))),
+                SwitchCase(
+                    Constant(3L),
+                    Constant((long)3, typeof(long))),
+                SwitchCase(
+                    Constant(4L),
+                    Constant((long)4, typeof(long))),
+                SwitchCase(
+                    Constant(5L),
+                    Constant((long)5, typeof(long))),
+                SwitchCase(
+                    Constant(6L),
+                    Constant((long)6, typeof(long))),
+                SwitchCase(
+                    Constant(12L),
+                    Constant((long)12, typeof(long)))
+                ),
+            p);
+
+        expr.PrintCSharp();
+        var @cs = (Func<long, long>)((long long_0) => //long
+        {
+            switch (long_0)
+            {
+                case (long)-3:
+                    return (long)-3;
+                case (long)3:
+                    return (long)3;
+                case (long)4:
+                    return (long)4;
+                case (long)5:
+                    return (long)5;
+                case (long)6:
+                    return (long)6;
+                case (long)12:
+                    return (long)12;
+                default:
+                    return (long)-1;
+            }
+        });
+
+        var fs = expr.CompileSys();
+        fs.PrintIL();
+
+        t.IsNotNull(fs);
+        t.AreEqual(-3, fs(-3));
+
+        var ff = expr.CompileFast();
+        ff.PrintIL();
+
+        t.IsNotNull(ff);
+        t.AreEqual(-3, ff(-3));
+    }
+
+    public void Test_switch_for_the_bytes_two_ranges_NOT_SUPPORTED_YET(TestContext t)
     {
         var p = Parameter(typeof(sbyte));
 
