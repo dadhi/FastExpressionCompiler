@@ -4368,7 +4368,8 @@ namespace FastExpressionCompiler
                                 // required for calling the method on the value type parameter
                                 var objType = objExpr.Type;
                                 objVarByAddress = !closure.LastEmitIsAddress && objType.IsValueType && // todo: @wip avoid ad-hocking with parameter here
-                                    (objExpr.NodeType != ExpressionType.Parameter || !((ParameterExpression)objExpr).IsByRef);
+                                    (objExpr.NodeType != ExpressionType.Parameter || !((ParameterExpression)objExpr).IsByRef) &&
+                                    !objType.IsByRefLike(); // ref struct types cannot be stored in local variables
                                 if (objVarByAddress)
                                     objVar = EmitStoreAndLoadLocalVariableAddress(il, objType);
                                 else
@@ -4938,7 +4939,7 @@ namespace FastExpressionCompiler
                     if (!TryEmit(objExpr, paramExprs, il, ref closure, setup, flags | ParentFlags.InstanceAccess))
                         return false;
                     objIsValueType = objExpr.Type.IsValueType;
-                    loadObjByAddress = objIsValueType && objExpr.NodeType != ExpressionType.Parameter && !closure.LastEmitIsAddress;
+                    loadObjByAddress = objIsValueType && objExpr.NodeType != ExpressionType.Parameter && !closure.LastEmitIsAddress && !objExpr.Type.IsByRefLike();
                 }
 
                 var parCount = methodParams.Length;
@@ -5047,7 +5048,10 @@ namespace FastExpressionCompiler
                             // Value type special treatment to load address of value instance in order to call a method.
                             // For the parameters, we will skip the address loading because the `LastEmitIsAddress == true` for `Ldarga`, 
                             // so the condition here will be skipped
-                            if (!closure.LastEmitIsAddress && objExpr.Type.IsValueType)
+                            // Ref struct types cannot be stored in local variables, so we skip them here
+                            if (!closure.LastEmitIsAddress &&
+                            objExpr.Type.IsValueType &&
+                            !objExpr.Type.IsByRefLike())
                             EmitStoreAndLoadLocalVariableAddress(il, objExpr.Type);
                     }
 
@@ -5094,7 +5098,7 @@ namespace FastExpressionCompiler
                         closure.LastEmitIsAddress = isByAddress;
                         if (!isByAddress)
                         {
-                            if (objExpr.Type.IsEnum)
+                            if (objExpr.Type.IsEnum && !objExpr.Type.IsByRefLike())
                                 EmitStoreAndLoadLocalVariableAddress(il, objExpr.Type);
                             il.Demit(OpCodes.Ldfld, field);
                         }
@@ -7815,6 +7819,33 @@ namespace FastExpressionCompiler
         internal static bool IsFloatingPoint(this Type type) =>
             type == typeof(float) ||
             type == typeof(double);
+
+        /// <summary>Checks if the type is a ref struct (byref-like type). 
+        /// Compatible with older frameworks that don't have Type.IsByRefLike property.</summary>
+        [MethodImpl((MethodImplOptions)256)]
+        [RequiresUnreferencedCode(Trimming.Message)]
+        internal static bool IsByRefLike(this Type type)
+        {
+#if NETSTANDARD2_1_OR_GREATER || NETCOREAPP2_1_OR_GREATER || NET6_0_OR_GREATER
+            return type.IsByRefLike;
+#else
+            // For older frameworks (net472, netstandard2.0), check for IsByRefLikeAttribute via reflection
+            // IsByRefLike property was introduced in .NET Standard 2.1 / .NET Core 2.1
+            if (!type.IsValueType)
+                return false;
+            
+            // Check if the type has IsByRefLikeAttribute
+            var attributes = type.GetCustomAttributes(inherit: false);
+            foreach (var attr in attributes)
+            {
+                var attrType = attr.GetType();
+                if (attrType.Name == "IsByRefLikeAttribute" || 
+                    attrType.FullName == "System.Runtime.CompilerServices.IsByRefLikeAttribute")
+                    return true;
+            }
+            return false;
+#endif
+        }
 
         internal static bool IsPrimitiveWithZeroDefaultExceptDecimal(this Type type)
         {

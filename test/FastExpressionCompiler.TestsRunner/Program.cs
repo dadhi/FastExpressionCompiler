@@ -389,6 +389,9 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue461_InvalidProgramException_when_null_checking_type_by_ref().Run);
                 Run(new LightExpression.IssueTests.Issue461_InvalidProgramException_when_null_checking_type_by_ref().Run);
 
+                Run(new Issue490_ref_struct_conditional().Run);
+                Run(new LightExpression.IssueTests.Issue490_ref_struct_conditional().Run);
+
                 Console.WriteLine($"{Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
 
