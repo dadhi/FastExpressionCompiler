@@ -18,11 +18,12 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
 {
     public void Run(TestRun t)
     {
+        Test_switch_with_first_and_last_outliers(t);
+        Test_switch_for_the_bytes_two_ranges_NOT_SUPPORTED_YET(t);
+        Test_switch_for_the_long(t);
         Test_switch_for_minimal_number_of_cases_enabling_OpCodesSwitch_and_no_default_case(t);
         Test_switch_for_all_integer_cases_starting_from_0(t);
         Test_switch_for_the_bytes(t);
-        Test_switch_for_the_long(t);
-        Test_switch_for_the_bytes_two_ranges_NOT_SUPPORTED_YET(t);
         Test_switch_for_the_enums(t);
         Test_switch_for_integer_cases_starting_from_Not_0(t);
         Test_switch_for_nullable_integer_types(t);
@@ -352,7 +353,6 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
             Switch(
                 p,
                 Constant(-1L),
-                // The -3 case is handled separately before the switch table, but -2 is included into the switch table
                 SwitchCase(
                     Constant(1L),
                     Constant((long)1, typeof(long))),
@@ -404,6 +404,80 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
 
         var ff = expr.CompileFast();
         ff.PrintIL();
+
+        t.IsNotNull(ff);
+        t.AreEqual(5, ff(5));
+    }
+
+    public void Test_switch_with_first_and_last_outliers(TestContext t)
+    {
+        var p = Parameter(typeof(int));
+
+        var expr = Lambda<Func<int, int>>(
+            Switch(
+                p,
+                Constant(-1),
+                // The -3 case is handled separately before the switch table
+                SwitchCase(
+                    Constant(-3), // outsider
+                    Constant(-3, typeof(int))),
+                SwitchCase(
+                    Constant(3),
+                    Constant(3, typeof(int))),
+                SwitchCase(
+                    Constant(4),
+                    Constant(4, typeof(int))),
+                SwitchCase(
+                    Constant(5),
+                    Constant(5, typeof(int))),
+                SwitchCase(
+                    Constant(6),
+                    Constant(6, typeof(int))),
+                SwitchCase(
+                    Constant(12), // outsider
+                    Constant(12, typeof(int)))
+                ),
+            p);
+
+        expr.PrintCSharp();
+
+        var fs = expr.CompileSys();
+        fs.PrintIL(format: ILFormat.AssertOpCodes);
+        fs.AssertOpCodes(
+            OpCodes.Ldarg_1, //        at IL_0000
+            OpCodes.Stloc_0, //        at IL_0001
+            OpCodes.Ldloc_0, //        at IL_0002
+            OpCodes.Ldc_I4_S, // 253   at IL_0003 Loads -3 in 2 compliment
+            OpCodes.Beq, // IL_0047    at IL_0005 If input is -3 branch to 47
+            OpCodes.Ldloc_0, //        at IL_0010
+            OpCodes.Ldc_I4_3, //       at IL_0011
+            OpCodes.Sub, //            at IL_0012
+            OpCodes.Switch, // [IL_0054, IL_0060, IL_0066, IL_0072] at IL_0013
+            OpCodes.Ldloc_0, //        at IL_0034
+            OpCodes.Ldc_I4_S, // 12    at IL_0035
+            OpCodes.Beq, // IL_0078    at IL_0037
+            OpCodes.Br, // IL_0085     at IL_0042
+            OpCodes.Ldc_I4_S, // 253   at IL_0047
+            OpCodes.Br, // IL_0086     at IL_0049
+            OpCodes.Ldc_I4_3, //       at IL_0054
+            OpCodes.Br, // IL_0086     at IL_0055
+            OpCodes.Ldc_I4_4, //       at IL_0060
+            OpCodes.Br, // IL_0086     at IL_0061
+            OpCodes.Ldc_I4_5, //       at IL_0066
+            OpCodes.Br, // IL_0086     at IL_0067
+            OpCodes.Ldc_I4_6, //       at IL_0072
+            OpCodes.Br, // IL_0086     at IL_0073
+            OpCodes.Ldc_I4_S, // 12    at IL_0078
+            OpCodes.Br, // IL_0086     at IL_0080
+            OpCodes.Ldc_I4_M1, //      at IL_0085
+            OpCodes.Ret  //            at IL_0086
+        );
+
+        t.IsNotNull(fs);
+        t.AreEqual(5, fs(5));
+
+        var ff = expr.CompileFast();
+        ff.PrintIL(format: ILFormat.AssertOpCodes);
 
         t.IsNotNull(ff);
         t.AreEqual(5, ff(5));

@@ -77,6 +77,7 @@ namespace FastExpressionCompiler
     using System.Diagnostics.CodeAnalysis;
     using static System.Environment;
     using static CodePrinter;
+    using System.Data.Odbc;
 
     /// <summary>The flags for the compiler</summary>
     [Flags]
@@ -5401,7 +5402,9 @@ namespace FastExpressionCompiler
                 var switchValueParent = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
 
                 // Check the pre-requisite conditions and emit OpCodes.Switch if possible, see #398
-                if (customEqualMethod == null && caseCount > 2 && switchValueType.IsIntegerOrUnderlyingInteger())
+                const int minSwitchTableSize = 3;
+                Debug.Assert(minSwitchTableSize >= 3); // The later code will assume at least so few of the cases count
+                if (customEqualMethod == null && caseCount >= minSwitchTableSize && switchValueType.IsIntegerOrUnderlyingInteger())
                 {
                     var multipleTestValuesLabelsId = 0;
 #if TESTING || DEBUG
@@ -5456,7 +5459,7 @@ namespace FastExpressionCompiler
                     }
 
                     // Let's analyze the switch values for the starting value and the gaps.
-                    // We require no more than nonContValueCountMax non-continous values and no larger gap than the valueGapMin for the rest,
+                    // We require no more than nonContValueCountMax non-continuous values and no larger gap than the valueGapMin for the rest,
                     // to consider the values for the switch table. Because otherwise the table will be filled with gaps and
                     // will become too large for the final optimization goal.
                     // Note that we cannot check the gaps earlier when collecting the values because the gaps may be filled at the end.
@@ -5464,12 +5467,26 @@ namespace FastExpressionCompiler
                     const int nonContValueCountMax = 3;
                     var contValueCount = 0;
                     var valuesConditionsMet = true;
-                    var switchTableSize = 1; // start from the 1 and then add the gaps
+                    var actualSwitchTableSize = 1; // start from the 1 and then add the gaps
 
-                    var firstTestValue = switchValues.GetSurePresentRef(0).Value;
-                    var prevSwitchValue = firstTestValue;
+                    var firstTestValueIdx = 0;
+                    var switchValuesCount = switchValues.Count;
+                    var lastTestValueIdx = switchValuesCount - 1;
 
-                    for (var i = 1; i < switchValues.Count; ++i)
+                    // Check for the 1 or 2 outliers with the big gap only if there are 1/2 + minSwitchTableSize, otherwise the table is too small and just count the outlier toward the nonContValueCountMax gaps.
+                    if (switchValuesCount >= 1 + minSwitchTableSize)
+                    {
+                        if (switchValues.GetSurePresentRef(1).Value - switchValues.GetSurePresentRef(0).Value > valueGapMin)
+                            firstTestValueIdx = 1;
+                        
+                        if (firstTestValueIdx == 0 || switchValuesCount >= 2 + minSwitchTableSize) {
+                            if (switchValues.GetSurePresentRef(lastTestValueIdx).Value - switchValues.GetSurePresentRef(lastTestValueIdx - 1).Value > valueGapMin)
+                                --lastTestValueIdx;
+                        }
+                    }
+
+                    var prevSwitchValue = switchValues.GetSurePresentRef(firstTestValueIdx).Value;
+                    for (var i = firstTestValueIdx + 1; i <= lastTestValueIdx; ++i)
                     {
                         var currValue = switchValues.GetSurePresentRef(i).Value;
                         var valueGap = currValue - prevSwitchValue;
@@ -5483,12 +5500,12 @@ namespace FastExpressionCompiler
                         }
 
                         prevSwitchValue = currValue;
-                        switchTableSize += (int)valueGap;
+                        actualSwitchTableSize += (int)valueGap;
                     }
 
                     if (valuesConditionsMet)
                     {
-                        Debug.Assert(switchTableSize >= caseCount, $"The switch table size should be at least as large as the case count, but found {switchTableSize} < {caseCount}");
+                        Debug.Assert(actualSwitchTableSize >= caseCount, $"The switch table size should be at least as large as the case count, but found {actualSwitchTableSize} < {caseCount}");
 
                         var endOfSwitchLabel = il.DefineLabel();
                         var defaultBodyLabel = defaultBody == null ? endOfSwitchLabel : il.DefineLabel();
@@ -5504,12 +5521,20 @@ namespace FastExpressionCompiler
                         // Test the pool at work
                         _labelPool ??= new Label[8][];
 #endif
+                        // Let define and collect the labels that we will be using for switch table and optional outliers
                         ProvidedArrayPool<Label, ClearItemsNo<Label>> labelPool = default;
                         labelPool.Init(_labelPool, 8);
-                        var switchTableLabels = labelPool.RentExactOrNew(switchTableSize);
+                        var switchTableLabels = labelPool.RentExactOrNew(actualSwitchTableSize);
 
-                        // let's start with the continuous values from the start
-                        prevSwitchValue = firstTestValue - 1;
+                        // Define outliers label in total order with the switch table, 
+                        // min one before the table is define now and the max one after the table is defined below.
+                        Label minOutlierLabel = default;
+                        if (firstTestValueIdx == 1)
+                            minOutlierLabel = il.DefineLabel();
+
+                        // Let's start with the continuous values from the start
+                        var firstTestValue = switchValues.GetSurePresentRef(firstTestValueIdx).Value;
+                        prevSwitchValue = firstTestValue - 1; // don't forget to normalize value because 0 is reserved
                         var switchTableIndex = 0;
                         for (var v = 0; v < switchValues.Count; ++v)
                         {
@@ -5543,9 +5568,28 @@ namespace FastExpressionCompiler
                             ++switchTableIndex;
                         }
 
+                        Label maxOutlierLabel = default;
+                        if (lastTestValueIdx == switchValuesCount - 2)
+                            maxOutlierLabel = il.DefineLabel();
+
                         // Emit the switch value here only after we sure about proceeding with switch table
                         if (!TryEmit(switchValueExpr, paramExprs, il, ref closure, setup, switchValueParent, -1))
                             return false;
+
+                        // Emit the min outlier before the switch table
+                        var switchValVar = -1;
+                        if (firstTestValueIdx == 1)
+                        {
+                            // store and use the switch value over in case of the outlier, otherwise just use whatever is on stack from the prev TryEmit
+                            EmitStoreAndLoadLocalVariable(il, switchValVar = il.GetNextLocalVarIndex(switchValueType));
+                            EmitLoadConstantLong(il, switchValues.GetSurePresentRef(0).Value); // Load the outlier
+                            il.Demit(OpCodes.Beq, minOutlierLabel);
+                            EmitLoadLocalVariable(il, switchValVar); // Load the switch var on stack for the next operation
+                        }
+                        else if (lastTestValueIdx == switchValuesCount - 2) // if the max outlier is defined, store and load the switch value
+                        {
+                            EmitStoreAndLoadLocalVariable(il, switchValVar = il.GetNextLocalVarIndex(switchValueType));
+                        }
 
                         // Before emitting switch we need to normalize the switch value to start from zero
                         if (firstTestValue != 0)
@@ -5556,6 +5600,14 @@ namespace FastExpressionCompiler
 
                         // Emit the switch instruction
                         il.DemitSwitch(switchTableLabels);
+
+                        // Emit the max outlier after the switch table
+                        if (lastTestValueIdx == switchValuesCount - 2)
+                        {
+                            Debug.Assert(switchValVar != -1);
+                            EmitLoadLocalVariable(il, switchValVar);
+                            il.Demit(OpCodes.Beq, maxOutlierLabel);
+                        }
 
                         // For the values OUTSIDE of switch table range, immediately branch to the default or to the end of the switch
                         il.Demit(OpCodes.Br, defaultBodyLabel); // the label is the same as endOfSwitchLabel if no default body present
