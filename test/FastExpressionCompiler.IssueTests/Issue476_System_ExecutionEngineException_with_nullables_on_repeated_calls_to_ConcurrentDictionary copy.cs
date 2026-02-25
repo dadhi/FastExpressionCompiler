@@ -33,7 +33,7 @@ public struct Issue490_Regression_in_compiling_lambdas_with_ref_struct_parameter
         expr.PrintCSharp();
 
         var fs = expr.CompileSys();
-        fs.PrintIL();
+        fs.PrintIL(format: ILDecoder.ILFormat.AssertOpCodes);
 
         // make reader and advance to the Null token
         var reader = new Utf8JsonReader("null"u8);
@@ -45,7 +45,7 @@ public struct Issue490_Regression_in_compiling_lambdas_with_ref_struct_parameter
         t.AreEqual(default, a);
 
         var ff = expr.CompileFast(false);
-        ff.PrintIL();
+        ff.PrintIL(format: ILDecoder.ILFormat.AssertOpCodes);
 
         var b = ff(ref reader);
         t.AreEqual(default, b);

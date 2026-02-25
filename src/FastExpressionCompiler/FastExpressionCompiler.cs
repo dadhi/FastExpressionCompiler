@@ -11356,6 +11356,13 @@ namespace FastExpressionCompiler
                 type = type.GetElementType();
             }
 
+            if (type.IsEnum)
+            {
+                var result = !stripNamespace && !string.IsNullOrEmpty(type.Namespace) 
+                    ? string.Concat(type.Namespace, ".", type.Name) : type.Name;
+                return printType?.Invoke(type, result) ?? result;
+            }
+
             var buildInTypeString = type.GetPrimitiveTypeNameAliasOrNull();
             if (buildInTypeString != null)
             {
