@@ -5484,7 +5484,7 @@ namespace FastExpressionCompiler
                                 --lastTestValueIdx;
                         }
                     }
-
+                    Debug.Assert(lastTestValueIdx - firstTestValueIdx + 1 >= minSwitchTableSize, "Postcondition: switch table between outliers should be of enough size");
                     var prevSwitchValue = switchValues.GetSurePresentRef(firstTestValueIdx).Value;
                     for (var i = firstTestValueIdx + 1; i <= lastTestValueIdx; ++i)
                     {
@@ -5505,7 +5505,8 @@ namespace FastExpressionCompiler
 
                     if (valuesConditionsMet)
                     {
-                        Debug.Assert(actualSwitchTableSize >= caseCount, $"The switch table size should be at least as large as the case count, but found {actualSwitchTableSize} < {caseCount}");
+                        Debug.Assert(actualSwitchTableSize >= lastTestValueIdx - firstTestValueIdx + 1, // take outliers into account
+                            $"The switch table size should be at least as large as the case count, but found {actualSwitchTableSize} < {lastTestValueIdx - firstTestValueIdx + 1}");
 
                         var endOfSwitchLabel = il.DefineLabel();
                         var defaultBodyLabel = defaultBody == null ? endOfSwitchLabel : il.DefineLabel();
