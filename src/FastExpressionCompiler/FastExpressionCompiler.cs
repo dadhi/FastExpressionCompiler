@@ -5535,9 +5535,9 @@ namespace FastExpressionCompiler
 
                         // Let's start with the continuous values from the start
                         var firstTestValue = switchValues.GetSurePresentRef(firstTestValueIdx).Value;
-                        prevSwitchValue = firstTestValue - 1; // don't forget to normalize value because 0 is reserved
+                        prevSwitchValue = firstTestValue - 1; // init the prev value to by 1 before the first for calc purposes
                         var switchTableIndex = 0;
-                        for (var v = 0; v < switchValues.Count; ++v)
+                        for (var v = firstTestValueIdx; v <= lastTestValueIdx; ++v)
                         {
                             var currSwitchVal = switchValues.GetSurePresentRef(v);
                             var currSwitchValue = currSwitchVal.Value;
