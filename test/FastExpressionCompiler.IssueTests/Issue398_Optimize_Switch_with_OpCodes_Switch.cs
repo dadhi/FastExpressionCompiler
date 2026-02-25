@@ -421,7 +421,7 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
                 SwitchCase(
                     Constant(-3),
                     Constant(3, typeof(int)),   // mixing and messing the order of test cases
-                    Constant(-3, typeof(int))), // min outlier with gap > minGap
+                    Constant(-10, typeof(int))), // min outlier with gap > minGap
                 SwitchCase(
                     Constant(4),
                     Constant(5, typeof(int)), // messing the order of test cases
@@ -433,8 +433,8 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
                     Constant(7),
                     Constant(7, typeof(int))),
                 SwitchCase(
-                    Constant(12),
-                    Constant(12, typeof(int))) // max outlier with gap > minGap
+                    Constant(20),
+                    Constant(20, typeof(int))) // max outlier with gap > minGap
                 ),
             p);
 
@@ -446,30 +446,28 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
             OpCodes.Ldarg_1, //        at IL_0000
             OpCodes.Stloc_0, //        at IL_0001
             OpCodes.Ldloc_0, //        at IL_0002
-            OpCodes.Ldc_I4_S, // 253   at IL_0003 Loads -3 in 2 compliment
-            OpCodes.Beq, // IL_0047    at IL_0005 If input is -3 branch to 47
+            OpCodes.Ldc_I4_S, // 246   at IL_0003
+            OpCodes.Beq, // IL_0051    at IL_0005
             OpCodes.Ldloc_0, //        at IL_0010
             OpCodes.Ldc_I4_3, //       at IL_0011
             OpCodes.Sub, //            at IL_0012
-            OpCodes.Switch, // [IL_0054, IL_0060, IL_0066, IL_0072] at IL_0013
-            OpCodes.Ldloc_0, //        at IL_0034
-            OpCodes.Ldc_I4_S, // 12    at IL_0035
-            OpCodes.Beq, // IL_0078    at IL_0037
-            OpCodes.Br, // IL_0085     at IL_0042
-            OpCodes.Ldc_I4_S, // 253   at IL_0047
-            OpCodes.Br, // IL_0086     at IL_0049
-            OpCodes.Ldc_I4_3, //       at IL_0054
-            OpCodes.Br, // IL_0086     at IL_0055
-            OpCodes.Ldc_I4_4, //       at IL_0060
-            OpCodes.Br, // IL_0086     at IL_0061
-            OpCodes.Ldc_I4_5, //       at IL_0066
-            OpCodes.Br, // IL_0086     at IL_0067
-            OpCodes.Ldc_I4_6, //       at IL_0072
-            OpCodes.Br, // IL_0086     at IL_0073
-            OpCodes.Ldc_I4_S, // 12    at IL_0078
-            OpCodes.Br, // IL_0086     at IL_0080
-            OpCodes.Ldc_I4_M1, //      at IL_0085
-            OpCodes.Ret  //            at IL_0086
+            OpCodes.Switch, // [IL_0051, IL_0058, IL_0058, IL_0064, IL_0070] at IL_0013
+            OpCodes.Ldloc_0, //        at IL_0038
+            OpCodes.Ldc_I4_S, // 20    at IL_0039
+            OpCodes.Beq, // IL_0076    at IL_0041
+            OpCodes.Br, // IL_0083     at IL_0046
+            OpCodes.Ldc_I4_S, // 253   at IL_0051
+            OpCodes.Br, // IL_0084     at IL_0053
+            OpCodes.Ldc_I4_4, //       at IL_0058
+            OpCodes.Br, // IL_0084     at IL_0059
+            OpCodes.Ldc_I4_6, //       at IL_0064
+            OpCodes.Br, // IL_0084     at IL_0065
+            OpCodes.Ldc_I4_7, //       at IL_0070
+            OpCodes.Br, // IL_0084     at IL_0071
+            OpCodes.Ldc_I4_S, // 20    at IL_0076
+            OpCodes.Br, // IL_0084     at IL_0078
+            OpCodes.Ldc_I4_M1, //      at IL_0083
+            OpCodes.Ret  //            at IL_0084
         );
 
         t.IsNotNull(fs);

@@ -5527,11 +5527,25 @@ namespace FastExpressionCompiler
                         labelPool.Init(_labelPool, 8);
                         var switchTableLabels = labelPool.RentExactOrNew(actualSwitchTableSize);
 
-                        // Define outliers label in total order with the switch table, 
-                        // min one before the table is define now and the max one after the table is defined below.
-                        Label minOutlierLabel = default;
+                        // Define outliers labels
+                        Label minOutlierLabel = default, maxOutlierLabel = default;
+                        int minOutlierCaseIdx = -1, maxOutlierCaseIdx = -1;
                         if (firstTestValueIdx == 1)
+                        {
                             minOutlierLabel = il.DefineLabel();
+                            minOutlierCaseIdx = switchValues.GetSurePresentRef(0).CaseIndexPlusOne - 1;
+                        }
+                        if (lastTestValueIdx == switchValuesCount - 2)
+                        {
+                            if (minOutlierCaseIdx != -1) // check if the outliers share the same label
+                            {
+                                maxOutlierCaseIdx = switchValues.GetSurePresentRef(switchValuesCount - 1).CaseIndexPlusOne - 1;
+                                if (maxOutlierCaseIdx == minOutlierCaseIdx)
+                                    maxOutlierLabel = minOutlierLabel;
+                            }
+                            else
+                                maxOutlierLabel = il.DefineLabel();
+                        }
 
                         // Let's start with the continuous values from the start
                         var firstTestValue = switchValues.GetSurePresentRef(firstTestValueIdx).Value;
@@ -5553,8 +5567,14 @@ namespace FastExpressionCompiler
                             if (caseIndex != -1)
                             {
                                 Debug.Assert(caseIndex < sameCaseLabelIndexes.Count, "Invalid CaseIndexPlusOne in switch case values");
+                                if (caseIndex == minOutlierCaseIdx | caseIndex == maxOutlierCaseIdx)
+                                {
+                                    switchTableLabels[switchTableIndex] = caseIndex == minOutlierCaseIdx ? minOutlierLabel : maxOutlierLabel;
+                                    continue;
+                                }
+
                                 ref var labelIndexPlusOneRef = ref sameCaseLabelIndexes.GetSurePresentRef(caseIndex);
-                                if (labelIndexPlusOneRef != 0)
+                                if (labelIndexPlusOneRef > 0)
                                     switchTableLabels[switchTableIndex] = switchTableLabels[labelIndexPlusOneRef - 1];
                                 else
                                 {
@@ -5568,10 +5588,6 @@ namespace FastExpressionCompiler
                             prevSwitchValue = currSwitchVal.Value;
                             ++switchTableIndex;
                         }
-
-                        Label maxOutlierLabel = default;
-                        if (lastTestValueIdx == switchValuesCount - 2)
-                            maxOutlierLabel = il.DefineLabel();
 
                         // Emit the switch value here only after we sure about proceeding with switch table
                         if (!TryEmit(switchValueExpr, paramExprs, il, ref closure, setup, switchValueParent, -1))
@@ -5616,16 +5632,21 @@ namespace FastExpressionCompiler
 
                         for (var i = 0; i < caseCount; ++i)
                         {
-                            // First test value is enough to find the corresponding label in switch table to mark the case body
                             var cs = cases[i];
-                            var testValExpr = cs.TestValues[0];
-                            var testValue = testValExpr is ConstantExpression constExpr ? ConvertValueObjectToLong(constExpr.Value) : 0L;
-                            var labelIndex = (int)(testValue - firstTestValue);
-                            il.DmarkLabel(switchTableLabels[labelIndex]);
+                            if (i == minOutlierCaseIdx || i == maxOutlierCaseIdx)
+                                il.DmarkLabel(i == minOutlierCaseIdx ? minOutlierLabel : maxOutlierLabel);
+                            else
+                            {
+                                // First test value is enough to find the corresponding label in switch table to mark the case body
+                                // because all test values share the same case body and the same label, so the first test value will do.
+                                var testValExpr = cs.TestValues[0];
+                                var testValue = testValExpr is ConstantExpression constExpr ? ConvertValueObjectToLong(constExpr.Value) : 0L;
+                                var labelIndex = (int)(testValue - firstTestValue);
+                                il.DmarkLabel(switchTableLabels[labelIndex]);
+                            }
 
                             if (!TryEmit(cs.Body, paramExprs, il, ref closure, setup, parent))
                                 return false;
-
                             il.Demit(OpCodes.Br, endOfSwitchLabel);
                         }
 
