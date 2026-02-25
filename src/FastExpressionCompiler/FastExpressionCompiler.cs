@@ -5055,7 +5055,7 @@ namespace FastExpressionCompiler
                             // Value type special treatment to load address of value instance in order to call a method.
                             // For the parameters, we will skip the address loading because the `LastEmitIsAddress == true` for `Ldarga`,
                             // so the condition here will be skipped
-                            if (!closure.LastEmitIsAddress && !objExpr.Type.IsByRef && objExpr.Type.IsValueType)
+                            if (!closure.LastEmitIsAddress && objExpr.Type.IsValueType && !(objExpr is PE pe && pe.IsByRef))
                                 EmitStoreAndLoadLocalVariableAddress(il, objExpr.Type);
                     }
 
