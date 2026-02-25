@@ -5583,7 +5583,7 @@ namespace FastExpressionCompiler
                         {
                             // store and use the switch value over in case of the outlier, otherwise just use whatever is on stack from the prev TryEmit
                             EmitStoreAndLoadLocalVariable(il, switchValVar = il.GetNextLocalVarIndex(switchValueType));
-                            EmitLoadConstantLong(il, switchValues.GetSurePresentRef(0).Value); // Load the outlier
+                            EmitLoadConstantLong(il, switchValues.GetSurePresentRef(0).Value); // Load the min outlier
                             il.Demit(OpCodes.Beq, minOutlierLabel);
                             EmitLoadLocalVariable(il, switchValVar); // Load the switch var on stack for the next operation
                         }
@@ -5607,7 +5607,8 @@ namespace FastExpressionCompiler
                         {
                             Debug.Assert(switchValVar != -1);
                             EmitLoadLocalVariable(il, switchValVar);
-                            il.Demit(OpCodes.Beq, maxOutlierLabel);
+                            EmitLoadConstantLong(il, switchValues.GetSurePresentRef(switchValuesCount - 1).Value); // Load the max outlier
+                            il.Demit(OpCodes.Beq, maxOutlierLabel); // If switch value matches the outlier break to its label
                         }
 
                         // For the values OUTSIDE of switch table range, immediately branch to the default or to the end of the switch
@@ -5615,9 +5616,8 @@ namespace FastExpressionCompiler
 
                         for (var i = 0; i < caseCount; ++i)
                         {
-                            var cs = cases[i];
-
                             // First test value is enough to find the corresponding label in switch table to mark the case body
+                            var cs = cases[i];
                             var testValExpr = cs.TestValues[0];
                             var testValue = testValExpr is ConstantExpression constExpr ? ConvertValueObjectToLong(constExpr.Value) : 0L;
                             var labelIndex = (int)(testValue - firstTestValue);

@@ -419,23 +419,22 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
                 Constant(-1),
                 // The -3 case is handled separately before the switch table
                 SwitchCase(
-                    Constant(-3), // outsider
-                    Constant(-3, typeof(int))),
-                SwitchCase(
-                    Constant(3),
-                    Constant(3, typeof(int))),
+                    Constant(-3),
+                    Constant(3, typeof(int)),   // mixing and messing the order of test cases
+                    Constant(-3, typeof(int))), // min outlier with gap > minGap
                 SwitchCase(
                     Constant(4),
+                    Constant(5, typeof(int)), // messing the order of test cases
                     Constant(4, typeof(int))),
-                SwitchCase(
-                    Constant(5),
-                    Constant(5, typeof(int))),
                 SwitchCase(
                     Constant(6),
                     Constant(6, typeof(int))),
                 SwitchCase(
-                    Constant(12), // outsider
-                    Constant(12, typeof(int)))
+                    Constant(7),
+                    Constant(7, typeof(int))),
+                SwitchCase(
+                    Constant(12),
+                    Constant(12, typeof(int))) // max outlier with gap > minGap
                 ),
             p);
 

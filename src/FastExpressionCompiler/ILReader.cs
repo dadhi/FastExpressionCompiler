@@ -340,7 +340,7 @@ public sealed class ILReader : IEnumerable<ILInstruction>
             // 8-bit integer branch target
             OperandType.ShortInlineBrTarget => new ShortInlineBrTargetInstruction(offset, opCode, ReadSByte(ref position)),
             // 8-bit integer: 001F  ldc.i4.s, FE12  unaligned.
-            OperandType.ShortInlineI => new ShortInlineIInstruction(offset, opCode, ReadByte(ref position)),
+            OperandType.ShortInlineI => new ShortInlineIInstruction(offset, opCode, ReadByte(ref position)), // todo: @feat I need to ReadSByte if possible to properly output the negative values as-is instead of 2-compliment byte representation
             // 32-bit IEEE floating point number
             OperandType.ShortInlineR => new ShortInlineRInstruction(offset, opCode, ReadSingle(ref position)),
             // 8-bit integer containing the ordinal of a local variable or an argument
