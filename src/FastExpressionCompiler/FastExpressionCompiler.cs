@@ -5636,7 +5636,7 @@ namespace FastExpressionCompiler
                         for (var i = 0; i < caseCount; ++i)
                         {
                             var cs = cases[i];
-                            if (i == minOutlierCaseBodyIdx || i == maxOutlierCaseBodyIdx)
+                            if (i == minOutlierCaseBodyIdx | i == maxOutlierCaseBodyIdx)
                                 il.DmarkLabel(i == minOutlierCaseBodyIdx ? minOutlierLabel : maxOutlierLabel);
                             else
                             {

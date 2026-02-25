@@ -471,13 +471,54 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
         );
 
         t.IsNotNull(fs);
+        t.AreEqual(-3, fs(-10));
+        t.AreEqual(-3, fs(3));
+        t.AreEqual(4, fs(4));
         t.AreEqual(4, fs(5));
+        t.AreEqual(4, fs(4));
+        t.AreEqual(6, fs(6));
+        t.AreEqual(7, fs(7));
+        t.AreEqual(20, fs(20));
 
         var ff = expr.CompileFast();
         ff.PrintIL(format: ILFormat.AssertOpCodes);
+        ff.AssertOpCodes(
+            OpCodes.Ldarg_1, //        at IL_0000
+            OpCodes.Stloc_0, //        at IL_0001
+            OpCodes.Ldloc_0, //        at IL_0002
+            OpCodes.Ldc_I4_S, // 246   at IL_0003
+            OpCodes.Beq, // IL_0051    at IL_0005
+            OpCodes.Ldloc_0, //        at IL_0010
+            OpCodes.Ldc_I4_3, //       at IL_0011
+            OpCodes.Sub, //            at IL_0012
+            OpCodes.Switch, // [IL_0051, IL_0058, IL_0058, IL_0064, IL_0070] at IL_0013
+            OpCodes.Ldloc_0, //        at IL_0038
+            OpCodes.Ldc_I4_S, // 20    at IL_0039
+            OpCodes.Beq, // IL_0076    at IL_0041
+            OpCodes.Br, // IL_0083     at IL_0046
+            OpCodes.Ldc_I4_S, // 253   at IL_0051
+            OpCodes.Br, // IL_0084     at IL_0053
+            OpCodes.Ldc_I4_4, //       at IL_0058
+            OpCodes.Br, // IL_0084     at IL_0059
+            OpCodes.Ldc_I4_6, //       at IL_0064
+            OpCodes.Br, // IL_0084     at IL_0065
+            OpCodes.Ldc_I4_7, //       at IL_0070
+            OpCodes.Br, // IL_0084     at IL_0071
+            OpCodes.Ldc_I4_S, // 20    at IL_0076
+            OpCodes.Br, // IL_0084     at IL_0078
+            OpCodes.Ldc_I4_M1, //      at IL_0083
+            OpCodes.Ret  //            at IL_0084
+        );
 
         t.IsNotNull(ff);
-        t.AreEqual(5, ff(5));
+        t.AreEqual(-3, fs(-10));
+        t.AreEqual(-3, fs(3));
+        t.AreEqual(4, fs(4));
+        t.AreEqual(4, fs(5));
+        t.AreEqual(4, fs(4));
+        t.AreEqual(6, fs(6));
+        t.AreEqual(7, fs(7));
+        t.AreEqual(20, fs(20));
     }
 
     public void Test_switch_for_the_bytes_two_ranges_NOT_SUPPORTED_YET(TestContext t)
