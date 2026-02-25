@@ -25,18 +25,21 @@ namespace FastExpressionCompiler.UnitTests
             // new Issue441_Fails_to_pass_Constant_as_call_parameter_by_reference().Run();
             // new Issue461_InvalidProgramException_when_null_checking_type_by_ref().Run();
 
-            var t = new LightExpression.TestRun(LightExpression.TestFlags.RethrowException);
-
-            t.Run(new LightExpression.IssueTests.Issue490_Regression_in_compiling_lambdas_with_ref_struct_parameters());
-            t.Run(new LightExpression.IssueTests.Issue398_Optimize_Switch_with_OpCodes_Switch());
-            t.Run(new LightExpression.IssueTests.Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET());
-            t.Run(new LightExpression.IssueTests.Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_expressions_during_the_compilation());
-            t.Run(new LightExpression.IssueTests.Issue473_InvalidProgramException_when_using_Expression_Condition_with_converted_decimal_expression());
-            t.Run(new LightExpression.IssueTests.Issue476_System_ExecutionEngineException_with_nullables_on_repeated_calls_to_ConcurrentDictionary());
+            var lt = new LightExpression.TestRun(LightExpression.TestFlags.RethrowException);
 
 #if NET8_0_OR_GREATER
-            var ts = new TestRun();
-            ts.Run(new Issue475_Reuse_DynamicMethod_if_possible());
+            lt.Run(new LightExpression.IssueTests.Issue490_Regression_in_compiling_lambdas_with_ref_struct_parameters());
+#endif
+
+            lt.Run(new LightExpression.IssueTests.Issue398_Optimize_Switch_with_OpCodes_Switch());
+            lt.Run(new LightExpression.IssueTests.Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET());
+            lt.Run(new LightExpression.IssueTests.Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_expressions_during_the_compilation());
+            lt.Run(new LightExpression.IssueTests.Issue473_InvalidProgramException_when_using_Expression_Condition_with_converted_decimal_expression());
+            lt.Run(new LightExpression.IssueTests.Issue476_System_ExecutionEngineException_with_nullables_on_repeated_calls_to_ConcurrentDictionary());
+
+#if NET8_0_OR_GREATER
+            var st = new TestRun();
+            st.Run(new Issue475_Reuse_DynamicMethod_if_possible());
 #endif
 
             RunAllTests();

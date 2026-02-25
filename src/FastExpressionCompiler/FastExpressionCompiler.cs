@@ -77,7 +77,6 @@ namespace FastExpressionCompiler
     using System.Diagnostics.CodeAnalysis;
     using static System.Environment;
     using static CodePrinter;
-    using System.Data.Odbc;
 
     /// <summary>The flags for the compiler</summary>
     [Flags]
