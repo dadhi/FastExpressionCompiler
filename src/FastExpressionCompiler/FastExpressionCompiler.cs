@@ -5567,19 +5567,20 @@ namespace FastExpressionCompiler
                             if (caseIndex != -1)
                             {
                                 Debug.Assert(caseIndex < sameCaseLabelIndexes.Count, "Invalid CaseIndexPlusOne in switch case values");
-                                if (caseIndex == minOutlierCaseIdx | caseIndex == maxOutlierCaseIdx)
-                                {
-                                    switchTableLabels[switchTableIndex] = caseIndex == minOutlierCaseIdx ? minOutlierLabel : maxOutlierLabel;
-                                    continue;
-                                }
-
                                 ref var labelIndexPlusOneRef = ref sameCaseLabelIndexes.GetSurePresentRef(caseIndex);
                                 if (labelIndexPlusOneRef > 0)
+                                {
                                     switchTableLabels[switchTableIndex] = switchTableLabels[labelIndexPlusOneRef - 1];
+                                }
+                                else if (caseIndex == minOutlierCaseIdx | caseIndex == maxOutlierCaseIdx)
+                                {
+                                    switchTableLabels[switchTableIndex] = caseIndex == minOutlierCaseIdx ? minOutlierLabel : maxOutlierLabel;
+                                    labelIndexPlusOneRef = switchTableIndex + 1;
+                                }
                                 else
                                 {
-                                    labelIndexPlusOneRef = switchTableIndex + 1;
                                     switchTableLabels[switchTableIndex] = il.DefineLabel();
+                                    labelIndexPlusOneRef = switchTableIndex + 1;
                                 }
                             }
                             else
