@@ -471,7 +471,7 @@ public struct Issue398_Optimize_Switch_with_OpCodes_Switch : ITestX
         );
 
         t.IsNotNull(fs);
-        t.AreEqual(5, fs(5));
+        t.AreEqual(4, fs(5));
 
         var ff = expr.CompileFast();
         ff.PrintIL(format: ILFormat.AssertOpCodes);
