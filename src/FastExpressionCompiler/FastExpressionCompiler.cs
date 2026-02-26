@@ -11041,14 +11041,18 @@ namespace FastExpressionCompiler
                 else
                 {
                     sb.NewLineIndent(lineIndent);
+                    var nodeType = expr.NodeType;
+                    var conditionalOrCoalesce = nodeType == ExpressionType.Conditional | nodeType == ExpressionType.Coalesce;
+                    if (conditionalOrCoalesce && expr.Type != typeof(void)) // it requires some assignment target in block
+                        sb.Append("_ = ");
+
                     expr.ToCSharpString(sb, EnclosedIn.Block, ref named,
                         lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
 
                     // Preventing the `};` kind of situation and separating the conditional block with empty line
-                    var nodeType = expr.NodeType;
                     if (nodeType.IsBlockLikeOrConditional())
                     {
-                        sb = nodeType == ExpressionType.Conditional | nodeType == ExpressionType.Coalesce ? sb.AppendSemicolonOnce() : sb;
+                        sb = conditionalOrCoalesce ? sb.AppendSemicolonOnce() : sb;
                         sb.NewLineIndent(lineIndent);
                     }
                     else if (nodeType != ExpressionType.Label & nodeType != ExpressionType.Default)

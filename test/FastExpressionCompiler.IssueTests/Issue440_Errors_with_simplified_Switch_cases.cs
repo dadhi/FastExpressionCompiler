@@ -66,7 +66,11 @@ public class Issue440_Errors_with_simplified_Switch_cases : ITest
         );
 
         var expr = Lambda<Func<int>>(block);
-        expr.PrintCSharp(); // todo: @fixme for the empty switch - do not output the switch at all
+        expr.PrintCSharp(); // empty switch is not outputted
+        var @cs = (Func<int>)(() => //int
+        {
+            return 2;
+        });
 
         var fs = expr.CompileSys();
         fs.PrintIL();
