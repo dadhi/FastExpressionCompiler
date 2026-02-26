@@ -6344,7 +6344,7 @@ namespace FastExpressionCompiler
 #endif
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
-                testExpr = TryReduceCondition(testExpr);
+                testExpr = Tools.TryReduceCondition(testExpr);
                 var testNodeType = testExpr.NodeType;
 
                 // Detect a simplistic case when we can use `Brtrue` or `Brfalse`.
@@ -6448,49 +6448,6 @@ namespace FastExpressionCompiler
                     il.DmarkLabel(labelDone);
                 }
                 return true;
-            }
-
-            public static Expression TryReduceCondition(Expression testExpr)
-            {
-                // removing Not by turning Equal -> NotEqual, NotEqual -> Equal
-                if (testExpr.NodeType == ExpressionType.Not)
-                {
-                    // simplify the not `==` -> `!=`, `!=` -> `==`
-                    var op = TryReduceCondition(((UnaryExpression)testExpr).Operand);
-                    var nodeType = op.NodeType;
-                    if (nodeType == ExpressionType.Equal) // ensures that it is a BinaryExpression
-                    {
-                        var binOp = (BinaryExpression)op;
-                        return NotEqual(binOp.Left, binOp.Right);
-                    }
-                    else if (nodeType == ExpressionType.NotEqual) // ensures that it is a BinaryExpression
-                    {
-                        var binOp = (BinaryExpression)op;
-                        return Equal(binOp.Left, binOp.Right);
-                    }
-                }
-                else if (testExpr is BinaryExpression b)
-                {
-                    var nodeType = b.NodeType;
-                    if (nodeType == ExpressionType.OrElse | nodeType == ExpressionType.Or)
-                    {
-                        if (b.Left is ConstantExpression lc && lc.Value is bool lcb)
-                            return lcb ? lc : TryReduceCondition(b.Right);
-
-                        if (b.Right is ConstantExpression rc && rc.Value is bool rcb && !rcb)
-                            return TryReduceCondition(b.Left);
-                    }
-                    else if (nodeType == ExpressionType.AndAlso | nodeType == ExpressionType.And)
-                    {
-                        if (b.Left is ConstantExpression lc && lc.Value is bool lcb)
-                            return !lcb ? lc : TryReduceCondition(b.Right);
-
-                        if (b.Right is ConstantExpression rc && rc.Value is bool rcb && rcb)
-                            return TryReduceCondition(b.Left);
-                    }
-                }
-
-                return testExpr;
             }
 
             [MethodImpl((MethodImplOptions)256)]
@@ -7581,7 +7538,7 @@ namespace FastExpressionCompiler
                 {
                     var operandExpr = ((UnaryExpression)expr).Operand;
                     if (operandExpr.NodeType == ExpressionType.Conditional) 
-                        operandExpr = EmittingVisitor.TryReduceCondition(operandExpr);
+                        operandExpr = Tools.TryReduceCondition(operandExpr);
                     if (operandExpr is ConstantExpression co)
                         resultBool = (bool)co.Value;
                     else if (!TryInterpretBool(ref resultBool, operandExpr, operandExpr.NodeType))
@@ -7599,7 +7556,7 @@ namespace FastExpressionCompiler
                     // Interpreting the left part as the first candidate for the result
                     var left = binaryExpr.Left;
                     if (left.NodeType == ExpressionType.Conditional) 
-                        left = EmittingVisitor.TryReduceCondition(left);
+                        left = Tools.TryReduceCondition(left);
                     if (left is ConstantExpression lc)
                         resultBool = (bool)lc.Value;
                     else if (!TryInterpretBool(ref resultBool, left, left.NodeType))
@@ -7613,7 +7570,7 @@ namespace FastExpressionCompiler
                     // If the first part is not enough to decide of the expression result, go right
                     var right = binaryExpr.Right;
                     if (right.NodeType == ExpressionType.Conditional) 
-                        right = EmittingVisitor.TryReduceCondition(right);
+                        right = Tools.TryReduceCondition(right);
                     if (right is ConstantExpression rc)
                     {
                         resultBool = (bool)rc.Value;
@@ -8544,6 +8501,49 @@ namespace FastExpressionCompiler
         }
 
         public static T GetFirst<T>(this T[] source) => source.Length == 0 ? default : source[0];
+
+        public static Expression TryReduceCondition(Expression testExpr)
+        {
+            // removing Not by turning Equal -> NotEqual, NotEqual -> Equal
+            if (testExpr.NodeType == ExpressionType.Not)
+            {
+                // simplify the not `==` -> `!=`, `!=` -> `==`
+                var op = TryReduceCondition(((UnaryExpression)testExpr).Operand);
+                var nodeType = op.NodeType;
+                if (nodeType == ExpressionType.Equal) // ensures that it is a BinaryExpression
+                {
+                    var binOp = (BinaryExpression)op;
+                    return NotEqual(binOp.Left, binOp.Right);
+                }
+                else if (nodeType == ExpressionType.NotEqual) // ensures that it is a BinaryExpression
+                {
+                    var binOp = (BinaryExpression)op;
+                    return Equal(binOp.Left, binOp.Right);
+                }
+            }
+            else if (testExpr is BinaryExpression b)
+            {
+                var nodeType = b.NodeType;
+                if (nodeType == ExpressionType.OrElse | nodeType == ExpressionType.Or)
+                {
+                    if (b.Left is ConstantExpression lc && lc.Value is bool lcb)
+                        return lcb ? lc : TryReduceCondition(b.Right);
+
+                    if (b.Right is ConstantExpression rc && rc.Value is bool rcb && !rcb)
+                        return TryReduceCondition(b.Left);
+                }
+                else if (nodeType == ExpressionType.AndAlso | nodeType == ExpressionType.And)
+                {
+                    if (b.Left is ConstantExpression lc && lc.Value is bool lcb)
+                        return !lcb ? lc : TryReduceCondition(b.Right);
+
+                    if (b.Right is ConstantExpression rc && rc.Value is bool rcb && rcb)
+                        return TryReduceCondition(b.Left);
+                }
+            }
+
+            return testExpr;
+        }
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]
