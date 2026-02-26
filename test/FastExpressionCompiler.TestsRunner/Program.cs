@@ -34,7 +34,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var st = new TestRun(TestFlags.RethrowException);
 
-            // st.Run(new Issue480_CLR_detected_an_invalid_program_exception());
+            st.Run(new Issue480_CLR_detected_an_invalid_program_exception());
 
 #if NET8_0_OR_GREATER
             st.Run(new Issue487_Fix_ToCSharpString_output_for_boolean_equality_expressions());
