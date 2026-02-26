@@ -94,6 +94,14 @@ public class Issue440_Errors_with_simplified_Switch_cases : ITest
 
         var expr = Lambda<Func<int>>(block);
         expr.PrintCSharp();
+        var @cs = (Func<int>)(() => //int
+        {
+            switch (1)
+            {
+                default:
+                    return 42;
+            }
+        });
 
         var fs = expr.CompileSys();
         fs.PrintIL();

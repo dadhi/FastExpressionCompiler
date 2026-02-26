@@ -38,6 +38,14 @@ namespace FastExpressionCompiler.IssueTests
                 input, text);
 
             lambda.PrintCSharp();
+            var @cs = (Func<Variable, string, Variable>)((
+                Variable variable_0, 
+                string string_1) => //Variable
+                {
+                    _ = variable_0 ?? new Variable("default");
+                    variable_0.Name = string_1;
+                    return variable_0;
+                });
 
             var fs = lambda.CompileSys();
             fs.PrintIL();

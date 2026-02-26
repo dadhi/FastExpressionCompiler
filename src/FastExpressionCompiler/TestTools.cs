@@ -96,13 +96,11 @@ public static class TestTools
         if (!AllowPrintCS) return;
         Console.WriteLine();
         Console.WriteLine($"//{Path.GetFileNameWithoutExtension(filePath)}.{caller}");
-
         if (expr == null)
         {
             Console.WriteLine("<null expression>");
             return;
         }
-
         var sb = new StringBuilder(1024);
         sb.Append("var @cs = ");
         sb = expr.ToCSharpString(sb,
@@ -120,7 +118,14 @@ public static class TestTools
         if (!AllowPrintCS) return;
         Console.WriteLine();
         Console.WriteLine($"//{Path.GetFileNameWithoutExtension(filePath)}.{caller}");
-        var sb = expr.ToCSharpString(new StringBuilder(1024), ToCSharpPrinter.EnclosedIn.AvoidParens, stripNamespace: stripNamespace).AppendSemicolonOnce();
+        if (expr == null)
+        {
+            Console.WriteLine("<null expression>");
+            return;
+        }
+        var sb = new StringBuilder(1024);
+        sb.Append("var @cs = ");
+        sb = expr.ToCSharpString(sb, ToCSharpPrinter.EnclosedIn.AvoidParens, stripNamespace: stripNamespace).AppendSemicolonOnce();
         var str = transform(sb.ToString());
         Console.WriteLine(str);
     }
@@ -131,15 +136,32 @@ public static class TestTools
         if (!AllowPrintCS) return;
         Console.WriteLine();
         Console.WriteLine($"//{Path.GetFileNameWithoutExtension(filePath)}.{caller}");
-        var sb = expr.ToCSharpString(new StringBuilder(1024), ToCSharpPrinter.EnclosedIn.AvoidParens, notRecognizedToCode: objectToCode, stripNamespace: stripNamespace).AppendSemicolonOnce();
+        if (expr == null)
+        {
+            Console.WriteLine("<null expression>");
+            return;
+        }
+        var sb = new StringBuilder(1024);
+        sb.Append("var @cs = ");
+        sb = expr.ToCSharpString(sb, ToCSharpPrinter.EnclosedIn.AvoidParens, notRecognizedToCode: objectToCode, stripNamespace: stripNamespace).AppendSemicolonOnce();
         var str = sb.ToString();
         Console.WriteLine(str);
     }
 
-    public static void PrintCSharp(this Expression expr, ref string result, bool stripNamespace = true)
+    public static void PrintCSharp(this Expression expr, ref string result, bool stripNamespace = true,
+        [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "")
     {
         if (!AllowPrintCS) return;
-        var sb = expr.ToCSharpString(new StringBuilder(1024), ToCSharpPrinter.EnclosedIn.AvoidParens, stripNamespace: stripNamespace).AppendSemicolonOnce();
+        Console.WriteLine();
+        Console.WriteLine($"//{Path.GetFileNameWithoutExtension(filePath)}.{caller}");
+        if (expr == null)
+        {
+            result = "<null expression>";
+            Console.WriteLine(result);
+        }
+        var sb = new StringBuilder(1024);
+        sb.Append("var @cs = ");
+        sb = expr.ToCSharpString(sb, ToCSharpPrinter.EnclosedIn.AvoidParens, stripNamespace: stripNamespace).AppendSemicolonOnce();
         result = sb.ToString();
         Console.WriteLine(result);
     }

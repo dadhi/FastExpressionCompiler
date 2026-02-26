@@ -7532,7 +7532,7 @@ namespace FastExpressionCompiler
                     if (found)
                     {
                         found = true;
-                        Console.WriteLine($"Interpretation in: {type.Name}.{method.Name}");
+                        Console.WriteLine($"//Interpretation in: {type.Name}.{method.Name}");
                         break; // collect the first found thing in stack trace
                     }
                 }
@@ -7540,7 +7540,7 @@ namespace FastExpressionCompiler
                 if (!found)
                 {
                     var methodTrace = string.Join("; ", frames.Skip(3).Select(f => f.GetMethod().Name).ToArray());
-                    Console.WriteLine($"Interpretation in: not found in stack trace: {methodTrace}");
+                    Console.WriteLine($"//Interpretation in: not found in stack trace: {methodTrace}");
                 }
             }
 #endif
@@ -11047,7 +11047,10 @@ namespace FastExpressionCompiler
                     // Preventing the `};` kind of situation and separating the conditional block with empty line
                     var nodeType = expr.NodeType;
                     if (nodeType.IsBlockLikeOrConditional())
+                    {
+                        sb = nodeType == ExpressionType.Conditional | nodeType == ExpressionType.Coalesce ? sb.AppendSemicolonOnce() : sb;
                         sb.NewLineIndent(lineIndent);
+                    }
                     else if (nodeType != ExpressionType.Label & nodeType != ExpressionType.Default)
                         sb.AppendSemicolonOnce();
                 }
