@@ -3248,8 +3248,8 @@ namespace FastExpressionCompiler
                 var opExpr = expr.Operand;
                 var sourceType = opExpr.Type;
                 var targetType = expr.Type;
-                var underlyingNullableSourceType = sourceType.GetUnderlyingNullableTypeOrNull();
-                var underlyingNullableTargetType = targetType.GetUnderlyingNullableTypeOrNull();
+                var underlyingNullableSourceType = Nullable.GetUnderlyingType(sourceType);
+                var underlyingNullableTargetType = Nullable.GetUnderlyingType(targetType);
 
                 var convertMethod = expr.Method;
                 if (convertMethod == null)
@@ -3420,7 +3420,7 @@ namespace FastExpressionCompiler
                     }
                     else if (methodParamType != sourceType) // This is an unlikely case of Target(Source? source)
                     {
-                        Debug.Assert(methodParamType.GetUnderlyingNullableTypeOrNull() == sourceType, "Expecting that the parameter type is the Nullable<sourceType>");
+                        Debug.Assert(Nullable.GetUnderlyingType(methodParamType) == sourceType, "Expecting that the parameter type is the Nullable<sourceType>");
                         il.Demit(OpCodes.Newobj, methodParamType.GetNullableConstructor());
                     }
 
@@ -7550,7 +7550,7 @@ namespace FastExpressionCompiler
             public static bool TryInterpretBool(out bool result, Expression expr, CompilerFlags flags)
             {
                 var exprType = expr.Type;
-                Debug.Assert(exprType.IsPrimitive || exprType.GetUnderlyingNullableTypeOrNull()?.IsPrimitive == true,
+                Debug.Assert(exprType.IsPrimitive || Nullable.GetUnderlyingType(exprType)?.IsPrimitive == true,
                     "Can reduce the boolean for the expressions of primitive types or for nullable of primitives but found " + expr.Type);
                 result = false;
                 if ((flags & CompilerFlags.DisableInterpreter) != 0)
@@ -8175,11 +8175,6 @@ namespace FastExpressionCompiler
         [MethodImpl((MethodImplOptions)256)]
         public static bool IsNullable(this Type type) =>
             (type.IsValueType & type.IsGenericType) && type.GetGenericTypeDefinition() == typeof(Nullable<>);
-
-        [RequiresUnreferencedCode(Trimming.Message)]
-        [MethodImpl((MethodImplOptions)256)]
-        public static Type GetUnderlyingNullableTypeOrNull(this Type type) =>
-            (type.IsValueType & type.IsGenericType) && type.GetGenericTypeDefinition() == typeof(Nullable<>) ? type.GetGenericArguments()[0] : null;
 
         [RequiresUnreferencedCode(Trimming.Message)]
         [MethodImpl((MethodImplOptions)256)]
