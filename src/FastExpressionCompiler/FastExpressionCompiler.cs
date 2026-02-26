@@ -9943,16 +9943,15 @@ namespace FastExpressionCompiler
             expr.ToCSharpString(new StringBuilder(1024), stripNamespace: true).Append(';').ToString();
 
         /// <summary>Tries hard to convert the expression into the valid C# code</summary>
-        public static string ToCSharpString(this Expression expr, ObjectToCode notRecognizedToCode) =>
+        public static string ToCSharpString(this Expression expr, ObjectToCode notRecognizedToCode, EnclosedIn enclosedIn = EnclosedIn.AvoidParens) =>
             expr.ToCSharpString(new StringBuilder(1024), stripNamespace: true, notRecognizedToCode: notRecognizedToCode).Append(';').ToString();
 
         /// <summary>Tries hard to convert the expression into the valid C# code</summary>
-        public static StringBuilder ToCSharpString(this Expression e, StringBuilder sb,
+        public static StringBuilder ToCSharpString(this Expression e, StringBuilder sb, EnclosedIn enclosedIn = EnclosedIn.ParensByDefault,
             int lineIndent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4, ObjectToCode notRecognizedToCode = null)
         {
             SmallList<NamedWithIndex, Stack4<NamedWithIndex>, NoArrayPool<NamedWithIndex>> named = default;
-            return e.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
-                lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
+            return e.ToCSharpString(sb, enclosedIn, ref named, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
         }
 
         /// <summary>Indicates the expression container</summary>
