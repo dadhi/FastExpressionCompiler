@@ -3515,10 +3515,12 @@ namespace FastExpressionCompiler
                         il.Demit(isChecked ? OpCodes.Conv_Ovf_I8 : OpCodes.Conv_I8);
                         break;
                     case TypeCode.Double:
+                        if (sourceType.IsUnsigned())
+                            il.Demit(OpCodes.Conv_R_Un);
                         il.Demit(OpCodes.Conv_R8);
                         break;
                     case TypeCode.Single:
-                        if (sourceType == typeof(uint))
+                        if (sourceType.IsUnsigned())
                             il.Demit(OpCodes.Conv_R_Un);
                         il.Demit(OpCodes.Conv_R4);
                         break;
