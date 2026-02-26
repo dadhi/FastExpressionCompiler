@@ -2437,7 +2437,7 @@ namespace FastExpressionCompiler
                 CompilerFlags setup, ParentFlags parent)
 #endif
             {
-                parent |= ParentFlags.CtorCall;
+                var flags = ParentFlags.CtorCall;
                 var newExpr = (NewExpression)expr;
 #if SUPPORTS_ARGUMENT_PROVIDER
                 var argExprs = (IArgumentProvider)newExpr;
@@ -2456,7 +2456,7 @@ namespace FastExpressionCompiler
                     // see the #488 for the details.
                     if (argCount == 1)
                     {
-                        if (!TryEmit(argExprs.GetArgument(0), paramExprs, il, ref closure, setup, parent, pars[0].ParameterType.IsByRef ? 0 : -1))
+                        if (!TryEmit(argExprs.GetArgument(0), paramExprs, il, ref closure, setup, flags, pars[0].ParameterType.IsByRef ? 0 : -1))
                             return false;
                     }
                     else
@@ -2464,7 +2464,7 @@ namespace FastExpressionCompiler
                         if (!closure.ArgsContainingComplexExpression.Map.ContainsKey(newExpr))
                         {
                             for (var i = 0; i < argCount; ++i)
-                                if (!TryEmit(argExprs.GetArgument(i), paramExprs, il, ref closure, setup, parent, pars[i].ParameterType.IsByRef ? i : -1))
+                                if (!TryEmit(argExprs.GetArgument(i), paramExprs, il, ref closure, setup, flags, pars[i].ParameterType.IsByRef ? i : -1))
                                     return false;
                         }
                         else
@@ -2474,7 +2474,7 @@ namespace FastExpressionCompiler
                             {
                                 var argExpr = argExprs.GetArgument(i);
                                 var parType = pars[i].ParameterType;
-                                if (!TryEmit(argExpr, paramExprs, il, ref closure, setup, parent, parType.IsByRef ? i : -1))
+                                if (!TryEmit(argExpr, paramExprs, il, ref closure, setup, flags, parType.IsByRef ? i : -1))
                                     return false;
                                 argVars.Add(EmitStoreLocalVariable(il, parType));
                             }
@@ -2483,21 +2483,32 @@ namespace FastExpressionCompiler
                         }
                     }
                 }
+                var newType = newExpr.Type;
                 // ReSharper disable once ConditionIsAlwaysTrueOrFalse
                 if (ctor != null)
                     il.Demit(OpCodes.Newobj, ctor);
-                else if (newExpr.Type.IsValueType)
+                else if (newType.IsValueType)
                 {
-                    ctor = newExpr.Type.GetConstructor(
+                    ctor = newType.GetConstructor(
                         BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
                         default, CallingConventions.Any, Tools.Empty<Type>(), default);
                     if (ctor != null)
                         il.Demit(OpCodes.Newobj, ctor);
                     else
-                        EmitLoadLocalVariable(il, InitValueTypeVariable(il, newExpr.Type));
+                        EmitLoadLocalVariable(il, InitValueTypeVariable(il, newType));
                 }
                 else
                     return false;
+
+                closure.LastEmitIsAddress = newType.IsValueType && (parent & ParentFlags.InstanceAccess) != 0 && !parent.IgnoresResult();
+                if (closure.LastEmitIsAddress)
+                {
+                    EmitStoreAndLoadLocalVariableAddress(il, newType);
+                }
+
+                if (parent.IgnoresResult())
+                    il.Demit(OpCodes.Pop);
+
                 return true;
             }
 
@@ -5088,7 +5099,7 @@ namespace FastExpressionCompiler
                             // if the field is not used as an index, #302
                             // or if the field is not accessed from the just constructed object `new Widget().DodgyValue`, #333
                             if (((parent & ParentFlags.InstanceAccess) != 0 &
-                                (parent & (ParentFlags.IndexAccess | ParentFlags.Ctor)) == 0) && field.FieldType.IsValueType)
+                                (parent & ParentFlags.IndexAccess) == 0) && field.FieldType.IsValueType)
                             isByAddress = true;
 
                         // we don't need to duplicate the instance if we are working with the field address to save to it directly,
