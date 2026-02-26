@@ -9938,11 +9938,11 @@ namespace FastExpressionCompiler
     [RequiresUnreferencedCode(Trimming.Message)]
     public static class ToCSharpPrinter
     {
-        /// <summary>Tries hard to convert the expression into the valid C# code</summary>
-        public static string ToCSharpString(this Expression expr) =>
-            expr.ToCSharpString(new StringBuilder(1024), stripNamespace: true).Append(';').ToString();
+        /// <summary>Tries hard to convert the expression into the valid C# code. Avoids parens by default for the root expr.</summary>
+        public static string ToCSharpString(this Expression expr, EnclosedIn enclosedIn = EnclosedIn.AvoidParens) =>
+            expr.ToCSharpString(new StringBuilder(1024), enclosedIn, stripNamespace: true).Append(';').ToString();
 
-        /// <summary>Tries hard to convert the expression into the valid C# code</summary>
+        /// <summary>Tries hard to convert the expression into the valid C# code. Avoids parens by default for the root expr.</summary>
         public static string ToCSharpString(this Expression expr, ObjectToCode notRecognizedToCode, EnclosedIn enclosedIn = EnclosedIn.AvoidParens) =>
             expr.ToCSharpString(new StringBuilder(1024), stripNamespace: true, notRecognizedToCode: notRecognizedToCode).Append(';').ToString();
 
@@ -10780,20 +10780,20 @@ namespace FastExpressionCompiler
                                     false, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                             }
 
-                            sb = !avoidParens ? sb.Append('(') : sb;
+                            sb = sb.AddParenIfNeeded('(', avoidParens);
                             b.Left.ToCSharpExpression(sb, EnclosedIn.ParensByDefault, ref named,
                                 false, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
 
                             if (nodeType == ExpressionType.Equal)
                             {
                                 if (b.Right is ConstantExpression r && r.Value is bool rb && rb)
-                                    return sb;
+                                    return sb.AddParenIfNeeded(')', avoidParens);
                                 sb.Append(" == ");
                             }
                             else if (nodeType == ExpressionType.NotEqual)
                             {
                                 if (b.Right is ConstantExpression r && r.Value is bool rb)
-                                    return rb ? sb.Append(" == false") : sb;
+                                    return (rb ? sb.Append(" == false") : sb).AddParenIfNeeded(')', avoidParens);
                                 sb.Append(" != ");
                             }
                             else
@@ -10814,6 +10814,9 @@ namespace FastExpressionCompiler
             enclosedIn == EnclosedIn.LambdaBody |
             enclosedIn == EnclosedIn.Block | // statement in a block don't need the parens as well
             enclosedIn == EnclosedIn.Return;
+
+        private static StringBuilder AddParenIfNeeded(this StringBuilder sb, char paren, bool avoidParen = false) =>
+            avoidParen ? sb : sb.Append(paren);
 
         private static StringBuilder ToCSharpBlock<TNamed>(this Expression expr, StringBuilder sb, ref TNamed named,
             int lineIndent, bool stripNamespace, Func<Type, string, string> printType, int indentSpaces, ObjectToCode notRecognizedToCode)
