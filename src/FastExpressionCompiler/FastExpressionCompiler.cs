@@ -10515,6 +10515,7 @@ namespace FastExpressionCompiler
                 case ExpressionType.Switch:
                     {
                         var x = (SwitchExpression)e;
+                        if (x.Cases.Count == 0 && x.DefaultBody == null) return sb; // do not output the empty switch 
 
                         lineIndent = sb.GetRealLineIndent(lineIndent);
 
@@ -10562,14 +10563,15 @@ namespace FastExpressionCompiler
                             var defaultBody = x.DefaultBody;
                             sb.NewLineIndent(caseValueIndent).Append("default:");
                             sb.NewLineIndent(caseBodyIndent);
-                            if (enclosedIn == EnclosedIn.LambdaBody)
+                            if (enclosedIn == EnclosedIn.LambdaBody | enclosedIn == EnclosedIn.Return)
                             {
                                 if (defaultBody is BlockExpression bl)
                                     bl.BlockToCSharpString(sb, ref named,
                                         caseBodyIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode, inTheLastBlock: true);
                                 else
                                 {
-                                    var bodyIn = defaultBody.Type != typeof(void) ? EnclosedIn.Return : EnclosedIn.AvoidParens;
+                                    var bodyIn = enclosedIn == EnclosedIn.Return ? EnclosedIn.Return 
+                                        : defaultBody.Type != typeof(void) ? EnclosedIn.Return : EnclosedIn.AvoidParens;
                                     defaultBody.ToCSharpString(bodyIn == EnclosedIn.Return ? sb.Append("return ") : sb, bodyIn, ref named,
                                         caseBodyIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).AppendSemicolonOnce(defaultBody);
                                 }
@@ -11073,6 +11075,7 @@ namespace FastExpressionCompiler
 
             sb.NewLineIndent(lineIndent);
             var enclosedIn = EnclosedIn.Block;
+            var isBraceLikeBlock = lastExpr.NodeType.IsBracedBlockLike();
             if (blockResultAssignment != null)
             {
                 blockResultAssignment.Left.ToCSharpString(sb, enclosedIn, ref named,
@@ -11096,19 +11099,18 @@ namespace FastExpressionCompiler
                     !lastExpr.NodeType.IsAssignNodeType())
                 {
                     enclosedIn = EnclosedIn.Return;
-                    sb.Append("return ");
+                    if (!isBraceLikeBlock) sb.Append("return "); // for the braced block like switch, loop, etc. move the return inside the block, see #440 
                 }
             }
 
-            if (lastExpr.NodeType.IsBracedBlockLike() ||
-                lastExpr is DefaultExpression d && d.Type == typeof(void))
+            if (isBraceLikeBlock || lastExpr is DefaultExpression d && d.Type == typeof(void))
             {
-                lastExpr.ToCSharpString(sb, EnclosedIn.Block, ref named,
+                lastExpr.ToCSharpString(sb, enclosedIn, ref named,
                     lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
             }
             else if (lastExpr.NodeType == ExpressionType.Assign && ((BinaryExpression)lastExpr).Right is BlockExpression)
             {
-                lastExpr.ToCSharpString(sb, EnclosedIn.Block, ref named,
+                lastExpr.ToCSharpString(sb, enclosedIn, ref named,
                     lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                 if (enclosedIn == EnclosedIn.Return)
                     sb.AppendSemicolonOnce();

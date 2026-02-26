@@ -12,20 +12,18 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-
     public class Issue284_Invalid_Program_after_Coalesce : ITest
     {
         public int Run()
         {
-            Invalid_expresion_with_Coalesce_when_invoked_should_throw_NullRef_the_same_as_system_compiled();
+            New_test();
+            Invalid_expression_with_Coalesce_when_invoked_should_throw_NullRef_the_same_as_system_compiled();
             Invalid_Program_after_Coalesce();
             Coalesce_in_Assign_in_Block();
-            New_test();
             return 4;
         }
 
-
-        public void Invalid_expresion_with_Coalesce_when_invoked_should_throw_NullRef_the_same_as_system_compiled()
+        public void Invalid_expression_with_Coalesce_when_invoked_should_throw_NullRef_the_same_as_system_compiled()
         {
             var input = Parameter(typeof(Variable));
             var text = Parameter(typeof(string));
@@ -39,7 +37,7 @@ namespace FastExpressionCompiler.IssueTests
                     input),
                 input, text);
 
-            // var t = lambda.ToExpressionString();
+            lambda.PrintCSharp();
 
             var fs = lambda.CompileSys();
             fs.PrintIL();
@@ -51,7 +49,6 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.Throws<NullReferenceException>(() =>
                 fx(null, "a"));
         }
-
 
         public void Invalid_Program_after_Coalesce()
         {
@@ -80,7 +77,6 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual("a", v.Name);
         }
 
-
         public void Coalesce_in_Assign_in_Block()
         {
             var input = Parameter(typeof(Variable));
@@ -105,7 +101,6 @@ namespace FastExpressionCompiler.IssueTests
             var v = f(null, "a");
             Asserts.AreEqual("default", v.Name);
         }
-
 
         public void New_test()
         {
