@@ -17,10 +17,8 @@ namespace FastExpressionCompiler.UnitTests
 
             // ILGeneratorTools.DisableILGeneratorPooling = true;
             // LightExpression.ILGeneratorTools.DisableILGeneratorPooling = true;
-
-            new Issue284_Invalid_Program_after_Coalesce().Run(); // test print cs
-            new Issue440_Errors_with_simplified_Switch_cases().Run(); // test print cs
-
+            // new Issue284_Invalid_Program_after_Coalesce().Run(); // test print cs
+            // new Issue440_Errors_with_simplified_Switch_cases().Run(); // test print cs
             // new LoopTests().Run(); // test print cs
             // new Issue458_Support_TryFault().Run();
             // new Issue127_Switch_is_supported().Run();
@@ -34,7 +32,10 @@ namespace FastExpressionCompiler.UnitTests
             // new Issue461_InvalidProgramException_when_null_checking_type_by_ref().Run();
 
 
-            var st = new TestRun();
+            var st = new TestRun(TestFlags.RethrowException);
+
+            // st.Run(new Issue480_CLR_detected_an_invalid_program_exception());
+
 #if NET8_0_OR_GREATER
             st.Run(new Issue487_Fix_ToCSharpString_output_for_boolean_equality_expressions());
             st.Run(new Issue475_Reuse_DynamicMethod_if_possible());

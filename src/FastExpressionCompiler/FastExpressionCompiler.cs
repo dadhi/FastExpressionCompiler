@@ -7549,7 +7549,9 @@ namespace FastExpressionCompiler
             /// In case of exception FEC will emit the whole computation to throw exception in the invocation phase</summary>
             public static bool TryInterpretBool(out bool result, Expression expr, CompilerFlags flags)
             {
-                Debug.Assert(expr.Type.IsPrimitive);
+                var exprType = expr.Type;
+                Debug.Assert(exprType.IsPrimitive || exprType.GetUnderlyingNullableTypeOrNull()?.IsPrimitive == true,
+                    "Can reduce the boolean for the expressions of primitive types or for nullable of primitives but found " + expr.Type);
                 result = false;
                 if ((flags & CompilerFlags.DisableInterpreter) != 0)
                     return false;
