@@ -67,6 +67,7 @@ public struct Issue458_Support_TryFault : ITest
         );
 
         expr.PrintCSharp();
+
         // outputs
         var @cs = (Func<int>)(() => //int
         {
@@ -87,7 +88,6 @@ public struct Issue458_Support_TryFault : ITest
                         x = 2;
                     }
                 }
-                ;
             }
             catch (Exception)
             {

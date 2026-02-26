@@ -8226,7 +8226,7 @@ namespace FastExpressionCompiler
         };
 
         [MethodImpl((MethodImplOptions)256)]
-        internal static bool IsBlockLike(this ExpressionType nodeType) =>
+        internal static bool IsBracedBlockLike(this ExpressionType nodeType) =>
             nodeType == ExpressionType.Try |
             nodeType == ExpressionType.Switch |
             nodeType == ExpressionType.Block |
@@ -8237,12 +8237,12 @@ namespace FastExpressionCompiler
             nodeType != ExpressionType.Goto &
             nodeType != ExpressionType.Label &
             nodeType != ExpressionType.Throw &&
-            !IsBlockLike(nodeType);
+            !IsBracedBlockLike(nodeType);
 
         [MethodImpl((MethodImplOptions)256)]
         internal static bool IsBlockLikeOrConditional(this ExpressionType nodeType) =>
             nodeType == ExpressionType.Conditional | nodeType == ExpressionType.Coalesce ||
-            IsBlockLike(nodeType);
+            IsBracedBlockLike(nodeType);
 
         internal static Expression StripConvertRecursively(this Expression expr) =>
             expr is UnaryExpression convert && convert.NodeType == ExpressionType.Convert
@@ -9940,11 +9940,11 @@ namespace FastExpressionCompiler
     {
         /// <summary>Tries hard to convert the expression into the valid C# code. Avoids parens by default for the root expr.</summary>
         public static string ToCSharpString(this Expression expr, EnclosedIn enclosedIn = EnclosedIn.AvoidParens) =>
-            expr.ToCSharpString(new StringBuilder(1024), enclosedIn, stripNamespace: true).Append(';').ToString();
+            expr.ToCSharpString(new StringBuilder(1024), enclosedIn, stripNamespace: true).ToString();
 
         /// <summary>Tries hard to convert the expression into the valid C# code. Avoids parens by default for the root expr.</summary>
         public static string ToCSharpString(this Expression expr, ObjectToCode notRecognizedToCode, EnclosedIn enclosedIn = EnclosedIn.AvoidParens) =>
-            expr.ToCSharpString(new StringBuilder(1024), stripNamespace: true, notRecognizedToCode: notRecognizedToCode).Append(';').ToString();
+            expr.ToCSharpString(new StringBuilder(1024), stripNamespace: true, notRecognizedToCode: notRecognizedToCode).ToString();
 
         /// <summary>Tries hard to convert the expression into the valid C# code</summary>
         public static StringBuilder ToCSharpString(this Expression e, StringBuilder sb, EnclosedIn enclosedIn = EnclosedIn.ParensByDefault,
@@ -10421,7 +10421,7 @@ namespace FastExpressionCompiler
                                     sb.Append("return ");
                                 part.ToCSharpString(sb, EnclosedIn.AvoidParens, ref named,
                                     incIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
-                                sb.AppendSemicolonOnce();
+                                sb.AppendSemicolonOnce(part);
                             }
                         }
 
@@ -10546,13 +10546,13 @@ namespace FastExpressionCompiler
                                 {
                                     var bodyIn = caseBody.Type != typeof(void) ? EnclosedIn.Return : EnclosedIn.AvoidParens;
                                     caseBody.ToCSharpString(bodyIn == EnclosedIn.Return ? sb.Append("return ") : sb, bodyIn, ref named,
-                                        caseBodyIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).AppendSemicolonOnce();
+                                        caseBodyIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).AppendSemicolonOnce(caseBody);
                                 }
                             }
                             else
                             {
                                 caseBody.ToCSharpString(sb, enclosedIn, ref named,
-                                    caseBodyIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).AppendSemicolonOnce();
+                                    caseBodyIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).AppendSemicolonOnce(caseBody);
                                 sb.NewLineIndent(caseBodyIndent).Append("break;");
                             }
                         }
@@ -10571,13 +10571,13 @@ namespace FastExpressionCompiler
                                 {
                                     var bodyIn = defaultBody.Type != typeof(void) ? EnclosedIn.Return : EnclosedIn.AvoidParens;
                                     defaultBody.ToCSharpString(bodyIn == EnclosedIn.Return ? sb.Append("return ") : sb, bodyIn, ref named,
-                                        caseBodyIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).AppendSemicolonOnce();
+                                        caseBodyIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).AppendSemicolonOnce(defaultBody);
                                 }
                             }
                             else
                             {
                                 defaultBody.ToCSharpString(sb, enclosedIn, ref named,
-                                    caseBodyIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).AppendSemicolonOnce();
+                                    caseBodyIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).AppendSemicolonOnce(defaultBody);
                                 sb.NewLineIndent(caseBodyIndent).Append("break;");
                             }
                         }
@@ -10831,7 +10831,7 @@ namespace FastExpressionCompiler
                 sb.NewLineIndent(lineIndent + indentSpaces);
                 sb = expr?.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
                     lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode) ?? sb.Append("null");
-                sb.AppendSemicolonOnce();
+                sb.AppendSemicolonOnce(expr);
             }
             return sb.NewLineIndent(lineIndent).Append('}');
         }
@@ -10841,7 +10841,7 @@ namespace FastExpressionCompiler
             bool newLineExpr, int lineIndent, bool stripNamespace, Func<Type, string, string> printType, int indentSpaces, ObjectToCode notRecognizedToCode)
             where TNamed : struct, ISmallList<NamedWithIndex>
         {
-            if (!expr.NodeType.IsBlockLike())
+            if (!expr.NodeType.IsBracedBlockLike())
             {
                 if (!newLineExpr)
                     return expr.ToCSharpString(sb, enclosedIn, ref named,
@@ -10870,8 +10870,8 @@ namespace FastExpressionCompiler
             return sb.NewLineIndent(lineIndent).Append("})");
         }
 
-        internal static StringBuilder AppendSemicolonOnce(this StringBuilder sb) =>
-            sb[sb.Length - 1] != ';' ? sb.Append(";") : sb;
+        internal static StringBuilder AppendSemicolonOnce(this StringBuilder sb, Expression expr = null) =>
+            expr?.NodeType.IsBracedBlockLike() == true ? sb : sb[sb.Length - 1] != ';' ? sb.Append(";") : sb;
 
         internal static StringBuilder AppendNewLineOnce(this StringBuilder sb)
         {
@@ -11099,7 +11099,7 @@ namespace FastExpressionCompiler
                 }
             }
 
-            if (lastExpr.NodeType.IsBlockLike() ||
+            if (lastExpr.NodeType.IsBracedBlockLike() ||
                 lastExpr is DefaultExpression d && d.Type == typeof(void))
             {
                 lastExpr.ToCSharpString(sb, EnclosedIn.Block, ref named,

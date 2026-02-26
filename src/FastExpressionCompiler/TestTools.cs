@@ -90,7 +90,7 @@ public static class TestTools
         [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "") =>
         PrintExpression(debugInfo.Expression, completeTypeNames, caller, filePath);
 
-    public static void PrintCSharp(this Expression expr, bool completeTypeNames = false,
+    public static void PrintCSharp(this Expression expr, bool completeTypeNames = false, bool stripNamespace = true,
         [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "")
     {
         if (!AllowPrintIL) return;
@@ -107,45 +107,51 @@ public static class TestTools
         sb.Append("var @cs = ");
         sb = expr.ToCSharpString(sb,
             lineIndent: 0,
-            stripNamespace: true,
+            stripNamespace: stripNamespace,
             printType: completeTypeNames ? null : CodePrinter.PrintTypeStripOuterClasses,
             indentSpaces: 4);
-        sb.Append(';');
+        sb.AppendSemicolonOnce();
         Console.WriteLine(sb.ToString());
     }
 
-    public static void PrintCSharp(this Expression expr, Func<string, string> transform,
+    public static void PrintCSharp(this Expression expr, Func<string, string> transform, bool stripNamespace = true,
         [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "")
     {
         if (!AllowPrintCS) return;
         Console.WriteLine();
         Console.WriteLine($"//{Path.GetFileNameWithoutExtension(filePath)}.{caller}");
-        Console.WriteLine(transform(expr.ToCSharpString()));
+        var sb = expr.ToCSharpString(new StringBuilder(1024), ToCSharpPrinter.EnclosedIn.AvoidParens, stripNamespace: stripNamespace).AppendSemicolonOnce();
+        var str = transform(sb.ToString());
+        Console.WriteLine(str);
     }
 
-    public static void PrintCSharp(this Expression expr, CodePrinter.ObjectToCode objectToCode,
+    public static void PrintCSharp(this Expression expr, CodePrinter.ObjectToCode objectToCode, bool stripNamespace = true,
         [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "")
     {
         if (!AllowPrintCS) return;
 
         Console.WriteLine();
         Console.WriteLine($"//{Path.GetFileNameWithoutExtension(filePath)}.{caller}");
-        Console.WriteLine(expr.ToCSharpString(objectToCode));
+        var sb = expr.ToCSharpString(new StringBuilder(1024), ToCSharpPrinter.EnclosedIn.AvoidParens, notRecognizedToCode: objectToCode, stripNamespace: stripNamespace).AppendSemicolonOnce();
+        var str = sb.ToString();
+        Console.WriteLine(str);
     }
 
-    public static void PrintCSharp(this Expression expr, ref string result)
+    public static void PrintCSharp(this Expression expr, ref string result, bool stripNamespace = true)
     {
         if (!AllowPrintCS) return;
-        Console.WriteLine(result = expr.ToCSharpString());
+        var sb = expr.ToCSharpString(new StringBuilder(1024), ToCSharpPrinter.EnclosedIn.AvoidParens, stripNamespace: stripNamespace).AppendSemicolonOnce();
+        result = sb.ToString();
+        Console.WriteLine(result);
     }
 
     /// <summary>The method outputs the whole code of the expression including the code of the nested lambdas.
     /// In case of nested lambda represented in the expression of the Constant Delegate, 
     /// and the Delegate.Target being IDelegateDebugInfo, you may call `IDelegateDebugInfo.EnumerateNestedLambdas()`
     /// and output C# for each nested lambda</summary>
-    public static void PrintCSharp(this IDelegateDebugInfo debugInfo, bool completeTypeNames = false,
+    public static void PrintCSharp(this IDelegateDebugInfo debugInfo, bool completeTypeNames = false, bool stripNamespace = true,
         [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "") =>
-        debugInfo.Expression.PrintCSharp(completeTypeNames, caller, filePath);
+        debugInfo.Expression.PrintCSharp(completeTypeNames, stripNamespace, caller, filePath);
 
     public static void PrintIL(this Delegate dlg, [CallerMemberName] string tag = null, ILFormat format = ILFormat.Default)
     {

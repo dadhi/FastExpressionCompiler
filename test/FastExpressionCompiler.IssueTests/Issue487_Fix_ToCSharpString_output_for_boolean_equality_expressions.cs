@@ -30,20 +30,17 @@ public struct Issue487_Fix_ToCSharpString_output_for_boolean_equality_expression
     public void Original_case(TestContext t)
     {
         var input = new TestClass() { MyTestBool = true };
-        var parameter = Expression.Parameter(input.GetType(), "x");
-        var property = Expression.Property(parameter, nameof(TestClass.MyTestBool));
-        var expr = Expression.Equal(property, Expression.Constant(true));
+        var parameter = Parameter(input.GetType(), "x");
+        var property = Property(parameter, nameof(TestClass.MyTestBool));
+        var expr = Equal(property, Constant(true));
 
-        var str = expr.ToString(); // => (x.MyTestBool == True)
-        var cs = expr.ToCSharpString(); // => (x.MyTestBool;
+        var str = expr.ToString();
+        t.AreEqual("(x.MyTestBool == True)", str);
+
+        var cs = expr.ToCSharpString();
+        t.AreEqual("x.MyTestBool", cs);
 
         expr.PrintCSharp();
-
-        // var fs = expr.CompileSys();
-        // fs.PrintIL(format: ILDecoder.ILFormat.AssertOpCodes);
-
-        // var ff = expr.CompileFast(false);
-        // ff.PrintIL(format: ILDecoder.ILFormat.AssertOpCodes);
     }
 }
 #endif
