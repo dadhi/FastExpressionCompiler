@@ -11,11 +11,17 @@ namespace FastExpressionCompiler.UnitTests
     {
         public static void Main()
         {
+            // TestTools.AllowPrintCS = false;
+            // TestTools.AllowPrintIL = false;
+            // TestTools.AllowPrintExpression = false;
+
             // ILGeneratorTools.DisableILGeneratorPooling = true;
             // LightExpression.ILGeneratorTools.DisableILGeneratorPooling = true;
 
-            new Issue458_Support_TryFault().Run();
+            new Issue440_Errors_with_simplified_Switch_cases().Run(); // test print cs
 
+            // new LoopTests().Run(); // test print cs
+            // new Issue458_Support_TryFault().Run();
             // new Issue127_Switch_is_supported().Run();
             // new Issue316_in_parameter().Run();
             // new LightExpression.IssueTests.Issue347_InvalidProgramException_on_compiling_an_expression_that_returns_a_record_which_implements_IList().Run();

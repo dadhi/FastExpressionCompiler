@@ -1,6 +1,5 @@
 ﻿using System;
 
-
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.UnitTests
@@ -9,7 +8,6 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
-
     public class LoopTests : ITest
     {
         public int Run()
@@ -23,7 +21,6 @@ namespace FastExpressionCompiler.UnitTests
             Loop_with_return_value();
             return 7;
         }
-
 
         public void Loop_with_return()
         {
@@ -40,13 +37,14 @@ namespace FastExpressionCompiler.UnitTests
                 Label(returnLabel));
 
             var loopLambda = Lambda<Action>(lambdaBody);
+            loopLambda.PrintCSharp();
+
             var loopFunc = loopLambda.CompileFast(true);
 
             Asserts.IsNotNull(loopFunc);
 
             loopFunc.Invoke();
         }
-
 
         public void Loop_with_break()
         {
@@ -62,12 +60,12 @@ namespace FastExpressionCompiler.UnitTests
                     breakLabel)
                 );
             var loopFunc = loopLambda.CompileFast(true);
+            loopLambda.PrintCSharp();
 
             Asserts.IsNotNull(loopFunc);
 
             loopFunc.Invoke();
         }
-
 
         public void Loop_with_unused_break()
         {
@@ -84,13 +82,13 @@ namespace FastExpressionCompiler.UnitTests
             var lambdaBody = Block(new[] { intVariable }, loop, Label(returnLabel));
 
             var loopLambda = Lambda<Action>(lambdaBody);
+            loopLambda.PrintCSharp();
             var loopFunc = loopLambda.CompileFast(true);
 
             Asserts.IsNotNull(loopFunc);
 
             loopFunc.Invoke();
         }
-
 
         public void Loop_with_break_and_continue()
         {
@@ -115,13 +113,13 @@ namespace FastExpressionCompiler.UnitTests
             var lambdaBody = Block(new[] { intVariable1, intVariable2 }, loopWithBreakAndContinue);
 
             var loopLambda = Lambda<Action>(lambdaBody);
+            loopLambda.PrintCSharp();
             var loopFunc = loopLambda.CompileFast(true);
 
             Asserts.IsNotNull(loopFunc);
 
             loopFunc.Invoke();
         }
-
 
         public void Loop_with_unused_continue()
         {
@@ -138,13 +136,13 @@ namespace FastExpressionCompiler.UnitTests
             var lambdaBody = Block(new[] { intVariable }, loop);
 
             var loopLambda = Lambda<Action>(lambdaBody);
+            loopLambda.PrintCSharp();
             var loopFunc = loopLambda.CompileFast(true);
 
             Asserts.IsNotNull(loopFunc);
 
             loopFunc.Invoke();
         }
-
 
         public void Loop_with_unused_break_and_continue()
         {
@@ -162,13 +160,13 @@ namespace FastExpressionCompiler.UnitTests
             var lambdaBody = Block(new[] { intVariable }, loop, Label(returnLabel));
 
             var loopLambda = Lambda<Action>(lambdaBody);
+            loopLambda.PrintCSharp();
             var loopFunc = loopLambda.CompileFast(true);
 
             Asserts.IsNotNull(loopFunc);
 
             loopFunc.Invoke();
         }
-
 
         public void Loop_with_return_value()
         {
@@ -184,6 +182,7 @@ namespace FastExpressionCompiler.UnitTests
             var lambdaBody = Block(new[] { intVariable }, loop, Label(returnLabel, Constant(3)));
 
             var loopLambda = Lambda<Func<int>>(lambdaBody);
+            loopLambda.PrintCSharp();
             var loopFunc = loopLambda.CompileFast(true);
 
             Asserts.IsNotNull(loopFunc);

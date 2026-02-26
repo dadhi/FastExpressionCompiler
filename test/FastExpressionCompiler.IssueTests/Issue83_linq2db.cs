@@ -4,7 +4,6 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 
-
 #pragma warning disable IDE1006 // Naming Styles for linq2db
 #pragma warning disable 649 // Unassigned fields
 
@@ -17,7 +16,6 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-
     public sealed class Issue83_linq2db : ITest
     {
         public int Run()

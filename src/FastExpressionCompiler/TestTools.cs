@@ -38,9 +38,9 @@ public static class TestTools
     static TestTools()
     {
 #if DEBUG
-        AllowPrintIL = true;
+        // AllowPrintIL = true;
         AllowPrintCS = true;
-        AllowPrintExpression = true;
+        // AllowPrintExpression = true;
 #endif
     }
 
@@ -93,7 +93,7 @@ public static class TestTools
     public static void PrintCSharp(this Expression expr, bool completeTypeNames = false, bool stripNamespace = true,
         [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "")
     {
-        if (!AllowPrintIL) return;
+        if (!AllowPrintCS) return;
         Console.WriteLine();
         Console.WriteLine($"//{Path.GetFileNameWithoutExtension(filePath)}.{caller}");
 
@@ -129,7 +129,6 @@ public static class TestTools
         [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "")
     {
         if (!AllowPrintCS) return;
-
         Console.WriteLine();
         Console.WriteLine($"//{Path.GetFileNameWithoutExtension(filePath)}.{caller}");
         var sb = expr.ToCSharpString(new StringBuilder(1024), ToCSharpPrinter.EnclosedIn.AvoidParens, notRecognizedToCode: objectToCode, stripNamespace: stripNamespace).AppendSemicolonOnce();

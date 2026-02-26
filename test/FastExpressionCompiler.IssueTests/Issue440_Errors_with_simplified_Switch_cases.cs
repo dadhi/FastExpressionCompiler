@@ -17,9 +17,9 @@ public class Issue440_Errors_with_simplified_Switch_cases : ITest
     {
         Switch_with_single_case_without_default();
 #if !NETFRAMEWORK
+        Switch_with_no_cases_but_default();
         // Switch without cases is not supported in .NET 472
         Switch_with_no_cases();
-        Switch_with_no_cases_but_default();
         return 3;
 #endif
         return 1;
@@ -66,7 +66,7 @@ public class Issue440_Errors_with_simplified_Switch_cases : ITest
         );
 
         var expr = Lambda<Func<int>>(block);
-        expr.PrintCSharp(); // todo: @fixme for the empty switch
+        expr.PrintCSharp(); // todo: @fixme for the empty switch - do not output the switch at all
 
         var fs = expr.CompileSys();
         fs.PrintIL();

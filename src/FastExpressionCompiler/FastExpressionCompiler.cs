@@ -10813,7 +10813,8 @@ namespace FastExpressionCompiler
             enclosedIn == EnclosedIn.AvoidParens |
             enclosedIn == EnclosedIn.LambdaBody |
             enclosedIn == EnclosedIn.Block | // statement in a block don't need the parens as well
-            enclosedIn == EnclosedIn.Return;
+            enclosedIn == EnclosedIn.Return |
+            enclosedIn == EnclosedIn.IfTest;
 
         private static StringBuilder AddParenIfNeeded(this StringBuilder sb, char paren, bool avoidParen = false) =>
             avoidParen ? sb : sb.Append(paren);
