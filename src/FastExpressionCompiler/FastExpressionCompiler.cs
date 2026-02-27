@@ -8545,11 +8545,24 @@ namespace FastExpressionCompiler
             return testExpr;
         }
 
+        // Does a low-hanging fruit reductions for now @date-20260227
         public static Expression TryReduceConditional(ConditionalExpression condExpr)
         {
-            var testExpr = TryReduceConditionalTest(condExpr.Test);
+            var origTestExpr = condExpr.Test;
+            var testExpr = TryReduceConditionalTest(origTestExpr);
+            if (testExpr is BinaryExpression bi && (bi.NodeType == ExpressionType.Equal || bi.NodeType == ExpressionType.NotEqual))
+            {
+                if (bi.Left is ConstantExpression lc && bi.Right is ConstantExpression rc)
+                {
+                    var equals = Equals(lc.Value, rc.Value);
+                    return bi.NodeType == ExpressionType.Equal
+                        ? (equals ? condExpr.IfTrue : condExpr.IfFalse)
+                        : (equals ? condExpr.IfFalse: condExpr.IfTrue);
+                }
+            }
+
             return testExpr is ConstantExpression constExpr && constExpr.Value is bool testBool
-                ? testBool ? condExpr.IfTrue : condExpr.IfFalse
+                ? (testBool ? condExpr.IfTrue : condExpr.IfFalse)
                 : condExpr;
         }
     }
