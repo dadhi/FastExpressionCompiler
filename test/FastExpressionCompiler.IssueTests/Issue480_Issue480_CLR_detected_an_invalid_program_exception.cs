@@ -25,11 +25,11 @@ public struct Issue480_CLR_detected_an_invalid_program_exception : ITestX
         var expr = Lambda<Func<object>>(exp);
 
         expr.PrintCSharp();
+        // var @cs = (Func<object>)(() => //object
+        //     (object)(((true) ? (bool?)null : (bool?)null) || ((true) ? (bool?)null : (bool?)null)));
 
         var fs = expr.CompileSys();
         fs.PrintIL(format: ILDecoder.ILFormat.AssertOpCodes);
-
-        // the compiled function should return default(int), yet it calls reader.GetInt32 instead
         var a = fs();
 
         var ff = expr.CompileFast(false);

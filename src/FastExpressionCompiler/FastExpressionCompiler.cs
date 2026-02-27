@@ -10688,9 +10688,9 @@ namespace FastExpressionCompiler
                                             false, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
 
                                     sb = avoidParens ? sb.Append('(') : sb.Append("((");
-                                    sb.Append(e.Type.ToCode(stripNamespace, printType));
-                                    sb.Append(')');
-                                    sb = op.ToCSharpExpression(sb, EnclosedIn.AvoidParens, ref named,
+                                    sb.Append(e.Type.ToCode(stripNamespace, printType)).Append(')');
+                                    var opParens = op is BinaryExpression || op.NodeType.IsBlockLikeOrConditional() ? EnclosedIn.ParensByDefault : EnclosedIn.AvoidParens;
+                                    sb = op.ToCSharpExpression(sb, opParens, ref named,
                                         false, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                                     return avoidParens ? sb : sb.Append(')');
 
