@@ -28,6 +28,7 @@ namespace FastExpressionCompiler.UnitTests
             ArrayLength_compiles();
             Convert_compiles();
             ConvertChecked_compiles();
+            ConvertToFloat();
             Increment_Constant_compiles();
             Decrement_compiles();
             Increment_compiles();
@@ -52,7 +53,7 @@ namespace FastExpressionCompiler.UnitTests
             UnaryPlus_compiles();
             Unbox_compiles();
 
-            return 27;
+            return 28;
         }
 
 
@@ -93,6 +94,33 @@ namespace FastExpressionCompiler.UnitTests
             int result = expression.CompileFast(true)(1.5);
 
             Asserts.AreEqual(1, result);
+        }
+
+        public void ConvertToFloat()
+        {
+            var tests = new object[] {
+                sbyte.MinValue, sbyte.MaxValue,
+                short.MinValue, short.MaxValue,
+                int.MinValue, int.MaxValue,
+                long.MinValue, long.MaxValue,
+                uint.MaxValue, uint.MaxValue - 1,
+                ulong.MaxValue, ulong.MaxValue-10000,
+                ushort.MaxValue, byte.MaxValue,
+                char.MaxValue, 'a',
+                true, false,
+                double.MaxValue, float.MaxValue, (float)float.Epsilon,
+#if NET7_0_OR_GREATER
+                Int128.MaxValue, Int128.MinValue, UInt128.MaxValue, // these use op_Explicit, but there isn't much coverage of that anyway
+#endif
+            };
+            foreach (var constant in tests)
+            {
+                var toFloat32 = Lambda<Func<float>>(Convert(Constant(constant), typeof(float)));
+                var toFloat64 = Lambda<Func<double>>(Convert(Constant(constant), typeof(double)));
+
+                Asserts.AreEqual(toFloat32.CompileSys()(), toFloat32.CompileFast(true)(), $"(float){constant.ToCode()}");
+                Asserts.AreEqual(toFloat64.CompileSys()(), toFloat64.CompileFast(true)(), $"(double){constant.ToCode()}");
+            }
         }
 
 
