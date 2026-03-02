@@ -205,7 +205,6 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(-1, result);
         }
 
-
         public void Binary_Not_compiles()
         {
             var param = Parameter(typeof(int), "i");
@@ -217,7 +216,6 @@ namespace FastExpressionCompiler.UnitTests
 
             Asserts.AreEqual(-2, result);
         }
-
 
         public void OnesComplement_compiles()
         {

@@ -1,0 +1,281 @@
+//Interpretation in: Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET.Original_expression
+//Interpretation in: Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET.Original_expression_with_closure
+//Interpretation in: Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_expressions_during_the_compilation.Logical_expression_started_with_not
+//Interpretation in: Issue473_InvalidProgramException_when_using_Expression_Condition_with_converted_decimal_expression.Original_case
+
+### .NET Latest (Core): Running UnitTests and IssueTests in parallel...
+6    of FastExpressionCompiler.IssueTests.Issue14_String_constant_comparisons_fail
+6    of FastExpressionCompiler.LightExpression.IssueTests.Issue14_String_constant_comparisons_fail
+1    of FastExpressionCompiler.IssueTests.Issue19_Nested_CallExpression_causes_AccessViolationException
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue19_Nested_CallExpression_causes_AccessViolationException
+3    of FastExpressionCompiler.IssueTests.Issue44_Conversion_To_Nullable_Throws_Exception
+3    of FastExpressionCompiler.LightExpression.IssueTests.Issue44_Conversion_To_Nullable_Throws_Exception
+29   of FastExpressionCompiler.UnitTests.ArithmeticOperationsTests
+33   of FastExpressionCompiler.IssueTests.Issue55_CompileFast_crash_with_ref_parameter
+29   of FastExpressionCompiler.LightExpression.UnitTests.ArithmeticOperationsTests
+33   of FastExpressionCompiler.LightExpression.IssueTests.Issue55_CompileFast_crash_with_ref_parameter
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue65_Add_LightExpression_Elvis_operator_support
+17   of FastExpressionCompiler.UnitTests.AssignTests
+10   of FastExpressionCompiler.IssueTests.Issue67_Equality_comparison_with_nullables_throws_at_delegate_invoke
+4    of FastExpressionCompiler.IssueTests.Issue71_Cannot_bind_to_the_target_method_because_its_signature
+4    of FastExpressionCompiler.LightExpression.IssueTests.Issue71_Cannot_bind_to_the_target_method_because_its_signature
+4    of FastExpressionCompiler.IssueTests.Issue72_Try_CompileFast_for_MS_Extensions_ObjectMethodExecutor
+2    of FastExpressionCompiler.IssueTests.Issue76_Expression_Convert_causing_signature_or_security_transparency_is_not_compatible_exception
+2    of FastExpressionCompiler.LightExpression.IssueTests.Issue76_Expression_Convert_causing_signature_or_security_transparency_is_not_compatible_exception
+17   of FastExpressionCompiler.LightExpression.UnitTests.AssignTests
+6    of FastExpressionCompiler.IssueTests.Issue78_blocks_with_constant_return
+6    of FastExpressionCompiler.LightExpression.IssueTests.Issue78_blocks_with_constant_return
+48   of FastExpressionCompiler.UnitTests.BinaryExpressionTests
+48   of FastExpressionCompiler.LightExpression.UnitTests.BinaryExpressionTests
+18   of FastExpressionCompiler.UnitTests.BlockTests
+18   of FastExpressionCompiler.LightExpression.UnitTests.BlockTests
+51   of FastExpressionCompiler.IssueTests.Issue83_linq2db
+2    of FastExpressionCompiler.UnitTests.ClosureConstantTests
+2    of FastExpressionCompiler.LightExpression.UnitTests.ClosureConstantTests
+6    of FastExpressionCompiler.UnitTests.CoalesceTests
+6    of FastExpressionCompiler.LightExpression.UnitTests.CoalesceTests
+//Interpretation in: ConditionalOperatorsTests.Test_IfThenElse
+11   of FastExpressionCompiler.UnitTests.ConditionalOperatorsTests
+//Interpretation in: ConditionalOperatorsTests.Test_IfThenElse
+11   of FastExpressionCompiler.LightExpression.UnitTests.ConditionalOperatorsTests
+51   of FastExpressionCompiler.LightExpression.IssueTests.Issue83_linq2db
+2    of FastExpressionCompiler.IssueTests.Issue88_Constant_from_static_field
+2    of FastExpressionCompiler.LightExpression.IssueTests.Issue88_Constant_from_static_field
+3    of FastExpressionCompiler.IssueTests.Issue91_Issue95_Tests
+3    of FastExpressionCompiler.LightExpression.IssueTests.Issue91_Issue95_Tests
+1    of FastExpressionCompiler.IssueTests.Issue100_LightExpression_wrong_return_type
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue100_LightExpression_wrong_return_type
+18   of FastExpressionCompiler.UnitTests.ConstantAndConversionTests
+10   of FastExpressionCompiler.IssueTests.Issue101_Not_supported_Assign_Modes
+10   of FastExpressionCompiler.LightExpression.IssueTests.Issue101_Not_supported_Assign_Modes
+2    of FastExpressionCompiler.IssueTests.Issue102_Label_and_Goto_Expression
+2    of FastExpressionCompiler.LightExpression.IssueTests.Issue102_Label_and_Goto_Expression
+2    of FastExpressionCompiler.IssueTests.Issue106_Power_support
+2    of FastExpressionCompiler.LightExpression.IssueTests.Issue106_Power_support
+4    of FastExpressionCompiler.IssueTests.Issue107_Assign_also_works_for_variables
+4    of FastExpressionCompiler.LightExpression.IssueTests.Issue107_Assign_also_works_for_variables
+18   of FastExpressionCompiler.LightExpression.UnitTests.ConstantAndConversionTests
+6    of FastExpressionCompiler.UnitTests.ConvertOperatorsTests
+6    of FastExpressionCompiler.LightExpression.UnitTests.ConvertOperatorsTests
+16   of FastExpressionCompiler.IssueTests.Issue127_Switch_is_supported
+17   of FastExpressionCompiler.UnitTests.DefaultTests
+17   of FastExpressionCompiler.LightExpression.UnitTests.DefaultTests
+6    of FastExpressionCompiler.UnitTests.EqualityOperatorsTests
+6    of FastExpressionCompiler.LightExpression.UnitTests.EqualityOperatorsTests
+1    of FastExpressionCompiler.UnitTests.GotoTests
+1    of FastExpressionCompiler.LightExpression.UnitTests.GotoTests
+1    of FastExpressionCompiler.UnitTests.HoistedLambdaExprTests
+16   of FastExpressionCompiler.LightExpression.IssueTests.Issue127_Switch_is_supported
+1    of FastExpressionCompiler.LightExpression.UnitTests.HoistedLambdaExprTests
+2    of FastExpressionCompiler.IssueTests.Issue146_bool_par
+2    of FastExpressionCompiler.LightExpression.IssueTests.Issue146_bool_par
+1    of FastExpressionCompiler.IssueTests.Issue147_int_try_parse
+7    of FastExpressionCompiler.UnitTests.LoopTests
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue147_int_try_parse
+1    of FastExpressionCompiler.IssueTests.Issue150_New_AttemptToReadProtectedMemory
+7    of FastExpressionCompiler.LightExpression.UnitTests.LoopTests
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue150_New_AttemptToReadProtectedMemory
+1    of FastExpressionCompiler.IssueTests.Issue153_MinValueMethodNotSupported
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue153_MinValueMethodNotSupported
+1    of FastExpressionCompiler.UnitTests.ListInitTests
+2    of FastExpressionCompiler.IssueTests.Issue156_InvokeAction
+2    of FastExpressionCompiler.LightExpression.IssueTests.Issue156_InvokeAction
+1    of FastExpressionCompiler.LightExpression.UnitTests.ListInitTests
+2    of FastExpressionCompiler.UnitTests.ManuallyComposedExprTests
+2    of FastExpressionCompiler.LightExpression.UnitTests.ManuallyComposedExprTests
+19   of FastExpressionCompiler.IssueTests.Issue159_NumericConversions
+17   of FastExpressionCompiler.UnitTests.NestedLambdaTests
+19   of FastExpressionCompiler.LightExpression.IssueTests.Issue159_NumericConversions
+17   of FastExpressionCompiler.LightExpression.UnitTests.NestedLambdaTests
+5    of FastExpressionCompiler.IssueTests.Issue170_Serializer_Person_Ref
+11   of FastExpressionCompiler.UnitTests.PreConstructedClosureTests
+5    of FastExpressionCompiler.LightExpression.IssueTests.Issue170_Serializer_Person_Ref
+11   of FastExpressionCompiler.LightExpression.UnitTests.PreConstructedClosureTests
+1    of FastExpressionCompiler.IssueTests.Issue174_NullReferenceInSetter
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue174_NullReferenceInSetter
+1    of FastExpressionCompiler.IssueTests.Issue177_Cannot_compile_to_the_required_delegate_type_with_non_generic_CompileFast
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue177_Cannot_compile_to_the_required_delegate_type_with_non_generic_CompileFast
+1    of FastExpressionCompiler.IssueTests.Issue179_Add_something_like_LambdaExpression_CompileToMethod
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue179_Add_something_like_LambdaExpression_CompileToMethod
+14   of FastExpressionCompiler.IssueTests.Issue181_TryEmitIncDecAssign_InvalidCastException
+14   of FastExpressionCompiler.LightExpression.IssueTests.Issue181_TryEmitIncDecAssign_InvalidCastException
+1    of FastExpressionCompiler.IssueTests.Issue190_Inc_Dec_Assign_Parent_Block_Var
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue190_Inc_Dec_Assign_Parent_Block_Var
+19   of FastExpressionCompiler.UnitTests.TryCatchTests
+10   of FastExpressionCompiler.IssueTests.Issue196_AutoMapper_tests_are_failing_when_using_FEC
+10   of FastExpressionCompiler.LightExpression.IssueTests.Issue196_AutoMapper_tests_are_failing_when_using_FEC
+2    of FastExpressionCompiler.IssueTests.Issue197_Operation_could_destabilize_the_runtime
+2    of FastExpressionCompiler.LightExpression.IssueTests.Issue197_Operation_could_destabilize_the_runtime
+19   of FastExpressionCompiler.LightExpression.UnitTests.TryCatchTests
+2    of FastExpressionCompiler.IssueTests.Issue204_Operation_could_destabilize_the_runtime__AutoMapper
+3    of FastExpressionCompiler.UnitTests.TypeBinaryExpressionTests
+3    of FastExpressionCompiler.LightExpression.UnitTests.TypeBinaryExpressionTests
+2    of FastExpressionCompiler.LightExpression.IssueTests.Issue204_Operation_could_destabilize_the_runtime__AutoMapper
+1    of FastExpressionCompiler.IssueTests.Issue209_AutoMapper_Operation_could_destabilize_the_runtime
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue209_AutoMapper_Operation_could_destabilize_the_runtime
+7    of FastExpressionCompiler.IssueTests.Issue243_Pass_Parameter_By_Ref_is_supported
+7    of FastExpressionCompiler.LightExpression.IssueTests.Issue243_Pass_Parameter_By_Ref_is_supported
+27   of FastExpressionCompiler.UnitTests.UnaryExpressionTests
+27   of FastExpressionCompiler.LightExpression.UnitTests.UnaryExpressionTests
+5    of FastExpressionCompiler.IssueTests.Nested_lambdas_assigned_to_vars
+8    of FastExpressionCompiler.UnitTests.ValueTypeTests
+5    of FastExpressionCompiler.LightExpression.IssueTests.Nested_lambdas_assigned_to_vars
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue231_ExpressionNew_does_not_work_with_struct
+8    of FastExpressionCompiler.LightExpression.UnitTests.ValueTypeTests
+2    of FastExpressionCompiler.IssueTests.Issue252_Bad_code_gen_for_comparison_of_nullable_type_to_null
+2    of FastExpressionCompiler.LightExpression.IssueTests.Issue252_Bad_code_gen_for_comparison_of_nullable_type_to_null
+4    of FastExpressionCompiler.IssueTests.Issue248_Calling_method_with_in_out_parameters_in_expression_lead_to_NullReferenceException_on_calling_site
+4    of FastExpressionCompiler.LightExpression.IssueTests.Issue248_Calling_method_with_in_out_parameters_in_expression_lead_to_NullReferenceException_on_calling_site
+3    of FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest
+1    of FastExpressionCompiler.IssueTests.Issue251_Bad_code_gen_for_byRef_parameters
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue251_Bad_code_gen_for_byRef_parameters
+11   of FastExpressionCompiler.LightExpression.UnitTests.LightExpressionTests
+3    of FastExpressionCompiler.UnitTests.ToCSharpStringTests
+3    of FastExpressionCompiler.LightExpression.UnitTests.ToCSharpStringTests
+
+UnitTests are passing in 351 ms.
+8    of FastExpressionCompiler.IssueTests.Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown
+8    of FastExpressionCompiler.LightExpression.IssueTests.Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown
+12   of FastExpressionCompiler.IssueTests.Issue261_Loop_wih_conditions_fails
+20   of FastExpressionCompiler.LightExpression.IssueTests.Issue261_Loop_wih_conditions_fails
+17   of FastExpressionCompiler.IssueTests.Issue274_Failing_Expressions_in_Linq2DB
+17   of FastExpressionCompiler.LightExpression.IssueTests.Issue274_Failing_Expressions_in_Linq2DB
+1    of FastExpressionCompiler.IssueTests.Issue281_Index_Out_of_Range
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue281_Index_Out_of_Range
+4    of FastExpressionCompiler.IssueTests.Issue284_Invalid_Program_after_Coalesce
+4    of FastExpressionCompiler.LightExpression.IssueTests.Issue284_Invalid_Program_after_Coalesce
+1    of FastExpressionCompiler.IssueTests.Issue293_Recursive_Methods
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue293_Recursive_Methods
+11   of FastExpressionCompiler.IssueTests.Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3
+11   of FastExpressionCompiler.LightExpression.IssueTests.Issue300_Bad_label_content_in_ILGenerator_in_the_Mapster_benchmark_with_FEC_V3
+1    of FastExpressionCompiler.IssueTests.Issue302_Error_compiling_expression_with_array_access
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue302_Error_compiling_expression_with_array_access
+2    of FastExpressionCompiler.IssueTests.Issue305_CompileFast_generates_incorrect_code_with_arrays_and_printing
+2    of FastExpressionCompiler.LightExpression.IssueTests.Issue305_CompileFast_generates_incorrect_code_with_arrays_and_printing
+1    of FastExpressionCompiler.IssueTests.Issue307_Switch_with_fall_through_throws_InvalidProgramException
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue307_Switch_with_fall_through_throws_InvalidProgramException
+1    of FastExpressionCompiler.IssueTests.Issue308_Wrong_delegate_type_returned_with_closure
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue308_Wrong_delegate_type_returned_with_closure
+1    of FastExpressionCompiler.IssueTests.Issue309_InvalidProgramException_with_MakeBinary_liftToNull_true
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue309_InvalidProgramException_with_MakeBinary_liftToNull_true
+2    of FastExpressionCompiler.IssueTests.Issue310_InvalidProgramException_ignored_nullable
+2    of FastExpressionCompiler.LightExpression.IssueTests.Issue310_InvalidProgramException_ignored_nullable
+4    of FastExpressionCompiler.IssueTests.Issue314_LiftToNull_ToExpressionString
+4    of FastExpressionCompiler.LightExpression.IssueTests.Issue314_LiftToNull_ToExpressionString
+3    of FastExpressionCompiler.IssueTests.Issue316_in_parameter
+4    of FastExpressionCompiler.LightExpression.IssueTests.Issue316_in_parameter
+//Interpretation in: Issue320_Bad_label_content_in_ILGenerator_when_creating_through_DynamicModule.Test_instance_call
+//Interpretation in: Issue320_Bad_label_content_in_ILGenerator_when_creating_through_DynamicModule.GenerateAssemblyManually
+2    of FastExpressionCompiler.IssueTests.Issue320_Bad_label_content_in_ILGenerator_when_creating_through_DynamicModule
+//Interpretation in: Issue320_Bad_label_content_in_ILGenerator_when_creating_through_DynamicModule.Test_instance_call
+//Interpretation in: Issue320_Bad_label_content_in_ILGenerator_when_creating_through_DynamicModule.GenerateAssemblyManually
+2    of FastExpressionCompiler.LightExpression.IssueTests.Issue320_Bad_label_content_in_ILGenerator_when_creating_through_DynamicModule
+1    of FastExpressionCompiler.IssueTests.Issue321_Call_with_out_parameter_to_field_type_that_is_not_value_type_fails
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue321_Call_with_out_parameter_to_field_type_that_is_not_value_type_fails
+1    of FastExpressionCompiler.IssueTests.Issue322_NullableIntArgumentWithDefaultIntValue
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue322_NullableIntArgumentWithDefaultIntValue
+1    of FastExpressionCompiler.IssueTests.Issue333_AccessViolationException_and_other_suspicious_behavior_on_invoking_result_of_CompileFast
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue333_AccessViolationException_and_other_suspicious_behavior_on_invoking_result_of_CompileFast
+params: ((0, Equal, 0, True))
+params: ((0, NotEqual, 0, False))
+params: ((1.12, Greater, 1.11, True))
+params: ((1.12, GreaterOrEqual, 1.11, True))
+params: ((1.12, LessOrEqual, 1.11, False))
+params: ((1.101, Less, 1.11, True))
+params: ((1.101, LessOrEqual, 1.11, True))
+params: ((1.101, Greater, 1.11, False))
+params: ((1.142, NotEqual, , True))
+params: ((1.142, Equal, , False))
+params: ((, NotEqual, 1.366, True))
+params: ((, Equal, 1.366, False))
+params: ((, Equal, , True))
+params: ((, NotEqual, , False))
+37   of FastExpressionCompiler.IssueTests.Issue341_Equality_comparison_between_nullable_and_null_inside_Any_produces_incorrect_compiled_expression
+params: ((0, Equal, 0, True))
+params: ((0, NotEqual, 0, False))
+params: ((1.12, Greater, 1.11, True))
+params: ((1.12, GreaterOrEqual, 1.11, True))
+params: ((1.12, LessOrEqual, 1.11, False))
+params: ((1.101, Less, 1.11, True))
+params: ((1.101, LessOrEqual, 1.11, True))
+params: ((1.101, Greater, 1.11, False))
+params: ((1.142, NotEqual, , True))
+params: ((1.142, Equal, , False))
+params: ((, NotEqual, 1.366, True))
+params: ((, Equal, 1.366, False))
+params: ((, Equal, , True))
+params: ((, NotEqual, , False))
+37   of FastExpressionCompiler.LightExpression.IssueTests.Issue341_Equality_comparison_between_nullable_and_null_inside_Any_produces_incorrect_compiled_expression
+10   of FastExpressionCompiler.LightExpression.IssueTests.Issue346_Is_it_possible_to_implement_ref_local_variables
+6    of FastExpressionCompiler.IssueTests.Issue347_InvalidProgramException_on_compiling_an_expression_that_returns_a_record_which_implements_IList
+6    of FastExpressionCompiler.LightExpression.IssueTests.Issue347_InvalidProgramException_on_compiling_an_expression_that_returns_a_record_which_implements_IList
+40   of FastExpressionCompiler.IssueTests.Issue352_xxxAssign_does_not_work_with_MemberAccess
+40   of FastExpressionCompiler.LightExpression.IssueTests.Issue352_xxxAssign_does_not_work_with_MemberAccess
+6    of FastExpressionCompiler.IssueTests.Issue353_NullReferenceException_when_calling_CompileFast_results
+6    of FastExpressionCompiler.LightExpression.IssueTests.Issue353_NullReferenceException_when_calling_CompileFast_results
+1    of FastExpressionCompiler.IssueTests.Issue355_Error_with_converting_to_from_signed_unsigned_integers
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue355_Error_with_converting_to_from_signed_unsigned_integers
+1    of FastExpressionCompiler.IssueTests.Issue357_Invalid_program_exception
+4    of FastExpressionCompiler.LightExpression.IssueTests.Issue363_ActionFunc16Generics
+2    of FastExpressionCompiler.LightExpression.IssueTests.Issue365_Working_with_ref_return_values
+1    of FastExpressionCompiler.IssueTests.Issue366_FEC334_gives_incorrect_results_in_some_linq_operations
+1    of FastExpressionCompiler.IssueTests.Issue374_CompileFast_does_not_work_with_HasFlag
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue374_CompileFast_does_not_work_with_HasFlag
+3    of FastExpressionCompiler.IssueTests.Issue380_Comparisons_with_nullable_types
+3    of FastExpressionCompiler.LightExpression.IssueTests.Issue380_Comparisons_with_nullable_types
+5    of FastExpressionCompiler.IssueTests.Issue386_Value_can_not_be_null_in_Nullable_convert
+5    of FastExpressionCompiler.LightExpression.IssueTests.Issue386_Value_can_not_be_null_in_Nullable_convert
+11   of FastExpressionCompiler.IssueTests.Issue390_405_406_Mapster_tests
+1    of FastExpressionCompiler.IssueTests.Issue400_Fix_the_direct_assignment_of_Try_to_Member
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue400_Fix_the_direct_assignment_of_Try_to_Member
+1    of FastExpressionCompiler.IssueTests.Issue404_String_plus_parameter_causes_Exception_in_target_invocation
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue404_String_plus_parameter_causes_Exception_in_target_invocation
+1    of FastExpressionCompiler.IssueTests.Issue408_Dictionary_mapping_failing_when_the_InvocationExpression_inlining_is_involved
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue408_Dictionary_mapping_failing_when_the_InvocationExpression_inlining_is_involved
+5    of FastExpressionCompiler.IssueTests.Issue414_Incorrect_il_when_passing_by_ref_value
+8    of FastExpressionCompiler.LightExpression.IssueTests.Issue414_Incorrect_il_when_passing_by_ref_value
+7    of FastExpressionCompiler.IssueTests.Issue418_Wrong_output_when_comparing_NaN_value
+7    of FastExpressionCompiler.LightExpression.IssueTests.Issue418_Wrong_output_when_comparing_NaN_value
+5    of FastExpressionCompiler.IssueTests.Issue419_The_JIT_compiler_encountered_invalid_IL_code_or_an_internal_limitation
+5    of FastExpressionCompiler.LightExpression.IssueTests.Issue419_The_JIT_compiler_encountered_invalid_IL_code_or_an_internal_limitation
+1    of FastExpressionCompiler.IssueTests.Issue420_Nullable_DateTime_comparison_differs_from_Expression_Compile
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue420_Nullable_DateTime_comparison_differs_from_Expression_Compile
+2    of FastExpressionCompiler.IssueTests.Issue421_Date_difference_is_giving_wrong_negative_value
+4    of FastExpressionCompiler.IssueTests.Issue422_InvalidProgramException_when_having_TryCatch_Default_in_Catch
+4    of FastExpressionCompiler.LightExpression.IssueTests.Issue422_InvalidProgramException_when_having_TryCatch_Default_in_Catch
+1    of FastExpressionCompiler.IssueTests.Issue423_Converting_a_uint_to_a_float_gives_the_wrong_result
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue423_Converting_a_uint_to_a_float_gives_the_wrong_result
+3    of FastExpressionCompiler.IssueTests.Issue426_Directly_passing_a_method_result_to_another_method_by_ref_fails_with_InvalidProgramException
+3    of FastExpressionCompiler.LightExpression.IssueTests.Issue426_Directly_passing_a_method_result_to_another_method_by_ref_fails_with_InvalidProgramException
+2    of FastExpressionCompiler.IssueTests.Issue428_Expression_Switch_without_a_default_case_incorrectly_calls_first_case_for_unmatched_values
+2    of FastExpressionCompiler.LightExpression.IssueTests.Issue428_Expression_Switch_without_a_default_case_incorrectly_calls_first_case_for_unmatched_values
+1    of FastExpressionCompiler.IssueTests.Issue430_TryCatch_Bad_label_content_in_ILGenerator
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue430_TryCatch_Bad_label_content_in_ILGenerator
+8    of FastExpressionCompiler.IssueTests.Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_values
+8    of FastExpressionCompiler.LightExpression.IssueTests.Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_values
+1    of FastExpressionCompiler.IssueTests.Issue439_Support_unused_Field_access_in_Block
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue439_Support_unused_Field_access_in_Block
+3    of FastExpressionCompiler.IssueTests.Issue440_Errors_with_simplified_Switch_cases
+3    of FastExpressionCompiler.LightExpression.IssueTests.Issue440_Errors_with_simplified_Switch_cases
+3    of FastExpressionCompiler.IssueTests.Issue441_Fails_to_pass_Constant_as_call_parameter_by_reference
+3    of FastExpressionCompiler.LightExpression.IssueTests.Issue441_Fails_to_pass_Constant_as_call_parameter_by_reference
+2    of FastExpressionCompiler.IssueTests.Issue442_TryCatch_and_the_Goto_outside_problems
+2    of FastExpressionCompiler.LightExpression.IssueTests.Issue442_TryCatch_and_the_Goto_outside_problems
+3    of FastExpressionCompiler.IssueTests.Issue443_Nested_Calls_with_lambda_parameters
+3    of FastExpressionCompiler.LightExpression.IssueTests.Issue443_Nested_Calls_with_lambda_parameters
+2    of FastExpressionCompiler.IssueTests.Issue449_MemberInit_produces_InvalidProgram
+2    of FastExpressionCompiler.LightExpression.IssueTests.Issue449_MemberInit_produces_InvalidProgram
+15   of FastExpressionCompiler.IssueTests.Issue451_Operator_implicit_explicit_produces_InvalidProgram
+15   of FastExpressionCompiler.LightExpression.IssueTests.Issue451_Operator_implicit_explicit_produces_InvalidProgram
+1    of FastExpressionCompiler.IssueTests.Issue455_TypeAs_should_return_null
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue455_TypeAs_should_return_null
+2    of FastExpressionCompiler.IssueTests.Issue458_Support_TryFault
+2    of FastExpressionCompiler.LightExpression.IssueTests.Issue458_Support_TryFault
+1    of FastExpressionCompiler.IssueTests.Issue460_ArgumentException_when_converting_from_object_to_type_with_explicit_operator
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue460_ArgumentException_when_converting_from_object_to_type_with_explicit_operator
+5    of FastExpressionCompiler.IssueTests.Issue461_InvalidProgramException_when_null_checking_type_by_ref
+5    of FastExpressionCompiler.LightExpression.IssueTests.Issue461_InvalidProgramException_when_null_checking_type_by_ref
+
+IssueTests are passing in 943 ms.
+
+ALL 1589 tests are passing in 943 ms.

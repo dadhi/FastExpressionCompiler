@@ -14,6 +14,7 @@ public class ConstantAndConversionTests : ITest
 {
     public int Run()
     {
+        Expressions_with_max_uint_constant();
 #if LIGHT_EXPRESSION
         Issue457_The_constant_changing_in_a_loop_without_recompilation();
         Issue464_Bound_closure_constants_can_be_modified_afterwards();
@@ -29,7 +30,6 @@ public class ConstantAndConversionTests : ITest
         Expressions_with_DateTime_and_long_constant();
         Expressions_with_DateTime_and_ulong_constant();
         Expressions_with_DateTime_and_uint_constant();
-        Expressions_with_max_uint_constant();
         Expressions_with_DateTime_and_double_constant();
         Expressions_with_DateTime_and_float_constant();
         Expressions_with_char_and_int();

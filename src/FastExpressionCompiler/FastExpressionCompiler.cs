@@ -516,13 +516,9 @@ namespace FastExpressionCompiler
         {
             var closureAndParamTypes = RentPooledOrNewClosureTypeToParamTypes(paramExprs);
 #endif
-            if (returnType != typeof(void) && !returnType.IsAssignableFrom(bodyExpr.Type)) {
-                return (flags & CompilerFlags.ThrowOnNotSupportedExpression) == 0 ? null
-                    : NotSupportedCase<object>(Result.NotSupported_NoCoalesceBetweenLambdaReturnTypeAndBodyType);
-            }
-
             // Try to avoid compilation altogether for Func<bool> delegates via Interpreter, see #468
-            if (closureAndParamTypes.Length == 1 & returnType == typeof(bool) && bodyExpr.Type == typeof(bool)
+            if (closureAndParamTypes.Length == 1 & returnType == typeof(bool) 
+                && !bodyExpr.Type.IsPrimitive // todo: @feat nullable is not supported yet
                 && Interpreter.IsCandidateForInterpretation(bodyExpr)
                 && Interpreter.TryInterpretBool(out var result, bodyExpr, flags))
                 return result ? Interpreter.TrueFunc : Interpreter.FalseFunc;
@@ -2213,10 +2209,9 @@ namespace FastExpressionCompiler
                         case ExpressionType.AndAlso:
                         case ExpressionType.OrElse:
                             {
-                                if (exprType != typeof(bool))
+                                if (!exprType.IsPrimitive) // todo: @feat
                                 {
-                                    // todo: @feat
-                                    Debug.WriteLine("Unsupported: Nullable<b> in || or && (invalid C# but valid expression) is not supported yet, see #480: " + expr);
+                                    Debug.WriteLine("Unsupported: Nullable<bool> in || or && (is invalid C# but valid expression) is not supported yet, see #480: " + expr);
                                     return false;
                                 }
                                 if (Interpreter.TryInterpretBool(out var resultBool, expr, setup))
@@ -2229,10 +2224,9 @@ namespace FastExpressionCompiler
                             }
                         case ExpressionType.Not:
                             {
-                                if (exprType != typeof(bool))
+                                if (!exprType.IsPrimitive) // todo: @feat
                                 {
-                                    // todo: @feat
-                                    Debug.WriteLine("Unsupported: Nullable<b> in || or && (invalid C# but valid expression) is not supported yet, see #480: " + expr);
+                                    Debug.WriteLine("Unsupported: Nullable<bool> in !x (is invalid C# but valid expression) is not supported yet, see #480: " + expr);
                                     return false;
                                 }
 
