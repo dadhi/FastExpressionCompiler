@@ -38,9 +38,9 @@ public static class TestTools
     static TestTools()
     {
 #if DEBUG
-        AllowPrintIL = true;
-        AllowPrintCS = true;
-        AllowPrintExpression = true;
+        // AllowPrintIL = true;
+        // AllowPrintCS = true;
+        // AllowPrintExpression = true;
 #endif
     }
 

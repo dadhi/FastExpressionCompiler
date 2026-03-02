@@ -6,6 +6,7 @@ using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.IssueTests;
 #else
 using System.Linq.Expressions;
+using Mapster;
 using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
@@ -14,6 +15,7 @@ public struct Issue480_CLR_detected_an_invalid_program_exception : ITestX
 {
     public void Run(TestRun t)
     {
+        Modified_case(t);
         Original_case(t);
     }
 
@@ -31,9 +33,34 @@ public struct Issue480_CLR_detected_an_invalid_program_exception : ITestX
         var fs = expr.CompileSys();
         fs.PrintIL(format: ILDecoder.ILFormat.AssertOpCodes);
         var a = fs();
+        t.IsNull(a);
 
-        var ff = expr.CompileFast(false);
+        var ff = expr.CompileFast();
         ff.PrintIL(format: ILDecoder.ILFormat.AssertOpCodes);
         var b = ff();
+        t.IsNull(b);
+    }
+
+    public void Modified_case(TestContext t)
+    {
+        var p1 = Condition(Equal(Constant(true), Constant(true)), Constant(null, typeof(bool?)), Constant(null, typeof(bool?)));
+        var p2 = Condition(Equal(Constant(true), Constant(true)), Constant(true, // adding true to see if left null is correspond to false
+            typeof(bool?)), Constant(null, typeof(bool?)));
+        var exp = Convert(OrElse(p1, p2), typeof(object));
+        var expr = Lambda<Func<object>>(exp);
+
+        expr.PrintCSharp();
+        // var @cs = (Func<object>)(() => //object
+        //     (object)(((true) ? (bool?)null : (bool?)null) || ((true) ? (bool?)null : (bool?)null)));
+
+        var fs = expr.CompileSys();
+        fs.PrintIL(format: ILDecoder.ILFormat.AssertOpCodes);
+        var a = fs();
+        t.IsTrue((bool)a);
+
+        var ff = expr.CompileFast();
+        ff.PrintIL(format: ILDecoder.ILFormat.AssertOpCodes);
+        var b = ff();
+        t.IsTrue((bool)b);
     }
 }

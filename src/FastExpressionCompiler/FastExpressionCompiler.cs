@@ -516,6 +516,11 @@ namespace FastExpressionCompiler
         {
             var closureAndParamTypes = RentPooledOrNewClosureTypeToParamTypes(paramExprs);
 #endif
+            if (returnType != typeof(void) && !returnType.IsAssignableFrom(bodyExpr.Type)) {
+                return (flags & CompilerFlags.ThrowOnNotSupportedExpression) == 0 ? null
+                    : NotSupportedCase<object>(Result.NotSupported_NoCoalesceBetweenLambdaReturnTypeAndBodyType);
+            }
+
             // Try to avoid compilation altogether for Func<bool> delegates via Interpreter, see #468
             if (returnType == typeof(bool) & closureAndParamTypes.Length == 1
                 && Interpreter.IsCandidateForInterpretation(bodyExpr)
@@ -1216,7 +1221,9 @@ namespace FastExpressionCompiler
             /// <summary>TypeEqual is not supported </summary>
             NotSupported_TypeEqual = 1009,
             /// <summary>`when` in catch is not supported yet</summary>
-            NotSupported_ExceptionCatchFilter = 1010
+            NotSupported_ExceptionCatchFilter = 1010,
+            /// <summary>Example: lambda return type requires bool, but body has an object type</summary>
+            NotSupported_NoCoalesceBetweenLambdaReturnTypeAndBodyType = 1011
         }
 
         /// <summary>Return value is ignored</summary>
