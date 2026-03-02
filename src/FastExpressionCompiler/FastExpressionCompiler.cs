@@ -2514,11 +2514,10 @@ namespace FastExpressionCompiler
                 else
                     return false;
 
-                closure.LastEmitIsAddress = newType.IsValueType && (parent & ParentFlags.InstanceAccess) != 0 && !parent.IgnoresResult();
+                closure.LastEmitIsAddress =
+                    (parent & ParentFlags.InstanceAccess) != 0 & (parent & ParentFlags.IgnoreResult) == 0 && newType.IsValueType;
                 if (closure.LastEmitIsAddress)
-                {
                     EmitStoreAndLoadLocalVariableAddress(il, newType);
-                }
 
                 if (parent.IgnoresResult())
                     il.Demit(OpCodes.Pop);

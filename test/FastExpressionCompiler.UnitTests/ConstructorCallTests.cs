@@ -61,8 +61,8 @@ public class ConstructorCallTests : ITest
         ).CompileFast(true);
         Asserts.AreEqual(42, ((TestStruct)fBox()).A);
 
-        var fInterface = Lambda<Func<ITestInterfacce>>(
-            Convert(New(TestStruct.Ctor, Constant(43), Constant("a")), typeof(ITestInterfacce))
+        var fInterface = Lambda<Func<ITestInterface>>(
+            Convert(New(TestStruct.Ctor, Constant(43), Constant("a")), typeof(ITestInterface))
         ).CompileFast(true);
         Asserts.AreEqual(43, fInterface().PropertyA);
 
@@ -377,9 +377,9 @@ public class ConstructorCallTests : ITest
         Asserts.AreEqual(42, fastCompiled());
     }
 
-    public interface ITestInterfacce { int PropertyA { get; } }
+    public interface ITestInterface { int PropertyA { get; } }
 
-    public struct TestStruct : ITestInterfacce
+    public struct TestStruct : ITestInterface
     {
         public static readonly ConstructorInfo Ctor = typeof(TestStruct).GetConstructors()[0];
         public int A;
@@ -406,7 +406,7 @@ public class ConstructorCallTests : ITest
         public static implicit operator int(TestStruct s) => s.A;
     }
 
-    public class TestClass : ITestInterfacce
+    public class TestClass : ITestInterface
     {
         public static readonly ConstructorInfo Ctor = typeof(TestClass).GetConstructors()[0];
         public int A;
