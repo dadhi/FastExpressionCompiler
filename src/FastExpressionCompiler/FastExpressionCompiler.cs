@@ -6359,14 +6359,6 @@ namespace FastExpressionCompiler
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
                 testExpr = Tools.TryReduceConditionalTest(testExpr);
-                if (testExpr is ConstantExpression constTest && constTest.Value is bool testBool)
-                {
-#if DEBUG
-                    Console.WriteLine("Reduced Conditional in Emit");
-#endif
-                    return TryEmit(testBool ? ifTrueExpr : ifFalseExpr, paramExprs, il, ref closure, setup, parent);
-                }
-
                 var testNodeType = testExpr.NodeType;
 
                 // Detect a simplistic case when we can use `Brtrue` or `Brfalse`.
@@ -7582,7 +7574,7 @@ namespace FastExpressionCompiler
                         left = Tools.TryReduceConditional((ConditionalExpression)left);
                     if (left is ConstantExpression lc)
                         resultBool = (bool)lc.Value;
-                    else if (!TryInterpretBool(ref resultBool, left, left.NodeType))
+                    else if (IsCandidateForInterpretation(left) && !TryInterpretBool(ref resultBool, left, left.NodeType))
                         return false;
 
                     // Short circuit the interpretation, because this is an actual logic of these logical operations
@@ -7599,7 +7591,7 @@ namespace FastExpressionCompiler
                         resultBool = (bool)rc.Value;
                         return true;
                     }
-                    return TryInterpretBool(ref resultBool, right, right.NodeType);
+                    return IsCandidateForInterpretation(right) && TryInterpretBool(ref resultBool, right, right.NodeType);
                 }
 
                 if (nodeType == ExpressionType.Equal |
@@ -7614,13 +7606,13 @@ namespace FastExpressionCompiler
                         var leftBool = false;
                         if (left is ConstantExpression lc)
                             leftBool = (bool)lc.Value;
-                        else if (!TryInterpretBool(ref leftBool, left, left.NodeType))
+                        else if (IsCandidateForInterpretation(left) && !TryInterpretBool(ref leftBool, left, left.NodeType))
                             return false;
 
                         var rightBool = false;
                         if (right is ConstantExpression rc)
                             rightBool = (bool)rc.Value;
-                        else if (!TryInterpretBool(ref rightBool, right, right.NodeType))
+                        else if (IsCandidateForInterpretation(right) && !TryInterpretBool(ref rightBool, right, right.NodeType))
                             return false;
 
                         resultBool = nodeType == ExpressionType.Equal ? leftBool == rightBool : leftBool != rightBool;
@@ -8577,7 +8569,7 @@ namespace FastExpressionCompiler
                 if (bi.Left is ConstantExpression lc && bi.Right is ConstantExpression rc)
                 {
 #if INTERPRETATION_DIAGNOSTICS
-                    Console.WriteLine("Reduced Conditional in Interpretation: " + condExpr);
+                    Console.WriteLine("//Reduced Conditional in Interpretation: " + condExpr);
 #endif
                     var equals = Equals(lc.Value, rc.Value);
                     return bi.NodeType == ExpressionType.Equal

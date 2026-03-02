@@ -14,10 +14,10 @@ public struct Issue480_CLR_detected_an_invalid_program_exception : ITestX
 {
     public void Run(TestRun t)
     {
+        Reduced_conditional_emit(t);
         Modified_case(t);
         Original_case(t);
         Reduced_conditional_interpretation(t);
-        Reduced_conditional_emit(t);
     }
 
     public void Original_case(TestContext t)
