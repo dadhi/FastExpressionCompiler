@@ -522,7 +522,7 @@ namespace FastExpressionCompiler
             }
 
             // Try to avoid compilation altogether for Func<bool> delegates via Interpreter, see #468
-            if (returnType == typeof(bool) & closureAndParamTypes.Length == 1
+            if (closureAndParamTypes.Length == 1 & returnType == typeof(bool) && bodyExpr.Type == typeof(bool)
                 && Interpreter.IsCandidateForInterpretation(bodyExpr)
                 && Interpreter.TryInterpretBool(out var result, bodyExpr, flags))
                 return result ? Interpreter.TrueFunc : Interpreter.FalseFunc;
@@ -2213,6 +2213,12 @@ namespace FastExpressionCompiler
                         case ExpressionType.AndAlso:
                         case ExpressionType.OrElse:
                             {
+                                if (exprType != typeof(bool))
+                                {
+                                    // todo: @feat
+                                    Debug.WriteLine("Unsupported: Nullable<b> in || or && (invalid C# but valid expression) is not supported yet, see #480: " + expr);
+                                    return false;
+                                }
                                 if (Interpreter.TryInterpretBool(out var resultBool, expr, setup))
                                 {
                                     if ((parent & ParentFlags.IgnoreResult) == 0)
@@ -2223,6 +2229,13 @@ namespace FastExpressionCompiler
                             }
                         case ExpressionType.Not:
                             {
+                                if (exprType != typeof(bool))
+                                {
+                                    // todo: @feat
+                                    Debug.WriteLine("Unsupported: Nullable<b> in || or && (invalid C# but valid expression) is not supported yet, see #480: " + expr);
+                                    return false;
+                                }
+
                                 if (Interpreter.TryInterpretBool(out var resultBool, expr, setup))
                                 {
                                     if ((parent & ParentFlags.IgnoreResult) == 0)
@@ -7461,6 +7474,7 @@ namespace FastExpressionCompiler
                     nodeType == ExpressionType.Not |
                     nodeType == ExpressionType.Negate |
                     expr is BinaryExpression;
+                    // todo: @wip include conditional?
             }
 
 #if INTERPRETATION_DIAGNOSTICS
@@ -7514,8 +7528,8 @@ namespace FastExpressionCompiler
             public static bool TryInterpretBool(out bool result, Expression expr, CompilerFlags flags)
             {
                 var exprType = expr.Type;
-                Debug.Assert(exprType.IsPrimitive || Nullable.GetUnderlyingType(exprType)?.IsPrimitive == true,
-                    "Can reduce the boolean for the expressions of primitive types or for nullable of primitives but found " + expr.Type);
+                Debug.Assert(exprType.IsPrimitive, // todo: @feat nullables are not supported yet // || Nullable.GetUnderlyingType(exprType)?.IsPrimitive == true,
+                    "Can only reduce the boolean for the expressions of primitive types but found " + expr.Type);
                 result = false;
                 if ((flags & CompilerFlags.DisableInterpreter) != 0)
                     return false;
