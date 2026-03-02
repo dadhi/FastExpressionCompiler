@@ -34,6 +34,16 @@ namespace FastExpressionCompiler.UnitTests
             // new Issue441_Fails_to_pass_Constant_as_call_parameter_by_reference().Run();
             // new Issue461_InvalidProgramException_when_null_checking_type_by_ref().Run();
 
+            var st = new TestRun(TestFlags.RethrowException);
+
+            st.Run(new Issue495_Incomplete_pattern_detection_for_NotSupported_1007_Return_goto_from_TryCatch_with_Assign_generates_invalid_IL());
+            st.Run(new Issue480_CLR_detected_an_invalid_program_exception());
+
+#if NET8_0_OR_GREATER
+            st.Run(new Issue487_Fix_ToCSharpString_output_for_boolean_equality_expressions());
+            st.Run(new Issue475_Reuse_DynamicMethod_if_possible());
+#endif
+
             var lt = new LightExpression.TestRun(LightExpression.TestFlags.RethrowException);
 
 #if NET8_0_OR_GREATER
@@ -45,15 +55,6 @@ namespace FastExpressionCompiler.UnitTests
             lt.Run(new LightExpression.IssueTests.Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_expressions_during_the_compilation());
             lt.Run(new LightExpression.IssueTests.Issue473_InvalidProgramException_when_using_Expression_Condition_with_converted_decimal_expression());
             lt.Run(new LightExpression.IssueTests.Issue476_System_ExecutionEngineException_with_nullables_on_repeated_calls_to_ConcurrentDictionary());
-
-            var st = new TestRun(TestFlags.RethrowException);
-
-            st.Run(new Issue480_CLR_detected_an_invalid_program_exception());
-
-#if NET8_0_OR_GREATER
-            st.Run(new Issue487_Fix_ToCSharpString_output_for_boolean_equality_expressions());
-            st.Run(new Issue475_Reuse_DynamicMethod_if_possible());
-#endif
 
             RunAllTests();
         }

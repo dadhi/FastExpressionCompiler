@@ -1217,9 +1217,7 @@ namespace FastExpressionCompiler
             /// <summary>TypeEqual is not supported </summary>
             NotSupported_TypeEqual = 1009,
             /// <summary>`when` in catch is not supported yet</summary>
-            NotSupported_ExceptionCatchFilter = 1010,
-            /// <summary>Example: lambda return type requires bool, but body has an object type</summary>
-            NotSupported_NoCoalesceBetweenLambdaReturnTypeAndBodyType = 1011
+            NotSupported_ExceptionCatchFilter = 1010
         }
 
         /// <summary>Return value is ignored</summary>
@@ -2343,7 +2341,7 @@ namespace FastExpressionCompiler
                                         {
                                             // But we cannot use the return pattern and eliminate the target label if we have more gotos referencing it, see #430
                                             var (gotos, labels) = closure.TargetToGotosAndLabels.Map.TryGetValueRef(label.Target, out var found);
-                                            if (found && gotos <= labels)
+                                            if (found & gotos <= labels)
                                             {
                                                 if ((parent & ParentFlags.TryCatch) != 0)
                                                 {
