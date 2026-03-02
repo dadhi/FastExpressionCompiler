@@ -16,6 +16,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public int Run()
         {
+            Ternarary_operator_with_logical_op();
             Test_IfThenElse();
             IfThen_with_block();
             IfThenElse_with_block();
@@ -27,7 +28,6 @@ namespace FastExpressionCompiler.UnitTests
             Ternarary_operator_with_not_equality();
             Ternarary_operator_with_less_then();
             Ternarary_operator_with_greater_then();
-            Ternarary_operator_with_logical_op();
             return 11;
         }
 
@@ -144,7 +144,6 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(string.Concat(s, "ccc"), dlg());
         }
 
-
         public void Ternarary_operator_with_logical_op()
         {
             var x = 1;
@@ -156,13 +155,13 @@ namespace FastExpressionCompiler.UnitTests
                 ? string.Concat(s, "ccc")
                 : string.Empty;
             var expr = sExpr.FromSysExpression();
+            expr.PrintCSharp();
 
             var dlg = expr.TryCompile<Func<object>>();
 
             Asserts.IsNotNull(dlg);
             Asserts.AreEqual(string.Concat(s, "ccc"), dlg());
         }
-
 
         public void Test_IfThenElse()
         {

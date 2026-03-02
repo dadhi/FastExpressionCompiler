@@ -7574,7 +7574,7 @@ namespace FastExpressionCompiler
                         left = Tools.TryReduceConditional((ConditionalExpression)left);
                     if (left is ConstantExpression lc)
                         resultBool = (bool)lc.Value;
-                    else if (IsCandidateForInterpretation(left) && !TryInterpretBool(ref resultBool, left, left.NodeType))
+                    else if (!TryInterpretBool(ref resultBool, left, left.NodeType))
                         return false;
 
                     // Short circuit the interpretation, because this is an actual logic of these logical operations
@@ -7591,7 +7591,7 @@ namespace FastExpressionCompiler
                         resultBool = (bool)rc.Value;
                         return true;
                     }
-                    return IsCandidateForInterpretation(right) && TryInterpretBool(ref resultBool, right, right.NodeType);
+                    return TryInterpretBool(ref resultBool, right, right.NodeType);
                 }
 
                 if (nodeType == ExpressionType.Equal |
@@ -7606,13 +7606,13 @@ namespace FastExpressionCompiler
                         var leftBool = false;
                         if (left is ConstantExpression lc)
                             leftBool = (bool)lc.Value;
-                        else if (IsCandidateForInterpretation(left) && !TryInterpretBool(ref leftBool, left, left.NodeType))
+                        else if (!TryInterpretBool(ref leftBool, left, left.NodeType))
                             return false;
 
                         var rightBool = false;
                         if (right is ConstantExpression rc)
                             rightBool = (bool)rc.Value;
-                        else if (IsCandidateForInterpretation(right) && !TryInterpretBool(ref rightBool, right, right.NodeType))
+                        else if (!TryInterpretBool(ref rightBool, right, right.NodeType))
                             return false;
 
                         resultBool = nodeType == ExpressionType.Equal ? leftBool == rightBool : leftBool != rightBool;
