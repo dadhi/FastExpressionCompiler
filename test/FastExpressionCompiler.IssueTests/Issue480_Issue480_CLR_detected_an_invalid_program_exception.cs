@@ -6,7 +6,6 @@ using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.IssueTests;
 #else
 using System.Linq.Expressions;
-using Mapster;
 using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
@@ -17,6 +16,8 @@ public struct Issue480_CLR_detected_an_invalid_program_exception : ITestX
     {
         Modified_case(t);
         Original_case(t);
+        Reduced_conditional_interpretation(t);
+        Reduced_conditional_emit(t);
     }
 
     public void Original_case(TestContext t)
@@ -50,8 +51,6 @@ public struct Issue480_CLR_detected_an_invalid_program_exception : ITestX
         var expr = Lambda<Func<object>>(exp);
 
         expr.PrintCSharp();
-        // var @cs = (Func<object>)(() => //object
-        //     (object)(((true) ? (bool?)null : (bool?)null) || ((true) ? (bool?)null : (bool?)null)));
 
         var fs = expr.CompileSys();
         fs.PrintIL(format: ILDecoder.ILFormat.AssertOpCodes);
@@ -61,6 +60,47 @@ public struct Issue480_CLR_detected_an_invalid_program_exception : ITestX
         var ff = expr.CompileFast(); // uses System fallback
         ff.PrintIL(format: ILDecoder.ILFormat.AssertOpCodes);
         var b = ff();
+        t.IsTrue((bool)b);
+    }
+
+    public void Reduced_conditional_interpretation(TestContext t)
+    {
+        var p1 = Condition(Equal(Constant(true), Constant(true)), Constant(false), Constant(true));
+        var p2 = Condition(Equal(Constant(true), Constant(true)), Constant(true), Constant(false));
+        var exp = Convert(OrElse(p1, p2), typeof(object));
+        var expr = Lambda<Func<object>>(exp);
+
+        expr.PrintCSharp();
+
+        var fs = expr.CompileSys();
+        fs.PrintIL(format: ILDecoder.ILFormat.AssertOpCodes);
+        var a = fs();
+        t.IsTrue((bool)a);
+
+        var ff = expr.CompileFast(); // uses System fallback
+        ff.PrintIL(format: ILDecoder.ILFormat.AssertOpCodes);
+        var b = ff();
+        t.IsTrue((bool)b);
+    }
+
+    public void Reduced_conditional_emit(TestContext t)
+    {
+        var input = Parameter(typeof(bool), "input");
+        var p1 = Condition(Equal(Constant(true), Constant(true)), input, Constant(true));
+        var p2 = Condition(Equal(Constant(true), Constant(true)), input, Constant(false));
+        var exp = Convert(OrElse(p1, p2), typeof(object));
+        var expr = Lambda<Func<bool, object>>(exp, input);
+
+        expr.PrintCSharp();
+
+        var fs = expr.CompileSys();
+        fs.PrintIL(format: ILDecoder.ILFormat.AssertOpCodes);
+        var a = fs(true);
+        t.IsTrue((bool)a);
+
+        var ff = expr.CompileFast(); // uses System fallback
+        ff.PrintIL(format: ILDecoder.ILFormat.AssertOpCodes);
+        var b = ff(true);
         t.IsTrue((bool)b);
     }
 }

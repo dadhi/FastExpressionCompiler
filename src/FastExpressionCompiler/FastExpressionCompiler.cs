@@ -518,7 +518,7 @@ namespace FastExpressionCompiler
 #endif
             // Try to avoid compilation altogether for Func<bool> delegates via Interpreter, see #468
             if (closureAndParamTypes.Length == 1 & returnType == typeof(bool) 
-                && !bodyExpr.Type.IsPrimitive // todo: @feat nullable is not supported yet
+                && bodyExpr.Type.IsPrimitive // todo: @feat #496 nullable is not supported yet
                 && Interpreter.IsCandidateForInterpretation(bodyExpr)
                 && Interpreter.TryInterpretBool(out var result, bodyExpr, flags))
                 return result ? Interpreter.TrueFunc : Interpreter.FalseFunc;
@@ -2209,7 +2209,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.AndAlso:
                         case ExpressionType.OrElse:
                             {
-                                if (!exprType.IsPrimitive) // todo: @feat
+                                if (!exprType.IsPrimitive) // todo: @feat #496
                                 {
                                     Debug.WriteLine("Unsupported: Nullable<bool> in || or && (is invalid C# but valid expression) is not supported yet, see #480: " + expr);
                                     return false;
@@ -2224,7 +2224,7 @@ namespace FastExpressionCompiler
                             }
                         case ExpressionType.Not:
                             {
-                                if (!exprType.IsPrimitive) // todo: @feat
+                                if (!exprType.IsPrimitive) // todo: @feat #496 
                                 {
                                     Debug.WriteLine("Unsupported: Nullable<bool> in !x (is invalid C# but valid expression) is not supported yet, see #480: " + expr);
                                     return false;
@@ -6359,6 +6359,14 @@ namespace FastExpressionCompiler
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
                 testExpr = Tools.TryReduceConditionalTest(testExpr);
+                if (testExpr is ConstantExpression constTest && constTest.Value is bool testBool)
+                {
+#if DEBUG
+                    Console.WriteLine("Reduced Conditional in Emit");
+#endif
+                    return TryEmit(testBool ? ifTrueExpr : ifFalseExpr, paramExprs, il, ref closure, setup, parent);
+                }
+
                 var testNodeType = testExpr.NodeType;
 
                 // Detect a simplistic case when we can use `Brtrue` or `Brfalse`.
@@ -8563,12 +8571,14 @@ namespace FastExpressionCompiler
         // Does a low-hanging fruit reductions for now @date-20260227
         public static Expression TryReduceConditional(ConditionalExpression condExpr)
         {
-            var origTestExpr = condExpr.Test;
-            var testExpr = TryReduceConditionalTest(origTestExpr);
+            var testExpr = TryReduceConditionalTest(condExpr.Test);
             if (testExpr is BinaryExpression bi && (bi.NodeType == ExpressionType.Equal || bi.NodeType == ExpressionType.NotEqual))
             {
                 if (bi.Left is ConstantExpression lc && bi.Right is ConstantExpression rc)
                 {
+#if INTERPRETATION_DIAGNOSTICS
+                    Console.WriteLine("Reduced Conditional in Interpretation: " + condExpr);
+#endif
                     var equals = Equals(lc.Value, rc.Value);
                     return bi.NodeType == ExpressionType.Equal
                         ? (equals ? condExpr.IfTrue : condExpr.IfFalse)
