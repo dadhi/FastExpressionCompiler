@@ -8217,17 +8217,20 @@ namespace FastExpressionCompiler
             nodeType == ExpressionType.Block |
             nodeType == ExpressionType.Loop;
 
-        [MethodImpl((MethodImplOptions)256)]
-        internal static bool IsReturnable(this ExpressionType nodeType) =>
-            nodeType != ExpressionType.Goto &
-            nodeType != ExpressionType.Label &
-            nodeType != ExpressionType.Throw &&
-            !IsBracedBlockLike(nodeType);
 
         [MethodImpl((MethodImplOptions)256)]
         internal static bool IsBlockLikeOrConditional(this ExpressionType nodeType) =>
             nodeType == ExpressionType.Conditional | nodeType == ExpressionType.Coalesce ||
             IsBracedBlockLike(nodeType);
+
+        [MethodImpl((MethodImplOptions)256)]
+        internal static bool IsReturnable(this Expression expr)
+        {
+            var nodeType = expr.NodeType;
+            return expr.Type != typeof(void) &&
+                nodeType != ExpressionType.Goto & nodeType != ExpressionType.Label & nodeType != ExpressionType.Throw &&
+                !IsBracedBlockLike(nodeType);
+        }
 
         internal static Expression StripConvertRecursively(this Expression expr) =>
             expr is UnaryExpression convert && convert.NodeType == ExpressionType.Convert
@@ -10294,8 +10297,7 @@ namespace FastExpressionCompiler
 
                         sb.Append(") => //").Append(lambdaMethod.ReturnType.ToCode(stripNamespace, printType));
                         var body = x.Body;
-                        var bNodeType = body.NodeType;
-                        var isReturnable = bNodeType.IsReturnable();
+                        var isReturnable = body.IsReturnable();
                         var ignoresResult = x.ReturnType == typeof(void);
                         if (isReturnable & !ignoresResult)
                         {
@@ -10465,7 +10467,7 @@ namespace FastExpressionCompiler
                             else
                             {
                                 sb.NewLineIndent(incIndent);
-                                var isReturnable = returnsValue && part.NodeType.IsReturnable() &&
+                                var isReturnable = returnsValue && part.IsReturnable() &&
                                     // todo: @improve right now it is a hack - usually to Assign something means no return
                                     !part.NodeType.IsAssignNodeType();
                                 if (isReturnable)
@@ -10550,7 +10552,7 @@ namespace FastExpressionCompiler
                             if (gtValue == null)
                                 return enclosedIn == EnclosedIn.Return ? sb.Append(";") : sb.Append("return;");
 
-                            var isReturnable = gtValue.NodeType.IsReturnable();
+                            var isReturnable = gtValue.IsReturnable();
                             if (isReturnable & enclosedIn != EnclosedIn.Return)
                                 sb.Append("return ");
 
