@@ -67,7 +67,7 @@ public struct Issue495_Incomplete_pattern_detection_for_NotSupported_1007_Return
                 finalResult = (object)"default";
                 // return:; // todo: @wip remove or comment or rename but make it a valid c#
             }
-            catch (Exception ex) // no need for ex
+            catch (Exception)//(Exception ex) // no need for ex
             {
                 ; // todo: @wip remove ; 
             }

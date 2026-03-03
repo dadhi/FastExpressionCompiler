@@ -1,6 +1,5 @@
 ﻿using System;
 
-
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.IssueTests
@@ -14,14 +13,13 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            InvokeFuncConstantIsSupported();
             InvokeActionConstantIsSupported();
+            InvokeFuncConstantIsSupported();
             return 2;
         }
 
         string _result;
         string Join(object x, object y) => _result = ("" + x) + y;
-
 
         public void InvokeActionConstantIsSupported()
         {

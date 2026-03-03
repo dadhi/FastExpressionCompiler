@@ -10044,7 +10044,7 @@ namespace FastExpressionCompiler
 
         internal static StringBuilder ToCSharpString<TNamed>(this Expression e, StringBuilder sb, EnclosedIn enclosedIn, ref TNamed named,
             int lineIndent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4,
-            ObjectToCode notRecognizedToCode = null, bool isReturnByRef = false)
+            ObjectToCode notRecognizedToCode = null, bool isReturnByRef = false, bool containerIgnoresResult = false)
             where TNamed : struct, ISmallList<NamedWithIndex>
         {
 #if LIGHT_EXPRESSION
@@ -10298,8 +10298,8 @@ namespace FastExpressionCompiler
                         sb.Append(") => //").Append(lambdaMethod.ReturnType.ToCode(stripNamespace, printType));
                         var body = x.Body;
                         var isReturnable = body.IsReturnable();
-                        var ignoresResult = x.ReturnType == typeof(void);
-                        if (isReturnable & !ignoresResult)
+                        var lambdaIgnoresResult = x.ReturnType == typeof(void);
+                        if (isReturnable & !lambdaIgnoresResult)
                         {
                             var newLineIndent = lineIndent + indentSpaces;
                             sb.NewLineIndent(newLineIndent);
@@ -10313,13 +10313,14 @@ namespace FastExpressionCompiler
                             if (body is BlockExpression bb)
                                 bb.BlockToCSharpString(sb, ref named,
                                     lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode,
-                                    inTheLastBlock: true, containerIgnoresResult: ignoresResult);
+                                    inTheLastBlock: true, containerIgnoresResult: lambdaIgnoresResult);
                             else
                             {
                                 sb.NewLineIndent(lineIndent + indentSpaces);
                                 body.ToCSharpString(sb, EnclosedIn.LambdaBody, ref named,
-                                    lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode);
-                                if (isReturnable)
+                                    lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode,
+                                    containerIgnoresResult: lambdaIgnoresResult);
+                                if (isReturnable || lambdaIgnoresResult)
                                     sb.AppendSemicolonOnce();
                             }
                             sb.NewLineIndent(lineIndent).Append('}');

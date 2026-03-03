@@ -1,6 +1,5 @@
 using System.Reflection.Emit;
 
-
 #pragma warning disable 649
 #pragma warning disable 219
 
@@ -18,9 +17,9 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
+            InvokeActionConstantIsSupported();
             InvokeActionConstantIsSupportedSimpleClass_AddAssign();
             InvokeActionConstantIsSupportedSimpleStruct_AddAssign();
-            InvokeActionConstantIsSupported();
             InvokeActionConstantIsSupportedSimple();
             InvokeActionConstantIsSupportedSimpleStruct();
             return 5;
@@ -54,7 +53,6 @@ namespace FastExpressionCompiler.IssueTests
             }
 
             var lambda = Lambda<DeserializeDelegate<Person>>(assignBlock, bufferArg, refOffsetArg, refValueArg);
-
 
             void LocalAssert(DeserializeDelegate<Person> invoke)
             {
