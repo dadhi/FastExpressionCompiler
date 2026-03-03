@@ -1,4 +1,3 @@
-#if NET8_0_OR_GREATER
 using System;
 using System.Reflection.Emit;
 using System.Text.Json;
@@ -88,4 +87,3 @@ public struct Issue495_Incomplete_pattern_detection_for_NotSupported_1007_Return
         // t.IsNull(ff);
     }
 }
-#endif
