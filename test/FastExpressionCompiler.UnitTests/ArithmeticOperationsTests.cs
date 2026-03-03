@@ -14,8 +14,8 @@ namespace FastExpressionCompiler.UnitTests
     {
         public int Run()
         {
-            Can_modulus_custom_in_Action();
             Can_modulus_custom_in_Action_block();
+            Can_modulus_custom_in_Action();
             Can_add_string_and_not_string();
             Can_modulus_custom();
             Can_sum_bytes_converted_to_ints();

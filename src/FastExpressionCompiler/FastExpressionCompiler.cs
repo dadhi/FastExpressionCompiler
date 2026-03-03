@@ -10793,6 +10793,8 @@ namespace FastExpressionCompiler
                             var nodeType = e.NodeType;
                             if (nodeType == ExpressionType.ArrayIndex)
                             {
+                                if (containerIgnoresResult | enclosedIn == EnclosedIn.Block)
+                                    sb.Append("_ = ");
                                 var arrInParens = b.Left.NodeType != ExpressionType.Parameter;
                                 if (arrInParens) sb.Append('(');
                                 b.Left.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
@@ -10835,6 +10837,9 @@ namespace FastExpressionCompiler
                                 return b.Right.ToCSharpExpression(sb, EnclosedIn.AvoidParens, ref named,
                                     false, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                             }
+
+                            if (containerIgnoresResult | enclosedIn == EnclosedIn.Block)
+                                sb.Append("_ = "); // apply for non assignments
 
                             sb = sb.AddParenIfNeeded('(', avoidParens);
                             b.Left.ToCSharpExpression(sb, EnclosedIn.ParensByDefault, ref named,
