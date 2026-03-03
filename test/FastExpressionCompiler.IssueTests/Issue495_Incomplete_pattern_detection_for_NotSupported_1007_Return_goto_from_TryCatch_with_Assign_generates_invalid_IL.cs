@@ -74,7 +74,6 @@ public struct Issue495_Incomplete_pattern_detection_for_NotSupported_1007_Return
             return finalResult;
         });
 
-
         var fs = expr.CompileSys();
         fs.PrintIL(format: ILDecoder.ILFormat.AssertOpCodes);
         fs();

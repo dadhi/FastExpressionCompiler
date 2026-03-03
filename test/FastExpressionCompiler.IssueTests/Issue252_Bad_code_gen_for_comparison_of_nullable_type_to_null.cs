@@ -13,13 +13,12 @@ namespace FastExpressionCompiler.IssueTests
     {
         public int Run()
         {
-            Not_equal_in_void_Handler_should_work();
             Equal_in_void_Handler_should_work();
+            Not_equal_in_void_Handler_should_work();
             return 2;
         }
 
         public delegate void Handler(int? value);
-
 
         public void Not_equal_in_void_Handler_should_work()
         {
@@ -41,7 +40,6 @@ namespace FastExpressionCompiler.IssueTests
             f(2);
             f(null);
         }
-
 
         public void Equal_in_void_Handler_should_work()
         {
