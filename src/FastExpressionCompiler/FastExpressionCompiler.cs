@@ -11438,7 +11438,10 @@ namespace FastExpressionCompiler
             if (buildInTypeString != null)
             {
                 if (arrayType != null)
-                    buildInTypeString += "[]";
+                {
+                    var rank = arrayType.GetArrayRank();
+                    buildInTypeString += rank == 1 ? "[]" : ("[" + new string(',', rank-1) + "]");
+                }
                 return printType?.Invoke(arrayType ?? type, buildInTypeString) ?? buildInTypeString;
             }
 

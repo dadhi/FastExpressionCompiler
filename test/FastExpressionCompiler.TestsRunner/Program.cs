@@ -18,9 +18,9 @@ namespace FastExpressionCompiler.UnitTests
             // ILGeneratorTools.DisableILGeneratorPooling = true;
             // LightExpression.ILGeneratorTools.DisableILGeneratorPooling = true;
 
+            new AssignTests().Run();
             new ArithmeticOperationsTests().Run();
             new Issue156_InvokeAction().Run();
-            new AssignTests().Run();
             // new Issue252_Bad_code_gen_for_comparison_of_nullable_type_to_null().Run();
             // new ConditionalOperatorsTests().Run();
             // new ConstantAndConversionTests().Run();
