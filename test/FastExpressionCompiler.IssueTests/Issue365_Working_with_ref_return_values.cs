@@ -2,10 +2,8 @@
 using System;
 using System.Reflection.Emit;
 
-
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.IssueTests;
-
 
 public class Issue365_Working_with_ref_return_values : ITest
 {
@@ -15,7 +13,6 @@ public class Issue365_Working_with_ref_return_values : ITest
         Test_access_ref_returning_method_then_property();
         return 2;
     }
-
 
     public void Test_access_ref_returning_method_assigned_var_then_property()
     {

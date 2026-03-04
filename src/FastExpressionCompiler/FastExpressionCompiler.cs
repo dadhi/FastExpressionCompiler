@@ -10109,7 +10109,7 @@ namespace FastExpressionCompiler
                         var method = mc.Method;
                         var methodReturnType = method.ReturnType;
                         if (methodReturnType.IsByRef)
-                            sb.Append("ref ");
+                            sb.AppendRefOnce();
 
                         // output convert only if it is required, e.g. it may happen for custom expressions designed by users
                         var diffTypes = mc.Type != methodReturnType;
@@ -10934,6 +10934,16 @@ namespace FastExpressionCompiler
 
         internal static StringBuilder AppendSemicolonOnce(this StringBuilder sb, Expression expr = null) =>
             expr?.NodeType.IsBracedBlockLike() == true ? sb : sb[sb.Length - 1] != ';' ? sb.Append(";") : sb;
+
+        internal static StringBuilder AppendRefOnce(this StringBuilder sb)
+        {
+            var len = sb.Length; 
+            return len >= 4 &&
+                sb[len - 4] == 'r' &&
+                sb[len - 3] == 'e' &&
+                sb[len - 2] == 'f' &&
+                sb[len - 1] == ' ' ? sb : sb.Append("ref ");
+        }
 
         internal static StringBuilder AppendNewLineOnce(this StringBuilder sb)
         {
