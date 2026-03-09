@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.UnitTests
@@ -15,7 +14,6 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
-
     public class BlockTests : ITest
     {
         public int Run()
@@ -41,7 +39,6 @@ namespace FastExpressionCompiler.UnitTests
 
             return 18;
         }
-
 
         public void Block_local_variable_assignment()
         {
