@@ -81,9 +81,9 @@ public abstract class Expression
     public virtual bool IsCustomToCSharpString => false;
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public virtual StringBuilder CustomToCSharpString<TNamed>(StringBuilder sb, EnclosedIn enclosedIn, ref TNamed named,
+    public virtual StringBuilder CustomToCSharpString(StringBuilder sb, EnclosedIn enclosedIn, ref PrintContext ctx,
         int lineIndent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4,
-        ObjectToCode notRecognizedToCode = null) where TNamed : struct, ISmallList<NamedWithIndex> => sb;
+        ObjectToCode notRecognizedToCode = null) => sb;
 
 #if SUPPORTS_VISITOR
     [RequiresUnreferencedCode(Trimming.Message)]
@@ -3353,7 +3353,7 @@ public class ConvertDelegateIntrinsicExpression : UnaryExpression
     public override bool IsCustomToCSharpString => true;
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override StringBuilder CustomToCSharpString<TNamed>(StringBuilder sb, EnclosedIn enclosedIn, ref TNamed named,
+    public override StringBuilder CustomToCSharpString(StringBuilder sb, EnclosedIn enclosedIn, ref PrintContext ctx,
         int lineIndent = 0, bool stripNamespace = false, Func<Type, string, string> printType = null, int indentSpaces = 4,
         ObjectToCode notRecognizedToCode = null)
     {
@@ -3361,7 +3361,7 @@ public class ConvertDelegateIntrinsicExpression : UnaryExpression
         sb = encloseInParens ? sb.Append("((") : sb.Append('(');
 
         sb.Append(Type.ToCode(stripNamespace, printType)).Append(')');
-        sb = Operand.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref named,
+        sb = Operand.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref ctx,
             lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
 
         sb.Append(".Invoke"); // Hey, this is the CUSTOM part of the output.
