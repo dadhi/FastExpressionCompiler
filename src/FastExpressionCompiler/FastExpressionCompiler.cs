@@ -11379,10 +11379,10 @@ namespace FastExpressionCompiler
             for (var i = ctx.LambdaPars.Count - 1; i >= 0; --i)
             {
                 ref var it = ref ctx.LambdaPars.GetSurePresentRef(i);
-                var count = it.Exprs.GetCount();
+                var count = it.Infos.Length;
                 for (var j = 0; j < count; ++j)
                     if (it.Exprs.GetParameter(j) == parExpr)
-                        return it.Infos[i].IsOut;
+                        return it.Infos[j].IsOut;
             }
             return false;
         }
