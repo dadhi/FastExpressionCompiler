@@ -10771,10 +10771,18 @@ namespace FastExpressionCompiler
                                 case ExpressionType.TypeAs:
                                 case ExpressionType.TypeIs:
                                     if (!avoidParens) sb.Append('(');
+
+                                    var valueOp = op.Type.IsValueType && e.NodeType == ExpressionType.TypeAs; // `as` cannot be directly applied to the value type operand, that's why convert to object first.
+                                    if (valueOp) sb.Append("(object)("); // see Issue455_TypeAs_should_return_null.Original_case
+
                                     op.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref ctx,
                                         lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
+
+                                    if (valueOp) sb.Append(')');
+                                    
                                     sb = e.NodeType == ExpressionType.TypeAs ? sb.Append(" as ") : sb.Append(" is ");
                                     sb.Append(e.Type.ToCode(stripNamespace, printType));
+
                                     if (!avoidParens) sb.Append(')');
                                     return sb;
 
