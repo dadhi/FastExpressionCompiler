@@ -1,106 +1,9 @@
 
-//ArithmeticOperationsTests.Can_modulus_custom_in_Action_block
-var @cs = (Action<BigInteger, BigInteger>)((
-    BigInteger a, 
-    BigInteger b) => //void
+//Issue455_TypeAs_should_return_null.Original_case
+var @cs = (Func<int?>)(() => //int?
 {
-    _ = a % b;
-});
-
-//ArithmeticOperationsTests.Can_modulus_custom_in_Action
-var @cs = (Action<BigInteger, BigInteger>)((
-    BigInteger a, 
-    BigInteger b) => //void
-{
-    _ = a % b;
-});
-
-//ArithmeticOperationsTests.Can_add_string_and_not_string
-var @cs = (Func<string>)(() => //string
-    default(c__DisplayClass37_0)/*NOTE: Provide the non-default value for the Constant of compiler-generated type!*/.s1 + ((object)default(c__DisplayClass37_0)/*NOTE: Provide the non-default value for the Constant of compiler-generated type!*/.s2));
-
-//ArithmeticOperationsTests.Can_modulus_custom
-var @cs = (Func<BigInteger, BigInteger, BigInteger>)((
-    BigInteger a, 
-    BigInteger b) => //BigInteger
-    a % b);
-
-//Issue156_InvokeAction.InvokeActionConstantIsSupported
-var @cs = (Action)(() => //void
-{
-    (default(Action<object, object>)/*NOTE: Provide the non-default value for the Constant!*/).Invoke(
-        (object)4,
-        (object)2);
-});
-
-//Issue156_InvokeAction.InvokeFuncConstantIsSupported
-var @cs = (Func<string>)(() => //string
-    (default(Func<int, int, string>)/*NOTE: Provide the non-default value for the Constant!*/).Invoke(
-        4,
-        2));
-
-//AssignTests.Array_multi_dimensional_index_assign_value_type_block
-var @cs = (Func<int>)(() => //int
-{
-    int[] int_arr_0 = null;
-    int_arr_0 = new int[
-        2,
-        1];
-    int_arr_0[1, 0] = 5;
-    return int_arr_0[1, 0];
-});
-
-//AssignTests.Can_assign_to_parameter_in_nested_lambda
-var @cs = (Func<string, Func<string>>)((string s) => //Func<string>
-    (Func<string>)(() => //string
-        s = "aaa"));
-
-//AssignTests.Parameter_test_try_catch_finally_result
-T __f<T>(System.Func<T> f) => f();
-var @cs = (Func<TryCatchTest, TryCatchTest>)((TryCatchTest trycatchtest_0) => //TryCatchTest
-{
-    trycatchtest_0 = 
-        __f(() => {
-            try
-            {
-                return new TryCatchTest();
-            }
-            catch (Exception)
-            {
-                return (TryCatchTest)null;
-            }
-        });
-    return trycatchtest_0;
-});
-
-//AssignTests.Member_test_try_catch_finally_result
-T __f<T>(System.Func<T> f) => f();
-var @cs = (Func<TryCatchTest>)(() => //TryCatchTest
-{
-    try
-    {
-        TryCatchTest trycatchtest_0 = null;
-        trycatchtest_0 = new TryCatchTest();
-        trycatchtest_0.NestedTest = 
-            __f(() => {
-                try
-                {
-                    TryCatchNestedTest trycatchnestedtest_1 = null;
-                    trycatchnestedtest_1 = new TryCatchNestedTest();
-                    trycatchnestedtest_1.Nested = "Value";
-                    return trycatchnestedtest_1;
-                }
-                catch (Exception)
-                {
-                    return (TryCatchNestedTest)null;
-                }
-            });
-        return trycatchtest_0;
-    }
-    catch (Exception)
-    {
-        return (TryCatchTest)null;
-    }
+    int? x = null;
+    return x = (object)((long)12345) as int?;
 });
 
 //Issue495_Incomplete_pattern_detection_for_NotSupported_1007_Return_goto_from_TryCatch_with_Assign_generates_invalid_IL.ReturnGotoFromTryCatchWithAssign_ShouldBeDetectedAsError1007
@@ -420,35 +323,8 @@ var @cs = (Func<BigInteger, BigInteger, BigInteger>)((
     BigInteger b) => //BigInteger
     a % b);
 6    of FastExpressionCompiler.IssueTests.Issue14_String_constant_comparisons_fail
-29   of FastExpressionCompiler.UnitTests.ArithmeticOperationsTests
 6    of FastExpressionCompiler.LightExpression.IssueTests.Issue14_String_constant_comparisons_fail
-
-//ArithmeticOperationsTests.Can_modulus_custom_in_Action_block
-var @cs = (Action<BigInteger, BigInteger>)((
-    BigInteger a, 
-    BigInteger b) => //void
-{
-    _ = a % b;
-});
-
-//ArithmeticOperationsTests.Can_modulus_custom_in_Action
-var @cs = (Action<BigInteger, BigInteger>)((
-    BigInteger a, 
-    BigInteger b) => //void
-{
-    _ = a % b;
-});
-
-//ArithmeticOperationsTests.Can_add_string_and_not_string
-var @cs = (Func<string>)(() => //string
-    default(c__DisplayClass37_0)/*NOTE: Provide the non-default value for the Constant of compiler-generated type!*/.s1 + ((object)default(c__DisplayClass37_0)/*NOTE: Provide the non-default value for the Constant of compiler-generated type!*/.s2));
 1    of FastExpressionCompiler.IssueTests.Issue19_Nested_CallExpression_causes_AccessViolationException
-
-//ArithmeticOperationsTests.Can_modulus_custom
-var @cs = (Func<BigInteger, BigInteger, BigInteger>)((
-    BigInteger a, 
-    BigInteger b) => //BigInteger
-    a % b);
 1    of FastExpressionCompiler.LightExpression.IssueTests.Issue19_Nested_CallExpression_causes_AccessViolationException
 
 //Issue44_Conversion_To_Nullable_Throws_Exception.Conversion_to_nullable_should_work_with_null_constructed_with_expressions
@@ -492,83 +368,33 @@ var @cs = (ActionRef<int>)((ref int int_0) => //void
     int_1 = int_0;
     Issue55_CompileFast_crash_with_ref_parameter.SetMinus1(ref int_1);
 });
-29   of FastExpressionCompiler.LightExpression.UnitTests.ArithmeticOperationsTests
+29   of FastExpressionCompiler.UnitTests.ArithmeticOperationsTests
 
-//AssignTests.Array_multi_dimensional_index_assign_value_type_block
-var @cs = (Func<int>)(() => //int
+//ArithmeticOperationsTests.Can_modulus_custom_in_Action_block
+var @cs = (Action<BigInteger, BigInteger>)((
+    BigInteger a, 
+    BigInteger b) => //void
 {
-    int[] int_arr_0 = null;
-    int_arr_0 = new int[
-        2,
-        1];
-    int_arr_0[1, 0] = 5;
-    return int_arr_0[1, 0];
+    _ = a % b;
 });
 
-//AssignTests.Can_assign_to_parameter_in_nested_lambda
-var @cs = (Func<string, Func<string>>)((string s) => //Func<string>
-    (Func<string>)(() => //string
-        s = "aaa"));
-
-//AssignTests.Parameter_test_try_catch_finally_result
-T __f<T>(System.Func<T> f) => f();
-var @cs = (Func<TryCatchTest, TryCatchTest>)((TryCatchTest trycatchtest_0) => //TryCatchTest
+//ArithmeticOperationsTests.Can_modulus_custom_in_Action
+var @cs = (Action<BigInteger, BigInteger>)((
+    BigInteger a, 
+    BigInteger b) => //void
 {
-    trycatchtest_0 = 
-        __f(() => {
-            try
-            {
-                return new TryCatchTest();
-            }
-            catch (Exception)
-            {
-                return (TryCatchTest)null;
-            }
-        });
-    return trycatchtest_0;
+    _ = a % b;
 });
 
-//AssignTests.Member_test_try_catch_finally_result
-T __f<T>(System.Func<T> f) => f();
-var @cs = (Func<TryCatchTest>)(() => //TryCatchTest
-{
-    try
-    {
-        TryCatchTest trycatchtest_0 = null;
-        trycatchtest_0 = new TryCatchTest();
-        trycatchtest_0.NestedTest = 
-            __f(() => {
-                try
-                {
-                    TryCatchNestedTest trycatchnestedtest_1 = null;
-                    trycatchnestedtest_1 = new TryCatchNestedTest();
-                    trycatchnestedtest_1.Nested = "Value";
-                    return trycatchnestedtest_1;
-                }
-                catch (Exception)
-                {
-                    return (TryCatchNestedTest)null;
-                }
-            });
-        return trycatchtest_0;
-    }
-    catch (Exception)
-    {
-        return (TryCatchTest)null;
-    }
-});
-17   of FastExpressionCompiler.UnitTests.AssignTests
+//ArithmeticOperationsTests.Can_add_string_and_not_string
+var @cs = (Func<string>)(() => //string
+    default(c__DisplayClass37_0)/*NOTE: Provide the non-default value for the Constant of compiler-generated type!*/.s1 + ((object)default(c__DisplayClass37_0)/*NOTE: Provide the non-default value for the Constant of compiler-generated type!*/.s2));
 
-//AssignTests.Array_multi_dimensional_index_assign_value_type_block
-var @cs = (Func<int>)(() => //int
-{
-    int[] int_arr_0 = null;
-    int_arr_0 = new int[
-        2,
-        1];
-    int_arr_0[1, 0] = 5;
-    return int_arr_0[1, 0];
-});
+//ArithmeticOperationsTests.Can_modulus_custom
+var @cs = (Func<BigInteger, BigInteger, BigInteger>)((
+    BigInteger a, 
+    BigInteger b) => //BigInteger
+    a % b);
 33   of FastExpressionCompiler.IssueTests.Issue55_CompileFast_crash_with_ref_parameter
 
 //Issue55_CompileFast_crash_with_ref_parameter.RefMethodCallingRefMethodWithLocal_OfStruct
@@ -578,22 +404,6 @@ var @cs = (ActionRef<RecVal>)((ref RecVal recval_0) => //void
     recval_1 = recval_0;
     Issue55_CompileFast_crash_with_ref_parameter.SetMinus1_OfStruct(ref recval_1);
 });
-
-//AssignTests.Array_multi_dimensional_index_assign_value_type_block
-var @cs = (Func<int>)(() => //int
-{
-    int[] int_arr_0 = null;
-    int_arr_0 = new int[
-        2,
-        1];
-    int_arr_0[1, 0] = 5;
-    return int_arr_0[1, 0];
-});
-
-//AssignTests.Can_assign_to_parameter_in_nested_lambda
-var @cs = (Func<string, Func<string>>)((string s) => //Func<string>
-    (Func<string>)(() => //string
-        s = "aaa"));
 
 //Issue55_CompileFast_crash_with_ref_parameter.RefMethodCallingRefMethodWithLocal_OfString
 var @cs = (ActionRef<string>)((ref string string_0) => //void
@@ -618,6 +428,34 @@ var @cs = (ActionRef<int>)((ref int int_0) => //void
     int_1 = int_0;
     Issue55_CompileFast_crash_with_ref_parameter.SetMinus1(ref int_1);
 });
+29   of FastExpressionCompiler.LightExpression.UnitTests.ArithmeticOperationsTests
+
+//AssignTests.Array_multi_dimensional_index_assign_value_type_block
+var @cs = (Func<int>)(() => //int
+{
+    int[,] int[,]_0 = null;
+    int[,]_0 = new int[
+        2,
+        1];
+    int[,]_0[1, 0] = 5;
+    return int[,]_0[1, 0];
+});
+
+//AssignTests.Can_assign_to_parameter_in_nested_lambda
+var @cs = (Func<string, Func<string>>)((string s) => //Func<string>
+    (Func<string>)(() => //string
+        s = "aaa"));
+33   of FastExpressionCompiler.LightExpression.IssueTests.Issue55_CompileFast_crash_with_ref_parameter
+
+//Issue65_Add_ExpressionInfo_Elvis_operator_support.Test
+var @cs = (Func<int, string>)((int n) => //string
+{
+    A x = null;
+    x = Issue65_Add_LightExpression_Elvis_operator_support.GetAnA(n);
+    return (x == (A)null) ? null : 
+        x.GetTheAnswer();
+});
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue65_Add_LightExpression_Elvis_operator_support
 
 //AssignTests.Parameter_test_try_catch_finally_result
 T __f<T>(System.Func<T> f) => f();
@@ -666,69 +504,85 @@ var @cs = (Func<TryCatchTest>)(() => //TryCatchTest
         return (TryCatchTest)null;
     }
 });
-17   of FastExpressionCompiler.LightExpression.UnitTests.AssignTests
-
-//BinaryExpressionTests.Issue399_Coalesce_for_nullable_long_and_non_nullable_long
-var @cs = (Action<Source, Destination>)((
-    Source s, 
-    Destination d) => //void
-{
-    d.NumberNonNullable = s.Number ?? (long)0;
-});
-
-//BinaryExpressionTests.Issue399_Coalesce_for_nullable_long_Automapper_test_Should_substitute_zero_for_null
-33   of FastExpressionCompiler.LightExpression.IssueTests.Issue55_CompileFast_crash_with_ref_parameter
-var @cs = (Action<Source, Destination>)((
-    Source s, 
-    Destination d) => //void
-{
-    d.Number = s.Number ?? (long?)(long)0;
-});
-
-//Issue65_Add_ExpressionInfo_Elvis_operator_support.Test
-var @cs = (Func<int, string>)((int n) => //string
-{
-    A x = null;
-    x = Issue65_Add_LightExpression_Elvis_operator_support.GetAnA(n);
-    return (x == (A)null) ? null : 
-        x.GetTheAnswer();
-});
-1    of FastExpressionCompiler.LightExpression.IssueTests.Issue65_Add_LightExpression_Elvis_operator_support
-48   of FastExpressionCompiler.UnitTests.BinaryExpressionTests
-
-//BinaryExpressionTests.Issue399_Coalesce_for_nullable_long_and_non_nullable_long
-var @cs = (Action<Source, Destination>)((
-    Source s, 
-    Destination d) => //void
-{
-    d.NumberNonNullable = s.Number ?? (long)0;
-});
-
-//BinaryExpressionTests.Issue399_Coalesce_for_nullable_long_Automapper_test_Should_substitute_zero_for_null
-var @cs = (Action<Source, Destination>)((
-    Source s, 
-    Destination d) => //void
-{
-    d.Number = s.Number ?? (long?)(long)0;
-});
 10   of FastExpressionCompiler.IssueTests.Issue67_Equality_comparison_with_nullables_throws_at_delegate_invoke
-4    of FastExpressionCompiler.IssueTests.Issue71_Cannot_bind_to_the_target_method_because_its_signature
-4    of FastExpressionCompiler.LightExpression.IssueTests.Issue71_Cannot_bind_to_the_target_method_because_its_signature
-48   of FastExpressionCompiler.LightExpression.UnitTests.BinaryExpressionTests
+17   of FastExpressionCompiler.UnitTests.AssignTests
 
-//BlockTests.Block_local_variable_assignment
+//AssignTests.Array_multi_dimensional_index_assign_value_type_block
 var @cs = (Func<int>)(() => //int
 {
-    int int_0 = default;
-    int int_1 = default;
-    int_0 = 5;
-    int_1 = 6;
+    int[,] int[,]_0 = null;
+    int[,]_0 = new int[
+        2,
+        1];
+    int[,]_0[1, 0] = 5;
+    return int[,]_0[1, 0];
+});
+4    of FastExpressionCompiler.IssueTests.Issue71_Cannot_bind_to_the_target_method_because_its_signature
+
+//AssignTests.Array_multi_dimensional_index_assign_value_type_block
+var @cs = (Func<int>)(() => //int
+{
+    int[,] int[,]_0 = null;
+    int[,]_0 = new int[
+        2,
+        1];
+    int[,]_0[1, 0] = 5;
+    return int[,]_0[1, 0];
 });
 
-//BlockTests.Block_returning_the_nested_lambda_assigning_the_outer_parameter
-var @cs = (Func<int, Func<int>>)((int p) => //Func<int>
-    (Func<int>)(() => //int
-        p = 42));
+//AssignTests.Can_assign_to_parameter_in_nested_lambda
+var @cs = (Func<string, Func<string>>)((string s) => //Func<string>
+    (Func<string>)(() => //string
+        s = "aaa"));
+4    of FastExpressionCompiler.LightExpression.IssueTests.Issue71_Cannot_bind_to_the_target_method_because_its_signature
+
+//AssignTests.Parameter_test_try_catch_finally_result
+T __f<T>(System.Func<T> f) => f();
+var @cs = (Func<TryCatchTest, TryCatchTest>)((TryCatchTest trycatchtest_0) => //TryCatchTest
+{
+    trycatchtest_0 = 
+        __f(() => {
+            try
+            {
+                return new TryCatchTest();
+            }
+            catch (Exception)
+            {
+                return (TryCatchTest)null;
+            }
+        });
+    return trycatchtest_0;
+});
+
+//AssignTests.Member_test_try_catch_finally_result
+T __f<T>(System.Func<T> f) => f();
+var @cs = (Func<TryCatchTest>)(() => //TryCatchTest
+{
+    try
+    {
+        TryCatchTest trycatchtest_0 = null;
+        trycatchtest_0 = new TryCatchTest();
+        trycatchtest_0.NestedTest = 
+            __f(() => {
+                try
+                {
+                    TryCatchNestedTest trycatchnestedtest_1 = null;
+                    trycatchnestedtest_1 = new TryCatchNestedTest();
+                    trycatchnestedtest_1.Nested = "Value";
+                    return trycatchnestedtest_1;
+                }
+                catch (Exception)
+                {
+                    return (TryCatchNestedTest)null;
+                }
+            });
+        return trycatchtest_0;
+    }
+    catch (Exception)
+    {
+        return (TryCatchTest)null;
+    }
+});
 4    of FastExpressionCompiler.IssueTests.Issue72_Try_CompileFast_for_MS_Extensions_ObjectMethodExecutor
 
 //Issue76_Expression_Convert_causing_signature_or_security_transparency_is_not_compatible_exception.When_using_fast_expression_compilation
@@ -737,14 +591,6 @@ var @cs = (Action<TestTarget, Guid>)((
     Guid id) => //void
 {
     doc.ID = (CustomID)id;
-});
-
-//BlockTests.Block_calling_non_void_method_returning_the_nested_lambda_assigning_the_outer_parameter
-var @cs = (Func<int, Func<int>>)((int p) => //Func<int>
-{
-    BlockTests.Inc(p);
-    return (Func<int>)(() => //int
-        p = 42);
 });
 2    of FastExpressionCompiler.IssueTests.Issue76_Expression_Convert_causing_signature_or_security_transparency_is_not_compatible_exception
 
@@ -755,25 +601,25 @@ var @cs = (Action<TestTarget, Guid>)((
 {
     doc.ID = (CustomID)id;
 });
+17   of FastExpressionCompiler.LightExpression.UnitTests.AssignTests
 
-//BlockTests.Block_calling_non_void_method_returning_the_nested_lambda_incrementing_the_outer_parameter
-var @cs = (Func<int, Func<int>>)((int p) => //Func<int>
+//BinaryExpressionTests.Issue399_Coalesce_for_nullable_long_and_non_nullable_long
+var @cs = (Action<Source, Destination>)((
+    Source s, 
+    Destination d) => //void
 {
-    return (Func<int>)(() => //int
-        ++p);
+    d.NumberNonNullable = s.Number ?? (long)0;
 });
 2    of FastExpressionCompiler.LightExpression.IssueTests.Issue76_Expression_Convert_causing_signature_or_security_transparency_is_not_compatible_exception
-6    of FastExpressionCompiler.IssueTests.Issue78_blocks_with_constant_return
-18   of FastExpressionCompiler.UnitTests.BlockTests
 
-//BlockTests.Block_local_variable_assignment
-var @cs = (Func<int>)(() => //int
+//BinaryExpressionTests.Issue399_Coalesce_for_nullable_long_Automapper_test_Should_substitute_zero_for_null
+var @cs = (Action<Source, Destination>)((
+    Source s, 
+    Destination d) => //void
 {
-    int int_0 = default;
-    int int_1 = default;
-    int_0 = 5;
-    int_1 = 6;
+    d.Number = s.Number ?? (long?)(long)0;
 });
+6    of FastExpressionCompiler.IssueTests.Issue78_blocks_with_constant_return
 6    of FastExpressionCompiler.LightExpression.IssueTests.Issue78_blocks_with_constant_return
 
 //Issue83_linq2db.linq2db_NullReferenceException
@@ -812,20 +658,23 @@ var @cs = (Func<IQueryRunner, IDataReader, InheritanceA>)((
         dr,
         qr.Expression,
         qr.Parameters));
+48   of FastExpressionCompiler.UnitTests.BinaryExpressionTests
 
-//BlockTests.Block_local_variable_assignment_with_lambda_invoke
-var @cs = (Func<int>)(() => //int
+//BinaryExpressionTests.Issue399_Coalesce_for_nullable_long_and_non_nullable_long
+var @cs = (Action<Source, Destination>)((
+    Source s, 
+    Destination d) => //void
 {
-    int int_0 = default;
-    return ((Func<int>)(() => //int
-        int_0 = 6))
-    .Invoke();
+    d.NumberNonNullable = s.Number ?? (long)0;
 });
 
-//BlockTests.Block_returning_the_nested_lambda_assigning_the_outer_parameter
-var @cs = (Func<int, Func<int>>)((int p) => //Func<int>
-    (Func<int>)(() => //int
-        p = 42));
+//BinaryExpressionTests.Issue399_Coalesce_for_nullable_long_Automapper_test_Should_substitute_zero_for_null
+var @cs = (Action<Source, Destination>)((
+    Source s, 
+    Destination d) => //void
+{
+    d.Number = s.Number ?? (long?)(long)0;
+});
 
 //Issue83_linq2db.linq2db_InvalidProgramException2_reuse_variable_for_upper_and_nested_lambda
 T __f<T>(System.Func<T> f) => f();
@@ -887,33 +736,19 @@ var @cs = (Func<IQueryRunner, IDataReader, object>)((
         qr.Parameters);
 });
 
-//BlockTests.Block_calling_non_void_method_returning_the_nested_lambda_assigning_the_outer_parameter
-var @cs = (Func<int, Func<int>>)((int p) => //Func<int>
-{
-    BlockTests.Inc(p);
-    return (Func<int>)(() => //int
-        p = 42);
-});
-
-//BlockTests.Block_calling_non_void_method_returning_the_nested_lambda_incrementing_the_outer_parameter
-var @cs = (Func<int, Func<int>>)((int p) => //Func<int>
-{
-    return (Func<int>)(() => //int
-        ++p);
-});
-
-//BlockTests.Block_assigning_local_variable_then_returning_the_nested_lambda_which_reassigns_the_variable
-var @cs = (Func<Func<string>>)(() => //Func<string>
-{
-    string string_0 = null;
-    string_0 = "35";
-    return (Func<string>)(() => //string
-        string_0 = "42");
-});
-
 //Issue83_linq2db.String_to_number_conversion_using_convert_with_method_with_DefaultExpression
 var @cs = (Func<string, int>)((string p) => //int
     (p != (string)null) ? (int)p : default(int));
+48   of FastExpressionCompiler.LightExpression.UnitTests.BinaryExpressionTests
+
+//BlockTests.Block_local_variable_assignment
+var @cs = (Func<int>)(() => //int
+{
+    int int_0 = default;
+    int int_1 = default;
+    int_0 = 5;
+    return int_1 = 6;
+});
 
 //Issue83_linq2db.Jit_compiler_internal_limitation
 var @cs = (Action<object, object>)((
@@ -943,30 +778,74 @@ var @cs = (Action<object, object>)((
     }
     testclass4_2.Field1 = (int)value;
 });
-18   of FastExpressionCompiler.LightExpression.UnitTests.BlockTests
-2    of FastExpressionCompiler.UnitTests.ClosureConstantTests
-2    of FastExpressionCompiler.LightExpression.UnitTests.ClosureConstantTests
-6    of FastExpressionCompiler.UnitTests.CoalesceTests
-6    of FastExpressionCompiler.LightExpression.UnitTests.CoalesceTests
 
-//ConditionalOperatorsTests.Ternarary_operator_with_logical_op
-var @cs = (Func<object>)(() => //object
-    ((default(c__DisplayClass9_0)/*NOTE: Provide the non-default value for the Constant of compiler-generated type!*/.x > 0) && ((default(c__DisplayClass9_0)/*NOTE: Provide the non-default value for the Constant of compiler-generated type!*/.s.Contains("e") && default(c__DisplayClass9_0)/*NOTE: Provide the non-default value for the Constant of compiler-generated type!*/.s.Contains("X")) || (default(c__DisplayClass9_0)/*NOTE: Provide the non-default value for the Constant of compiler-generated type!*/.s.StartsWith("T") && default(c__DisplayClass9_0)/*NOTE: Provide the non-default value for the Constant of compiler-generated type!*/.s.EndsWith("t")))) ? 
-        string.Concat(
-            default(c__DisplayClass9_0)/*NOTE: Provide the non-default value for the Constant of compiler-generated type!*/.s,
-            "ccc") : 
-        string.Empty);
-//Interpretation in: ConditionalOperatorsTests.Test_IfThenElse
-11   of FastExpressionCompiler.UnitTests.ConditionalOperatorsTests
+//BlockTests.Block_returning_the_nested_lambda_assigning_the_outer_parameter
+var @cs = (Func<int, Func<int>>)((int p) => //Func<int>
+    (Func<int>)(() => //int
+        p = 42));
 
-//ConditionalOperatorsTests.Ternarary_operator_with_logical_op
-var @cs = (Func<object>)(() => //object
-    ((default(c__DisplayClass9_0)/*NOTE: Provide the non-default value for the Constant of compiler-generated type!*/.x > 0) && ((default(c__DisplayClass9_0)/*NOTE: Provide the non-default value for the Constant of compiler-generated type!*/.s.Contains("e") && default(c__DisplayClass9_0)/*NOTE: Provide the non-default value for the Constant of compiler-generated type!*/.s.Contains("X")) || (default(c__DisplayClass9_0)/*NOTE: Provide the non-default value for the Constant of compiler-generated type!*/.s.StartsWith("T") && default(c__DisplayClass9_0)/*NOTE: Provide the non-default value for the Constant of compiler-generated type!*/.s.EndsWith("t")))) ? 
-        string.Concat(
-            default(c__DisplayClass9_0)/*NOTE: Provide the non-default value for the Constant of compiler-generated type!*/.s,
-            "ccc") : 
-        string.Empty);
-//Interpretation in: ConditionalOperatorsTests.Test_IfThenElse
+//BlockTests.Block_calling_non_void_method_returning_the_nested_lambda_assigning_the_outer_parameter
+var @cs = (Func<int, Func<int>>)((int p) => //Func<int>
+{
+    BlockTests.Inc(p);
+    return (Func<int>)(() => //int
+        p = 42);
+});
+
+//BlockTests.Block_calling_non_void_method_returning_the_nested_lambda_incrementing_the_outer_parameter
+var @cs = (Func<int, Func<int>>)((int p) => //Func<int>
+{
+    return (Func<int>)(() => //int
+        ++p);
+});
+18   of FastExpressionCompiler.UnitTests.BlockTests
+
+//BlockTests.Block_local_variable_assignment
+var @cs = (Func<int>)(() => //int
+{
+    int int_0 = default;
+    int int_1 = default;
+    int_0 = 5;
+    return int_1 = 6;
+});
+
+//BlockTests.Block_local_variable_assignment_with_lambda_invoke
+var @cs = (Func<int>)(() => //int
+{
+    int int_0 = default;
+    return ((Func<int>)(() => //int
+        int_0 = 6))
+    .Invoke();
+});
+
+//BlockTests.Block_returning_the_nested_lambda_assigning_the_outer_parameter
+var @cs = (Func<int, Func<int>>)((int p) => //Func<int>
+    (Func<int>)(() => //int
+        p = 42));
+
+//BlockTests.Block_calling_non_void_method_returning_the_nested_lambda_assigning_the_outer_parameter
+var @cs = (Func<int, Func<int>>)((int p) => //Func<int>
+{
+    BlockTests.Inc(p);
+    return (Func<int>)(() => //int
+        p = 42);
+});
+
+//BlockTests.Block_calling_non_void_method_returning_the_nested_lambda_incrementing_the_outer_parameter
+var @cs = (Func<int, Func<int>>)((int p) => //Func<int>
+{
+    return (Func<int>)(() => //int
+        ++p);
+});
+
+//BlockTests.Block_assigning_local_variable_then_returning_the_nested_lambda_which_reassigns_the_variable
+var @cs = (Func<Func<string>>)(() => //Func<string>
+{
+    string string_0 = null;
+    string_0 = "35";
+    return (Func<string>)(() => //string
+        string_0 = "42");
+});
 
 //Issue83_linq2db.linq2db_InvalidProgramException3
 var @cs = (Func<IDataReader, int>)((IDataReader rd) => //int
@@ -974,13 +853,13 @@ var @cs = (Func<IDataReader, int>)((IDataReader rd) => //int
     SQLiteDataReader ldr = null;
     int int123 = default;
     ldr = (SQLiteDataReader)rd;
-    int123 = (ldr.IsDBNull(0) ? (int?)null : 
+    return int123 = (ldr.IsDBNull(0) ? (int?)null : 
         new int?(ldr.GetInt32(0))) ?? Issue83_linq2db.GetDefault2(ldr.IsDBNull(0) ? 0 : 
             ldr.GetInt32(0));
 });
-11   of FastExpressionCompiler.LightExpression.UnitTests.ConditionalOperatorsTests
-//Interpretation in: ConstantAndConversionTests.Expressions_with_max_uint_constant
+18   of FastExpressionCompiler.LightExpression.UnitTests.BlockTests
 51   of FastExpressionCompiler.IssueTests.Issue83_linq2db
+2    of FastExpressionCompiler.UnitTests.ClosureConstantTests
 
 //Issue83_linq2db.linq2db_NullReferenceException
 var @cs = (Func<IQueryRunner, IDataReader, InheritanceA>)((
@@ -1018,6 +897,8 @@ var @cs = (Func<IQueryRunner, IDataReader, InheritanceA>)((
         dr,
         qr.Expression,
         qr.Parameters));
+2    of FastExpressionCompiler.LightExpression.UnitTests.ClosureConstantTests
+6    of FastExpressionCompiler.UnitTests.CoalesceTests
 
 //Issue83_linq2db.linq2db_InvalidProgramException2_reuse_variable_for_upper_and_nested_lambda
 T __f<T>(System.Func<T> f) => f();
@@ -1078,10 +959,20 @@ var @cs = (Func<IQueryRunner, IDataReader, object>)((
         qr.Expression,
         qr.Parameters);
 });
+6    of FastExpressionCompiler.LightExpression.UnitTests.CoalesceTests
+
+//ConditionalOperatorsTests.Ternarary_operator_with_logical_op
+var @cs = (Func<object>)(() => //object
+    ((default(c__DisplayClass9_0)/*NOTE: Provide the non-default value for the Constant of compiler-generated type!*/.x > 0) && ((default(c__DisplayClass9_0)/*NOTE: Provide the non-default value for the Constant of compiler-generated type!*/.s.Contains("e") && default(c__DisplayClass9_0)/*NOTE: Provide the non-default value for the Constant of compiler-generated type!*/.s.Contains("X")) || (default(c__DisplayClass9_0)/*NOTE: Provide the non-default value for the Constant of compiler-generated type!*/.s.StartsWith("T") && default(c__DisplayClass9_0)/*NOTE: Provide the non-default value for the Constant of compiler-generated type!*/.s.EndsWith("t")))) ? 
+        string.Concat(
+            default(c__DisplayClass9_0)/*NOTE: Provide the non-default value for the Constant of compiler-generated type!*/.s,
+            "ccc") : 
+        string.Empty);
 
 //Issue83_linq2db.String_to_number_conversion_using_convert_with_method_with_DefaultExpression
 var @cs = (Func<string, int>)((string p) => //int
     (p != (string)null) ? (int)p : default(int));
+//Interpretation in: ConditionalOperatorsTests.Test_IfThenElse
 
 //Issue83_linq2db.Jit_compiler_internal_limitation
 var @cs = (Action<object, object>)((
@@ -1111,8 +1002,38 @@ var @cs = (Action<object, object>)((
     }
     testclass4_2.Field1 = (int)value;
 });
+11   of FastExpressionCompiler.UnitTests.ConditionalOperatorsTests
+
+//ConditionalOperatorsTests.Ternarary_operator_with_logical_op
+var @cs = (Func<object>)(() => //object
+    ((default(c__DisplayClass9_0)/*NOTE: Provide the non-default value for the Constant of compiler-generated type!*/.x > 0) && ((default(c__DisplayClass9_0)/*NOTE: Provide the non-default value for the Constant of compiler-generated type!*/.s.Contains("e") && default(c__DisplayClass9_0)/*NOTE: Provide the non-default value for the Constant of compiler-generated type!*/.s.Contains("X")) || (default(c__DisplayClass9_0)/*NOTE: Provide the non-default value for the Constant of compiler-generated type!*/.s.StartsWith("T") && default(c__DisplayClass9_0)/*NOTE: Provide the non-default value for the Constant of compiler-generated type!*/.s.EndsWith("t")))) ? 
+        string.Concat(
+            default(c__DisplayClass9_0)/*NOTE: Provide the non-default value for the Constant of compiler-generated type!*/.s,
+            "ccc") : 
+        string.Empty);
+//Interpretation in: ConditionalOperatorsTests.Test_IfThenElse
+11   of FastExpressionCompiler.LightExpression.UnitTests.ConditionalOperatorsTests
+//Interpretation in: ConstantAndConversionTests.Expressions_with_max_uint_constant
+
+//Issue83_linq2db.linq2db_InvalidProgramException3
+var @cs = (Func<IDataReader, int>)((IDataReader rd) => //int
+{
+    SQLiteDataReader ldr = null;
+    int int123 = default;
+    ldr = (SQLiteDataReader)rd;
+    return int123 = (ldr.IsDBNull(0) ? (int?)null : 
+        new int?(ldr.GetInt32(0))) ?? Issue83_linq2db.GetDefault2(ldr.IsDBNull(0) ? 0 : 
+            ldr.GetInt32(0));
+});
+51   of FastExpressionCompiler.LightExpression.IssueTests.Issue83_linq2db
+2    of FastExpressionCompiler.IssueTests.Issue88_Constant_from_static_field
+2    of FastExpressionCompiler.LightExpression.IssueTests.Issue88_Constant_from_static_field
+3    of FastExpressionCompiler.IssueTests.Issue91_Issue95_Tests
 //Interpretation in: ConstantAndConversionTests.Expressions_with_char_and_int
 //Interpretation in: ConstantAndConversionTests.Expressions_with_char_and_short
+3    of FastExpressionCompiler.LightExpression.IssueTests.Issue91_Issue95_Tests
+1    of FastExpressionCompiler.IssueTests.Issue100_LightExpression_wrong_return_type
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue100_LightExpression_wrong_return_type
 //Interpretation in: ConstantAndConversionTests.Can_return_constant
 18   of FastExpressionCompiler.UnitTests.ConstantAndConversionTests
 //Interpretation in: ConstantAndConversionTests.Expressions_with_max_uint_constant
@@ -1124,53 +1045,154 @@ var @cs = (Func<int>)(() => //int
 //ConstantAndConversionTests.Issue465_The_primitive_constant_can_be_configured_to_put_in_closure
 var @cs = (Func<int>)(() => //int
     default(ValueRef<int>)/*NOTE: Provide the non-default value for the Constant!*/.Value);
+10   of FastExpressionCompiler.IssueTests.Issue101_Not_supported_Assign_Modes
 
 //ConstantAndConversionTests.Issue466_The_constant_may_be_referenced_multiple_times
 var @cs = (Func<int>)(() => //int
     default(ValueRef<int>)/*NOTE: Provide the non-default value for the Constant!*/.Value + default(ValueRef<int>)/*NOTE: Provide the non-default value for the Constant!*/.Value);
+10   of FastExpressionCompiler.LightExpression.IssueTests.Issue101_Not_supported_Assign_Modes
+2    of FastExpressionCompiler.IssueTests.Issue102_Label_and_Goto_Expression
+2    of FastExpressionCompiler.LightExpression.IssueTests.Issue102_Label_and_Goto_Expression
+2    of FastExpressionCompiler.IssueTests.Issue106_Power_support
+2    of FastExpressionCompiler.LightExpression.IssueTests.Issue106_Power_support
+4    of FastExpressionCompiler.IssueTests.Issue107_Assign_also_works_for_variables
+4    of FastExpressionCompiler.LightExpression.IssueTests.Issue107_Assign_also_works_for_variables
 
-//Issue83_linq2db.linq2db_InvalidProgramException3
-var @cs = (Func<IDataReader, int>)((IDataReader rd) => //int
+//Issue127_Switch_is_supported.Switch_nullable_enum_value_equals_via_comparison_method_with_non_nullable_parameters
+var @cs = (Func<MyEnum?, string>)((MyEnum? myenum_0) => //string
 {
-    SQLiteDataReader ldr = null;
-    int int123 = default;
-    ldr = (SQLiteDataReader)rd;
-    int123 = (ldr.IsDBNull(0) ? (int?)null : 
-        new int?(ldr.GetInt32(0))) ?? Issue83_linq2db.GetDefault2(ldr.IsDBNull(0) ? 0 : 
-            ldr.GetInt32(0));
+    switch (myenum_0)
+    {
+        case (MyEnum?)MyEnum.A:
+            return "A";
+        case (MyEnum?)MyEnum.B:
+            return "B";
+        case (MyEnum?)MyEnum.C:
+            return "C";
+        default:
+            return "Z";
+    }
 });
-51   of FastExpressionCompiler.LightExpression.IssueTests.Issue83_linq2db
-2    of FastExpressionCompiler.IssueTests.Issue88_Constant_from_static_field
-2    of FastExpressionCompiler.LightExpression.IssueTests.Issue88_Constant_from_static_field
 //Interpretation in: ConstantAndConversionTests.Expressions_with_char_and_int
 //Interpretation in: ConstantAndConversionTests.Expressions_with_char_and_short
-3    of FastExpressionCompiler.IssueTests.Issue91_Issue95_Tests
-3    of FastExpressionCompiler.LightExpression.IssueTests.Issue91_Issue95_Tests
-1    of FastExpressionCompiler.IssueTests.Issue100_LightExpression_wrong_return_type
-1    of FastExpressionCompiler.LightExpression.IssueTests.Issue100_LightExpression_wrong_return_type
+
+//Issue127_Switch_is_supported.Switch_nullable_enum_value_equals_to_non_nullable_cases_via_comparison_method_Impossible_both_should_be_nullable
+var @cs = (Func<MyEnum?, string>)((MyEnum? myenum_0) => //string
+{
+    switch (myenum_0)
+    {
+        case (MyEnum?)MyEnum.A:
+            return "A";
+        case (MyEnum?)MyEnum.B:
+            return "B";
+        case (MyEnum?)MyEnum.C:
+            return "C";
+        default:
+            return "Z";
+    }
+});
+
+//Issue127_Switch_is_supported.SwitchIsSupported_string_with_comparison_method
+var @cs = (Func<string, string>)((string string_0) => //string
+{
+    switch (string_0)
+    {
+        case "a":
+            return "A";
+        case "b":
+            return "B";
+        default:
+            return "C";
+    }
+});
 //Interpretation in: ConstantAndConversionTests.Can_return_constant
 18   of FastExpressionCompiler.LightExpression.UnitTests.ConstantAndConversionTests
 
 //ConvertOperatorsTests.Convert_Func_to_Custom_delegate_should_work
+
+//Issue127_Switch_is_supported.Switch_nullable_enum_value_equals_to_nullable_cases
 var @cs = (Func<Func<string>, GetString>)((Func<string> p) => //GetString
     (GetString)(MethodInfo)default(RuntimeMethodInfo)/*NOTE: Provide the non-default value for the Constant!*/.CreateDelegate(
         typeof(GetString),
         p));
-10   of FastExpressionCompiler.IssueTests.Issue101_Not_supported_Assign_Modes
+var @cs = (Func<MyEnum?, string>)((MyEnum? myenum_0) => //string
+{
+    switch (myenum_0)
+    {
+        case (MyEnum?)MyEnum.A:
+            return "A";
+        case (MyEnum?)MyEnum.B:
+            return "B";
+        case (MyEnum?)MyEnum.C:
+            return "C";
+        default:
+            return "Z";
+    }
+});
+
+//Issue127_Switch_is_supported.SwitchIsSupported_bool_value
+var @cs = (Func<bool, string>)((bool bool_0) => //string
+{
+    switch (bool_0)
+    {
+        case true:
+            return "A";
+        case false:
+            return "B";
+        default:
+            return "Z";
+    }
+});
+
+//Issue127_Switch_is_supported.SwitchIsSupported1
+var @cs = (Func<int, string>)((int int_0) => //string
+{
+    switch (int_0)
+    {
+        case 1:
+            return "A";
+        case 2:
+            return "B";
+        case 5:
+            return "C";
+        default:
+            return "Z";
+    }
+});
 6    of FastExpressionCompiler.UnitTests.ConvertOperatorsTests
 
 //ConvertOperatorsTests.Convert_Func_to_Custom_delegate_should_work
 var @cs = (Func<Func<string>, GetString>)((Func<string> fs) => //GetString
     (GetString)fs.Invoke);
-10   of FastExpressionCompiler.LightExpression.IssueTests.Issue101_Not_supported_Assign_Modes
-2    of FastExpressionCompiler.IssueTests.Issue102_Label_and_Goto_Expression
+
+//Issue127_Switch_is_supported.SwitchIsSupported31
+var @cs = (Func<int, string>)((int int_0) => //string
+{
+    switch (int_0)
+    {
+        case 1:
+            return "A";
+        default:
+            return "Z";
+    }
+});
 6    of FastExpressionCompiler.LightExpression.UnitTests.ConvertOperatorsTests
-2    of FastExpressionCompiler.LightExpression.IssueTests.Issue102_Label_and_Goto_Expression
-2    of FastExpressionCompiler.IssueTests.Issue106_Power_support
-2    of FastExpressionCompiler.LightExpression.IssueTests.Issue106_Power_support
+
+//Issue127_Switch_is_supported.SwitchIsSupported_string
+var @cs = (Func<string, string>)((string string_0) => //string
+{
+    switch (string_0)
+    {
+        case "A":
+            return "A";
+        case "B":
+            return "B";
+        default:
+            return "C";
+    }
+});
 17   of FastExpressionCompiler.UnitTests.DefaultTests
-4    of FastExpressionCompiler.IssueTests.Issue107_Assign_also_works_for_variables
-4    of FastExpressionCompiler.LightExpression.IssueTests.Issue107_Assign_also_works_for_variables
+16   of FastExpressionCompiler.IssueTests.Issue127_Switch_is_supported
 
 //Issue127_Switch_is_supported.Switch_nullable_enum_value_equals_via_comparison_method_with_non_nullable_parameters
 var @cs = (Func<MyEnum?, string>)((MyEnum? myenum_0) => //string
@@ -1276,128 +1298,6 @@ var @cs = (Func<int, string>)((int int_0) => //string
             return "Z";
     }
 });
-32   of FastExpressionCompiler.UnitTests.ConstructorCallTests
-
-//Issue127_Switch_is_supported.SwitchIsSupported_string
-var @cs = (Func<string, string>)((string string_0) => //string
-{
-    switch (string_0)
-    {
-        case "A":
-            return "A";
-        case "B":
-            return "B";
-        default:
-            return "C";
-    }
-});
-16   of FastExpressionCompiler.IssueTests.Issue127_Switch_is_supported
-
-//Issue127_Switch_is_supported.Switch_nullable_enum_value_equals_via_comparison_method_with_non_nullable_parameters
-var @cs = (Func<MyEnum?, string>)((MyEnum? myenum_0) => //string
-{
-    switch (myenum_0)
-    {
-        case (MyEnum?)MyEnum.A:
-            return "A";
-        case (MyEnum?)MyEnum.B:
-            return "B";
-        case (MyEnum?)MyEnum.C:
-            return "C";
-        default:
-            return "Z";
-    }
-});
-
-//Issue127_Switch_is_supported.Switch_nullable_enum_value_equals_to_non_nullable_cases_via_comparison_method_Impossible_both_should_be_nullable
-var @cs = (Func<MyEnum?, string>)((MyEnum? myenum_0) => //string
-{
-    switch (myenum_0)
-    {
-        case (MyEnum?)MyEnum.A:
-            return "A";
-        case (MyEnum?)MyEnum.B:
-            return "B";
-        case (MyEnum?)MyEnum.C:
-            return "C";
-        default:
-            return "Z";
-    }
-});
-
-//Issue127_Switch_is_supported.SwitchIsSupported_string_with_comparison_method
-var @cs = (Func<string, string>)((string string_0) => //string
-{
-    switch (string_0)
-    {
-        case "a":
-            return "A";
-        case "b":
-            return "B";
-        default:
-            return "C";
-    }
-});
-
-//Issue127_Switch_is_supported.Switch_nullable_enum_value_equals_to_nullable_cases
-var @cs = (Func<MyEnum?, string>)((MyEnum? myenum_0) => //string
-{
-    switch (myenum_0)
-    {
-        case (MyEnum?)MyEnum.A:
-            return "A";
-        case (MyEnum?)MyEnum.B:
-            return "B";
-        case (MyEnum?)MyEnum.C:
-            return "C";
-        default:
-            return "Z";
-    }
-});
-32   of FastExpressionCompiler.LightExpression.UnitTests.ConstructorCallTests
-
-//Issue127_Switch_is_supported.SwitchIsSupported_bool_value
-var @cs = (Func<bool, string>)((bool bool_0) => //string
-{
-    switch (bool_0)
-    {
-        case true:
-            return "A";
-        case false:
-            return "B";
-        default:
-            return "Z";
-    }
-});
-
-//Issue127_Switch_is_supported.SwitchIsSupported1
-var @cs = (Func<int, string>)((int int_0) => //string
-{
-    switch (int_0)
-    {
-        case 1:
-            return "A";
-        case 2:
-            return "B";
-        case 5:
-            return "C";
-        default:
-            return "Z";
-    }
-});
-
-//Issue127_Switch_is_supported.SwitchIsSupported31
-var @cs = (Func<int, string>)((int int_0) => //string
-{
-    switch (int_0)
-    {
-        case 1:
-            return "A";
-        default:
-            return "Z";
-    }
-});
-6    of FastExpressionCompiler.UnitTests.EqualityOperatorsTests
 
 //Issue127_Switch_is_supported.SwitchIsSupported_string
 var @cs = (Func<string, string>)((string string_0) => //string
@@ -1413,13 +1313,60 @@ var @cs = (Func<string, string>)((string string_0) => //string
     }
 });
 16   of FastExpressionCompiler.LightExpression.IssueTests.Issue127_Switch_is_supported
-6    of FastExpressionCompiler.LightExpression.UnitTests.EqualityOperatorsTests
+32   of FastExpressionCompiler.UnitTests.ConstructorCallTests
 2    of FastExpressionCompiler.IssueTests.Issue146_bool_par
-1    of FastExpressionCompiler.UnitTests.GotoTests
 2    of FastExpressionCompiler.LightExpression.IssueTests.Issue146_bool_par
+1    of FastExpressionCompiler.IssueTests.Issue147_int_try_parse
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue147_int_try_parse
+1    of FastExpressionCompiler.IssueTests.Issue150_New_AttemptToReadProtectedMemory
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue150_New_AttemptToReadProtectedMemory
+1    of FastExpressionCompiler.IssueTests.Issue153_MinValueMethodNotSupported
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue153_MinValueMethodNotSupported
+
+//Issue156_InvokeAction.InvokeActionConstantIsSupported
+var @cs = (Action)(() => //void
+{
+    (default(Action<object, object>)/*NOTE: Provide the non-default value for the Constant!*/).Invoke(
+        (object)4,
+        (object)2);
+});
+
+//Issue156_InvokeAction.InvokeFuncConstantIsSupported
+var @cs = (Func<string>)(() => //string
+    (default(Func<int, int, string>)/*NOTE: Provide the non-default value for the Constant!*/).Invoke(
+        4,
+        2));
+2    of FastExpressionCompiler.IssueTests.Issue156_InvokeAction
+32   of FastExpressionCompiler.LightExpression.UnitTests.ConstructorCallTests
+
+//Issue156_InvokeAction.InvokeActionConstantIsSupported
+var @cs = (Action)(() => //void
+{
+    (default(Action<object, object>)/*NOTE: Provide the non-default value for the Constant!*/).Invoke(
+        (object)4,
+        (object)2);
+});
+
+//Issue156_InvokeAction.InvokeFuncConstantIsSupported
+var @cs = (Func<string>)(() => //string
+    (default(Func<int, int, string>)/*NOTE: Provide the non-default value for the Constant!*/).Invoke(
+        4,
+        2));
+2    of FastExpressionCompiler.LightExpression.IssueTests.Issue156_InvokeAction
+
+//Issue159_NumericConversions.FloatToDecimalNullableShouldWork
+var @cs = (Func<ValueHolder<float>, ValueHolder<Decimal?>>)((ValueHolder<float> floatValue) => //ValueHolder<Decimal?>
+{
+    ValueHolder<Decimal?> nullableDecimal = null;
+    nullableDecimal = new ValueHolder<Decimal?>();
+    nullableDecimal.Value = (Decimal?)floatValue.Value;
+    return nullableDecimal;
+});
+6    of FastExpressionCompiler.UnitTests.EqualityOperatorsTests
+6    of FastExpressionCompiler.LightExpression.UnitTests.EqualityOperatorsTests
+1    of FastExpressionCompiler.UnitTests.GotoTests
 1    of FastExpressionCompiler.LightExpression.UnitTests.GotoTests
 
-1    of FastExpressionCompiler.IssueTests.Issue147_int_try_parse
 //HoistedLambdaExprTests.Should_compile_nested_lambda
 var @cs = (Func<X>)(() => //X
     X.Get(
@@ -1428,7 +1375,6 @@ var @cs = (Func<X>)(() => //X
         new Lazy<A>((Func<A>)(() => //A
             default(c__DisplayClass1_0)/*NOTE: Provide the non-default value for the Constant of compiler-generated type!*/.a))));
 1    of FastExpressionCompiler.UnitTests.HoistedLambdaExprTests
-1    of FastExpressionCompiler.LightExpression.IssueTests.Issue147_int_try_parse
 
 //HoistedLambdaExprTests.Should_compile_nested_lambda
 var @cs = (Func<X>)(() => //X
@@ -1484,7 +1430,6 @@ var @cs = (Action)(() => //void
     void_0:;
     void_1:;
 });
-1    of FastExpressionCompiler.IssueTests.Issue150_New_AttemptToReadProtectedMemory
 
 //LoopTests.Loop_with_break_and_continue
 var @cs = (Action)(() => //void
@@ -1507,6 +1452,10 @@ var @cs = (Action)(() => //void
     }
     void_1:;
 });
+
+//Issue159_NumericConversions.ConvertNullableFloatToDecimal
+var @cs = (Func<float?, Decimal?>)((float? f) => //Decimal?
+    (Decimal?)f);
 
 //LoopTests.Loop_with_unused_continue
 var @cs = (Action)(() => //void
@@ -1542,7 +1491,6 @@ var @cs = (Action)(() => //void
 });
 
 //LoopTests.Loop_with_return_value
-1    of FastExpressionCompiler.LightExpression.IssueTests.Issue150_New_AttemptToReadProtectedMemory
 var @cs = (Func<int>)(() => //int
 {
     int i = default;
@@ -1557,11 +1505,8 @@ var @cs = (Func<int>)(() => //int
     int_0:;
 });
 7    of FastExpressionCompiler.UnitTests.LoopTests
-1    of FastExpressionCompiler.IssueTests.Issue153_MinValueMethodNotSupported
 
 //LoopTests.Loop_with_return
-1    of FastExpressionCompiler.LightExpression.IssueTests.Issue153_MinValueMethodNotSupported
-
 var @cs = (Action)(() => //void
 {
     int i = default;
@@ -1575,19 +1520,6 @@ var @cs = (Action)(() => //void
     }
     void_0:;
 });
-//Issue156_InvokeAction.InvokeActionConstantIsSupported
-var @cs = (Action)(() => //void
-{
-    (default(Action<object, object>)/*NOTE: Provide the non-default value for the Constant!*/).Invoke(
-        (object)4,
-        (object)2);
-});
-
-//Issue156_InvokeAction.InvokeFuncConstantIsSupported
-var @cs = (Func<string>)(() => //string
-    (default(Func<int, int, string>)/*NOTE: Provide the non-default value for the Constant!*/).Invoke(
-        4,
-        2));
 
 //LoopTests.Loop_with_break
 var @cs = (Action)(() => //void
@@ -1603,7 +1535,6 @@ var @cs = (Action)(() => //void
     }
     void_0:;
 });
-2    of FastExpressionCompiler.IssueTests.Issue156_InvokeAction
 
 //LoopTests.Loop_with_unused_break
 var @cs = (Action)(() => //void
@@ -1621,14 +1552,6 @@ var @cs = (Action)(() => //void
     void_1:;
 });
 
-//Issue156_InvokeAction.InvokeActionConstantIsSupported
-var @cs = (Action)(() => //void
-{
-    (default(Action<object, object>)/*NOTE: Provide the non-default value for the Constant!*/).Invoke(
-        (object)4,
-        (object)2);
-});
-
 //LoopTests.Loop_with_break_and_continue
 var @cs = (Action)(() => //void
 {
@@ -1651,12 +1574,6 @@ var @cs = (Action)(() => //void
     void_1:;
 });
 
-//Issue156_InvokeAction.InvokeFuncConstantIsSupported
-var @cs = (Func<string>)(() => //string
-    (default(Func<int, int, string>)/*NOTE: Provide the non-default value for the Constant!*/).Invoke(
-        4,
-        2));
-
 //LoopTests.Loop_with_unused_continue
 var @cs = (Action)(() => //void
 {
@@ -1672,7 +1589,6 @@ var @cs = (Action)(() => //void
     }
     void_1:;
 });
-2    of FastExpressionCompiler.LightExpression.IssueTests.Issue156_InvokeAction
 
 //LoopTests.Loop_with_unused_break_and_continue
 var @cs = (Action)(() => //void
@@ -1691,16 +1607,7 @@ var @cs = (Action)(() => //void
     void_2:;
 });
 
-//Issue159_NumericConversions.FloatToDecimalNullableShouldWork
-
 //LoopTests.Loop_with_return_value
-var @cs = (Func<ValueHolder<float>, ValueHolder<Decimal?>>)((ValueHolder<float> floatValue) => //ValueHolder<Decimal?>
-{
-    ValueHolder<Decimal?> nullableDecimal = null;
-    nullableDecimal = new ValueHolder<Decimal?>();
-    nullableDecimal.Value = (Decimal?)floatValue.Value;
-    return nullableDecimal;
-});
 var @cs = (Func<int>)(() => //int
 {
     int i = default;
@@ -1715,6 +1622,16 @@ var @cs = (Func<int>)(() => //int
     int_0:;
 });
 7    of FastExpressionCompiler.LightExpression.UnitTests.LoopTests
+19   of FastExpressionCompiler.IssueTests.Issue159_NumericConversions
+
+//Issue159_NumericConversions.FloatToDecimalNullableShouldWork
+var @cs = (Func<ValueHolder<float>, ValueHolder<Decimal?>>)((ValueHolder<float> floatValue) => //ValueHolder<Decimal?>
+{
+    ValueHolder<Decimal?> nullableDecimal = null;
+    nullableDecimal = new ValueHolder<Decimal?>();
+    nullableDecimal.Value = (Decimal?)floatValue.Value;
+    return nullableDecimal;
+});
 
 //ListInitTests.Simple_ListInit_works
 var @cs = (Func<ListInitTests, IEnumerable<PropertyValue>>)((ListInitTests obj) => //IEnumerable<PropertyValue>
@@ -1762,7 +1679,6 @@ var @cs = (Func<int, int>)((int int_0) => //int
 });
 
 //NestedLambdaTests.Hmm_I_can_use_the_same_parameter_for_outer_and_nested_lambda
-
 var @cs = (Func<int>)(() => //int
     ((Func<int, int>)((int n) => //int
         n - ((Func<int, int>)((int n) => //int
@@ -1774,6 +1690,7 @@ var @cs = (Func<int>)(() => //int
             n + 1))
         .Invoke(
             13));
+
 //Issue159_NumericConversions.ConvertNullableFloatToDecimal
 var @cs = (Func<float?, Decimal?>)((float? f) => //Decimal?
     (Decimal?)f);
@@ -1811,81 +1728,6 @@ var @cs = (Func<int, int>)((int n) => //int
             n = nSaved;
         }
     }));
-19   of FastExpressionCompiler.IssueTests.Issue159_NumericConversions
-
-//Issue159_NumericConversions.FloatToDecimalNullableShouldWork
-var @cs = (Func<ValueHolder<float>, ValueHolder<Decimal?>>)((ValueHolder<float> floatValue) => //ValueHolder<Decimal?>
-{
-    ValueHolder<Decimal?> nullableDecimal = null;
-    nullableDecimal = new ValueHolder<Decimal?>();
-    nullableDecimal.Value = (Decimal?)floatValue.Value;
-    return nullableDecimal;
-});
-17   of FastExpressionCompiler.UnitTests.NestedLambdaTests
-
-//NestedLambdaTests.Issue401_What_happens_if_inlined_invocation_of_lambda_overrides_the_same_parameter
-var @cs = (Func<int, int>)((int int_0) => //int
-{
-    int_0 = 42;
-    ((Action<int>)((int int_0) => //void
-    {
-        int_0 = int_0 - 2;
-    }))
-    .Invoke(
-        int_0);
-    return int_0;
-});
-
-//NestedLambdaTests.Hmm_I_can_use_the_same_parameter_for_outer_and_nested_lambda
-var @cs = (Func<int>)(() => //int
-    ((Func<int, int>)((int n) => //int
-        n - ((Func<int, int>)((int n) => //int
-            n + 1))
-        .Invoke(
-            n)))
-    .Invoke(
-        42) + ((Func<int, int>)((int n) => //int
-            n + 1))
-        .Invoke(
-            13));
-
-//NestedLambdaTests.Using_try_finally_as_arithmetic_operand_use_void_block_in_finally
-T __f<T>(System.Func<T> f) => f();
-var @cs = (Func<int, int>)((int n) => //int
-    n - 
-    __f(() => {
-        int nSaved = default;
-        try
-        {
-            nSaved = n;
-            return n + 10;
-        }
-        finally
-        {
-            n = nSaved;
-        }
-    }));
-
-//NestedLambdaTests.Using_try_finally_as_arithmetic_operand
-
-T __f<T>(System.Func<T> f) => f();
-var @cs = (Func<int, int>)((int n) => //int
-    n - 
-    __f(() => {
-        int nSaved = default;
-        try
-        {
-            nSaved = n;
-            return n + 10;
-        }
-        finally
-        {
-            n = nSaved;
-        }
-    }));
-//Issue159_NumericConversions.ConvertNullableFloatToDecimal
-var @cs = (Func<float?, Decimal?>)((float? f) => //Decimal?
-    (Decimal?)f);
 19   of FastExpressionCompiler.LightExpression.IssueTests.Issue159_NumericConversions
 
 //Issue170_Serializer_Person_Ref.InvokeActionConstantIsSupported
@@ -1920,88 +1762,80 @@ var @cs = (DeserializeDelegateSimple<SimplePersonClass>)((ref SimplePersonClass 
 {
     value.Health += 5;
 });
-17   of FastExpressionCompiler.LightExpression.UnitTests.NestedLambdaTests
+17   of FastExpressionCompiler.UnitTests.NestedLambdaTests
+
+//NestedLambdaTests.Issue401_What_happens_if_inlined_invocation_of_lambda_overrides_the_same_parameter
 5    of FastExpressionCompiler.LightExpression.IssueTests.Issue170_Serializer_Person_Ref
-1    of FastExpressionCompiler.IssueTests.Issue174_NullReferenceInSetter
-11   of FastExpressionCompiler.UnitTests.PreConstructedClosureTests
-1    of FastExpressionCompiler.LightExpression.IssueTests.Issue174_NullReferenceInSetter
-1    of FastExpressionCompiler.IssueTests.Issue177_Cannot_compile_to_the_required_delegate_type_with_non_generic_CompileFast
-1    of FastExpressionCompiler.LightExpression.IssueTests.Issue177_Cannot_compile_to_the_required_delegate_type_with_non_generic_CompileFast
-11   of FastExpressionCompiler.LightExpression.UnitTests.PreConstructedClosureTests
-1    of FastExpressionCompiler.IssueTests.Issue179_Add_something_like_LambdaExpression_CompileToMethod
-
-//TryCatchTests.Can_handle_the_exception_and_return_result_from_TryCatch_block
-var @cs = (Func<string, int>)((string a) => //int
+var @cs = (Func<int, int>)((int int_0) => //int
 {
-    try
+    int_0 = 42;
+    ((Action<int>)((int int_0) => //void
     {
-        return int.Parse(a);
-    }
-    catch (Exception ex)
-    {
-        return (ex.Message.Length > 0) ? 47 : 0;
-    }
+        int_0 = int_0 - 2;
+    }))
+    .Invoke(
+        int_0);
+    return int_0;
 });
-1    of FastExpressionCompiler.LightExpression.IssueTests.Issue179_Add_something_like_LambdaExpression_CompileToMethod
 
-//TryCatchTests.Issue424_Can_be_nested_in_call_expression
+//NestedLambdaTests.Hmm_I_can_use_the_same_parameter_for_outer_and_nested_lambda
+var @cs = (Func<int>)(() => //int
+    ((Func<int, int>)((int n) => //int
+        n - ((Func<int, int>)((int n) => //int
+            n + 1))
+        .Invoke(
+            n)))
+    .Invoke(
+        42) + ((Func<int, int>)((int n) => //int
+            n + 1))
+        .Invoke(
+            13));
+1    of FastExpressionCompiler.IssueTests.Issue174_NullReferenceInSetter
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue174_NullReferenceInSetter
+
+//NestedLambdaTests.Using_try_finally_as_arithmetic_operand_use_void_block_in_finally
 T __f<T>(System.Func<T> f) => f();
-var @cs = (Func<Func<string>, Func<string>, Func<string>, string>)((
-    Func<string> pa, 
-    Func<string> pb, 
-    Func<string> pc) => //string
-    TryCatchTests.TestMethod(
-        __f(() => {
-            try
-            {
-                return pa.Invoke();
-            }
-            catch (Exception ex)
-            {
-                return ex.Message;
-            }
-        }),
-        __f(() => {
-            try
-            {
-                return pb.Invoke();
-            }
-            catch (Exception ex)
-            {
-                return ex.Message;
-            }
-        }),
-        __f(() => {
-            try
-            {
-                return pc.Invoke();
-            }
-            catch (Exception ex)
-            {
-                return ex.Message;
-            }
-        })));
+var @cs = (Func<int, int>)((int n) => //int
+    n - 
+    __f(() => {
+        int nSaved = default;
+        try
+        {
+            nSaved = n;
+            return n + 10;
+        }
+        finally
+        {
+            n = nSaved;
+        }
+    }));
+1    of FastExpressionCompiler.IssueTests.Issue177_Cannot_compile_to_the_required_delegate_type_with_non_generic_CompileFast
+
+//NestedLambdaTests.Using_try_finally_as_arithmetic_operand
+T __f<T>(System.Func<T> f) => f();
+var @cs = (Func<int, int>)((int n) => //int
+    n - 
+    __f(() => {
+        int nSaved = default;
+        try
+        {
+            nSaved = n;
+            return n + 10;
+        }
+        finally
+        {
+            n = nSaved;
+        }
+    }));
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue177_Cannot_compile_to_the_required_delegate_type_with_non_generic_CompileFast
+1    of FastExpressionCompiler.IssueTests.Issue179_Add_something_like_LambdaExpression_CompileToMethod
+1    of FastExpressionCompiler.LightExpression.IssueTests.Issue179_Add_something_like_LambdaExpression_CompileToMethod
 
 //Issue181_TryEmitIncDecAssign_InvalidCastException.TryEmitIncDecAssign_Supports_PostIncrement_Property_Action
 var @cs = (Action<Issue181_TryEmitIncDecAssign_InvalidCastException>)((Issue181_TryEmitIncDecAssign_InvalidCastException issue181_tryemitincdecassign_invalidcastexception_0) => //void
 {
     issue181_tryemitincdecassign_invalidcastexception_0.CounterProperty++;
 });
-
-//TryCatchTests.Can_be_nested_in_binary
-T __f<T>(System.Func<T> f) => f();
-var @cs = (Func<Func<int>, int>)((Func<int> p) => //int
-    1 + 
-    __f(() => {
-        try
-        {
-            return p.Invoke();
-        }
-        catch (Exception)
-        {
-            return 0;
-        }
-    }));
 14   of FastExpressionCompiler.IssueTests.Issue181_TryEmitIncDecAssign_InvalidCastException
 
 //Issue181_TryEmitIncDecAssign_InvalidCastException.TryEmitIncDecAssign_Supports_PostIncrement_Property_Action
@@ -2009,91 +1843,12 @@ var @cs = (Action<Issue181_TryEmitIncDecAssign_InvalidCastException>)((Issue181_
 {
     issue181_tryemitincdecassign_invalidcastexception_0.CounterProperty++;
 });
-
-//TryCatchTests.Can_return_from_catch_block
-var @cs = (Func<bool>)(() => //bool
-{
-    try
-    {
-        throw default(DivideByZeroException)/*NOTE: Provide the non-default value for the Constant!*/;
-        return false;
-    }
-    catch (DivideByZeroException)
-    {
-        return true;
-    }
-});
-
-//TryCatchTests.Can_return_with_return_goto_from_the_catch_block
-var @cs = (Func<bool>)(() => //bool
-{
-    try
-    {
-        throw default(DivideByZeroException)/*NOTE: Provide the non-default value for the Constant!*/;
-        return false;
-    }
-    catch (DivideByZeroException)
-    {
-        return true;
-        bool_0:;
-        return false;
-    }
-});
-
-//TryCatchTests.Can_return_from_try_block_using_label
-var @cs = (Func<string>)(() => //string
-{
-    try
-    {
-        return "From Try block";
-    }
-    catch (Exception)
-    {
-        return "From Catch block";
-    }
-    string_0:;
-});
+17   of FastExpressionCompiler.LightExpression.UnitTests.NestedLambdaTests
 14   of FastExpressionCompiler.LightExpression.IssueTests.Issue181_TryEmitIncDecAssign_InvalidCastException
 1    of FastExpressionCompiler.IssueTests.Issue190_Inc_Dec_Assign_Parent_Block_Var
-
-//TryCatchTests.Can_return_from_catch_block_using_label
-var @cs = (Func<string>)(() => //string
-{
-    try
-    {
-        throw new Exception();
-    }
-    catch (Exception)
-    {
-        return "From Catch block";
-    }
-    string_0:;
-});
 1    of FastExpressionCompiler.LightExpression.IssueTests.Issue190_Inc_Dec_Assign_Parent_Block_Var
 
-//TryCatchTests.Can_return_try_block_result_using_label_from_the_inner_try
-
 //Issue196_AutoMapper_tests_are_failing_when_using_FEC.Test_the_tmp_var_block_reduction
-var @cs = (Func<string>)(() => //string
-{
-    try
-    {
-        try
-        {
-            return "From inner Try block";
-        }
-        catch (Exception)
-        {
-            return "From inner Catch block";
-        }
-        string_0:;
-    }
-    catch (Exception)
-    {
-        return "From outer Catch block";
-    }
-    string_1:;
-});
 T __f<T>(System.Func<T> f) => f();
 var @cs = (Func<Source, Dest, Dest>)((
     Source src, 
@@ -2111,38 +1866,7 @@ var @cs = (Func<Source, Dest, Dest>)((
     Dest dst) => //Dest
     (src == null) ? (Dest)null : 
         dst ?? throw default(ArgumentNullException)/*NOTE: Provide the non-default value for the Constant!*/);
-
-//TryCatchTests.Can_return_from_try_block_using_goto_to_label_with_default_value
-var @cs = (Func<string>)(() => //string
-{
-    string s = null;
-    try
-    {
-        return "From Try block";
-    }
-    catch (Exception)
-    {
-        return "From Catch block";
-    }
-    string_0:;
-});
-
-//TryCatchTests.Can_return_from_try_block_using_goto_to_label_with_the_more_code_after_label
-var @cs = (Func<string>)(() => //string
-{
-    string s = null;
-    try
-    {
-        return "From Try block";
-    }
-    catch (Exception)
-    {
-        return "From Catch block";
-    }
-    void_0:;
-    s = "the end";
-    return s;
-});
+11   of FastExpressionCompiler.UnitTests.PreConstructedClosureTests
 
 //Issue196_AutoMapper_tests_are_failing_when_using_FEC.Coalesce_should_produce_optimal_opcodes
 var @cs = (Func<Source, Dest>)((Source source) => //Dest
@@ -2151,7 +1875,7 @@ var @cs = (Func<Source, Dest>)((Source source) => //Dest
         {
             Value = source.Value
         });
-19   of FastExpressionCompiler.UnitTests.TryCatchTests
+11   of FastExpressionCompiler.LightExpression.UnitTests.PreConstructedClosureTests
 
 //TryCatchTests.Can_handle_the_exception_and_return_result_from_TryCatch_block
 var @cs = (Func<string, int>)((string a) => //int
@@ -2224,9 +1948,15 @@ var @cs = (Func<Source, Dest, Dest>)((
     (src == null) ? (Dest)null : 
         dst ?? throw default(ArgumentNullException)/*NOTE: Provide the non-default value for the Constant!*/);
 
-//TryCatchTests.Can_be_nested_in_binary
-
 //Issue196_AutoMapper_tests_are_failing_when_using_FEC.Coalesce_should_produce_optimal_opcodes
+var @cs = (Func<Source, Dest>)((Source source) => //Dest
+    (source == null) ? (Dest)null : 
+        default(Dest)/*NOTE: Provide the non-default value for the Constant!*/ ?? new Dest()
+        {
+            Value = source.Value
+        });
+
+//TryCatchTests.Can_be_nested_in_binary
 T __f<T>(System.Func<T> f) => f();
 var @cs = (Func<Func<int>, int>)((Func<int> p) => //int
     1 + 
@@ -2240,12 +1970,6 @@ var @cs = (Func<Func<int>, int>)((Func<int> p) => //int
             return 0;
         }
     }));
-var @cs = (Func<Source, Dest>)((Source source) => //Dest
-    (source == null) ? (Dest)null : 
-        default(Dest)/*NOTE: Provide the non-default value for the Constant!*/ ?? new Dest()
-        {
-            Value = source.Value
-        });
 
 //TryCatchTests.Can_return_from_catch_block
 var @cs = (Func<bool>)(() => //bool
@@ -2342,9 +2066,9 @@ var @cs = (Func<string>)(() => //string
     }
     string_0:;
 });
-2    of FastExpressionCompiler.IssueTests.Issue197_Operation_could_destabilize_the_runtime
 
 //TryCatchTests.Can_return_from_try_block_using_goto_to_label_with_the_more_code_after_label
+2    of FastExpressionCompiler.IssueTests.Issue197_Operation_could_destabilize_the_runtime
 var @cs = (Func<string>)(() => //string
 {
     string s = null;
@@ -2376,7 +2100,6 @@ var @cs = (Func<OrderWithNullableStatus, OrderDtoWithNullableStatus>)((OrderWith
     return dest;
 });
 2    of FastExpressionCompiler.IssueTests.Issue204_Operation_could_destabilize_the_runtime__AutoMapper
-19   of FastExpressionCompiler.LightExpression.UnitTests.TryCatchTests
 
 //Issue204_Operation_could_destabilize_the_runtime__AutoMapper.ShouldAlsoWork
 var @cs = (Func<OrderWithNullableStatus, OrderDtoWithNullableStatus>)((OrderWithNullableStatus src) => //OrderDtoWithNullableStatus
@@ -2391,33 +2114,82 @@ var @cs = (Func<OrderWithNullableStatus, OrderDtoWithNullableStatus>)((OrderWith
     dest.Status = propertyValue;
     return dest;
 });
+19   of FastExpressionCompiler.UnitTests.TryCatchTests
 2    of FastExpressionCompiler.LightExpression.IssueTests.Issue204_Operation_could_destabilize_the_runtime__AutoMapper
-3    of FastExpressionCompiler.UnitTests.TypeBinaryExpressionTests
-1    of FastExpressionCompiler.IssueTests.Issue209_AutoMapper_Operation_could_destabilize_the_runtime
-3    of FastExpressionCompiler.LightExpression.UnitTests.TypeBinaryExpressionTests
 
-//UnaryExpressionTests.PostDecrementAssign_compiles
-var @cs = (Func<int, int>)((int i) => //int
-    i--);
+//TryCatchTests.Can_handle_the_exception_and_return_result_from_TryCatch_block
+var @cs = (Func<string, int>)((string a) => //int
+{
+    try
+    {
+        return int.Parse(a);
+    }
+    catch (Exception ex)
+    {
+        return (ex.Message.Length > 0) ? 47 : 0;
+    }
+});
+1    of FastExpressionCompiler.IssueTests.Issue209_AutoMapper_Operation_could_destabilize_the_runtime
+
+//TryCatchTests.Issue424_Can_be_nested_in_call_expression
+T __f<T>(System.Func<T> f) => f();
+var @cs = (Func<Func<string>, Func<string>, Func<string>, string>)((
+    Func<string> pa, 
+    Func<string> pb, 
+    Func<string> pc) => //string
+    TryCatchTests.TestMethod(
+        __f(() => {
+            try
+            {
+                return pa.Invoke();
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
+        }),
+        __f(() => {
+            try
+            {
+                return pb.Invoke();
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
+        }),
+        __f(() => {
+            try
+            {
+                return pc.Invoke();
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
+            }
+        })));
 1    of FastExpressionCompiler.LightExpression.IssueTests.Issue209_AutoMapper_Operation_could_destabilize_the_runtime
 
-//UnaryExpressionTests.ArrayOfStructParameter_MemberPostDecrementAssign_works
-var @cs = (Func<UnaryExpressionTests.X[], int, int>)((
-    UnaryExpressionTests.X[] a, 
-    int i) => //int
-    a[i].N--);
-
 //Issue243_Pass_Parameter_By_Ref_is_supported.Lambda_Ref_Parameter_Passed_Into_Static_Value_Method
 var @cs = (RefDelegate)((ref string string_0) => //string
     Issue243_Pass_Parameter_By_Ref_is_supported.PassByValue(string_0));
 
-//UnaryExpressionTests.ArrayOfStructParameter_MemberPreDecrementAssign_works
+//TryCatchTests.Can_be_nested_in_binary
+T __f<T>(System.Func<T> f) => f();
+var @cs = (Func<Func<int>, int>)((Func<int> p) => //int
+    1 + 
+    __f(() => {
+        try
+        {
+            return p.Invoke();
+        }
+        catch (Exception)
+        {
+            return 0;
+        }
+    }));
 
 //Issue243_Pass_Parameter_By_Ref_is_supported.Lambda_Ref_Parameter_Passed_Into_Instance_Value_Method
-var @cs = (Func<UnaryExpressionTests.X[], int, int>)((
-    UnaryExpressionTests.X[] a, 
-    int i) => //int
-    --a[i].N);
 var @cs = (RefInstanceDelegate<PassedByRefClass, string>)((
     ref PassedByRefClass passedbyrefclass_0, 
     ref string string_1) => //string
@@ -2428,7 +2200,37 @@ var @cs = (RefInstanceDelegate<PassedByRefStruct, int>)((
     ref PassedByRefStruct passedbyrefstruct_0, 
     ref int int_1) => //string
     passedbyrefstruct_0.PassByValue(int_1));
+
+//TryCatchTests.Can_return_from_catch_block
 7    of FastExpressionCompiler.IssueTests.Issue243_Pass_Parameter_By_Ref_is_supported
+var @cs = (Func<bool>)(() => //bool
+{
+    try
+    {
+        throw default(DivideByZeroException)/*NOTE: Provide the non-default value for the Constant!*/;
+        return false;
+    }
+    catch (DivideByZeroException)
+    {
+        return true;
+    }
+});
+
+//TryCatchTests.Can_return_with_return_goto_from_the_catch_block
+var @cs = (Func<bool>)(() => //bool
+{
+    try
+    {
+        throw default(DivideByZeroException)/*NOTE: Provide the non-default value for the Constant!*/;
+        return false;
+    }
+    catch (DivideByZeroException)
+    {
+        return true;
+        bool_0:;
+        return false;
+    }
+});
 
 //Issue243_Pass_Parameter_By_Ref_is_supported.Lambda_Ref_Parameter_Passed_Into_Static_Value_Method
 var @cs = (RefDelegate)((ref string string_0) => //string
@@ -2445,7 +2247,57 @@ var @cs = (RefInstanceDelegate<PassedByRefStruct, int>)((
     ref PassedByRefStruct passedbyrefstruct_0, 
     ref int int_1) => //string
     passedbyrefstruct_0.PassByValue(int_1));
+
+//TryCatchTests.Can_return_from_try_block_using_label
+var @cs = (Func<string>)(() => //string
+{
+    try
+    {
+        return "From Try block";
+    }
+    catch (Exception)
+    {
+        return "From Catch block";
+    }
+    string_0:;
+});
+
+//TryCatchTests.Can_return_from_catch_block_using_label
+var @cs = (Func<string>)(() => //string
+{
+    try
+    {
+        throw new Exception();
+    }
+    catch (Exception)
+    {
+        return "From Catch block";
+    }
+    string_0:;
+});
 7    of FastExpressionCompiler.LightExpression.IssueTests.Issue243_Pass_Parameter_By_Ref_is_supported
+
+//TryCatchTests.Can_return_try_block_result_using_label_from_the_inner_try
+var @cs = (Func<string>)(() => //string
+{
+    try
+    {
+        try
+        {
+            return "From inner Try block";
+        }
+        catch (Exception)
+        {
+            return "From inner Catch block";
+        }
+        string_0:;
+    }
+    catch (Exception)
+    {
+        return "From outer Catch block";
+    }
+    string_1:;
+});
 
 //Nested_lambdas_assigned_to_vars.Test_shared_sub_expressions
 var @cs = (Func<A>)(() => //A
@@ -2472,6 +2324,38 @@ var @cs = (Func<A>)(() => //A
                     2,
                     (Func<D>)(() => //D
                         new D())))))))));
+
+//TryCatchTests.Can_return_from_try_block_using_goto_to_label_with_default_value
+var @cs = (Func<string>)(() => //string
+{
+    string s = null;
+    try
+    {
+        return "From Try block";
+    }
+    catch (Exception)
+    {
+        return "From Catch block";
+    }
+    string_0:;
+});
+
+//TryCatchTests.Can_return_from_try_block_using_goto_to_label_with_the_more_code_after_label
+var @cs = (Func<string>)(() => //string
+{
+    string s = null;
+    try
+    {
+        return "From Try block";
+    }
+    catch (Exception)
+    {
+        return "From Catch block";
+    }
+    void_0:;
+    s = "the end";
+    return s;
+});
 
 //Nested_lambdas_assigned_to_vars.Test_shared_sub_expressions_with_3_dublicate_D
 var @cs = (Func<A1>)(() => //A1
@@ -2540,6 +2424,8 @@ var @cs = (Func<Name, Name, Name, A2>)((
                         2,
                         (Func<D1>)(() => //D1
                             new D1(d1Name))))))))));
+19   of FastExpressionCompiler.LightExpression.UnitTests.TryCatchTests
+3    of FastExpressionCompiler.UnitTests.TypeBinaryExpressionTests
 
 //Nested_lambdas_assigned_to_vars.Test_2_shared_lambdas_on_the_same_level
 var @cs = (Func<DD>)(() => //DD
@@ -2552,17 +2438,11 @@ var @cs = (Func<DD>)(() => //DD
             2,
             (Func<D>)(() => //D
                 new D())))));
-
-//UnaryExpressionTests.Parameter_PostIncrementAssign_compiles
-var @cs = (Func<int, int>)((int i) => //int
-    i++);
 5    of FastExpressionCompiler.IssueTests.Nested_lambdas_assigned_to_vars
-
-//UnaryExpressionTests.RefParameter_PostIncrementAssign_works
-var @cs = (FuncByRef)((ref int i) => //int
-    i++);
+3    of FastExpressionCompiler.LightExpression.UnitTests.TypeBinaryExpressionTests
 
 //Nested_lambdas_assigned_to_vars.Test_shared_sub_expressions
+
 var @cs = (Func<A>)(() => //A
     new A(
         ((B)default(Nested_lambdas_assigned_to_vars)/*NOTE: Provide the non-default value for the Constant!*/.GetOrAdd(
@@ -2587,25 +2467,23 @@ var @cs = (Func<A>)(() => //A
                     2,
                     (Func<D>)(() => //D
                         new D())))))))));
+//UnaryExpressionTests.PostDecrementAssign_compiles
+var @cs = (Func<int, int>)((int i) => //int
+    i--);
 
-//UnaryExpressionTests.ArrayParameter_PostIncrementAssign_works
-var @cs = (Func<int[], int, int>)((
-    int[] a, 
+//UnaryExpressionTests.ArrayOfStructParameter_MemberPostDecrementAssign_works
+var @cs = (Func<UnaryExpressionTests.X[], int, int>)((
+    UnaryExpressionTests.X[] a, 
     int i) => //int
-    a[i]++);
+    a[i].N--);
 
-//UnaryExpressionTests.ArrayParameterByRef_PostIncrementAssign_works
-var @cs = (FuncArrByRef)((
-    ref int[] a, 
+//UnaryExpressionTests.ArrayOfStructParameter_MemberPreDecrementAssign_works
+var @cs = (Func<UnaryExpressionTests.X[], int, int>)((
+    UnaryExpressionTests.X[] a, 
     int i) => //int
-    a[i]++);
-
-//UnaryExpressionTests.ArrayItemRefParameter_PostIncrementAssign_works
-var @cs = (FuncByRef)((ref int i) => //int
-    i++);
+    --a[i].N);
 
 //Nested_lambdas_assigned_to_vars.Test_shared_sub_expressions_with_3_dublicate_D
-28   of FastExpressionCompiler.UnitTests.UnaryExpressionTests
 var @cs = (Func<A1>)(() => //A1
     new A1(
         ((D)default(Nested_lambdas_assigned_to_vars)/*NOTE: Provide the non-default value for the Constant!*/.GetOrAdd(
@@ -2634,16 +2512,6 @@ var @cs = (Func<A1>)(() => //A1
                     2,
                     (Func<D>)(() => //D
                         new D())))))))));
-
-//UnaryExpressionTests.PostDecrementAssign_compiles
-var @cs = (Func<int, int>)((int i) => //int
-    i--);
-
-//UnaryExpressionTests.ArrayOfStructParameter_MemberPostDecrementAssign_works
-var @cs = (Func<UnaryExpressionTests.X[], int, int>)((
-    UnaryExpressionTests.X[] a, 
-    int i) => //int
-    a[i].N--);
 
 //Nested_lambdas_assigned_to_vars.Test_shared_sub_expressions_with_non_passed_params_in_closure
 var @cs = (Func<Name, Name, Name, A2>)((
@@ -2682,12 +2550,6 @@ var @cs = (Func<Name, Name, Name, A2>)((
                         2,
                         (Func<D1>)(() => //D1
                             new D1(d1Name))))))))));
-
-//UnaryExpressionTests.ArrayOfStructParameter_MemberPreDecrementAssign_works
-var @cs = (Func<UnaryExpressionTests.X[], int, int>)((
-    UnaryExpressionTests.X[] a, 
-    int i) => //int
-    --a[i].N);
 
 //Nested_lambdas_assigned_to_vars.Test_2_shared_lambdas_on_the_same_level
 var @cs = (Func<DD>)(() => //DD
@@ -2746,7 +2608,7 @@ var @cs = (SerializerDelegate)((
     ISerializer serializer, 
     ref Test data) => //void
 {
-    serializer.WriteDecimal(indata.Field1);
+    serializer.WriteDecimal(in data.Field1);
 });
 
 //Issue248_Calling_method_with_in_out_parameters_in_expression_lead_to_NullReferenceException_on_calling_site.Test_2
@@ -2754,7 +2616,7 @@ var @cs = (SerializerDelegate)((
     ISerializer serializer, 
     ref Test data) => //void
 {
-    serializer.WriteDecimal(indata.NestedTest.Field1);
+    serializer.WriteDecimal(in data.NestedTest.Field1);
 });
 
 //Issue248_Calling_method_with_in_out_parameters_in_expression_lead_to_NullReferenceException_on_calling_site.Test_3
@@ -2778,43 +2640,27 @@ var @cs = (SerializerDelegate)((
 });
 4    of FastExpressionCompiler.IssueTests.Issue248_Calling_method_with_in_out_parameters_in_expression_lead_to_NullReferenceException_on_calling_site
 
-//UnaryExpressionTests.Parameter_PostIncrementAssign_compiles
-var @cs = (Func<int, int>)((int i) => //int
-    i++);
-
 //Issue248_Calling_method_with_in_out_parameters_in_expression_lead_to_NullReferenceException_on_calling_site.Test_1
 var @cs = (SerializerDelegate)((
     ISerializer serializer, 
     ref Test data) => //void
 {
-    serializer.WriteDecimal(indata.Field1);
+    serializer.WriteDecimal(in data.Field1);
 });
 
-//UnaryExpressionTests.RefParameter_PostIncrementAssign_works
-var @cs = (FuncByRef)((ref int i) => //int
-    i++);
-
-
 //Issue248_Calling_method_with_in_out_parameters_in_expression_lead_to_NullReferenceException_on_calling_site.Test_2
-//UnaryExpressionTests.ArrayParameter_PostIncrementAssign_works
 var @cs = (SerializerDelegate)((
     ISerializer serializer, 
     ref Test data) => //void
 {
-    serializer.WriteDecimal(indata.NestedTest.Field1);
+    serializer.WriteDecimal(in data.NestedTest.Field1);
 });
-var @cs = (Func<int[], int, int>)((
-    int[] a, 
-    int i) => //int
-    a[i]++);
 
-//UnaryExpressionTests.ArrayParameterByRef_PostIncrementAssign_works
+//UnaryExpressionTests.Parameter_PostIncrementAssign_compiles
+var @cs = (Func<int, int>)((int i) => //int
+    i++);
 
 //Issue248_Calling_method_with_in_out_parameters_in_expression_lead_to_NullReferenceException_on_calling_site.Test_3
-var @cs = (FuncArrByRef)((
-    ref int[] a, 
-    int i) => //int
-    a[i]++);
 var @cs = (SerializerDelegate)((
     ISerializer serializer, 
     ref Test data) => //void
@@ -2822,7 +2668,7 @@ var @cs = (SerializerDelegate)((
     serializer.WriteDecimalByVal(data.Field1);
 });
 
-//UnaryExpressionTests.ArrayItemRefParameter_PostIncrementAssign_works
+//UnaryExpressionTests.RefParameter_PostIncrementAssign_works
 var @cs = (FuncByRef)((ref int i) => //int
     i++);
 
@@ -2837,7 +2683,19 @@ var @cs = (SerializerDelegate)((
             true,
             (float)0.3)).KlazField);
 });
+
+//UnaryExpressionTests.ArrayParameter_PostIncrementAssign_works
+var @cs = (Func<int[], int, int>)((
+    int[] a, 
+    int i) => //int
+    a[i]++);
 4    of FastExpressionCompiler.LightExpression.IssueTests.Issue248_Calling_method_with_in_out_parameters_in_expression_lead_to_NullReferenceException_on_calling_site
+
+//UnaryExpressionTests.ArrayParameterByRef_PostIncrementAssign_works
+var @cs = (FuncArrByRef)((
+    ref int[] a, 
+    int i) => //int
+    a[i]++);
 
 //Issue251_Bad_code_gen_for_byRef_parameters.Test_1
 var @cs = (EqualsHandler)((
@@ -2845,7 +2703,10 @@ var @cs = (EqualsHandler)((
     in double rightValue) => //bool
     leftValue.Equals(rightValue));
 1    of FastExpressionCompiler.IssueTests.Issue251_Bad_code_gen_for_byRef_parameters
-28   of FastExpressionCompiler.LightExpression.UnitTests.UnaryExpressionTests
+
+//UnaryExpressionTests.ArrayItemRefParameter_PostIncrementAssign_works
+var @cs = (FuncByRef)((ref int i) => //int
+    i++);
 
 //Issue251_Bad_code_gen_for_byRef_parameters.Test_1
 var @cs = (EqualsHandler)((
@@ -2854,6 +2715,95 @@ var @cs = (EqualsHandler)((
     leftValue.Equals(rightValue));
 1    of FastExpressionCompiler.LightExpression.IssueTests.Issue251_Bad_code_gen_for_byRef_parameters
 
+//Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown.Should_Deserialize_Simple
+28   of FastExpressionCompiler.UnitTests.UnaryExpressionTests
+var @cs = (DeserializerDlg<Word>)((
+    ref ReadOnlySequence<byte> input, 
+    Word value, 
+    out long bytesRead) => //bool
+{
+    SequenceReader<byte> reader = default;
+    string wordValue = null;
+    reader = new SequenceReader<byte>(input);
+    if (ReaderExtensions.TryReadValue<string>(
+        ref reader,
+        out wordValue) == false)
+    {
+        bytesRead = reader.Consumed;
+        return false;
+        bool_0:;
+        return false;
+    }
+    value.Value = wordValue;
+    bytesRead = reader.Consumed;
+    return true;
+    bool_0:;
+    return false;
+});
+
+//UnaryExpressionTests.PostDecrementAssign_compiles
+var @cs = (Func<int, int>)((int i) => //int
+    i--);
+
+//UnaryExpressionTests.ArrayOfStructParameter_MemberPostDecrementAssign_works
+var @cs = (Func<UnaryExpressionTests.X[], int, int>)((
+    UnaryExpressionTests.X[] a, 
+    int i) => //int
+    a[i].N--);
+
+//Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown.Should_Deserialize_Simple
+var @cs = (DeserializerDlg<Simple>)((
+    ref ReadOnlySequence<byte> input, 
+    Simple value, 
+    out long bytesRead) => //bool
+{
+    SequenceReader<byte> reader = default;
+    int identifier = default;
+    Word[] content = null;
+    byte contentLength = default;
+    reader = new SequenceReader<byte>(input);
+    if (ReaderExtensions.TryReadValue<int>(
+        ref reader,
+        out identifier) == false)
+    {
+        bytesRead = reader.Consumed;
+        return false;
+        bool_0:;
+        return false;
+    }
+    if (ReaderExtensions.TryReadValue<byte>(
+        ref reader,
+        out contentLength) == false)
+    {
+        bytesRead = reader.Consumed;
+        return false;
+        bool_0:;
+        return false;
+    }
+    if (Serializer.TryDeserializeValues<Word>(
+        ref reader,
+        (int)contentLength,
+        out content) == false)
+    {
+        bytesRead = reader.Consumed;
+        return false;
+        bool_0:;
+        return false;
+    }
+    value.Identifier = identifier;
+    value.Sentence = content;
+    bytesRead = reader.Consumed;
+    return true;
+    bool_0:;
+    return false;
+});
+
+//UnaryExpressionTests.ArrayOfStructParameter_MemberPreDecrementAssign_works
+var @cs = (Func<UnaryExpressionTests.X[], int, int>)((
+    UnaryExpressionTests.X[] a, 
+    int i) => //int
+    --a[i].N);
+
 //Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown.Try_compare_strings
 var @cs = (Func<string, string>)((string s) => //string
 {
@@ -2881,137 +2831,17 @@ var @cs = (Func<bool, string>)((bool b) => //string
     string_0:;
     return (string)null;
 });
-
-//Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown.Should_Deserialize_Simple
-var @cs = (DeserializerDlg<Word>)((
-    ref ReadOnlySequence<byte> input, 
-    Word value, 
-    out long bytesRead) => //bool
-{
-    SequenceReader<byte> reader = default;
-    string wordValue = null;
-    reader = new SequenceReader<byte>(input);
-    if (ReaderExtensions.TryReadValue<string>(
-        ref reader,
-        out wordValue) == false)
-    {
-        bytesRead = ref reader.Consumed;
-        return false;
-        bool_0:;
-        return false;
-    }
-    value.Value = wordValue;
-    bytesRead = ref reader.Consumed;
-    return true;
-    bool_0:;
-    return false;
-});
-8    of FastExpressionCompiler.UnitTests.ValueTypeTests
-
-//Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown.Should_Deserialize_Simple
-var @cs = (DeserializerDlg<Simple>)((
-    ref ReadOnlySequence<byte> input, 
-    Simple value, 
-    out long bytesRead) => //bool
-{
-    SequenceReader<byte> reader = default;
-    int identifier = default;
-    Word[] content = null;
-    byte contentLength = default;
-    reader = new SequenceReader<byte>(input);
-    if (ReaderExtensions.TryReadValue<int>(
-        ref reader,
-        out identifier) == false)
-    {
-        bytesRead = ref reader.Consumed;
-        return false;
-        bool_0:;
-        return false;
-    }
-    if (ReaderExtensions.TryReadValue<byte>(
-        ref reader,
-        out contentLength) == false)
-    {
-        bytesRead = ref reader.Consumed;
-        return false;
-        bool_0:;
-        return false;
-    }
-    if (Serializer.TryDeserializeValues<Word>(
-        ref reader,
-        (int)contentLength,
-        out content) == false)
-    {
-        bytesRead = ref reader.Consumed;
-        return false;
-        bool_0:;
-        return false;
-    }
-    value.Identifier = identifier;
-    value.Sentence = content;
-    bytesRead = ref reader.Consumed;
-    return true;
-    bool_0:;
-    return false;
-});
-8    of FastExpressionCompiler.LightExpression.UnitTests.ValueTypeTests
 8    of FastExpressionCompiler.IssueTests.Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown
 
-//Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown.Try_compare_strings
-var @cs = (Func<string, string>)((string s) => //string
-{
-    if (s == "42")
-    {
-        return "true";
-        string_0:;
-        return (string)null;
-    }
-    return "false";
-    string_0:;
-    return (string)null;
-});
-
-//NestedLambdasSharedToExpressionCodeStringTest.Issue478_Debug_info_should_be_included_into_nested_lambdas
-
-//Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown.Conditional_with_Equal_true_should_shortcircuit_to_Brtrue_or_Brfalse
-var @cs = (Func<A>)(() => //A
-    new A(
-        ((B)default(NestedLambdasSharedToExpressionCodeStringTest)/*NOTE: Provide the non-default value for the Constant!*/.GetOrAdd(
-            0,
-            (Func<object>)(() => //object
-                new B(
-                    ((C)default(NestedLambdasSharedToExpressionCodeStringTest)/*NOTE: Provide the non-default value for the Constant!*/.GetOrAdd(
-                        1,
-                        (Func<object>)(() => //object
-                            new C(((D)default(NestedLambdasSharedToExpressionCodeStringTest)/*NOTE: Provide the non-default value for the Constant!*/.GetOrAdd(
-                                2,
-                                (Func<object>)(() => //object
-                                    new D()))))))),
-                    ((D)default(NestedLambdasSharedToExpressionCodeStringTest)/*NOTE: Provide the non-default value for the Constant!*/.GetOrAdd(
-                        2,
-                        (Func<object>)(() => //object
-                            new D()))))))),
-        ((C)default(NestedLambdasSharedToExpressionCodeStringTest)/*NOTE: Provide the non-default value for the Constant!*/.GetOrAdd(
-            1,
-            (Func<object>)(() => //object
-                new C(((D)default(NestedLambdasSharedToExpressionCodeStringTest)/*NOTE: Provide the non-default value for the Constant!*/.GetOrAdd(
-                    2,
-                    (Func<object>)(() => //object
-                        new D())))))))));
-var @cs = (Func<bool, string>)((bool b) => //string
-{
-    if (b)
-    {
-        return "true";
-        string_0:;
-        return (string)null;
-    }
-    return "false";
-    string_0:;
-    return (string)null;
-});
+//UnaryExpressionTests.Parameter_PostIncrementAssign_compiles
+var @cs = (Func<int, int>)((int i) => //int
+    i++);
 
 //Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown.Should_Deserialize_Simple
+
+//UnaryExpressionTests.RefParameter_PostIncrementAssign_works
+var @cs = (FuncByRef)((ref int i) => //int
+    i++);
 var @cs = (DeserializerDlg<Word>)((
     ref ReadOnlySequence<byte> input, 
     Word value, 
@@ -3024,17 +2854,29 @@ var @cs = (DeserializerDlg<Word>)((
         ref reader,
         out wordValue) == false)
     {
-        bytesRead = ref reader.Consumed;
+        bytesRead = reader.Consumed;
         return false;
         bool_0:;
         return false;
     }
     value.Value = wordValue;
-    bytesRead = ref reader.Consumed;
+    bytesRead = reader.Consumed;
     return true;
     bool_0:;
     return false;
 });
+
+//UnaryExpressionTests.ArrayParameter_PostIncrementAssign_works
+var @cs = (Func<int[], int, int>)((
+    int[] a, 
+    int i) => //int
+    a[i]++);
+
+//UnaryExpressionTests.ArrayParameterByRef_PostIncrementAssign_works
+var @cs = (FuncArrByRef)((
+    ref int[] a, 
+    int i) => //int
+    a[i]++);
 
 //Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown.Should_Deserialize_Simple
 var @cs = (DeserializerDlg<Simple>)((
@@ -3051,7 +2893,7 @@ var @cs = (DeserializerDlg<Simple>)((
         ref reader,
         out identifier) == false)
     {
-        bytesRead = ref reader.Consumed;
+        bytesRead = reader.Consumed;
         return false;
         bool_0:;
         return false;
@@ -3060,7 +2902,7 @@ var @cs = (DeserializerDlg<Simple>)((
         ref reader,
         out contentLength) == false)
     {
-        bytesRead = ref reader.Consumed;
+        bytesRead = reader.Consumed;
         return false;
         bool_0:;
         return false;
@@ -3070,20 +2912,56 @@ var @cs = (DeserializerDlg<Simple>)((
         (int)contentLength,
         out content) == false)
     {
-        bytesRead = ref reader.Consumed;
+        bytesRead = reader.Consumed;
         return false;
         bool_0:;
         return false;
     }
     value.Identifier = identifier;
     value.Sentence = content;
-    bytesRead = ref reader.Consumed;
+    bytesRead = reader.Consumed;
     return true;
     bool_0:;
     return false;
 });
 
-//NestedLambdasSharedToExpressionCodeStringTest.Should_output_a_valid_expression_code
+//UnaryExpressionTests.ArrayItemRefParameter_PostIncrementAssign_works
+var @cs = (FuncByRef)((ref int i) => //int
+    i++);
+28   of FastExpressionCompiler.LightExpression.UnitTests.UnaryExpressionTests
+
+//Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown.Try_compare_strings
+var @cs = (Func<string, string>)((string s) => //string
+{
+    if (s == "42")
+    {
+        return "true";
+        string_0:;
+        return (string)null;
+    }
+    return "false";
+    string_0:;
+    return (string)null;
+});
+
+//Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown.Conditional_with_Equal_true_should_shortcircuit_to_Brtrue_or_Brfalse
+var @cs = (Func<bool, string>)((bool b) => //string
+{
+    if (b)
+    {
+        return "true";
+        string_0:;
+        return (string)null;
+    }
+    return "false";
+    string_0:;
+    return (string)null;
+});
+8    of FastExpressionCompiler.LightExpression.IssueTests.Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown
+8    of FastExpressionCompiler.UnitTests.ValueTypeTests
+8    of FastExpressionCompiler.LightExpression.UnitTests.ValueTypeTests
+
+//NestedLambdasSharedToExpressionCodeStringTest.Issue478_Debug_info_should_be_included_into_nested_lambdas
 var @cs = (Func<A>)(() => //A
     new A(
         ((B)default(NestedLambdasSharedToExpressionCodeStringTest)/*NOTE: Provide the non-default value for the Constant!*/.GetOrAdd(
@@ -3108,13 +2986,6 @@ var @cs = (Func<A>)(() => //A
                     2,
                     (Func<object>)(() => //object
                         new D())))))))));
-3    of FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest
-8    of FastExpressionCompiler.LightExpression.IssueTests.Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown
-11   of FastExpressionCompiler.LightExpression.UnitTests.LightExpressionTests
-3    of FastExpressionCompiler.UnitTests.ToCSharpStringTests
-3    of FastExpressionCompiler.LightExpression.UnitTests.ToCSharpStringTests
-
-UnitTests are passing in 831 ms.
 
 //Issue261_Loop_wih_conditions_fails.Test_serialization_of_the_Dictionary
 var @cs = (WriteSealed)((
@@ -3201,6 +3072,33 @@ var @cs = (WriteSealed)((
     finishWrite_3:;
 });
 
+//NestedLambdasSharedToExpressionCodeStringTest.Should_output_a_valid_expression_code
+var @cs = (Func<A>)(() => //A
+    new A(
+        ((B)default(NestedLambdasSharedToExpressionCodeStringTest)/*NOTE: Provide the non-default value for the Constant!*/.GetOrAdd(
+            0,
+            (Func<object>)(() => //object
+                new B(
+                    ((C)default(NestedLambdasSharedToExpressionCodeStringTest)/*NOTE: Provide the non-default value for the Constant!*/.GetOrAdd(
+                        1,
+                        (Func<object>)(() => //object
+                            new C(((D)default(NestedLambdasSharedToExpressionCodeStringTest)/*NOTE: Provide the non-default value for the Constant!*/.GetOrAdd(
+                                2,
+                                (Func<object>)(() => //object
+                                    new D()))))))),
+                    ((D)default(NestedLambdasSharedToExpressionCodeStringTest)/*NOTE: Provide the non-default value for the Constant!*/.GetOrAdd(
+                        2,
+                        (Func<object>)(() => //object
+                            new D()))))))),
+        ((C)default(NestedLambdasSharedToExpressionCodeStringTest)/*NOTE: Provide the non-default value for the Constant!*/.GetOrAdd(
+            1,
+            (Func<object>)(() => //object
+                new C(((D)default(NestedLambdasSharedToExpressionCodeStringTest)/*NOTE: Provide the non-default value for the Constant!*/.GetOrAdd(
+                    2,
+                    (Func<object>)(() => //object
+                        new D())))))))));
+3    of FastExpressionCompiler.LightExpression.UnitTests.NestedLambdasSharedToExpressionCodeStringTest
+
 //Issue261_Loop_wih_conditions_fails.Serialize_the_nullable_decimal_array
 var @cs = (WriteSealed)((
     Nullable<Decimal>[] source, 
@@ -3244,6 +3142,11 @@ var @cs = (WriteSealed)((
     skipWrite:;
     finishWrite_1:;
 });
+11   of FastExpressionCompiler.LightExpression.UnitTests.LightExpressionTests
+3    of FastExpressionCompiler.UnitTests.ToCSharpStringTests
+3    of FastExpressionCompiler.LightExpression.UnitTests.ToCSharpStringTests
+
+UnitTests are passing in 538 ms.
 
 //Issue261_Loop_wih_conditions_fails.Test_DictionaryTest_StringDictionary
 var @cs = (WriteSealed)((
@@ -3842,8 +3745,8 @@ var @cs = (Func<IQueryRunner, IDataReader, IGrouping<bool, Customer>>)((
         IDataContext dctx, 
         IDataReader rd, 
         Expression expr, 
-        object[] ps, 
-        object[] preamble) => //IGrouping<bool, Customer>
+        object[] preamble, 
+        object[] ps) => //IGrouping<bool, Customer>
     {
         SQLiteDataReader ldr = null;
         ldr = (SQLiteDataReader)dr;
@@ -3883,8 +3786,8 @@ var @cs = (Func<IQueryRunner, IDataReader, f__AnonymousType142<int?>>)((
         IDataContext dctx, 
         IDataReader rd, 
         Expression expr, 
-        object[] ps, 
-        object[] preamble) => //f__AnonymousType142<int?>
+        object[] preamble, 
+        object[] ps) => //f__AnonymousType142<int?>
     {
         SQLiteDataReader ldr = null;
         f__AnonymousType142<int?> f__anonymoustype142_int__0 = null;
@@ -5335,7 +5238,7 @@ var @cs = (ArrAndRefParam)((
 });
 
 //Issue352_xxxAssign_does_not_work_with_MemberAccess.Check_MultiArrayAccess_AddAssign_PlusOne
-var @cs = (Action<int[]>)((int[] a) => //void
+var @cs = (Action<int[,]>)((int[,] a) => //void
 {
     a[1, 2] += 1;
 });
@@ -5384,11 +5287,11 @@ var @cs = (Action<int[]>)((int[] a) => //void
 //Issue352_xxxAssign_does_not_work_with_MemberAccess.Check_ArrayAccess_AddAssign_ReturnResultInFunction
 var @cs = (Func<int[], int>)((int[] a) => //int
 {
-    a[2] += 33;
+    return a[2] += 33;
 });
 
 //Issue352_xxxAssign_does_not_work_with_MemberAccess.Check_MultiArrayAccess_Assign_InAction
-var @cs = (Action<int[]>)((int[] a) => //void
+var @cs = (Action<int[,]>)((int[,] a) => //void
 {
     a[1, 2] = 33;
 });
@@ -5408,7 +5311,7 @@ var @cs = (Action<int[]>)((int[] a) => //void
 //Issue352_xxxAssign_does_not_work_with_MemberAccess.Check_MemberAccess_AddAssign_ToNewExpression
 var @cs = (Func<int>)(() => //int
 {
-    (new Box(42)).Field += 33;
+    return (new Box(42)).Field += 33;
 });
 
 //Issue352_xxxAssign_does_not_work_with_MemberAccess.Check_MemberAccess_AddAssign_StaticMember
@@ -5583,7 +5486,7 @@ var @cs = (ArrAndRefParam)((
 });
 
 //Issue352_xxxAssign_does_not_work_with_MemberAccess.Check_MultiArrayAccess_AddAssign_PlusOne
-var @cs = (Action<int[]>)((int[] a) => //void
+var @cs = (Action<int[,]>)((int[,] a) => //void
 {
     a[1, 2] += 1;
 });
@@ -5632,11 +5535,11 @@ var @cs = (Action<int[]>)((int[] a) => //void
 //Issue352_xxxAssign_does_not_work_with_MemberAccess.Check_ArrayAccess_AddAssign_ReturnResultInFunction
 var @cs = (Func<int[], int>)((int[] a) => //int
 {
-    a[2] += 33;
+    return a[2] += 33;
 });
 
 //Issue352_xxxAssign_does_not_work_with_MemberAccess.Check_MultiArrayAccess_Assign_InAction
-var @cs = (Action<int[]>)((int[] a) => //void
+var @cs = (Action<int[,]>)((int[,] a) => //void
 {
     a[1, 2] = 33;
 });
@@ -5656,7 +5559,7 @@ var @cs = (Action<int[]>)((int[] a) => //void
 //Issue352_xxxAssign_does_not_work_with_MemberAccess.Check_MemberAccess_AddAssign_ToNewExpression
 var @cs = (Func<int>)(() => //int
 {
-    (new Box(42)).Field += 33;
+    return (new Box(42)).Field += 33;
 });
 
 //Issue352_xxxAssign_does_not_work_with_MemberAccess.Check_MemberAccess_AddAssign_StaticMember
@@ -6069,8 +5972,8 @@ var @cs = (Func<int, int, int, int, int, int, int[]>)((
     int p1, 
     int p2, 
     int p3, 
-    int p4, 
-    int p5) => //int[]
+    int p5, 
+    int p4) => //int[]
     new int[]{
         p0,
         p1,
@@ -6078,481 +5981,19 @@ var @cs = (Func<int, int, int, int, int, int, int[]>)((
         p3,
         p4,
         p5});
-
-//Issue363_ActionFunc16Generics.Can_Create_Func
-var @cs = (Func<int, int, int, int, int, int, int, int[]>)((
-    int p0, 
-    int p1, 
-    int p2, 
-    int p3, 
-    int p4, 
-    int p5, 
-    int p6) => //int[]
-    new int[]{
-        p0,
-        p1,
-        p2,
-        p3,
-        p4,
-        p5,
-        p6});
-
-//Issue363_ActionFunc16Generics.Can_Create_Func
-var @cs = (Func<int, int, int, int, int, int, int, int[]>)((
-    int p0, 
-    int p1, 
-    int p2, 
-    int p3, 
-    int p4, 
-    int p5, 
-    int p6) => //int[]
-    new int[]{
-        p0,
-        p1,
-        p2,
-        p3,
-        p4,
-        p5,
-        p6});
-
-//Issue363_ActionFunc16Generics.Can_Create_Func
-var @cs = (Func<int, int, int, int, int, int, int, int, int[]>)((
-    int p0, 
-    int p1, 
-    int p2, 
-    int p3, 
-    int p4, 
-    int p5, 
-    int p6, 
-    int p7) => //int[]
-    new int[]{
-        p0,
-        p1,
-        p2,
-        p3,
-        p4,
-        p5,
-        p6,
-        p7});
-
-//Issue363_ActionFunc16Generics.Can_Create_Func
-var @cs = (Func<int, int, int, int, int, int, int, int, int[]>)((
-    int p0, 
-    int p1, 
-    int p2, 
-    int p3, 
-    int p4, 
-    int p5, 
-    int p6, 
-    int p7) => //int[]
-    new int[]{
-        p0,
-        p1,
-        p2,
-        p3,
-        p4,
-        p5,
-        p6,
-        p7});
-
-//Issue363_ActionFunc16Generics.Can_Create_Func
-var @cs = (Func<int, int, int, int, int, int, int, int, int, int[]>)((
-    int p0, 
-    int p1, 
-    int p2, 
-    int p3, 
-    int p4, 
-    int p5, 
-    int p6, 
-    int p7, 
-    int p8) => //int[]
-    new int[]{
-        p0,
-        p1,
-        p2,
-        p3,
-        p4,
-        p5,
-        p6,
-        p7,
-        p8});
-
-//Issue363_ActionFunc16Generics.Can_Create_Func
-var @cs = (Func<int, int, int, int, int, int, int, int, int, int[]>)((
-    int p0, 
-    int p1, 
-    int p2, 
-    int p3, 
-    int p4, 
-    int p5, 
-    int p6, 
-    int p7, 
-    int p8) => //int[]
-    new int[]{
-        p0,
-        p1,
-        p2,
-        p3,
-        p4,
-        p5,
-        p6,
-        p7,
-        p8});
-
-//Issue363_ActionFunc16Generics.Can_Create_Func
-var @cs = (Func<int, int, int, int, int, int, int, int, int, int, int[]>)((
-    int p0, 
-    int p1, 
-    int p2, 
-    int p3, 
-    int p4, 
-    int p5, 
-    int p6, 
-    int p7, 
-    int p8, 
-    int p9) => //int[]
-    new int[]{
-        p0,
-        p1,
-        p2,
-        p3,
-        p4,
-        p5,
-        p6,
-        p7,
-        p8,
-        p9});
-
-//Issue363_ActionFunc16Generics.Can_Create_Func
-var @cs = (Func<int, int, int, int, int, int, int, int, int, int, int[]>)((
-    int p0, 
-    int p1, 
-    int p2, 
-    int p3, 
-    int p4, 
-    int p5, 
-    int p6, 
-    int p7, 
-    int p8, 
-    int p9) => //int[]
-    new int[]{
-        p0,
-        p1,
-        p2,
-        p3,
-        p4,
-        p5,
-        p6,
-        p7,
-        p8,
-        p9});
-
-//Issue363_ActionFunc16Generics.Can_Create_Func
-var @cs = (Func<int, int, int, int, int, int, int, int, int, int, int, int[]>)((
-    int p0, 
-    int p1, 
-    int p2, 
-    int p3, 
-    int p4, 
-    int p5, 
-    int p6, 
-    int p7, 
-    int p8, 
-    int p9, 
-    int p10) => //int[]
-    new int[]{
-        p0,
-        p1,
-        p2,
-        p3,
-        p4,
-        p5,
-        p6,
-        p7,
-        p8,
-        p9,
-        p10});
-
-//Issue363_ActionFunc16Generics.Can_Create_Func
-var @cs = (Func<int, int, int, int, int, int, int, int, int, int, int, int[]>)((
-    int p0, 
-    int p1, 
-    int p2, 
-    int p3, 
-    int p4, 
-    int p5, 
-    int p6, 
-    int p7, 
-    int p8, 
-    int p9, 
-    int p10) => //int[]
-    new int[]{
-        p0,
-        p1,
-        p2,
-        p3,
-        p4,
-        p5,
-        p6,
-        p7,
-        p8,
-        p9,
-        p10});
-
-//Issue363_ActionFunc16Generics.Can_Create_Func
-var @cs = (Func<int, int, int, int, int, int, int, int, int, int, int, int, int[]>)((
-    int p0, 
-    int p1, 
-    int p2, 
-    int p3, 
-    int p4, 
-    int p5, 
-    int p6, 
-    int p7, 
-    int p8, 
-    int p9, 
-    int p10, 
-    int p11) => //int[]
-    new int[]{
-        p0,
-        p1,
-        p2,
-        p3,
-        p4,
-        p5,
-        p6,
-        p7,
-        p8,
-        p9,
-        p10,
-        p11});
-
-//Issue363_ActionFunc16Generics.Can_Create_Func
-var @cs = (Func<int, int, int, int, int, int, int, int, int, int, int, int, int[]>)((
-    int p0, 
-    int p1, 
-    int p2, 
-    int p3, 
-    int p4, 
-    int p5, 
-    int p6, 
-    int p7, 
-    int p8, 
-    int p9, 
-    int p10, 
-    int p11) => //int[]
-    new int[]{
-        p0,
-        p1,
-        p2,
-        p3,
-        p4,
-        p5,
-        p6,
-        p7,
-        p8,
-        p9,
-        p10,
-        p11});
-
-//Issue363_ActionFunc16Generics.Can_Create_Func
-var @cs = (Func<int, int, int, int, int, int, int, int, int, int, int, int, int, int[]>)((
-    int p0, 
-    int p1, 
-    int p2, 
-    int p3, 
-    int p4, 
-    int p5, 
-    int p6, 
-    int p7, 
-    int p8, 
-    int p9, 
-    int p10, 
-    int p11, 
-    int p12) => //int[]
-    new int[]{
-        p0,
-        p1,
-        p2,
-        p3,
-        p4,
-        p5,
-        p6,
-        p7,
-        p8,
-        p9,
-        p10,
-        p11,
-        p12});
-
-//Issue363_ActionFunc16Generics.Can_Create_Func
-var @cs = (Func<int, int, int, int, int, int, int, int, int, int, int, int, int, int[]>)((
-    int p0, 
-    int p1, 
-    int p2, 
-    int p3, 
-    int p4, 
-    int p5, 
-    int p6, 
-    int p7, 
-    int p8, 
-    int p9, 
-    int p10, 
-    int p11, 
-    int p12) => //int[]
-    new int[]{
-        p0,
-        p1,
-        p2,
-        p3,
-        p4,
-        p5,
-        p6,
-        p7,
-        p8,
-        p9,
-        p10,
-        p11,
-        p12});
-
-//Issue363_ActionFunc16Generics.Can_Create_Func
-var @cs = (Func<int, int, int, int, int, int, int, int, int, int, int, int, int, int, int[]>)((
-    int p0, 
-    int p1, 
-    int p2, 
-    int p3, 
-    int p4, 
-    int p5, 
-    int p6, 
-    int p7, 
-    int p8, 
-    int p9, 
-    int p10, 
-    int p11, 
-    int p12, 
-    int p13) => //int[]
-    new int[]{
-        p0,
-        p1,
-        p2,
-        p3,
-        p4,
-        p5,
-        p6,
-        p7,
-        p8,
-        p9,
-        p10,
-        p11,
-        p12,
-        p13});
-
-//Issue363_ActionFunc16Generics.Can_Create_Func
-var @cs = (Func<int, int, int, int, int, int, int, int, int, int, int, int, int, int, int[]>)((
-    int p0, 
-    int p1, 
-    int p2, 
-    int p3, 
-    int p4, 
-    int p5, 
-    int p6, 
-    int p7, 
-    int p8, 
-    int p9, 
-    int p10, 
-    int p11, 
-    int p12, 
-    int p13) => //int[]
-    new int[]{
-        p0,
-        p1,
-        p2,
-        p3,
-        p4,
-        p5,
-        p6,
-        p7,
-        p8,
-        p9,
-        p10,
-        p11,
-        p12,
-        p13});
-
-//Issue363_ActionFunc16Generics.Can_Create_Func
-var @cs = (Func<int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int[]>)((
-    int p0, 
-    int p1, 
-    int p2, 
-    int p3, 
-    int p4, 
-    int p5, 
-    int p6, 
-    int p7, 
-    int p8, 
-    int p9, 
-    int p10, 
-    int p11, 
-    int p12, 
-    int p13, 
-    int p14) => //int[]
-    new int[]{
-        p0,
-        p1,
-        p2,
-        p3,
-        p4,
-        p5,
-        p6,
-        p7,
-        p8,
-        p9,
-        p10,
-        p11,
-        p12,
-        p13,
-        p14});
-
-//Issue363_ActionFunc16Generics.Can_Create_Func
-var @cs = (Func<int, int, int, int, int, int, int, int, int, int, int, int, int, int, int, int[]>)((
-    int p0, 
-    int p1, 
-    int p2, 
-    int p3, 
-    int p4, 
-    int p5, 
-    int p6, 
-    int p7, 
-    int p8, 
-    int p9, 
-    int p10, 
-    int p11, 
-    int p12, 
-    int p13, 
-    int p14) => //int[]
-    new int[]{
-        p0,
-        p1,
-        p2,
-        p3,
-        p4,
-        p5,
-        p6,
-        p7,
-        p8,
-        p9,
-        p10,
-        p11,
-        p12,
-        p13,
-        p14});
-4    of FastExpressionCompiler.LightExpression.IssueTests.Issue363_ActionFunc16Generics
+--------------------------------------------
+ERROR: Tests `FastExpressionCompiler.LightExpression.IssueTests.Issue363_ActionFunc16Generics` failed with
+FastExpressionCompiler.LightExpression.AssertionException: Expected `AreEqual(expr.ToCSharpString(), restoredExpr.ToCSharpString())`, but found `"(Func<int, int, int, int, int, int, int[]>)((\r\n    int p0, \r\n    int p1, \r\n    int p2, \r\n    int p3, \r\n    int p4, \r\n    int p5) => //int[]\r\n    new int[]{\r\n        p0,\r\n        p1,\r\n        p2,\r\n        p3,\r\n        p4,\r\n        p5})"` is Not equal to `"(Func<int, int, int, int, int, int, int[]>)((\r\n    int p0, \r\n    int p1, \r\n    int p2, \r\n    int p3, \r\n    int p5, \r\n    int p4) => //int[]\r\n    new int[]{\r\n        p0,\r\n        p1,\r\n        p2,\r\n        p3,\r\n        p4,\r\n        p5})"`
+   at FastExpressionCompiler.LightExpression.IssueTests.Issue363_ActionFunc16Generics.Can_Create_Func(Int32 paramCount) in C:\dev\FastExpressionCompiler\test\FastExpressionCompiler.LightExpression.IssueTests\Issue363_ActionFunc16Generics.cs:line 82
+   at FastExpressionCompiler.LightExpression.IssueTests.Issue363_ActionFunc16Generics.Run() in C:\dev\FastExpressionCompiler\test\FastExpressionCompiler.LightExpression.IssueTests\Issue363_ActionFunc16Generics.cs:line 19
+   at FastExpressionCompiler.UnitTests.Program.<>c__DisplayClass1_0.<RunAllTests>g__Run|0(Func`1 run, String name) in C:\dev\FastExpressionCompiler\test\FastExpressionCompiler.TestsRunner\Program.cs:line 78
+--------------------------------------------
 
 //Issue365_Working_with_ref_return_values.Test_access_ref_returning_method_assigned_var_then_property
 var @cs = (Action<ParamProcessor>)((ParamProcessor pp) => //void
 {
     ParamValue varByRef__discard_init_by_ref = default; ref var varByRef = ref varByRef__discard_init_by_ref;
-    varByRef = ref ref pp.GetParamValueByRef();
+    varByRef = ref pp.GetParamValueByRef();
     varByRef.Value = 8;
 });
 
@@ -6650,167 +6091,6 @@ var @cs = (Func<Message, bool>)((Message x) => //bool
 var @cs = (Func<Message, bool>)((Message x) => //bool
     ((int?)x.UserType) != ((int?)default(MessageSpec)/*NOTE: Provide the non-default value for the Constant!*/.type));
 5    of FastExpressionCompiler.LightExpression.IssueTests.Issue386_Value_can_not_be_null_in_Nullable_convert
-
-//Issue390_405_406_Mapster_tests.Run
-var @cs = (Func<ExportInfoModel, ExportInfoDto>)((ExportInfoModel exportinfomodel_0) => //ExportInfoDto
-{
-    MapContextScope scope = null;
-    if (exportinfomodel_0 == (ExportInfoModel)null)
-    {
-        return (ExportInfoDto)null;
-    }
-    scope = new MapContextScope();
-    try
-    {
-        object cache = null;
-        Dictionary<ReferenceTuple, object> references = null;
-        ReferenceTuple key = default;
-        ExportInfoDto result = null;
-        references = scope.Context.References;
-        key = new ReferenceTuple(
-            exportinfomodel_0,
-            typeof(ExportInfoDto));
-        if (references.TryGetValue(
-            key,
-            out cache))
-        {
-            return (ExportInfoDto)cache;
-        }
-        result = new ExportInfoDto(TypeAdapter<Nullable<long>[], long[]>.Map.Invoke(exportinfomodel_0.Locations));
-        references[key] = (object)result;
-        return result;
-    }
-    finally
-    {
-        scope.Dispose();
-    }
-    issue390_405_406_mapster_tests_exportinfodto_0:;
-});
-
-//Issue390_405_406_Mapster_tests.Run
-var @cs = (Func<ExportInfoModel, ExportInfoDto, ExportInfoDto>)((
-    ExportInfoModel exportinfomodel_0, 
-    ExportInfoDto exportinfodto_1) => //ExportInfoDto
-{
-    MapContextScope scope = null;
-    if (exportinfomodel_0 == (ExportInfoModel)null)
-    {
-        return (ExportInfoDto)null;
-    }
-    scope = new MapContextScope();
-    try
-    {
-        object cache = null;
-        Dictionary<ReferenceTuple, object> references = null;
-        ReferenceTuple key = default;
-        ExportInfoDto result = null;
-        references = scope.Context.References;
-        key = new ReferenceTuple(
-            exportinfomodel_0,
-            typeof(ExportInfoDto));
-        if (references.TryGetValue(
-            key,
-            out cache))
-        {
-            return (ExportInfoDto)cache;
-        }
-        result = new ExportInfoDto(TypeAdapter<Nullable<long>[], long[]>.Map.Invoke(exportinfomodel_0.Locations));
-        references[key] = (object)result;
-        return result;
-    }
-    finally
-    {
-        scope.Dispose();
-    }
-    issue390_405_406_mapster_tests_exportinfodto_0:;
-});
-
-//Issue390_405_406_Mapster_tests.Run
-var @cs = (Func<AuthResultDto, Token>)((AuthResultDto authresultdto_0) => //Token
-{
-    MapContextScope scope = null;
-    if (authresultdto_0 == (AuthResultDto)null)
-    {
-        return (Token)null;
-    }
-    scope = new MapContextScope();
-    try
-    {
-        object cache = null;
-        Dictionary<ReferenceTuple, object> references = null;
-        ReferenceTuple key = default;
-        Token result = null;
-        references = scope.Context.References;
-        key = new ReferenceTuple(
-            authresultdto_0,
-            typeof(Token));
-        if (references.TryGetValue(
-            key,
-            out cache))
-        {
-            return (Token)cache;
-        }
-        result = new Token();
-        references[key] = (object)result;
-        result.RefreshTokenExpirationDate = ((Func<DateTime?, DateTime>)((DateTime? datetime_1) => //DateTime
-            (datetime_1 == (DateTime?)null) ? DateTime.Parse("1/1/0001 12:00:00 AM") : (DateTime)datetime_1))
-        .Invoke(
-            (authresultdto_0.RefreshToken == (RefreshTokenDto)null) ? (DateTime?)null : 
-                (DateTime?)authresultdto_0.RefreshToken.ExpirationDate.LocalDateTime);
-        return result;
-    }
-    finally
-    {
-        scope.Dispose();
-    }
-    issue390_405_406_mapster_tests_token_0:;
-});
-
-//Issue390_405_406_Mapster_tests.Run
-var @cs = (Func<AuthResultDto, Token, Token>)((
-    AuthResultDto authresultdto_0, 
-    Token token_1) => //Token
-{
-    MapContextScope scope = null;
-    if (authresultdto_0 == (AuthResultDto)null)
-    {
-        return (Token)null;
-    }
-    scope = new MapContextScope();
-    try
-    {
-        object cache = null;
-        Dictionary<ReferenceTuple, object> references = null;
-        ReferenceTuple key = default;
-        Token result = null;
-        references = scope.Context.References;
-        key = new ReferenceTuple(
-            authresultdto_0,
-            typeof(Token));
-        if (references.TryGetValue(
-            key,
-            out cache))
-        {
-            return (Token)cache;
-        }
-        result = token_1 ?? new Token();
-        references[key] = (object)result;
-        result.RefreshTokenExpirationDate = ((Func<DateTime?, DateTime, DateTime>)((
-            DateTime? datetime_2, 
-            DateTime datetime_3) => //DateTime
-            (datetime_2 == (DateTime?)null) ? DateTime.Parse("1/1/0001 12:00:00 AM") : (DateTime)datetime_2))
-        .Invoke(
-            (authresultdto_0.RefreshToken == (RefreshTokenDto)null) ? (DateTime?)null : 
-                (DateTime?)authresultdto_0.RefreshToken.ExpirationDate.LocalDateTime,
-            result.RefreshTokenExpirationDate);
-        return result;
-    }
-    finally
-    {
-        scope.Dispose();
-    }
-    issue390_405_406_mapster_tests_token_0:;
-});
 
 //Issue390_405_406_Mapster_tests.Run
 var @cs = (Func<ResultAgent, AgentStatusDto>)((ResultAgent resultagent_0) => //AgentStatusDto
@@ -6916,6 +6196,167 @@ var @cs = (Func<ResultAgent, AgentStatusDto, AgentStatusDto>)((
         scope.Dispose();
     }
     issue390_405_406_mapster_tests_agentstatusdto_0:;
+});
+
+//Issue390_405_406_Mapster_tests.Run
+var @cs = (Func<AuthResultDto, Token>)((AuthResultDto authresultdto_0) => //Token
+{
+    MapContextScope scope = null;
+    if (authresultdto_0 == (AuthResultDto)null)
+    {
+        return (Token)null;
+    }
+    scope = new MapContextScope();
+    try
+    {
+        object cache = null;
+        Dictionary<ReferenceTuple, object> references = null;
+        ReferenceTuple key = default;
+        Token result = null;
+        references = scope.Context.References;
+        key = new ReferenceTuple(
+            authresultdto_0,
+            typeof(Token));
+        if (references.TryGetValue(
+            key,
+            out cache))
+        {
+            return (Token)cache;
+        }
+        result = new Token();
+        references[key] = (object)result;
+        result.RefreshTokenExpirationDate = ((Func<DateTime?, DateTime>)((DateTime? datetime_1) => //DateTime
+            (datetime_1 == (DateTime?)null) ? DateTime.Parse("1/1/0001 12:00:00 AM") : (DateTime)datetime_1))
+        .Invoke(
+            (authresultdto_0.RefreshToken == (RefreshTokenDto)null) ? (DateTime?)null : 
+                (DateTime?)authresultdto_0.RefreshToken.ExpirationDate.LocalDateTime);
+        return result;
+    }
+    finally
+    {
+        scope.Dispose();
+    }
+    issue390_405_406_mapster_tests_token_0:;
+});
+
+//Issue390_405_406_Mapster_tests.Run
+var @cs = (Func<AuthResultDto, Token, Token>)((
+    AuthResultDto authresultdto_0, 
+    Token token_1) => //Token
+{
+    MapContextScope scope = null;
+    if (authresultdto_0 == (AuthResultDto)null)
+    {
+        return (Token)null;
+    }
+    scope = new MapContextScope();
+    try
+    {
+        object cache = null;
+        Dictionary<ReferenceTuple, object> references = null;
+        ReferenceTuple key = default;
+        Token result = null;
+        references = scope.Context.References;
+        key = new ReferenceTuple(
+            authresultdto_0,
+            typeof(Token));
+        if (references.TryGetValue(
+            key,
+            out cache))
+        {
+            return (Token)cache;
+        }
+        result = token_1 ?? new Token();
+        references[key] = (object)result;
+        result.RefreshTokenExpirationDate = ((Func<DateTime?, DateTime, DateTime>)((
+            DateTime? datetime_2, 
+            DateTime datetime_3) => //DateTime
+            (datetime_2 == (DateTime?)null) ? DateTime.Parse("1/1/0001 12:00:00 AM") : (DateTime)datetime_2))
+        .Invoke(
+            (authresultdto_0.RefreshToken == (RefreshTokenDto)null) ? (DateTime?)null : 
+                (DateTime?)authresultdto_0.RefreshToken.ExpirationDate.LocalDateTime,
+            result.RefreshTokenExpirationDate);
+        return result;
+    }
+    finally
+    {
+        scope.Dispose();
+    }
+    issue390_405_406_mapster_tests_token_0:;
+});
+
+//Issue390_405_406_Mapster_tests.Run
+var @cs = (Func<ExportInfoModel, ExportInfoDto>)((ExportInfoModel exportinfomodel_0) => //ExportInfoDto
+{
+    MapContextScope scope = null;
+    if (exportinfomodel_0 == (ExportInfoModel)null)
+    {
+        return (ExportInfoDto)null;
+    }
+    scope = new MapContextScope();
+    try
+    {
+        object cache = null;
+        Dictionary<ReferenceTuple, object> references = null;
+        ReferenceTuple key = default;
+        ExportInfoDto result = null;
+        references = scope.Context.References;
+        key = new ReferenceTuple(
+            exportinfomodel_0,
+            typeof(ExportInfoDto));
+        if (references.TryGetValue(
+            key,
+            out cache))
+        {
+            return (ExportInfoDto)cache;
+        }
+        result = new ExportInfoDto(TypeAdapter<Nullable<long>[], long[]>.Map.Invoke(exportinfomodel_0.Locations));
+        references[key] = (object)result;
+        return result;
+    }
+    finally
+    {
+        scope.Dispose();
+    }
+    issue390_405_406_mapster_tests_exportinfodto_0:;
+});
+
+//Issue390_405_406_Mapster_tests.Run
+var @cs = (Func<ExportInfoModel, ExportInfoDto, ExportInfoDto>)((
+    ExportInfoModel exportinfomodel_0, 
+    ExportInfoDto exportinfodto_1) => //ExportInfoDto
+{
+    MapContextScope scope = null;
+    if (exportinfomodel_0 == (ExportInfoModel)null)
+    {
+        return (ExportInfoDto)null;
+    }
+    scope = new MapContextScope();
+    try
+    {
+        object cache = null;
+        Dictionary<ReferenceTuple, object> references = null;
+        ReferenceTuple key = default;
+        ExportInfoDto result = null;
+        references = scope.Context.References;
+        key = new ReferenceTuple(
+            exportinfomodel_0,
+            typeof(ExportInfoDto));
+        if (references.TryGetValue(
+            key,
+            out cache))
+        {
+            return (ExportInfoDto)cache;
+        }
+        result = new ExportInfoDto(TypeAdapter<Nullable<long>[], long[]>.Map.Invoke(exportinfomodel_0.Locations));
+        references[key] = (object)result;
+        return result;
+    }
+    finally
+    {
+        scope.Dispose();
+    }
+    issue390_405_406_mapster_tests_exportinfodto_0:;
 });
 
 //Issue390_405_406_Mapster_tests.Run
@@ -7151,167 +6592,6 @@ var @cs = (Func<object, AgentStatusDto>)((object object_0) => //AgentStatusDto
 });
 
 //Issue390_405_406_Mapster_tests.Run
-var @cs = (Func<ExportInfoModel, ExportInfoDto>)((ExportInfoModel exportinfomodel_0) => //ExportInfoDto
-{
-    MapContextScope scope = null;
-    if (exportinfomodel_0 == (ExportInfoModel)null)
-    {
-        return (ExportInfoDto)null;
-    }
-    scope = new MapContextScope();
-    try
-    {
-        object cache = null;
-        Dictionary<ReferenceTuple, object> references = null;
-        ReferenceTuple key = default;
-        ExportInfoDto result = null;
-        references = scope.Context.References;
-        key = new ReferenceTuple(
-            exportinfomodel_0,
-            typeof(ExportInfoDto));
-        if (references.TryGetValue(
-            key,
-            out cache))
-        {
-            return (ExportInfoDto)cache;
-        }
-        result = new ExportInfoDto(TypeAdapter<Nullable<long>[], long[]>.Map.Invoke(exportinfomodel_0.Locations));
-        references[key] = (object)result;
-        return result;
-    }
-    finally
-    {
-        scope.Dispose();
-    }
-    issue390_405_406_mapster_tests_exportinfodto_0:;
-});
-
-//Issue390_405_406_Mapster_tests.Run
-var @cs = (Func<ExportInfoModel, ExportInfoDto, ExportInfoDto>)((
-    ExportInfoModel exportinfomodel_0, 
-    ExportInfoDto exportinfodto_1) => //ExportInfoDto
-{
-    MapContextScope scope = null;
-    if (exportinfomodel_0 == (ExportInfoModel)null)
-    {
-        return (ExportInfoDto)null;
-    }
-    scope = new MapContextScope();
-    try
-    {
-        object cache = null;
-        Dictionary<ReferenceTuple, object> references = null;
-        ReferenceTuple key = default;
-        ExportInfoDto result = null;
-        references = scope.Context.References;
-        key = new ReferenceTuple(
-            exportinfomodel_0,
-            typeof(ExportInfoDto));
-        if (references.TryGetValue(
-            key,
-            out cache))
-        {
-            return (ExportInfoDto)cache;
-        }
-        result = new ExportInfoDto(TypeAdapter<Nullable<long>[], long[]>.Map.Invoke(exportinfomodel_0.Locations));
-        references[key] = (object)result;
-        return result;
-    }
-    finally
-    {
-        scope.Dispose();
-    }
-    issue390_405_406_mapster_tests_exportinfodto_0:;
-});
-
-//Issue390_405_406_Mapster_tests.Run
-var @cs = (Func<AuthResultDto, Token>)((AuthResultDto authresultdto_0) => //Token
-{
-    MapContextScope scope = null;
-    if (authresultdto_0 == (AuthResultDto)null)
-    {
-        return (Token)null;
-    }
-    scope = new MapContextScope();
-    try
-    {
-        object cache = null;
-        Dictionary<ReferenceTuple, object> references = null;
-        ReferenceTuple key = default;
-        Token result = null;
-        references = scope.Context.References;
-        key = new ReferenceTuple(
-            authresultdto_0,
-            typeof(Token));
-        if (references.TryGetValue(
-            key,
-            out cache))
-        {
-            return (Token)cache;
-        }
-        result = new Token();
-        references[key] = (object)result;
-        result.RefreshTokenExpirationDate = ((Func<DateTime?, DateTime>)((DateTime? datetime_1) => //DateTime
-            (datetime_1 == (DateTime?)null) ? DateTime.Parse("1/1/0001 12:00:00 AM") : (DateTime)datetime_1))
-        .Invoke(
-            (authresultdto_0.RefreshToken == (RefreshTokenDto)null) ? (DateTime?)null : 
-                (DateTime?)authresultdto_0.RefreshToken.ExpirationDate.LocalDateTime);
-        return result;
-    }
-    finally
-    {
-        scope.Dispose();
-    }
-    issue390_405_406_mapster_tests_token_0:;
-});
-
-//Issue390_405_406_Mapster_tests.Run
-var @cs = (Func<AuthResultDto, Token, Token>)((
-    AuthResultDto authresultdto_0, 
-    Token token_1) => //Token
-{
-    MapContextScope scope = null;
-    if (authresultdto_0 == (AuthResultDto)null)
-    {
-        return (Token)null;
-    }
-    scope = new MapContextScope();
-    try
-    {
-        object cache = null;
-        Dictionary<ReferenceTuple, object> references = null;
-        ReferenceTuple key = default;
-        Token result = null;
-        references = scope.Context.References;
-        key = new ReferenceTuple(
-            authresultdto_0,
-            typeof(Token));
-        if (references.TryGetValue(
-            key,
-            out cache))
-        {
-            return (Token)cache;
-        }
-        result = token_1 ?? new Token();
-        references[key] = (object)result;
-        result.RefreshTokenExpirationDate = ((Func<DateTime?, DateTime, DateTime>)((
-            DateTime? datetime_2, 
-            DateTime datetime_3) => //DateTime
-            (datetime_2 == (DateTime?)null) ? DateTime.Parse("1/1/0001 12:00:00 AM") : (DateTime)datetime_2))
-        .Invoke(
-            (authresultdto_0.RefreshToken == (RefreshTokenDto)null) ? (DateTime?)null : 
-                (DateTime?)authresultdto_0.RefreshToken.ExpirationDate.LocalDateTime,
-            result.RefreshTokenExpirationDate);
-        return result;
-    }
-    finally
-    {
-        scope.Dispose();
-    }
-    issue390_405_406_mapster_tests_token_0:;
-});
-
-//Issue390_405_406_Mapster_tests.Run
 var @cs = (Func<ResultAgent, AgentStatusDto>)((ResultAgent resultagent_0) => //AgentStatusDto
 {
     MapContextScope scope = null;
@@ -7415,6 +6695,167 @@ var @cs = (Func<ResultAgent, AgentStatusDto, AgentStatusDto>)((
         scope.Dispose();
     }
     issue390_405_406_mapster_tests_agentstatusdto_0:;
+});
+
+//Issue390_405_406_Mapster_tests.Run
+var @cs = (Func<AuthResultDto, Token>)((AuthResultDto authresultdto_0) => //Token
+{
+    MapContextScope scope = null;
+    if (authresultdto_0 == (AuthResultDto)null)
+    {
+        return (Token)null;
+    }
+    scope = new MapContextScope();
+    try
+    {
+        object cache = null;
+        Dictionary<ReferenceTuple, object> references = null;
+        ReferenceTuple key = default;
+        Token result = null;
+        references = scope.Context.References;
+        key = new ReferenceTuple(
+            authresultdto_0,
+            typeof(Token));
+        if (references.TryGetValue(
+            key,
+            out cache))
+        {
+            return (Token)cache;
+        }
+        result = new Token();
+        references[key] = (object)result;
+        result.RefreshTokenExpirationDate = ((Func<DateTime?, DateTime>)((DateTime? datetime_1) => //DateTime
+            (datetime_1 == (DateTime?)null) ? DateTime.Parse("1/1/0001 12:00:00 AM") : (DateTime)datetime_1))
+        .Invoke(
+            (authresultdto_0.RefreshToken == (RefreshTokenDto)null) ? (DateTime?)null : 
+                (DateTime?)authresultdto_0.RefreshToken.ExpirationDate.LocalDateTime);
+        return result;
+    }
+    finally
+    {
+        scope.Dispose();
+    }
+    issue390_405_406_mapster_tests_token_0:;
+});
+
+//Issue390_405_406_Mapster_tests.Run
+var @cs = (Func<AuthResultDto, Token, Token>)((
+    AuthResultDto authresultdto_0, 
+    Token token_1) => //Token
+{
+    MapContextScope scope = null;
+    if (authresultdto_0 == (AuthResultDto)null)
+    {
+        return (Token)null;
+    }
+    scope = new MapContextScope();
+    try
+    {
+        object cache = null;
+        Dictionary<ReferenceTuple, object> references = null;
+        ReferenceTuple key = default;
+        Token result = null;
+        references = scope.Context.References;
+        key = new ReferenceTuple(
+            authresultdto_0,
+            typeof(Token));
+        if (references.TryGetValue(
+            key,
+            out cache))
+        {
+            return (Token)cache;
+        }
+        result = token_1 ?? new Token();
+        references[key] = (object)result;
+        result.RefreshTokenExpirationDate = ((Func<DateTime?, DateTime, DateTime>)((
+            DateTime? datetime_2, 
+            DateTime datetime_3) => //DateTime
+            (datetime_2 == (DateTime?)null) ? DateTime.Parse("1/1/0001 12:00:00 AM") : (DateTime)datetime_2))
+        .Invoke(
+            (authresultdto_0.RefreshToken == (RefreshTokenDto)null) ? (DateTime?)null : 
+                (DateTime?)authresultdto_0.RefreshToken.ExpirationDate.LocalDateTime,
+            result.RefreshTokenExpirationDate);
+        return result;
+    }
+    finally
+    {
+        scope.Dispose();
+    }
+    issue390_405_406_mapster_tests_token_0:;
+});
+
+//Issue390_405_406_Mapster_tests.Run
+var @cs = (Func<ExportInfoModel, ExportInfoDto>)((ExportInfoModel exportinfomodel_0) => //ExportInfoDto
+{
+    MapContextScope scope = null;
+    if (exportinfomodel_0 == (ExportInfoModel)null)
+    {
+        return (ExportInfoDto)null;
+    }
+    scope = new MapContextScope();
+    try
+    {
+        object cache = null;
+        Dictionary<ReferenceTuple, object> references = null;
+        ReferenceTuple key = default;
+        ExportInfoDto result = null;
+        references = scope.Context.References;
+        key = new ReferenceTuple(
+            exportinfomodel_0,
+            typeof(ExportInfoDto));
+        if (references.TryGetValue(
+            key,
+            out cache))
+        {
+            return (ExportInfoDto)cache;
+        }
+        result = new ExportInfoDto(TypeAdapter<Nullable<long>[], long[]>.Map.Invoke(exportinfomodel_0.Locations));
+        references[key] = (object)result;
+        return result;
+    }
+    finally
+    {
+        scope.Dispose();
+    }
+    issue390_405_406_mapster_tests_exportinfodto_0:;
+});
+
+//Issue390_405_406_Mapster_tests.Run
+var @cs = (Func<ExportInfoModel, ExportInfoDto, ExportInfoDto>)((
+    ExportInfoModel exportinfomodel_0, 
+    ExportInfoDto exportinfodto_1) => //ExportInfoDto
+{
+    MapContextScope scope = null;
+    if (exportinfomodel_0 == (ExportInfoModel)null)
+    {
+        return (ExportInfoDto)null;
+    }
+    scope = new MapContextScope();
+    try
+    {
+        object cache = null;
+        Dictionary<ReferenceTuple, object> references = null;
+        ReferenceTuple key = default;
+        ExportInfoDto result = null;
+        references = scope.Context.References;
+        key = new ReferenceTuple(
+            exportinfomodel_0,
+            typeof(ExportInfoDto));
+        if (references.TryGetValue(
+            key,
+            out cache))
+        {
+            return (ExportInfoDto)cache;
+        }
+        result = new ExportInfoDto(TypeAdapter<Nullable<long>[], long[]>.Map.Invoke(exportinfomodel_0.Locations));
+        references[key] = (object)result;
+        return result;
+    }
+    finally
+    {
+        scope.Dispose();
+    }
+    issue390_405_406_mapster_tests_exportinfodto_0:;
 });
 
 //Issue390_405_406_Mapster_tests.Run
@@ -7717,7 +7158,7 @@ var @cs = (Func<Source, Destination, ResolutionContext, Destination>)((
                         }
                         return collectionDestination;
                     });
-                typeMapDestination.Values = mappedValue;
+                return typeMapDestination.Values = mappedValue;
             }
             catch (Exception ex)
             {
@@ -7805,7 +7246,7 @@ var @cs = (Func<Source, Destination, ResolutionContext, Destination>)((
                         }
                         return collectionDestination;
                     });
-                typeMapDestination.Values = mappedValue;
+                return typeMapDestination.Values = mappedValue;
             }
             catch (Exception ex)
             {
@@ -8008,12 +7449,12 @@ var @cs = (RefFunc<Obj, bool>)((in Obj p) => //bool
 
 //Issue420_Nullable_DateTime_comparison_differs_from_Expression_Compile.Original_case
 var @cs = (Func<HasDateTime, bool>)((HasDateTime HasDateTime) => //bool
-    HasDateTime.T == (DateTime?)DateTime.Parse("3/3/2026 3:00:31 PM"));
+    HasDateTime.T == (DateTime?)DateTime.Parse("3/10/2026 3:13:48 PM"));
 1    of FastExpressionCompiler.IssueTests.Issue420_Nullable_DateTime_comparison_differs_from_Expression_Compile
 
 //Issue420_Nullable_DateTime_comparison_differs_from_Expression_Compile.Original_case
 var @cs = (Func<HasDateTime, bool>)((HasDateTime HasDateTime) => //bool
-    HasDateTime.T == (DateTime?)DateTime.Parse("3/3/2026 3:00:31 PM"));
+    HasDateTime.T == (DateTime?)DateTime.Parse("3/10/2026 3:13:48 PM"));
 1    of FastExpressionCompiler.LightExpression.IssueTests.Issue420_Nullable_DateTime_comparison_differs_from_Expression_Compile
 
 //Issue421_Date_difference_is_giving_wrong_negative_value.Original_case_2
@@ -8698,7 +8139,7 @@ var @cs = (Func<int>)(() => //int
         goto label;
         throw default(Exception)/*NOTE: Provide the non-default value for the Constant!*/;
         label:;
-        int_0 = 2;
+        return int_0 = 2;
     }
     catch (Exception ex)
     {
@@ -8734,7 +8175,7 @@ var @cs = (Func<int>)(() => //int
         goto label;
         throw default(Exception)/*NOTE: Provide the non-default value for the Constant!*/;
         label:;
-        int_0 = 2;
+        return int_0 = 2;
     }
     catch (Exception ex)
     {
@@ -8967,7 +8408,7 @@ var @cs = (Func<bool?>)(() => //bool?
 var @cs = (Func<int?>)(() => //int?
 {
     int? x = null;
-    x = (long)12345 as int?;
+    return x = (object)((long)12345) as int?;
 });
 1    of FastExpressionCompiler.IssueTests.Issue455_TypeAs_should_return_null
 
@@ -8975,7 +8416,7 @@ var @cs = (Func<int?>)(() => //int?
 var @cs = (Func<int?>)(() => //int?
 {
     int? x = null;
-    x = (long)12345 as int?;
+    return x = (object)((long)12345) as int?;
 });
 1    of FastExpressionCompiler.LightExpression.IssueTests.Issue455_TypeAs_should_return_null
 
@@ -9121,6 +8562,6 @@ var @cs = (InFunc<Target, bool>)((in Target p) => //bool
     null != p);
 5    of FastExpressionCompiler.LightExpression.IssueTests.Issue461_InvalidProgramException_when_null_checking_type_by_ref
 
-IssueTests are passing in 2277 ms.
+IssueTests are passing in 1549 ms.
 
-ALL 1655 tests are passing in 2278 ms.
+ERROR: Some tests are FAILED!

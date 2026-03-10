@@ -39,6 +39,7 @@
         "NETFRAMEWORK",
         "Newarr",
         "Newobj",
+        "outparameter",
         "shortcircuit",
         "stackchange",
         "Starg",

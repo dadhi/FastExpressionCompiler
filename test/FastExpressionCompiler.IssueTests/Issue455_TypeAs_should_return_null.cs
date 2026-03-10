@@ -34,12 +34,12 @@ public struct Issue455_TypeAs_should_return_null : ITest, ITestX
         );
 
         expr.PrintCSharp();
+
         var @cs = (Func<int?>)(() => //int?
         {
             int? x = null;
-            return x = (object)12345 as int?;
+            return x = (object)((long)12345) as int?;
         });
-
 
         var fs = expr.CompileSys();
         fs.PrintIL();
