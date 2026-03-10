@@ -900,7 +900,7 @@ public struct SmallList<T, TStack, TPool> : ISmallList<T>
     [MethodImpl((MethodImplOptions)256)]
     public ref T GetLastSurePresentItem()
     {
-        Debug.Assert(_count != 0, "Expecting that the list is not empty");
+        Debug.Assert(_count > 0, "Expecting that the list is not empty");
         return ref GetSurePresentRef(_count - 1);
     }
 
@@ -908,9 +908,16 @@ public struct SmallList<T, TStack, TPool> : ISmallList<T>
     [MethodImpl((MethodImplOptions)256)]
     public void RemoveLastSurePresentItem()
     {
-        Debug.Assert(_count != 0, "SmallList.RemoveLastSurePresentItem: Expecting that the list is not empty");
+        Debug.Assert(_count > 0, "SmallList.RemoveLastSurePresentItem: Expecting that the list is not empty");
         GetSurePresentRef(_count - 1) = default;
         --_count;
+    }
+
+    /// <summary>Just adjusts Count-1, without clearing/dropping anything</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public void TryRemoveLastNoDrop()
+    {
+        if (_count > 0) --_count;
     }
 
     /// <inheritdoc/>

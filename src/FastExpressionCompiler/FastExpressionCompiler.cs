@@ -10331,6 +10331,7 @@ namespace FastExpressionCompiler
                             }
                             sb.NewLineIndent(lineIndent).Append('}');
                         }
+                        ctx.LambdaPars.TryRemoveLastNoDrop();
                         return sb.Append(')');
                     }
                 case ExpressionType.Invoke:
