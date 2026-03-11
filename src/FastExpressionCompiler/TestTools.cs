@@ -78,12 +78,9 @@ public static class TestTools
         if (!AllowPrintExpression) return;
         Console.WriteLine();
         Console.WriteLine($"//{Path.GetFileNameWithoutExtension(filePath)}.{caller}");
-        Console.WriteLine(
-            expr.ToExpressionString(out var _, out var _, out var _,
-            stripNamespace: true,
-            printType: completeTypeNames ? null : CodePrinter.PrintTypeStripOuterClasses,
-            indentSpaces: 4)
-        );
+        var printType = completeTypeNames ? null : CodePrinter.PrintTypeStripOuterClasses;
+        var exprStr = expr.ToExpressionString(out var _, out var _, out var _, stripNamespace: true, indentSpaces: 4, printType: printType);
+        Console.WriteLine(exprStr);
     }
 
     public static void PrintExpression(this IDelegateDebugInfo debugInfo, bool completeTypeNames = false,
@@ -103,11 +100,8 @@ public static class TestTools
         }
         var sb = new StringBuilder(1024);
         sb.Append("var @cs = ");
-        sb = expr.ToCSharpString(sb,
-            lineIndent: 0,
-            stripNamespace: stripNamespace,
-            printType: completeTypeNames ? null : CodePrinter.PrintTypeStripOuterClasses,
-            indentSpaces: 4);
+        var printType = completeTypeNames ? null : CodePrinter.PrintTypeStripOuterClasses;
+        sb = expr.ToCSharpString(sb, ToCSharpPrinter.EnclosedIn.AvoidParens, stripNamespace: stripNamespace, printType: printType);
         sb.AppendSemicolonOnce();
         Console.WriteLine(sb.ToString());
     }
@@ -125,7 +119,8 @@ public static class TestTools
         }
         var sb = new StringBuilder(1024);
         sb.Append("var @cs = ");
-        sb = expr.ToCSharpString(sb, ToCSharpPrinter.EnclosedIn.AvoidParens, stripNamespace: stripNamespace).AppendSemicolonOnce();
+        sb = expr.ToCSharpString(sb, ToCSharpPrinter.EnclosedIn.AvoidParens, stripNamespace: stripNamespace);
+        sb.AppendSemicolonOnce();
         var str = transform(sb.ToString());
         Console.WriteLine(str);
     }
@@ -143,7 +138,8 @@ public static class TestTools
         }
         var sb = new StringBuilder(1024);
         sb.Append("var @cs = ");
-        sb = expr.ToCSharpString(sb, ToCSharpPrinter.EnclosedIn.AvoidParens, notRecognizedToCode: objectToCode, stripNamespace: stripNamespace).AppendSemicolonOnce();
+        sb = expr.ToCSharpString(sb, ToCSharpPrinter.EnclosedIn.AvoidParens, notRecognizedToCode: objectToCode, stripNamespace: stripNamespace);
+        sb.AppendSemicolonOnce();
         var str = sb.ToString();
         Console.WriteLine(str);
     }
@@ -161,7 +157,8 @@ public static class TestTools
         }
         var sb = new StringBuilder(1024);
         sb.Append("var @cs = ");
-        sb = expr.ToCSharpString(sb, ToCSharpPrinter.EnclosedIn.AvoidParens, stripNamespace: stripNamespace).AppendSemicolonOnce();
+        sb = expr.ToCSharpString(sb, ToCSharpPrinter.EnclosedIn.AvoidParens, stripNamespace: stripNamespace);
+        sb.AppendSemicolonOnce();
         result = sb.ToString();
         Console.WriteLine(result);
     }

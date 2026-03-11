@@ -7,7 +7,9 @@
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}/test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj"
+                "${workspaceFolder}/test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj",
+                "/p:EnableSourceLink=false",
+                "/p:ContinuousIntegrationBuild=false"
             ],
             "problemMatcher": "$msCompile",
             "group": {
@@ -21,7 +23,9 @@
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}/test/FastExpressionCompiler.Benchmarks/FastExpressionCompiler.Benchmarks.csproj"
+                "${workspaceFolder}/test/FastExpressionCompiler.Benchmarks/FastExpressionCompiler.Benchmarks.csproj",
+                "/p:EnableSourceLink=false",
+                "/p:ContinuousIntegrationBuild=false"
             ],
             "problemMatcher": "$msCompile",
             "group": {

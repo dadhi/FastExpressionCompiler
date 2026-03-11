@@ -21,7 +21,7 @@ namespace FastExpressionCompiler.UnitTests
             // new Issue455_TypeAs_should_return_null().Run();
             // new BlockTests().Run();
             // new LightExpression.IssueTests.Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown().Run();
-            new AssignTests().Run();
+            // new AssignTests().Run();
             // new LightExpression.IssueTests.Issue365_Working_with_ref_return_values().Run();
             // new ArithmeticOperationsTests().Run();
             // new Issue156_InvokeAction().Run();
@@ -44,13 +44,13 @@ namespace FastExpressionCompiler.UnitTests
 
             var st = new TestRun(TestFlags.RethrowException);
 
-            st.Run(new Issue495_Incomplete_pattern_detection_for_NotSupported_1007_Return_goto_from_TryCatch_with_Assign_generates_invalid_IL());
-            st.Run(new Issue480_CLR_detected_an_invalid_program_exception());
-
 #if NET8_0_OR_GREATER
             st.Run(new Issue487_Fix_ToCSharpString_output_for_boolean_equality_expressions());
             st.Run(new Issue475_Reuse_DynamicMethod_if_possible());
 #endif
+
+            st.Run(new Issue495_Incomplete_pattern_detection_for_NotSupported_1007_Return_goto_from_TryCatch_with_Assign_generates_invalid_IL());
+            st.Run(new Issue480_CLR_detected_an_invalid_program_exception());
 
             var lt = new LightExpression.TestRun(LightExpression.TestFlags.RethrowException);
 
