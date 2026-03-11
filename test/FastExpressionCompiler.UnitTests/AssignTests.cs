@@ -370,6 +370,16 @@ namespace FastExpressionCompiler.UnitTests
 
             expr.PrintCSharp();
 
+            var @cs = (Func<int>)(() => //int
+            {
+                int[,] int__a_0 = null;
+                int__a_0 = new int[
+                    2,
+                    1];
+                int__a_0[1, 0] = 5;
+                return int__a_0[1, 0];
+            });
+
             var fs = expr.CompileFast(true);
 
 #if LIGHT_EXPRESSION
