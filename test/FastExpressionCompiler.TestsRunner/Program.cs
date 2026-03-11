@@ -18,10 +18,10 @@ namespace FastExpressionCompiler.UnitTests
             // ILGeneratorTools.DisableILGeneratorPooling = true;
             // LightExpression.ILGeneratorTools.DisableILGeneratorPooling = true;
 
-            new Issue455_TypeAs_should_return_null().Run();
+            // new Issue455_TypeAs_should_return_null().Run();
             // new BlockTests().Run();
             // new LightExpression.IssueTests.Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown().Run();
-            // new AssignTests().Run();
+            new AssignTests().Run();
             // new LightExpression.IssueTests.Issue365_Working_with_ref_return_values().Run();
             // new ArithmeticOperationsTests().Run();
             // new Issue156_InvokeAction().Run();

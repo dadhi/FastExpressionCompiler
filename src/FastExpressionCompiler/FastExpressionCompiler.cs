@@ -11421,16 +11421,18 @@ namespace FastExpressionCompiler
                 sb.Append(name);
                 return nameIndex == 0 ? sb : sb.Append('_').Append(nameIndex);
             }
-            var validTypeIdent = typeCode
-                .Replace('.', '_')
-                .Replace('<', '_')
-                .Replace('>', '_')
-                .Replace(", ", "_")
-                .Replace("?", "")
-                .Replace("[]", "_arr")
-                .ToLowerInvariant();
 
-            return sb.Append(validTypeIdent).Append('_').Append(noNameIndex);
+            var validCsIdentFromTypeName = new StringBuilder(typeCode.Length);
+            for (var k = 0; k < typeCode.Length; ++k)
+            {
+                var ch = typeCode[k];
+                var toUnder = ch == '.' | ch == '<' | ch == '>' | ch == ',' | ch == '?' | ch == ' ' | ch == '^' | ch == '[';
+                var toArray = ch == ']';
+                var newChar = toUnder | toArray ? (toUnder ? '_' : 'a') : k == 0 ? Char.ToLowerInvariant(ch) : ch;
+                validCsIdentFromTypeName.Append(newChar);
+            }
+
+            return sb.Append(validCsIdentFromTypeName).Append('_').Append(noNameIndex);
         }
 
         internal static StringBuilder AppendLabelName<TNamed>(this StringBuilder sb, LabelTarget target, ref TNamed named)

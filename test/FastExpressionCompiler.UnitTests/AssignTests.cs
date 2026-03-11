@@ -358,7 +358,6 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(a, f());
         }
 
-
         public void Array_multi_dimensional_index_assign_value_type_block()
         {
             var variable = Variable(typeof(int[,]));
