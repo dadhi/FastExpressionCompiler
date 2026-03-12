@@ -1,6 +1,4 @@
 using System;
-using System.Reflection.Emit;
-using System.Text.Json;
 
 #if LIGHT_EXPRESSION
 using FastExpressionCompiler.LightExpression.ImTools;

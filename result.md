@@ -91,3 +91,54 @@ Invalid (not compile-able) snippets found in `DebugOutputs/printcs_20260310-01.o
 10. **Issue439_Support_unused_Field_access_in_Block.Original_case**
     - Contains bare statement `testClass.Result0;`
     - Member-access expression alone is not a valid statement expression in C#.
+
+## Results003
+
+Review of `printcs_20260312-01.out` (delta vs Results002):
+
+### Fixed since Results002
+
+1. **AssignTests.Array_multi_dimensional_index_assign_value_type_block**
+   - Previously had invalid declaration like `int[,] int[,]_0 = null;`.
+   - Now emitted as valid declaration, e.g. `int[,] int__a_0 = null;`.
+
+2. **Issue237_* label-collision cases**
+   - The previously reported duplicate labels (`bool_0:` / `string_0:` duplicates in same body) are no longer present in the shown snippets.
+
+### Still invalid in 20260312-01
+
+1. **Issue495_Incomplete_pattern_detection...ReturnGotoFromTryCatchWithAssign_ShouldBeDetectedAsError1007**
+   - Still contains label `return:;`.
+   - `return` is a keyword and cannot be used as a label identifier.
+
+2. **Issue487_Fix_ToCSharpString_output_for_boolean_equality_expressions.Original_case**
+   - Snippet is `var @cs = x.MyTestBool;`
+   - `x` is undeclared in the emitted snippet.
+
+3. **Issue320_Bad_label_content_in_ILGenerator_when_creating_through_DynamicModule.Test_instance_call**
+   - `Func<int>` body still ends without a `return` statement on all paths.
+
+4. **Issue321_Call_with_out_parameter_to_field_type_that_is_not_value_type_fails.Test_outparameter**
+   - Still uses `out default(TestPOD)...` as out target.
+   - `out` requires an assignable variable/storage location.
+
+5. **Issue365_Working_with_ref_return_values.Test_access_ref_returning_method_then_property**
+   - Still contains `ref pp.GetParamValueByRef().Value = 7;`
+   - Invalid assignment form in C#.
+
+6. **Issue439_Support_unused_Field_access_in_Block.Original_case**
+   - Still contains bare member access statement `testClass.Result0;`.
+
+### New invalids noticed in 20260312-01 (not listed in Results002)
+
+1. **Issue428_Expression_Switch_without_a_default_case_incorrectly_calls_first_case_for_unmatched_values**
+   - Emitted switch has non-empty `case 1:` directly followed by `case 2:` without `break/goto/return`.
+   - This is C# compile error: control cannot fall through from one case label to another.
+
+2. **Issue422_InvalidProgramException_when_having_TryCatch_Default_in_Catch.Original_case_but_comparing_with_non_null_left_operand**
+   - Uses `left == ...` where `left` is not declared in snippet.
+
+### Net
+
+- Good progress: multidimensional array declaration and previously duplicated labels appear fixed.
+- Remaining compile blockers are still present (keyword-label, missing returns, invalid out target, invalid ref assignment form, bare member-access statement), plus at least two newly observed invalid patterns (switch fall-through and undeclared `left`).

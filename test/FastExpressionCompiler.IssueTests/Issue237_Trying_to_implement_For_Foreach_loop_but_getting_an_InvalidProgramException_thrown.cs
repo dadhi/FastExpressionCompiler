@@ -39,7 +39,6 @@ namespace FastExpressionCompiler.IssueTests
             return 8;
         }
 
-        
         public void Should_Deserialize_Simple_via_manual_CSharp_code()
         {
             DeserializerDlg<Word> dlgWord =
@@ -312,6 +311,29 @@ namespace FastExpressionCompiler.IssueTests
                 input, valueWord, bytesRead);
 
             expr0.PrintCSharp();
+            _ = (DeserializerDlg<Word>)((
+                ref ReadOnlySequence<byte> input, 
+                Word value, 
+                out long bytesRead) => //bool
+            {
+                SequenceReader<byte> reader = default;
+                string wordValue = null;
+                reader = new SequenceReader<byte>(input);
+                if (ReaderExtensions.TryReadValue<string>(
+                    ref reader,
+                    out wordValue) == false)
+                {
+                    bytesRead = reader.Consumed;
+                    return false;
+                    bool_33826822:;
+                    return false;
+                }
+                value.Value = wordValue;
+                bytesRead = reader.Consumed;
+                return true;
+                bool_37095509:;
+                return false;
+            });
 
             // sanity check
             var f0sys = expr0.CompileSys();
@@ -345,6 +367,52 @@ namespace FastExpressionCompiler.IssueTests
                 input, valueSimple, bytesRead);
 
             expr1.PrintCSharp();
+
+            _ = (DeserializerDlg<Simple>)((
+                ref ReadOnlySequence<byte> input, 
+                Simple value, 
+                out long bytesRead) => //bool
+            {
+                SequenceReader<byte> reader = default;
+                int identifier = default;
+                Word[] content = null;
+                byte contentLength = default;
+                reader = new SequenceReader<byte>(input);
+                if (ReaderExtensions.TryReadValue<int>(
+                    ref reader,
+                    out identifier) == false)
+                {
+                    bytesRead = reader.Consumed;
+                    return false;
+                    bool_33826822:;
+                    return false;
+                }
+                if (ReaderExtensions.TryReadValue<byte>(
+                    ref reader,
+                    out contentLength) == false)
+                {
+                    bytesRead = reader.Consumed;
+                    return false;
+                    bool_33826822:;
+                    return false;
+                }
+                if (Serializer.TryDeserializeValues<Word>(
+                    ref reader,
+                    (int)contentLength,
+                    out content) == false)
+                {
+                    bytesRead = reader.Consumed;
+                    return false;
+                    bool_33826822:;
+                    return false;
+                }
+                value.Identifier = identifier;
+                value.Sentence = content;
+                bytesRead = reader.Consumed;
+                return true;
+                bool_37095509:;
+                return false;
+            });
 
             var f1sys = expr1.CompileSys();
             f1sys.PrintIL("system compiled il");

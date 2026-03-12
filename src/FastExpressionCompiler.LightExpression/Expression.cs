@@ -2072,7 +2072,7 @@ public abstract class Expression
     public static SwitchExpression Switch(Expression switchValue, Expression defaultBody, MethodInfo comparison, IEnumerable<SwitchCase> cases) =>
         Switch(null, switchValue, defaultBody, comparison, cases.AsArray());
 
-    // The type of the whole switch epxression is void if no default body provided, because what should we return in default case then?
+    // The type of the whole switch expression is void if no default body provided, because what should we return in default case then?
     public static SwitchExpression Switch(Expression switchValue, params SwitchCase[] cases) =>
         Switch(typeof(void), switchValue, null, null, cases);
 
@@ -5312,8 +5312,8 @@ public class LabelTarget
         Justification = "The method is used for debugging purposes only.")]
     public override string ToString()
     {
-        SmallList<NamedWithIndex, Stack4<NamedWithIndex>, NoArrayPool<NamedWithIndex>> named = default;
-        return new StringBuilder().AppendLabelName(this, ref named).ToString();
+        PrintContext ctx = default;
+        return new StringBuilder().AppendLabelName(this, ref ctx).ToString();
     }
 }
 
@@ -5612,7 +5612,7 @@ public class SixParametersLambdaExpression : TypedLambdaExpression
     public sealed override IReadOnlyList<ParameterExpression> Parameters => new[] { Parameter0, Parameter1, Parameter2, Parameter3, Parameter4, Parameter5 };
     public sealed override int ParameterCount => 6;
     public sealed override ParameterExpression GetParameter(int i) =>
-        i == 0 ? Parameter0 : i == 1 ? Parameter1 : i == 2 ? Parameter2 : i == 3 ? Parameter3 : i == 5 ? Parameter4 : Parameter5;
+        i == 0 ? Parameter0 : i == 1 ? Parameter1 : i == 2 ? Parameter2 : i == 3 ? Parameter3 : i == 4 ? Parameter4 : Parameter5;
     internal SixParametersLambdaExpression(Type delegateType, Expression body,
         ParameterExpression p0, ParameterExpression p1, ParameterExpression p2, ParameterExpression p3,
         ParameterExpression p4, ParameterExpression p5) : base(delegateType, body)

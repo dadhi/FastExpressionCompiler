@@ -9519,14 +9519,14 @@ namespace FastExpressionCompiler
         {
             if (paramsExprs.TryGetIndex(out var i, pe, paramsExprs.Count, default(RefEq<PE>)))
             {
-                SmallList<NamedWithIndex, Stack4<NamedWithIndex>, NoArrayPool<NamedWithIndex>> named = default;
+                PrintContext ctx = default;
                 return sb
                     .Append("p[").Append(i)
                     .Append(" // (")
                     .Append(!pe.Type.IsPrimitive && pe.Type.IsValueType ? "[struct] " : string.Empty)
                     .Append(pe.Type.ToCode(stripNamespace, printType))
                     .Append(' ')
-                    .AppendName(pe, pe.Name, pe.Type.ToCode(stripNamespace, printType), ref named, pe.GetHashCode()).Append(')') // todo: @wip #434 but for ToExpressionString
+                    .AppendName(pe, pe.Name, pe.Type.ToCode(stripNamespace, printType), ref ctx, pe.GetHashCode()).Append(')') // todo: @wip #434 but for ToExpressionString
                     .NewLineIndent(lineIndent)
                     .Append(']');
             }
@@ -9540,9 +9540,9 @@ namespace FastExpressionCompiler
         {
             if (labelTargets.TryGetIndex(out var i, lt, labelTargets.Count, default(RefEq<LabelTarget>)))
             {
-                SmallList<NamedWithIndex, Stack4<NamedWithIndex>, NoArrayPool<NamedWithIndex>> named = default;
+                PrintContext ctx = default;
                 return sb.Append("l[").Append(i)
-                    .Append(" // (").AppendName(lt, lt.Name, lt.Type.ToCode(stripNamespace, printType), ref named, lt.GetHashCode()).Append(')')
+                    .Append(" // (").AppendName(lt, lt.Name, lt.Type.ToCode(stripNamespace, printType), ref ctx, lt.GetHashCode()).Append(')')
                     .NewLineIndent(lineIndent).Append(']');
             }
             labelTargets.Add(lt);
@@ -10072,7 +10072,7 @@ namespace FastExpressionCompiler
                     {
                         if (isReturnByRef)
                             sb.Append("ref ");
-                        return sb.AppendName(e, ((ParameterExpression)e).Name, e.Type.ToCode(stripNamespace, printType), ref ctx.Named);
+                        return sb.AppendName(e, ((ParameterExpression)e).Name, e.Type.ToCode(stripNamespace, printType), ref ctx);
                     }
                 case ExpressionType.New:
                     {
@@ -10296,7 +10296,7 @@ namespace FastExpressionCompiler
                                     sb.Append(pi.IsOut ? "out " : pi.IsIn ? "in " : "ref ");
                                 var typeCode = pe.Type.ToCode(stripNamespace, printType);
                                 sb.Append(typeCode).Append(' ');
-                                sb.AppendName(pe, pe.Name, typeCode, ref ctx.Named);
+                                sb.AppendName(pe, pe.Name, typeCode, ref ctx);
                             }
                             ctx.LambdaPars.Add(new() { Exprs = paramExprs, Infos = parInfos });
                         }
@@ -10426,8 +10426,7 @@ namespace FastExpressionCompiler
                         if (x.ContinueLabel != null)
                         {
                             sb.NewLineIndent(lineIndent);
-                            sb.AppendLabelName(x.ContinueLabel, ref ctx.Named)
-                                .Append(":;"); // the label is with the semicolon, because it will invalid code at the end of lambda without it
+                            sb.AppendLabelName(x.ContinueLabel, ref ctx, nameUsage: NameUsage.MarkLabel).Append(":;"); // the label is with the semicolon, because it will invalid code at the end of lambda without it
                         }
 
                         sb.NewLineIndent(lineIndent + indentSpaces);
@@ -10438,7 +10437,7 @@ namespace FastExpressionCompiler
 
                         // the label is with the semicolon, because it will invalid code at the end of lambda without it
                         if (x.BreakLabel != null)
-                            sb.NewLineIndent(lineIndent).AppendLabelName(x.BreakLabel, ref ctx.Named).Append(":;");
+                            sb.NewLineIndent(lineIndent).AppendLabelName(x.BreakLabel, ref ctx, nameUsage: NameUsage.MarkLabel).Append(":;");
 
                         return sb;
                     }
@@ -10514,7 +10513,7 @@ namespace FastExpressionCompiler
 
                                 var hVar = h.Variable;
                                 if (hVar != null)
-                                    sb.Append(' ').AppendName(hVar, hVar.Name, hVar.Type.ToCode(stripNamespace, printType), ref ctx.Named);
+                                    sb.Append(' ').AppendName(hVar, hVar.Name, hVar.Type.ToCode(stripNamespace, printType), ref ctx);
 
                                 sb.Append(')');
                                 if (h.Filter != null)
@@ -10549,7 +10548,7 @@ namespace FastExpressionCompiler
                 case ExpressionType.Label:
                     {
                         // we don't output the default value and relying on the Goto Return `return` instead, otherwise we may change the logic of the code
-                        return sb.NewLineIndent(lineIndent).AppendLabelName(((LabelExpression)e).Target, ref ctx.Named).Append(":;");
+                        return sb.NewLineIndent(lineIndent).AppendLabelName(((LabelExpression)e).Target, ref ctx, nameUsage: NameUsage.MarkLabel).Append(":;");
                     }
                 case ExpressionType.Goto:
                     {
@@ -10571,7 +10570,7 @@ namespace FastExpressionCompiler
                                 sb.AppendSemicolonOnce();
                             return sb;
                         }
-                        return sb.Append("goto ").AppendLabelName(gt.Target, ref ctx.Named);
+                        return sb.Append("goto ").AppendLabelName(gt.Target, ref ctx, nameUsage: NameUsage.GotoLabel);
                     }
                 case ExpressionType.Switch:
                     {
@@ -11076,11 +11075,11 @@ namespace FastExpressionCompiler
                 var vNameSuffix = !vIsByRef ? "" : "__discard_init_by_ref";
 
                 var vTypeCode = vType.ToCode(stripNamespace, printType);
-                var vName = new StringBuilder().AppendName(v, v.Name + vNameSuffix, vTypeCode, ref ctx.Named);
+                var vName = new StringBuilder().AppendName(v, v.Name + vNameSuffix, vTypeCode, ref ctx);
                 sb.Append(vTypeCode).Append(' ').Append(vName).Append(vType.IsValueType && !vType.IsNullable() ? " = default;" : " = null;");
 
                 if (vIsByRef)
-                    sb.Append(" ref var ").AppendName(v, v.Name, vTypeCode, ref ctx.Named).Append(" = ref ").Append(vName).Append(';');
+                    sb.Append(" ref var ").AppendName(v, v.Name, vTypeCode, ref ctx).Append(" = ref ").Append(vName).Append(';');
             }
 
             // we don't inline a single expression case because it can always go crazy with assignment, e.g. `var a; a = 1 + (a = 2) + a * 2`
@@ -11100,17 +11099,22 @@ namespace FastExpressionCompiler
                         gt.Value.ToCSharpString(sb.Append("return "),
                             EnclosedIn.Return, ref ctx, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode)
                             .AppendSemicolonOnce();
+                    return sb;
 
-                    sb.NewLineIndent(lineIndent);
-                    sb.AppendLabelName(label.Target, ref ctx.Named).Append(":;");
+                    // todo: @wip @remove do we need this, let explore what code ouputput will blow up
+                    // sb.NewLineIndent(lineIndent);
 
-                    if (label.DefaultValue == null)
-                        return sb.AppendLine(); // no return because we may have other expressions after label
-                    sb.NewLineIndent(lineIndent);
-                    sb.Append("return ");
-                    label.DefaultValue.ToCSharpString(sb, EnclosedIn.Return, ref ctx,
-                        lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
-                    return sb.AppendSemicolonOnce();
+                    // // In principle the label mark should mark a single place only. So we we found that it used already -> ??? skip it, rename it?
+                    // // see Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown.Should_Deserialize_Simple
+                    // sb.AppendLabelName(label.Target, ref ctx, nameUsage: NameUsage.MarkLabel).Append(":;");
+
+                    // if (label.DefaultValue == null)
+                    //     return sb.AppendLine(); // no return because we may have other expressions after label
+                    // sb.NewLineIndent(lineIndent);
+                    // sb.Append("return ");
+                    // label.DefaultValue.ToCSharpString(sb, EnclosedIn.Return, ref ctx,
+                    //     lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
+                    // return sb.AppendSemicolonOnce();
                 }
 
                 if (expr is BlockExpression bl)
@@ -11346,13 +11350,26 @@ namespace FastExpressionCompiler
             return sb.Append(" }))");
         }
 
-        /// <summary>Named with index indeed</summary>
-        public struct NamedWithIndex
+        /// <summary>Name usage</summary>
+        public enum NameUsage
         {
-            /// <summary>Named</summary>
-            public object Named;
-            /// <summary>Provides an unique suffix for the same named things</summary>
+            /// <summary>Whatever</summary>
+            Whatever,
+            /// <summary>Used in goto</summary>
+            GotoLabel,
+            /// <summary>Used in mark</summary>
+            MarkLabel
+        }
+
+        /// <summary>Named with index indeed</summary>
+        public struct NameIndex
+        {
+            /// <summary>Object to name</summary>
+            public object Obj;
+            /// <summary>Provides an unique suffix for the same named objects</summary>
             public int Index;
+            /// <summary>Usage context</summary>
+            public NameUsage Usage;
         }
 
         /// <summary>Contains the lambda with its paramete infos info. 
@@ -11373,7 +11390,7 @@ namespace FastExpressionCompiler
         public struct PrintContext
         {
             /// <summary>Used to generated the unique names for the variables/parameters</summary>
-            public SmallList<NamedWithIndex, Stack4<NamedWithIndex>, NoArrayPool<NamedWithIndex>> Named;
+            public SmallList<NameIndex, Stack4<NameIndex>, NoArrayPool<NameIndex>> SameNamed;
             /// <summary>Use to find additional info about the parameter, like IsOut, which is available in ParameterInfo and not in parameter expression</summary>
             public SmallList<LambdaPars, Stack4<LambdaPars>, NoArrayPool<LambdaPars>> LambdaPars;
         }
@@ -11393,27 +11410,31 @@ namespace FastExpressionCompiler
             return false;
         }
 
-        internal static StringBuilder AppendName<TNamed>(this StringBuilder sb, object parOrTarget, string name, string typeCode, ref TNamed named, int noNameIndex = 0)
-            where TNamed : ISmallList<NamedWithIndex>
+        internal static StringBuilder AppendName(this StringBuilder sb,
+            object parOrTarget, string name, string typeCode, ref PrintContext ctx,
+            int customIndex = 0, NameUsage nameUsage = NameUsage.Whatever)
         {
             var nameIndex = 0;
-            if (noNameIndex == 0)
+            if (customIndex == 0)
             {
                 var found = false;
-                foreach (var n in named)
+                for (var i = 0; i < ctx.SameNamed.Count; ++i)
                 {
-                    if (found = ReferenceEquals(n.Named, parOrTarget))
+                    ref var n = ref ctx.SameNamed.GetSurePresentRef(i); 
+                    if (found = ReferenceEquals(n.Obj, parOrTarget))
                     {
                         nameIndex = n.Index;
                         break;
                     }
-                    if (n.Named is ParameterExpression pe1 && parOrTarget is ParameterExpression pe2 && pe1.Name == pe2.Name ||
-                        n.Named is LabelTarget lt1 && parOrTarget is LabelTarget lt2 && lt1.Name == lt2.Name)
+                    // If param or label target are not the same object but have the same name, say `bool p` and `int p`, 
+                    // then we increment assigned index to distinguish p_1 from p_0.
+                    if (n.Obj is ParameterExpression pe1 && parOrTarget is ParameterExpression pe2 && pe1.Name == pe2.Name ||
+                        n.Obj is LabelTarget lt1 && parOrTarget is LabelTarget lt2 && lt1.Name == lt2.Name)
                         ++nameIndex;
                 }
                 if (!found)
-                    named.Add(new() { Named = parOrTarget, Index = nameIndex });
-                noNameIndex = nameIndex;
+                    ctx.SameNamed.Add(new() { Obj = parOrTarget, Index = nameIndex, Usage = nameUsage });
+                customIndex = nameIndex;
             }
 
             if (!string.IsNullOrWhiteSpace(name))
@@ -11432,12 +11453,12 @@ namespace FastExpressionCompiler
                 validCsIdentFromTypeName.Append(newChar);
             }
 
-            return sb.Append(validCsIdentFromTypeName).Append('_').Append(noNameIndex);
+            return sb.Append(validCsIdentFromTypeName).Append('_').Append(customIndex);
         }
 
-        internal static StringBuilder AppendLabelName<TNamed>(this StringBuilder sb, LabelTarget target, ref TNamed named)
-            where TNamed : struct, ISmallList<NamedWithIndex> =>
-            sb.AppendName(target, target.Name, target.Type.ToCode(stripNamespace: true), ref named);
+        internal static StringBuilder AppendLabelName(this StringBuilder sb, LabelTarget target, ref PrintContext ctx,
+            int customIndex = 0, NameUsage nameUsage = NameUsage.Whatever) =>
+            sb.AppendName(target, target.Name, target.Type.ToCode(stripNamespace: true, printType: null), ref ctx, customIndex, nameUsage);
 
         /// <summary>Returns the standard name (alias) for the well-known primitive type, e.g. Int16 -> short</summary>
         public static string GetPrimitiveTypeNameAliasOrNull(this Type type) =>

@@ -1258,7 +1258,8 @@ public static class SmallMap
             var vHash = Vector256.Create(hash);
             var vHashes = MemoryMarshal.Cast<int, Vector256<int>>(hashes.AsSpan());
             var i = 0;
-            foreach (var vCurr in vHashes)
+            // todo: @perf think how can we untangle the dependency chains in this loop to enable the ILM and better CPU units utilization
+            foreach (var vCurr in vHashes) 
             {
                 var vMatches = Vector256.Equals(vCurr, vHash);
                 var matches = Vector256.ExtractMostSignificantBits(vMatches);
@@ -1342,7 +1343,7 @@ public static class SmallMap
     }
 }
 
-// todo: @improve ? how/where to add SIMD to improve CPU utilization but not losing perf for smaller sizes
+// todo: @perf ? how/where to add SIMD to improve CPU utilization but not losing perf for smaller sizes
 /// <summary>
 /// Fast and less-allocating hash map without thread safety nets. Please measure it in your own use case before use.
 /// It is configurable in regard of hash calculation/equality via `TEq` type parameter and 
@@ -1361,7 +1362,7 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
     where TEntry : struct, IEntry<K>
     where TEq : struct, IEq<K>
     where TStackCap : struct, ISize2Plus
-    where TStackHashes : struct, IStack<int, TStackCap, TStackHashes>
+    where TStackHashes : struct, IStack<int, TStackCap, TStackHashes> // todo: @simplify Can we combine TStackHashes and TStackEntries together in struct to simplify the generics
     where TStackEntries : struct, IStack<TEntry, TStackCap, TStackEntries>
     where TEntries : struct, IEntries<K, TEntry, TEq>
 {

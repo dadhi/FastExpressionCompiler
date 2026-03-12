@@ -24,7 +24,6 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             return 4;
         }
 
-
         public void Supports_16_Func_Params()
         {
             LambdaExpression lambda = Lambda(
