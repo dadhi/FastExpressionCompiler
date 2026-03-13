@@ -1,8 +1,5 @@
-using System.Linq.Expressions;
-using System.Reflection.Emit;
 using System.Reflection;
 using System;
-
 
 #if LIGHT_EXPRESSION
 namespace FastExpressionCompiler.LightExpression.IssueTests
@@ -11,7 +8,6 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
-
     public class Issue321_Call_with_out_parameter_to_field_type_that_is_not_value_type_fails : ITest
     {
         public int Run()
@@ -32,20 +28,20 @@ namespace FastExpressionCompiler.IssueTests
 
         public void Test_outparameter()
         {
-            var stringMethod = this.GetType().GetMethod("TestStringOutMethod", bindingAttr: BindingFlags.NonPublic | BindingFlags.Static)!;
-            var intMethod = this.GetType().GetMethod("TestIntOutMethod", bindingAttr: BindingFlags.NonPublic | BindingFlags.Static)!;
+            var stringMethod = GetType().GetMethod("TestStringOutMethod", bindingAttr: BindingFlags.NonPublic | BindingFlags.Static)!;
+            var intMethod = GetType().GetMethod("TestIntOutMethod", bindingAttr: BindingFlags.NonPublic | BindingFlags.Static)!;
 
             var pod = new TestPOD();
 
-            var program = Expression.Block(
-                Expression.Call(null, stringMethod,
-                    Expression.Constant("hello world"), Expression.Field(Expression.Constant(pod), pod.GetType().GetField("stringvalue")!)),
-                Expression.Call(null, intMethod,
-                    Expression.Constant(4), Expression.Field(Expression.Constant(pod), pod.GetType().GetField("intvalue")!))
+            var program = Block(
+                Call(null, stringMethod,
+                    Constant("hello world"), Field(Constant(pod), pod.GetType().GetField("stringvalue")!)),
+                Call(null, intMethod,
+                    Constant(4), Field(Constant(pod), pod.GetType().GetField("intvalue")!))
             );
 
             // Make a lambda and compile it
-            var expr = Expression.Lambda<Action>(program);
+            var expr = Lambda<Action>(program);
             expr.PrintCSharp(s => s.Replace(GetType().Name + ".", ""));
             // the output:
             var a = (Action)(() => //$

@@ -11439,6 +11439,8 @@ namespace FastExpressionCompiler
 
             if (!string.IsNullOrWhiteSpace(name))
             {
+                if (name[0] != '@' && IsCSharpKeyword(name))
+                    sb.Append('@');
                 sb.Append(name);
                 return nameIndex == 0 ? sb : sb.Append('_').Append(nameIndex);
             }
@@ -11455,6 +11457,30 @@ namespace FastExpressionCompiler
 
             return sb.Append(validCsIdentFromTypeName).Append('_').Append(customIndex);
         }
+
+        private static bool IsCSharpKeyword(string name) => name switch
+        {
+            // Reserved keywords
+            "abstract" or "as" or "base" or "bool" or "break" or "byte" or "case" or "catch" or "char" or
+            "checked" or "class" or "const" or "continue" or "decimal" or "default" or "delegate" or "do" or
+            "double" or "else" or "enum" or "event" or "explicit" or "extern" or "false" or "finally" or
+            "fixed" or "float" or "for" or "foreach" or "goto" or "if" or "implicit" or "in" or "int" or
+            "interface" or "internal" or "is" or "lock" or "long" or "namespace" or "new" or "null" or
+            "object" or "operator" or "out" or "override" or "params" or "private" or "protected" or
+            "public" or "readonly" or "ref" or "return" or "sbyte" or "sealed" or "short" or "sizeof" or
+            "stackalloc" or "static" or "string" or "struct" or "switch" or "this" or "throw" or "true" or
+            "try" or "typeof" or "uint" or "ulong" or "unchecked" or "unsafe" or "ushort" or "using" or
+            "virtual" or "void" or "volatile" or "while" => true,
+
+            // Contextual keywords (still require @ to be used safely as identifiers in generated code)
+            "add" or "alias" or "and" or "ascending" or "args" or "async" or "await" or "by" or "descending" or
+            "dynamic" or "equals" or "file" or "from" or "get" or "global" or "group" or "init" or "into" or
+            "join" or "let" or "managed" or "nameof" or "nint" or "not" or "notnull" or "nuint" or "on" or
+            "or" or "orderby" or "partial" or "record" or "remove" or "required" or "scoped" or "select" or
+            "set" or "unmanaged" or "value" or "var" or "when" or "where" or "with" or "yield" => true,
+
+            _ => false
+        };
 
         internal static StringBuilder AppendLabelName(this StringBuilder sb, LabelTarget target, ref PrintContext ctx,
             int customIndex = 0, NameUsage nameUsage = NameUsage.Whatever) =>

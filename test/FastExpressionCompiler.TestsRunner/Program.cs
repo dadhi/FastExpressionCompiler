@@ -18,7 +18,8 @@ namespace FastExpressionCompiler.UnitTests
             // ILGeneratorTools.DisableILGeneratorPooling = true;
             // LightExpression.ILGeneratorTools.DisableILGeneratorPooling = true;
 
-            new LightExpression.IssueTests.Issue363_ActionFunc16Generics().Run();
+            new LightExpression.IssueTests.Issue321_Call_with_out_parameter_to_field_type_that_is_not_value_type_fails().Run();
+            // new LightExpression.IssueTests.Issue363_ActionFunc16Generics().Run();
             // new Issue455_TypeAs_should_return_null().Run();
             // new BlockTests().Run();
             // new LightExpression.IssueTests.Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown().Run();

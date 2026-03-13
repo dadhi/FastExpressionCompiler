@@ -87,7 +87,7 @@ public static class TestTools
         [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "") =>
         PrintExpression(debugInfo.Expression, completeTypeNames, caller, filePath);
 
-    public static void PrintCSharp(this Expression expr, bool completeTypeNames = false, bool stripNamespace = true,
+    public static void PrintCSharp(this Expression expr, bool completeTypeNames = false, bool stripNamespace = true, string assignToVar = "_",
         [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "")
     {
         if (!AllowPrintCS) return;
@@ -99,14 +99,15 @@ public static class TestTools
             return;
         }
         var sb = new StringBuilder(1024);
-        sb.Append("var @cs = ");
+        if (expr.Type != typeof(void) && !string.IsNullOrEmpty(assignToVar))
+            sb.Append($"var {assignToVar} = ");
         var printType = completeTypeNames ? null : CodePrinter.PrintTypeStripOuterClasses;
         sb = expr.ToCSharpString(sb, ToCSharpPrinter.EnclosedIn.AvoidParens, stripNamespace: stripNamespace, printType: printType);
         sb.AppendSemicolonOnce();
         Console.WriteLine(sb.ToString());
     }
 
-    public static void PrintCSharp(this Expression expr, Func<string, string> transform, bool stripNamespace = true,
+    public static void PrintCSharp(this Expression expr, Func<string, string> transform, bool stripNamespace = true, string assignToVar = "_",
         [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "")
     {
         if (!AllowPrintCS) return;
@@ -118,14 +119,15 @@ public static class TestTools
             return;
         }
         var sb = new StringBuilder(1024);
-        sb.Append("var @cs = ");
+        if (expr.Type != typeof(void) && !string.IsNullOrEmpty(assignToVar))
+            sb.Append($"var {assignToVar} = ");
         sb = expr.ToCSharpString(sb, ToCSharpPrinter.EnclosedIn.AvoidParens, stripNamespace: stripNamespace);
         sb.AppendSemicolonOnce();
         var str = transform(sb.ToString());
         Console.WriteLine(str);
     }
 
-    public static void PrintCSharp(this Expression expr, CodePrinter.ObjectToCode objectToCode, bool stripNamespace = true,
+    public static void PrintCSharp(this Expression expr, CodePrinter.ObjectToCode objectToCode, bool stripNamespace = true, string assignToVar = "_",
         [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "")
     {
         if (!AllowPrintCS) return;
@@ -137,14 +139,15 @@ public static class TestTools
             return;
         }
         var sb = new StringBuilder(1024);
-        sb.Append("var @cs = ");
+        if (expr.Type != typeof(void) && !string.IsNullOrEmpty(assignToVar))
+            sb.Append($"var {assignToVar} = ");
         sb = expr.ToCSharpString(sb, ToCSharpPrinter.EnclosedIn.AvoidParens, notRecognizedToCode: objectToCode, stripNamespace: stripNamespace);
         sb.AppendSemicolonOnce();
         var str = sb.ToString();
         Console.WriteLine(str);
     }
 
-    public static void PrintCSharp(this Expression expr, ref string result, bool stripNamespace = true,
+    public static void PrintCSharp(this Expression expr, ref string result, bool stripNamespace = true, string assignToVar = "_",
         [CallerMemberName] string caller = "", [CallerFilePath] string filePath = "")
     {
         if (!AllowPrintCS) return;
@@ -156,7 +159,8 @@ public static class TestTools
             Console.WriteLine(result);
         }
         var sb = new StringBuilder(1024);
-        sb.Append("var @cs = ");
+        if (expr.Type != typeof(void) && !string.IsNullOrEmpty(assignToVar))
+            sb.Append($"var {assignToVar} = ");
         sb = expr.ToCSharpString(sb, ToCSharpPrinter.EnclosedIn.AvoidParens, stripNamespace: stripNamespace);
         sb.AppendSemicolonOnce();
         result = sb.ToString();
