@@ -11157,12 +11157,23 @@ namespace FastExpressionCompiler
                     blockResultAssignment);
 
             // todo: @improve the label is already used by the Return GoTo we should skip it output here OR we need to replace the Return Goto `return` with `goto`
-            if (lastExpr is LabelExpression) // keep the last label on the same vertical line
+            if (lastExpr is LabelExpression lastLabel) // keep the last label on the same vertical line
             {
                 lastExpr.ToCSharpString(sb, EnclosedIn.Block, ref ctx,
                     lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                 if (inTheLastBlock)
+                {
+                    // todo: @improve @hack no return, need to track returns, see Issue320_Bad_label_content_in_ILGenerator_when_creating_through_DynamicModule.Test_instance_call
+                    var labelDefault = lastLabel.DefaultValue;
+                    if (labelDefault != null && // for now just provide return for variable and such, that for soe reason were put in label as default
+                        (labelDefault.NodeType != ExpressionType.Constant & labelDefault.NodeType != ExpressionType.Default))
+                    {
+                        sb.NewLineIndent(lineIndent);
+                        labelDefault.ToCSharpString(sb.Append("return "),
+                            EnclosedIn.Return, ref ctx, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
+                    }
                     sb.AppendSemicolonOnce(); // the last label forms the invalid C#, so we need at least ';' at the end
+                }
                 return sb;
             }
 
