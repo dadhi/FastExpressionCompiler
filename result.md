@@ -142,3 +142,42 @@ Review of `printcs_20260312-01.out` (delta vs Results002):
 
 - Good progress: multidimensional array declaration and previously duplicated labels appear fixed.
 - Remaining compile blockers are still present (keyword-label, missing returns, invalid out target, invalid ref assignment form, bare member-access statement), plus at least two newly observed invalid patterns (switch fall-through and undeclared `left`).
+
+## Results004
+
+Review of `printcs_20260317-01.out` (delta vs Results003 / `printcs_20260312-01.out`):
+
+### Fixed since Results003
+
+1. **Issue495_Incomplete_pattern_detection...ReturnGotoFromTryCatchWithAssign_ShouldBeDetectedAsError1007**
+   - Previously reported as invalid due to label `return:;`.
+   - Now emitted as `@return:;` (verbatim identifier), which is valid C# label syntax.
+
+### Still invalid (previously known, still present)
+
+1. **Issue487_Fix_ToCSharpString_output_for_boolean_equality_expressions.Original_case**
+   - Still emits `var _ = x.MyTestBool;` with `x` undeclared in the snippet.
+
+2. **Issue320_Bad_label_content_in_ILGenerator_when_creating_through_DynamicModule.Test_instance_call**
+   - `Func<int>` body still has no reachable `return` on all paths (ends with label only).
+
+3. **Issue321_Call_with_out_parameter_to_field_type_that_is_not_value_type_fails.Test_outparameter**
+   - Still uses `out default(TestPOD)...` as out argument target (not assignable).
+
+4. **Issue439_Support_unused_Field_access_in_Block.Original_case**
+   - Still contains bare member-access statement `testClass.Result0;` (invalid statement expression).
+
+5. **Issue428_Expression_Switch_without_a_default_case_incorrectly_calls_first_case_for_unmatched_values**
+   - Still has case-to-case fall-through in emitted C# without terminating jump/return.
+
+6. **Issue422_InvalidProgramException_when_having_TryCatch_Default_in_Catch.Original_case_but_comparing_with_non_null_left_operand**
+   - Still references undeclared identifier `left`.
+
+### Previously reported invalid no longer observed in this output
+
+1. **Issue365_Working_with_ref_return_values.Test_access_ref_returning_method_then_property**
+   - Now emitted as `pp.GetParamValueByRef().Value = 7;` (the prior invalid `ref ... = ...` form is gone).
+
+### New errors introduced in this run
+
+- No additional *new* compile blockers were identified beyond the already-known set above.

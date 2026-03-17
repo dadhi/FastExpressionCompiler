@@ -10,18 +10,16 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
-
 public class Issue422_InvalidProgramException_when_having_TryCatch_Default_in_Catch : ITest
 {
     public int Run()
     {
-        Original_case();
         Original_case_but_comparing_with_non_null_left_operand();
+        Original_case();
         Original_case_but_comparing_with_nullable_left_operand();
         Change_comparison_operators_order_as_expected();
         return 4;
     }
-
 
     public void Original_case()
     {
@@ -73,7 +71,6 @@ public class Issue422_InvalidProgramException_when_having_TryCatch_Default_in_Ca
         Asserts.IsTrue(ff(null));
     }
 
-
     public void Original_case_but_comparing_with_non_null_left_operand()
     {
         var pEntity = Parameter(typeof(Tuple<object>));
@@ -94,7 +91,6 @@ public class Issue422_InvalidProgramException_when_having_TryCatch_Default_in_Ca
         Asserts.IsFalse(fs(null));
         Asserts.IsFalse(ff(null));
     }
-
 
     public void Original_case_but_comparing_with_nullable_left_operand()
     {

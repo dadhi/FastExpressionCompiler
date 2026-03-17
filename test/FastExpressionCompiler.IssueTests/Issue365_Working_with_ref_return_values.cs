@@ -9,8 +9,8 @@ public class Issue365_Working_with_ref_return_values : ITest
 {
     public int Run()
     {
-        Test_access_ref_returning_method_assigned_var_then_property();
         Test_access_ref_returning_method_then_property();
+        Test_access_ref_returning_method_assigned_var_then_property();
         return 2;
     }
 
@@ -84,7 +84,7 @@ public class Issue365_Working_with_ref_return_values : ITest
         @cs(paramProcessor);
         Asserts.AreEqual(7, paramProcessor.ParamValue.Value);
 
-        // var fs = e.CompileSys(); // todo: does not conver ref returning method calls, cause unable cannot find the property on the T& type
+        // var fs = e.CompileSys(); // todo: does not cover ref returning method calls, cause unable cannot find the property on the T& type
 
         var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
         ff.AssertOpCodes(

@@ -14,6 +14,7 @@
         "Hasher",
         "iface",
         "ifaces",
+        "ifthen",
         "Initobj",
         "intrinsics",
         "Isinst",

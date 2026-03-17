@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection.Emit;
 
-
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.IssueTests;
@@ -12,7 +11,6 @@ using System.Linq.Expressions;
 using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
-
 
 public class Issue428_Expression_Switch_without_a_default_case_incorrectly_calls_first_case_for_unmatched_values : ITest
 {
@@ -26,7 +24,6 @@ public class Issue428_Expression_Switch_without_a_default_case_incorrectly_calls
     private static List<String> _cases = new();
     public static void AddCase(string value) => _cases.Add(value);
     public static void DebugWriteCase(string value, int n) => Debug.WriteLine($"{value}-{n}");
-
 
     public void Original_case()
     {
@@ -62,7 +59,6 @@ public class Issue428_Expression_Switch_without_a_default_case_incorrectly_calls
         Asserts.AreEqual(new[] { "1", "2" }, _cases);
         _cases.Clear();
     }
-
 
     public void Not_so_original_case()
     {

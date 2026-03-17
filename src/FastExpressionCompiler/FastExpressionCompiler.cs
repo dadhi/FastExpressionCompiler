@@ -10107,7 +10107,7 @@ namespace FastExpressionCompiler
 
                         var method = mc.Method;
                         var methodReturnType = method.ReturnType;
-                        if (methodReturnType.IsByRef)
+                        if (enclosedIn != EnclosedIn.Instance && methodReturnType.IsByRef)
                             sb.AppendRefOnce();
 
                         // output convert only if it is required, e.g. it may happen for custom expressions designed by users
@@ -10183,7 +10183,7 @@ namespace FastExpressionCompiler
                             // wrap the `new X().Y` into parens as `(new X()).Y` as it is may be a part of the bigger expression
                             if (inst.NodeType == ExpressionType.New)
                                 sb.Append('(');
-                            inst.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref ctx,
+                            inst.ToCSharpString(sb, EnclosedIn.Instance, ref ctx,
                                 lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
                             if (inst.NodeType == ExpressionType.New)
                                 sb.Append(')');

@@ -2,6 +2,7 @@ using System.Reflection;
 using System;
 
 #if LIGHT_EXPRESSION
+using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.IssueTests
 #else
 using static System.Linq.Expressions.Expression;
