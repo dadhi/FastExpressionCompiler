@@ -10601,13 +10601,18 @@ namespace FastExpressionCompiler
                             if (enclosedIn == EnclosedIn.LambdaBody)
                             {
                                 if (caseBody is BlockExpression bl)
+                                {
                                     bl.BlockToCSharpString(sb, ref ctx,
                                         caseBodyIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode, inTheLastBlock: true);
+                                    sb.NewLineIndent(caseBodyIndent).Append("break;");
+                                }
                                 else
                                 {
                                     var bodyIn = caseBody.Type != typeof(void) ? EnclosedIn.Return : EnclosedIn.AvoidParens;
                                     caseBody.ToCSharpString(bodyIn == EnclosedIn.Return ? sb.Append("return ") : sb, bodyIn, ref ctx,
                                         caseBodyIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).AppendSemicolonOnce(caseBody);
+                                    if (bodyIn != EnclosedIn.Return)
+                                        sb.NewLineIndent(caseBodyIndent).Append("break;");
                                 }
                             }
                             else

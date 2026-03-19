@@ -80,7 +80,7 @@ public class Issue422_InvalidProgramException_when_having_TryCatch_Default_in_Ca
         var expr = Lambda<Func<Tuple<object>, bool>>(Equal(Constant(left),
             TryCatch(lastInstanceAccessor, new[] { Catch(typeof(NullReferenceException), Default(lastInstanceAccessor.Type)) })), pEntity);
 
-        expr.PrintCSharp((x, stripNamespace, printType) => "left");
+        expr.PrintCSharp((x, stripNamespace, printType) => "left"); // valid C#
 
         var fs = expr.CompileSys();
         fs.PrintIL();
