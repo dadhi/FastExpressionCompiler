@@ -18,10 +18,10 @@ namespace FastExpressionCompiler.UnitTests
             // ILGeneratorTools.DisableILGeneratorPooling = true;
             // LightExpression.ILGeneratorTools.DisableILGeneratorPooling = true;
 
+            // new TryCatchTests().Run();
             // new Issue320_Bad_label_content_in_ILGenerator_when_creating_through_DynamicModule().Run();
             // new Issue422_InvalidProgramException_when_having_TryCatch_Default_in_Catch().Run();
             // new Issue428_Expression_Switch_without_a_default_case_incorrectly_calls_first_case_for_unmatched_values().Run();
-
             // new LightExpression.IssueTests.Issue365_Working_with_ref_return_values().Run();
             // new LightExpression.IssueTests.Issue321_Call_with_out_parameter_to_field_type_that_is_not_value_type_fails().Run();
             // new LightExpression.IssueTests.Issue363_ActionFunc16Generics().Run();
@@ -51,13 +51,12 @@ namespace FastExpressionCompiler.UnitTests
 
             var st = new TestRun(TestFlags.RethrowException);
 
+            st.Run(new Issue495_Incomplete_pattern_detection_for_NotSupported_1007_Return_goto_from_TryCatch_with_Assign_generates_invalid_IL());
+            st.Run(new Issue480_CLR_detected_an_invalid_program_exception());
 #if NET8_0_OR_GREATER
             st.Run(new Issue487_Fix_ToCSharpString_output_for_boolean_equality_expressions());
             st.Run(new Issue475_Reuse_DynamicMethod_if_possible());
 #endif
-
-            st.Run(new Issue495_Incomplete_pattern_detection_for_NotSupported_1007_Return_goto_from_TryCatch_with_Assign_generates_invalid_IL());
-            st.Run(new Issue480_CLR_detected_an_invalid_program_exception());
 
             var lt = new LightExpression.TestRun(LightExpression.TestFlags.RethrowException);
 

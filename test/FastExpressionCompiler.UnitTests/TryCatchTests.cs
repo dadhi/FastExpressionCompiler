@@ -16,6 +16,7 @@ namespace FastExpressionCompiler.UnitTests
     {
         public int Run()
         {
+            Can_return_nested_catch_block_result();
             Can_handle_the_exception_and_return_result_from_TryCatch_block();
             Issue424_Can_be_nested_in_call_expression();
             Can_be_nested_in_binary();
@@ -28,7 +29,6 @@ namespace FastExpressionCompiler.UnitTests
             Can_return_from_try_block_using_label();
             Can_return_from_catch_block_using_label();
             Can_return_try_block_result_using_label_from_the_inner_try();
-            Can_return_nested_catch_block_result();
             Can_return_from_try_block_using_goto_to_label_with_default_value();
             Can_return_from_try_block_using_goto_to_label_with_the_more_code_after_label();
             Can_rethrow();
@@ -75,7 +75,6 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsNotNull(func);
             Asserts.Throws<InvalidDataSourceException>(() => func());
         }
-
 
         public void Can_handle_the_exception_and_return_result_from_TryCatch_block()
         {
@@ -127,7 +126,6 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual(47, ff("A"));
             Asserts.AreEqual(123, ff("123"));
         }
-
 
         public void Can_use_exception_parameter()
         {
@@ -369,7 +367,6 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.AreEqual("From inner Try block", ff());
         }
 
-
         public void Can_return_nested_catch_block_result()
         {
             var returnType = typeof(string);
@@ -397,12 +394,33 @@ namespace FastExpressionCompiler.UnitTests
                 ),
                 Label(outerReturnLabel, Default(outerReturnLabel.Type))));
 
+            expr.PrintCSharp();
+            var _ = (Func<string>)(() => //string
+            {
+                try
+                {
+                    try
+                    {
+                        throw new Exception();
+                    }
+                    catch (Exception)
+                    {
+                        return "From inner Catch block";
+                    }
+                    string_0:;
+                }
+                catch (Exception)
+                {
+                    return "From outer Catch block";
+                }
+                string_1:;
+            });
+
             var func = expr.CompileFast(true);
 
             Asserts.IsNotNull(func);
             Asserts.AreEqual("From inner Catch block", func());
         }
-
 
         public void Can_rethrow()
         {

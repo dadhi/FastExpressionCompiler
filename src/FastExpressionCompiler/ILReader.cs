@@ -31,10 +31,10 @@ namespace FastExpressionCompiler.ILDecoder;
 [Flags]
 public enum ILFormat : byte
 {
-    Default,
-    AssertOpCodes,
+    Default = 0,
+    AssertOpCodes = 1,
     /// <summary>Exclude NOP opcodes from the output</summary>
-    SkipNop
+    SkipNop = 1 << 1
 }
 
 [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "Uses reflection on internal types and is not trim-compatible.")]

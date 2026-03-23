@@ -15,6 +15,7 @@ public struct Issue495_Incomplete_pattern_detection_for_NotSupported_1007_Return
     public void Run(TestRun t)
     {
         ReturnGotoFromTryCatchWithAssign_ShouldBeDetectedAsError1007(t);
+        ReturnGotoFromTryCatchWithAssign_ShouldBeDetectedAsError1007_null_path(t);
     }
 
     public void ReturnGotoFromTryCatchWithAssign_ShouldBeDetectedAsError1007(TestContext t)
@@ -35,10 +36,10 @@ public struct Issue495_Incomplete_pattern_detection_for_NotSupported_1007_Return
                         NotEqual(variable, Constant(null, typeof(object))),
                         // FEC should detect this as error 1007 and reject it
                         Return(returnLabel, Assign(finalResult, variable), typeof(object))
-                        // @wip other patters:
-                        // - Return(label, Block(Assign(var, value), value))
-                        // - Return(label, Call(MethodThatAssigns, ref var, value))
-                        // - Return(label, Coalesce(value, Assign(var, default)))
+                    // @wip other patters:
+                    // - Return(label, Block(Assign(var, value), value))
+                    // - Return(label, Call(MethodThatAssigns, ref var, value))
+                    // - Return(label, Coalesce(value, Assign(var, default)))
                     ),
                     Assign(finalResult, Constant("default", typeof(object))),
                     Label(returnLabel, Constant("fallback", typeof(object)))
@@ -51,36 +52,109 @@ public struct Issue495_Incomplete_pattern_detection_for_NotSupported_1007_Return
         var expr = Lambda<Func<object>>(block);
 
         expr.PrintCSharp();
-        var @cs = (Func<object>)(() => //object
+        var _ = (Func<object>)(() => //object
         {
-            object var = null;
+            object @var = null;
             object finalResult = null;
             try
             {
-                var = (object)"hello";
-                if (var != null)
+                @var = "hello";
+                if (@var != null)
                 {
-                    return finalResult = var;
-                }; // todo: @wip remove ;
-                finalResult = (object)"default";
-                // return:; // todo: @wip remove or comment or rename but make it a valid c#
+                    return finalResult = @var;
+                }
+                finalResult = "default";
+            @return:;
             }
-            catch (Exception)//(Exception ex) // no need for ex
+            catch (Exception
+                #pragma warning disable CS0168 // unused var
+                ex
+                #pragma warning restore CS0168
+            )
             {
-                ; // todo: @wip remove ; 
+                ;
             }
             return finalResult;
         });
 
         var fs = expr.CompileSys();
         fs.PrintIL(format: ILDecoder.ILFormat.AssertOpCodes);
-        fs();
+        var a = fs();
+        t.AreEqual("hello", a);
 
         // Act: CompileFast should throw NotSupportedExpressionException or return null
-        // var ff = expr.CompileFast(ifFastFailedReturnNull: true);
-        // ff.PrintIL(format: ILDecoder.ILFormat.AssertOpCodes);
+        var ff = expr.CompileFast(ifFastFailedReturnNull: true);
+        t.IsNotNull(ff);
+        ff.PrintIL(format: ILDecoder.ILFormat.AssertOpCodes);
+        var b = ff();
+        t.AreEqual("hello", b);
+    }
 
-        // // Expected: compiled should be null (pattern detected as unsupported)
-        // t.IsNull(ff);
+    public void ReturnGotoFromTryCatchWithAssign_ShouldBeDetectedAsError1007_null_path(TestContext t)
+    {
+        // Arrange: Build expression with Return(label, Assign(...)) inside TryCatch
+        var variable = Variable(typeof(object), "var");
+        var finalResult = Variable(typeof(object), "finalResult");
+        var returnLabel = Label(typeof(object), "return");
+        var exceptionParam = Parameter(typeof(Exception), "ex");
+
+        var block = Block(
+            new[] { variable, finalResult },
+            TryCatch(
+                Block(
+                    typeof(void),
+                    Assign(variable, Constant(null, typeof(object))),
+                    IfThen(
+                        NotEqual(variable, Constant(null, typeof(object))),
+                        // FEC should detect this as error 1007 and reject it
+                        Return(returnLabel, Assign(finalResult, variable), typeof(object))
+                    // @wip other patters:
+                    // - Return(label, Block(Assign(var, value), value))
+                    // - Return(label, Call(MethodThatAssigns, ref var, value))
+                    // - Return(label, Coalesce(value, Assign(var, default)))
+                    ),
+                    Assign(finalResult, Constant("default", typeof(object))),
+                    Label(returnLabel, Constant("fallback", typeof(object)))
+                ),
+                Catch(exceptionParam, Empty())
+            ),
+            finalResult
+        );
+
+        var expr = Lambda<Func<object>>(block);
+
+        expr.PrintCSharp();
+        var _ = (Func<object>)(() => //object
+        {
+            object @var = null;
+            object finalResult = null;
+            try
+            {
+                @var = null;
+                if (@var != null)
+                {
+                    return finalResult = @var;
+                }
+                finalResult = "default";
+            @return:;
+            }
+            catch (Exception)
+            {
+                ;
+            }
+            return finalResult;
+        });
+
+        var fs = expr.CompileSys();
+        fs.PrintIL(format: ILDecoder.ILFormat.AssertOpCodes);
+        var a = fs();
+        t.AreEqual("default", a);
+
+        // Act: CompileFast should throw NotSupportedExpressionException or return null
+        var ff = expr.CompileFast(ifFastFailedReturnNull: true);
+        t.IsNotNull(ff);
+        ff.PrintIL(format: ILDecoder.ILFormat.AssertOpCodes);
+        var b = ff();
+        t.AreEqual("default", b);
     }
 }

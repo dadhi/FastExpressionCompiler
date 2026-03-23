@@ -2347,7 +2347,7 @@ namespace FastExpressionCompiler
                                                 {
                                                     if ((setup & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
                                                         throw new NotSupportedExpressionException(Result.NotSupported_Try_GotoReturnToTheFollowupLabel);
-                                                    return false; // todo: @feature return from the TryCatch with the internal label is not supported, though it is the unlikely case
+                                                    return false; // todo: @feature return from the TryCatch with the internal label is not supported, though it is an unlikely case
                                                 }
 
                                                 // we are generating the return value and ensuring here that it is not popped-out
@@ -2618,7 +2618,9 @@ namespace FastExpressionCompiler
                 var returnVariableIndexPlusOne = labelInfo.ReturnVariableIndexPlusOneAndIsDefined >>> 1;
                 if (returnVariableIndexPlusOne != 0)
                 {
-                    if (defaultValue != null)
+                    // if the result value was ignored then we did not IL generate anything for the default value,
+                    // and that in order means we do not have valid thing on stack to store here - so skip the store
+                    if (defaultValue != null & ((parent & ParentFlags.IgnoreResult) == 0))
                         EmitStoreLocalVariable(il, returnVariableIndexPlusOne - 1);
 
                     il.DmarkLabel(labelInfo.ReturnLabel);
@@ -4203,7 +4205,7 @@ namespace FastExpressionCompiler
                             return TryEmitAssignToParameterOrVariable((ParameterExpression)left, right,
                                 nodeType, isPost, exprType, paramExprs, il, ref closure, setup, parent, resultVar);
 
-                        // todo: @wip split for now between the Increment/Decrement and the rest
+                        // todo: @better split for now between the Increment/Decrement and the rest
                         var p = (ParameterExpression)left;
 #if LIGHT_EXPRESSION
                         var paramExprCount = paramExprs.ParameterCount;
@@ -4398,7 +4400,7 @@ namespace FastExpressionCompiler
 
                                 // required for calling the method on the value type parameter
                                 var objType = objExpr.Type;
-                                objVarByAddress = !closure.LastEmitIsAddress && objType.IsValueType && // todo: @wip avoid ad-hocking with parameter here
+                                objVarByAddress = !closure.LastEmitIsAddress && objType.IsValueType && // todo: @better avoid ad-hocking with parameter here
                                     (objExpr.NodeType != ExpressionType.Parameter || !((ParameterExpression)objExpr).IsByRef);
                                 if (objVarByAddress)
                                     objVar = EmitStoreAndLoadLocalVariableAddress(il, objType);
@@ -10056,17 +10058,19 @@ namespace FastExpressionCompiler
                 case ExpressionType.Constant:
                     {
                         var x = (ConstantExpression)e;
-                        if (x.Value == null)
+                        var val = x.Value;
+                        if (val == null)
                             return x.Type == null ? sb.Append("null") : NullConstantOrDefaultToCSharpString(x.Type, sb, enclosedIn, stripNamespace, printType);
 
-                        if (x.Value is Type t)
+                        if (val is Type t)
                             return sb.AppendTypeOf(t, stripNamespace, printType);
 
-                        if (x.Value.GetType() != x.Type) // add the Type cast
+                        var actualType = val.GetType();
+                        if (actualType != x.Type && (actualType.IsValueType || x.Type != typeof(object))) // add the Type cast, but avoid cast to object for the reference types
                             sb.Append('(').Append(x.Type.ToCode(stripNamespace, printType)).Append(')');
 
                         // value output may also add the cast for the primitive values
-                        return sb.Append(x.Value.ToCode(notRecognizedToCode ?? CodePrinter.DefaultNotRecognizedToCode, stripNamespace, printType));
+                        return sb.Append(val.ToCode(notRecognizedToCode ?? CodePrinter.DefaultNotRecognizedToCode, stripNamespace, printType));
                     }
                 case ExpressionType.Parameter:
                     {
@@ -10513,7 +10517,10 @@ namespace FastExpressionCompiler
 
                                 var hVar = h.Variable;
                                 if (hVar != null)
+                                {
+                                    // todo: @wip @feat add around the ex var the "#pragma warning disable CS0168 // unused var" "#pragma warning restore CS0168", see #495, or better check inside the catch block for the usage. We need to completely remove the var, because prefix '_' does not remove the warning. 
                                     sb.Append(' ').AppendName(hVar, hVar.Name, hVar.Type.ToCode(stripNamespace, printType), ref ctx);
+                                }
 
                                 sb.Append(')');
                                 if (h.Filter != null)
@@ -11757,7 +11764,7 @@ namespace FastExpressionCompiler
         /// otherwise uses passed <paramref name="notRecognizedToCode"/> or falls back to `ToString()`.
         /// </summary>
         [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode(Trimming.Message)]
-        public static string ToCode(this object x,
+        public static string ToCode<T>(this T x,
             ObjectToCode notRecognizedToCode = null, bool stripNamespace = false, Func<Type, string, string> printType = null)
         {
             if (x == null)
