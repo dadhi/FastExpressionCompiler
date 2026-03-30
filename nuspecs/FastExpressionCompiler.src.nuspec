@@ -2,9 +2,9 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata minClientVersion="3.3.0">
         <id>FastExpressionCompiler.src</id>
-        <version>5.3.3</version>
+        <version>5.4.0</version>
         <authors>Maksim Volkau</authors>
-        <copyright>Copyright © 2016-2025 Maksim Volkau</copyright>
+        <copyright>Copyright © 2016-2026 Maksim Volkau</copyright>
         <projectUrl>https://github.com/dadhi/FastExpressionCompiler</projectUrl>
         <license type="expression">MIT</license>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
@@ -12,6 +12,31 @@
         <tags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</tags>
         <icon>logo.png</icon>
         <releaseNotes><![CDATA[
+## v5.4.0 Feature and bug-fix release
+
+### Features
+
+- #398 Optimize Switch with OpCodes.Switch  
+- #484 PrintIL options to output op-codes in the format directly copyable to AssertOpCodes method 
+- #482 [impl] Update to the modern optimized and fixed versions of ImTools SmallList and SmallMap
+
+### Fixes
+
+- Multiple fixes in `ToCSharpString`, `PrintCSharp`
+- #480 "CLR detected an invalid program" exception
+- #483 fix recursive PrintIL output for Label Offset and Argument Ordinal
+- #485 PrintCSharp for Switch does not prints "break" when required
+- #487 Fix ToCSharpString output for boolean equality expressions
+- #490 Regression in compiling lambdas with ref struct parameters
+- by [exyi](https://github.com/exyi) #491 Fix unsigned int to floating point number conversion
+- by [exyi](https://github.com/exyi) #493 Fix ParentFlags propagating in TryEmitNewExpression
+- #495 Incomplete pattern detection for error 1007: Return goto from TryCatch with Assign generates invalid IL instead of failing gracefully
+
+### Full Changelog
+
+https://github.com/dadhi/FastExpressionCompiler/compare/v5.3.3...v5.4.0
+
+
 ## v5.3.3 Bug-fix release (src packages only)
 
 - fixed: #488 Fix warnings in src package

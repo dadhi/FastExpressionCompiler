@@ -2,7 +2,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016-2025 Maksim Volkau
+Copyright (c) 2016-2026 Maksim Volkau
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -1361,8 +1361,8 @@ public static class SmallMap
 public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, TEntries>
     where TEntry : struct, IEntry<K>
     where TEq : struct, IEq<K>
-    where TStackCap : struct, ISize2Plus
-    where TStackHashes : struct, IStack<int, TStackCap, TStackHashes> // todo: @simplify Can we combine TStackHashes and TStackEntries together in struct to simplify the generics
+    where TStackCap : struct, ISize2Plus // todo: @simplify Can we combine TStackCap, TStackHashes and TStackEntries together in struct to simplify the generics
+    where TStackHashes : struct, IStack<int, TStackCap, TStackHashes>
     where TStackEntries : struct, IStack<TEntry, TStackCap, TStackEntries>
     where TEntries : struct, IEntries<K, TEntry, TEq>
 {
