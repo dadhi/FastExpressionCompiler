@@ -38,6 +38,7 @@
         "Maksim",
         "NETCOREAPP",
         "NETFRAMEWORK",
+        "NETSTANDARD",
         "Newarr",
         "Newobj",
         "outparameter",

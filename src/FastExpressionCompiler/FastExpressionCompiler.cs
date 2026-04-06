@@ -2222,7 +2222,7 @@ namespace FastExpressionCompiler
                             }
                         case ExpressionType.Not:
                             {
-                                if (!exprType.IsPrimitive) // todo: @feat #496 
+                                if (!exprType.IsPrimitive) // todo: @feat #496
                                 {
                                     Debug.WriteLine("Unsupported: Nullable<bool> in !x (is invalid C# but valid expression) is not supported yet, see #480: " + expr);
                                     return false;
@@ -2531,6 +2531,10 @@ namespace FastExpressionCompiler
                 CompilerFlags setup, ParentFlags parent)
 #endif
             {
+                // Loop expression itself does not leave a value on stack.
+                // If its body produces a value (e.g. a nested typed break/goto path), we need to ignore it before branching back to the loop head, see #498.
+                parent |= ParentFlags.IgnoreResult;
+
                 // Mark the start of the loop body:
                 var loopBodyLabel = il.DefineLabel();
                 il.DmarkLabel(loopBodyLabel);

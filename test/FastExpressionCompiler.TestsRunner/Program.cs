@@ -51,6 +51,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var st = new TestRun(TestFlags.RethrowException);
 
+            st.Run(new Issue498_InvalidProgramException_when_using_loop());
             st.Run(new Issue495_Incomplete_pattern_detection_for_NotSupported_1007_Return_goto_from_TryCatch_with_Assign_generates_invalid_IL());
             st.Run(new Issue480_CLR_detected_an_invalid_program_exception());
 #if NET8_0_OR_GREATER
