@@ -203,12 +203,19 @@ public struct Issue498_InvalidProgramException_when_using_loop : ITestX
 
         var compareToMethod = typeof(int).GetMethod("CompareTo", [typeof(int)]);
 
-        // Mirrors makeCondition(leftIndex, rightIndex, Return(endMain,1), Return(endMain,-1))
+        // Mirrors makeCondition(leftIndex, rightIndex, breakExp: Return(endMain, 1), continueExp: Return(endMain, -1))
         // for INT DESC without null-handling overhead.
+        //
+        // The SortCompiler convention is: -1 = "continueExp" (advance cursor, left value is smaller in sort order),
+        //                                  1 = "breakExp"    (stop advancing, left value is larger in sort order).
+        // For DESC order the natural comparison result is negated so that:
+        //   left=3, right=1 → CompareTo=1, negated=-1 → return -1  (3 sorts before 1 in DESC)
+        //   left=1, right=3 → CompareTo=-1, negated=1 → return  1  (1 sorts after  3 in DESC)
+        //
         // allNotNil block:
         //   compareResult = left.CompareTo(right)
         //   compareResult = -compareResult           (DESC: negate)
-        //   if compareResult == -1: return -1        (continueExp)
+        //   if compareResult == -1: return -1        (continueExp: left comes first)
         //   (fall through to breakExp)
         // breakExp (fallthrough): return 1
         // Label: endMain default -1
@@ -225,8 +232,8 @@ public struct Issue498_InvalidProgramException_when_using_loop : ITestX
 
         var fs = expr.CompileSys();
         fs.PrintIL();
-        t.AreEqual(-1, fs(3, 1)); // DESC: 3 > 1 means left should come first → result -1
-        t.AreEqual(1, fs(1, 3));  // DESC: 1 < 3 means left should come after  → result  1
+        t.AreEqual(-1, fs(3, 1)); // 3 > 1 in DESC → left(3) comes first → -1
+        t.AreEqual(1, fs(1, 3));  // 1 < 3 in DESC → left(1) comes after  → +1
 
         var ff = expr.CompileFast(ifFastFailedReturnNull: true);
         t.IsNotNull(ff);
