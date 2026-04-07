@@ -35,9 +35,12 @@ namespace FastExpressionCompiler.UnitTests
 
                 var t = (LightExpression.TestRun)state;
                 t.Run(new LightExpression.IssueTests.Issue183_NullableDecimal());
+                t.Run(new LightExpression.IssueTests.Issue398_Optimize_Switch_with_OpCodes_Switch());
                 t.Run(new LightExpression.IssueTests.Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET());
                 t.Run(new LightExpression.IssueTests.Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_expressions_during_the_compilation());
                 t.Run(new LightExpression.IssueTests.Issue473_InvalidProgramException_when_using_Expression_Condition_with_converted_decimal_expression());
+                t.Run(new LightExpression.IssueTests.Issue476_System_ExecutionEngineException_with_nullables_on_repeated_calls_to_ConcurrentDictionary());
+                t.Run(new LightExpression.IssueTests.Issue498_InvalidProgramException_when_using_loop());
                 t.Run(new LightExpression.IssueTests.Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
 
                 Console.WriteLine($"Just LightExpression tests are passing in {justLightTestsStopwatch.ElapsedMilliseconds} ms.");
@@ -53,6 +56,10 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET());
             fecTests.Run(new Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_expressions_during_the_compilation());
             fecTests.Run(new Issue473_InvalidProgramException_when_using_Expression_Condition_with_converted_decimal_expression());
+            fecTests.Run(new Issue476_System_ExecutionEngineException_with_nullables_on_repeated_calls_to_ConcurrentDictionary());
+            fecTests.Run(new Issue480_CLR_detected_an_invalid_program_exception());
+            fecTests.Run(new Issue495_Incomplete_pattern_detection_for_NotSupported_1007_Return_goto_from_TryCatch_with_Assign_generates_invalid_IL());
+            fecTests.Run(new Issue498_InvalidProgramException_when_using_loop());
             fecTests.Run(new Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
 
 
