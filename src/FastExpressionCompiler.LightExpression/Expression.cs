@@ -5160,7 +5160,7 @@ public sealed class TypedManyVariablesBlockExpression : ManyVariablesBlockExpres
 public sealed class LoopExpression : Expression
 {
     public override ExpressionType NodeType => ExpressionType.Loop;
-    public override Type Type => typeof(void);
+    public override Type Type => BreakLabel?.Type ?? typeof(void);
     public readonly Expression Body;
     public readonly LabelTarget BreakLabel;
     public readonly LabelTarget ContinueLabel;
