@@ -2588,8 +2588,14 @@ namespace FastExpressionCompiler
                 var indexArgs = indexExpr.Arguments;
 #endif
                 var indexArgCount = indexArgs.GetCount();
+                // Strip InstanceAccess when emitting arguments: they are parameters to the indexer
+                // getter method, not instances. Without this, a nested IndexExpression like
+                // `list[i][j]` leaks the outer InstanceAccess into the inner indexer's argument
+                // emission, causing value-type args (e.g. int) to be loaded by address (ldloca)
+                // instead of by value (ldloc), producing invalid IL. See #499.
+                var argParent = p & ~ParentFlags.InstanceAccess;
                 for (var i = 0; i < indexArgCount; i++)
-                    if (!TryEmit(indexArgs.GetArgument(i), paramExprs, il, ref closure, setup, p, -1))
+                    if (!TryEmit(indexArgs.GetArgument(i), paramExprs, il, ref closure, setup, argParent, -1))
                         return false;
 
                 var indexerProp = indexExpr.Indexer;
