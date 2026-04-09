@@ -17,7 +17,10 @@ public struct Issue499_InvalidProgramException_for_Sorting_and_comparison_functi
     {
         Quicksort_partition_with_nested_loops(t);
         Comparison_function_with_goto_labels(t);
-        ArrayInList_ArrayAcceesError(t);
+        ArrayInList_NullableInt_ArrayAccessError(t);
+        ArrayInList_Int_ArrayAccessError(t);
+        ArrayInList_String_ArrayAccessError(t);
+        ArrayInList_Struct_ArrayAccess(t);
     }
 
     // Reproduces the sorting use-case from https://github.com/dadhi/FastExpressionCompiler/issues/499
@@ -159,7 +162,7 @@ public struct Issue499_InvalidProgramException_for_Sorting_and_comparison_functi
     /// ff raise System.InvalidProgramException: Common Language Runtime detected an invalid program.
     /// </summary>
     /// <param name="t"></param>
-    public void ArrayInList_ArrayAcceesError(TestContext t)
+    public void ArrayInList_NullableInt_ArrayAccessError(TestContext t)
     {
         List<Expression> exps = new List<Expression>();
         var dataArrayList = Parameter(typeof(List<int?[]>), "dataArrayList");
@@ -174,24 +177,155 @@ public struct Issue499_InvalidProgramException_for_Sorting_and_comparison_functi
         exps.Add(Assign(left_ListIndex, Constant(0)));
         exps.Add(Assign(left_ArrayIndex, Constant(0)));
         exps.Add(Assign(leftVars[0], ArrayAccess(Expression.Property(dataArrayList, "Item", left_ListIndex), left_ArrayIndex)));
+        LabelTarget endMain = Expression.Label(typeof(int?), "endMain");
+        exps.Add(Expression.Label(endMain, leftVars[0]));
 
         BlockExpression block = Block(
             vars.ToArray(), exps
         );
-        var expr = Lambda<Action<List<int?[]>>>(block, dataArrayList);
+        var expr = Lambda<Func<List<int?[]>, int?>>(block, dataArrayList);
         expr.PrintCSharp();
 
         List<int?[]> data1 = new List<int?[]> { new int?[] { 1 } };
         List<int?[]> data2 = new List<int?[]> { new int?[] { 1 } };
 
-
         var fs = expr.CompileSys();
         fs.PrintIL();
-        fs(data1);
+        t.AreEqual(1, fs(data1));
 
         var ff = expr.CompileFast(ifFastFailedReturnNull: true);
         t.IsNotNull(ff);
         ff.PrintIL();
-        ff(data2);
+        t.AreEqual(1, ff(data2));
+    }
+
+    /// <summary>
+    /// ff raise System.InvalidProgramException: Common Language Runtime detected an invalid program.
+    /// </summary>
+    /// <param name="t"></param>
+    public void ArrayInList_Int_ArrayAccessError(TestContext t)
+    {
+        List<Expression> exps = new List<Expression>();
+        var dataArrayList = Parameter(typeof(List<int[]>), "dataArrayList");
+        List<ParameterExpression> vars = new List<ParameterExpression>();
+        var left_ListIndex = Parameter(typeof(int), "left_ListIndex");
+        var left_ArrayIndex = Parameter(typeof(int), "left_ArrayIndex");
+
+        vars.AddRange(new ParameterExpression[] { left_ListIndex, left_ArrayIndex });
+        var leftVars = new ParameterExpression[1];
+        leftVars[0] = Parameter(typeof(int), $"left_{0}");
+        vars.Add(leftVars[0]);
+        exps.Add(Assign(left_ListIndex, Constant(0)));
+        exps.Add(Assign(left_ArrayIndex, Constant(0)));
+        exps.Add(Assign(leftVars[0], ArrayAccess(Expression.Property(dataArrayList, "Item", left_ListIndex), left_ArrayIndex)));
+        LabelTarget endMain = Expression.Label(typeof(int), "endMain");
+        exps.Add(Expression.Label(endMain, leftVars[0]));
+
+        BlockExpression block = Block(
+            vars.ToArray(), exps
+        );
+        var expr = Lambda<Func<List<int[]>, int>>(block, dataArrayList);
+        expr.PrintCSharp();
+
+        List<int[]> data1 = new List<int[]> { new int[] { 1 } };
+        List<int[]> data2 = new List<int[]> { new int[] { 1 } };
+
+        var fs = expr.CompileSys();
+        fs.PrintIL();
+        t.AreEqual(1, fs(data1));
+
+        var ff = expr.CompileFast(ifFastFailedReturnNull: true);
+        t.IsNotNull(ff);
+        ff.PrintIL();
+        t.AreEqual(1, ff(data2));
+    }
+
+
+    /// <summary>
+    /// ff raise System.InvalidProgramException: Common Language Runtime detected an invalid program.
+    /// </summary>
+    /// <param name="t"></param>
+    public void ArrayInList_String_ArrayAccessError(TestContext t)
+    {
+        List<Expression> exps = new List<Expression>();
+        var dataArrayList = Parameter(typeof(List<string[]>), "dataArrayList");
+        List<ParameterExpression> vars = new List<ParameterExpression>();
+        var left_ListIndex = Parameter(typeof(int), "left_ListIndex");
+        var left_ArrayIndex = Parameter(typeof(int), "left_ArrayIndex");
+
+        vars.AddRange(new ParameterExpression[] { left_ListIndex, left_ArrayIndex });
+        var leftVars = new ParameterExpression[1];
+        leftVars[0] = Parameter(typeof(string), $"left_{0}");
+        vars.Add(leftVars[0]);
+        exps.Add(Assign(left_ListIndex, Constant(0)));
+        exps.Add(Assign(left_ArrayIndex, Constant(0)));
+        exps.Add(Assign(leftVars[0], ArrayAccess(Expression.Property(dataArrayList, "Item", left_ListIndex), left_ArrayIndex)));
+        LabelTarget endMain = Expression.Label(typeof(string), "endMain");
+        exps.Add(Expression.Label(endMain, leftVars[0]));
+
+        BlockExpression block = Block(
+            vars.ToArray(), exps
+        );
+        var expr = Lambda<Func<List<string[]>, string>>(block, dataArrayList);
+        expr.PrintCSharp();
+
+        List<string[]> data1 = new List<string[]> { new string[] { "test1" } };
+        List<string[]> data2 = new List<string[]> { new string[] { "test2" } };
+        var fs = expr.CompileSys();
+        fs.PrintIL();
+        t.AreEqual("test1", fs(data1));
+
+        var ff = expr.CompileFast(ifFastFailedReturnNull: true);
+        t.IsNotNull(ff);
+        ff.PrintIL();
+        t.AreEqual("test2", ff(data2));
+    }
+
+    /// <summary>
+    /// passed before fix issue 499
+    /// </summary>
+    /// <param name="t"></param>
+    public void ArrayInList_Struct_ArrayAccess(TestContext t)
+    {
+        List<Expression> exps = new List<Expression>();
+        var dataArrayList = Parameter(typeof(List<SomeStruct[]>), "dataArrayList");
+        List<ParameterExpression> vars = new List<ParameterExpression>();
+        var left_ListIndex = Parameter(typeof(int), "left_ListIndex");
+        var left_ArrayIndex = Parameter(typeof(int), "left_ArrayIndex");
+
+        vars.AddRange(new ParameterExpression[] { left_ListIndex, left_ArrayIndex });
+        var leftVars = new ParameterExpression[1];
+        leftVars[0] = Parameter(typeof(int?), $"left_{0}");
+        vars.Add(leftVars[0]);
+        exps.Add(Assign(left_ListIndex, Constant(0)));
+        exps.Add(Assign(left_ArrayIndex, Constant(0)));
+        exps.Add(Assign(leftVars[0], Property(ArrayAccess(Property(dataArrayList, "Item", left_ListIndex), left_ArrayIndex), "Foo")));
+        LabelTarget endMain = Expression.Label(typeof(int?), "endMain");
+        exps.Add(Expression.Label(endMain, leftVars[0]));
+
+        BlockExpression block = Block(
+            vars.ToArray(), exps
+        );
+        var expr = Lambda<Func<List<SomeStruct[]>, int?>>(block, dataArrayList);
+        expr.PrintCSharp();
+
+        List<SomeStruct[]> data1 = new List<SomeStruct[]> { new SomeStruct[] { new SomeStruct { Foo = 1 } } };
+        List<SomeStruct[]> data2 = new List<SomeStruct[]> { new SomeStruct[] { new SomeStruct { Foo = 1 } } };
+
+        var fs = expr.CompileSys();
+        fs.PrintIL();
+        var resultFs = fs(data1);
+        t.AreEqual(1, resultFs);
+
+        var ff = expr.CompileFast(ifFastFailedReturnNull: true);
+        t.IsNotNull(ff);
+        ff.PrintIL();
+        var resultFf = ff(data2);
+        t.AreEqual(1, resultFf);
+    }
+
+    public struct SomeStruct
+    {
+        public int? Foo { get; set; }
     }
 }
