@@ -10938,8 +10938,7 @@ namespace FastExpressionCompiler
             else
             {
                 sb.NewLineIndent(lineIndent + indentSpaces);
-                var needsDiscard = expr != null && expr.NeedsDiscardWhenUsedAsStatement();
-                if (needsDiscard) // it requires some assignment target to avoid error or warning
+                if (expr != null && expr.NeedsDiscardWhenUsedAsStatement())
                     sb.Append("_ = ");
                 sb = expr?.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref ctx,
                     lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode) ?? sb.Append("null");
@@ -11164,7 +11163,7 @@ namespace FastExpressionCompiler
                     sb.NewLineIndent(lineIndent);
                     var nodeType = expr.NodeType;
                     var returningCondOrCoalesceOrCall = expr.NeedsDiscardWhenUsedAsStatement();
-                    if (returningCondOrCoalesceOrCall) // it requires some assignment target to avoid error or warning
+                    if (returningCondOrCoalesceOrCall)
                         sb.Append("_ = ");
 
                     expr.ToCSharpString(sb, EnclosedIn.Block, ref ctx,
