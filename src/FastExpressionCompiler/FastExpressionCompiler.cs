@@ -10000,6 +10000,408 @@ namespace FastExpressionCompiler
         }
     }
 
+#if LIGHT_EXPRESSION
+    /// <summary>Provides structural equality comparison for the LightExpression.</summary>
+    public static class ExpressionEqualityComparer
+    {
+        /// <summary>Structurally compares two expressions.
+        /// Parameters are matched by their position within their enclosing lambda, and label targets by identity pairing.
+        /// No heap allocations for expressions with up to 4 lambda parameters or label targets.</summary>
+        public static bool EqualsTo(this Expression x, Expression y)
+        {
+            SmallList<ParameterExpression> xps = default, yps = default;
+            SmallList<LabelTarget> xls = default, yls = default;
+            return Eq(x, y, ref xps, ref yps, ref xls, ref yls);
+        }
+
+        private static bool Eq(Expression x, Expression y,
+            ref SmallList<ParameterExpression> xps, ref SmallList<ParameterExpression> yps,
+            ref SmallList<LabelTarget> xls, ref SmallList<LabelTarget> yls)
+        {
+            if (ReferenceEquals(x, y)) return true;
+            if (x == null | y == null) return false;
+            if (x.NodeType != y.NodeType | x.Type != y.Type) return false;
+            switch (x.NodeType)
+            {
+                case ExpressionType.Parameter:
+                {
+                    var px = (ParameterExpression)x;
+                    var py = (ParameterExpression)y;
+                    for (var i = 0; i < xps.Count; i++)
+                        if (ReferenceEquals(xps.Items[i], px))
+                            return ReferenceEquals(yps.Items[i], py);
+                    // unmapped — compare structurally (Type already checked)
+                    return px.IsByRef == py.IsByRef && px.Name == py.Name;
+                }
+
+                case ExpressionType.Constant:
+                {
+                    var cx = (ConstantExpression)x;
+                    var cy = (ConstantExpression)y;
+                    return Equals(cx.Value, cy.Value);
+                }
+
+                case ExpressionType.Lambda:
+                {
+                    var lx = (LambdaExpression)x;
+                    var ly = (LambdaExpression)y;
+                    var pc = lx.ParameterCount;
+                    if (pc != ly.ParameterCount) return false;
+                    var sc = xps.Count;
+                    for (var i = 0; i < pc; i++)
+                    {
+                        xps.AddDefaultAndGetRef() = lx.GetParameter(i);
+                        yps.AddDefaultAndGetRef() = ly.GetParameter(i);
+                    }
+                    var eq = Eq(lx.Body, ly.Body, ref xps, ref yps, ref xls, ref yls);
+                    xps.Count = sc;
+                    yps.Count = sc;
+                    return eq;
+                }
+
+                case ExpressionType.Negate: case ExpressionType.NegateChecked:
+                case ExpressionType.UnaryPlus: case ExpressionType.Not:
+                case ExpressionType.ArrayLength: case ExpressionType.TypeAs:
+                case ExpressionType.Convert: case ExpressionType.ConvertChecked:
+                case ExpressionType.Quote: case ExpressionType.Throw:
+                case ExpressionType.OnesComplement: case ExpressionType.IsTrue: case ExpressionType.IsFalse:
+                case ExpressionType.Increment: case ExpressionType.Decrement:
+                case ExpressionType.PreIncrementAssign: case ExpressionType.PostIncrementAssign:
+                case ExpressionType.PreDecrementAssign: case ExpressionType.PostDecrementAssign:
+                case ExpressionType.Unbox:
+                {
+                    var ux = (UnaryExpression)x;
+                    var uy = (UnaryExpression)y;
+                    return ux.Method == uy.Method &&
+                        Eq(ux.Operand, uy.Operand, ref xps, ref yps, ref xls, ref yls);
+                }
+
+                case ExpressionType.Add: case ExpressionType.AddChecked:
+                case ExpressionType.Subtract: case ExpressionType.SubtractChecked:
+                case ExpressionType.Multiply: case ExpressionType.MultiplyChecked:
+                case ExpressionType.Divide: case ExpressionType.Modulo:
+                case ExpressionType.Power: case ExpressionType.And:
+                case ExpressionType.Or: case ExpressionType.ExclusiveOr:
+                case ExpressionType.LeftShift: case ExpressionType.RightShift:
+                case ExpressionType.AndAlso: case ExpressionType.OrElse:
+                case ExpressionType.Equal: case ExpressionType.NotEqual:
+                case ExpressionType.LessThan: case ExpressionType.LessThanOrEqual:
+                case ExpressionType.GreaterThan: case ExpressionType.GreaterThanOrEqual:
+                case ExpressionType.Coalesce: case ExpressionType.ArrayIndex:
+                case ExpressionType.Assign:
+                case ExpressionType.AddAssign: case ExpressionType.AddAssignChecked:
+                case ExpressionType.SubtractAssign: case ExpressionType.SubtractAssignChecked:
+                case ExpressionType.MultiplyAssign: case ExpressionType.MultiplyAssignChecked:
+                case ExpressionType.DivideAssign: case ExpressionType.ModuloAssign:
+                case ExpressionType.PowerAssign: case ExpressionType.AndAssign:
+                case ExpressionType.OrAssign: case ExpressionType.ExclusiveOrAssign:
+                case ExpressionType.LeftShiftAssign: case ExpressionType.RightShiftAssign:
+                {
+                    var bx = (BinaryExpression)x;
+                    var by = (BinaryExpression)y;
+                    return bx.Method == by.Method &&
+                        Eq(bx.Conversion, by.Conversion, ref xps, ref yps, ref xls, ref yls) &&
+                        Eq(bx.Left, by.Left, ref xps, ref yps, ref xls, ref yls) &&
+                        Eq(bx.Right, by.Right, ref xps, ref yps, ref xls, ref yls);
+                }
+
+                case ExpressionType.Call:
+                {
+                    var mx = (MethodCallExpression)x;
+                    var my = (MethodCallExpression)y;
+                    return mx.Method == my.Method &&
+                        Eq(mx.Object, my.Object, ref xps, ref yps, ref xls, ref yls) &&
+                        EqArgs(mx, my, ref xps, ref yps, ref xls, ref yls);
+                }
+
+                case ExpressionType.MemberAccess:
+                {
+                    var fx = (MemberExpression)x;
+                    var fy = (MemberExpression)y;
+                    return fx.Member == fy.Member &&
+                        Eq(fx.Expression, fy.Expression, ref xps, ref yps, ref xls, ref yls);
+                }
+
+                case ExpressionType.New:
+                {
+                    var nx = (NewExpression)x;
+                    var ny = (NewExpression)y;
+                    return nx.Constructor == ny.Constructor &&
+                        EqArgs(nx, ny, ref xps, ref yps, ref xls, ref yls);
+                }
+
+                case ExpressionType.NewArrayInit:
+                case ExpressionType.NewArrayBounds:
+                {
+                    var nx = (NewArrayExpression)x;
+                    var ny = (NewArrayExpression)y;
+                    return EqArgs(nx, ny, ref xps, ref yps, ref xls, ref yls);
+                }
+
+                case ExpressionType.Conditional:
+                {
+                    var cx = (ConditionalExpression)x;
+                    var cy = (ConditionalExpression)y;
+                    return Eq(cx.Test, cy.Test, ref xps, ref yps, ref xls, ref yls) &&
+                        Eq(cx.IfTrue, cy.IfTrue, ref xps, ref yps, ref xls, ref yls) &&
+                        Eq(cx.IfFalse, cy.IfFalse, ref xps, ref yps, ref xls, ref yls);
+                }
+
+                case ExpressionType.Block:
+                {
+                    var bx = (BlockExpression)x;
+                    var by = (BlockExpression)y;
+                    var vc = bx.Variables.Count;
+                    if (vc != by.Variables.Count) return false;
+                    var ec = bx.Expressions.Count;
+                    if (ec != by.Expressions.Count) return false;
+                    var sc = xps.Count;
+                    for (var i = 0; i < vc; i++)
+                    {
+                        xps.AddDefaultAndGetRef() = bx.Variables[i];
+                        yps.AddDefaultAndGetRef() = by.Variables[i];
+                    }
+                    var eq = true;
+                    for (var i = 0; i < ec && eq; i++)
+                        eq = Eq(bx.Expressions.GetSurePresentRef(i), by.Expressions.GetSurePresentRef(i),
+                            ref xps, ref yps, ref xls, ref yls);
+                    xps.Count = sc;
+                    yps.Count = sc;
+                    return eq;
+                }
+
+                case ExpressionType.MemberInit:
+                {
+                    var mx = (MemberInitExpression)x;
+                    var my = (MemberInitExpression)y;
+                    var bc = mx.Bindings.Count;
+                    if (bc != my.Bindings.Count) return false;
+                    if (!Eq(mx.Expression, my.Expression, ref xps, ref yps, ref xls, ref yls)) return false;
+                    for (var i = 0; i < bc; i++)
+                        if (!EqBinding(mx.Bindings[i], my.Bindings[i], ref xps, ref yps, ref xls, ref yls)) return false;
+                    return true;
+                }
+
+                case ExpressionType.ListInit:
+                {
+                    var lx = (ListInitExpression)x;
+                    var ly = (ListInitExpression)y;
+                    var ic = lx.Initializers.Count;
+                    if (ic != ly.Initializers.Count) return false;
+                    if (!Eq(lx.NewExpression, ly.NewExpression, ref xps, ref yps, ref xls, ref yls)) return false;
+                    for (var i = 0; i < ic; i++)
+                        if (!EqElementInit(lx.Initializers[i], ly.Initializers[i], ref xps, ref yps, ref xls, ref yls)) return false;
+                    return true;
+                }
+
+                case ExpressionType.TypeIs:
+                case ExpressionType.TypeEqual:
+                {
+                    var tx = (TypeBinaryExpression)x;
+                    var ty = (TypeBinaryExpression)y;
+                    return tx.TypeOperand == ty.TypeOperand &&
+                        Eq(tx.Expression, ty.Expression, ref xps, ref yps, ref xls, ref yls);
+                }
+
+                case ExpressionType.Invoke:
+                {
+                    var ix = (InvocationExpression)x;
+                    var iy = (InvocationExpression)y;
+                    return Eq(ix.Expression, iy.Expression, ref xps, ref yps, ref xls, ref yls) &&
+                        EqArgs(ix, iy, ref xps, ref yps, ref xls, ref yls);
+                }
+
+                case ExpressionType.Index:
+                {
+                    var ix = (IndexExpression)x;
+                    var iy = (IndexExpression)y;
+                    return ix.Indexer == iy.Indexer &&
+                        Eq(ix.Object, iy.Object, ref xps, ref yps, ref xls, ref yls) &&
+                        EqArgs(ix, iy, ref xps, ref yps, ref xls, ref yls);
+                }
+
+                case ExpressionType.Default:
+                    return true; // Type already matched above
+
+                case ExpressionType.Label:
+                {
+                    var lx = (LabelExpression)x;
+                    var ly = (LabelExpression)y;
+                    return EqLabel(lx.Target, ly.Target, ref xls, ref yls) &&
+                        Eq(lx.DefaultValue, ly.DefaultValue, ref xps, ref yps, ref xls, ref yls);
+                }
+
+                case ExpressionType.Goto:
+                {
+                    var gx = (GotoExpression)x;
+                    var gy = (GotoExpression)y;
+                    return gx.Kind == gy.Kind &&
+                        EqLabel(gx.Target, gy.Target, ref xls, ref yls) &&
+                        Eq(gx.Value, gy.Value, ref xps, ref yps, ref xls, ref yls);
+                }
+
+                case ExpressionType.Loop:
+                {
+                    var lx = (LoopExpression)x;
+                    var ly = (LoopExpression)y;
+                    return EqLabel(lx.BreakLabel, ly.BreakLabel, ref xls, ref yls) &&
+                        EqLabel(lx.ContinueLabel, ly.ContinueLabel, ref xls, ref yls) &&
+                        Eq(lx.Body, ly.Body, ref xps, ref yps, ref xls, ref yls);
+                }
+
+                case ExpressionType.Try:
+                {
+                    var tx = (TryExpression)x;
+                    var ty = (TryExpression)y;
+                    if (!Eq(tx.Body, ty.Body, ref xps, ref yps, ref xls, ref yls)) return false;
+                    if (!Eq(tx.Finally, ty.Finally, ref xps, ref yps, ref xls, ref yls)) return false;
+                    if (!Eq(tx.Fault, ty.Fault, ref xps, ref yps, ref xls, ref yls)) return false;
+                    var hc = tx.Handlers.Count;
+                    if (hc != ty.Handlers.Count) return false;
+                    for (var i = 0; i < hc; i++)
+                    {
+                        var hx = tx.Handlers[i];
+                        var hy = ty.Handlers[i];
+                        if (hx.Test != hy.Test) return false;
+                        var sc = xps.Count;
+                        if (hx.Variable != null | hy.Variable != null)
+                        {
+                            if (hx.Variable == null | hy.Variable == null) return false;
+                            if (hx.Variable.Type != hy.Variable.Type) return false;
+                            xps.AddDefaultAndGetRef() = hx.Variable;
+                            yps.AddDefaultAndGetRef() = hy.Variable;
+                        }
+                        var ceq = Eq(hx.Body, hy.Body, ref xps, ref yps, ref xls, ref yls) &&
+                            Eq(hx.Filter, hy.Filter, ref xps, ref yps, ref xls, ref yls);
+                        xps.Count = sc;
+                        yps.Count = sc;
+                        if (!ceq) return false;
+                    }
+                    return true;
+                }
+
+                case ExpressionType.Switch:
+                {
+                    var sx = (SwitchExpression)x;
+                    var sy = (SwitchExpression)y;
+                    if (sx.Comparison != sy.Comparison) return false;
+                    if (!Eq(sx.SwitchValue, sy.SwitchValue, ref xps, ref yps, ref xls, ref yls)) return false;
+                    if (!Eq(sx.DefaultBody, sy.DefaultBody, ref xps, ref yps, ref xls, ref yls)) return false;
+                    var cc = sx.Cases.Count;
+                    if (cc != sy.Cases.Count) return false;
+                    for (var i = 0; i < cc; i++)
+                    {
+                        var cx = sx.Cases[i];
+                        var cy = sy.Cases[i];
+                        if (!Eq(cx.Body, cy.Body, ref xps, ref yps, ref xls, ref yls)) return false;
+                        var tc = cx.TestValues.Count;
+                        if (tc != cy.TestValues.Count) return false;
+                        for (var j = 0; j < tc; j++)
+                            if (!Eq(cx.TestValues[j], cy.TestValues[j], ref xps, ref yps, ref xls, ref yls)) return false;
+                    }
+                    return true;
+                }
+
+                case ExpressionType.RuntimeVariables:
+                {
+                    var rx = (RuntimeVariablesExpression)x;
+                    var ry = (RuntimeVariablesExpression)y;
+                    var vc = rx.Variables.Count;
+                    if (vc != ry.Variables.Count) return false;
+                    for (var i = 0; i < vc; i++)
+                        if (!Eq(rx.Variables[i], ry.Variables[i], ref xps, ref yps, ref xls, ref yls)) return false;
+                    return true;
+                }
+
+                case ExpressionType.DebugInfo:
+                {
+                    var dx = (DebugInfoExpression)x;
+                    var dy = (DebugInfoExpression)y;
+                    return dx.IsClear == dy.IsClear &&
+                        dx.StartLine == dy.StartLine && dx.StartColumn == dy.StartColumn &&
+                        dx.EndLine == dy.EndLine && dx.EndColumn == dy.EndColumn &&
+                        dx.Document?.FileName == dy.Document?.FileName;
+                }
+
+                default:
+                    return false;
+            }
+        }
+
+        private static bool EqLabel(LabelTarget x, LabelTarget y,
+            ref SmallList<LabelTarget> xls, ref SmallList<LabelTarget> yls)
+        {
+            if (ReferenceEquals(x, y)) return true;
+            if (x == null | y == null) return false;
+            if (x.Type != y.Type) return false;
+            for (var i = 0; i < xls.Count; i++)
+                if (ReferenceEquals(xls.Items[i], x))
+                    return ReferenceEquals(yls.Items[i], y);
+            // Register the pair and compare by name
+            xls.AddDefaultAndGetRef() = x;
+            yls.AddDefaultAndGetRef() = y;
+            return x.Name == y.Name;
+        }
+
+        private static bool EqArgs(IArgumentProvider x, IArgumentProvider y,
+            ref SmallList<ParameterExpression> xps, ref SmallList<ParameterExpression> yps,
+            ref SmallList<LabelTarget> xls, ref SmallList<LabelTarget> yls)
+        {
+            var c = x.ArgumentCount;
+            if (c != y.ArgumentCount) return false;
+            for (var i = 0; i < c; i++)
+                if (!Eq(x.GetArgument(i), y.GetArgument(i), ref xps, ref yps, ref xls, ref yls)) return false;
+            return true;
+        }
+
+        private static bool EqElementInit(ElementInit x, ElementInit y,
+            ref SmallList<ParameterExpression> xps, ref SmallList<ParameterExpression> yps,
+            ref SmallList<LabelTarget> xls, ref SmallList<LabelTarget> yls)
+        {
+            if (x.AddMethod != y.AddMethod) return false;
+            var ac = x.ArgumentCount;
+            if (ac != y.ArgumentCount) return false;
+            for (var i = 0; i < ac; i++)
+                if (!Eq(x.GetArgument(i), y.GetArgument(i), ref xps, ref yps, ref xls, ref yls)) return false;
+            return true;
+        }
+
+        private static bool EqBinding(MemberBinding x, MemberBinding y,
+            ref SmallList<ParameterExpression> xps, ref SmallList<ParameterExpression> yps,
+            ref SmallList<LabelTarget> xls, ref SmallList<LabelTarget> yls)
+        {
+            if (x.BindingType != y.BindingType | x.Member != y.Member) return false;
+            switch (x.BindingType)
+            {
+                case MemberBindingType.Assignment:
+                    return Eq(((MemberAssignment)x).Expression, ((MemberAssignment)y).Expression,
+                        ref xps, ref yps, ref xls, ref yls);
+                case MemberBindingType.MemberBinding:
+                {
+                    var mb = (MemberMemberBinding)x;
+                    var mbOther = (MemberMemberBinding)y;
+                    var bc = mb.Bindings.Count;
+                    if (bc != mbOther.Bindings.Count) return false;
+                    for (var i = 0; i < bc; i++)
+                        if (!EqBinding(mb.Bindings[i], mbOther.Bindings[i], ref xps, ref yps, ref xls, ref yls)) return false;
+                    return true;
+                }
+                case MemberBindingType.ListBinding:
+                {
+                    var lb = (MemberListBinding)x;
+                    var lbOther = (MemberListBinding)y;
+                    var ic = lb.Initializers.Count;
+                    if (ic != lbOther.Initializers.Count) return false;
+                    for (var i = 0; i < ic; i++)
+                        if (!EqElementInit(lb.Initializers[i], lbOther.Initializers[i], ref xps, ref yps, ref xls, ref yls)) return false;
+                    return true;
+                }
+                default: return false;
+            }
+        }
+    }
+#endif
+
     /// <summary>Converts the expression into the valid C# code representation</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
     public static class ToCSharpPrinter

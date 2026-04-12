@@ -386,8 +386,7 @@ namespace FastExpressionCompiler.UnitTests
             var sysExpr = expr.ToLambdaExpression();
             var restoredExpr = sysExpr.ToLightExpression();
             restoredExpr.PrintCSharp();
-            // todo: @wip #431 generates different names for the unnamed variables which is not comparable
-            Asserts.AreEqual(expr.ToCSharpString(), restoredExpr.ToCSharpString());
+            Asserts.IsTrue(expr.EqualsTo(restoredExpr));
 #endif
             Asserts.IsNotNull(fs);
             Asserts.AreEqual(5, fs());

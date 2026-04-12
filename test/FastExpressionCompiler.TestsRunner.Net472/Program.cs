@@ -382,6 +382,8 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue430_TryCatch_Bad_label_content_in_ILGenerator().Run);
                 Run(new LightExpression.IssueTests.Issue430_TryCatch_Bad_label_content_in_ILGenerator().Run);
 
+                Run(new LightExpression.IssueTests.Issue431_Add_structural_equality_comparison_to_LightExpression().Run);
+
                 Run(new Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_values().Run);
                 Run(new LightExpression.IssueTests.Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_values().Run);
 

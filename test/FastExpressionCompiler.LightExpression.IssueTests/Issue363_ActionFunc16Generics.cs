@@ -78,7 +78,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
             var sysExpr = expr.ToLambdaExpression();
             var restoredExpr = sysExpr.ToLightExpression();
             restoredExpr.PrintCSharp();
-            Asserts.AreEqual(expr.ToCSharpString(), restoredExpr.ToCSharpString());
+            Asserts.IsTrue(expr.EqualsTo(restoredExpr));
 #endif
 
             // (a, b, c, ...) => new[] { a, b, c, ... }
