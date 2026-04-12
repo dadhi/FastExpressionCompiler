@@ -2,7 +2,6 @@ using System;
 using System.Linq;
 using System.Reflection;
 
-
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
 using FastExpressionCompiler.LightExpression;
@@ -12,8 +11,6 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
-
-#if LIGHT_EXPRESSION
 public struct Issue431_Add_structural_equality_comparison_to_LightExpression : ITestX
 {
     public static readonly ConstructorInfo CtorOfA = typeof(A).GetTypeInfo().DeclaredConstructors.First();
@@ -35,7 +32,9 @@ public struct Issue431_Add_structural_equality_comparison_to_LightExpression : I
         Eq_try_catch(t);
         Eq_loop_with_labels(t);
         Eq_switch(t);
+#if LIGHT_EXPRESSION
         Eq_complex_lambda_round_trip(t);
+#endif
         NotEq_different_constants(t);
         NotEq_different_types(t);
         NotEq_different_parameters(t);
@@ -163,19 +162,21 @@ public struct Issue431_Add_structural_equality_comparison_to_LightExpression : I
         t.IsTrue(e1.EqualsTo(e2));
     }
 
+#if LIGHT_EXPRESSION
     public void Eq_complex_lambda_round_trip(TestContext t)
     {
         var expr = Lambda<Func<object[], object>>(
             MemberInit(
                 New(CtorOfA, New(CtorOfB)),
                 Bind(PropAProp, New(CtorOfB))),
-            ParameterOf<object[]>("p"));
+            Parameter(typeof(object[]), "p"));
 
         var sysExpr = expr.ToLambdaExpression();
         var restoredExpr = sysExpr.ToLightExpression<Func<object[], object>>();
 
         t.IsTrue(expr.EqualsTo(restoredExpr));
     }
+#endif
 
     public void NotEq_different_constants(TestContext t)
     {
@@ -209,4 +210,3 @@ public struct Issue431_Add_structural_equality_comparison_to_LightExpression : I
 
     public class B { }
 }
-#endif
