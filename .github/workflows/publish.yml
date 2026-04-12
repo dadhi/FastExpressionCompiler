@@ -19,6 +19,9 @@ jobs:
         with:
           global-json-file: global.json
 
+      - name: Install NuGet CLI
+        run: sudo apt-get install -y nuget
+
       - name: Build
         run: dotnet build -c:Release
 
@@ -26,22 +29,25 @@ jobs:
         shell: pwsh
         run: ./BuildScripts/MakeInternal.ps1
 
-      - name: Pack with dotnet
+      - name: Pack
         run: |
-          arrTag=(${GITHUB_REF//\// })
-          VERSION="${arrTag[2]}"
-          VERSION="${VERSION//v}"
-          echo "$VERSION"
-
-          dotnet pack --no-build --output artifacts -p:Version=$VERSION -p:ContinuousIntegrationBuild=True ./nuspecs/FastExpressionCompiler.src.nuspec
-          dotnet pack --no-build --output artifacts -p:Version=$VERSION -p:ContinuousIntegrationBuild=True ./nuspecs/FastExpressionCompiler.LightExpression.src.nuspec
-          dotnet pack --no-build --output artifacts -p:Version=$VERSION -p:ContinuousIntegrationBuild=True ./nuspecs/FastExpressionCompiler.Internal.src.nuspec
-          dotnet pack --no-build --output artifacts -p:Version=$VERSION -p:ContinuousIntegrationBuild=True ./nuspecs/FastExpressionCompiler.LightExpression.Internal.src.nuspec
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "Packing version: $VERSION"
+          mkdir -p artifacts
+          nuget pack ./nuspecs/FastExpressionCompiler.src.nuspec -OutputDirectory artifacts -Version $VERSION -NonInteractive
+          nuget pack ./nuspecs/FastExpressionCompiler.LightExpression.src.nuspec -OutputDirectory artifacts -Version $VERSION -NonInteractive
+          nuget pack ./nuspecs/FastExpressionCompiler.Internal.src.nuspec -OutputDirectory artifacts -Version $VERSION -NonInteractive
+          nuget pack ./nuspecs/FastExpressionCompiler.LightExpression.Internal.src.nuspec -OutputDirectory artifacts -Version $VERSION -NonInteractive
 
       - uses: actions/upload-artifact@v4
         with:
           name: Packages
           path: ./artifacts
 
-    # - name: Push with dotnet
-    #   run: dotnet nuget push artifacts/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+      - name: Push to GitHub Packages
+        run: |
+          dotnet nuget add source --username dadhi --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/dadhi/index.json"
+          dotnet nuget push artifacts/*.nupkg --source github --skip-duplicate
+
+      - name: Push to NuGet.org
+        run: dotnet nuget push artifacts/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
