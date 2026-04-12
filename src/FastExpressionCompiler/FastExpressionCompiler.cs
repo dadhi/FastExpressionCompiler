@@ -10927,6 +10927,12 @@ namespace FastExpressionCompiler
             else
             {
                 sb.NewLineIndent(lineIndent + indentSpaces);
+                var nodeType = expr?.NodeType ?? ExpressionType.Default;
+                var needsDiscard = expr != null && expr.Type != typeof(void)
+                    && (nodeType == ExpressionType.Call | nodeType == ExpressionType.Invoke
+                        | nodeType == ExpressionType.Conditional | nodeType == ExpressionType.Coalesce);
+                if (needsDiscard) // it requires some assignment target to avoid error or warning
+                    sb.Append("_ = ");
                 sb = expr?.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref ctx,
                     lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode) ?? sb.Append("null");
                 sb.AppendSemicolonOnce(expr);
@@ -11149,9 +11155,10 @@ namespace FastExpressionCompiler
                 {
                     sb.NewLineIndent(lineIndent);
                     var nodeType = expr.NodeType;
-                    var returningCondOrCoalesce = expr.Type != typeof(void)
-                        && nodeType == ExpressionType.Conditional | nodeType == ExpressionType.Coalesce;
-                    if (returningCondOrCoalesce) // it requires some assignment target to avoid error or warning
+                    var returningCondOrCoalesceOrCall = expr.Type != typeof(void)
+                        && (nodeType == ExpressionType.Conditional | nodeType == ExpressionType.Coalesce
+                            | nodeType == ExpressionType.Call | nodeType == ExpressionType.Invoke);
+                    if (returningCondOrCoalesceOrCall) // it requires some assignment target to avoid error or warning
                         sb.Append("_ = ");
 
                     expr.ToCSharpString(sb, EnclosedIn.Block, ref ctx,
@@ -11160,7 +11167,7 @@ namespace FastExpressionCompiler
                     // Preventing the `};` kind of situation and separating the conditional block with empty line
                     if (nodeType.IsBlockLikeOrConditional())
                     {
-                        sb = returningCondOrCoalesce ? sb.AppendSemicolonOnce() : sb;
+                        sb = returningCondOrCoalesceOrCall ? sb.AppendSemicolonOnce() : sb;
                         sb.NewLineIndent(lineIndent);
                     }
                     else if (nodeType != ExpressionType.Label & nodeType != ExpressionType.Default)
