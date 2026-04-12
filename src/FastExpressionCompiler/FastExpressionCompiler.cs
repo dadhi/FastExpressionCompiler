@@ -10225,13 +10225,13 @@ namespace FastExpressionCompiler
                 case ExpressionType.Parameter:
                 {
                     // Check if this parameter is bound inside an enclosing lambda or block by looking it
-                    // up in the collected pairs. For example, in Lambda(x => x + 1, x), when we reach `x`
-                    // inside the body we find it at position 0 in _xps; we then check that the corresponding
-                    // param from the other expression is also at position 0 in _yps.
+                    // up in the collected pairs. E.g. in Lambda<Func<int,int>>(body: Add(p, one), parameters: p),
+                    // when we reach `p` inside the body we find it at index 0 in _xps, and then verify
+                    // the corresponding param from the other expression is also at index 0 in _yps.
                     for (var i = 0; i < _xps.Count; i++)
                         if (ReferenceEquals(_xps.GetSurePresentRef(i), x))
                             return ReferenceEquals(_yps.GetSurePresentRef(i), y);
-                    // Single parameter expression, or parameter not in any parameter list of enclosing lambda or block.
+                    // Unbound/standalone parameter, not found in any enclosing lambda or block parameter list.
                     var px = (ParameterExpression)x;
                     var py = (ParameterExpression)y;
                     return px.IsByRef == py.IsByRef && px.Name == py.Name;
