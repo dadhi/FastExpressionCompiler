@@ -32,6 +32,9 @@ jobs:
       - name: Build
         run: dotnet build -c:Release
 
+      - name: Tests - net10.0 (Latest)
+        run: dotnet run --no-build -c:Release -f:net10.0 --project test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
+
       - name: Tests - net9.0 (Latest)
         run: dotnet run --no-build -c:Release -f:net9.0 --project test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
 
