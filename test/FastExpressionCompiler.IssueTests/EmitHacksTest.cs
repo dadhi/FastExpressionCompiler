@@ -227,6 +227,7 @@ namespace FastExpressionCompiler.IssueTests
             // Access m_scope via reflection (DynamicILGenerator.m_scope returns DynamicScope which is a non-public type,
             // so UnsafeAccessorType cannot currently be used for the return value).
             // Then use UnsafeAccessorType to access m_tokens on the DynamicScope instance directly.
+            if (mScopeField == null) return null;
             var scope = mScopeField.GetValue(il);
             ref var mTokens = ref GetMTokens_Net10(scope);
             mTokens.Add(meth.MethodHandle);
@@ -327,15 +328,15 @@ namespace FastExpressionCompiler.IssueTests
             // m_tokens.Add(rtConstructor.MethodHandle);
             // var tk = m_tokens.Count - 1 | (int)MetadataTokenType.MethodDef;
 
-            var mScopeFieldLocal = ilType.GetField("m_scope", BindingFlags.Instance | BindingFlags.NonPublic);
-            if (mScopeFieldLocal == null)
+            var scopeField = ilType.GetField("m_scope", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (scopeField == null)
                 return null;
-            var mScope = mScopeFieldLocal.GetValue(il);
+            var mScope = scopeField.GetValue(il);
 
-            var mTokensFieldLocal = mScope.GetType().GetField("m_tokens", BindingFlags.Instance | BindingFlags.NonPublic);
-            if (mTokensFieldLocal == null)
+            var tokensField = mScope.GetType().GetField("m_tokens", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (tokensField == null)
                 return null;
-            var mTokens = mTokensFieldLocal.GetValue(mScope);
+            var mTokens = tokensField.GetValue(mScope);
 
 
             il.Emit(OpCodes.Ret);
