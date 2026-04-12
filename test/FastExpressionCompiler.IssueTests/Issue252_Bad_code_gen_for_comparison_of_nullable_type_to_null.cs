@@ -53,6 +53,8 @@ namespace FastExpressionCompiler.IssueTests
             var expr = Lambda<Handler>(callIfNotNull, parameterExpr);
 
             expr.PrintCSharp();
+            Asserts.Contains("_ = ((int?)null).ToString();", expr.ToCSharpString());
+
             var fs = expr.CompileSys();
             fs.PrintIL();
 
