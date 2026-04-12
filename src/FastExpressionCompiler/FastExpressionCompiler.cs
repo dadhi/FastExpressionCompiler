@@ -1613,6 +1613,16 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Switch:
                         var switchExpr = ((SwitchExpression)expr);
+                        // Compile-time switch branch elimination (#489): if switch value is interpretable, collect only the matching branch
+                        if (Interpreter.TryFindSwitchBranch(switchExpr, flags, out var switchMatchedBody))
+                        {
+                            if (switchMatchedBody != null)
+                            {
+                                expr = switchMatchedBody;
+                                continue;
+                            }
+                            return r; // no matched body and no default → nothing to collect
+                        }
                         if ((r = TryCollectInfo(ref closure, switchExpr.SwitchValue, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK ||
                             switchExpr.DefaultBody != null && // todo: @check is the order of collection affects the result?
                             (r = TryCollectInfo(ref closure, switchExpr.DefaultBody, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
@@ -5397,25 +5407,8 @@ namespace FastExpressionCompiler
                 public int MultiTestValCaseBodyIdxPlusOne; // 0 means not multi-test case, otherwise index+1
             }
 
-            private static long ConvertValueObjectToLong(object valObj)
-            {
-                Debug.Assert(valObj != null);
-                var type = valObj.GetType();
-                type = type.IsEnum ? Enum.GetUnderlyingType(type) : type;
-                return Type.GetTypeCode(type) switch
-                {
-                    TypeCode.Char => (long)(char)valObj,
-                    TypeCode.SByte => (long)(sbyte)valObj,
-                    TypeCode.Byte => (long)(byte)valObj,
-                    TypeCode.Int16 => (long)(short)valObj,
-                    TypeCode.UInt16 => (long)(ushort)valObj,
-                    TypeCode.Int32 => (long)(int)valObj,
-                    TypeCode.UInt32 => (long)(uint)valObj,
-                    TypeCode.Int64 => (long)valObj,
-                    TypeCode.UInt64 => (long)(ulong)valObj,
-                    _ => 0 // unreachable
-                };
-            }
+            private static long ConvertValueObjectToLong(object valObj) =>
+                Interpreter.ConvertValueObjectToLong(valObj);
 
 #if LIGHT_EXPRESSION
             private static bool TryEmitSwitch(SwitchExpression expr, IParameterProvider paramExprs, ILGenerator il, ref ClosureInfo closure,
@@ -5430,6 +5423,10 @@ namespace FastExpressionCompiler
                 var cases = expr.Cases;
                 var caseCount = cases.Count;
                 var defaultBody = expr.DefaultBody;
+
+                // Compile-time switch branch elimination (#489): if the switch value is interpretable, select the matching branch
+                if (Interpreter.TryFindSwitchBranch(expr, setup, out var matchedBody))
+                    return matchedBody == null || TryEmit(matchedBody, paramExprs, il, ref closure, setup, parent);
 
                 // Optimization for the single case
                 if (caseCount == 1 & defaultBody != null)
@@ -7231,6 +7228,28 @@ namespace FastExpressionCompiler
                 _ => UnreachableCase(code, (object)null)
             };
 
+            /// <summary>Converts an integer/enum/char boxed value to <c>long</c> for uniform comparison.</summary>
+            [MethodImpl((MethodImplOptions)256)]
+            internal static long ConvertValueObjectToLong(object valObj)
+            {
+                Debug.Assert(valObj != null);
+                var type = valObj.GetType();
+                type = type.IsEnum ? Enum.GetUnderlyingType(type) : type;
+                return Type.GetTypeCode(type) switch
+                {
+                    TypeCode.Char => (long)(char)valObj,
+                    TypeCode.SByte => (long)(sbyte)valObj,
+                    TypeCode.Byte => (long)(byte)valObj,
+                    TypeCode.Int16 => (long)(short)valObj,
+                    TypeCode.UInt16 => (long)(ushort)valObj,
+                    TypeCode.Int32 => (long)(int)valObj,
+                    TypeCode.UInt32 => (long)(uint)valObj,
+                    TypeCode.Int64 => (long)valObj,
+                    TypeCode.UInt64 => (long)(ulong)valObj,
+                    _ => 0 // unreachable
+                };
+            }
+
             internal static bool ComparePrimitiveValues(ref PValue left, ref PValue right, TypeCode code, ExpressionType nodeType)
             {
                 switch (nodeType)
@@ -7563,7 +7582,7 @@ namespace FastExpressionCompiler
             {
                 var exprType = expr.Type;
                 Debug.Assert(exprType.IsPrimitive, // todo: @feat nullables are not supported yet // || Nullable.GetUnderlyingType(exprType)?.IsPrimitive == true,
-                    "Can only reduce the boolean for the expressions of primitive types but found " + expr.Type);
+                    "Can only reduce the boolean for the expressions of primitive type but found " + expr.Type);
                 result = false;
                 if ((flags & CompilerFlags.DisableInterpreter) != 0)
                     return false;
@@ -7581,6 +7600,95 @@ namespace FastExpressionCompiler
                     return false;
                 }
             }
+
+            /// <summary>
+            /// Tries to determine at compile time which branch a switch expression will take.
+            /// Works for integer/enum and string switch values with no custom equality method.
+            /// Returns true when the switch value is deterministic; <paramref name="matchedBody"/> is set to
+            /// the branch body to emit (null means use default body which may itself be null).
+            /// </summary>
+            public static bool TryFindSwitchBranch(SwitchExpression switchExpr, CompilerFlags flags, out Expression matchedBody)
+            {
+                matchedBody = null;
+                if (switchExpr.Comparison != null) return false; // custom equality: can't interpret statically
+                if ((flags & CompilerFlags.DisableInterpreter) != 0) return false;
+                var switchValueExpr = switchExpr.SwitchValue;
+                var switchValueType = switchValueExpr.Type;
+                var cases = switchExpr.Cases;
+                try
+                {
+                    // String switch: only constant switch values supported
+                    if (switchValueType == typeof(string))
+                    {
+                        if (switchValueExpr is not ConstantExpression ce) return false;
+                        var switchStr = ce.Value;
+                        for (var i = 0; i < cases.Count; i++)
+                        {
+                            var testValues = cases[i].TestValues;
+                            for (var j = 0; j < testValues.Count; j++)
+                            {
+                                if (testValues[j] is not ConstantExpression testConst) return false;
+                                if (Equals(switchStr, testConst.Value)) { matchedBody = cases[i].Body; return true; }
+                            }
+                        }
+                        matchedBody = switchExpr.DefaultBody;
+                        return true;
+                    }
+
+                    // Integer / enum / char switch
+                    var effectiveType = switchValueType.IsEnum ? Enum.GetUnderlyingType(switchValueType) : switchValueType;
+                    var typeCode = Type.GetTypeCode(effectiveType);
+                    if (typeCode < TypeCode.Char || typeCode > TypeCode.UInt64) return false; // non-integral (e.g. float, decimal)
+
+                    long switchValLong;
+                    if (switchValueExpr is ConstantExpression switchConst && switchConst.Value != null)
+                        switchValLong = ConvertValueObjectToLong(switchConst.Value);
+                    else if (typeCode == TypeCode.Int32)
+                    {
+                        var intVal = 0;
+                        if (!TryInterpretInt(ref intVal, switchValueExpr, switchValueExpr.NodeType)) return false;
+                        switchValLong = intVal;
+                    }
+                    else
+                    {
+                        PValue pv = default;
+                        if (!TryInterpretPrimitiveValue(ref pv, switchValueExpr, typeCode, switchValueExpr.NodeType)) return false;
+                        switchValLong = PValueToLong(ref pv, typeCode);
+                    }
+
+                    for (var i = 0; i < cases.Count; i++)
+                    {
+                        var testValues = cases[i].TestValues;
+                        for (var j = 0; j < testValues.Count; j++)
+                        {
+                            if (testValues[j] is not ConstantExpression testConst || testConst.Value == null) continue;
+                            if (switchValLong == ConvertValueObjectToLong(testConst.Value)) { matchedBody = cases[i].Body; return true; }
+                        }
+                    }
+                    matchedBody = switchExpr.DefaultBody;
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+
+            /// <summary>Converts a <see cref="PValue"/> union to a <c>long</c> for integer/char comparison.</summary>
+            [MethodImpl((MethodImplOptions)256)]
+            internal static long PValueToLong(ref PValue value, TypeCode code) => code switch
+            {
+                TypeCode.Char   => (long)value.CharValue,
+                TypeCode.SByte  => (long)value.SByteValue,
+                TypeCode.Byte   => (long)value.ByteValue,
+                TypeCode.Int16  => (long)value.Int16Value,
+                TypeCode.UInt16 => (long)value.UInt16Value,
+                TypeCode.Int32  => (long)value.Int32Value,
+                TypeCode.UInt32 => (long)value.UInt32Value,
+                TypeCode.Int64  => value.Int64Value,
+                TypeCode.UInt64 => (long)value.UInt64Value,
+                _ => 0L,
+            };
 
             // todo: @perf try split to `TryInterpretBinary` overload to streamline the calls for TryEmitConditional and similar
             /// <summary>Tries to interpret the expression of the Primitive type of Constant, Convert, Logical, Comparison, Arithmetic.</summary>
