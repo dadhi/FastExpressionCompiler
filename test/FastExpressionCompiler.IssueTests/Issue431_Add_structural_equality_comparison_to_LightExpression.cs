@@ -1,13 +1,16 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
 using FastExpressionCompiler.LightExpression;
+using FastExpressionCompiler.LightExpression.ImTools;
 namespace FastExpressionCompiler.LightExpression.IssueTests;
 #else
 using static System.Linq.Expressions.Expression;
+using FastExpressionCompiler.ImTools;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
@@ -35,6 +38,9 @@ public struct Issue431_Add_structural_equality_comparison_to_LightExpression : I
 #if LIGHT_EXPRESSION
         Eq_complex_lambda_round_trip(t);
 #endif
+        Hash_equal_expressions_have_equal_hashes(t);
+        Hash_used_as_dictionary_key(t);
+        Hash_used_as_smallmap_key(t);
         NotEq_different_constants(t);
         NotEq_different_types(t);
         NotEq_different_parameters(t);
@@ -177,6 +183,64 @@ public struct Issue431_Add_structural_equality_comparison_to_LightExpression : I
         t.IsTrue(expr.EqualsTo(restoredExpr));
     }
 #endif
+
+    public void Hash_equal_expressions_have_equal_hashes(TestContext t)
+    {
+        // Structural equality implies equal hashes (mandatory contract for use as dictionary key).
+        var p1 = Parameter(typeof(int), "x");
+        var p2 = Parameter(typeof(int), "y"); // different name — structurally same
+        var e1 = Lambda<Func<int, int>>(Add(p1, Constant(1)), p1);
+        var e2 = Lambda<Func<int, int>>(Add(p2, Constant(1)), p2);
+        t.IsTrue(e1.EqualsTo(e2));
+        t.AreEqual(ExpressionEqualityComparer.GetHashCode(e1), ExpressionEqualityComparer.GetHashCode(e2));
+
+        // Constants
+        t.AreEqual(ExpressionEqualityComparer.GetHashCode(Constant(42)), ExpressionEqualityComparer.GetHashCode(Constant(42)));
+
+        // Different constants must have different hashes (not guaranteed in general, but these are obviously distinct)
+        t.AreNotEqual(ExpressionEqualityComparer.GetHashCode(Constant(1)), ExpressionEqualityComparer.GetHashCode(Constant(2)));
+    }
+
+    public void Hash_used_as_dictionary_key(TestContext t)
+    {
+        // Verify that structurally-equal expressions resolve to the same Dictionary bucket.
+        var cmp = default(ExpressionEqualityComparer);
+        var dict = new Dictionary<
+#if LIGHT_EXPRESSION
+            FastExpressionCompiler.LightExpression.Expression,
+#else
+            System.Linq.Expressions.Expression,
+#endif
+            string>(cmp);
+
+        var p1 = Parameter(typeof(int), "x");
+        var e1 = Lambda<Func<int, int>>(Add(p1, Constant(1)), p1);
+        dict[e1] = "found";
+
+        var p2 = Parameter(typeof(int), "y"); // different identity/name
+        var e2 = Lambda<Func<int, int>>(Add(p2, Constant(1)), p2);
+        t.IsTrue(dict.TryGetValue(e2, out var v));
+        t.AreEqual("found", v);
+    }
+
+    public void Hash_used_as_smallmap_key(TestContext t)
+    {
+        // Verify lookup via SmallMap8 which uses GetHashCode + Equals internally.
+        var p1 = Parameter(typeof(int), "x");
+        var e1 = Lambda<Func<int, int>>(Add(p1, Constant(1)), p1);
+        var h1 = ExpressionEqualityComparer.GetHashCode(e1);
+
+        var p2 = Parameter(typeof(int), "y");
+        var e2 = Lambda<Func<int, int>>(Add(p2, Constant(1)), p2);
+        var h2 = ExpressionEqualityComparer.GetHashCode(e2);
+
+        // Structurally equal ⟹ same hash
+        t.AreEqual(h1, h2);
+
+        // Structurally different ⟹ different hash (for obviously distinct constants)
+        var e3 = Lambda<Func<int, int>>(Add(p1, Constant(99)), p1);
+        t.AreNotEqual(h1, ExpressionEqualityComparer.GetHashCode(e3));
+    }
 
     public void NotEq_different_constants(TestContext t)
     {

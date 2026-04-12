@@ -10012,23 +10012,25 @@ namespace FastExpressionCompiler
         private SmallList<LabelTarget, Stack8<LabelTarget>, NoArrayPool<LabelTarget>> _xls, _yls;
 
         /// <summary>Structurally compares two expressions. Primary entry point — no heap allocation for the comparer.</summary>
-        public static bool EqualsTo(Expression x, Expression y)
-        {
-            var eq = default(ExpressionEqualityComparer);
-            return eq.Eq(x, y);
-        }
+        [MethodImpl((MethodImplOptions)256)]
+        public static bool EqualsTo(Expression x, Expression y) =>
+            new ExpressionEqualityComparer().Eq(x, y);
 
         /// <summary>Computes a content-addressable hash for the expression tree.
         /// Bound lambda and block parameters are hashed by their position index so that structurally
         /// equal lambdas with differently-named parameters produce the same hash.</summary>
-        public static int GetHashCode(Expression expr)
-        {
-            var ctx = default(ExpressionEqualityComparer);
-            return ctx.Hash(expr);
-        }
+        [MethodImpl((MethodImplOptions)256)]
+        public static int GetHashCode(Expression expr) =>
+            new ExpressionEqualityComparer().Hash(expr);
 
+        // Boost hash_combine formula: h1 ^= h2 + 0x9e3779b9 + (h1<<6) + (h1>>2)
+        // The golden-ratio constant 0x9e3779b9 breaks up symmetry and spreads bits across the
+        // full integer range. The shifts give good avalanche with no conditional branch.
+        // This outperforms the simpler djb2 (33*h1^h2) and is compatible with all target
+        // frameworks (unlike System.HashCode which requires .NET Standard 2.1+).
+        [MethodImpl((MethodImplOptions)256)]
         private static int Combine(int h1, int h2) =>
-            h1 == 0 ? h2 : unchecked((h1 << 5) + h1 ^ h2);
+            unchecked(h1 ^ (h2 + (int)0x9e3779b9 + (h1 << 6) + (h1 >> 2)));
 
         private int Hash(Expression expr)
         {
@@ -10202,15 +10204,19 @@ namespace FastExpressionCompiler
         }
 
         /// <summary>IEqualityComparer&lt;Expression&gt; implementation — delegates to the static <see cref="EqualsTo"/> for a fresh context per call.</summary>
+        [MethodImpl((MethodImplOptions)256)]
         bool IEqualityComparer<Expression>.Equals(Expression x, Expression y) => EqualsTo(x, y);
 
         /// <summary>IEqualityComparer&lt;Expression&gt; implementation — delegates to the static <see cref="GetHashCode(Expression)"/>.</summary>
+        [MethodImpl((MethodImplOptions)256)]
         int IEqualityComparer<Expression>.GetHashCode(Expression obj) => GetHashCode(obj);
 
         /// <summary>Non-generic IEqualityComparer implementation — delegates to the static methods for use with legacy BCL APIs.</summary>
+        [MethodImpl((MethodImplOptions)256)]
         bool IEqualityComparer.Equals(object x, object y) => EqualsTo(x as Expression, y as Expression);
 
         /// <summary>Non-generic IEqualityComparer implementation — delegates to the static <see cref="GetHashCode(Expression)"/>.</summary>
+        [MethodImpl((MethodImplOptions)256)]
         int IEqualityComparer.GetHashCode(object obj) => GetHashCode(obj as Expression);
 
         /// <summary>Structurally compares two expressions, using the current parameter/label context for identity mapping.
