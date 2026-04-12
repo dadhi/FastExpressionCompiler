@@ -50,6 +50,9 @@ public class Program
         //BenchmarkRunner.Run<ClosureConstantsBenchmark.Compilation>();
         //BenchmarkRunner.Run<ClosureConstantsBenchmark.Invocation>();
 
+        // BenchmarkRunner.Run<Issue489_Switch_BranchElimination.Compile>();
+        // BenchmarkRunner.Run<Issue489_Switch_BranchElimination.Invoke>();
+
         BenchmarkRunner.Run<StackSearch>();
         // BenchmarkRunner.Run<SmallList_Switch_vs_AsSpan_ByRef_Add>();
         // BenchmarkRunner.Run<SmallList_Switch_vs_AsSpan_ByRef_Access>();
