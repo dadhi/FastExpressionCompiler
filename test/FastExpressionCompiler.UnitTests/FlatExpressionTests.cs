@@ -1,22 +1,14 @@
-// FlatExpression is only in the FastExpressionCompiler assembly (not the LightExpression variant),
-// so these tests are excluded from the LIGHT_EXPRESSION build.
+// FlatExpression is only in the FastExpressionCompiler assembly, not the LightExpression variant.
 #if !LIGHT_EXPRESSION
 using System;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 
-// FlatExpression lives in a separate namespace — no conditional #if needed here.
 using FastExpressionCompiler.FlatExpression;
 
 namespace FastExpressionCompiler.UnitTests;
 
-/// <summary>
-/// Demonstration / exploration tests for the <see cref="ExpressionTree"/> POC.
-///
-/// These tests double as living documentation of the design space — wins, gaps, and
-/// open questions are highlighted inline.
-/// </summary>
 public class FlatExpressionTests : ITest
 {
     public int Run()
@@ -45,19 +37,14 @@ public class FlatExpressionTests : ITest
 
         Dump_does_not_throw();
 
-        // Round-trip: build flat → System.Linq.Expressions → compile → invoke
         Roundtrip_lambda_identity_compile_and_invoke();
         Roundtrip_lambda_add_compile_and_invoke();
 
-        // Gap showcase: mutating a closure constant after building the flat tree.
+        // Closure constants can be swapped after tree construction without rebuilding.
         Closure_constant_is_mutable_after_build();
 
         return 22;
     }
-
-    // -------------------------------------------------------------------------
-    // Idx basics
-    // -------------------------------------------------------------------------
 
     public void Idx_default_is_nil()
     {
@@ -74,10 +61,6 @@ public class FlatExpressionTests : ITest
         Asserts.AreEqual(3, idx.It);
     }
 
-    // -------------------------------------------------------------------------
-    // Node construction
-    // -------------------------------------------------------------------------
-
     public void Build_constant_node_inline()
     {
         var tree = default(ExpressionTree);
@@ -90,7 +73,7 @@ public class FlatExpressionTests : ITest
         Asserts.AreEqual(ExpressionType.Constant, node.NodeType);
         Asserts.AreEqual(typeof(int), node.Type);
         Asserts.AreEqual(42, (int)node.Info);
-        Asserts.AreEqual(-1, node.ConstantIndex); // inline, not in closure
+        Asserts.AreEqual(-1, node.ConstantIndex);
     }
 
     public void Build_constant_node_in_closure()
@@ -99,7 +82,7 @@ public class FlatExpressionTests : ITest
         var ci = tree.Constant("hello", putIntoClosure: true);
 
         ref var node = ref tree.NodeAt(ci);
-        Asserts.AreEqual(0, node.ConstantIndex); // first closure slot
+        Asserts.AreEqual(0, node.ConstantIndex);
         Asserts.AreEqual(1, tree.ClosureConstants.Count);
         Asserts.AreEqual("hello", (string)tree.ClosureConstants.GetSurePresentRef(0));
     }
@@ -131,19 +114,18 @@ public class FlatExpressionTests : ITest
 
     public void Build_lambda_int_identity()
     {
-        // (x) => x  (identity lambda: Func<int,int>)
         var tree = default(ExpressionTree);
         var p = tree.Parameter(typeof(int), "x");
         var lambdaIdx = tree.Lambda(typeof(Func<int, int>), body: p, parameters: [p]);
 
-        Asserts.AreEqual(2, tree.NodeCount); // param + lambda
+        Asserts.AreEqual(2, tree.NodeCount);
         Asserts.AreEqual(lambdaIdx, tree.RootIdx);
 
         ref var lambda = ref tree.NodeAt(lambdaIdx);
         Asserts.AreEqual(ExpressionType.Lambda, lambda.NodeType);
-        Asserts.AreEqual(p, lambda.ChildIdx);       // body
+        Asserts.AreEqual(p, lambda.ChildIdx);
 
-        // params are stored as Idx[] in Info (not via NextIdx/ExtraIdx)
+        // params stored as Idx[] in Info — not chained via NextIdx (see Lambda factory)
         var parms = (Idx[])lambda.Info;
         Asserts.AreEqual(1, parms.Length);
         Asserts.AreEqual(p, parms[0]);
@@ -151,25 +133,23 @@ public class FlatExpressionTests : ITest
 
     public void Build_lambda_add_two_params()
     {
-        // (x, y) => x + y
         var tree = default(ExpressionTree);
         var px = tree.Parameter(typeof(int), "x");
         var py = tree.Parameter(typeof(int), "y");
         var add = tree.Add(px, py, typeof(int));
         var lambda = tree.Lambda(typeof(Func<int, int, int>), body: add, parameters: [px, py]);
 
-        Asserts.AreEqual(4, tree.NodeCount); // px, py, add, lambda
+        Asserts.AreEqual(4, tree.NodeCount);
 
         ref var lambdaNode = ref tree.NodeAt(lambda);
-        Asserts.AreEqual(add, lambdaNode.ChildIdx); // body
+        Asserts.AreEqual(add, lambdaNode.ChildIdx);
 
-        // params stored as Idx[] in Info, NextIdx is NOT modified
         var parms = (Idx[])lambdaNode.Info;
         Asserts.AreEqual(2, parms.Length);
         Asserts.AreEqual(px, parms[0]);
         Asserts.AreEqual(py, parms[1]);
 
-        // px and py are NOT linked via NextIdx (design decision: avoids list conflicts)
+        // NextIdx is NOT touched — a param can still appear as a New/Call argument alongside being a lambda param
         ref var pxNode = ref tree.NodeAt(px);
         Asserts.IsTrue(pxNode.NextIdx.IsNil);
     }
@@ -187,7 +167,6 @@ public class FlatExpressionTests : ITest
         Asserts.AreEqual(typeof(Tuple<int, string>), newNode.Type);
         Asserts.AreEqual(ctor, (ConstructorInfo)newNode.Info);
 
-        // args are chained
         var siblings = tree.Siblings(newNode.ChildIdx).ToArray();
         Asserts.AreEqual(2, siblings.Length);
         Asserts.AreEqual(arg1, siblings[0]);
@@ -208,31 +187,25 @@ public class FlatExpressionTests : ITest
 
     public void Build_conditional()
     {
-        // x > 0 ? x : -x
         var tree = default(ExpressionTree);
         var x = tree.Parameter(typeof(int), "x");
         var zero = tree.Constant(0);
         var test = tree.Binary(ExpressionType.GreaterThan, x, zero, typeof(bool));
         var neg = tree.Negate(x, typeof(int));
-        // Note: Conditional modifies ifTrue.NextIdx — so ifTrue should be a fresh node.
-        // Here we re-use x as ifTrue which is fine since NextIdx on parameter node
-        // was not set yet (it was linked only in ExtraIdx of lambda in other tests).
-        // For clarity build a fresh constant:
         var xCopy = tree.Parameter(typeof(int), "x_copy");
         var cond = tree.Conditional(test, xCopy, neg, typeof(int));
 
         ref var condNode = ref tree.NodeAt(cond);
         Asserts.AreEqual(ExpressionType.Conditional, condNode.NodeType);
         Asserts.AreEqual(test, condNode.ChildIdx);
-        Asserts.AreEqual(xCopy, condNode.ExtraIdx); // ifTrue
-        // ifFalse is linked as ifTrue.NextIdx
+        Asserts.AreEqual(xCopy, condNode.ExtraIdx);
+        // ifFalse is chained as ifTrue.NextIdx
         ref var ifTrueNode = ref tree.NodeAt(xCopy);
         Asserts.AreEqual(neg, ifTrueNode.NextIdx);
     }
 
     public void Build_block_with_variable()
     {
-        // { int v = 0; return v; }
         var tree = default(ExpressionTree);
         var v = tree.Variable(typeof(int), "v");
         var zero = tree.Constant(0);
@@ -241,13 +214,9 @@ public class FlatExpressionTests : ITest
 
         ref var blockNode = ref tree.NodeAt(blockIdx);
         Asserts.AreEqual(ExpressionType.Block, blockNode.NodeType);
-        Asserts.IsFalse(blockNode.ChildIdx.IsNil); // exprs
-        Asserts.IsFalse(blockNode.ExtraIdx.IsNil); // vars
+        Asserts.IsFalse(blockNode.ChildIdx.IsNil);
+        Asserts.IsFalse(blockNode.ExtraIdx.IsNil);
     }
-
-    // -------------------------------------------------------------------------
-    // Structural equality
-    // -------------------------------------------------------------------------
 
     public void Structural_equality_same_trees()
     {
@@ -262,19 +231,14 @@ public class FlatExpressionTests : ITest
 
         var t2 = default(ExpressionTree);
         var a = t2.Constant(10);
-        var b = t2.Constant(99); // different constant value: StructurallyEqual compares Info via Equals
+        var b = t2.Constant(99);
         t2.Add(a, b, typeof(int));
 
         Asserts.IsFalse(ExpressionTree.StructurallyEqual(ref t1, ref t2));
     }
 
-    // -------------------------------------------------------------------------
-    // ToSystemExpression
-    // -------------------------------------------------------------------------
-
     public void Convert_to_system_expression_constant_lambda()
     {
-        // () => 42
         var tree = default(ExpressionTree);
         var c = tree.Constant(42);
         tree.Lambda(typeof(Func<int>), body: c);
@@ -286,7 +250,6 @@ public class FlatExpressionTests : ITest
 
     public void Convert_to_system_expression_add_lambda()
     {
-        // (x, y) => x + y
         var tree = default(ExpressionTree);
         var px = tree.Parameter(typeof(int), "x");
         var py = tree.Parameter(typeof(int), "y");
@@ -300,7 +263,6 @@ public class FlatExpressionTests : ITest
 
     public void Convert_to_system_expression_new_lambda()
     {
-        // (n) => new Tuple<int,string>(n, "x")
         var ctor = typeof(Tuple<int, string>).GetConstructor([typeof(int), typeof(string)]);
         var tree = default(ExpressionTree);
         var n = tree.Parameter(typeof(int), "n");
@@ -312,60 +274,40 @@ public class FlatExpressionTests : ITest
         Asserts.AreEqual(ExpressionType.New, sysExpr.Body.NodeType);
     }
 
-    // -------------------------------------------------------------------------
-    // Round-trip: flat → System.Linq.Expressions → compile → invoke
-    // -------------------------------------------------------------------------
-
     public void Roundtrip_lambda_identity_compile_and_invoke()
     {
-        // (x) => x
         var tree = default(ExpressionTree);
         var p = tree.Parameter(typeof(int), "x");
         tree.Lambda(typeof(Func<int, int>), body: p, parameters: [p]);
 
-        var sysExpr = (Expression<Func<int, int>>)tree.ToSystemExpression();
-        var fn = sysExpr.Compile();
+        var fn = ((Expression<Func<int, int>>)tree.ToSystemExpression()).Compile();
         Asserts.AreEqual(7, fn(7));
     }
 
     public void Roundtrip_lambda_add_compile_and_invoke()
     {
-        // (x, y) => x + y
         var tree = default(ExpressionTree);
         var px = tree.Parameter(typeof(int), "x");
         var py = tree.Parameter(typeof(int), "y");
         var add = tree.Add(px, py, typeof(int));
         tree.Lambda(typeof(Func<int, int, int>), body: add, parameters: [px, py]);
 
-        var sysExpr = (Expression<Func<int, int, int>>)tree.ToSystemExpression();
-        var fn = sysExpr.Compile();
+        var fn = ((Expression<Func<int, int, int>>)tree.ToSystemExpression()).Compile();
         Asserts.AreEqual(11, fn(4, 7));
     }
 
-    // -------------------------------------------------------------------------
-    // Gap showcase: mutable closure constant
-    // -------------------------------------------------------------------------
-
     public void Closure_constant_is_mutable_after_build()
     {
-        // Build a lambda that captures a constant via the closure array.
-        // After building we can swap the constant value without rebuilding the tree
-        // (same Idx still points to the same closure slot).
         var tree = default(ExpressionTree);
         var c = tree.Constant("initial", putIntoClosure: true);
         tree.Lambda(typeof(Func<string>), body: c);
 
-        // Change the constant at slot 0
+        // Swap constant in-place; the Idx still points to the same closure slot.
         tree.ClosureConstants.GetSurePresentRef(0) = "updated";
 
-        var sysExpr = (Expression<Func<string>>)tree.ToSystemExpression();
-        var fn = sysExpr.Compile();
+        var fn = ((Expression<Func<string>>)tree.ToSystemExpression()).Compile();
         Asserts.AreEqual("updated", fn());
     }
-
-    // -------------------------------------------------------------------------
-    // Diagnostic
-    // -------------------------------------------------------------------------
 
     public void Dump_does_not_throw()
     {
@@ -374,10 +316,6 @@ public class FlatExpressionTests : ITest
         Asserts.IsNotNull(dump);
         Asserts.IsTrue(dump.Contains("ExpressionTree"));
     }
-
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
 
     private static ExpressionTree BuildAddTree()
     {
