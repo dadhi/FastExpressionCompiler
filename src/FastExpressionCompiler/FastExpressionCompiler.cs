@@ -10002,17 +10002,25 @@ namespace FastExpressionCompiler
 
 #if LIGHT_EXPRESSION
     /// <summary>Provides structural equality comparison for the LightExpression.</summary>
-    public static class ExpressionEqualityComparer
+    public sealed class ExpressionEqualityComparer : IEqualityComparer<Expression>
     {
+        /// <summary>The default singleton instance.</summary>
+        public static readonly ExpressionEqualityComparer Default = new ExpressionEqualityComparer();
+
         /// <summary>Structurally compares two expressions.
         /// Parameters are matched by their position within their enclosing lambda, and label targets by identity pairing.
         /// No heap allocations for expressions with up to 4 lambda parameters or label targets.</summary>
-        public static bool EqualsTo(this Expression x, Expression y)
+        public bool Equals(Expression x, Expression y)
         {
             SmallList<ParameterExpression> xps = default, yps = default;
             SmallList<LabelTarget> xls = default, yls = default;
             return Eq(x, y, ref xps, ref yps, ref xls, ref yls);
         }
+
+        /// <summary>Returns a hash based on NodeType and Type of the expression.
+        /// Consistent with structural equality: expressions that compare equal will have the same hash.</summary>
+        public int GetHashCode(Expression obj) =>
+            obj == null ? 0 : HashCombiner.Combine((int)obj.NodeType, obj.Type?.GetHashCode() ?? 0);
 
         private static bool Eq(Expression x, Expression y,
             ref SmallList<ParameterExpression> xps, ref SmallList<ParameterExpression> yps,
@@ -10399,6 +10407,14 @@ namespace FastExpressionCompiler
                 default: return false;
             }
         }
+    }
+
+    /// <summary>Extension method convenience wrapper for structural equality via <see cref="ExpressionEqualityComparer.Default"/>.</summary>
+    public static class ExpressionEqualityComparerExtensions
+    {
+        /// <summary>Structurally compares two expressions using <see cref="ExpressionEqualityComparer.Default"/>.</summary>
+        public static bool EqualsTo(this Expression x, Expression y) =>
+            ExpressionEqualityComparer.Default.Equals(x, y);
     }
 #endif
 
