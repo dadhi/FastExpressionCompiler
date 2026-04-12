@@ -1508,6 +1508,15 @@ namespace FastExpressionCompiler
                         }
                     case ExpressionType.Conditional:
                         var condExpr = (ConditionalExpression)expr;
+                        // Try structural branch elimination - skip collecting dead branch info
+                        {
+                            var reducedCond = Tools.TryReduceConditional(condExpr);
+                            if (!ReferenceEquals(reducedCond, condExpr))
+                            {
+                                expr = reducedCond;
+                                continue;
+                            }
+                        }
                         if ((r = TryCollectInfo(ref closure, condExpr.Test, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK ||
                             (r = TryCollectInfo(ref closure, condExpr.IfFalse, paramExprs, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
                             return r;
@@ -2246,6 +2255,15 @@ namespace FastExpressionCompiler
                             {
                                 expr = testIsTrue ? condExpr.IfTrue : condExpr.IfFalse;
                                 continue; // no recursion, just continue with the left or right side of condition
+                            }
+                            // Try structural branch elimination (e.g., null == Default(X) → always true/false)
+                            {
+                                var reducedCond = Tools.TryReduceConditional(condExpr);
+                                if (!ReferenceEquals(reducedCond, condExpr))
+                                {
+                                    expr = reducedCond;
+                                    continue;
+                                }
                             }
                             return TryEmitConditional(testExpr, condExpr.IfTrue, condExpr.IfFalse, paramExprs, il, ref closure, setup, parent);
 
@@ -8591,7 +8609,9 @@ namespace FastExpressionCompiler
             var testExpr = TryReduceConditionalTest(condExpr.Test);
             if (testExpr is BinaryExpression bi && (bi.NodeType == ExpressionType.Equal || bi.NodeType == ExpressionType.NotEqual))
             {
-                if (bi.Left is ConstantExpression lc && bi.Right is ConstantExpression rc)
+                var left = bi.Left;
+                var right = bi.Right;
+                if (left is ConstantExpression lc && right is ConstantExpression rc)
                 {
 #if INTERPRETATION_DIAGNOSTICS
                     Console.WriteLine("//Reduced Conditional in Interpretation: " + condExpr);
@@ -8601,12 +8621,33 @@ namespace FastExpressionCompiler
                         ? (equals ? condExpr.IfTrue : condExpr.IfFalse)
                         : (equals ? condExpr.IfFalse: condExpr.IfTrue);
                 }
+
+                // Handle compile-time branch elimination for null/default equality:
+                // e.g. Constant(null) == Default(typeof(X)) or Default(typeof(X)) == Constant(null)
+                // where X is a reference, interface, or nullable type - both represent null, so they are always equal
+                var leftIsNull = left is ConstantExpression lnc && lnc.Value == null ||
+                                 left is DefaultExpression lde && IsNullDefault(lde.Type);
+                var rightIsNull = right is ConstantExpression rnc && rnc.Value == null ||
+                                  right is DefaultExpression rde && IsNullDefault(rde.Type);
+                if (leftIsNull && rightIsNull)
+                {
+#if INTERPRETATION_DIAGNOSTICS
+                    Console.WriteLine("//Reduced Conditional (null/default equality) in Interpretation: " + condExpr);
+#endif
+                    // both sides represent null, so they are equal
+                    return bi.NodeType == ExpressionType.Equal ? condExpr.IfTrue : condExpr.IfFalse;
+                }
             }
 
             return testExpr is ConstantExpression constExpr && constExpr.Value is bool testBool
                 ? (testBool ? condExpr.IfTrue : condExpr.IfFalse)
                 : condExpr;
         }
+
+        // Returns true if the type's default value is null (reference types, interfaces, and Nullable<T>)
+        [MethodImpl((MethodImplOptions)256)]
+        internal static bool IsNullDefault(Type type) =>
+            type.IsClass || type.IsInterface || Nullable.GetUnderlyingType(type) != null;
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]
