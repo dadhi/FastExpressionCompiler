@@ -164,6 +164,7 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new LightExpression.UnitTests.LightExpressionTests().Run);
                 Run(new ToCSharpStringTests().Run);
                 Run(new LightExpression.UnitTests.ToCSharpStringTests().Run);
+                Run(new FlatExpressionTests().Run);
 
                 Console.WriteLine($"{Environment.NewLine}UnitTests are passing in {sw.ElapsedMilliseconds} ms.");
 
