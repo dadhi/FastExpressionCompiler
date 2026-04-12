@@ -8235,6 +8235,17 @@ namespace FastExpressionCompiler
             nodeType == ExpressionType.Conditional | nodeType == ExpressionType.Coalesce ||
             IsBracedBlockLike(nodeType);
 
+        // Returns true when a non-void expression used as a statement needs a `_ = ` discard prefix
+        // to suppress CS0201 / produce valid, unambiguous C# output.
+        [MethodImpl((MethodImplOptions)256)]
+        internal static bool NeedsDiscardWhenUsedAsStatement(this Expression expr)
+        {
+            var nodeType = expr.NodeType;
+            return expr.Type != typeof(void)
+                && (nodeType == ExpressionType.Call | nodeType == ExpressionType.Invoke
+                    | nodeType == ExpressionType.Conditional | nodeType == ExpressionType.Coalesce);
+        }
+
         [MethodImpl((MethodImplOptions)256)]
         internal static bool IsReturnable(this Expression expr)
         {
@@ -10927,10 +10938,7 @@ namespace FastExpressionCompiler
             else
             {
                 sb.NewLineIndent(lineIndent + indentSpaces);
-                var nodeType = expr?.NodeType ?? ExpressionType.Default;
-                var needsDiscard = expr != null && expr.Type != typeof(void)
-                    && (nodeType == ExpressionType.Call | nodeType == ExpressionType.Invoke
-                        | nodeType == ExpressionType.Conditional | nodeType == ExpressionType.Coalesce);
+                var needsDiscard = expr != null && expr.NeedsDiscardWhenUsedAsStatement();
                 if (needsDiscard) // it requires some assignment target to avoid error or warning
                     sb.Append("_ = ");
                 sb = expr?.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref ctx,
@@ -11155,9 +11163,7 @@ namespace FastExpressionCompiler
                 {
                     sb.NewLineIndent(lineIndent);
                     var nodeType = expr.NodeType;
-                    var returningCondOrCoalesceOrCall = expr.Type != typeof(void)
-                        && (nodeType == ExpressionType.Conditional | nodeType == ExpressionType.Coalesce
-                            | nodeType == ExpressionType.Call | nodeType == ExpressionType.Invoke);
+                    var returningCondOrCoalesceOrCall = expr.NeedsDiscardWhenUsedAsStatement();
                     if (returningCondOrCoalesceOrCall) // it requires some assignment target to avoid error or warning
                         sb.Append("_ = ");
 
