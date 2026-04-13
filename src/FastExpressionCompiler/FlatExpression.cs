@@ -65,7 +65,13 @@ public struct Idx : IEquatable<Idx>
 /// <summary>
 /// Fat node in <see cref="ExpressionTree.Nodes"/>. Intrusive linked-list tree encoding:
 /// <list type="table">
-///   <item><term>Constant</term>   <description>Info = boxed value; ConstantIndex ≥ 0 → value lives in ClosureConstants instead.</description></item>
+///   <item><term>Constant</term>
+///     <description>
+///       ExtraIdx.It == 0 (nil): value is in Info (boxed, or null for null constant).<br/>
+///       ExtraIdx.It &gt; 0: value is ClosureConstants[ExtraIdx.It - 1] (1-based).<br/>
+///       ExtraIdx.It == -1: int32-fitting value (bool/byte/int/float/…) stored inline in ChildIdx.It bits — no boxing.
+///     </description>
+///   </item>
 ///   <item><term>Parameter</term>  <description>Info = name (string or null).</description></item>
 ///   <item><term>Unary</term>      <description>Info = MethodInfo (nullable), ChildIdx = operand.</description></item>
 ///   <item><term>Binary</term>     <description>Info = MethodInfo (nullable), ChildIdx = left, ExtraIdx = right.</description></item>
@@ -75,17 +81,25 @@ public struct Idx : IEquatable<Idx>
 ///   <item><term>Block</term>      <description>ChildIdx = first expr, ExtraIdx = first variable (both chained via NextIdx).</description></item>
 ///   <item><term>Conditional</term><description>ChildIdx = test, ExtraIdx = ifTrue; ifFalse = ifTrue.NextIdx.</description></item>
 /// </list>
+/// <para>
+/// Layout: 32 bytes on 64-bit (refs first eliminates 4-byte padding after NodeType).<br/>
+/// vs LightExpression heap objects (16-byte header + fields):<br/>
+///   Constant/Parameter: ~40 bytes heap | Binary/Unary: ~48–56 bytes heap
+/// </para>
 /// </summary>
 [StructLayout(LayoutKind.Sequential)]
-public struct ExpressionNode
+public struct ExpressionNode  // 32 bytes: Type(8)+Info(8)+NodeType(4)+NextIdx(4)+ChildIdx(4)+ExtraIdx(4)
 {
-    public ExpressionType NodeType;
+    // Reference fields placed first to avoid 4-byte padding that would appear after NodeType.
     public Type Type;
     public object Info;
-    /// <summary>≥ 0: index into <see cref="ExpressionTree.ClosureConstants"/>. -1: value is inline in Info.</summary>
-    public int ConstantIndex;
+    public ExpressionType NodeType;
     public Idx NextIdx;
+    /// <summary>First child node, or for Constant with ExtraIdx.It==-1: raw int32 value bits.</summary>
     public Idx ChildIdx;
+    /// <summary>
+    /// Second child node; for Constant: 0=value in Info, positive=ClosureConstants index (1-based), -1=inline bits in ChildIdx.It.
+    /// </summary>
     public Idx ExtraIdx;
 }
 
@@ -116,7 +130,6 @@ public struct ExpressionTree
         ExpressionType nodeType,
         Type type,
         object info = null,
-        int constantIndex = -1,
         Idx childIdx = default,
         Idx extraIdx = default)
     {
@@ -124,32 +137,74 @@ public struct ExpressionTree
         n.NodeType = nodeType;
         n.Type = type;
         n.Info = info;
-        n.ConstantIndex = constantIndex;
         n.ChildIdx = childIdx;
         n.ExtraIdx = extraIdx;
         n.NextIdx = Idx.Nil;
         return Idx.Of(Nodes.Count); // Count already incremented by AddDefaultAndGetRef
     }
 
-    // Primitives with stable identity — safe to keep inline (ConstantIndex == -1).
-    private static bool IsInlineable(Type t) =>
-        t == typeof(int) || t == typeof(long) || t == typeof(double) || t == typeof(float) ||
-        t == typeof(bool) || t == typeof(string) || t == typeof(char) ||
-        t == typeof(byte) || t == typeof(short) || t == typeof(decimal) ||
-        t == typeof(DateTime) || t == typeof(Guid);
+    // Types whose value fits in 32 bits — stored inline in ChildIdx.It to avoid boxing.
+    private static bool FitsInInt32(Type t) =>
+        t == typeof(int)   || t == typeof(uint)   || t == typeof(bool)  || t == typeof(float) ||
+        t == typeof(byte)  || t == typeof(sbyte)  || t == typeof(short) || t == typeof(ushort) ||
+        t == typeof(char);
+
+    // Encode an inline value as its int32 bit pattern (only call when FitsInInt32 is true).
+    private static int ToInt32Bits(object value, Type t)
+    {
+        if (t == typeof(int))    return (int)value;
+        if (t == typeof(uint))   return (int)(uint)value;   // reinterpret bits
+        if (t == typeof(bool))   return (bool)value ? 1 : 0;
+        if (t == typeof(float))  return BitConverter.SingleToInt32Bits((float)value);
+        if (t == typeof(byte))   return (byte)value;
+        if (t == typeof(sbyte))  return (sbyte)value;
+        if (t == typeof(short))  return (short)value;
+        if (t == typeof(ushort)) return (ushort)value;
+        if (t == typeof(char))   return (char)value;
+        return 0; // unreachable
+    }
+
+    // Decode int32 bit pattern back to a boxed value (only call when FitsInInt32 is true).
+    internal static object FromInt32Bits(int bits, Type t)
+    {
+        if (t == typeof(int))    return bits;
+        if (t == typeof(uint))   return (uint)bits;
+        if (t == typeof(bool))   return bits != 0;
+        if (t == typeof(float))  return BitConverter.Int32BitsToSingle(bits);
+        if (t == typeof(byte))   return (byte)bits;
+        if (t == typeof(sbyte))  return (sbyte)bits;
+        if (t == typeof(short))  return (short)bits;
+        if (t == typeof(ushort)) return (ushort)bits;
+        if (t == typeof(char))   return (char)bits;
+        return null; // unreachable
+    }
+
+    // Types not fitting in int32 but still safe to keep inline in Info (no special closure treatment needed).
+    private static bool IsInfoInline(Type t) =>
+        t == typeof(string) || t == typeof(long)    || t == typeof(double) ||
+        t == typeof(decimal)|| t == typeof(DateTime)|| t == typeof(Guid);
 
     public Idx Constant(object value, bool putIntoClosure = false)
     {
         if (value == null)
-            return AddNode(ExpressionType.Constant, typeof(object), null);
+            return AddNode(ExpressionType.Constant, typeof(object));
 
         var type = value.GetType();
-        if (!putIntoClosure && IsInlineable(type))
-            return AddNode(ExpressionType.Constant, type, value, constantIndex: -1);
+        if (!putIntoClosure)
+        {
+            if (FitsInInt32(type))
+                // ExtraIdx.It == -1 is the "inline bits" sentinel; ChildIdx.It holds the value.
+                return AddNode(ExpressionType.Constant, type,
+                    childIdx: new Idx { It = ToInt32Bits(value, type) },
+                    extraIdx: new Idx { It = -1 });
+            if (IsInfoInline(type))
+                return AddNode(ExpressionType.Constant, type, info: value);
+        }
 
         var ci = ClosureConstants.Count;
         ClosureConstants.Add(value);
-        return AddNode(ExpressionType.Constant, type, null, constantIndex: ci);
+        // ExtraIdx.It > 0 (1-based) identifies the closure constant slot.
+        return AddNode(ExpressionType.Constant, type, extraIdx: new Idx { It = ci + 1 });
     }
 
     public Idx Constant<T>(T value, bool putIntoClosure = false) =>
@@ -271,9 +326,13 @@ public struct ExpressionTree
         {
             case ExpressionType.Constant:
             {
-                var value = node.ConstantIndex >= 0
-                    ? ClosureConstants.GetSurePresentRef(node.ConstantIndex)
-                    : node.Info;
+                object value;
+                if (node.ExtraIdx.It > 0)
+                    value = ClosureConstants.GetSurePresentRef(node.ExtraIdx.It - 1);
+                else if (node.ExtraIdx.It == -1)
+                    value = FromInt32Bits(node.ChildIdx.It, node.Type);
+                else
+                    value = node.Info;
                 return SysExpr.Constant(value, node.Type);
             }
 
@@ -411,7 +470,6 @@ public struct ExpressionTree
             if (na.NodeType != nb.NodeType) return false;
             if (na.Type != nb.Type) return false;
             if (!InfoEqual(na.Info, nb.Info)) return false;
-            if (na.ConstantIndex != nb.ConstantIndex) return false;
             if (na.NextIdx.It != nb.NextIdx.It) return false;
             if (na.ChildIdx.It != nb.ChildIdx.It) return false;
             if (na.ExtraIdx.It != nb.ExtraIdx.It) return false;
@@ -443,10 +501,14 @@ public struct ExpressionTree
         for (var i = 0; i < NodeCount; i++)
         {
             ref var n = ref Nodes.GetSurePresentRef(i);
+            var constStr = n.NodeType == ExpressionType.Constant
+                ? (n.ExtraIdx.It > 0   ? $"closure[{n.ExtraIdx.It - 1}]" :
+                   n.ExtraIdx.It == -1 ? $"inline:{FromInt32Bits(n.ChildIdx.It, n.Type)}" :
+                   $"info:{n.Info}")
+                : null;
             sb.AppendLine(
                 $"  [{i + 1}] {n.NodeType,-22} type={n.Type?.Name,-14} " +
-                $"info={InfoStr(n.Info),-30} " +
-                $"ci={n.ConstantIndex,2}  " +
+                $"{(constStr != null ? $"val={constStr,-28}" : $"info={InfoStr(n.Info),-28}")} " +
                 $"child={n.ChildIdx}  extra={n.ExtraIdx}  next={n.NextIdx}");
         }
         if (ClosureConstants.Count > 0)

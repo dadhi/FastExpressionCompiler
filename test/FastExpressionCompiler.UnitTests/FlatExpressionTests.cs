@@ -72,8 +72,9 @@ public class FlatExpressionTests : ITest
         ref var node = ref tree.NodeAt(ci);
         Asserts.AreEqual(ExpressionType.Constant, node.NodeType);
         Asserts.AreEqual(typeof(int), node.Type);
-        Asserts.AreEqual(42, (int)node.Info);
-        Asserts.AreEqual(-1, node.ConstantIndex);
+        Asserts.AreEqual(null, node.Info);
+        Asserts.AreEqual(-1, node.ExtraIdx.It);   // inline bits sentinel
+        Asserts.AreEqual(42, node.ChildIdx.It);   // inline int32 bits
     }
 
     public void Build_constant_node_in_closure()
@@ -82,7 +83,7 @@ public class FlatExpressionTests : ITest
         var ci = tree.Constant("hello", putIntoClosure: true);
 
         ref var node = ref tree.NodeAt(ci);
-        Asserts.AreEqual(0, node.ConstantIndex);
+        Asserts.AreEqual(1, node.ExtraIdx.It);   // 1-based closure index
         Asserts.AreEqual(1, tree.ClosureConstants.Count);
         Asserts.AreEqual("hello", (string)tree.ClosureConstants.GetSurePresentRef(0));
     }
