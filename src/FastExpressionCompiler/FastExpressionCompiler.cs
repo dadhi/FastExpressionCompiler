@@ -41,6 +41,13 @@ THE SOFTWARE.
 #define SUPPORTS_IL_GENERATOR_REUSE
 #endif
 
+// Enables direct IL stream writes for token-emitting opcodes (Call, Ldfld, Newobj, etc.)
+// using UnsafeAccessorType introduced in .NET 10.
+// Set ILGeneratorTools.UseILEmitHack = false to fall back to ILGenerator.Emit() for debugging.
+#if NET10_0_OR_GREATER
+#define SUPPORTS_IL_EMIT_HACK
+#endif
+
 #if LIGHT_EXPRESSION
 #define SUPPORTS_ARGUMENT_PROVIDER
 #endif
@@ -63,6 +70,7 @@ namespace FastExpressionCompiler
     using static FastExpressionCompiler.ImTools.SmallMap;
 #endif
     using System;
+    using System.Buffers.Binary;
     using System.Collections;
     using System.Collections.Generic;
     using System.Linq;
@@ -8616,6 +8624,16 @@ namespace FastExpressionCompiler
         public static bool DisableILGeneratorPooling;
         /// <summary>Configuration option to disable the ILGenerator Emit debug output</summary>
         public static bool DisableDemit;
+#if SUPPORTS_IL_EMIT_HACK
+        /// <summary>
+        /// When true, uses direct IL stream writes for token-emitting opcodes
+        /// (Call, Callvirt, Newobj, Ldfld, Stfld, etc.) bypassing ILGenerator.Emit() overhead.
+        /// Set to false to fall back to standard ILGenerator.Emit() (e.g. for benchmarking or debugging).
+        /// Starts as false and is enabled by DynamicMethodHacks static initializer once the required
+        /// internals (m_scope, etc.) have been resolved successfully.
+        /// </summary>
+        public static bool UseILEmitHack;
+#endif
 
 #if DEMIT
         [MethodImpl((MethodImplOptions)256)]
@@ -8773,13 +8791,31 @@ namespace FastExpressionCompiler
         public static void Demit(this ILGenerator il, OpCode opcode, Type value) => il.Emit(opcode, value);
 
         [MethodImpl((MethodImplOptions)256)]
-        public static void Demit(this ILGenerator il, OpCode opcode, FieldInfo value) => il.Emit(opcode, value);
+        public static void Demit(this ILGenerator il, OpCode opcode, FieldInfo value)
+        {
+#if SUPPORTS_IL_EMIT_HACK
+            if (UseILEmitHack) { DynamicMethodHacks.HackEmitField(il, opcode, value); return; }
+#endif
+            il.Emit(opcode, value);
+        }
 
         [MethodImpl((MethodImplOptions)256)]
-        public static void Demit(this ILGenerator il, OpCode opcode, MethodInfo value) => il.Emit(opcode, value);
+        public static void Demit(this ILGenerator il, OpCode opcode, MethodInfo value)
+        {
+#if SUPPORTS_IL_EMIT_HACK
+            if (UseILEmitHack) { DynamicMethodHacks.HackEmitMethod(il, opcode, value); return; }
+#endif
+            il.Emit(opcode, value);
+        }
 
         [MethodImpl((MethodImplOptions)256)]
-        public static void Demit(this ILGenerator il, OpCode opcode, ConstructorInfo value) => il.Emit(opcode, value);
+        public static void Demit(this ILGenerator il, OpCode opcode, ConstructorInfo value)
+        {
+#if SUPPORTS_IL_EMIT_HACK
+            if (UseILEmitHack) { DynamicMethodHacks.HackEmitCtor(il, opcode, value); return; }
+#endif
+            il.Emit(opcode, value);
+        }
 
         [MethodImpl((MethodImplOptions)256)]
         public static void Demit(this ILGenerator il, OpCode opcode, Label value) => il.Emit(opcode, value);
@@ -8813,6 +8849,91 @@ namespace FastExpressionCompiler
 
         [MethodImpl((MethodImplOptions)256)]
         public static void Demit(this ILGenerator il, string value, OpCode opcode) => il.Emit(opcode, value);
+
+#if SUPPORTS_IL_EMIT_HACK
+        // ─────────────────────────────────────────────────────────────────────────────
+        // Specialized emit helpers for when the call site already knows method metadata.
+        // These skip the IsStatic / ReturnType / GetParameters checks inside Demit(),
+        // reducing overhead further when emitting many related calls in sequence.
+        // ─────────────────────────────────────────────────────────────────────────────
+
+        /// <summary>Emits <c>call</c> to a static method that returns void.</summary>
+        [MethodImpl((MethodImplOptions)256)]
+        public static void DemitCallStaticVoid(this ILGenerator il, MethodInfo meth, int paramCount)
+        {
+            if (UseILEmitHack)
+            {
+                var dt = meth.DeclaringType;
+                if ((dt == null || (!dt.IsGenericType && !dt.IsArray)) && il.GetType() == DynamicMethodHacks.DynamicILGeneratorType)
+                { DynamicMethodHacks.HackEmitMethodToken(il, OpCodes.Call, meth.MethodHandle, -paramCount); return; }
+            }
+            il.Emit(OpCodes.Call, meth);
+        }
+
+        /// <summary>Emits <c>call</c> to a static method that returns a value (pushes +1).</summary>
+        [MethodImpl((MethodImplOptions)256)]
+        public static void DemitCallStatic(this ILGenerator il, MethodInfo meth, int paramCount)
+        {
+            if (UseILEmitHack)
+            {
+                var dt = meth.DeclaringType;
+                if ((dt == null || (!dt.IsGenericType && !dt.IsArray)) && il.GetType() == DynamicMethodHacks.DynamicILGeneratorType)
+                { DynamicMethodHacks.HackEmitMethodToken(il, OpCodes.Call, meth.MethodHandle, 1 - paramCount); return; }
+            }
+            il.Emit(OpCodes.Call, meth);
+        }
+
+        /// <summary>Emits <c>call</c>/<c>callvirt</c> to an instance method that returns void.</summary>
+        [MethodImpl((MethodImplOptions)256)]
+        public static void DemitCallInstanceVoid(this ILGenerator il, OpCode opcode, MethodInfo meth, int paramCount)
+        {
+            if (UseILEmitHack)
+            {
+                var dt = meth.DeclaringType;
+                if ((dt == null || (!dt.IsGenericType && !dt.IsArray)) && il.GetType() == DynamicMethodHacks.DynamicILGeneratorType)
+                { DynamicMethodHacks.HackEmitMethodToken(il, opcode, meth.MethodHandle, -paramCount - 1); return; }
+            }
+            il.Emit(opcode, meth);
+        }
+
+        /// <summary>Emits <c>call</c>/<c>callvirt</c> to an instance method that returns a value (net stack: -paramCount).</summary>
+        [MethodImpl((MethodImplOptions)256)]
+        public static void DemitCallInstance(this ILGenerator il, OpCode opcode, MethodInfo meth, int paramCount)
+        {
+            if (UseILEmitHack)
+            {
+                var dt = meth.DeclaringType;
+                if ((dt == null || (!dt.IsGenericType && !dt.IsArray)) && il.GetType() == DynamicMethodHacks.DynamicILGeneratorType)
+                { DynamicMethodHacks.HackEmitMethodToken(il, opcode, meth.MethodHandle, -paramCount); return; }
+            }
+            il.Emit(opcode, meth);
+        }
+
+        /// <summary>Emits <c>newobj</c> for a constructor (net stack: 1 - paramCount).</summary>
+        [MethodImpl((MethodImplOptions)256)]
+        public static void DemitNewobj(this ILGenerator il, ConstructorInfo ctor, int paramCount)
+        {
+            if (UseILEmitHack)
+            {
+                var dt = ctor.DeclaringType;
+                if ((dt == null || (!dt.IsGenericType && !dt.IsArray)) && il.GetType() == DynamicMethodHacks.DynamicILGeneratorType)
+                { DynamicMethodHacks.HackEmitMethodToken(il, OpCodes.Newobj, ctor.MethodHandle, 1 - paramCount); return; }
+            }
+            il.Emit(OpCodes.Newobj, ctor);
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────────
+        // ILEmitContext: caches refs to m_length and m_ILStream for a sequence of emits,
+        // eliminating the per-call UAT field accesses when emitting multiple instructions.
+        //
+        // Usage (NET10+ only, ref struct so stack-only):
+        //   var ctx = new DynamicMethodHacks.ILEmitContext(il);
+        //   ctx.EmitBatch(OpCodes.Ldarg_0, /* stackChange */ 1,
+        //                 OpCodes.Ldfld, fieldHandle, /* stackChange */ 0);
+        //
+        // todo: @perf wire up call sites once the batch helpers cover enough patterns
+        // ─────────────────────────────────────────────────────────────────────────────
+#endif
 #endif
     }
 
@@ -8880,6 +9001,12 @@ namespace FastExpressionCompiler
 
         internal static FieldInfo ILGeneratorField;
         internal static Type DynamicILGeneratorType;
+#if SUPPORTS_IL_EMIT_HACK
+        // m_scope is on DynamicILGenerator (non-public type). Since its return type DynamicScope is also
+        // non-public, UnsafeAccessorType cannot express this field access — reflection is still used here.
+        // m_tokens on the returned scope is then accessed via UnsafeAccessorType (GetMTokens below).
+        internal static FieldInfo _mScopeField;
+#endif
 
         static DynamicMethodHacks()
         {
@@ -8893,6 +9020,9 @@ namespace FastExpressionCompiler
                 return; // nothing to do here
 
             DynamicILGeneratorType = ILGeneratorField.FieldType;
+#if SUPPORTS_IL_EMIT_HACK
+            _mScopeField = DynamicILGeneratorType.GetField("m_scope", instanceNonPublic);
+#endif
 
             // Avoid demit polluting the output of the the initialization phase
             var prevDemitValue = ILGeneratorTools.DisableDemit;
@@ -9354,6 +9484,12 @@ namespace FastExpressionCompiler
 
             // Restore the demit
             ILGeneratorTools.DisableDemit = prevDemitValue;
+#if SUPPORTS_IL_EMIT_HACK
+            // Enable the IL emit hack now that initialization is complete.
+            // Only activate if _mScopeField was successfully resolved (required for GetScopeTokens).
+            if (_mScopeField != null)
+                ILGeneratorTools.UseILEmitHack = true;
+#endif
 
             // ## 3 TBD
             //
@@ -9511,6 +9647,187 @@ namespace FastExpressionCompiler
         [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "m_tokens")]
         internal static extern ref System.Collections.Generic.List<object> GetMTokens(
             [UnsafeAccessorType("System.Reflection.Emit.DynamicScope")] object scope);
+
+        // ─────────────────────────────────────────────────────────────────────────────
+        // Core helpers for the SUPPORTS_IL_EMIT_HACK fast-emit path.
+        //
+        // Architecture:
+        //   • GetScopeTokens(il)  — one reflection get per call (m_scope), then UAT for m_tokens
+        //   • HackEmitMethodToken — core: write opcode bytes + token + UpdateStackSize
+        //   • HackEmitMethod/Ctor/Field — compute stack change from reflection, then delegate
+        //
+        // Capacity handling mirrors ILGenerator.IncreaseCapacity: Array.Resize to 2× or mLength+needed.
+        //
+        // Common opcode+token sizes:
+        //   Call/Callvirt/Newobj/Ldfld/Stfld etc.: 1-byte opcode + 4-byte token = 5 bytes total.
+        //
+        // Batch patterns seen in FEC (each pair avoids a second EnsureCapacity call):
+        //   Ldarg_0 + Ldfld  (load closure field)          → DemitLdarg0Ldfld
+        //   Stloc_N + Ldloc_N  (store+load local)          → already in EmitStoreAndLoadLocalVariable
+        //   Stloc_N + Ldloca_N (store+load address)        → already in EmitStoreAndLoadLocalVariableAddress
+        //   Dup + Brtrue/Brfalse + Pop  (null check)       → future batch candidate
+        //   todo: @perf add DemitLdarg0Ldfld batch helper once benchmark confirms savings
+        // ─────────────────────────────────────────────────────────────────────────────
+
+        /// <summary>Gets a ref to the <c>m_tokens</c> list from an ILGenerator's dynamic scope.
+        /// Requires one reflection field-get for <c>m_scope</c> (whose return type DynamicScope is
+        /// non-public and therefore cannot be expressed as a UnsafeAccessorType return type).</summary>
+        [MethodImpl((MethodImplOptions)256)]
+        private static ref List<object> GetScopeTokens(ILGenerator il)
+        {
+            var scope = _mScopeField.GetValue(il);
+            return ref GetMTokens(scope);
+        }
+
+        /// <summary>Core IL-stream write for a single-byte opcode followed by a 4-byte method/ctor token.
+        /// Only valid for methods on non-generic, non-array declaring types.
+        /// For generic/array types, fall back to ILGenerator.Emit().</summary>
+        [MethodImpl((MethodImplOptions)256)]
+        internal static void HackEmitMethodToken(ILGenerator il, OpCode opcode, RuntimeMethodHandle handle, int stackChange)
+        {
+            ref int mLength = ref GetMLength(il);
+            ref byte[] mILStream = ref GetMILStream(il);
+
+            // opcode (1 or 2 bytes) + token (4 bytes)
+            int needed = opcode.Size + 4;
+            if (mLength + needed >= mILStream.Length)
+                Array.Resize(ref mILStream, Math.Max(mILStream.Length * 2, mLength + needed));
+
+            if (opcode.Size == 1)
+                mILStream[mLength++] = (byte)opcode.Value;
+            else
+            {
+                mILStream[mLength++] = (byte)((int)opcode.Value >> 8);
+                mILStream[mLength++] = (byte)opcode.Value;
+            }
+
+            // DynamicScope.m_tokens: simple methods → RuntimeMethodHandle; generic type methods → GenericMethodInfo.
+            // Since GenericMethodInfo is an internal runtime type we cannot construct without reflection,
+            // HackEmitMethod/Ctor fall back to il.Emit() for generic types before reaching here.
+            ref var mTokens = ref GetScopeTokens(il);
+            mTokens.Add(handle);
+            int token = (mTokens.Count - 1) | 0x06000000;
+            BinaryPrimitives.WriteInt32LittleEndian(mILStream.AsSpan(mLength), token);
+            mLength += 4;
+
+            UpdateStackSize(il, opcode, stackChange);
+        }
+
+        /// <summary>Core IL-stream write for a single-byte opcode followed by a 4-byte field token.
+        /// Stores a RuntimeFieldHandle directly (DynamicResolver handles this for both generic and non-generic fields).</summary>
+        [MethodImpl((MethodImplOptions)256)]
+        private static void HackEmitFieldToken(ILGenerator il, OpCode opcode, RuntimeFieldHandle handle, int stackChange)
+        {
+            ref int mLength = ref GetMLength(il);
+            ref byte[] mILStream = ref GetMILStream(il);
+
+            int needed = opcode.Size + 4;
+            if (mLength + needed >= mILStream.Length)
+                Array.Resize(ref mILStream, Math.Max(mILStream.Length * 2, mLength + needed));
+
+            if (opcode.Size == 1)
+                mILStream[mLength++] = (byte)opcode.Value;
+            else
+            {
+                mILStream[mLength++] = (byte)((int)opcode.Value >> 8);
+                mILStream[mLength++] = (byte)opcode.Value;
+            }
+
+            // Store the field handle directly; DynamicResolver.ResolveToken handles RuntimeFieldHandle.
+            // The runtime always calls GetTokenFor(field, declaringType) which stores GenericFieldInfo,
+            // but RuntimeFieldHandle alone is sufficient for the JIT to locate the field.
+            ref var mTokens = ref GetScopeTokens(il);
+            mTokens.Add(handle);
+            int token = (mTokens.Count - 1) | 0x04000000;
+            BinaryPrimitives.WriteInt32LittleEndian(mILStream.AsSpan(mLength), token);
+            mLength += 4;
+
+            UpdateStackSize(il, opcode, stackChange);
+        }
+
+        /// <summary>Emits a method-calling opcode, computing stack change from reflection metadata.</summary>
+        [MethodImpl((MethodImplOptions)256)]
+        internal static void HackEmitMethod(ILGenerator il, OpCode opcode, MethodInfo meth)
+        {
+            // The hack only works for DynamicILGenerator (il from DynamicMethod.GetILGenerator).
+            // Fall back for RuntimeILGenerator (e.g., MethodBuilder.GetILGenerator).
+            if (il.GetType() != DynamicILGeneratorType) { il.Emit(opcode, meth); return; }
+
+            // Fall back for methods on generic/array types: DynamicScope requires GenericMethodInfo
+            // (an internal runtime type) for these; we cannot construct it without reflection overhead.
+            var declaringType = meth.DeclaringType;
+            if (declaringType != null && (declaringType.IsGenericType || declaringType.IsArray))
+            {
+                il.Emit(opcode, meth);
+                return;
+            }
+
+            // Mirror the stack-change logic in ILGenerator.Emit(OpCode, MethodInfo):
+            // push return value if non-void, pop each parameter, pop 'this' if instance (except newobj/ldtoken/ldftn)
+            int stackChange = 0;
+            if (meth.ReturnType != typeof(void))
+                stackChange++;
+            if (opcode.StackBehaviourPop == StackBehaviour.Varpop)
+                stackChange -= meth.GetParameters().Length;
+            if (!meth.IsStatic &&
+                !(opcode.Equals(OpCodes.Newobj) || opcode.Equals(OpCodes.Ldtoken) || opcode.Equals(OpCodes.Ldftn)))
+                stackChange--;
+            HackEmitMethodToken(il, opcode, meth.MethodHandle, stackChange);
+        }
+
+        /// <summary>Emits a constructor-calling opcode, computing stack change from reflection metadata.</summary>
+        [MethodImpl((MethodImplOptions)256)]
+        internal static void HackEmitCtor(ILGenerator il, OpCode opcode, ConstructorInfo ctor)
+        {
+            // Fall back for non-DynamicILGenerator (e.g., MethodBuilder's IL generator)
+            if (il.GetType() != DynamicILGeneratorType) { il.Emit(opcode, ctor); return; }
+
+            // Fall back for ctors on generic/array types
+            var declaringType = ctor.DeclaringType;
+            if (declaringType != null && (declaringType.IsGenericType || declaringType.IsArray))
+            {
+                il.Emit(opcode, ctor);
+                return;
+            }
+
+            // Mirror ILGenerator.Emit(OpCode, ConstructorInfo): newobj pushes 1, pops all parameters
+            int stackChange = opcode.Equals(OpCodes.Newobj) ? 1 - ctor.GetParameters().Length : 0;
+            HackEmitMethodToken(il, opcode, ctor.MethodHandle, stackChange);
+        }
+
+        /// <summary>Emits a field-access opcode, computing stack change from opcode semantics.</summary>
+        [MethodImpl((MethodImplOptions)256)]
+        internal static void HackEmitField(ILGenerator il, OpCode opcode, FieldInfo field)
+        {
+            // Fall back for non-DynamicILGenerator (e.g., MethodBuilder's IL generator)
+            if (il.GetType() != DynamicILGeneratorType) { il.Emit(opcode, field); return; }
+
+            // Fall back for fields on generic/array types: the ILReader's DynamicScopeTokenResolver.AsField
+            // calls FieldInfo.GetFieldFromHandle(handle) without a type context, which throws for generic types.
+            // Also DynamicILGenerator.Emit always stores GenericFieldInfo (not RuntimeFieldHandle) for such fields.
+            var declaringType = field.DeclaringType;
+            if (declaringType != null && (declaringType.IsGenericType || declaringType.IsArray))
+            {
+                il.Emit(opcode, field);
+                return;
+            }
+
+            // Mirror ILGenerator.Emit(OpCode, FieldInfo) stack-change rules:
+            //   Ldfld/Ldflda:  pop obj, push value/addr  → net 0
+            //   Stfld:         pop obj + value           → net -2
+            //   Ldsfld/Ldsflda: push value/addr          → net +1
+            //   Stsfld:        pop value                 → net -1
+            int stackChange;
+            if (opcode.Equals(OpCodes.Ldfld) || opcode.Equals(OpCodes.Ldflda))
+                stackChange = 0;    // pop obj (-1) + push value/addr (+1) = 0
+            else if (opcode.Equals(OpCodes.Stfld))
+                stackChange = -2;   // pop obj + pop value
+            else if (opcode.Equals(OpCodes.Ldsfld) || opcode.Equals(OpCodes.Ldsflda))
+                stackChange = 1;    // push value/addr
+            else // Stsfld
+                stackChange = -1;   // pop value
+            HackEmitFieldToken(il, opcode, field.FieldHandle, stackChange);
+        }
 #endif
     }
 
