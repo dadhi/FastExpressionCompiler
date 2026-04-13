@@ -37,6 +37,8 @@ public static class TestTools
 
     static TestTools()
     {
+        // todo: @feat convert these properties to the csproj properties to use with dotnet cli
+        // AllowPrintCS = true;
 #if DEBUG
         AllowPrintIL = true;
         AllowPrintCS = true;

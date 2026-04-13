@@ -9488,7 +9488,7 @@ namespace FastExpressionCompiler
         public static string ToExpressionString(this Expression expr, ObjectToCode notRecognizedToCode = null) =>
             expr.ToExpressionString(out var _, out var _, out var _, notRecognizedToCode: notRecognizedToCode);
 
-        // todo: @api There should be a version returning StringBuilder the same as for ToCSharpString
+        // todo: @feat There should be a version returning StringBuilder the same as for ToCSharpString
         /// <summary>
         /// Prints the expression in its constructing syntax -
         /// helpful to get the expression from the debug session and put into it the code for the test.
@@ -10311,7 +10311,7 @@ namespace FastExpressionCompiler
                             for (var i = 0; i < count; i++)
                             {
                                 if (i > 0)
-                                    sb.Append(", ");
+                                    sb.Append(",");
                                 if (count > 1)
                                     sb.NewLineIndent(lineIndent + indentSpaces);
 

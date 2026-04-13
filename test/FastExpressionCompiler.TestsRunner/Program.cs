@@ -107,7 +107,7 @@ namespace FastExpressionCompiler.UnitTests
 
             Console.WriteLine("""
 
-            ### .NET Latest (Core): Running UnitTests and IssueTests in parallel...
+            //## .NET Latest (Core): Running UnitTests and IssueTests in parallel...
             """);
 
             var sw = Stopwatch.StartNew();
@@ -165,7 +165,7 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new ToCSharpStringTests().Run);
                 Run(new LightExpression.UnitTests.ToCSharpStringTests().Run);
 
-                Console.WriteLine($"{Environment.NewLine}UnitTests are passing in {sw.ElapsedMilliseconds} ms.");
+                Console.WriteLine($"{Environment.NewLine}//UnitTests are passing in {sw.ElapsedMilliseconds} ms.");
 
             });
 
@@ -439,7 +439,7 @@ namespace FastExpressionCompiler.UnitTests
                 return;
             }
 
-            Console.WriteLine($"ALL {totalTestsPassed,-4} tests are passing in {sw.ElapsedMilliseconds} ms.");
+            Console.WriteLine($"//ALL {totalTestsPassed,-4} tests are passing in {sw.ElapsedMilliseconds} ms.");
         }
     }
 }

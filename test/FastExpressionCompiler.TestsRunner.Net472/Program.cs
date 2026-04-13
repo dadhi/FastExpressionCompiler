@@ -24,7 +24,7 @@ namespace FastExpressionCompiler.UnitTests
 
             Console.WriteLine("""
 
-            ### TestX runs on FEC tests (UnitTests and IssueTests) and FEC.LightExpression tests in ||
+            //## TestX runs on FEC tests (UnitTests and IssueTests) and FEC.LightExpression tests in ||
             """);
 
             var lightTestsStopwatch = Stopwatch.StartNew();
@@ -115,7 +115,7 @@ namespace FastExpressionCompiler.UnitTests
 
             Console.WriteLine("""
 
-            ### .NET Framework 4.72: Running UnitTests and IssueTests in parallel...
+            //## .NET Framework 4.72: Running UnitTests and IssueTests in parallel...
             """);
 
             var sw = Stopwatch.StartNew();
@@ -173,7 +173,7 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new ToCSharpStringTests().Run);
                 Run(new LightExpression.UnitTests.ToCSharpStringTests().Run);
 
-                Console.WriteLine($"{Environment.NewLine}UnitTests are passing in {sw.ElapsedMilliseconds} ms.");
+                Console.WriteLine($"{Environment.NewLine}//UnitTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
 
             var issueTests = Task.Run(() =>
@@ -427,7 +427,7 @@ namespace FastExpressionCompiler.UnitTests
                 return;
             }
 
-            Console.WriteLine($"ALL {totalTestsPassed,-4} tests are passing in {sw.ElapsedMilliseconds} ms.");
+            Console.WriteLine($"//ALL {totalTestsPassed,-4} tests are passing in {sw.ElapsedMilliseconds} ms.");
         }
     }
 }
