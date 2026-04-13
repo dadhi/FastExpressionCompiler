@@ -263,33 +263,86 @@ public struct ExpressionTree
     public Idx Not(Idx operand) =>
         Unary(ExpressionType.Not, operand, typeof(bool));
 
-    /// <summary>Adds a Negate node.</summary>
+    /// <summary>Adds a Negate node, inferring the type from <paramref name="operand"/>.</summary>
+    public Idx Negate(Idx operand) =>
+        Unary(ExpressionType.Negate, operand, NodeAt(operand).Type);
+    /// <summary>Adds a Negate node with an explicit result type.</summary>
     public Idx Negate(Idx operand, Type type) =>
         Unary(ExpressionType.Negate, operand, type);
 
-    /// <summary>Adds a binary expression node.</summary>
+    /// <summary>Adds a binary expression node with an explicit result type.</summary>
     public Idx Binary(ExpressionType nodeType, Idx left, Idx right, Type type, MethodInfo method = null) =>
         AddNode(nodeType, type, info: method, childIdx: left, extraIdx: right);
+    /// <summary>Adds a binary expression node, inferring the result type from <paramref name="left"/>.</summary>
+    public Idx Binary(ExpressionType nodeType, Idx left, Idx right, MethodInfo method = null) =>
+        Binary(nodeType, left, right, NodeAt(left).Type, method);
 
-    /// <summary>Adds an Add node.</summary>
+    /// <summary>Adds an Add node with an explicit result type.</summary>
     public Idx Add(Idx left, Idx right, Type type) =>
         Binary(ExpressionType.Add, left, right, type);
+    /// <summary>Adds an Add node, inferring the result type from <paramref name="left"/>.</summary>
+    public Idx Add(Idx left, Idx right) =>
+        Binary(ExpressionType.Add, left, right, NodeAt(left).Type);
 
-    /// <summary>Adds a Subtract node.</summary>
+    /// <summary>Adds a Subtract node with an explicit result type.</summary>
     public Idx Subtract(Idx left, Idx right, Type type) =>
         Binary(ExpressionType.Subtract, left, right, type);
+    /// <summary>Adds a Subtract node, inferring the result type from <paramref name="left"/>.</summary>
+    public Idx Subtract(Idx left, Idx right) =>
+        Binary(ExpressionType.Subtract, left, right, NodeAt(left).Type);
 
-    /// <summary>Adds a Multiply node.</summary>
+    /// <summary>Adds a Multiply node with an explicit result type.</summary>
     public Idx Multiply(Idx left, Idx right, Type type) =>
         Binary(ExpressionType.Multiply, left, right, type);
+    /// <summary>Adds a Multiply node, inferring the result type from <paramref name="left"/>.</summary>
+    public Idx Multiply(Idx left, Idx right) =>
+        Binary(ExpressionType.Multiply, left, right, NodeAt(left).Type);
+
+    /// <summary>Adds a Divide node, inferring the result type from <paramref name="left"/>.</summary>
+    public Idx Divide(Idx left, Idx right) =>
+        Binary(ExpressionType.Divide, left, right, NodeAt(left).Type);
+    /// <summary>Adds a Divide node with an explicit result type.</summary>
+    public Idx Divide(Idx left, Idx right, Type type) =>
+        Binary(ExpressionType.Divide, left, right, type);
+
+    /// <summary>Adds a Modulo node, inferring the result type from <paramref name="left"/>.</summary>
+    public Idx Modulo(Idx left, Idx right) =>
+        Binary(ExpressionType.Modulo, left, right, NodeAt(left).Type);
+    /// <summary>Adds a Modulo node with an explicit result type.</summary>
+    public Idx Modulo(Idx left, Idx right, Type type) =>
+        Binary(ExpressionType.Modulo, left, right, type);
 
     /// <summary>Adds an Equal node (returns bool).</summary>
     public Idx Equal(Idx left, Idx right) =>
         Binary(ExpressionType.Equal, left, right, typeof(bool));
+    /// <summary>Adds a NotEqual node (returns bool).</summary>
+    public Idx NotEqual(Idx left, Idx right) =>
+        Binary(ExpressionType.NotEqual, left, right, typeof(bool));
+    /// <summary>Adds a LessThan node (returns bool).</summary>
+    public Idx LessThan(Idx left, Idx right) =>
+        Binary(ExpressionType.LessThan, left, right, typeof(bool));
+    /// <summary>Adds a LessThanOrEqual node (returns bool).</summary>
+    public Idx LessThanOrEqual(Idx left, Idx right) =>
+        Binary(ExpressionType.LessThanOrEqual, left, right, typeof(bool));
+    /// <summary>Adds a GreaterThan node (returns bool).</summary>
+    public Idx GreaterThan(Idx left, Idx right) =>
+        Binary(ExpressionType.GreaterThan, left, right, typeof(bool));
+    /// <summary>Adds a GreaterThanOrEqual node (returns bool).</summary>
+    public Idx GreaterThanOrEqual(Idx left, Idx right) =>
+        Binary(ExpressionType.GreaterThanOrEqual, left, right, typeof(bool));
+    /// <summary>Adds an AndAlso (short-circuit &amp;&amp;) node, inferring the result type from <paramref name="left"/>.</summary>
+    public Idx AndAlso(Idx left, Idx right) =>
+        Binary(ExpressionType.AndAlso, left, right, NodeAt(left).Type);
+    /// <summary>Adds an OrElse (short-circuit ||) node, inferring the result type from <paramref name="left"/>.</summary>
+    public Idx OrElse(Idx left, Idx right) =>
+        Binary(ExpressionType.OrElse, left, right, NodeAt(left).Type);
 
-    /// <summary>Adds an Assign node.</summary>
+    /// <summary>Adds an Assign node with an explicit result type.</summary>
     public Idx Assign(Idx target, Idx value, Type type) =>
         Binary(ExpressionType.Assign, target, value, type);
+    /// <summary>Adds an Assign node, inferring the result type from <paramref name="target"/>.</summary>
+    public Idx Assign(Idx target, Idx value) =>
+        Binary(ExpressionType.Assign, target, value, NodeAt(target).Type);
 
     /// <summary>Adds a New node calling the given constructor with the provided arguments.</summary>
     public Idx New(ConstructorInfo ctor, params Idx[] args)
