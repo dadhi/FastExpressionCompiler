@@ -8235,6 +8235,17 @@ namespace FastExpressionCompiler
             nodeType == ExpressionType.Conditional | nodeType == ExpressionType.Coalesce ||
             IsBracedBlockLike(nodeType);
 
+        // Returns true when a non-void expression used as a statement needs a `_ = ` discard prefix
+        // to suppress CS0201 / produce valid, unambiguous C# output.
+        [MethodImpl((MethodImplOptions)256)]
+        internal static bool NeedsDiscardWhenUsedAsStatement(this Expression expr)
+        {
+            var nodeType = expr.NodeType;
+            return expr.Type != typeof(void)
+                && (nodeType == ExpressionType.Call | nodeType == ExpressionType.Invoke
+                    | nodeType == ExpressionType.Conditional | nodeType == ExpressionType.Coalesce);
+        }
+
         [MethodImpl((MethodImplOptions)256)]
         internal static bool IsReturnable(this Expression expr)
         {
@@ -10927,6 +10938,8 @@ namespace FastExpressionCompiler
             else
             {
                 sb.NewLineIndent(lineIndent + indentSpaces);
+                if (expr != null && expr.NeedsDiscardWhenUsedAsStatement())
+                    sb.Append("_ = ");
                 sb = expr?.ToCSharpString(sb, EnclosedIn.ParensByDefault, ref ctx,
                     lineIndent + indentSpaces, stripNamespace, printType, indentSpaces, notRecognizedToCode) ?? sb.Append("null");
                 sb.AppendSemicolonOnce(expr);
@@ -11149,9 +11162,8 @@ namespace FastExpressionCompiler
                 {
                     sb.NewLineIndent(lineIndent);
                     var nodeType = expr.NodeType;
-                    var returningCondOrCoalesce = expr.Type != typeof(void)
-                        && nodeType == ExpressionType.Conditional | nodeType == ExpressionType.Coalesce;
-                    if (returningCondOrCoalesce) // it requires some assignment target to avoid error or warning
+                    var returningCondOrCoalesceOrCall = expr.NeedsDiscardWhenUsedAsStatement();
+                    if (returningCondOrCoalesceOrCall)
                         sb.Append("_ = ");
 
                     expr.ToCSharpString(sb, EnclosedIn.Block, ref ctx,
@@ -11160,7 +11172,7 @@ namespace FastExpressionCompiler
                     // Preventing the `};` kind of situation and separating the conditional block with empty line
                     if (nodeType.IsBlockLikeOrConditional())
                     {
-                        sb = returningCondOrCoalesce ? sb.AppendSemicolonOnce() : sb;
+                        sb = returningCondOrCoalesceOrCall ? sb.AppendSemicolonOnce() : sb;
                         sb.NewLineIndent(lineIndent);
                     }
                     else if (nodeType != ExpressionType.Label & nodeType != ExpressionType.Default)
