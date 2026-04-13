@@ -48,17 +48,25 @@ using SysParam = System.Linq.Expressions.ParameterExpression;
 [StructLayout(LayoutKind.Sequential)]
 public struct Idx : IEquatable<Idx>
 {
+    /// <summary>Raw 1-based index; 0 means nil.</summary>
     public int It;
 
+    /// <summary>True when this index is nil (unset).</summary>
     public bool IsNil => It == 0;
+    /// <summary>The nil sentinel value.</summary>
     public static Idx Nil => default;
 
+    /// <summary>Creates a 1-based index from the given value.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Idx Of(int oneBasedIndex) => new Idx { It = oneBasedIndex };
 
+    /// <inheritdoc/>
     public bool Equals(Idx other) => It == other.It;
+    /// <inheritdoc/>
     public override bool Equals(object obj) => obj is Idx other && Equals(other);
+    /// <inheritdoc/>
     public override int GetHashCode() => It;
+    /// <inheritdoc/>
     public override string ToString() => IsNil ? "nil" : It.ToString();
 }
 
@@ -91,9 +99,13 @@ public struct Idx : IEquatable<Idx>
 public struct ExpressionNode  // 32 bytes: Type(8)+Info(8)+NodeType(4)+NextIdx(4)+ChildIdx(4)+ExtraIdx(4)
 {
     // Reference fields placed first to avoid 4-byte padding that would appear after NodeType.
+    /// <summary>Result type of this node.</summary>
     public Type Type;
+    /// <summary>Method/constructor for Call/New/Unary/Binary; parameter name for Parameter; closure key for Constant; parameter <see cref="Idx"/> array for Lambda.</summary>
     public object Info;
+    /// <summary>Expression kind (mirrors <see cref="System.Linq.Expressions.ExpressionType"/>).</summary>
     public ExpressionType NodeType;
+    /// <summary>Next sibling in an intrusive linked list (arguments, block expressions, etc.).</summary>
     public Idx NextIdx;
     /// <summary>First child node, or for Constant with ExtraIdx.It==-1: raw int32 value bits.</summary>
     public Idx ChildIdx;
@@ -110,13 +122,18 @@ public struct ExpressionNode  // 32 bytes: Type(8)+Info(8)+NodeType(4)+NextIdx(4
 public struct ExpressionTree
 {
     // First 16 nodes are on the stack; further nodes spill to a heap array.
+    /// <summary>Flat node storage. First 16 nodes are stack-resident; further nodes spill to a heap array.</summary>
     public SmallList<ExpressionNode, Stack16<ExpressionNode>, NoArrayPool<ExpressionNode>> Nodes;
     // First 4 closure constants on stack.
+    /// <summary>Closure-captured constants. First 4 are stack-resident.</summary>
     public SmallList<object, Stack4<object>, NoArrayPool<object>> ClosureConstants;
+    /// <summary>Index of the root expression node (typically a Lambda).</summary>
     public Idx RootIdx;
 
+    /// <summary>Total number of nodes in this tree.</summary>
     public int NodeCount => Nodes.Count;
 
+    /// <summary>Returns a reference to the node at the given index.</summary>
     [UnscopedRef]
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ref ExpressionNode NodeAt(Idx idx)
@@ -155,7 +172,7 @@ public struct ExpressionTree
         if (t == typeof(int))    return (int)value;
         if (t == typeof(uint))   return (int)(uint)value;   // reinterpret bits
         if (t == typeof(bool))   return (bool)value ? 1 : 0;
-        if (t == typeof(float))  return BitConverter.SingleToInt32Bits((float)value);
+        if (t == typeof(float))  return FloatIntBits.FloatToInt((float)value);
         if (t == typeof(byte))   return (byte)value;
         if (t == typeof(sbyte))  return (sbyte)value;
         if (t == typeof(short))  return (short)value;
@@ -170,7 +187,7 @@ public struct ExpressionTree
         if (t == typeof(int))    return bits;
         if (t == typeof(uint))   return (uint)bits;
         if (t == typeof(bool))   return bits != 0;
-        if (t == typeof(float))  return BitConverter.Int32BitsToSingle(bits);
+        if (t == typeof(float))  return FloatIntBits.IntToFloat(bits);
         if (t == typeof(byte))   return (byte)bits;
         if (t == typeof(sbyte))  return (sbyte)bits;
         if (t == typeof(short))  return (short)bits;
@@ -179,11 +196,22 @@ public struct ExpressionTree
         return null; // unreachable
     }
 
+    // Explicit-layout union to reinterpret float/int bits without Unsafe or BitConverter (portable across all TFMs).
+    [StructLayout(LayoutKind.Explicit)]
+    private struct FloatIntBits
+    {
+        [FieldOffset(0)] public float F;
+        [FieldOffset(0)] public int I;
+        public static int FloatToInt(float f) => new FloatIntBits { F = f }.I;
+        public static float IntToFloat(int i) => new FloatIntBits { I = i }.F;
+    }
+
     // Types not fitting in int32 but still safe to keep inline in Info (no special closure treatment needed).
     private static bool IsInfoInline(Type t) =>
         t == typeof(string) || t == typeof(long)    || t == typeof(double) ||
         t == typeof(decimal)|| t == typeof(DateTime)|| t == typeof(Guid);
 
+    /// <summary>Adds a Constant node. Small value types (int, bool, float, etc.) are stored inline without boxing.</summary>
     public Idx Constant(object value, bool putIntoClosure = false)
     {
         if (value == null)
@@ -207,54 +235,70 @@ public struct ExpressionTree
         return AddNode(ExpressionType.Constant, type, extraIdx: new Idx { It = ci + 1 });
     }
 
+    /// <summary>Typed overload of <see cref="Constant(object,bool)"/>.</summary>
     public Idx Constant<T>(T value, bool putIntoClosure = false) =>
         Constant((object)value, putIntoClosure);
 
+    /// <summary>Adds a Parameter node with the given type and optional name.</summary>
     public Idx Parameter(Type type, string name = null) =>
         AddNode(ExpressionType.Parameter, type, info: name);
 
+    /// <summary>Alias for <see cref="Parameter"/> — adds a block-local variable node.</summary>
     public Idx Variable(Type type, string name = null) =>
         AddNode(ExpressionType.Parameter, type, info: name);
 
+    /// <summary>Adds a Default(type) node.</summary>
     public Idx Default(Type type) =>
         AddNode(ExpressionType.Default, type);
 
+    /// <summary>Adds a unary expression node.</summary>
     public Idx Unary(ExpressionType nodeType, Idx operand, Type type, MethodInfo method = null) =>
         AddNode(nodeType, type, info: method, childIdx: operand);
 
+    /// <summary>Adds a Convert node.</summary>
     public Idx Convert(Idx operand, Type toType) =>
         Unary(ExpressionType.Convert, operand, toType);
 
+    /// <summary>Adds a Not node.</summary>
     public Idx Not(Idx operand) =>
         Unary(ExpressionType.Not, operand, typeof(bool));
 
+    /// <summary>Adds a Negate node.</summary>
     public Idx Negate(Idx operand, Type type) =>
         Unary(ExpressionType.Negate, operand, type);
 
+    /// <summary>Adds a binary expression node.</summary>
     public Idx Binary(ExpressionType nodeType, Idx left, Idx right, Type type, MethodInfo method = null) =>
         AddNode(nodeType, type, info: method, childIdx: left, extraIdx: right);
 
+    /// <summary>Adds an Add node.</summary>
     public Idx Add(Idx left, Idx right, Type type) =>
         Binary(ExpressionType.Add, left, right, type);
 
+    /// <summary>Adds a Subtract node.</summary>
     public Idx Subtract(Idx left, Idx right, Type type) =>
         Binary(ExpressionType.Subtract, left, right, type);
 
+    /// <summary>Adds a Multiply node.</summary>
     public Idx Multiply(Idx left, Idx right, Type type) =>
         Binary(ExpressionType.Multiply, left, right, type);
 
+    /// <summary>Adds an Equal node (returns bool).</summary>
     public Idx Equal(Idx left, Idx right) =>
         Binary(ExpressionType.Equal, left, right, typeof(bool));
 
+    /// <summary>Adds an Assign node.</summary>
     public Idx Assign(Idx target, Idx value, Type type) =>
         Binary(ExpressionType.Assign, target, value, type);
 
+    /// <summary>Adds a New node calling the given constructor with the provided arguments.</summary>
     public Idx New(ConstructorInfo ctor, params Idx[] args)
     {
         var firstArgIdx = LinkList(args);
         return AddNode(ExpressionType.New, ctor.DeclaringType, info: ctor, childIdx: firstArgIdx);
     }
 
+    /// <summary>Adds a Call node. Pass <see cref="Idx.Nil"/> for <paramref name="instance"/> for static calls.</summary>
     public Idx Call(MethodInfo method, Idx instance, params Idx[] args)
     {
         var returnType = method.ReturnType == typeof(void) ? typeof(void) : method.ReturnType;
@@ -266,6 +310,7 @@ public struct ExpressionTree
 
     // Parameters stored in Info as Idx[] rather than chained via NextIdx, because the same
     // parameter node may already have its NextIdx used as part of a New/Call argument chain.
+    /// <summary>Adds a Lambda node. Sets <see cref="RootIdx"/> when <paramref name="isRoot"/> is true.</summary>
     public Idx Lambda(Type delegateType, Idx body, Idx[] parameters = null, bool isRoot = true)
     {
         var lambdaIdx = AddNode(ExpressionType.Lambda, delegateType, info: parameters, childIdx: body);
@@ -274,12 +319,14 @@ public struct ExpressionTree
         return lambdaIdx;
     }
 
+    /// <summary>Adds a Conditional (ternary) node.</summary>
     public Idx Conditional(Idx test, Idx ifTrue, Idx ifFalse, Type type)
     {
         NodeAt(ifTrue).NextIdx = ifFalse; // ifFalse hangs off ifTrue.NextIdx
         return AddNode(ExpressionType.Conditional, type, childIdx: test, extraIdx: ifTrue);
     }
 
+    /// <summary>Adds a Block node containing the given expressions and optional block-local variables.</summary>
     public Idx Block(Type type, Idx[] exprs, Idx[] variables = null)
     {
         var firstExprIdx = LinkList(exprs);
@@ -287,6 +334,7 @@ public struct ExpressionTree
         return AddNode(ExpressionType.Block, type, childIdx: firstExprIdx, extraIdx: firstVarIdx);
     }
 
+    /// <summary>Chains the given indices via <see cref="ExpressionNode.NextIdx"/> and returns the first index.</summary>
     public Idx LinkList(Idx[] indices)
     {
         if (indices == null || indices.Length == 0)
@@ -298,6 +346,7 @@ public struct ExpressionTree
     }
 
     // Allocates an enumerator — suitable for tests and diagnostics; avoid in hot paths.
+    /// <summary>Enumerates the sibling chain starting at <paramref name="head"/>. Allocates an enumerator — avoid in hot paths.</summary>
     public IEnumerable<Idx> Siblings(Idx head)
     {
         var cur = head;
@@ -309,6 +358,7 @@ public struct ExpressionTree
     }
 
     // Builds body after registering params so they are found in paramMap when encountered in the body.
+    /// <summary>Converts this flat tree to a <see cref="System.Linq.Expressions.Expression"/> rooted at <see cref="RootIdx"/>.</summary>
     public SysExpr ToSystemExpression()
     {
         var paramMap = default(SmallMap16<int, SysParam, IntEq>);
@@ -459,6 +509,7 @@ public struct ExpressionTree
     }
 
     // O(n) structural equality — no traversal, single pass over the flat arrays.
+    /// <summary>O(n) structural equality check. Compares both trees node-by-node in a single pass — no recursive traversal.</summary>
     public static bool StructurallyEqual(ref ExpressionTree a, ref ExpressionTree b)
     {
         if (a.NodeCount != b.NodeCount) return false;
@@ -494,6 +545,7 @@ public struct ExpressionTree
         return Equals(infoA, infoB);
     }
 
+    /// <summary>Returns a human-readable dump of all nodes and closure constants for diagnostics.</summary>
     public string Dump()
     {
         var sb = new System.Text.StringBuilder();
