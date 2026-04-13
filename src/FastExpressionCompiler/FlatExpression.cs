@@ -242,6 +242,7 @@ public struct ExpressionTree
         return indices[0];
     }
 
+    // Allocates an enumerator — suitable for tests and diagnostics; avoid in hot paths.
     public IEnumerable<Idx> Siblings(Idx head)
     {
         var cur = head;
@@ -253,9 +254,13 @@ public struct ExpressionTree
     }
 
     // Builds body after registering params so they are found in paramMap when encountered in the body.
-    public SysExpr ToSystemExpression() => ToSystemExpression(RootIdx, new Dictionary<int, SysParam>());
+    public SysExpr ToSystemExpression()
+    {
+        var paramMap = default(SmallMap16<int, SysParam, IntEq>);
+        return ToSystemExpression(RootIdx, ref paramMap);
+    }
 
-    private SysExpr ToSystemExpression(Idx nodeIdx, Dictionary<int, SysParam> paramMap)
+    private SysExpr ToSystemExpression(Idx nodeIdx, ref SmallMap16<int, SysParam, IntEq> paramMap)
     {
         if (nodeIdx.IsNil)
             throw new InvalidOperationException("Cannot convert nil Idx to System.Linq.Expressions");
@@ -274,11 +279,9 @@ public struct ExpressionTree
 
             case ExpressionType.Parameter:
             {
-                if (!paramMap.TryGetValue(nodeIdx.It, out var p))
-                {
+                ref var p = ref paramMap.Map.AddOrGetValueRef(nodeIdx.It, out var found);
+                if (!found)
                     p = SysExpr.Parameter(node.Type, node.Info as string);
-                    paramMap[nodeIdx.It] = p;
-                }
                 return p;
             }
 
@@ -291,20 +294,20 @@ public struct ExpressionTree
                 var paramExprs = new List<SysParam>();
                 if (paramIdxs != null)
                     foreach (var pIdx in paramIdxs)
-                        paramExprs.Add((SysParam)ToSystemExpression(pIdx, paramMap));
-                var body = ToSystemExpression(node.ChildIdx, paramMap);
+                        paramExprs.Add((SysParam)ToSystemExpression(pIdx, ref paramMap));
+                var body = ToSystemExpression(node.ChildIdx, ref paramMap);
                 return SysExpr.Lambda(node.Type, body, paramExprs);
             }
 
             case ExpressionType.New:
-                return SysExpr.New((ConstructorInfo)node.Info, SiblingList(node.ChildIdx, paramMap));
+                return SysExpr.New((ConstructorInfo)node.Info, SiblingList(node.ChildIdx, ref paramMap));
 
             case ExpressionType.Call:
             {
                 var method = (MethodInfo)node.Info;
                 return method.IsStatic
-                    ? SysExpr.Call(method, SiblingList(node.ChildIdx, paramMap))
-                    : SysExpr.Call(ToSystemExpression(node.ChildIdx, paramMap), method, SiblingList(node.ExtraIdx, paramMap));
+                    ? SysExpr.Call(method, SiblingList(node.ChildIdx, ref paramMap))
+                    : SysExpr.Call(ToSystemExpression(node.ChildIdx, ref paramMap), method, SiblingList(node.ExtraIdx, ref paramMap));
             }
 
             case ExpressionType.Add:
@@ -332,8 +335,8 @@ public struct ExpressionTree
             case ExpressionType.Power:
             case ExpressionType.Coalesce:
                 return SysExpr.MakeBinary(node.NodeType,
-                    ToSystemExpression(node.ChildIdx, paramMap),
-                    ToSystemExpression(node.ExtraIdx, paramMap),
+                    ToSystemExpression(node.ChildIdx, ref paramMap),
+                    ToSystemExpression(node.ExtraIdx, ref paramMap),
                     false, node.Info as MethodInfo);
 
             case ExpressionType.Negate:
@@ -353,24 +356,28 @@ public struct ExpressionTree
             case ExpressionType.PreDecrementAssign:
             case ExpressionType.PostDecrementAssign:
                 return SysExpr.MakeUnary(node.NodeType,
-                    ToSystemExpression(node.ChildIdx, paramMap),
+                    ToSystemExpression(node.ChildIdx, ref paramMap),
                     node.Type, node.Info as MethodInfo);
 
             case ExpressionType.Conditional:
                 return SysExpr.Condition(
-                    ToSystemExpression(node.ChildIdx, paramMap),
-                    ToSystemExpression(node.ExtraIdx, paramMap),
-                    ToSystemExpression(NodeAt(node.ExtraIdx).NextIdx, paramMap),
+                    ToSystemExpression(node.ChildIdx, ref paramMap),
+                    ToSystemExpression(node.ExtraIdx, ref paramMap),
+                    ToSystemExpression(NodeAt(node.ExtraIdx).NextIdx, ref paramMap),
                     node.Type);
 
             case ExpressionType.Block:
             {
-                var exprs = SiblingList(node.ChildIdx, paramMap);
+                var exprs = SiblingList(node.ChildIdx, ref paramMap);
                 if (node.ExtraIdx.IsNil)
                     return SysExpr.Block(node.Type, exprs);
                 var vars = new List<SysParam>();
-                foreach (var vIdx in Siblings(node.ExtraIdx))
-                    vars.Add((SysParam)ToSystemExpression(vIdx, paramMap));
+                var vCur = node.ExtraIdx;
+                while (!vCur.IsNil)
+                {
+                    vars.Add((SysParam)ToSystemExpression(vCur, ref paramMap));
+                    vCur = NodeAt(vCur).NextIdx;
+                }
                 return SysExpr.Block(node.Type, vars, exprs);
             }
 
@@ -380,11 +387,15 @@ public struct ExpressionTree
         }
     }
 
-    private List<SysExpr> SiblingList(Idx head, Dictionary<int, SysParam> paramMap)
+    private List<SysExpr> SiblingList(Idx head, ref SmallMap16<int, SysParam, IntEq> paramMap)
     {
         var list = new List<SysExpr>();
-        foreach (var idx in Siblings(head))
-            list.Add(ToSystemExpression(idx, paramMap));
+        var cur = head;
+        while (!cur.IsNil)
+        {
+            list.Add(ToSystemExpression(cur, ref paramMap));
+            cur = NodeAt(cur).NextIdx;
+        }
         return list;
     }
 
