@@ -8857,16 +8857,19 @@ namespace FastExpressionCompiler
         // reducing overhead further when emitting many related calls in sequence.
         // ─────────────────────────────────────────────────────────────────────────────
 
+        /// <summary>Returns true when the hack may be used: the ILGenerator is a DynamicILGenerator
+        /// and the declaring type (if any) is not a generic/array type.</summary>
+        [MethodImpl((MethodImplOptions)256)]
+        private static bool CanUseHackEmit(Type declaringType, ILGenerator il) =>
+            (declaringType == null || (!declaringType.IsGenericType && !declaringType.IsArray))
+            && il.GetType() == DynamicMethodHacks.DynamicILGeneratorType;
+
         /// <summary>Emits <c>call</c> to a static method that returns void.</summary>
         [MethodImpl((MethodImplOptions)256)]
         public static void DemitCallStaticVoid(this ILGenerator il, MethodInfo meth, int paramCount)
         {
-            if (UseILEmitHack)
-            {
-                var dt = meth.DeclaringType;
-                if ((dt == null || (!dt.IsGenericType && !dt.IsArray)) && il.GetType() == DynamicMethodHacks.DynamicILGeneratorType)
-                { DynamicMethodHacks.HackEmitMethodToken(il, OpCodes.Call, meth.MethodHandle, -paramCount); return; }
-            }
+            if (UseILEmitHack && CanUseHackEmit(meth.DeclaringType, il))
+            { DynamicMethodHacks.HackEmitMethodToken(il, OpCodes.Call, meth.MethodHandle, -paramCount); return; }
             il.Emit(OpCodes.Call, meth);
         }
 
@@ -8874,12 +8877,8 @@ namespace FastExpressionCompiler
         [MethodImpl((MethodImplOptions)256)]
         public static void DemitCallStatic(this ILGenerator il, MethodInfo meth, int paramCount)
         {
-            if (UseILEmitHack)
-            {
-                var dt = meth.DeclaringType;
-                if ((dt == null || (!dt.IsGenericType && !dt.IsArray)) && il.GetType() == DynamicMethodHacks.DynamicILGeneratorType)
-                { DynamicMethodHacks.HackEmitMethodToken(il, OpCodes.Call, meth.MethodHandle, 1 - paramCount); return; }
-            }
+            if (UseILEmitHack && CanUseHackEmit(meth.DeclaringType, il))
+            { DynamicMethodHacks.HackEmitMethodToken(il, OpCodes.Call, meth.MethodHandle, 1 - paramCount); return; }
             il.Emit(OpCodes.Call, meth);
         }
 
@@ -8887,12 +8886,8 @@ namespace FastExpressionCompiler
         [MethodImpl((MethodImplOptions)256)]
         public static void DemitCallInstanceVoid(this ILGenerator il, OpCode opcode, MethodInfo meth, int paramCount)
         {
-            if (UseILEmitHack)
-            {
-                var dt = meth.DeclaringType;
-                if ((dt == null || (!dt.IsGenericType && !dt.IsArray)) && il.GetType() == DynamicMethodHacks.DynamicILGeneratorType)
-                { DynamicMethodHacks.HackEmitMethodToken(il, opcode, meth.MethodHandle, -paramCount - 1); return; }
-            }
+            if (UseILEmitHack && CanUseHackEmit(meth.DeclaringType, il))
+            { DynamicMethodHacks.HackEmitMethodToken(il, opcode, meth.MethodHandle, -paramCount - 1); return; }
             il.Emit(opcode, meth);
         }
 
@@ -8900,12 +8895,8 @@ namespace FastExpressionCompiler
         [MethodImpl((MethodImplOptions)256)]
         public static void DemitCallInstance(this ILGenerator il, OpCode opcode, MethodInfo meth, int paramCount)
         {
-            if (UseILEmitHack)
-            {
-                var dt = meth.DeclaringType;
-                if ((dt == null || (!dt.IsGenericType && !dt.IsArray)) && il.GetType() == DynamicMethodHacks.DynamicILGeneratorType)
-                { DynamicMethodHacks.HackEmitMethodToken(il, opcode, meth.MethodHandle, -paramCount); return; }
-            }
+            if (UseILEmitHack && CanUseHackEmit(meth.DeclaringType, il))
+            { DynamicMethodHacks.HackEmitMethodToken(il, opcode, meth.MethodHandle, -paramCount); return; }
             il.Emit(opcode, meth);
         }
 
@@ -8913,12 +8904,8 @@ namespace FastExpressionCompiler
         [MethodImpl((MethodImplOptions)256)]
         public static void DemitNewobj(this ILGenerator il, ConstructorInfo ctor, int paramCount)
         {
-            if (UseILEmitHack)
-            {
-                var dt = ctor.DeclaringType;
-                if ((dt == null || (!dt.IsGenericType && !dt.IsArray)) && il.GetType() == DynamicMethodHacks.DynamicILGeneratorType)
-                { DynamicMethodHacks.HackEmitMethodToken(il, OpCodes.Newobj, ctor.MethodHandle, 1 - paramCount); return; }
-            }
+            if (UseILEmitHack && CanUseHackEmit(ctor.DeclaringType, il))
+            { DynamicMethodHacks.HackEmitMethodToken(il, OpCodes.Newobj, ctor.MethodHandle, 1 - paramCount); return; }
             il.Emit(OpCodes.Newobj, ctor);
         }
 
@@ -9690,7 +9677,7 @@ namespace FastExpressionCompiler
 
             // opcode (1 or 2 bytes) + token (4 bytes)
             int needed = opcode.Size + 4;
-            if (mLength + needed >= mILStream.Length)
+            if (mLength + needed > mILStream.Length)
                 Array.Resize(ref mILStream, Math.Max(mILStream.Length * 2, mLength + needed));
 
             if (opcode.Size == 1)
@@ -9722,7 +9709,7 @@ namespace FastExpressionCompiler
             ref byte[] mILStream = ref GetMILStream(il);
 
             int needed = opcode.Size + 4;
-            if (mLength + needed >= mILStream.Length)
+            if (mLength + needed > mILStream.Length)
                 Array.Resize(ref mILStream, Math.Max(mILStream.Length * 2, mLength + needed));
 
             if (opcode.Size == 1)
