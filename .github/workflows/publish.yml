@@ -41,7 +41,7 @@ jobs:
 
       # The classic NuGet CLI is required because .nuspec files are not supported by `dotnet pack`.
       - name: Install NuGet CLI
-        run: sudo apt-get install -y nuget
+        uses: nuget/setup-nuget@v2
 
       - name: Build
         run: dotnet build -c:Release
