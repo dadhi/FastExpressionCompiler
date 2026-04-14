@@ -3230,7 +3230,7 @@ namespace FastExpressionCompiler
                 ParamExprs paramExprs,
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
-                if (!TryEmit(expr.Expression, paramExprs, il, ref closure, setup, parent))
+                if (!TryEmitCore(expr.Expression, paramExprs, il, ref closure, setup, parent))
                     return false;
                 if ((parent & ParentFlags.IgnoreResult) != 0)
                     return true;
@@ -6311,7 +6311,7 @@ namespace FastExpressionCompiler
                 ParamExprs paramExprs,
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
-                if (!TryEmit(expr.Left, paramExprs, il, ref closure, setup, parent))
+                if (!TryEmitCore(expr.Left, paramExprs, il, ref closure, setup, parent))
                     return false;
 
                 var labelSkipRight = il.DefineLabel();
