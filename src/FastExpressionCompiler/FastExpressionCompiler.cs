@@ -768,6 +768,19 @@ namespace FastExpressionCompiler
             /// and when inlined in the parent lambda it is no longer the return but just a jump to the label.
             internal short CurrentInlinedLambdaInvokeIndex;
 
+            /// <summary>The IL generator for the current lambda being compiled</summary>
+            public ILGenerator IL;
+
+            /// <summary>The compiler flags for the current compilation</summary>
+            public CompilerFlags Flags;
+
+            /// <summary>The parameters of the current lambda being compiled</summary>
+#if LIGHT_EXPRESSION
+            public IParameterProvider ParamExprs;
+#else
+            public IReadOnlyList<PE> ParamExprs;
+#endif
+
             public ClosureStatus Status;
 
             /// Constant expressions to find an index (by reference) of constant expression from compiled expression.
