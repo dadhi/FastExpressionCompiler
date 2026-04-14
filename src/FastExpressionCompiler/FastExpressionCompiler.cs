@@ -2761,7 +2761,7 @@ namespace FastExpressionCompiler
                         // if the target expression type is of underlying nullable, and the left operand is not null,
                         // then extract its underlying value
                         EmitLoadLocalVariableAddress(il, varIndex);
-                        il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                        il.DemitLdfld(leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
                     }
                     else
                         EmitLoadLocalVariable(il, varIndex); // loading the value (not address) to return it
@@ -2974,7 +2974,7 @@ namespace FastExpressionCompiler
 
                                     // Check if the NonPassedArray field is being set (not null),
                                     // otherwise the nested lambda is not yet emitted, and it is not expected for the variable to be set inside it
-                                    il.Demit(OpCodes.Ldfld, NestedLambdaForNonPassedParams.NonPassedParamsField);
+                                    il.DemitLdfld(NestedLambdaForNonPassedParams.NonPassedParamsField);
 
                                     // Load the variable from the NonPassedParams array
                                     EmitLoadConstantInt(il, varIndexInNonPassedParams);
@@ -3115,7 +3115,7 @@ namespace FastExpressionCompiler
 
                 // Load non-passed argument from Closure - closure object is always a first argument
                 il.Demit(OpCodes.Ldarg_0);
-                il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
+                il.DemitLdfld(ArrayClosureWithNonPassedParamsField);
                 EmitLoadConstantInt(il, nonPassedParamIndex);
                 il.Demit(OpCodes.Ldelem_Ref);
                 return il.TryEmitUnboxOf(paramType);
@@ -3154,7 +3154,7 @@ namespace FastExpressionCompiler
 
                 // Load non-passed argument from Closure - closure object is always a first argument
                 il.Demit(OpCodes.Ldarg_0);
-                il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
+                il.DemitLdfld(ArrayClosureWithNonPassedParamsField);
                 EmitLoadConstantInt(il, nonPassedParamIndex);
                 il.Demit(OpCodes.Ldelem_Ref);
                 return true;
@@ -3442,7 +3442,7 @@ namespace FastExpressionCompiler
                         // If the nullable source has the value, do the conversion
                         il.DmarkLabel(labelSourceHasValue);
                         EmitLoadLocalVariableAddress(il, sourceVarIndex);
-                        il.Demit(OpCodes.Ldfld, sourceType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                        il.DemitLdfld(sourceType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
 
                         EmitMethodCallOrVirtualCall(il, convertMethod);
 
@@ -3491,7 +3491,7 @@ namespace FastExpressionCompiler
                     // If the nullable source has the value, do the conversion
                     il.DmarkLabel(labelSourceHasValue);
                     EmitLoadLocalVariableAddress(il, sourceVarIndex);
-                    il.Demit(OpCodes.Ldfld, sourceType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                    il.DemitLdfld(sourceType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
 
                     if (!TryEmitPrimitiveValueConvert(underlyingNullableSourceType, underlyingNullableTargetType, il, expr.NodeType == ExpressionType.ConvertChecked))
                         return false;
@@ -3665,7 +3665,7 @@ namespace FastExpressionCompiler
                         // for the multiple usages the field was loaded and saved into variable in `EmitLoadConstantsAndNestedLambdasIntoVars`
                         if (refField != null)
                         {
-                            il.Demit(OpCodes.Ldfld, refField);
+                            il.DemitLdfld(refField);
                             if (refField.FieldType != typeof(object))
                                 return true; // for typed constant we done,
                             // but the object ref field requires the normal constant treatment with unboxing of the ValueType or the cast
@@ -3814,7 +3814,7 @@ namespace FastExpressionCompiler
                 // todo: @perf load the field to `var` only if the constants are more than 1
                 // Load constants array field from Closure and store it into the variable
                 il.Demit(OpCodes.Ldarg_0);
-                il.Demit(OpCodes.Ldfld, ArrayClosureArrayField);
+                il.DemitLdfld(ArrayClosureArrayField);
                 EmitStoreLocalVariable(il, il.GetNextLocalVarIndex(typeof(object[]))); // always does Stloc_0, because it is done at start of the lambda emit
 
                 // important that the constant will contain the nested lambdas as well in the same array after the actual constants,
@@ -3865,7 +3865,7 @@ namespace FastExpressionCompiler
                     var field = value == 0 ?
                         _decimalZero ?? (_decimalZero = typeof(Decimal).GetField(nameof(Decimal.Zero))) :
                         _decimalOne ?? (_decimalOne = typeof(Decimal).GetField(nameof(Decimal.One)));
-                    il.Demit(OpCodes.Ldsfld, field);
+                    il.DemitLdsfld(field);
                     return;
                 }
 
@@ -3889,13 +3889,13 @@ namespace FastExpressionCompiler
 
                 if (value == decimal.MinValue)
                 {
-                    il.Demit(OpCodes.Ldsfld, typeof(decimal).GetField(nameof(decimal.MinValue)));
+                    il.DemitLdsfld(typeof(decimal).GetField(nameof(decimal.MinValue)));
                     return;
                 }
 
                 if (value == decimal.MaxValue)
                 {
-                    il.Demit(OpCodes.Ldsfld, typeof(decimal).GetField(nameof(decimal.MaxValue)));
+                    il.DemitLdsfld(typeof(decimal).GetField(nameof(decimal.MaxValue)));
                     return;
                 }
 
@@ -4500,7 +4500,7 @@ namespace FastExpressionCompiler
                                     il.Demit(OpCodes.Brfalse, leftOrRightNullableAreNullLabel = il.DefineLabel());
 
                                     EmitLoadLocalVariableAddress(il, rightVar);
-                                    il.Demit(OpCodes.Ldfld, rightType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod()); // unwrap right operand
+                                    il.DemitLdfld(rightType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod()); // unwrap right operand
                                 }
 
                                 if (!TryEmitArithmeticOperation(leftType, rightType, nodeType, exprType, il))
@@ -4524,7 +4524,7 @@ namespace FastExpressionCompiler
                                 il.Demit(OpCodes.Brfalse, leftOrRightNullableAreNullLabel = il.DefineLabel());
 
                                 EmitLoadLocalVariableAddress(il, leftNullableVar);
-                                il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                                il.DemitLdfld(leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
 
                                 EmitIncOrDec(il, nodeType == ExpressionType.Add);
                             }
@@ -4548,7 +4548,7 @@ namespace FastExpressionCompiler
                                     il.Demit(OpCodes.Brfalse, leftOrRightNullableAreNullLabel = il.DefineLabel());
 
                                     EmitLoadLocalVariableAddress(il, leftNullableVar);
-                                    il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                                    il.DemitLdfld(leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
 
                                     EmitLoadLocalVariable(il, rightVar);
                                 }
@@ -4563,10 +4563,10 @@ namespace FastExpressionCompiler
                                     il.Demit(OpCodes.Brfalse, leftOrRightNullableAreNullLabel = il.DefineLabel());
 
                                     EmitLoadLocalVariableAddress(il, leftNullableVar);
-                                    il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());  // unwrap left operand
+                                    il.DemitLdfld(leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());  // unwrap left operand
 
                                     EmitLoadLocalVariableAddress(il, rightVar);
-                                    il.Demit(OpCodes.Ldfld, rightType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod()); // unwrap right operand
+                                    il.DemitLdfld(rightType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod()); // unwrap right operand
                                 }
 
                                 if (!TryEmitArithmeticOperation(leftType, rightType, nodeType, exprType, il))
@@ -4768,7 +4768,7 @@ namespace FastExpressionCompiler
 
                     // load array field and param item index
                     il.Demit(OpCodes.Ldarg_0); // load closure as it is always an argument zero
-                    il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
+                    il.DemitLdfld(ArrayClosureWithNonPassedParamsField);
                     EmitLoadConstantInt(il, nonPassedParamIndex);
 
                     EmitLoadLocalVariable(il, rightVar);
@@ -4789,7 +4789,7 @@ namespace FastExpressionCompiler
                 if (resultVar != -1 & isPost)
                 {
                     il.Demit(OpCodes.Ldarg_0); // load closure as it is always an argument zero
-                    il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
+                    il.DemitLdfld(ArrayClosureWithNonPassedParamsField);
                     EmitLoadConstantInt(il, nonPassedParamIndex);
                     il.Demit(OpCodes.Ldelem_Ref); // load the variable from array
                     if (exprType.IsValueType)
@@ -4809,7 +4809,7 @@ namespace FastExpressionCompiler
                 EmitStoreLocalVariable(il, arithmeticResultVar);
 
                 il.Demit(OpCodes.Ldarg_0); // load closure as it is always an argument zero
-                il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
+                il.DemitLdfld(ArrayClosureWithNonPassedParamsField);
                 EmitLoadConstantInt(il, nonPassedParamIndex);
 
                 EmitLoadLocalVariable(il, arithmeticResultVar);
@@ -5147,11 +5147,11 @@ namespace FastExpressionCompiler
                         {
                             if (objExpr.Type.IsEnum)
                                 EmitStoreAndLoadLocalVariableAddress(il, objExpr.Type);
-                            il.Demit(OpCodes.Ldfld, field);
+                            il.DemitLdfld(field);
                         }
                         else
                         {
-                            il.Demit(OpCodes.Ldflda, field);
+                            il.DemitLdflda(field);
                             if ((parent & ParentFlags.AssignmentLeftValue) != 0)
                                 il.Demit(OpCodes.Dup);
                         }
@@ -5169,7 +5169,7 @@ namespace FastExpressionCompiler
                     {
                         if (parent.IgnoresResult())
                             return true; // do nothing
-                        il.Demit(OpCodes.Ldsfld, field);
+                        il.DemitLdsfld(field);
                     }
                     return true;
                 }
@@ -5217,7 +5217,7 @@ namespace FastExpressionCompiler
                 // Store the NonPassedParams back into the NestedLambda wrapper for the #437.
                 // Also, it is needed to be able to assign the closed variable after the closure is passed to the lambda,
                 // e.g. `var x = 1; var f = () => x + 1; x = 2; f();` expects 3, not 2
-                il.Demit(OpCodes.Stfld, NestedLambdaForNonPassedParams.NonPassedParamsField);
+                il.DemitStfld(NestedLambdaForNonPassedParams.NonPassedParamsField);
 
                 // Populate the NonPassedParams array
                 for (var nestedParamIndex = 0; nestedParamIndex < nonPassedParamsCount; ++nestedParamIndex)
@@ -5257,7 +5257,7 @@ namespace FastExpressionCompiler
 
                             // Load the parameter from outer closure `Items` array
                             il.Demit(OpCodes.Ldarg_0); // closure is always a first argument
-                            il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
+                            il.DemitLdfld(ArrayClosureWithNonPassedParamsField);
                             EmitLoadConstantInt(il, outerNonPassedParamIndex);
                             il.Demit(OpCodes.Ldelem_Ref);
                         }
@@ -5269,7 +5269,7 @@ namespace FastExpressionCompiler
 
                 // Load the actual lambda delegate on stack
                 EmitLoadLocalVariable(il, nestedLambdaInfo.LambdaVarIndex);
-                il.Demit(OpCodes.Ldfld, NestedLambdaForNonPassedParams.NestedLambdaField);
+                il.DemitLdfld(NestedLambdaForNonPassedParams.NestedLambdaField);
 
                 // Load the nonPassedParams as a first argument of closure
                 EmitLoadLocalVariable(il, nonPassedParamsVarIndex);
@@ -5279,7 +5279,7 @@ namespace FastExpressionCompiler
                 if (lambda is NestedLambdaForNonPassedParamsWithConstants)
                 {
                     EmitLoadLocalVariable(il, nestedLambdaInfo.LambdaVarIndex);
-                    il.Demit(OpCodes.Ldfld, NestedLambdaForNonPassedParamsWithConstants.ConstantsAndNestedLambdasField);
+                    il.DemitLdfld(NestedLambdaForNonPassedParamsWithConstants.ConstantsAndNestedLambdasField);
                     il.Demit(OpCodes.Newobj, ArrayClosureWithNonPassedParamsAndConstantsCtor);
                 }
                 else
@@ -5816,11 +5816,11 @@ namespace FastExpressionCompiler
 
                         // Compare the switch value with the case value via Ceq or comparison method and then compare the HasValue of both
                         EmitLoadLocalVariableAddress(il, switchValueVar);
-                        il.Demit(OpCodes.Ldfld, switchNullableUnsafeValueField);
+                        il.DemitLdfld(switchNullableUnsafeValueField);
                         if (!TryEmit(caseTestValue, paramExprs, il, ref closure, setup, switchValueParent, param1ByRefIndex))
                             return false;
                         var caseValueVar = EmitStoreAndLoadLocalVariableAddress(il, switchValueType);
-                        il.Demit(OpCodes.Ldfld, switchNullableUnsafeValueField);
+                        il.DemitLdfld(switchNullableUnsafeValueField);
                         if (equalityMethod == null)
                             il.Demit(OpCodes.Ceq);
                         else if (!EmitMethodCall(il, equalityMethod))
@@ -5953,7 +5953,7 @@ namespace FastExpressionCompiler
                     else if (leftIsNullable)
                     {
                         lVarIndex = EmitStoreAndLoadLocalVariableAddress(il, leftType);
-                        il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                        il.DemitLdfld(leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
                         leftType = Nullable.GetUnderlyingType(leftType);
                     }
                 }
@@ -5992,7 +5992,7 @@ namespace FastExpressionCompiler
                     else
                     {
                         EmitLoadLocalVariableAddress(il, lVarIndex);
-                        il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                        il.DemitLdfld(leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
                         leftType = Nullable.GetUnderlyingType(leftType);
                     }
 
@@ -6001,7 +6001,7 @@ namespace FastExpressionCompiler
                     else
                     {
                         EmitLoadLocalVariableAddress(il, rVarIndex);
-                        il.Demit(OpCodes.Ldfld, rightType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                        il.DemitLdfld(rightType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
                         rightType = Nullable.GetUnderlyingType(rightType);
                     }
                 }
@@ -6015,7 +6015,7 @@ namespace FastExpressionCompiler
                 else if (rightType.IsNullable())
                 {
                     rVarIndex = EmitStoreAndLoadLocalVariableAddress(il, rightType);
-                    il.Demit(OpCodes.Ldfld, rightType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                    il.DemitLdfld(rightType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
                     rightType = Nullable.GetUnderlyingType(rightType);
                 }
 
@@ -6190,7 +6190,7 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Brfalse, noNullableValueLabel);
 
                     EmitLoadLocalVariableAddress(il, leftVar);
-                    il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                    il.DemitLdfld(leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
                     leftValueVar = EmitStoreLocalVariable(il, Nullable.GetUnderlyingType(leftType));
                 }
                 else if (!TryEmit(left, paramExprs, il, ref closure, setup, flags))
@@ -6224,7 +6224,7 @@ namespace FastExpressionCompiler
                         il.Demit(OpCodes.Brfalse, noNullableValueLabel);
 
                         EmitLoadLocalVariableAddress(il, rightVar);
-                        il.Demit(OpCodes.Ldfld, rightType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                        il.DemitLdfld(rightType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
                         rightValueVar = EmitStoreLocalVariable(il, Nullable.GetUnderlyingType(rightType));
                     }
                     else if (!TryEmit(right, paramExprs, il, ref closure, setup, flags))
@@ -8782,6 +8782,38 @@ namespace FastExpressionCompiler
             Debug.WriteLine($"{opcode} {value}  -- {emitterName}:{emitterLine}");
         }
 
+        [MethodImpl((MethodImplOptions)256)]
+        public static void DemitLdfld(this ILGenerator il, FieldInfo field, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
+        {
+            il.Emit(OpCodes.Ldfld, field);
+            if (DisableDemit) return;
+            Debug.WriteLine($"ldfld {field.FieldType.ToCode(stripNamespace: true)} {field.DeclaringType?.ToCode(stripNamespace: true)}.{field.Name}  -- {emitterName}:{emitterLine}");
+        }
+
+        [MethodImpl((MethodImplOptions)256)]
+        public static void DemitStfld(this ILGenerator il, FieldInfo field, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
+        {
+            il.Emit(OpCodes.Stfld, field);
+            if (DisableDemit) return;
+            Debug.WriteLine($"stfld {field.FieldType.ToCode(stripNamespace: true)} {field.DeclaringType?.ToCode(stripNamespace: true)}.{field.Name}  -- {emitterName}:{emitterLine}");
+        }
+
+        [MethodImpl((MethodImplOptions)256)]
+        public static void DemitLdsfld(this ILGenerator il, FieldInfo field, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
+        {
+            il.Emit(OpCodes.Ldsfld, field);
+            if (DisableDemit) return;
+            Debug.WriteLine($"ldsfld {field.FieldType.ToCode(stripNamespace: true)} {field.DeclaringType?.ToCode(stripNamespace: true)}.{field.Name}  -- {emitterName}:{emitterLine}");
+        }
+
+        [MethodImpl((MethodImplOptions)256)]
+        public static void DemitLdflda(this ILGenerator il, FieldInfo field, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
+        {
+            il.Emit(OpCodes.Ldflda, field);
+            if (DisableDemit) return;
+            Debug.WriteLine($"ldflda {field.FieldType.ToCode(stripNamespace: true)} {field.DeclaringType?.ToCode(stripNamespace: true)}.{field.Name}  -- {emitterName}:{emitterLine}");
+        }
+
 #else // no DEMIT! :-)
 
         [MethodImpl((MethodImplOptions)256)]
@@ -8850,21 +8882,61 @@ namespace FastExpressionCompiler
         [MethodImpl((MethodImplOptions)256)]
         public static void Demit(this ILGenerator il, string value, OpCode opcode) => il.Emit(opcode, value);
 
-#if SUPPORTS_IL_EMIT_HACK
-        // ─────────────────────────────────────────────────────────────────────────────
-        // Specialized emit helpers for when the call site already knows method metadata.
-        // These skip the IsStatic / ReturnType / GetParameters checks inside Demit(),
-        // reducing overhead further when emitting many related calls in sequence.
-        // ─────────────────────────────────────────────────────────────────────────────
+        // Specialized field-access helpers that hardcode the opcode and stack change,
+        // avoiding the runtime opcode switch in HackEmitField when the call site already knows the operation.
 
-        /// <summary>Returns true when the hack may be used: the ILGenerator is a DynamicILGenerator
-        /// and the declaring type (if any) is not a generic/array type.</summary>
+        [MethodImpl((MethodImplOptions)256)]
+        public static void DemitLdfld(this ILGenerator il, FieldInfo field)
+        {
+#if SUPPORTS_IL_EMIT_HACK
+            if (UseILEmitHack && CanUseHackEmit(field.DeclaringType, il))
+            { DynamicMethodHacks.HackEmitFieldToken(il, OpCodes.Ldfld, field.FieldHandle, 0); return; }
+#endif
+            il.Emit(OpCodes.Ldfld, field);
+        }
+
+        [MethodImpl((MethodImplOptions)256)]
+        public static void DemitStfld(this ILGenerator il, FieldInfo field)
+        {
+#if SUPPORTS_IL_EMIT_HACK
+            if (UseILEmitHack && CanUseHackEmit(field.DeclaringType, il))
+            { DynamicMethodHacks.HackEmitFieldToken(il, OpCodes.Stfld, field.FieldHandle, -2); return; }
+#endif
+            il.Emit(OpCodes.Stfld, field);
+        }
+
+        [MethodImpl((MethodImplOptions)256)]
+        public static void DemitLdsfld(this ILGenerator il, FieldInfo field)
+        {
+#if SUPPORTS_IL_EMIT_HACK
+            if (UseILEmitHack && CanUseHackEmit(field.DeclaringType, il))
+            { DynamicMethodHacks.HackEmitFieldToken(il, OpCodes.Ldsfld, field.FieldHandle, 1); return; }
+#endif
+            il.Emit(OpCodes.Ldsfld, field);
+        }
+
+        [MethodImpl((MethodImplOptions)256)]
+        public static void DemitLdflda(this ILGenerator il, FieldInfo field)
+        {
+#if SUPPORTS_IL_EMIT_HACK
+            if (UseILEmitHack && CanUseHackEmit(field.DeclaringType, il))
+            { DynamicMethodHacks.HackEmitFieldToken(il, OpCodes.Ldflda, field.FieldHandle, 0); return; }
+#endif
+            il.Emit(OpCodes.Ldflda, field);
+        }
+
+
+#if SUPPORTS_IL_EMIT_HACK
+        // Specialized emit helpers where the call site already knows the opcode/isStatic/return-type/param-count,
+        // skipping the reflection-based checks inside HackEmitMethod/Ctor/Field.
+
+        // True when il is a DynamicILGenerator and the declaring type (if any) is not generic/array.
         [MethodImpl((MethodImplOptions)256)]
         private static bool CanUseHackEmit(Type declaringType, ILGenerator il) =>
             (declaringType == null || (!declaringType.IsGenericType && !declaringType.IsArray))
             && il.GetType() == DynamicMethodHacks.DynamicILGeneratorType;
 
-        /// <summary>Emits <c>call</c> to a static method that returns void.</summary>
+        /// <summary>Emits <c>call</c> to a static void method.</summary>
         [MethodImpl((MethodImplOptions)256)]
         public static void DemitCallStaticVoid(this ILGenerator il, MethodInfo meth, int paramCount)
         {
@@ -8873,7 +8945,7 @@ namespace FastExpressionCompiler
             il.Emit(OpCodes.Call, meth);
         }
 
-        /// <summary>Emits <c>call</c> to a static method that returns a value (pushes +1).</summary>
+        /// <summary>Emits <c>call</c> to a static method returning a value (net stack: 1 - paramCount).</summary>
         [MethodImpl((MethodImplOptions)256)]
         public static void DemitCallStatic(this ILGenerator il, MethodInfo meth, int paramCount)
         {
@@ -8882,7 +8954,7 @@ namespace FastExpressionCompiler
             il.Emit(OpCodes.Call, meth);
         }
 
-        /// <summary>Emits <c>call</c>/<c>callvirt</c> to an instance method that returns void.</summary>
+        /// <summary>Emits <c>call</c>/<c>callvirt</c> to an instance void method (net stack: -paramCount - 1).</summary>
         [MethodImpl((MethodImplOptions)256)]
         public static void DemitCallInstanceVoid(this ILGenerator il, OpCode opcode, MethodInfo meth, int paramCount)
         {
@@ -8891,7 +8963,7 @@ namespace FastExpressionCompiler
             il.Emit(opcode, meth);
         }
 
-        /// <summary>Emits <c>call</c>/<c>callvirt</c> to an instance method that returns a value (net stack: -paramCount).</summary>
+        /// <summary>Emits <c>call</c>/<c>callvirt</c> to an instance method returning a value (net stack: -paramCount).</summary>
         [MethodImpl((MethodImplOptions)256)]
         public static void DemitCallInstance(this ILGenerator il, OpCode opcode, MethodInfo meth, int paramCount)
         {
@@ -8900,7 +8972,7 @@ namespace FastExpressionCompiler
             il.Emit(opcode, meth);
         }
 
-        /// <summary>Emits <c>newobj</c> for a constructor (net stack: 1 - paramCount).</summary>
+        /// <summary>Emits <c>newobj</c> (net stack: 1 - paramCount).</summary>
         [MethodImpl((MethodImplOptions)256)]
         public static void DemitNewobj(this ILGenerator il, ConstructorInfo ctor, int paramCount)
         {
@@ -8909,19 +8981,9 @@ namespace FastExpressionCompiler
             il.Emit(OpCodes.Newobj, ctor);
         }
 
-        // ─────────────────────────────────────────────────────────────────────────────
-        // ILEmitContext: caches refs to m_length and m_ILStream for a sequence of emits,
-        // eliminating the per-call UAT field accesses when emitting multiple instructions.
-        //
-        // Usage (NET10+ only, ref struct so stack-only):
-        //   var ctx = new DynamicMethodHacks.ILEmitContext(il);
-        //   ctx.EmitBatch(OpCodes.Ldarg_0, /* stackChange */ 1,
-        //                 OpCodes.Ldfld, fieldHandle, /* stackChange */ 0);
-        //
-        // todo: @perf wire up call sites once the batch helpers cover enough patterns
-        // ─────────────────────────────────────────────────────────────────────────────
-#endif
-#endif
+        // todo: @perf ILEmitContext - cache refs to m_length/m_ILStream for a sequence of emits once batch helpers cover enough patterns.
+#endif // SUPPORTS_IL_EMIT_HACK
+#endif // no DEMIT
     }
 
     /// <summary>Reflecting the internal methods to access the more performant for defining the local variable</summary>
@@ -9121,7 +9183,7 @@ namespace FastExpressionCompiler
                     {
                         il.Demit(OpCodes.Ldarg_2);
                         il.Demit(OpCodes.Call, GetLocalVarSigHelperMethod);
-                        il.Demit(OpCodes.Stfld, field);
+                        il.DemitStfld(field);
                         continue;
                     }
 
@@ -9130,7 +9192,7 @@ namespace FastExpressionCompiler
                     {
                         il.Demit(OpCodes.Ldarg_2);
                         il.Demit(OpCodes.Newobj, ScopeTreeCtor);
-                        il.Demit(OpCodes.Stfld, field);
+                        il.DemitStfld(field);
                         continue;
                     }
 
@@ -9139,7 +9201,7 @@ namespace FastExpressionCompiler
                     {
                         il.Demit(OpCodes.Ldarg_2);
                         il.Demit(OpCodes.Ldarg_1);
-                        il.Demit(OpCodes.Stfld, field);
+                        il.DemitStfld(field);
                         continue;
                     }
 
@@ -9148,7 +9210,7 @@ namespace FastExpressionCompiler
 
                     il.Demit(OpCodes.Ldarg_2);
                     ExpressionCompiler.EmittingVisitor.EmitDefault(il, field.FieldType);
-                    il.Demit(OpCodes.Stfld, field);
+                    il.DemitStfld(field);
                 }
 
                 // var scope = new DynamicScope();
@@ -9635,30 +9697,13 @@ namespace FastExpressionCompiler
         internal static extern ref System.Collections.Generic.List<object> GetMTokens(
             [UnsafeAccessorType("System.Reflection.Emit.DynamicScope")] object scope);
 
-        // ─────────────────────────────────────────────────────────────────────────────
         // Core helpers for the SUPPORTS_IL_EMIT_HACK fast-emit path.
-        //
-        // Architecture:
-        //   • GetScopeTokens(il)  — one reflection get per call (m_scope), then UAT for m_tokens
-        //   • HackEmitMethodToken — core: write opcode bytes + token + UpdateStackSize
-        //   • HackEmitMethod/Ctor/Field — compute stack change from reflection, then delegate
-        //
-        // Capacity handling mirrors ILGenerator.IncreaseCapacity: Array.Resize to 2× or mLength+needed.
-        //
-        // Common opcode+token sizes:
-        //   Call/Callvirt/Newobj/Ldfld/Stfld etc.: 1-byte opcode + 4-byte token = 5 bytes total.
-        //
-        // Batch patterns seen in FEC (each pair avoids a second EnsureCapacity call):
-        //   Ldarg_0 + Ldfld  (load closure field)          → DemitLdarg0Ldfld
-        //   Stloc_N + Ldloc_N  (store+load local)          → already in EmitStoreAndLoadLocalVariable
-        //   Stloc_N + Ldloca_N (store+load address)        → already in EmitStoreAndLoadLocalVariableAddress
-        //   Dup + Brtrue/Brfalse + Pop  (null check)       → future batch candidate
-        //   todo: @perf add DemitLdarg0Ldfld batch helper once benchmark confirms savings
-        // ─────────────────────────────────────────────────────────────────────────────
+        // GetScopeTokens: one reflection get for m_scope (non-public return type prevents UAT), then UAT for m_tokens.
+        // HackEmitMethodToken/HackEmitFieldToken: write opcode bytes + token + UpdateStackSize.
+        // HackEmitMethod/Ctor/Field: compute stack change from reflection metadata; fall back for generic/array types and non-DynamicILGenerator.
+        // todo: @perf batch candidates: Ldarg_0+Ldfld (closure load), Dup+Brtrue/Brfalse+Pop (null check)
 
-        /// <summary>Gets a ref to the <c>m_tokens</c> list from an ILGenerator's dynamic scope.
-        /// Requires one reflection field-get for <c>m_scope</c> (whose return type DynamicScope is
-        /// non-public and therefore cannot be expressed as a UnsafeAccessorType return type).</summary>
+        // Gets m_tokens from the dynamic scope; one reflection get for m_scope (non-public return type prevents UAT).
         [MethodImpl((MethodImplOptions)256)]
         private static ref List<object> GetScopeTokens(ILGenerator il)
         {
@@ -9666,9 +9711,7 @@ namespace FastExpressionCompiler
             return ref GetMTokens(scope);
         }
 
-        /// <summary>Core IL-stream write for a single-byte opcode followed by a 4-byte method/ctor token.
-        /// Only valid for methods on non-generic, non-array declaring types.
-        /// For generic/array types, fall back to ILGenerator.Emit().</summary>
+        // Core IL-stream write for a method/ctor token (non-generic, non-array declaring types only).
         [MethodImpl((MethodImplOptions)256)]
         internal static void HackEmitMethodToken(ILGenerator il, OpCode opcode, RuntimeMethodHandle handle, int stackChange)
         {
@@ -9688,9 +9731,7 @@ namespace FastExpressionCompiler
                 mILStream[mLength++] = (byte)opcode.Value;
             }
 
-            // DynamicScope.m_tokens: simple methods → RuntimeMethodHandle; generic type methods → GenericMethodInfo.
-            // Since GenericMethodInfo is an internal runtime type we cannot construct without reflection,
-            // HackEmitMethod/Ctor fall back to il.Emit() for generic types before reaching here.
+            // Store RuntimeMethodHandle directly; HackEmitMethod/Ctor ensure non-generic types reach here.
             ref var mTokens = ref GetScopeTokens(il);
             mTokens.Add(handle);
             int token = (mTokens.Count - 1) | 0x06000000;
@@ -9700,10 +9741,9 @@ namespace FastExpressionCompiler
             UpdateStackSize(il, opcode, stackChange);
         }
 
-        /// <summary>Core IL-stream write for a single-byte opcode followed by a 4-byte field token.
-        /// Stores a RuntimeFieldHandle directly (DynamicResolver handles this for both generic and non-generic fields).</summary>
+        // Core IL-stream write for a field token. Stores RuntimeFieldHandle directly (DynamicResolver handles it).
         [MethodImpl((MethodImplOptions)256)]
-        private static void HackEmitFieldToken(ILGenerator il, OpCode opcode, RuntimeFieldHandle handle, int stackChange)
+        internal static void HackEmitFieldToken(ILGenerator il, OpCode opcode, RuntimeFieldHandle handle, int stackChange)
         {
             ref int mLength = ref GetMLength(il);
             ref byte[] mILStream = ref GetMILStream(il);
@@ -9720,9 +9760,7 @@ namespace FastExpressionCompiler
                 mILStream[mLength++] = (byte)opcode.Value;
             }
 
-            // Store the field handle directly; DynamicResolver.ResolveToken handles RuntimeFieldHandle.
-            // The runtime always calls GetTokenFor(field, declaringType) which stores GenericFieldInfo,
-            // but RuntimeFieldHandle alone is sufficient for the JIT to locate the field.
+            // Store the field handle; DynamicResolver.ResolveToken handles RuntimeFieldHandle directly.
             ref var mTokens = ref GetScopeTokens(il);
             mTokens.Add(handle);
             int token = (mTokens.Count - 1) | 0x04000000;
@@ -9732,25 +9770,14 @@ namespace FastExpressionCompiler
             UpdateStackSize(il, opcode, stackChange);
         }
 
-        /// <summary>Emits a method-calling opcode, computing stack change from reflection metadata.</summary>
         [MethodImpl((MethodImplOptions)256)]
         internal static void HackEmitMethod(ILGenerator il, OpCode opcode, MethodInfo meth)
         {
-            // The hack only works for DynamicILGenerator (il from DynamicMethod.GetILGenerator).
-            // Fall back for RuntimeILGenerator (e.g., MethodBuilder.GetILGenerator).
-            if (il.GetType() != DynamicILGeneratorType) { il.Emit(opcode, meth); return; }
+            var dt = meth.DeclaringType;
+            if (il.GetType() != DynamicILGeneratorType || (dt != null && (dt.IsGenericType || dt.IsArray)))
+            { il.Emit(opcode, meth); return; }
 
-            // Fall back for methods on generic/array types: DynamicScope requires GenericMethodInfo
-            // (an internal runtime type) for these; we cannot construct it without reflection overhead.
-            var declaringType = meth.DeclaringType;
-            if (declaringType != null && (declaringType.IsGenericType || declaringType.IsArray))
-            {
-                il.Emit(opcode, meth);
-                return;
-            }
-
-            // Mirror the stack-change logic in ILGenerator.Emit(OpCode, MethodInfo):
-            // push return value if non-void, pop each parameter, pop 'this' if instance (except newobj/ldtoken/ldftn)
+            // Mirror ILGenerator.Emit(OpCode, MethodInfo): +1 for non-void return, -params, -1 for instance (except newobj/ldtoken/ldftn)
             int stackChange = 0;
             if (meth.ReturnType != typeof(void))
                 stackChange++;
@@ -9762,57 +9789,38 @@ namespace FastExpressionCompiler
             HackEmitMethodToken(il, opcode, meth.MethodHandle, stackChange);
         }
 
-        /// <summary>Emits a constructor-calling opcode, computing stack change from reflection metadata.</summary>
         [MethodImpl((MethodImplOptions)256)]
         internal static void HackEmitCtor(ILGenerator il, OpCode opcode, ConstructorInfo ctor)
         {
-            // Fall back for non-DynamicILGenerator (e.g., MethodBuilder's IL generator)
-            if (il.GetType() != DynamicILGeneratorType) { il.Emit(opcode, ctor); return; }
-
-            // Fall back for ctors on generic/array types
-            var declaringType = ctor.DeclaringType;
-            if (declaringType != null && (declaringType.IsGenericType || declaringType.IsArray))
-            {
-                il.Emit(opcode, ctor);
-                return;
-            }
+            var dt = ctor.DeclaringType;
+            if (il.GetType() != DynamicILGeneratorType || (dt != null && (dt.IsGenericType || dt.IsArray)))
+            { il.Emit(opcode, ctor); return; }
 
             // Mirror ILGenerator.Emit(OpCode, ConstructorInfo): newobj pushes 1, pops all parameters
             int stackChange = opcode.Equals(OpCodes.Newobj) ? 1 - ctor.GetParameters().Length : 0;
             HackEmitMethodToken(il, opcode, ctor.MethodHandle, stackChange);
         }
 
-        /// <summary>Emits a field-access opcode, computing stack change from opcode semantics.</summary>
         [MethodImpl((MethodImplOptions)256)]
         internal static void HackEmitField(ILGenerator il, OpCode opcode, FieldInfo field)
         {
-            // Fall back for non-DynamicILGenerator (e.g., MethodBuilder's IL generator)
-            if (il.GetType() != DynamicILGeneratorType) { il.Emit(opcode, field); return; }
+            // Fall back for generic/array types: ILReader's DynamicScopeTokenResolver.AsField calls
+            // GetFieldFromHandle(handle) without type context, which throws for generic types.
+            var dt = field.DeclaringType;
+            if (il.GetType() != DynamicILGeneratorType || (dt != null && (dt.IsGenericType || dt.IsArray)))
+            { il.Emit(opcode, field); return; }
 
-            // Fall back for fields on generic/array types: the ILReader's DynamicScopeTokenResolver.AsField
-            // calls FieldInfo.GetFieldFromHandle(handle) without a type context, which throws for generic types.
-            // Also DynamicILGenerator.Emit always stores GenericFieldInfo (not RuntimeFieldHandle) for such fields.
-            var declaringType = field.DeclaringType;
-            if (declaringType != null && (declaringType.IsGenericType || declaringType.IsArray))
-            {
-                il.Emit(opcode, field);
-                return;
-            }
-
-            // Mirror ILGenerator.Emit(OpCode, FieldInfo) stack-change rules:
-            //   Ldfld/Ldflda:  pop obj, push value/addr  → net 0
-            //   Stfld:         pop obj + value           → net -2
-            //   Ldsfld/Ldsflda: push value/addr          → net +1
-            //   Stsfld:        pop value                 → net -1
+            // Ldfld/Ldflda: net 0 (pop obj, push value/addr); Stfld: -2 (pop obj+value);
+            // Ldsfld/Ldsflda: +1 (push value/addr); Stsfld: -1 (pop value)
             int stackChange;
             if (opcode.Equals(OpCodes.Ldfld) || opcode.Equals(OpCodes.Ldflda))
-                stackChange = 0;    // pop obj (-1) + push value/addr (+1) = 0
+                stackChange = 0;
             else if (opcode.Equals(OpCodes.Stfld))
-                stackChange = -2;   // pop obj + pop value
+                stackChange = -2;
             else if (opcode.Equals(OpCodes.Ldsfld) || opcode.Equals(OpCodes.Ldsflda))
-                stackChange = 1;    // push value/addr
+                stackChange = 1;
             else // Stsfld
-                stackChange = -1;   // pop value
+                stackChange = -1;
             HackEmitFieldToken(il, opcode, field.FieldHandle, stackChange);
         }
 #endif
