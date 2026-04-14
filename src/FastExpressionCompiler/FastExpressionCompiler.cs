@@ -2066,7 +2066,7 @@ namespace FastExpressionCompiler
             private static readonly MethodInfo _objectEqualsMethod =
                 ((Func<object, object, bool>)object.Equals).Method;
 
-            private struct FastExpressionCompiler
+            private struct EmitContext
             {
                 private readonly ParamExprs _paramExprs;
                 private readonly ILGenerator _il;
@@ -2074,7 +2074,7 @@ namespace FastExpressionCompiler
 
                 public ClosureInfo Closure;
 
-                public FastExpressionCompiler(ParamExprs paramExprs, ILGenerator il, ClosureInfo closure, CompilerFlags setup)
+                public EmitContext(ParamExprs paramExprs, ILGenerator il, ClosureInfo closure, CompilerFlags setup)
                 {
                     _paramExprs = paramExprs;
                     _il = il;
@@ -2091,7 +2091,7 @@ namespace FastExpressionCompiler
                 ParamExprs paramExprs,
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent, int byRefIndex = -1)
             {
-                var compiler = new FastExpressionCompiler(paramExprs, il, closure, setup);
+                var compiler = new EmitContext(paramExprs, il, closure, setup);
                 var emitted = compiler.TryEmit(expr, parent, byRefIndex);
                 closure = compiler.Closure;
                 return emitted;
