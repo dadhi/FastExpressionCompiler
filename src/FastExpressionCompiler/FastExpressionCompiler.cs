@@ -62,6 +62,11 @@ namespace FastExpressionCompiler
     using FastExpressionCompiler.ILDecoder;
     using static FastExpressionCompiler.ImTools.SmallMap;
 #endif
+#if LIGHT_EXPRESSION
+    using ParamExprs = FastExpressionCompiler.LightExpression.IParameterProvider;
+#else
+    using ParamExprs = System.Collections.Generic.IReadOnlyList<System.Linq.Expressions.ParameterExpression>;
+#endif
     using System;
     using System.Collections;
     using System.Collections.Generic;
@@ -1237,11 +1242,7 @@ namespace FastExpressionCompiler
         /// Important: The method collects the info from the nested lambdas up-front and de-duplicates the lambdas as well.</summary>
         [MethodImpl((MethodImplOptions)256)]
         public static bool TryCollectBoundConstants(ref ClosureInfo closure, Expression expr,
-#if LIGHT_EXPRESSION
-            IParameterProvider paramExprs, // `paramExprs` are required for nested lambda compilation
-#else
-            IReadOnlyList<PE> paramExprs,
-#endif
+            ParamExprs paramExprs, // `paramExprs` are required for nested lambda compilation
             NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, CompilerFlags flags)
         {
             var r = TryCollectInfo(ref closure, expr, paramExprs, nestedLambda, ref rootNestedLambdas, flags);
@@ -1251,11 +1252,7 @@ namespace FastExpressionCompiler
         /// <summary>Collects the information about closure constants, nested lambdas, non-passed parameters, goto labels and variables in blocks.
         /// Returns `OK` result if everything is fine and other result for error.</summary>
         public static Result TryCollectInfo(ref ClosureInfo closure, Expression expr,
-#if LIGHT_EXPRESSION
-            IParameterProvider paramExprs,
-#else
-            IReadOnlyList<PE> paramExprs,
-#endif
+            ParamExprs paramExprs,
             NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, CompilerFlags flags)
         {
             var r = Result.OK;
@@ -1918,11 +1915,7 @@ namespace FastExpressionCompiler
         }
 
         private static Result TryCollectListInitExprConstants(ref ClosureInfo closure, ListInitExpression expr,
-#if LIGHT_EXPRESSION
-            IParameterProvider paramExprs,
-#else
-            IReadOnlyList<PE> paramExprs,
-#endif
+            ParamExprs paramExprs,
             NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, CompilerFlags flags)
         {
             var newExpr = expr.NewExpression;
@@ -1946,11 +1939,7 @@ namespace FastExpressionCompiler
         }
 
         private static Result TryCollectTryExprInfo(ref ClosureInfo closure, TryExpression tryExpr,
-#if LIGHT_EXPRESSION
-            IParameterProvider paramExprs,
-#else
-            IReadOnlyList<PE> paramExprs,
-#endif
+            ParamExprs paramExprs,
             NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, CompilerFlags flags)
         {
             var r = Result.OK;
@@ -2077,12 +2066,39 @@ namespace FastExpressionCompiler
             private static readonly MethodInfo _objectEqualsMethod =
                 ((Func<object, object, bool>)object.Equals).Method;
 
+            private struct FastExpressionCompiler
+            {
+                private readonly ParamExprs _paramExprs;
+                private readonly ILGenerator _il;
+                private readonly CompilerFlags _setup;
+
+                public ClosureInfo Closure;
+
+                public FastExpressionCompiler(ParamExprs paramExprs, ILGenerator il, ClosureInfo closure, CompilerFlags setup)
+                {
+                    _paramExprs = paramExprs;
+                    _il = il;
+                    _setup = setup;
+                    Closure = closure;
+                }
+
+                [RequiresUnreferencedCode(Trimming.Message)]
+                public bool TryEmit(Expression expr, ParentFlags parent, int byRefIndex = -1) =>
+                    TryEmitCore(expr, _paramExprs, _il, ref Closure, _setup, parent, byRefIndex);
+            }
+
             public static bool TryEmit(Expression expr,
-#if LIGHT_EXPRESSION
-                IParameterProvider paramExprs,
-#else
-                IReadOnlyList<PE> paramExprs,
-#endif
+                ParamExprs paramExprs,
+                ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent, int byRefIndex = -1)
+            {
+                var compiler = new FastExpressionCompiler(paramExprs, il, closure, setup);
+                var emitted = compiler.TryEmit(expr, parent, byRefIndex);
+                closure = compiler.Closure;
+                return emitted;
+            }
+
+            private static bool TryEmitCore(Expression expr,
+                ParamExprs paramExprs,
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent, int byRefIndex = -1)
             {
                 var exprType = expr.Type;
@@ -2122,12 +2138,12 @@ namespace FastExpressionCompiler
 
                         case ExpressionType.ArrayIndex:
                             var arrIndexExpr = (BinaryExpression)expr;
-                            return TryEmit(arrIndexExpr.Left, paramExprs, il, ref closure, setup, parent | ParentFlags.IndexAccess)
-                                && TryEmit(arrIndexExpr.Right, paramExprs, il, ref closure, setup, parent | ParentFlags.IndexAccess) // #265
+                            return TryEmitCore(arrIndexExpr.Left, paramExprs, il, ref closure, setup, parent | ParentFlags.IndexAccess)
+                                && TryEmitCore(arrIndexExpr.Right, paramExprs, il, ref closure, setup, parent | ParentFlags.IndexAccess) // #265
                                 && TryEmitArrayIndexGet(il, exprType, ref closure, parent);
 
                         case ExpressionType.ArrayLength:
-                            if (!TryEmit(((UnaryExpression)expr).Operand, paramExprs, il, ref closure, setup, parent))
+                            if (!TryEmitCore(((UnaryExpression)expr).Operand, paramExprs, il, ref closure, setup, parent))
                                 return false;
                             if ((parent & ParentFlags.IgnoreResult) == 0)
                                 il.Demit(OpCodes.Ldlen);
@@ -2354,7 +2370,7 @@ namespace FastExpressionCompiler
                                                 var gtOrLabelValue = gt.Value ?? label.DefaultValue;
                                                 if (gtOrLabelValue != null)
                                                 {
-                                                    if (!TryEmit(gtOrLabelValue, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult))
+                                                    if (!TryEmitCore(gtOrLabelValue, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult))
                                                         return false;
 
                                                     if ((parent & ParentFlags.InlinedLambdaInvoke) != 0)
@@ -2378,7 +2394,7 @@ namespace FastExpressionCompiler
                                             }
                                         }
 
-                                        if (!TryEmit(stExpr, paramExprs, il, ref closure, setup, parent | ParentFlags.IgnoreResult))
+                                        if (!TryEmitCore(stExpr, paramExprs, il, ref closure, setup, parent | ParentFlags.IgnoreResult))
                                             return false;
                                     }
                                 }
@@ -2387,7 +2403,7 @@ namespace FastExpressionCompiler
                                 if (blockVarCount == 0)
                                     continue; // OMG! no recursion, continue with the last expression
 
-                                if (!TryEmit(expr, paramExprs, il, ref closure, setup, parent))
+                                if (!TryEmitCore(expr, paramExprs, il, ref closure, setup, parent))
                                     return false;
 
                                 closure.PopBlock();
@@ -2404,7 +2420,7 @@ namespace FastExpressionCompiler
                                 var ok = true;
                                 var throwOperand = ((UnaryExpression)expr).Operand;
                                 if (throwOperand != null)
-                                    ok = TryEmit(throwOperand, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult);
+                                    ok = TryEmitCore(throwOperand, paramExprs, il, ref closure, setup, parent & ~ParentFlags.IgnoreResult);
                                 il.Demit(throwOperand != null ? OpCodes.Throw : OpCodes.Rethrow);
                                 return ok;
                             }
@@ -2568,11 +2584,7 @@ namespace FastExpressionCompiler
 
             // similar code is used by the TryEmitArithmeticAndOrAssign, so don't forget to modify it as well
             private static bool TryEmitIndexGet(IndexExpression indexExpr,
-#if LIGHT_EXPRESSION
-                IParameterProvider paramExprs,
-#else
-                IReadOnlyList<PE> paramExprs,
-#endif
+                ParamExprs paramExprs,
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
                 var p = parent & ~ParentFlags.IgnoreResult | ParentFlags.IndexAccess;
@@ -2926,11 +2938,7 @@ namespace FastExpressionCompiler
             }
 
             public static bool TryEmitParameter(ParameterExpression paramExpr,
-#if LIGHT_EXPRESSION
-                IParameterProvider paramExprs,
-#else
-                IReadOnlyList<PE> paramExprs,
-#endif
+                ParamExprs paramExprs,
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent, int byRefIndex = -1)
             {
                 var paramExprCount = paramExprs.GetCount();
@@ -3153,11 +3161,7 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitSimpleUnaryExpression(UnaryExpression expr, ExpressionType nodeType,
-#if LIGHT_EXPRESSION
-                IParameterProvider paramExprs,
-#else
-                IReadOnlyList<PE> paramExprs,
-#endif
+                ParamExprs paramExprs,
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
                 var exprType = expr.Type;
@@ -3223,11 +3227,7 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitTypeIsOrEqual(TypeBinaryExpression expr,
-#if LIGHT_EXPRESSION
-                IParameterProvider paramExprs,
-#else
-                IReadOnlyList<PE> paramExprs,
-#endif
+                ParamExprs paramExprs,
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
                 if (!TryEmit(expr.Expression, paramExprs, il, ref closure, setup, parent))
@@ -3247,11 +3247,7 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitNot(UnaryExpression expr,
-#if LIGHT_EXPRESSION
-                IParameterProvider paramExprs,
-#else
-                IReadOnlyList<PE> paramExprs,
-#endif
+                ParamExprs paramExprs,
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
                 var op = expr.Operand;
@@ -3272,11 +3268,7 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitConvert(UnaryExpression expr,
-#if LIGHT_EXPRESSION
-                IParameterProvider paramExprs,
-#else
-                IReadOnlyList<PE> paramExprs,
-#endif
+                ParamExprs paramExprs,
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
                 var opExpr = expr.Operand;
@@ -4196,11 +4188,7 @@ namespace FastExpressionCompiler
             // the `right = null` argument indicates the increment/decrement operation
             private static bool TryEmitArithmeticAndOrAssign(
                 Expression left, Expression right, Type exprType, ExpressionType nodeType, bool isPost,
-#if LIGHT_EXPRESSION
-                IParameterProvider paramExprs,
-#else
-                IReadOnlyList<PE> paramExprs,
-#endif
+                ParamExprs paramExprs,
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
                 // we need the result variable and the time of Post/Pre when to store it only if the result is not ignored, otherwise don't bother
@@ -4653,11 +4641,7 @@ namespace FastExpressionCompiler
             // the null `right` means the increment/decrement operation
             private static bool TryEmitAssignToParameterOrVariable(
                 ParameterExpression left, Expression right, ExpressionType nodeType, bool isPost, Type exprType,
-#if LIGHT_EXPRESSION
-                IParameterProvider paramExprs,
-#else
-                IReadOnlyList<PE> paramExprs,
-#endif
+                ParamExprs paramExprs,
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent, int resultVar = -1)
             {
 #if LIGHT_EXPRESSION
@@ -4961,11 +4945,7 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitMethodCall(Expression expr,
-#if LIGHT_EXPRESSION
-                IParameterProvider paramExprs,
-#else
-                IReadOnlyList<PE> paramExprs,
-#endif
+                ParamExprs paramExprs,
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent, int byRefIndex = -1)
             {
                 var flags = ParentFlags.Call;
@@ -5064,11 +5044,7 @@ namespace FastExpressionCompiler
             }
 
             public static bool TryEmitMemberGet(MemberExpression expr,
-#if LIGHT_EXPRESSION
-                IParameterProvider paramExprs,
-#else
-                IReadOnlyList<PE> paramExprs,
-#endif
+                ParamExprs paramExprs,
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent, int byRefIndex = -1)
             {
                 var objExpr = expr.Expression;
@@ -5870,11 +5846,7 @@ namespace FastExpressionCompiler
 
             private static bool TryEmitComparison(
                 Expression left, Expression right, Type exprType, ExpressionType nodeType,
-#if LIGHT_EXPRESSION
-                IParameterProvider paramExprs,
-#else
-                IReadOnlyList<PE> paramExprs,
-#endif
+                ParamExprs paramExprs,
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
                 var leftType = left.Type;
@@ -6154,11 +6126,7 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitArithmetic(Expression left, Expression right, ExpressionType nodeType, Type exprType,
-#if LIGHT_EXPRESSION
-                IParameterProvider paramExprs,
-#else
-                IReadOnlyList<PE> paramExprs,
-#endif
+                ParamExprs paramExprs,
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
                 var flags = (parent
@@ -6340,11 +6308,7 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitLogicalOperator(BinaryExpression expr, ExpressionType nodeType,
-#if LIGHT_EXPRESSION
-                IParameterProvider paramExprs,
-#else
-                IReadOnlyList<PE> paramExprs,
-#endif
+                ParamExprs paramExprs,
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
                 if (!TryEmit(expr.Left, paramExprs, il, ref closure, setup, parent))
@@ -6373,11 +6337,7 @@ namespace FastExpressionCompiler
             private static bool TryEmitConditional(
                 Expression testExpr, Expression ifTrueExpr, Expression ifFalseExpr,
                 // Type type, // todo: @wip what about the type, what if it is a void?
-#if LIGHT_EXPRESSION
-                IParameterProvider paramExprs,
-#else
-                IReadOnlyList<PE> paramExprs,
-#endif
+                ParamExprs paramExprs,
                 ILGenerator il, ref ClosureInfo closure, CompilerFlags setup, ParentFlags parent)
             {
                 testExpr = Tools.TryReduceConditionalTest(testExpr);
