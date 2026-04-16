@@ -150,17 +150,17 @@ namespace FastExpressionCompiler
             if ((flags & CompilerFlags.EnableDelegateDebugInfo) != 0)
                 throw new NotSupportedException("The `CompilerFlags.EnableDelegateDebugInfo` is not supported because the debug info is gathered into the closure object which is not allowed for static lambda to be compiled to method.");
 
-            var context = new CompilerContext(ClosureStatus.ShouldBeStaticMethod, lambdaExpr.GetParamExprs());
+            var context = new CompilerContext(ClosureStatus.ShouldBeStaticMethod, lambdaExpr.GetParamExprs(), flags);
             var bodyExpr = lambdaExpr.Body;
             var nestedLambdas = new SmallList<NestedLambdaInfo>();
-            if (!TryCollectBoundConstants(ref context, bodyExpr, null, ref nestedLambdas, flags))
+            if (!TryCollectBoundConstants(ref context, bodyExpr, null, ref nestedLambdas))
                 return false;
 
             if ((context.Status & ClosureStatus.HasClosure) != 0)
                 return false;
 
             var parent = lambdaExpr.ReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
-            if (!EmittingVisitor.TryEmit(bodyExpr, il, ref context, flags, parent))
+            if (!EmittingVisitor.TryEmit(bodyExpr, il, ref context, parent))
                 return false;
 
             il.Demit(OpCodes.Ret);
@@ -320,7 +320,7 @@ namespace FastExpressionCompiler
             for (var i = 0; i < closureConstants.Length; i++)
                 closureConstants[i] = closureConstantsExprs[i].Value;
 
-            var context = new CompilerContext(ClosureStatus.UserProvided | ClosureStatus.HasClosure, closureConstants, lambdaExpr.GetParamExprs());
+            var context = new CompilerContext(ClosureStatus.UserProvided | ClosureStatus.HasClosure, closureConstants, lambdaExpr.GetParamExprs(), flags);
             return TryCompileWithPreCreatedClosure<TDelegate>(lambdaExpr, ref context, flags);
         }
 
@@ -336,7 +336,7 @@ namespace FastExpressionCompiler
             EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref context);
 
             var parent = lambdaExpr.ReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
-            if (!EmittingVisitor.TryEmit(lambdaExpr.Body, il, ref context, flags, parent))
+            if (!EmittingVisitor.TryEmit(lambdaExpr.Body, il, ref context, parent))
                 return null;
 
             il.Demit(OpCodes.Ret);
@@ -351,7 +351,7 @@ namespace FastExpressionCompiler
         public static TDelegate TryCompileWithoutClosure<TDelegate>(this LambdaExpression lambdaExpr,
             CompilerFlags flags = CompilerFlags.Default) where TDelegate : class
         {
-            var context = new CompilerContext(ClosureStatus.UserProvided, lambdaExpr.GetParamExprs());
+            var context = new CompilerContext(ClosureStatus.UserProvided, lambdaExpr.GetParamExprs(), flags);
 
             var closurePlusParamTypes = RentPooledOrNewClosureTypeToParamTypes(context.ParamExprs);
 
@@ -360,7 +360,7 @@ namespace FastExpressionCompiler
 
             var il = method.GetILGenerator();
             var parent = lambdaExpr.ReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
-            if (!EmittingVisitor.TryEmit(lambdaExpr.Body, il, ref context, flags, parent))
+            if (!EmittingVisitor.TryEmit(lambdaExpr.Body, il, ref context, parent))
                 return null;
 
             il.Demit(OpCodes.Ret);
@@ -411,8 +411,8 @@ namespace FastExpressionCompiler
             Delegate compiledDelegate = null;
 
             // The method collects the info from the all nested lambdas deep down up-front and de-duplicates the lambdas as well.
-            var context = new CompilerContext(ClosureStatus.ToBeCollected, paramExprs);
-            var collectResult = TryCollectInfo(ref context, bodyExpr, null, ref context.NestedLambdas, flags);
+            var context = new CompilerContext(ClosureStatus.ToBeCollected, paramExprs, flags);
+            var collectResult = TryCollectInfo(ref context, bodyExpr, null, ref context.NestedLambdas);
             if (collectResult == Result.OK)
             {
                 var constantsAndNestedLambdas = (context.Status & ClosureStatus.HasClosure) != 0
@@ -442,7 +442,7 @@ namespace FastExpressionCompiler
                 if (returnType.IsByRef)
                     parent |= ParentFlags.ReturnByRef;
 
-                if (EmittingVisitor.TryEmit(bodyExpr, il, ref context, flags, parent))
+                if (EmittingVisitor.TryEmit(bodyExpr, il, ref context, parent))
                 {
                     il.Demit(OpCodes.Ret);
                     compiledDelegate = dynMethod.CreateDelegate(delegateType, closure);
@@ -666,18 +666,22 @@ namespace FastExpressionCompiler
             /// <summary>Track compiled lambda parameters</summary>
             public ParamExprs ParamExprs;
 
+            /// <summary>Compiler flags</summary>
+            public CompilerFlags CompilerFlags;
+
             /// <summary>Populates the info</summary>
-            public CompilerContext(ClosureStatus status, ParamExprs paramExprs)
+            public CompilerContext(ClosureStatus status, ParamExprs paramExprs, CompilerFlags compilerFlags)
             {
                 Status = status;
                 Constants = new SmallList<object>();
                 LastEmitIsAddress = false;
                 CurrentInlinedLambdaInvokeIndex = -1;
                 ParamExprs = paramExprs;
+                CompilerFlags = compilerFlags;
             }
 
             /// <summary>Populates info directly with provided closure object and constants.</summary>
-            public CompilerContext(ClosureStatus status, object[] constValues, ParamExprs paramExprs)
+            public CompilerContext(ClosureStatus status, object[] constValues, ParamExprs paramExprs, CompilerFlags compilerFlags)
             {
                 Status = status;
 
@@ -689,6 +693,7 @@ namespace FastExpressionCompiler
                 CurrentInlinedLambdaInvokeIndex = -1;
 
                 ParamExprs = paramExprs;
+                CompilerFlags = compilerFlags;
             }
 
             [MethodImpl((MethodImplOptions)256)]
@@ -1122,16 +1127,16 @@ namespace FastExpressionCompiler
         /// Important: The method collects the info from the nested lambdas up-front and de-duplicates the lambdas as well.</summary>
         [MethodImpl((MethodImplOptions)256)]
         public static bool TryCollectBoundConstants(ref CompilerContext context, Expression expr,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, CompilerFlags flags)
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
         {
-            var r = TryCollectInfo(ref context, expr, nestedLambda, ref rootNestedLambdas, flags);
-            return r == Result.OK || (flags & CompilerFlags.ThrowOnNotSupportedExpression) != 0 && NotSupportedCase<bool>(r);
+            var r = TryCollectInfo(ref context, expr, nestedLambda, ref rootNestedLambdas);
+            return r == Result.OK || (context.CompilerFlags & CompilerFlags.ThrowOnNotSupportedExpression) != 0 && NotSupportedCase<bool>(r);
         }
 
         /// <summary>Collects the information about closure constants, nested lambdas, non-passed parameters, goto labels and variables in blocks.
         /// Returns `OK` result if everything is fine and other result for error.</summary>
         public static Result TryCollectInfo(ref CompilerContext context, Expression expr,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, CompilerFlags flags)
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
         {
             var r = Result.OK;
             while (true)
@@ -1140,7 +1145,7 @@ namespace FastExpressionCompiler
                     return Result.ExpressionIsNull;
 #if LIGHT_EXPRESSION
                 if (expr.IsIntrinsic)
-                    return expr.TryCollectInfo(flags, ref context, nestedLambda, ref rootNestedLambdas);
+                    return expr.TryCollectInfo(ref context, nestedLambda, ref rootNestedLambdas);
 #endif
                 switch (expr.NodeType)
                 {
@@ -1192,14 +1197,14 @@ namespace FastExpressionCompiler
                             }
 
                             if (callObjectExpr != null &&
-                                (r = TryCollectInfo(ref context, callObjectExpr, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+                                (r = TryCollectInfo(ref context, callObjectExpr, nestedLambda, ref rootNestedLambdas)) != Result.OK)
                                 return r;
 
                             var hasComplexExpression = false;
                             for (var i = 0; i < argCount; i++)
                             {
                                 context.HasComplexExpression = false; // reset the flag because we want to know the real result after the arg collection
-                                if ((r = TryCollectInfo(ref context, callArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+                                if ((r = TryCollectInfo(ref context, callArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas)) != Result.OK)
                                     return r;
                                 // if any argument is complex, then thw whole call should be complex,
                                 // because we cannot just store and restore a single argument, it should be done for all arguments
@@ -1234,7 +1239,7 @@ namespace FastExpressionCompiler
                             for (var i = 0; i < argCount; i++)
                             {
                                 context.HasComplexExpression = false;
-                                if ((r = TryCollectInfo(ref context, ctorArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+                                if ((r = TryCollectInfo(ref context, ctorArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas)) != Result.OK)
                                     return r;
                                 hasComplexExpression |= context.HasComplexExpression;
                             }
@@ -1263,17 +1268,16 @@ namespace FastExpressionCompiler
                         if (elemCount == 0)
                             return r;
                         for (var i = 0; i < elemCount - 1; i++)
-                            if ((r = TryCollectInfo(ref context, arrElems.GetArgument(i), nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+                            if ((r = TryCollectInfo(ref context, arrElems.GetArgument(i), nestedLambda, ref rootNestedLambdas)) != Result.OK)
                                 return r;
                         expr = arrElems.GetArgument(elemCount - 1);
                         continue;
 
                     case ExpressionType.MemberInit:
-                        return TryCollectMemberInitExprConstants(ref context, (MemberInitExpression)expr, nestedLambda, ref rootNestedLambdas, flags);
+                        return TryCollectMemberInitExprConstants(ref context, (MemberInitExpression)expr, nestedLambda, ref rootNestedLambdas);
 
                     case ExpressionType.ListInit:
-                        return TryCollectListInitExprConstants(
-                            ref context, (ListInitExpression)expr, nestedLambda, ref rootNestedLambdas, flags);
+                        return TryCollectListInitExprConstants(ref context, (ListInitExpression)expr, nestedLambda, ref rootNestedLambdas);
 
                     case ExpressionType.Lambda:
                         // Here we look if the lambda is already stored in the nested lambdas tree (Collected+Compiled),
@@ -1299,7 +1303,7 @@ namespace FastExpressionCompiler
                             return r;
                         }
 
-                        var nestedLambdaContext = new CompilerContext(ClosureStatus.ToBeCollected, nestedParamExprs);
+                        var nestedLambdaContext = new CompilerContext(ClosureStatus.ToBeCollected, nestedParamExprs, context.CompilerFlags);
                         var newNestedLambda = new NestedLambdaInfo(nestedLambdaExpr);
 
                         if (nestedLambda != null)
@@ -1307,7 +1311,7 @@ namespace FastExpressionCompiler
                         else
                             rootNestedLambdas.Add(newNestedLambda);
 
-                        if ((r = TryCollectInfo(ref nestedLambdaContext, nestedLambdaExpr.Body, newNestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+                        if ((r = TryCollectInfo(ref nestedLambdaContext, nestedLambdaExpr.Body, newNestedLambda, ref rootNestedLambdas)) != Result.OK)
                             return r;
 
                         if (newNestedLambda.NonPassedParameters.Count != 0 &&
@@ -1315,7 +1319,7 @@ namespace FastExpressionCompiler
                                 nestedLambda, nestedParamExprs, ref newNestedLambda.NonPassedParameters))
                             return Result.ParameterIsNotVariableNorInPassedParameters;
 
-                        if (!TryCompileNestedLambda(ref nestedLambdaContext, newNestedLambda, flags))
+                        if (!TryCompileNestedLambda(ref nestedLambdaContext, newNestedLambda))
                             return Result.NestedLambdaCompileError;
 
                         return r;
@@ -1326,7 +1330,7 @@ namespace FastExpressionCompiler
                             var invokeArgs = invokeExpr.GetArgExprs();
                             var invokeArgCount = invokeArgs.GetArgCount();
                             var invokedExpr = invokeExpr.Expression;
-                            if ((flags & CompilerFlags.NoInvocationLambdaInlining) == 0 && invokedExpr is LambdaExpression lambdaExpr)
+                            if ((context.CompilerFlags & CompilerFlags.NoInvocationLambdaInlining) == 0 && invokedExpr is LambdaExpression lambdaExpr)
                             {
                                 var oldIndex = context.CurrentInlinedLambdaInvokeIndex;
                                 context.CurrentInlinedLambdaInvokeIndex = context.AddInlinedLambdaInvoke(invokeExpr);
@@ -1336,7 +1340,7 @@ namespace FastExpressionCompiler
                                 if (!found)
                                     inlinedExpr = CreateInlinedLambdaInvocationExpression(invokeArgs, lambdaExpr);
 
-                                if ((r = TryCollectInfo(ref context, inlinedExpr, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+                                if ((r = TryCollectInfo(ref context, inlinedExpr, nestedLambda, ref rootNestedLambdas)) != Result.OK)
                                     return r;
 
                                 context.HasComplexExpression = true;
@@ -1351,20 +1355,20 @@ namespace FastExpressionCompiler
                                 continue;
                             }
 
-                            if ((r = TryCollectInfo(ref context, invokedExpr, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+                            if ((r = TryCollectInfo(ref context, invokedExpr, nestedLambda, ref rootNestedLambdas)) != Result.OK)
                                 return r;
 
                             var lastArgIndex = invokeArgCount - 1;
                             for (var i = 0; i < lastArgIndex; i++)
-                                if ((r = TryCollectInfo(ref context, invokeArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+                                if ((r = TryCollectInfo(ref context, invokeArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas)) != Result.OK)
                                     return r;
                             expr = invokeArgs.GetArgument(lastArgIndex);
                             continue;
                         }
                     case ExpressionType.Conditional:
                         var condExpr = (ConditionalExpression)expr;
-                        if ((r = TryCollectInfo(ref context, condExpr.Test, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK ||
-                            (r = TryCollectInfo(ref context, condExpr.IfFalse, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+                        if ((r = TryCollectInfo(ref context, condExpr.Test, nestedLambda, ref rootNestedLambdas)) != Result.OK ||
+                            (r = TryCollectInfo(ref context, condExpr.IfFalse, nestedLambda, ref rootNestedLambdas)) != Result.OK)
                             return r;
                         expr = condExpr.IfTrue;
                         continue;
@@ -1384,7 +1388,7 @@ namespace FastExpressionCompiler
                             blockExprs[1] is BinaryExpression st1 && st1.NodeType == ExpressionType.Assign &&
                             st0.Left == blockExprs[0] && st1.Right == blockExprs[0])
                         {
-                            if ((r = TryCollectInfo(ref context, st0.Right, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+                            if ((r = TryCollectInfo(ref context, st0.Right, nestedLambda, ref rootNestedLambdas)) != Result.OK)
                                 return r;
                             expr = st1.Left;
                             continue;
@@ -1396,14 +1400,14 @@ namespace FastExpressionCompiler
                             context.PushBlockWithVars(varExprs);
 
                         for (var i = 0; i < blockExprCount - 1; i++)
-                            if ((r = TryCollectInfo(ref context, blockExprs[i], nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+                            if ((r = TryCollectInfo(ref context, blockExprs[i], nestedLambda, ref rootNestedLambdas)) != Result.OK)
                                 return r;
 
                         expr = blockExprs[blockExprCount - 1];
                         if (varExprCount == 0)
                             continue; // in case of no variables we can collect the last expr without recursion
 
-                        if ((r = TryCollectInfo(ref context, expr, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+                        if ((r = TryCollectInfo(ref context, expr, nestedLambda, ref rootNestedLambdas)) != Result.OK)
                             return r;
                         context.PopBlock();
                         return r;
@@ -1420,7 +1424,7 @@ namespace FastExpressionCompiler
                         var indexArgs = indexExpr.GetArgExprs();
                         var indexArgCount = indexArgs.GetArgCount();
                         for (var i = 0; i < indexArgCount; i++)
-                            if ((r = TryCollectInfo(ref context, indexArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+                            if ((r = TryCollectInfo(ref context, indexArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas)) != Result.OK)
                                 return r;
                         if (indexExpr.Object == null)
                             return r;
@@ -1430,7 +1434,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.Try:
                         {
                             context.HasComplexExpression = false;
-                            r = TryCollectTryExprInfo(ref context, (TryExpression)expr, nestedLambda, ref rootNestedLambdas, flags);
+                            r = TryCollectTryExprInfo(ref context, (TryExpression)expr, nestedLambda, ref rootNestedLambdas);
                             context.HasComplexExpression = true;
                             return r;
                         }
@@ -1455,16 +1459,16 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Switch:
                         var switchExpr = ((SwitchExpression)expr);
-                        if ((r = TryCollectInfo(ref context, switchExpr.SwitchValue, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK ||
+                        if ((r = TryCollectInfo(ref context, switchExpr.SwitchValue, nestedLambda, ref rootNestedLambdas)) != Result.OK ||
                             switchExpr.DefaultBody != null && // todo: @check is the order of collection affects the result?
-                            (r = TryCollectInfo(ref context, switchExpr.DefaultBody, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+                            (r = TryCollectInfo(ref context, switchExpr.DefaultBody, nestedLambda, ref rootNestedLambdas)) != Result.OK)
                             return r;
 
                         var switchCases = switchExpr.Cases;
                         if (switchCases.Count != 0)
                         {
                             for (var i = 0; i < switchCases.Count - 1; i++)
-                                if ((r = TryCollectInfo(ref context, switchCases[i].Body, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+                                if ((r = TryCollectInfo(ref context, switchCases[i].Body, nestedLambda, ref rootNestedLambdas)) != Result.OK)
                                     return r;
                             expr = switchCases[switchCases.Count - 1].Body;
                             continue;
@@ -1504,7 +1508,7 @@ namespace FastExpressionCompiler
 
                         if (expr is BinaryExpression binaryExpr)
                         {
-                            if ((r = TryCollectInfo(ref context, binaryExpr.Left, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+                            if ((r = TryCollectInfo(ref context, binaryExpr.Left, nestedLambda, ref rootNestedLambdas)) != Result.OK)
                                 return r;
                             expr = binaryExpr.Right;
                             continue;
@@ -1638,7 +1642,7 @@ namespace FastExpressionCompiler
             return false;
         }
 
-        private static bool TryCompileNestedLambda(ref CompilerContext nestedLambdaContext, NestedLambdaInfo nestedLambdaInfo, CompilerFlags flags)
+        private static bool TryCompileNestedLambda(ref CompilerContext nestedLambdaContext, NestedLambdaInfo nestedLambdaInfo)
         {
             // 1. Try to compile nested lambda in place
             // 2. Check that parameters used in compiled lambda are passed or closed by outer lambda
@@ -1652,7 +1656,7 @@ namespace FastExpressionCompiler
             if (nestedLambdaBody is NoArgsNewClassIntrinsicExpression newExpr)
             {
                 var paramTypes = RentPooledOrNewClosureTypeToParamTypes(nestedLambdaParamExprs);
-                nestedLambdaInfo.Lambda = CompileNoArgsNew(newExpr, nestedLambdaExpr.Type, paramTypes, nestedReturnType, flags);
+                nestedLambdaInfo.Lambda = CompileNoArgsNew(newExpr, nestedLambdaExpr.Type, paramTypes, nestedReturnType, nestedLambdaContext.CompilerFlags);
                 FreePooledClosureTypeAndParamTypes(paramTypes);
                 return true;
             }
@@ -1666,7 +1670,7 @@ namespace FastExpressionCompiler
                 : null;
 
             ArrayClosure nestedLambdaClosure = null;
-            var hasDebugInfo = (flags & CompilerFlags.EnableDelegateDebugInfo) != 0;
+            var hasDebugInfo = (nestedLambdaContext.CompilerFlags & CompilerFlags.EnableDelegateDebugInfo) != 0;
             var hasNonPassedParameters = nestedLambdaInfo.NonPassedParameters.Count != 0;
             if (!hasNonPassedParameters)
                 nestedLambdaClosure = !hasDebugInfo
@@ -1685,7 +1689,7 @@ namespace FastExpressionCompiler
             if (nestedReturnType.IsByRef)
                 parent |= ParentFlags.ReturnByRef;
 
-            var emitOk = EmittingVisitor.TryEmit(nestedLambdaBody, il, ref nestedLambdaContext, flags, parent);
+            var emitOk = EmittingVisitor.TryEmit(nestedLambdaBody, il, ref nestedLambdaContext, parent);
             if (emitOk)
             {
                 il.Demit(OpCodes.Ret);
@@ -1723,12 +1727,12 @@ namespace FastExpressionCompiler
             where TDelegate : Delegate => d?.Target as IDelegateDebugInfo;
 
         private static Result TryCollectMemberInitExprConstants(ref CompilerContext context, MemberInitExpression expr,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, CompilerFlags flags)
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
         {
             var newExpr = expr.NewExpression;
             var binds = expr.GetBindings();
             var r = Result.OK;
-            if ((r = TryCollectInfo(ref context, newExpr, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+            if ((r = TryCollectInfo(ref context, newExpr, nestedLambda, ref rootNestedLambdas)) != Result.OK)
                 return r;
 
             var count = binds.GetBindingCount();
@@ -1738,21 +1742,21 @@ namespace FastExpressionCompiler
                 if (b.BindingType != MemberBindingType.Assignment)
                     return b.BindingType == MemberBindingType.MemberBinding ? Result.NotSupported_MemberInit_MemberBinding : Result.NotSupported_MemberInit_ListBinding; // todo: @feature MemberMemberBinding and the MemberListBinding is not supported yet.
 
-                if ((r = TryCollectInfo(ref context, ((MemberAssignment)b).Expression, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+                if ((r = TryCollectInfo(ref context, ((MemberAssignment)b).Expression, nestedLambda, ref rootNestedLambdas)) != Result.OK)
                     return r;
             }
             return r;
         }
 
         private static Result TryCollectListInitExprConstants(ref CompilerContext context, ListInitExpression expr,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, CompilerFlags flags)
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
         {
             var newExpr = expr.NewExpression;
             var inits = expr.Initializers;
             var count = inits.Count;
 
             var r = Result.OK;
-            if ((r = TryCollectInfo(ref context, newExpr, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+            if ((r = TryCollectInfo(ref context, newExpr, nestedLambda, ref rootNestedLambdas)) != Result.OK)
                 return r;
 
             for (var i = 0; i < count; ++i)
@@ -1761,17 +1765,17 @@ namespace FastExpressionCompiler
                 var args = elemInit.Arguments;
                 var argCount = args.Count;
                 for (var a = 0; a < argCount; ++a)
-                    if ((r = TryCollectInfo(ref context, args.GetArgument(a), nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+                    if ((r = TryCollectInfo(ref context, args.GetArgument(a), nestedLambda, ref rootNestedLambdas)) != Result.OK)
                         return r;
             }
             return r;
         }
 
         private static Result TryCollectTryExprInfo(ref CompilerContext context, TryExpression tryExpr,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, CompilerFlags flags)
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
         {
             var r = Result.OK;
-            if ((r = TryCollectInfo(ref context, tryExpr.Body, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+            if ((r = TryCollectInfo(ref context, tryExpr.Body, nestedLambda, ref rootNestedLambdas)) != Result.OK)
                 return r;
 
             var catchBlocks = tryExpr.Handlers;
@@ -1782,15 +1786,15 @@ namespace FastExpressionCompiler
                 if (catchExVar != null)
                 {
                     context.PushBlockWithVars(catchExVar);
-                    if ((r = TryCollectInfo(ref context, catchExVar, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+                    if ((r = TryCollectInfo(ref context, catchExVar, nestedLambda, ref rootNestedLambdas)) != Result.OK)
                         return r;
                 }
 
                 if (catchBlock.Filter != null &&
-                    (r = TryCollectInfo(ref context, catchBlock.Filter, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+                    (r = TryCollectInfo(ref context, catchBlock.Filter, nestedLambda, ref rootNestedLambdas)) != Result.OK)
                     return r;
 
-                if ((r = TryCollectInfo(ref context, catchBlock.Body, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+                if ((r = TryCollectInfo(ref context, catchBlock.Body, nestedLambda, ref rootNestedLambdas)) != Result.OK)
                     return r;
 
                 if (catchExVar != null)
@@ -1799,7 +1803,7 @@ namespace FastExpressionCompiler
 
             var faultOrFinally = tryExpr.Fault ?? tryExpr.Finally;
             if (faultOrFinally != null &&
-                (r = TryCollectInfo(ref context, faultOrFinally, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+                (r = TryCollectInfo(ref context, faultOrFinally, nestedLambda, ref rootNestedLambdas)) != Result.OK)
                 return r;
 
             return r;
@@ -1894,8 +1898,7 @@ namespace FastExpressionCompiler
             private static readonly MethodInfo _objectEqualsMethod =
                 ((Func<object, object, bool>)object.Equals).Method;
 
-            public static bool TryEmit(Expression expr,
-                ILGenerator il, ref CompilerContext context, CompilerFlags setup, ParentFlags parent, int byRefIndex = -1)
+            public static bool TryEmit(Expression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex = -1)
             {
                 var exprType = expr.Type;
                 while (true)
@@ -1903,14 +1906,14 @@ namespace FastExpressionCompiler
                     context.LastEmitIsAddress = false;
 #if LIGHT_EXPRESSION
                     if (expr.IsIntrinsic)
-                        return expr.TryEmit(setup, ref context, il, parent, byRefIndex);
+                        return expr.TryEmit(ref context, il, parent, byRefIndex);
 #endif
                     var nodeType = expr.NodeType;
                     switch (nodeType)
                     {
                         case ExpressionType.Parameter:
                             return (parent & ParentFlags.IgnoreResult) != 0 ||
-                                TryEmitParameter((ParameterExpression)expr, il, ref context, setup, parent, byRefIndex);
+                                TryEmitParameter((ParameterExpression)expr, il, ref context, parent, byRefIndex);
 
                         case ExpressionType.TypeAs:
                         case ExpressionType.IsTrue:
@@ -1922,24 +1925,24 @@ namespace FastExpressionCompiler
                         case ExpressionType.OnesComplement:
                         case ExpressionType.UnaryPlus:
                         case ExpressionType.Unbox:
-                            return TryEmitSimpleUnaryExpression((UnaryExpression)expr, nodeType, il, ref context, setup, parent);
+                            return TryEmitSimpleUnaryExpression((UnaryExpression)expr, nodeType, il, ref context, parent);
 
                         case ExpressionType.TypeIs:
                         case ExpressionType.TypeEqual:
-                            return TryEmitTypeIsOrEqual((TypeBinaryExpression)expr, il, ref context, setup, parent);
+                            return TryEmitTypeIsOrEqual((TypeBinaryExpression)expr, il, ref context, parent);
 
                         case ExpressionType.Convert:
                         case ExpressionType.ConvertChecked:
-                            return TryEmitConvert((UnaryExpression)expr, il, ref context, setup, parent);
+                            return TryEmitConvert((UnaryExpression)expr, il, ref context, parent);
 
                         case ExpressionType.ArrayIndex:
                             var arrIndexExpr = (BinaryExpression)expr;
-                            return TryEmit(arrIndexExpr.Left, il, ref context, setup, parent | ParentFlags.IndexAccess)
-                                && TryEmit(arrIndexExpr.Right, il, ref context, setup, parent | ParentFlags.IndexAccess) // #265
+                            return TryEmit(arrIndexExpr.Left, il, ref context, parent | ParentFlags.IndexAccess)
+                                && TryEmit(arrIndexExpr.Right, il, ref context, parent | ParentFlags.IndexAccess) // #265
                                 && TryEmitArrayIndexGet(il, exprType, ref context, parent);
 
                         case ExpressionType.ArrayLength:
-                            if (!TryEmit(((UnaryExpression)expr).Operand, il, ref context, setup, parent))
+                            if (!TryEmit(((UnaryExpression)expr).Operand, il, ref context, parent))
                                 return false;
                             if ((parent & ParentFlags.IgnoreResult) == 0)
                                 il.Demit(OpCodes.Ldlen);
@@ -1950,31 +1953,31 @@ namespace FastExpressionCompiler
                                 TryEmitConstant((ConstantExpression)expr, exprType, il, ref context, byRefIndex);
 
                         case ExpressionType.Call:
-                            return TryEmitMethodCall(expr, il, ref context, setup, parent, byRefIndex);
+                            return TryEmitMethodCall(expr, il, ref context, parent, byRefIndex);
 
                         case ExpressionType.MemberAccess:
-                            return TryEmitMemberGet((MemberExpression)expr, il, ref context, setup, parent, byRefIndex);
+                            return TryEmitMemberGet((MemberExpression)expr, il, ref context, parent, byRefIndex);
 
                         case ExpressionType.New:
-                            return TryEmitNew(expr, il, ref context, setup, parent);
+                            return TryEmitNew(expr, il, ref context, parent);
 
                         case ExpressionType.NewArrayBounds:
-                            return EmitNewArrayBounds((NewArrayExpression)expr, il, ref context, setup, parent);
+                            return EmitNewArrayBounds((NewArrayExpression)expr, il, ref context, parent);
 
                         case ExpressionType.NewArrayInit:
-                            return EmitNewArrayInit((NewArrayExpression)expr, il, ref context, setup, parent);
+                            return EmitNewArrayInit((NewArrayExpression)expr, il, ref context, parent);
 
                         case ExpressionType.MemberInit:
-                            return EmitMemberInit((MemberInitExpression)expr, il, ref context, setup, parent);
+                            return EmitMemberInit((MemberInitExpression)expr, il, ref context, parent);
 
                         case ExpressionType.ListInit:
-                            return TryEmitListInit((ListInitExpression)expr, il, ref context, setup, parent);
+                            return TryEmitListInit((ListInitExpression)expr, il, ref context, parent);
 
                         case ExpressionType.Lambda:
                             return TryEmitNestedLambda((LambdaExpression)expr, il, ref context);
 
                         case ExpressionType.Invoke:
-                            return TryEmitInvoke((InvocationExpression)expr, il, ref context, setup, parent);
+                            return TryEmitInvoke((InvocationExpression)expr, il, ref context, parent);
 
                         case ExpressionType.GreaterThan:
                         case ExpressionType.GreaterThanOrEqual:
@@ -1983,14 +1986,13 @@ namespace FastExpressionCompiler
                         case ExpressionType.Equal:
                         case ExpressionType.NotEqual:
                             {
-                                if (exprType.IsPrimitive && Interpreter.TryInterpretBool(out var boolResult, expr, setup))
+                                if (exprType.IsPrimitive && Interpreter.TryInterpretBool(out var boolResult, expr, context.CompilerFlags))
                                 {
                                     if ((parent & ParentFlags.IgnoreResult) == 0)
                                         il.Demit(boolResult ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
                                     return true;
                                 }
-                                return TryEmitComparison(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, exprType, nodeType, il,
-                                    ref context, setup, parent);
+                                return TryEmitComparison(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, exprType, nodeType, il, ref context, parent);
                             }
                         case ExpressionType.Add:
                         case ExpressionType.Subtract:
@@ -2004,17 +2006,15 @@ namespace FastExpressionCompiler
                         case ExpressionType.RightShift:
                             {
                                 return exprType.IsPrimitive
-                                    && TryInterpretAndEmitResult(expr, il, parent, setup)
-                                    || TryEmitArithmetic(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, nodeType, exprType, il,
-                                        ref context, setup, parent);
+                                    && TryInterpretAndEmitResult(expr, il, parent, context.CompilerFlags)
+                                    || TryEmitArithmetic(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, nodeType, exprType, il, ref context, parent);
                             }
                         // todo: @feature #472 add interpretation when those node types are supported
                         case ExpressionType.AddChecked:
                         case ExpressionType.SubtractChecked:
                         case ExpressionType.MultiplyChecked:
                         case ExpressionType.Power:
-                            return TryEmitArithmetic(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, nodeType, exprType, il,
-                                ref context, setup, parent);
+                            return TryEmitArithmetic(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, nodeType, exprType, il, ref context, parent);
 
                         case ExpressionType.AndAlso:
                         case ExpressionType.OrElse:
@@ -2024,13 +2024,13 @@ namespace FastExpressionCompiler
                                     Debug.WriteLine("Unsupported: Nullable<bool> in || or && (is invalid C# but valid expression) is not supported yet, see #480: " + expr);
                                     return false;
                                 }
-                                if (Interpreter.TryInterpretBool(out var resultBool, expr, setup))
+                                if (Interpreter.TryInterpretBool(out var resultBool, expr, context.CompilerFlags))
                                 {
                                     if ((parent & ParentFlags.IgnoreResult) == 0)
                                         il.Demit(resultBool ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
                                     return true;
                                 }
-                                return TryEmitLogicalOperator((BinaryExpression)expr, nodeType, il, ref context, setup, parent);
+                                return TryEmitLogicalOperator((BinaryExpression)expr, nodeType, il, ref context, parent);
                             }
                         case ExpressionType.Not:
                             {
@@ -2040,36 +2040,36 @@ namespace FastExpressionCompiler
                                     return false;
                                 }
 
-                                if (Interpreter.TryInterpretBool(out var resultBool, expr, setup))
+                                if (Interpreter.TryInterpretBool(out var resultBool, expr, context.CompilerFlags))
                                 {
                                     if ((parent & ParentFlags.IgnoreResult) == 0)
                                         il.Demit(resultBool ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
                                     return true;
                                 }
-                                return TryEmitNot((UnaryExpression)expr, il, ref context, setup, parent);
+                                return TryEmitNot((UnaryExpression)expr, il, ref context, parent);
                             }
                         case ExpressionType.Coalesce:
-                            return TryEmitCoalesceOperator((BinaryExpression)expr, il, ref context, setup, parent);
+                            return TryEmitCoalesceOperator((BinaryExpression)expr, il, ref context, parent);
 
                         case ExpressionType.Conditional:
                             var condExpr = (ConditionalExpression)expr;
                             var testExpr = condExpr.Test;
-                            if (Interpreter.TryInterpretBool(out var testIsTrue, testExpr, setup))
+                            if (Interpreter.TryInterpretBool(out var testIsTrue, testExpr, context.CompilerFlags))
                             {
                                 expr = testIsTrue ? condExpr.IfTrue : condExpr.IfFalse;
                                 continue; // no recursion, just continue with the left or right side of condition
                             }
-                            return TryEmitConditional(testExpr, condExpr.IfTrue, condExpr.IfFalse, il, ref context, setup, parent);
+                            return TryEmitConditional(testExpr, condExpr.IfTrue, condExpr.IfFalse, il, ref context, parent);
 
                         case ExpressionType.PostIncrementAssign:
                         case ExpressionType.PreIncrementAssign:
                             return TryEmitArithmeticAndOrAssign(((UnaryExpression)expr).Operand, null, exprType, ExpressionType.Add,
-                                nodeType == ExpressionType.PostIncrementAssign, il, ref context, setup, parent);
+                                nodeType == ExpressionType.PostIncrementAssign, il, ref context, parent);
 
                         case ExpressionType.PostDecrementAssign:
                         case ExpressionType.PreDecrementAssign:
                             return TryEmitArithmeticAndOrAssign(((UnaryExpression)expr).Operand, null, exprType, ExpressionType.Subtract,
-                                nodeType == ExpressionType.PostDecrementAssign, il, ref context, setup, parent);
+                                nodeType == ExpressionType.PostDecrementAssign, il, ref context, parent);
 
                         case ExpressionType.AddAssign:
                         case ExpressionType.AddAssignChecked:
@@ -2088,7 +2088,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.Assign:
                             var ba = (BinaryExpression)expr;
                             return TryEmitArithmeticAndOrAssign(ba.Left, ba.Right, exprType,
-                                AssignToArithmeticOrSelf(nodeType), false, il, ref context, setup, parent);
+                                AssignToArithmeticOrSelf(nodeType), false, il, ref context, parent);
 
                         case ExpressionType.Block:
                             {
@@ -2104,8 +2104,7 @@ namespace FastExpressionCompiler
                                     statementExprs[0] is BinaryExpression st0 && st0.NodeType == ExpressionType.Assign &&
                                     statementExprs[1] is BinaryExpression st1 && st1.NodeType == ExpressionType.Assign &&
                                     st0.Left == blockVarExprs[0] && st1.Right == blockVarExprs[0])
-                                    return TryEmitArithmeticAndOrAssign(st1.Left, st0.Right, st0.Left.Type,
-                                        ExpressionType.Assign, false, il, ref context, setup, parent);
+                                    return TryEmitArithmeticAndOrAssign(st1.Left, st0.Right, st0.Left.Type, ExpressionType.Assign, false, il, ref context, parent);
 
                                 if (blockVarCount != 0)
                                     context.PushBlockAndConstructLocalVars(blockVarExprs, il);
@@ -2157,7 +2156,7 @@ namespace FastExpressionCompiler
                                             {
                                                 if ((parent & ParentFlags.TryCatch) != 0)
                                                 {
-                                                    if ((setup & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
+                                                    if ((context.CompilerFlags & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
                                                         throw new NotSupportedExpressionException(Result.NotSupported_Try_GotoReturnToTheFollowupLabel);
                                                     return false; // todo: @feature return from the TryCatch with the internal label is not supported, though it is an unlikely case
                                                 }
@@ -2166,7 +2165,7 @@ namespace FastExpressionCompiler
                                                 var gtOrLabelValue = gt.Value ?? label.DefaultValue;
                                                 if (gtOrLabelValue != null)
                                                 {
-                                                    if (!TryEmit(gtOrLabelValue, il, ref context, setup, parent & ~ParentFlags.IgnoreResult))
+                                                    if (!TryEmit(gtOrLabelValue, il, ref context, parent & ~ParentFlags.IgnoreResult))
                                                         return false;
 
                                                     if ((parent & ParentFlags.InlinedLambdaInvoke) != 0)
@@ -2190,7 +2189,7 @@ namespace FastExpressionCompiler
                                             }
                                         }
 
-                                        if (!TryEmit(stExpr, il, ref context, setup, parent | ParentFlags.IgnoreResult))
+                                        if (!TryEmit(stExpr, il, ref context, parent | ParentFlags.IgnoreResult))
                                             return false;
                                     }
                                 }
@@ -2199,24 +2198,24 @@ namespace FastExpressionCompiler
                                 if (blockVarCount == 0)
                                     continue; // OMG! no recursion, continue with the last expression
 
-                                if (!TryEmit(expr, il, ref context, setup, parent))
+                                if (!TryEmit(expr, il, ref context, parent))
                                     return false;
 
                                 context.PopBlock();
                                 return true;
                             }
                         case ExpressionType.Loop:
-                            return TryEmitLoop((LoopExpression)expr, il, ref context, setup, parent);
+                            return TryEmitLoop((LoopExpression)expr, il, ref context, parent);
 
                         case ExpressionType.Try:
-                            return TryEmitTryCatchFinallyBlock((TryExpression)expr, il, ref context, setup, parent | ParentFlags.TryCatch);
+                            return TryEmitTryCatchFinallyBlock((TryExpression)expr, il, ref context, parent | ParentFlags.TryCatch);
 
                         case ExpressionType.Throw:
                             {
                                 var ok = true;
                                 var throwOperand = ((UnaryExpression)expr).Operand;
                                 if (throwOperand != null)
-                                    ok = TryEmit(throwOperand, il, ref context, setup, parent & ~ParentFlags.IgnoreResult);
+                                    ok = TryEmit(throwOperand, il, ref context, parent & ~ParentFlags.IgnoreResult);
                                 il.Demit(throwOperand != null ? OpCodes.Throw : OpCodes.Rethrow);
                                 return ok;
                             }
@@ -2227,16 +2226,16 @@ namespace FastExpressionCompiler
                             return true;
 
                         case ExpressionType.Index:
-                            return TryEmitIndexGet((IndexExpression)expr, il, ref context, setup, parent);
+                            return TryEmitIndexGet((IndexExpression)expr, il, ref context, parent);
 
                         case ExpressionType.Goto:
-                            return TryEmitGoto((GotoExpression)expr, il, ref context, setup, parent);
+                            return TryEmitGoto((GotoExpression)expr, il, ref context, parent);
 
                         case ExpressionType.Label:
-                            return TryEmitLabel((LabelExpression)expr, il, ref context, setup, parent);
+                            return TryEmitLabel((LabelExpression)expr, il, ref context, parent);
 
                         case ExpressionType.Switch:
-                            return TryEmitSwitch((SwitchExpression)expr, il, ref context, setup, parent);
+                            return TryEmitSwitch((SwitchExpression)expr, il, ref context, parent);
 
                         case ExpressionType.Extension:
                             expr = expr.Reduce();
@@ -2253,8 +2252,7 @@ namespace FastExpressionCompiler
                 }
             }
 
-            private static bool TryEmitNew(Expression expr, ILGenerator il, ref CompilerContext context,
-                CompilerFlags setup, ParentFlags parent)
+            private static bool TryEmitNew(Expression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var flags = ParentFlags.CtorCall;
                 var newExpr = (NewExpression)expr;
@@ -2271,7 +2269,7 @@ namespace FastExpressionCompiler
                     // see the #488 for the details.
                     if (argCount == 1)
                     {
-                        if (!TryEmit(argExprs.GetArgument(0), il, ref context, setup, flags, pars[0].ParameterType.IsByRef ? 0 : -1))
+                        if (!TryEmit(argExprs.GetArgument(0), il, ref context, flags, pars[0].ParameterType.IsByRef ? 0 : -1))
                             return false;
                     }
                     else
@@ -2279,7 +2277,7 @@ namespace FastExpressionCompiler
                         if (!context.ArgsContainingComplexExpression.Map.ContainsKey(newExpr))
                         {
                             for (var i = 0; i < argCount; ++i)
-                                if (!TryEmit(argExprs.GetArgument(i), il, ref context, setup, flags, pars[i].ParameterType.IsByRef ? i : -1))
+                                if (!TryEmit(argExprs.GetArgument(i), il, ref context, flags, pars[i].ParameterType.IsByRef ? i : -1))
                                     return false;
                         }
                         else
@@ -2289,7 +2287,7 @@ namespace FastExpressionCompiler
                             {
                                 var argExpr = argExprs.GetArgument(i);
                                 var parType = pars[i].ParameterType;
-                                if (!TryEmit(argExpr, il, ref context, setup, flags, parType.IsByRef ? i : -1))
+                                if (!TryEmit(argExpr, il, ref context, flags, parType.IsByRef ? i : -1))
                                     return false;
                                 argVars.Add(EmitStoreLocalVariable(il, parType));
                             }
@@ -2326,8 +2324,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitLoop(LoopExpression loopExpr, ILGenerator il, ref CompilerContext context,
-                CompilerFlags setup, ParentFlags parent)
+            private static bool TryEmitLoop(LoopExpression loopExpr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 // Loop expression itself does not leave a value on stack.
                 // If its body produces a value (e.g. a nested typed break/goto path), we need to ignore it before branching back to the loop head, see #498.
@@ -2346,7 +2343,7 @@ namespace FastExpressionCompiler
                     il.DmarkLabel(continueLabel);
                 }
 
-                if (!TryEmit(loopExpr.Body, il, ref context, setup, parent))
+                if (!TryEmit(loopExpr.Body, il, ref context, parent))
                     return false;
 
                 // If loop hasn't exited, jump back to start of its body:
@@ -2365,14 +2362,13 @@ namespace FastExpressionCompiler
             }
 
             // similar code is used by the TryEmitArithmeticAndOrAssign, so don't forget to modify it as well
-            private static bool TryEmitIndexGet(IndexExpression indexExpr,
-                ILGenerator il, ref CompilerContext context, CompilerFlags setup, ParentFlags parent)
+            private static bool TryEmitIndexGet(IndexExpression indexExpr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var p = parent & ~ParentFlags.IgnoreResult | ParentFlags.IndexAccess;
 
                 var objExpr = indexExpr.Object;
                 if (objExpr != null &&
-                    !TryEmit(objExpr, il, ref context, setup, p | ParentFlags.InstanceAccess))
+                    !TryEmit(objExpr, il, ref context, p | ParentFlags.InstanceAccess))
                     return false;
 
                 var indexArgs = indexExpr.GetArgExprs();
@@ -2384,7 +2380,7 @@ namespace FastExpressionCompiler
                 // instead of by value (ldloc), producing invalid IL. See #499.
                 var argParent = p & ~ParentFlags.InstanceAccess;
                 for (var i = 0; i < indexArgCount; i++)
-                    if (!TryEmit(indexArgs.GetArgument(i), il, ref context, setup, argParent, -1))
+                    if (!TryEmit(indexArgs.GetArgument(i), il, ref context, argParent, -1))
                         return false;
 
                 var indexerProp = indexExpr.Indexer;
@@ -2395,8 +2391,7 @@ namespace FastExpressionCompiler
                         : EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod("Get")); // multi-dimensional array
             }
 
-            private static bool TryEmitLabel(LabelExpression expr, ILGenerator il, ref CompilerContext context,
-                CompilerFlags setup, ParentFlags parent)
+            private static bool TryEmitLabel(LabelExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 ref var labelInfo = ref context.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(expr.Target, out var foundLabel);
                 if (!foundLabel)
@@ -2406,7 +2401,7 @@ namespace FastExpressionCompiler
                 il.DmarkLabel(label);
 
                 var defaultValue = expr.DefaultValue;
-                if (defaultValue != null && !TryEmit(defaultValue, il, ref context, setup, parent))
+                if (defaultValue != null && !TryEmit(defaultValue, il, ref context, parent))
                     return false;
 
                 var returnVariableIndexPlusOne = labelInfo.ReturnVariableIndexPlusOneAndIsDefined >>> 1;
@@ -2439,8 +2434,7 @@ namespace FastExpressionCompiler
                 il.Demit(returnOpCode, labelInfo.ReturnLabel);
             }
 
-            private static bool TryEmitGoto(GotoExpression expr, ILGenerator il, ref CompilerContext context,
-                CompilerFlags setup, ParentFlags parent)
+            private static bool TryEmitGoto(GotoExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 ref var labelInfo = ref context.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(expr.Target, out var labelFound);
                 if (!labelFound)
@@ -2451,7 +2445,7 @@ namespace FastExpressionCompiler
                 }
                 var gotoValue = expr.Value;
                 if (gotoValue != null &&
-                    !TryEmit(gotoValue, il, ref context, setup, parent & ~ParentFlags.IgnoreResult))
+                    !TryEmit(gotoValue, il, ref context, parent & ~ParentFlags.IgnoreResult))
                     return false;
 
                 switch (expr.Kind)
@@ -2496,8 +2490,7 @@ namespace FastExpressionCompiler
                 }
             }
 
-            private static bool TryEmitCoalesceOperator(BinaryExpression expr, ILGenerator il, ref CompilerContext context,
-                CompilerFlags setup, ParentFlags parent)
+            private static bool TryEmitCoalesceOperator(BinaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var labelFalse = il.DefineLabel(); // todo: @perf define only if needed
                 var labelDone = il.DefineLabel();
@@ -2508,7 +2501,7 @@ namespace FastExpressionCompiler
                 // we won't OpCodes.Pop inside the Coalesce as it may leave the Il in invalid state - instead we will pop at the end here (#284)
                 var flags = (parent & ~ParentFlags.IgnoreResult) | ParentFlags.Coalesce;
 
-                if (!TryEmit(left, il, ref context, setup, flags))
+                if (!TryEmit(left, il, ref context, flags))
                     return false;
 
                 var exprType = expr.Type;
@@ -2534,7 +2527,7 @@ namespace FastExpressionCompiler
 
                     il.Demit(OpCodes.Br, labelDone);
                     il.DmarkLabel(labelFalse);
-                    if (!TryEmit(right, il, ref context, setup, flags))
+                    if (!TryEmit(right, il, ref context, flags))
                         return false;
 
                     il.DmarkLabel(labelDone);
@@ -2545,7 +2538,7 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Brtrue, labelFalse); // automates the chain of the Ldnull, Ceq, Brfalse
                     il.Demit(OpCodes.Pop);                // left is null, pop its value from the stack
 
-                    if (!TryEmit(right, il, ref context, setup, flags))
+                    if (!TryEmit(right, il, ref context, flags))
                         return false;
 
                     if (right.Type != exprType)
@@ -2601,15 +2594,14 @@ namespace FastExpressionCompiler
                 }
             }
 
-            private static bool TryEmitTryCatchFinallyBlock(TryExpression tryExpr, ILGenerator il, ref CompilerContext context,
-                CompilerFlags setup, ParentFlags parent)
+            private static bool TryEmitTryCatchFinallyBlock(TryExpression tryExpr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
 #if DEMIT
                 Debug.WriteLine("try {");
 #endif
                 il.BeginExceptionBlock();
 
-                if (!TryEmit(tryExpr.Body, il, ref context, setup, parent))
+                if (!TryEmit(tryExpr.Body, il, ref context, parent))
                     return false;
 
                 var exprType = tryExpr.Type;
@@ -2625,7 +2617,7 @@ namespace FastExpressionCompiler
                     var catchBlock = catchBlocks[i];
                     if (catchBlock.Filter != null)
                     {
-                        if ((setup & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
+                        if ((context.CompilerFlags & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
                             throw new NotSupportedExpressionException(Result.NotSupported_ExceptionCatchFilter);
                         return false;
                     }
@@ -2649,7 +2641,7 @@ namespace FastExpressionCompiler
                         EmitStoreLocalVariable(il, exVarIndex);
                     }
 
-                    if (!TryEmit(catchBlock.Body, il, ref context, setup, parent))
+                    if (!TryEmit(catchBlock.Body, il, ref context, parent))
                         return false;
 
                     if (exVarExpr != null)
@@ -2667,7 +2659,7 @@ namespace FastExpressionCompiler
 #endif
                     il.BeginFaultBlock();
                     // it is important to ignore result for the fault block, because it should not return anything
-                    if (!TryEmit(faultExpr, il, ref context, setup, parent | ParentFlags.IgnoreResult))
+                    if (!TryEmit(faultExpr, il, ref context, parent | ParentFlags.IgnoreResult))
                         return false;
                 }
                 else if (tryExpr.Finally != null)
@@ -2678,7 +2670,7 @@ namespace FastExpressionCompiler
 #endif
                     il.BeginFinallyBlock();
                     // it is important to ignore result for the finally block, because it should not return anything
-                    if (!TryEmit(finallyExpr, il, ref context, setup, parent | ParentFlags.IgnoreResult))
+                    if (!TryEmit(finallyExpr, il, ref context, parent | ParentFlags.IgnoreResult))
                         return false;
                 }
 
@@ -2694,8 +2686,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            public static bool TryEmitParameter(ParameterExpression paramExpr,
-                ILGenerator il, ref CompilerContext context, CompilerFlags setup, ParentFlags parent, int byRefIndex = -1)
+            public static bool TryEmitParameter(ParameterExpression paramExpr, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex = -1)
             {
                 var paramExprs = context.ParamExprs;
                 var paramExprCount = paramExprs.GetParamCount();
@@ -2918,11 +2909,11 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitSimpleUnaryExpression(UnaryExpression expr, ExpressionType nodeType,
-                ILGenerator il, ref CompilerContext context, CompilerFlags setup, ParentFlags parent)
+                ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var exprType = expr.Type;
 
-                if (!TryEmit(expr.Operand, il, ref context, setup, parent))
+                if (!TryEmit(expr.Operand, il, ref context, parent))
                     return false;
 
                 if (nodeType == ExpressionType.TypeAs)
@@ -2982,10 +2973,9 @@ namespace FastExpressionCompiler
                 return il.EmitPopIfIgnoreResult(parent);
             }
 
-            private static bool TryEmitTypeIsOrEqual(TypeBinaryExpression expr,
-                ILGenerator il, ref CompilerContext context, CompilerFlags setup, ParentFlags parent)
+            private static bool TryEmitTypeIsOrEqual(TypeBinaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
-                if (!TryEmit(expr.Expression, il, ref context, setup, parent))
+                if (!TryEmit(expr.Expression, il, ref context, parent))
                     return false;
                 if ((parent & ParentFlags.IgnoreResult) != 0)
                     return true;
@@ -2996,20 +2986,19 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Cgt_Un);
                     return true;
                 }
-                if ((setup & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
+                if ((context.CompilerFlags & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
                     throw new NotSupportedExpressionException(Result.NotSupported_TypeEqual);
                 return false;
             }
 
-            private static bool TryEmitNot(UnaryExpression expr,
-                ILGenerator il, ref CompilerContext context, CompilerFlags setup, ParentFlags parent)
+            private static bool TryEmitNot(UnaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var op = expr.Operand;
                 if (op.NodeType == ExpressionType.Equal)
                     return TryEmitComparison(((BinaryExpression)op).Left, ((BinaryExpression)op).Right,
-                        expr.Type, ExpressionType.NotEqual, il, ref context, setup, parent);
+                        expr.Type, ExpressionType.NotEqual, il, ref context, parent);
 
-                if (!TryEmit(op, il, ref context, setup, parent))
+                if (!TryEmit(op, il, ref context, parent))
                     return false;
 
                 if ((parent & ParentFlags.IgnoreResult) != 0)
@@ -3021,8 +3010,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitConvert(UnaryExpression expr,
-                ILGenerator il, ref CompilerContext context, CompilerFlags setup, ParentFlags parent)
+            private static bool TryEmitConvert(UnaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var opExpr = expr.Operand;
                 var sourceType = opExpr.Type;
@@ -3035,10 +3023,10 @@ namespace FastExpressionCompiler
                 {
                     // Try fast the special cases which does not require searching for the conversion operators in principle:
                     if (parent.IgnoresResult() && (sourceType == targetType || targetType.IsAssignableFrom(sourceType)))
-                        return TryEmit(opExpr, il, ref context, setup, parent & ~ParentFlags.InstanceAccess);
+                        return TryEmit(opExpr, il, ref context, parent & ~ParentFlags.InstanceAccess);
 
                     // Emit the operand before going to the fast checks below
-                    if (!TryEmit(opExpr, il, ref context, setup, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess))
+                    if (!TryEmit(opExpr, il, ref context, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess))
                         return false;
 
                     if (sourceType == targetType)
@@ -3099,7 +3087,7 @@ namespace FastExpressionCompiler
                     methodParamType = mParams[0].ParameterType;
 
                     // todo: @wip check if we need to add the ParentFlags.Call here?
-                    if (!TryEmit(opExpr, il, ref context, setup, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess))
+                    if (!TryEmit(opExpr, il, ref context, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess))
                         return false;
                 }
                 else
@@ -3671,14 +3659,13 @@ namespace FastExpressionCompiler
             private static int InitValueTypeVariable(ILGenerator il, Type exprType) =>
                 InitValueTypeVariable(il, exprType, il.GetNextLocalVarIndex(exprType));
 
-            private static bool EmitNewArrayBounds(NewArrayExpression expr,
-                ILGenerator il, ref CompilerContext context, CompilerFlags setup, ParentFlags parent)
+            private static bool EmitNewArrayBounds(NewArrayExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var bounds = expr.GetArgExprs();
                 var boundCount = bounds.GetArgCount();
                 if (boundCount == 1)
                 {
-                    if (!TryEmit(bounds.GetArgument(0), il, ref context, setup, parent))
+                    if (!TryEmit(bounds.GetArgument(0), il, ref context, parent))
                         return false;
                     var elemType = expr.Type.GetElementType();
                     if (elemType == null)
@@ -3688,15 +3675,14 @@ namespace FastExpressionCompiler
                 else
                 {
                     for (var i = 0; i < boundCount; i++)
-                        if (!TryEmit(bounds.GetArgument(i), il, ref context, setup, parent))
+                        if (!TryEmit(bounds.GetArgument(i), il, ref context, parent))
                             return false;
                     il.Demit(OpCodes.Newobj, expr.Type.GetTypeInfo().DeclaredConstructors.GetFirst());
                 }
                 return true;
             }
 
-            private static bool EmitNewArrayInit(NewArrayExpression expr,
-                ILGenerator il, ref CompilerContext context, CompilerFlags setup, ParentFlags parent)
+            private static bool EmitNewArrayInit(NewArrayExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var arrayType = expr.Type;
                 if (arrayType.GetArrayRank() > 1)
@@ -3720,13 +3706,13 @@ namespace FastExpressionCompiler
                     if (isElemOfValueType) // loading element address for later copying of value into it.
                     {
                         il.Demit(OpCodes.Ldelema, elemType);
-                        if (!TryEmit(elems.GetArgument(i), il, ref context, setup, parent))
+                        if (!TryEmit(elems.GetArgument(i), il, ref context, parent))
                             return false;
                         il.Demit(OpCodes.Stobj, elemType); // store element of value type by array element address
                     }
                     else
                     {
-                        if (!TryEmit(elems.GetArgument(i), il, ref context, setup, parent))
+                        if (!TryEmit(elems.GetArgument(i), il, ref context, parent))
                             return false;
                         il.Demit(OpCodes.Stelem_Ref);
                     }
@@ -3734,8 +3720,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool EmitMemberInit(MemberInitExpression expr, ILGenerator il, ref CompilerContext context,
-                CompilerFlags setup, ParentFlags parent)
+            private static bool EmitMemberInit(MemberInitExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var valueVarIndex = -1;
                 var exprType = expr.Type;
@@ -3746,7 +3731,7 @@ namespace FastExpressionCompiler
 #if LIGHT_EXPRESSION
                 if (newExpr == null)
                 {
-                    if (!TryEmit(expr.Expression, il, ref context, setup, parent))
+                    if (!TryEmit(expr.Expression, il, ref context, parent))
                         return false;
                     if (valueVarIndex != -1)
                         EmitStoreLocalVariable(il, valueVarIndex);
@@ -3760,8 +3745,7 @@ namespace FastExpressionCompiler
                     {
                         var args = newExpr.Constructor.GetParameters();
                         for (var i = 0; i < argCount; i++)
-                            if (!TryEmit(argExprs.GetArgument(i), il, ref context, setup, parent,
-                                args[i].ParameterType.IsByRef ? i : -1))
+                            if (!TryEmit(argExprs.GetArgument(i), il, ref context, parent, args[i].ParameterType.IsByRef ? i : -1))
                                 return false;
                     }
 
@@ -3790,7 +3774,7 @@ namespace FastExpressionCompiler
                     else
                         il.Demit(OpCodes.Dup); // duplicate member owner on stack
 
-                    if (!TryEmit(((MemberAssignment)binding).Expression, il, ref context, setup, parent) ||
+                    if (!TryEmit(((MemberAssignment)binding).Expression, il, ref context, parent) ||
                         !EmitMemberSet(il, binding.Member))
                         return false;
                 }
@@ -3820,8 +3804,7 @@ namespace FastExpressionCompiler
                 member is FieldInfo field ? EmitFieldSet(il, field) :
                 false;
 
-            private static bool TryEmitListInit(ListInitExpression expr, ILGenerator il, ref CompilerContext context,
-                CompilerFlags setup, ParentFlags parent)
+            private static bool TryEmitListInit(ListInitExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var valueVarIndex = -1;
                 var exprType = expr.Type;
@@ -3835,7 +3818,7 @@ namespace FastExpressionCompiler
                 {
                     var args = newExpr.Constructor.GetParameters();
                     for (var i = 0; i < argCount; i++)
-                        if (!TryEmit(argExprs.GetArgument(i), il, ref context, setup, parent, args[i].ParameterType.IsByRef ? i : -1))
+                        if (!TryEmit(argExprs.GetArgument(i), il, ref context, parent, args[i].ParameterType.IsByRef ? i : -1))
                             return false;
                 }
 
@@ -3873,7 +3856,7 @@ namespace FastExpressionCompiler
                     var addArgCount = addArgs.GetArgCount();
 
                     for (var a = 0; ok && a < addArgCount; ++a)
-                        ok = TryEmit(addArgs.GetArgument(a), il, ref context, setup, callFlags, methodParams[a].ParameterType.IsByRef ? a : -1);
+                        ok = TryEmit(addArgs.GetArgument(a), il, ref context, callFlags, methodParams[a].ParameterType.IsByRef ? a : -1);
 
                     if (!exprType.IsValueType)
                         ok = EmitMethodCallOrVirtualCall(il, method);
@@ -3895,7 +3878,7 @@ namespace FastExpressionCompiler
             // the `right = null` argument indicates the increment/decrement operation
             private static bool TryEmitArithmeticAndOrAssign(
                 Expression left, Expression right, Type exprType, ExpressionType nodeType, bool isPost,
-                ILGenerator il, ref CompilerContext context, CompilerFlags setup, ParentFlags parent)
+                ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 // we need the result variable and the time of Post/Pre when to store it only if the result is not ignored, otherwise don't bother
                 var resultVar = -1;
@@ -3907,7 +3890,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.Parameter:
                         if (!isPost)
                             return TryEmitAssignToParameterOrVariable((ParameterExpression)left, right,
-                                nodeType, isPost, exprType, il, ref context, setup, parent, resultVar);
+                                nodeType, isPost, exprType, il, ref context, parent, resultVar);
 
                         // todo: @better split for now between the Increment/Decrement and the rest
                         var p = (ParameterExpression)left;
@@ -3999,7 +3982,7 @@ namespace FastExpressionCompiler
                             if (right.NodeType.IsBlockLikeOrConditional() ||
                                 right.NodeType == ExpressionType.Invoke)
                             {
-                                if (!TryEmit(right, il, ref context, setup, rightOnlyFlags))
+                                if (!TryEmit(right, il, ref context, rightOnlyFlags))
                                     return false;
                                 if (context.LastEmitIsAddress)
                                     EmitLoadIndirectlyByRef(il, rightType);
@@ -4011,7 +3994,7 @@ namespace FastExpressionCompiler
                             if (leftMemberExpr != null)
                             {
                                 if (objExpr != null &&
-                                    !TryEmit(objExpr, il, ref context, setup, leftArLeastFlags | ParentFlags.InstanceAccess))
+                                    !TryEmit(objExpr, il, ref context, leftArLeastFlags | ParentFlags.InstanceAccess))
                                     return false;
                             }
                             else
@@ -4021,11 +4004,11 @@ namespace FastExpressionCompiler
                                 {
                                     var isIndexerAMethodCall = indexArgCount > 1 | orLeftIndexExpr.Indexer != null;
                                     var objFlags = isIndexerAMethodCall ? ParentFlags.InstanceCall : ParentFlags.InstanceAccess | ParentFlags.IndexAccess;
-                                    if (!TryEmit(objExpr, il, ref context, setup, objFlags | ParentFlags.AssignmentLeftValue))
+                                    if (!TryEmit(objExpr, il, ref context, objFlags | ParentFlags.AssignmentLeftValue))
                                         return false;
                                 }
                                 for (var i = 0; i < indexArgCount; i++)
-                                    if (!TryEmit(indexArgs.GetArgument(i), il, ref context, setup, baseFlags, -1))
+                                    if (!TryEmit(indexArgs.GetArgument(i), il, ref context, baseFlags, -1))
                                         return false;
                             }
 
@@ -4036,7 +4019,7 @@ namespace FastExpressionCompiler
                             }
                             else
                             {
-                                if (!TryEmit(right, il, ref context, setup, rightOnlyFlags))
+                                if (!TryEmit(right, il, ref context, rightOnlyFlags))
                                     return false;
                                 if (resultVar != -1)
                                     EmitStoreAndLoadLocalVariable(il, resultVar);
@@ -4075,8 +4058,7 @@ namespace FastExpressionCompiler
                         var leftType = left.Type;
                         if (leftMemberExpr != null)
                         {
-                            if (!TryEmitMemberGet(leftMemberExpr, il, ref context, setup,
-                                    leftArLeastFlags | ParentFlags.Arithmetic | ParentFlags.DupIt))
+                            if (!TryEmitMemberGet(leftMemberExpr, il, ref context, leftArLeastFlags | ParentFlags.Arithmetic | ParentFlags.DupIt))
                                 return false;
                         }
                         else // if (leftIndexExpr != null)
@@ -4088,7 +4070,7 @@ namespace FastExpressionCompiler
                             if (objExpr != null)
                             {
                                 var objFlags = isIndexerAMethodCall ? ParentFlags.InstanceCall : ParentFlags.InstanceAccess | ParentFlags.IndexAccess;
-                                if (!TryEmit(objExpr, il, ref context, setup, objFlags | ParentFlags.Arithmetic))
+                                if (!TryEmit(objExpr, il, ref context, objFlags | ParentFlags.Arithmetic))
                                     return false;
 
                                 // required for calling the method on the value type parameter
@@ -4109,7 +4091,7 @@ namespace FastExpressionCompiler
                             for (var i = 0; i < indexArgCount; i++)
                             {
                                 var indexArg = indexArgs.GetArgument(i);
-                                if (!TryEmit(indexArg, il, ref context, setup, baseFlags))
+                                if (!TryEmit(indexArg, il, ref context, baseFlags))
                                     return false;
                                 var indexArgVar = EmitStoreAndLoadLocalVariable(il, indexArg.Type);
                                 if (i == 0) indexArgVar0 = indexArgVar;
@@ -4163,7 +4145,7 @@ namespace FastExpressionCompiler
                             else
                             {
                                 var rightType = right.Type;
-                                if (!TryEmit(right, il, ref context, setup, rightOnlyFlags))
+                                if (!TryEmit(right, il, ref context, rightOnlyFlags))
                                     return false;
 
                                 var rightIsNullable = rightType.IsNullable();
@@ -4207,7 +4189,7 @@ namespace FastExpressionCompiler
                             {
                                 // emit the right expression immediately after the left and then just process their results
                                 var rightType = right.Type;
-                                if (!TryEmit(right, il, ref context, setup, rightOnlyFlags))
+                                if (!TryEmit(right, il, ref context, rightOnlyFlags))
                                     return false;
                                 if (context.LastEmitIsAddress)
                                     EmitLoadIndirectlyByRef(il, rightType);
@@ -4336,7 +4318,7 @@ namespace FastExpressionCompiler
             // the null `right` means the increment/decrement operation
             private static bool TryEmitAssignToParameterOrVariable(
                 ParameterExpression left, Expression right, ExpressionType nodeType, bool isPost, Type exprType,
-                ILGenerator il, ref CompilerContext context, CompilerFlags setup, ParentFlags parent, int resultVar = -1)
+                ILGenerator il, ref CompilerContext context, ParentFlags parent, int resultVar = -1)
             {
                 var paramExprs = context.ParamExprs;
                 var paramExprCount = paramExprs.GetParamCount();
@@ -4360,7 +4342,7 @@ namespace FastExpressionCompiler
                         var varFlags = flags | ParentFlags.AssignmentRightValue;
                         if (isLeftByRef)
                             varFlags |= ParentFlags.AssignmentByRef;
-                        ok = TryEmit(right, il, ref context, setup, varFlags);
+                        ok = TryEmit(right, il, ref context, varFlags);
                         if (resultVar != -1 & !isPost)
                             EmitStoreAndLoadLocalVariable(il, resultVar);
                         if (!isLeftByRef)
@@ -4368,7 +4350,7 @@ namespace FastExpressionCompiler
                     }
                     else
                     {
-                        ok = TryEmitArithmetic(left, right, nodeType, exprType, il, ref context, setup, flags | ParentFlags.AssignmentLeftValue);
+                        ok = TryEmitArithmetic(left, right, nodeType, exprType, il, ref context, flags | ParentFlags.AssignmentLeftValue);
                         if (resultVar != -1 & !isPost)
                             EmitStoreAndLoadLocalVariable(il, resultVar);
                         if (isLeftByRef)
@@ -4403,8 +4385,8 @@ namespace FastExpressionCompiler
                         EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value for the later further use
 
                     ok = nodeType == ExpressionType.Assign
-                        ? TryEmit(right, il, ref context, setup, flags)
-                        : TryEmitArithmetic(left, right, nodeType, exprType, il, ref context, setup, flags);
+                        ? TryEmit(right, il, ref context, flags)
+                        : TryEmitArithmetic(left, right, nodeType, exprType, il, ref context, flags);
 
                     if (resultVar != -1 & !isPost)
                         EmitStoreAndLoadLocalVariable(il, resultVar);
@@ -4426,7 +4408,7 @@ namespace FastExpressionCompiler
 
                 if (nodeType == ExpressionType.Assign)
                 {
-                    if (!TryEmit(right, il, ref context, setup, flags))
+                    if (!TryEmit(right, il, ref context, flags))
                         return false;
                     if (right is ParameterExpression rp && rp.IsByRef)
                         EmitLoadIndirectlyByRef(il, rp.Type);
@@ -4470,7 +4452,7 @@ namespace FastExpressionCompiler
                 }
 
                 // todo: @perf optimize for the increment/decrement case
-                if (!TryEmitArithmetic(left, right, nodeType, exprType, il, ref context, setup, flags))
+                if (!TryEmitArithmetic(left, right, nodeType, exprType, il, ref context, flags))
                     return false;
 
                 var arithmeticResultVar = resultVar != -1 ? resultVar : il.GetNextLocalVarIndex(exprType);
@@ -4636,8 +4618,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitMethodCall(Expression expr,
-                ILGenerator il, ref CompilerContext context, CompilerFlags setup, ParentFlags parent, int byRefIndex = -1)
+            private static bool TryEmitMethodCall(Expression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex = -1)
             {
                 var flags = ParentFlags.Call;
                 var callExpr = (MethodCallExpression)expr;
@@ -4649,7 +4630,7 @@ namespace FastExpressionCompiler
                 var loadObjByAddress = false;
                 if (objExpr != null)
                 {
-                    if (!TryEmit(objExpr, il, ref context, setup, flags | ParentFlags.InstanceAccess))
+                    if (!TryEmit(objExpr, il, ref context, flags | ParentFlags.InstanceAccess))
                         return false;
                     objIsValueType = objExpr.Type.IsValueType;
                     loadObjByAddress = objIsValueType && objExpr.NodeType != ExpressionType.Parameter && !context.LastEmitIsAddress;
@@ -4677,7 +4658,7 @@ namespace FastExpressionCompiler
                         {
                             var argExpr = callArgs.GetArgument(i);
                             var parType = methodParams[i].ParameterType;
-                            if (!TryEmit(argExpr, il, ref context, setup, flags, parType.IsByRef ? i : -1))
+                            if (!TryEmit(argExpr, il, ref context, flags, parType.IsByRef ? i : -1))
                                 return false;
                         }
                     }
@@ -4691,7 +4672,7 @@ namespace FastExpressionCompiler
                         {
                             var argExpr = callArgs.GetArgument(i);
                             var parType = methodParams[i].ParameterType;
-                            if (!TryEmit(argExpr, il, ref context, setup, flags, parType.IsByRef ? i : -1))
+                            if (!TryEmit(argExpr, il, ref context, flags, parType.IsByRef ? i : -1))
                                 return false;
                             argVars.Add(EmitStoreLocalVariable(il, parType));
                         }
@@ -4734,8 +4715,7 @@ namespace FastExpressionCompiler
                 return ok;
             }
 
-            public static bool TryEmitMemberGet(MemberExpression expr,
-                ILGenerator il, ref CompilerContext context, CompilerFlags setup, ParentFlags parent, int byRefIndex = -1)
+            public static bool TryEmitMemberGet(MemberExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex = -1)
             {
                 var objExpr = expr.Expression;
                 if (expr.Member is PropertyInfo prop)
@@ -4747,7 +4727,7 @@ namespace FastExpressionCompiler
                             & ~(ParentFlags.IgnoreResult | ParentFlags.MemberAccess | ParentFlags.DupIt |
                                 ParentFlags.LambdaCall | ParentFlags.ReturnByRef);
 
-                        if (!TryEmit(objExpr, il, ref context, setup, p))
+                        if (!TryEmit(objExpr, il, ref context, p))
                             return false;
 
                         if ((parent & ParentFlags.DupIt) != 0) // just duplicate the whatever is emitted for object
@@ -4771,7 +4751,7 @@ namespace FastExpressionCompiler
                         var p = (parent | ParentFlags.InstanceAccess | ParentFlags.MemberAccess)
                             & ~ParentFlags.IgnoreResult & ~ParentFlags.DupIt;
 
-                        if (!TryEmit(objExpr, il, ref context, setup, p))
+                        if (!TryEmit(objExpr, il, ref context, p))
                             return false;
 
                         if (parent.IgnoresResult())
@@ -4959,15 +4939,14 @@ namespace FastExpressionCompiler
                 return ok;
             }
 
-            private static bool TryEmitInvoke(InvocationExpression expr, ILGenerator il, ref CompilerContext context,
-                CompilerFlags setup, ParentFlags parent)
+            private static bool TryEmitInvoke(InvocationExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var paramCount = context.ParamExprs.GetParamCount();
 
                 var argExprs = expr.GetArgExprs();
                 var argCount = argExprs.GetArgCount();
                 var invokedExpr = expr.Expression;
-                if ((setup & CompilerFlags.NoInvocationLambdaInlining) == 0 && invokedExpr is LambdaExpression lambdaExpr)
+                if ((context.CompilerFlags & CompilerFlags.NoInvocationLambdaInlining) == 0 && invokedExpr is LambdaExpression lambdaExpr)
                 {
                     parent |= ParentFlags.InlinedLambdaInvoke;
 
@@ -4976,7 +4955,7 @@ namespace FastExpressionCompiler
                     if (!found)
                         return false;
 
-                    if (!TryEmit(inlinedExpr, il, ref context, setup, parent))
+                    if (!TryEmit(inlinedExpr, il, ref context, parent))
                         return false;
 
                     if ((parent & ParentFlags.IgnoreResult) == 0 && inlinedExpr.Type != typeof(void))
@@ -4996,7 +4975,7 @@ namespace FastExpressionCompiler
                     return true;
                 }
 
-                if (!TryEmit(invokedExpr, il, ref context, setup, parent & ~ParentFlags.IgnoreResult)) // removing the IgnoreResult temporary because we need "full" lambda emit and we will re-apply the IgnoreResult later at the end of the method
+                if (!TryEmit(invokedExpr, il, ref context, parent & ~ParentFlags.IgnoreResult)) // removing the IgnoreResult temporary because we need "full" lambda emit and we will re-apply the IgnoreResult later at the end of the method
                     return false;
 
                 //if (lambda is ConstantExpression lambdaConst) // todo: @perf opportunity to optimize
@@ -5010,7 +4989,7 @@ namespace FastExpressionCompiler
                     for (var i = 0; i < args.Length; ++i)
                     {
                         var argExpr = argExprs.GetArgument(i);
-                        if (!TryEmit(argExpr, il, ref context, setup, useResult, args[i].ParameterType.IsByRef ? i : -1))
+                        if (!TryEmit(argExpr, il, ref context, useResult, args[i].ParameterType.IsByRef ? i : -1))
                             return false;
                     }
                 }
@@ -5051,8 +5030,7 @@ namespace FastExpressionCompiler
                 };
             }
 
-            private static bool TryEmitSwitch(SwitchExpression expr, ILGenerator il, ref CompilerContext context,
-                CompilerFlags setup, ParentFlags parent)
+            private static bool TryEmitSwitch(SwitchExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var switchValueExpr = expr.SwitchValue;
                 var customEqualMethod = expr.Comparison;
@@ -5071,13 +5049,13 @@ namespace FastExpressionCompiler
                         {
                             // todo: @perf avoid creation of the additional expression
                             testExpr = Equal(switchValueExpr, cs0.TestValues[0]);
-                            if (Interpreter.TryInterpretBool(out var testResult, testExpr, setup))
-                                return TryEmit(testResult ? cs0.Body : defaultBody, il, ref context, setup, parent);
+                            if (Interpreter.TryInterpretBool(out var testResult, testExpr, context.CompilerFlags))
+                                return TryEmit(testResult ? cs0.Body : defaultBody, il, ref context, parent);
                         }
                         else
                             testExpr = Call(customEqualMethod, switchValueExpr, cs0.TestValues[0]);
 
-                        return TryEmitConditional(testExpr, cs0.Body, defaultBody, il, ref context, setup, parent);
+                        return TryEmitConditional(testExpr, cs0.Body, defaultBody, il, ref context, parent);
                     }
                 }
 
@@ -5275,7 +5253,7 @@ namespace FastExpressionCompiler
                         }
 
                         // Emit the switch value here only after we sure about proceeding with switch table
-                        if (!TryEmit(switchValueExpr, il, ref context, setup, switchValueParent, -1))
+                        if (!TryEmit(switchValueExpr, il, ref context, switchValueParent, -1))
                             return false;
 
                         // Emit the min outlier before the switch table
@@ -5330,7 +5308,7 @@ namespace FastExpressionCompiler
                                 il.DmarkLabel(switchTableLabels[labelIndex]);
                             }
 
-                            if (!TryEmit(cs.Body, il, ref context, setup, parent))
+                            if (!TryEmit(cs.Body, il, ref context, parent))
                                 return false;
                             il.Demit(OpCodes.Br, endOfSwitchLabel);
                         }
@@ -5341,7 +5319,7 @@ namespace FastExpressionCompiler
                         if (defaultBody != null)
                         {
                             il.DmarkLabel(defaultBodyLabel);
-                            if (!TryEmit(defaultBody, il, ref context, setup, parent))
+                            if (!TryEmit(defaultBody, il, ref context, parent))
                                 return false;
                         }
 
@@ -5385,13 +5363,13 @@ namespace FastExpressionCompiler
                 }
 
                 // Emit the switch value once and store it in the local variable for comparison in cases below
-                if (!TryEmit(switchValueExpr, il, ref context, setup, switchValueParent, param0ByRefIndex))
+                if (!TryEmit(switchValueExpr, il, ref context, switchValueParent, param0ByRefIndex))
                     return false;
 
                 if (caseCount == 0) // see #440
                 {
                     il.Demit(OpCodes.Pop); // remove the switch value result
-                    return defaultBody == null || TryEmit(defaultBody, il, ref context, setup, parent);
+                    return defaultBody == null || TryEmit(defaultBody, il, ref context, parent);
                 }
 
                 var switchValueVar = EmitStoreLocalVariable(il, switchValueType);
@@ -5417,7 +5395,7 @@ namespace FastExpressionCompiler
                         if (!switchValueIsNullable)
                         {
                             EmitLoadLocalVariable(il, switchValueVar);
-                            if (!TryEmit(caseTestValue, il, ref context, setup, switchValueParent, param1ByRefIndex))
+                            if (!TryEmit(caseTestValue, il, ref context, switchValueParent, param1ByRefIndex))
                                 return false;
                             if (equalityMethod == null)
                             {
@@ -5434,7 +5412,7 @@ namespace FastExpressionCompiler
                         if (equalityMethod != null & !isEqualityMethodForUnderlyingNullable)
                         {
                             EmitLoadLocalVariable(il, switchValueVar);
-                            if (!TryEmit(caseTestValue, il, ref context, setup, switchValueParent, param1ByRefIndex) ||
+                            if (!TryEmit(caseTestValue, il, ref context, switchValueParent, param1ByRefIndex) ||
                                 !EmitMethodCall(il, equalityMethod))
                                 return false;
                             il.Demit(OpCodes.Brtrue, caseBodyLabel);
@@ -5456,7 +5434,7 @@ namespace FastExpressionCompiler
                         // Compare the switch value with the case value via Ceq or comparison method and then compare the HasValue of both
                         EmitLoadLocalVariableAddress(il, switchValueVar);
                         il.Demit(OpCodes.Ldfld, switchNullableUnsafeValueField);
-                        if (!TryEmit(caseTestValue, il, ref context, setup, switchValueParent, param1ByRefIndex))
+                        if (!TryEmit(caseTestValue, il, ref context, switchValueParent, param1ByRefIndex))
                             return false;
                         var caseValueVar = EmitStoreAndLoadLocalVariableAddress(il, switchValueType);
                         il.Demit(OpCodes.Ldfld, switchNullableUnsafeValueField);
@@ -5476,7 +5454,7 @@ namespace FastExpressionCompiler
                     }
                 }
 
-                if (defaultBody != null && !TryEmit(defaultBody, il, ref context, setup, parent))
+                if (defaultBody != null && !TryEmit(defaultBody, il, ref context, parent))
                     return false;
                 il.Demit(OpCodes.Br, switchEndLabel);
 
@@ -5484,7 +5462,7 @@ namespace FastExpressionCompiler
                 {
                     il.DmarkLabel(caseLabels[caseIndex]);
                     var cs = cases[caseIndex];
-                    if (!TryEmit(cs.Body, il, ref context, setup, parent))
+                    if (!TryEmit(cs.Body, il, ref context, parent))
                         return false;
 
                     il.Demit(OpCodes.Br, switchEndLabel);
@@ -5517,7 +5495,7 @@ namespace FastExpressionCompiler
 
             private static bool TryEmitComparison(
                 Expression left, Expression right, Type exprType, ExpressionType nodeType,
-                ILGenerator il, ref CompilerContext context, CompilerFlags setup, ParentFlags parent)
+                ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var leftType = left.Type;
                 var leftIsNullable = leftType.IsNullable();
@@ -5544,7 +5522,7 @@ namespace FastExpressionCompiler
                 {
                     if (leftIsNullable & rightIsNull)
                     {
-                        if (!TryEmit(left, il, ref context, setup, operandParent))
+                        if (!TryEmit(left, il, ref context, operandParent))
                             return false;
 
                         // See #341 `Nullable_decimal_parameter_with_decimal_constant_comparison_cases`
@@ -5559,7 +5537,7 @@ namespace FastExpressionCompiler
 
                     if (leftIsNull && rightType.IsNullable())
                     {
-                        if (!TryEmit(right, il, ref context, setup, operandParent))
+                        if (!TryEmit(right, il, ref context, operandParent))
                             return false;
 
                         if (!context.LastEmitIsAddress && !(right is ParameterExpression p && p.IsByRef))
@@ -5578,7 +5556,7 @@ namespace FastExpressionCompiler
                 // and store, load the left result for the complex expressions, see `IsComplexExpression` and #422
                 if (!leftIsNull)
                 {
-                    if (!TryEmit(left, il, ref context, setup, operandParent))
+                    if (!TryEmit(left, il, ref context, operandParent))
                         return false;
 
                     // save the left result to restore it later after the complex expression, see #422
@@ -5594,7 +5572,7 @@ namespace FastExpressionCompiler
 
                 if (rightIsNull)
                     il.Demit(OpCodes.Ldnull);
-                else if (!TryEmit(right, il, ref context, setup, operandParent))
+                else if (!TryEmit(right, il, ref context, operandParent))
                     return false;
 
                 if (comparingToLeftNull | comparingToRightNull ||
@@ -5796,7 +5774,7 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitArithmetic(Expression left, Expression right, ExpressionType nodeType, Type exprType,
-                ILGenerator il, ref CompilerContext context, CompilerFlags setup, ParentFlags parent)
+                ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var flags = (parent
                     & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
@@ -5811,7 +5789,7 @@ namespace FastExpressionCompiler
                 if (leftIsNullable)
                 {
                     noNullableValueLabel = il.DefineLabel();
-                    if (!TryEmit(left, il, ref context, setup, flags | ParentFlags.InstanceCall))
+                    if (!TryEmit(left, il, ref context, flags | ParentFlags.InstanceCall))
                         return false;
 
                     leftVar = EmitStoreAndLoadLocalVariableAddress(il, leftType);
@@ -5822,7 +5800,7 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
                     leftValueVar = EmitStoreLocalVariable(il, Nullable.GetUnderlyingType(leftType));
                 }
-                else if (!TryEmit(left, il, ref context, setup, flags))
+                else if (!TryEmit(left, il, ref context, flags))
                     return false;
 
                 var rightIsNullable = false;
@@ -5844,7 +5822,7 @@ namespace FastExpressionCompiler
                     rightIsNullable = rightType.IsNullable();
                     if (rightIsNullable)
                     {
-                        if (!TryEmit(right, il, ref context, setup, flags | ParentFlags.InstanceCall))
+                        if (!TryEmit(right, il, ref context, flags | ParentFlags.InstanceCall))
                             return false;
 
                         rightVar = EmitStoreAndLoadLocalVariableAddress(il, rightType);
@@ -5856,7 +5834,7 @@ namespace FastExpressionCompiler
                         il.Demit(OpCodes.Ldfld, rightType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
                         rightValueVar = EmitStoreLocalVariable(il, Nullable.GetUnderlyingType(rightType));
                     }
-                    else if (!TryEmit(right, il, ref context, setup, flags))
+                    else if (!TryEmit(right, il, ref context, flags))
                         return false;
 
                     // Means that it was complex right and the result of the left operation was stored
@@ -5977,15 +5955,15 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitLogicalOperator(BinaryExpression expr, ExpressionType nodeType,
-                ILGenerator il, ref CompilerContext context, CompilerFlags setup, ParentFlags parent)
+                ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
-                if (!TryEmit(expr.Left, il, ref context, setup, parent))
+                if (!TryEmit(expr.Left, il, ref context, parent))
                     return false;
 
                 var labelSkipRight = il.DefineLabel();
                 il.Demit(nodeType == ExpressionType.AndAlso ? OpCodes.Brfalse : OpCodes.Brtrue, labelSkipRight);
 
-                if (!TryEmit(expr.Right, il, ref context, setup, parent))
+                if (!TryEmit(expr.Right, il, ref context, parent))
                     return false;
 
                 var labelDone = il.DefineLabel();
@@ -6002,10 +5980,8 @@ namespace FastExpressionCompiler
                 expr is DefaultExpression ld && (ld.Type.IsClass || ld.Type.IsNullable()) ||
                 expr is ConstantExpression lc && lc.Value == null;
 
-            private static bool TryEmitConditional(
-                Expression testExpr, Expression ifTrueExpr, Expression ifFalseExpr,
-                // Type type, // todo: @wip what about the type, what if it is a void?
-                ILGenerator il, ref CompilerContext context, CompilerFlags setup, ParentFlags parent)
+            private static bool TryEmitConditional(Expression testExpr, Expression ifTrueExpr, Expression ifFalseExpr,
+                ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 testExpr = Tools.TryReduceConditionalTest(testExpr);
                 var testNodeType = testExpr.NodeType;
@@ -6071,12 +6047,12 @@ namespace FastExpressionCompiler
                     }
 
                     if (useBrFalseOrTrue != -1 &&
-                        !TryEmit(oppositeTestExpr, il, ref context, setup, parent & ~ParentFlags.IgnoreResult))
+                        !TryEmit(oppositeTestExpr, il, ref context, parent & ~ParentFlags.IgnoreResult))
                         return false;
                 }
 
                 if (useBrFalseOrTrue == -1 &&
-                    !TryEmit(testExpr, il, ref context, setup, parent & ~ParentFlags.IgnoreResult))
+                    !TryEmit(testExpr, il, ref context, parent & ~ParentFlags.IgnoreResult))
                     return false;
 
                 if (nullOfValueType != null)
@@ -6096,7 +6072,7 @@ namespace FastExpressionCompiler
                 else
                     il.Demit(OpCodes.Brfalse, labelIfFalse);
 
-                if (!TryEmit(ifTrueExpr, il, ref context, setup, parent))
+                if (!TryEmit(ifTrueExpr, il, ref context, parent))
                     return false;
 
                 if (ifFalseExpr.NodeType == ExpressionType.Default && ifFalseExpr.Type == typeof(void))
@@ -6106,7 +6082,7 @@ namespace FastExpressionCompiler
                     var labelDone = il.DefineLabel();
                     il.Demit(OpCodes.Br, labelDone);
                     il.DmarkLabel(labelIfFalse);
-                    if (!TryEmit(ifFalseExpr, il, ref context, setup, parent))
+                    if (!TryEmit(ifFalseExpr, il, ref context, parent))
                         return false;
                     il.DmarkLabel(labelDone);
                 }

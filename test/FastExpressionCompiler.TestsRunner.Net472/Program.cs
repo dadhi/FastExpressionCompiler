@@ -81,7 +81,7 @@ namespace FastExpressionCompiler.UnitTests
             }
 
             var totalTestCount = fecTests.TotalTestCount + lightTests.TotalTestCount;
-            Console.WriteLine($"TestX: {totalTestCount,-4} tests are passing in {totalStopwatch.ElapsedMilliseconds} ms.");
+            Console.WriteLine($"//TestX: {totalTestCount,-4} tests are passing in {totalStopwatch.ElapsedMilliseconds} ms.");
         }
 
         public static void RunAllTests()
@@ -415,14 +415,14 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue461_InvalidProgramException_when_null_checking_type_by_ref().Run);
                 Run(new LightExpression.IssueTests.Issue461_InvalidProgramException_when_null_checking_type_by_ref().Run);
 
-                Console.WriteLine($"{Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
+                Console.WriteLine($"{Environment.NewLine}//IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
 
             Task.WaitAll(unitTests, issueTests);
             Console.WriteLine();
             if (failed)
             {
-                Console.WriteLine("ERROR: Some tests are FAILED!");
+                Console.WriteLine("//ERROR: Some tests are FAILED!");
                 Environment.Exit(1); // error
                 return;
             }

@@ -68,15 +68,13 @@ public abstract class Expression
     /// <summary>Collects the information about closure constants, nested lambdas, non-passed parameters, goto labels and variables in blocks.
     /// Returns `0` if everything is fine and positive error code for error.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
-    public virtual Result TryCollectInfo(CompilerFlags flags, ref CompilerContext context,
-        NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) => 0;
+    public virtual Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) => 0;
 
     /// <summary>The second FEC state to emit the actual IL op-codes based on the information collected by the first traversal
     /// and available in the `closure` structure. Find the expression examples below by searching `IsIntrinsic => true`.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
 
-    public virtual bool TryEmit(CompilerFlags flags, ref CompilerContext context,
-        ILGenerator il, ParentFlags parent, int byRefIndex = -1) => false;
+    public virtual bool TryEmit(ref CompilerContext context, ILGenerator il, ParentFlags parent, int byRefIndex = -1) => false;
 
     public virtual bool IsCustomToCSharpString => false;
 
@@ -3335,15 +3333,13 @@ public class ConvertDelegateIntrinsicExpression : UnaryExpression
     public override bool IsIntrinsic => true;
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override Result TryCollectInfo(CompilerFlags flags, ref CompilerContext context,
-        NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) =>
-        ExpressionCompiler.TryCollectInfo(ref context, Operand, nestedLambda, ref rootNestedLambdas, flags);
+    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) =>
+        ExpressionCompiler.TryCollectInfo(ref context, Operand, nestedLambda, ref rootNestedLambdas);
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override bool TryEmit(CompilerFlags flags, ref CompilerContext context,
-        ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    public override bool TryEmit(ref CompilerContext context, ILGenerator il, ParentFlags parent, int byRefIndex = -1)
     {
-        if (!EmittingVisitor.TryEmit(Operand, il, ref context, flags, parent, byRefIndex))
+        if (!EmittingVisitor.TryEmit(Operand, il, ref context, parent, byRefIndex))
             return false;
         il.Demit(OpCodes.Ldftn, Operand.Type.FindDelegateInvokeMethod());
         il.Demit(OpCodes.Newobj, Type.GetConstructors()[0]);
@@ -3379,15 +3375,13 @@ public class ConvertIntrinsicExpression<T> : UnaryExpression where T : class
     public override bool IsIntrinsic => true;
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override Result TryCollectInfo(CompilerFlags flags, ref CompilerContext context,
-        NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) =>
-        ExpressionCompiler.TryCollectInfo(ref context, Operand, nestedLambda, ref rootNestedLambdas, flags);
+    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) =>
+        ExpressionCompiler.TryCollectInfo(ref context, Operand, nestedLambda, ref rootNestedLambdas);
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override bool TryEmit(CompilerFlags flags, ref CompilerContext context,
-        ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    public override bool TryEmit(ref CompilerContext context, ILGenerator il, ParentFlags parent, int byRefIndex = -1)
     {
-        if (!EmittingVisitor.TryEmit(Operand, il, ref context, flags, parent, byRefIndex))
+        if (!EmittingVisitor.TryEmit(Operand, il, ref context, parent, byRefIndex))
             return false;
         if (Type == typeof(object))
         {
@@ -3933,12 +3927,10 @@ public sealed class NoArgsNewClassIntrinsicExpression : NewExpression
     public override bool IsIntrinsic => true;
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override Result TryCollectInfo(CompilerFlags flags, ref CompilerContext context,
-        NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) => 0;
+    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) => 0;
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override bool TryEmit(CompilerFlags setup, ref CompilerContext context,
-        ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    public override bool TryEmit(ref CompilerContext context, ILGenerator il, ParentFlags parent, int byRefIndex = -1)
     {
         il.Demit(OpCodes.Newobj, Constructor);
         return true;
@@ -3961,15 +3953,13 @@ public sealed class NoByRefOneArgNewIntrinsicExpression : OneArgumentNewExpressi
     public override bool IsIntrinsic => true;
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override Result TryCollectInfo(CompilerFlags flags, ref CompilerContext context,
-        NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) =>
-        ExpressionCompiler.TryCollectInfo(ref context, Argument, nestedLambda, ref rootNestedLambdas, flags);
+    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) =>
+        ExpressionCompiler.TryCollectInfo(ref context, Argument, nestedLambda, ref rootNestedLambdas);
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override bool TryEmit(CompilerFlags setup, ref CompilerContext context,
-        ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    public override bool TryEmit(ref CompilerContext context, ILGenerator il, ParentFlags parent, int byRefIndex = -1)
     {
-        var ok = EmittingVisitor.TryEmit(Argument, il, ref context, setup, parent | ParentFlags.CtorCall, -1);
+        var ok = EmittingVisitor.TryEmit(Argument, il, ref context, parent | ParentFlags.CtorCall, -1);
         il.Demit(OpCodes.Newobj, Constructor);
         return ok;
     }
@@ -3995,22 +3985,20 @@ public sealed class NoByRefTwoArgumentsNewIntrinsicExpression : TwoArgumentsNewE
     public override bool IsIntrinsic => true;
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override Result TryCollectInfo(CompilerFlags flags, ref CompilerContext context,
-        NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
     {
         var r = Result.OK;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument0, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
-        return ExpressionCompiler.TryCollectInfo(ref context, Argument1, nestedLambda, ref rootNestedLambdas, flags);
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument0, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
+        return ExpressionCompiler.TryCollectInfo(ref context, Argument1, nestedLambda, ref rootNestedLambdas);
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override bool TryEmit(CompilerFlags setup, ref CompilerContext context,
-        ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    public override bool TryEmit(ref CompilerContext context, ILGenerator il, ParentFlags parent, int byRefIndex = -1)
     {
         var f = parent | ParentFlags.CtorCall;
         var ok =
-            EmittingVisitor.TryEmit(Argument0, il, ref context, setup, f, -1) &&
-            EmittingVisitor.TryEmit(Argument1, il, ref context, setup, f, -1);
+            EmittingVisitor.TryEmit(Argument0, il, ref context, f, -1) &&
+            EmittingVisitor.TryEmit(Argument1, il, ref context, f, -1);
         il.Demit(OpCodes.Newobj, Constructor);
         return ok;
     }
@@ -4039,24 +4027,22 @@ public sealed class NoByRefThreeArgumentsNewIntrinsicExpression : ThreeArguments
     public override bool IsIntrinsic => true;
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override Result TryCollectInfo(CompilerFlags flags, ref CompilerContext context,
-        NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
     {
         var r = Result.OK;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument0, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument1, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
-        return ExpressionCompiler.TryCollectInfo(ref context, Argument2, nestedLambda, ref rootNestedLambdas, flags);
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument0, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument1, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
+        return ExpressionCompiler.TryCollectInfo(ref context, Argument2, nestedLambda, ref rootNestedLambdas);
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override bool TryEmit(CompilerFlags setup, ref CompilerContext context,
-        ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    public override bool TryEmit(ref CompilerContext context, ILGenerator il, ParentFlags parent, int byRefIndex = -1)
     {
         var f = parent | ParentFlags.CtorCall;
         var ok =
-            EmittingVisitor.TryEmit(Argument0, il, ref context, setup, f, -1) &&
-            EmittingVisitor.TryEmit(Argument1, il, ref context, setup, f, -1) &&
-            EmittingVisitor.TryEmit(Argument2, il, ref context, setup, f, -1);
+            EmittingVisitor.TryEmit(Argument0, il, ref context, f, -1) &&
+            EmittingVisitor.TryEmit(Argument1, il, ref context, f, -1) &&
+            EmittingVisitor.TryEmit(Argument2, il, ref context, f, -1);
         il.Demit(OpCodes.Newobj, Constructor);
         return ok;
     }
@@ -4086,26 +4072,24 @@ public sealed class NoByRefFourArgumentsNewIntrinsicExpression : FourArgumentsNe
     public override bool IsIntrinsic => true;
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override Result TryCollectInfo(CompilerFlags flags, ref CompilerContext context,
-        NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
     {
         var r = Result.OK;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument0, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument1, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument2, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
-        return ExpressionCompiler.TryCollectInfo(ref context, Argument3, nestedLambda, ref rootNestedLambdas, flags);
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument0, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument1, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument2, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
+        return ExpressionCompiler.TryCollectInfo(ref context, Argument3, nestedLambda, ref rootNestedLambdas);
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override bool TryEmit(CompilerFlags setup, ref CompilerContext context,
-        ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    public override bool TryEmit(ref CompilerContext context, ILGenerator il, ParentFlags parent, int byRefIndex = -1)
     {
         var f = parent | ParentFlags.CtorCall;
         var ok =
-            EmittingVisitor.TryEmit(Argument0, il, ref context, setup, f, -1) &&
-            EmittingVisitor.TryEmit(Argument1, il, ref context, setup, f, -1) &&
-            EmittingVisitor.TryEmit(Argument2, il, ref context, setup, f, -1) &&
-            EmittingVisitor.TryEmit(Argument3, il, ref context, setup, f, -1);
+            EmittingVisitor.TryEmit(Argument0, il, ref context, f, -1) &&
+            EmittingVisitor.TryEmit(Argument1, il, ref context, f, -1) &&
+            EmittingVisitor.TryEmit(Argument2, il, ref context, f, -1) &&
+            EmittingVisitor.TryEmit(Argument3, il, ref context, f, -1);
         il.Demit(OpCodes.Newobj, Constructor);
         return ok;
     }
@@ -4137,28 +4121,26 @@ public sealed class NoByRefFiveArgumentsNewIntrinsicExpression : FiveArgumentsNe
     public override bool IsIntrinsic => true;
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override Result TryCollectInfo(CompilerFlags flags, ref CompilerContext context,
-        NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
     {
         var r = Result.OK;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument0, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument1, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument2, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument3, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
-        return ExpressionCompiler.TryCollectInfo(ref context, Argument4, nestedLambda, ref rootNestedLambdas, flags);
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument0, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument1, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument2, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument3, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
+        return   ExpressionCompiler.TryCollectInfo(ref context, Argument4, nestedLambda, ref rootNestedLambdas);
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override bool TryEmit(CompilerFlags setup, ref CompilerContext context,
-        ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    public override bool TryEmit(ref CompilerContext context, ILGenerator il, ParentFlags parent, int byRefIndex = -1)
     {
         var f = parent | ParentFlags.CtorCall;
         var ok =
-            EmittingVisitor.TryEmit(Argument0, il, ref context, setup, f, -1) &&
-            EmittingVisitor.TryEmit(Argument1, il, ref context, setup, f, -1) &&
-            EmittingVisitor.TryEmit(Argument2, il, ref context, setup, f, -1) &&
-            EmittingVisitor.TryEmit(Argument3, il, ref context, setup, f, -1) &&
-            EmittingVisitor.TryEmit(Argument4, il, ref context, setup, f, -1);
+            EmittingVisitor.TryEmit(Argument0, il, ref context, f, -1) &&
+            EmittingVisitor.TryEmit(Argument1, il, ref context, f, -1) &&
+            EmittingVisitor.TryEmit(Argument2, il, ref context, f, -1) &&
+            EmittingVisitor.TryEmit(Argument3, il, ref context, f, -1) &&
+            EmittingVisitor.TryEmit(Argument4, il, ref context, f, -1);
         il.Demit(OpCodes.Newobj, Constructor);
         return ok;
     }
@@ -4192,30 +4174,28 @@ public sealed class NoByRefSixArgumentsNewIntrinsicExpression : SixArgumentsNewE
     public override bool IsIntrinsic => true;
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override Result TryCollectInfo(CompilerFlags flags, ref CompilerContext context,
-        NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
     {
         var r = Result.OK;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument0, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument1, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument2, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument3, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument4, nestedLambda, ref rootNestedLambdas, flags)) != Result.OK) return r;
-        return   ExpressionCompiler.TryCollectInfo(ref context, Argument5, nestedLambda, ref rootNestedLambdas, flags);
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument0, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument1, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument2, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument3, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument4, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
+        return   ExpressionCompiler.TryCollectInfo(ref context, Argument5, nestedLambda, ref rootNestedLambdas);
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override bool TryEmit(CompilerFlags setup, ref CompilerContext context,
-        ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    public override bool TryEmit(ref CompilerContext context, ILGenerator il, ParentFlags parent, int byRefIndex = -1)
     {
         var f = parent | ParentFlags.CtorCall;
         var ok =
-            EmittingVisitor.TryEmit(Argument0, il, ref context, setup, f, -1) &&
-            EmittingVisitor.TryEmit(Argument1, il, ref context, setup, f, -1) &&
-            EmittingVisitor.TryEmit(Argument2, il, ref context, setup, f, -1) &&
-            EmittingVisitor.TryEmit(Argument3, il, ref context, setup, f, -1) &&
-            EmittingVisitor.TryEmit(Argument4, il, ref context, setup, f, -1) &&
-            EmittingVisitor.TryEmit(Argument5, il, ref context, setup, f, -1);
+            EmittingVisitor.TryEmit(Argument0, il, ref context, f, -1) &&
+            EmittingVisitor.TryEmit(Argument1, il, ref context, f, -1) &&
+            EmittingVisitor.TryEmit(Argument2, il, ref context, f, -1) &&
+            EmittingVisitor.TryEmit(Argument3, il, ref context, f, -1) &&
+            EmittingVisitor.TryEmit(Argument4, il, ref context, f, -1) &&
+            EmittingVisitor.TryEmit(Argument5, il, ref context, f, -1);
         il.Demit(OpCodes.Newobj, Constructor);
         return ok;
     }
@@ -4250,32 +4230,30 @@ public sealed class NoByRefSevenArgumentsNewIntrinsicExpression : SevenArguments
     public override bool IsIntrinsic => true;
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override Result TryCollectInfo(CompilerFlags flags, ref CompilerContext context,
-        NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
     {
         var r = Result.OK;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument0, nestedLambda, ref rootNestedLambdas, flags)) != 0) return r;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument1, nestedLambda, ref rootNestedLambdas, flags)) != 0) return r;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument2, nestedLambda, ref rootNestedLambdas, flags)) != 0) return r;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument3, nestedLambda, ref rootNestedLambdas, flags)) != 0) return r;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument4, nestedLambda, ref rootNestedLambdas, flags)) != 0) return r;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument5, nestedLambda, ref rootNestedLambdas, flags)) != 0) return r;
-        return   ExpressionCompiler.TryCollectInfo(ref context, Argument6, nestedLambda, ref rootNestedLambdas, flags);
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument0, nestedLambda, ref rootNestedLambdas)) != 0) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument1, nestedLambda, ref rootNestedLambdas)) != 0) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument2, nestedLambda, ref rootNestedLambdas)) != 0) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument3, nestedLambda, ref rootNestedLambdas)) != 0) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument4, nestedLambda, ref rootNestedLambdas)) != 0) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument5, nestedLambda, ref rootNestedLambdas)) != 0) return r;
+        return   ExpressionCompiler.TryCollectInfo(ref context, Argument6, nestedLambda, ref rootNestedLambdas);
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override bool TryEmit(CompilerFlags setup, ref CompilerContext context,
-        ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    public override bool TryEmit(ref CompilerContext context, ILGenerator il, ParentFlags parent, int byRefIndex = -1)
     {
         var f = parent | ParentFlags.CtorCall;
         var ok =
-            EmittingVisitor.TryEmit(Argument0, il, ref context, setup, f, -1) &&
-            EmittingVisitor.TryEmit(Argument1, il, ref context, setup, f, -1) &&
-            EmittingVisitor.TryEmit(Argument2, il, ref context, setup, f, -1) &&
-            EmittingVisitor.TryEmit(Argument3, il, ref context, setup, f, -1) &&
-            EmittingVisitor.TryEmit(Argument4, il, ref context, setup, f, -1) &&
-            EmittingVisitor.TryEmit(Argument5, il, ref context, setup, f, -1) &&
-            EmittingVisitor.TryEmit(Argument6, il, ref context, setup, f, -1);
+            EmittingVisitor.TryEmit(Argument0, il, ref context, f, -1) &&
+            EmittingVisitor.TryEmit(Argument1, il, ref context, f, -1) &&
+            EmittingVisitor.TryEmit(Argument2, il, ref context, f, -1) &&
+            EmittingVisitor.TryEmit(Argument3, il, ref context, f, -1) &&
+            EmittingVisitor.TryEmit(Argument4, il, ref context, f, -1) &&
+            EmittingVisitor.TryEmit(Argument5, il, ref context, f, -1) &&
+            EmittingVisitor.TryEmit(Argument6, il, ref context, f, -1);
         il.Demit(OpCodes.Newobj, Constructor);
         return ok;
     }
@@ -4296,25 +4274,23 @@ public sealed class NoByRefManyArgsNewIntrinsicExpression : ManyArgumentsNewExpr
     public override bool IsIntrinsic => true;
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override Result TryCollectInfo(CompilerFlags flags, ref CompilerContext context,
-        NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
     {
         var r = Result.OK;
         var args = Args;
         for (var i = 0; i < args.Count; i++)
-            if ((r = ExpressionCompiler.TryCollectInfo(ref context, args[i], nestedLambda, ref rootNestedLambdas, flags)) != Result.OK)
+            if ((r = ExpressionCompiler.TryCollectInfo(ref context, args[i], nestedLambda, ref rootNestedLambdas)) != Result.OK)
                 return r;
         return 0;
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override bool TryEmit(CompilerFlags setup, ref CompilerContext context,
-        ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    public override bool TryEmit(ref CompilerContext context, ILGenerator il, ParentFlags parent, int byRefIndex = -1)
     {
         var f = parent | ParentFlags.CtorCall;
         var args = Args;
         for (var i = 0; i < args.Count; i++)
-            if (!EmittingVisitor.TryEmit(args[i], il, ref context, setup, f, -1))
+            if (!EmittingVisitor.TryEmit(args[i], il, ref context, f, -1))
                 return false;
         il.Demit(OpCodes.Newobj, Constructor);
         return true;
