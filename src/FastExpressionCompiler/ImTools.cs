@@ -376,6 +376,12 @@ public struct Stack2<T> : IStack<T, Size2, Stack2<T>>
     int IIndexed<T>.Count => Capacity;
 
     internal T _it0, _it1;
+    /// <summary>2 item constructor</summary>
+    public Stack2(T it0, T it1)
+    {
+        _it0 = it0;
+        _it1 = it1;
+    }
 
     /// <inheritdoc/>
     [UnscopedRef]
