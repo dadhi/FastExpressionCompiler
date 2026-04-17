@@ -132,8 +132,6 @@ namespace FastExpressionCompiler
     [RequiresUnreferencedCode(Trimming.Message)]
     public static partial class ExpressionCompiler
     {
-        #region Expression.CompileFast overloads for Delegate, Func, and Action
-
         /// <summary>Compiles lambda expression to TDelegate type. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static TDelegate CompileFast<TDelegate>(this LambdaExpression lambdaExpr,
             bool ifFastFailedReturnNull = false, CompilerFlags flags = CompilerFlags.Default) where TDelegate : class =>
@@ -292,8 +290,6 @@ namespace FastExpressionCompiler
             (Action<T1, T2, T3, T4, T5, T6>)TryCompileBoundToFirstClosureParam(typeof(Action<T1, T2, T3, T4, T5, T6>), lambdaExpr.Body, lambdaExpr.GetParamExprs(), typeof(void), flags)
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
-        #endregion
-
         /// <summary>Tries to compile lambda expression to <typeparamref name="TDelegate"/></summary>
         public static TDelegate TryCompile<TDelegate>(this LambdaExpression lambdaExpr, CompilerFlags flags = CompilerFlags.Default)
             where TDelegate : class =>
@@ -325,7 +321,7 @@ namespace FastExpressionCompiler
         }
 
         internal static TDelegate TryCompileWithPreCreatedClosure<TDelegate>(
-            this LambdaExpression lambdaExpr, ref CompilerContext context, CompilerFlags flags) where TDelegate : class
+            LambdaExpression lambdaExpr, ref CompilerContext context, CompilerFlags flags) where TDelegate : class
         {
             var closurePlusParamTypes = RentPooledOrNewClosureTypeToParamTypes(lambdaExpr.GetParamExprs());
 
@@ -1074,8 +1070,6 @@ namespace FastExpressionCompiler
                 (t1, t2, t3, t4, t5, t6, t7, t8, t9, t10) => f(c, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10);
         }
 
-        #region Collect Bound Constants
-
         /// Helps to identify constants as the one to be put into the Closure
         public static bool IsClosureBoundConstant(object value, Type type) =>
             value is Delegate || type.IsArray ||
@@ -1808,8 +1802,6 @@ namespace FastExpressionCompiler
 
             return r;
         }
-
-        #endregion
 
         /// The minimal context-aware flags set by parent
         [Flags]
