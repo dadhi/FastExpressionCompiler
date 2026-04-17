@@ -39,7 +39,11 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+#if LIGHT_EXPRESSION
+using FastExpressionCompiler.LightExpression.ImTools;
+#else
 using FastExpressionCompiler.ImTools;
+#endif
 
 using SysExpr = System.Linq.Expressions.Expression;
 using SysParam = System.Linq.Expressions.ParameterExpression;
@@ -161,39 +165,59 @@ public struct ExpressionTree
     }
 
     // Types whose value fits in 32 bits — stored inline in ChildIdx.It to avoid boxing.
-    private static bool FitsInInt32(Type t) =>
-        t == typeof(int)   || t == typeof(uint)   || t == typeof(bool)  || t == typeof(float) ||
-        t == typeof(byte)  || t == typeof(sbyte)  || t == typeof(short) || t == typeof(ushort) ||
-        t == typeof(char);
+    private static bool FitsInInt32(Type t)
+    {
+        switch (Type.GetTypeCode(t))
+        {
+            case TypeCode.Boolean:
+            case TypeCode.Char:
+            case TypeCode.Byte:
+            case TypeCode.SByte:
+            case TypeCode.Int16:
+            case TypeCode.UInt16:
+            case TypeCode.Int32:
+            case TypeCode.UInt32:
+            case TypeCode.Single:
+                return true;
+            default:
+                return false;
+        }
+    }
 
     // Encode an inline value as its int32 bit pattern (only call when FitsInInt32 is true).
     private static int ToInt32Bits(object value, Type t)
     {
-        if (t == typeof(int))    return (int)value;
-        if (t == typeof(uint))   return (int)(uint)value;   // reinterpret bits
-        if (t == typeof(bool))   return (bool)value ? 1 : 0;
-        if (t == typeof(float))  return FloatIntBits.FloatToInt((float)value);
-        if (t == typeof(byte))   return (byte)value;
-        if (t == typeof(sbyte))  return (sbyte)value;
-        if (t == typeof(short))  return (short)value;
-        if (t == typeof(ushort)) return (ushort)value;
-        if (t == typeof(char))   return (char)value;
-        return 0; // unreachable
+        switch (Type.GetTypeCode(t))
+        {
+            case TypeCode.Int32:   return (int)value;
+            case TypeCode.UInt32:  return (int)(uint)value;   // reinterpret bits
+            case TypeCode.Boolean: return (bool)value ? 1 : 0;
+            case TypeCode.Single:  return FloatIntBits.FloatToInt((float)value);
+            case TypeCode.Byte:    return (byte)value;
+            case TypeCode.SByte:   return (sbyte)value;
+            case TypeCode.Int16:   return (short)value;
+            case TypeCode.UInt16:  return (ushort)value;
+            case TypeCode.Char:    return (char)value;
+            default:               return 0; // unreachable
+        }
     }
 
     // Decode int32 bit pattern back to a boxed value (only call when FitsInInt32 is true).
     internal static object FromInt32Bits(int bits, Type t)
     {
-        if (t == typeof(int))    return bits;
-        if (t == typeof(uint))   return (uint)bits;
-        if (t == typeof(bool))   return bits != 0;
-        if (t == typeof(float))  return FloatIntBits.IntToFloat(bits);
-        if (t == typeof(byte))   return (byte)bits;
-        if (t == typeof(sbyte))  return (sbyte)bits;
-        if (t == typeof(short))  return (short)bits;
-        if (t == typeof(ushort)) return (ushort)bits;
-        if (t == typeof(char))   return (char)bits;
-        return null; // unreachable
+        switch (Type.GetTypeCode(t))
+        {
+            case TypeCode.Int32:   return bits;
+            case TypeCode.UInt32:  return (uint)bits;
+            case TypeCode.Boolean: return bits != 0;
+            case TypeCode.Single:  return FloatIntBits.IntToFloat(bits);
+            case TypeCode.Byte:    return (byte)bits;
+            case TypeCode.SByte:   return (sbyte)bits;
+            case TypeCode.Int16:   return (short)bits;
+            case TypeCode.UInt16:  return (ushort)bits;
+            case TypeCode.Char:    return (char)bits;
+            default:               return null; // unreachable
+        }
     }
 
     // Explicit-layout union to reinterpret float/int bits without Unsafe or BitConverter (portable across all TFMs).
@@ -292,11 +316,8 @@ public struct ExpressionTree
         Binary(ExpressionType.Assign, target, value, type);
 
     /// <summary>Adds a New node calling the given constructor with the provided arguments.</summary>
-    public Idx New(ConstructorInfo ctor, params Idx[] args)
-    {
-        var firstArgIdx = LinkList(args);
-        return AddNode(ExpressionType.New, ctor.DeclaringType, info: ctor, childIdx: firstArgIdx);
-    }
+    public Idx New(ConstructorInfo ctor, params Idx[] args) =>
+        AddNode(ExpressionType.New, ctor.DeclaringType, info: ctor, childIdx: LinkList(args));
 
     /// <summary>Adds a Call node. Pass <see cref="Idx.Nil"/> for <paramref name="instance"/> for static calls.</summary>
     public Idx Call(MethodInfo method, Idx instance, params Idx[] args)
@@ -333,6 +354,110 @@ public struct ExpressionTree
         var firstVarIdx = variables == null || variables.Length == 0 ? Idx.Nil : LinkList(variables);
         return AddNode(ExpressionType.Block, type, childIdx: firstExprIdx, extraIdx: firstVarIdx);
     }
+
+    // ── Additional convenience shorthands for binary ops ───────────────────────────────────────
+
+    /// <summary>Adds a NotEqual node (returns bool).</summary>
+    public Idx NotEqual(Idx left, Idx right) =>
+        Binary(ExpressionType.NotEqual, left, right, typeof(bool));
+
+    /// <summary>Adds a LessThan node (returns bool).</summary>
+    public Idx LessThan(Idx left, Idx right) =>
+        Binary(ExpressionType.LessThan, left, right, typeof(bool));
+
+    /// <summary>Adds a LessThanOrEqual node (returns bool).</summary>
+    public Idx LessThanOrEqual(Idx left, Idx right) =>
+        Binary(ExpressionType.LessThanOrEqual, left, right, typeof(bool));
+
+    /// <summary>Adds a GreaterThan node (returns bool).</summary>
+    public Idx GreaterThan(Idx left, Idx right) =>
+        Binary(ExpressionType.GreaterThan, left, right, typeof(bool));
+
+    /// <summary>Adds a GreaterThanOrEqual node (returns bool).</summary>
+    public Idx GreaterThanOrEqual(Idx left, Idx right) =>
+        Binary(ExpressionType.GreaterThanOrEqual, left, right, typeof(bool));
+
+    /// <summary>Adds an AndAlso (short-circuit &amp;&amp;) node.</summary>
+    public Idx AndAlso(Idx left, Idx right) =>
+        Binary(ExpressionType.AndAlso, left, right, typeof(bool));
+
+    /// <summary>Adds an OrElse (short-circuit ||) node.</summary>
+    public Idx OrElse(Idx left, Idx right) =>
+        Binary(ExpressionType.OrElse, left, right, typeof(bool));
+
+    /// <summary>Adds a Coalesce (??) node.</summary>
+    public Idx Coalesce(Idx left, Idx right, Type type) =>
+        Binary(ExpressionType.Coalesce, left, right, type);
+
+    /// <summary>Adds an ArrayIndex node. The <paramref name="array"/> node must have an array type.</summary>
+    public Idx ArrayIndex(Idx array, Idx index) =>
+        Binary(ExpressionType.ArrayIndex, array, index, NodeAt(array).Type.GetElementType()
+            ?? throw new ArgumentException("Array node type must be an array type.", nameof(array)));
+
+    // ── Compound-assignment convenience shorthands ──────────────────────────────────────────────
+
+    /// <summary>Adds an AddAssign node.</summary>
+    public Idx AddAssign(Idx target, Idx value, Type type) =>
+        Binary(ExpressionType.AddAssign, target, value, type);
+
+    /// <summary>Adds a SubtractAssign node.</summary>
+    public Idx SubtractAssign(Idx target, Idx value, Type type) =>
+        Binary(ExpressionType.SubtractAssign, target, value, type);
+
+    /// <summary>Adds a MultiplyAssign node.</summary>
+    public Idx MultiplyAssign(Idx target, Idx value, Type type) =>
+        Binary(ExpressionType.MultiplyAssign, target, value, type);
+
+    // ── MemberAccess ────────────────────────────────────────────────────────────────────────────
+    // Info = MemberInfo; ChildIdx = instance (nil for static).
+
+    /// <summary>Adds a MemberAccess node for a field or property. Pass <see cref="Idx.Nil"/> for static members.</summary>
+    public Idx MemberAccess(Idx instance, MemberInfo member)
+    {
+        Type memberType;
+        if (member is PropertyInfo pi)
+            memberType = pi.PropertyType;
+        else if (member is FieldInfo fi)
+            memberType = fi.FieldType;
+        else
+            throw new ArgumentException($"MemberAccess requires a FieldInfo or PropertyInfo, got {member.GetType().Name}.", nameof(member));
+        return AddNode(ExpressionType.MemberAccess, memberType, info: member, childIdx: instance);
+    }
+
+    /// <summary>Adds a MemberAccess node for a field.</summary>
+    public Idx Field(Idx instance, FieldInfo field) => MemberAccess(instance, field);
+
+    /// <summary>Adds a MemberAccess node for a property.</summary>
+    public Idx Property(Idx instance, PropertyInfo property) => MemberAccess(instance, property);
+
+    // ── Invoke ──────────────────────────────────────────────────────────────────────────────────
+    // ChildIdx = delegate expression; ExtraIdx = first argument (chained via NextIdx).
+
+    /// <summary>Adds an Invoke node (delegate invocation).</summary>
+    public Idx Invoke(Idx delegateExpr, Type returnType, params Idx[] args) =>
+        AddNode(ExpressionType.Invoke, returnType, childIdx: delegateExpr, extraIdx: LinkList(args));
+
+    // ── TypeIs / TypeEqual ──────────────────────────────────────────────────────────────────────
+    // Info = Type to test against; ChildIdx = expression.
+
+    /// <summary>Adds a TypeIs node (returns bool; true when expr is a subtype of <paramref name="type"/>).</summary>
+    public Idx TypeIs(Idx expr, Type type) =>
+        AddNode(ExpressionType.TypeIs, typeof(bool), info: type, childIdx: expr);
+
+    /// <summary>Adds a TypeEqual node (returns bool; true when expr's exact runtime type equals <paramref name="type"/>).</summary>
+    public Idx TypeEqual(Idx expr, Type type) =>
+        AddNode(ExpressionType.TypeEqual, typeof(bool), info: type, childIdx: expr);
+
+    // ── NewArrayInit / NewArrayBounds ───────────────────────────────────────────────────────────
+    // Type = array type; ChildIdx = first element/bound (chained via NextIdx).
+
+    /// <summary>Adds a NewArrayInit node (creates and initializes a 1D array).</summary>
+    public Idx NewArrayInit(Type elementType, params Idx[] elements) =>
+        AddNode(ExpressionType.NewArrayInit, elementType.MakeArrayType(), childIdx: LinkList(elements));
+
+    /// <summary>Adds a NewArrayBounds node (creates an array given dimension bounds).</summary>
+    public Idx NewArrayBounds(Type elementType, params Idx[] bounds) =>
+        AddNode(ExpressionType.NewArrayBounds, elementType.MakeArrayType(), childIdx: LinkList(bounds));
 
     /// <summary>Chains the given indices via <see cref="ExpressionNode.NextIdx"/> and returns the first index.</summary>
     public Idx LinkList(Idx[] indices)
@@ -409,64 +534,36 @@ public struct ExpressionTree
             }
 
             case ExpressionType.New:
-                return SysExpr.New((ConstructorInfo)node.Info, SiblingList(node.ChildIdx, ref paramMap));
+                return SysExpr.New((ConstructorInfo)node.Info, SiblingListSE(node.ChildIdx, ref paramMap));
+
+            case ExpressionType.NewArrayInit:
+                return SysExpr.NewArrayInit(node.Type.GetElementType(), SiblingListSE(node.ChildIdx, ref paramMap));
+
+            case ExpressionType.NewArrayBounds:
+                return SysExpr.NewArrayBounds(node.Type.GetElementType(), SiblingListSE(node.ChildIdx, ref paramMap));
 
             case ExpressionType.Call:
             {
                 var method = (MethodInfo)node.Info;
                 return method.IsStatic
-                    ? SysExpr.Call(method, SiblingList(node.ChildIdx, ref paramMap))
-                    : SysExpr.Call(ToSystemExpression(node.ChildIdx, ref paramMap), method, SiblingList(node.ExtraIdx, ref paramMap));
+                    ? SysExpr.Call(method, SiblingListSE(node.ChildIdx, ref paramMap))
+                    : SysExpr.Call(ToSystemExpression(node.ChildIdx, ref paramMap), method, SiblingListSE(node.ExtraIdx, ref paramMap));
             }
 
-            case ExpressionType.Add:
-            case ExpressionType.AddChecked:
-            case ExpressionType.Subtract:
-            case ExpressionType.SubtractChecked:
-            case ExpressionType.Multiply:
-            case ExpressionType.MultiplyChecked:
-            case ExpressionType.Divide:
-            case ExpressionType.Modulo:
-            case ExpressionType.And:
-            case ExpressionType.AndAlso:
-            case ExpressionType.Or:
-            case ExpressionType.OrElse:
-            case ExpressionType.ExclusiveOr:
-            case ExpressionType.Equal:
-            case ExpressionType.NotEqual:
-            case ExpressionType.LessThan:
-            case ExpressionType.LessThanOrEqual:
-            case ExpressionType.GreaterThan:
-            case ExpressionType.GreaterThanOrEqual:
-            case ExpressionType.Assign:
-            case ExpressionType.LeftShift:
-            case ExpressionType.RightShift:
-            case ExpressionType.Power:
-            case ExpressionType.Coalesce:
-                return SysExpr.MakeBinary(node.NodeType,
-                    ToSystemExpression(node.ChildIdx, ref paramMap),
-                    ToSystemExpression(node.ExtraIdx, ref paramMap),
-                    false, node.Info as MethodInfo);
+            case ExpressionType.Invoke:
+                return SysExpr.Invoke(ToSystemExpression(node.ChildIdx, ref paramMap), SiblingListSE(node.ExtraIdx, ref paramMap));
 
-            case ExpressionType.Negate:
-            case ExpressionType.NegateChecked:
-            case ExpressionType.Not:
-            case ExpressionType.Convert:
-            case ExpressionType.ConvertChecked:
-            case ExpressionType.ArrayLength:
-            case ExpressionType.Quote:
-            case ExpressionType.TypeAs:
-            case ExpressionType.Throw:
-            case ExpressionType.Unbox:
-            case ExpressionType.Increment:
-            case ExpressionType.Decrement:
-            case ExpressionType.PreIncrementAssign:
-            case ExpressionType.PostIncrementAssign:
-            case ExpressionType.PreDecrementAssign:
-            case ExpressionType.PostDecrementAssign:
-                return SysExpr.MakeUnary(node.NodeType,
-                    ToSystemExpression(node.ChildIdx, ref paramMap),
-                    node.Type, node.Info as MethodInfo);
+            case ExpressionType.MemberAccess:
+            {
+                var member = (MemberInfo)node.Info;
+                return SysExpr.MakeMemberAccess(node.ChildIdx.IsNil ? null : ToSystemExpression(node.ChildIdx, ref paramMap), member);
+            }
+
+            case ExpressionType.TypeIs:
+                return SysExpr.TypeIs(ToSystemExpression(node.ChildIdx, ref paramMap), (Type)node.Info);
+
+            case ExpressionType.TypeEqual:
+                return SysExpr.TypeEqual(ToSystemExpression(node.ChildIdx, ref paramMap), (Type)node.Info);
 
             case ExpressionType.Conditional:
                 return SysExpr.Condition(
@@ -477,7 +574,7 @@ public struct ExpressionTree
 
             case ExpressionType.Block:
             {
-                var exprs = SiblingList(node.ChildIdx, ref paramMap);
+                var exprs = SiblingListSE(node.ChildIdx, ref paramMap);
                 if (node.ExtraIdx.IsNil)
                     return SysExpr.Block(node.Type, exprs);
                 var vars = new List<SysParam>();
@@ -491,12 +588,19 @@ public struct ExpressionTree
             }
 
             default:
-                throw new NotSupportedException(
-                    $"FlatExpression → System.Linq.Expressions: NodeType {node.NodeType} is not yet mapped.");
+                // All Binary and Unary node types: use ExtraIdx presence to distinguish.
+                if (!node.ExtraIdx.IsNil)
+                    return SysExpr.MakeBinary(node.NodeType,
+                        ToSystemExpression(node.ChildIdx, ref paramMap),
+                        ToSystemExpression(node.ExtraIdx, ref paramMap),
+                        false, node.Info as MethodInfo);
+                return SysExpr.MakeUnary(node.NodeType,
+                    ToSystemExpression(node.ChildIdx, ref paramMap),
+                    node.Type, node.Info as MethodInfo);
         }
     }
 
-    private List<SysExpr> SiblingList(Idx head, ref SmallMap16<int, SysParam, IntEq> paramMap)
+    private List<SysExpr> SiblingListSE(Idx head, ref SmallMap16<int, SysParam, IntEq> paramMap)
     {
         var list = new List<SysExpr>();
         var cur = head;
@@ -507,6 +611,151 @@ public struct ExpressionTree
         }
         return list;
     }
+
+#if LIGHT_EXPRESSION
+    /// <summary>Converts this flat tree to a <see cref="FastExpressionCompiler.LightExpression.Expression"/> rooted at <see cref="RootIdx"/>.</summary>
+    [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode("FastExpressionCompiler is not supported in trimming scenarios.")]
+    public FastExpressionCompiler.LightExpression.Expression ToLightExpression()
+    {
+        var paramMap = default(SmallMap16<int, FastExpressionCompiler.LightExpression.ParameterExpression, IntEq>);
+        return ToLightExpression(RootIdx, ref paramMap);
+    }
+
+    [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode("FastExpressionCompiler is not supported in trimming scenarios.")]
+    private FastExpressionCompiler.LightExpression.Expression ToLightExpression(
+        Idx nodeIdx, ref SmallMap16<int, FastExpressionCompiler.LightExpression.ParameterExpression, IntEq> paramMap)
+    {
+        if (nodeIdx.IsNil)
+            throw new InvalidOperationException("Cannot convert nil Idx to LightExpression");
+
+        ref var node = ref NodeAt(nodeIdx);
+
+        switch (node.NodeType)
+        {
+            case ExpressionType.Constant:
+            {
+                object value;
+                if (node.ExtraIdx.It > 0)
+                    value = ClosureConstants.GetSurePresentRef(node.ExtraIdx.It - 1);
+                else if (node.ExtraIdx.It == -1)
+                    value = FromInt32Bits(node.ChildIdx.It, node.Type);
+                else
+                    value = node.Info;
+                return FastExpressionCompiler.LightExpression.Expression.Constant(value, node.Type);
+            }
+
+            case ExpressionType.Parameter:
+            {
+                ref var p = ref paramMap.Map.AddOrGetValueRef(nodeIdx.It, out var found);
+                if (!found)
+                    p = FastExpressionCompiler.LightExpression.Expression.Parameter(node.Type, node.Info as string);
+                return p;
+            }
+
+            case ExpressionType.Default:
+                return FastExpressionCompiler.LightExpression.Expression.Default(node.Type);
+
+            case ExpressionType.Lambda:
+            {
+                var paramIdxs = node.Info as Idx[];
+                var paramExprs = new List<FastExpressionCompiler.LightExpression.ParameterExpression>();
+                if (paramIdxs != null)
+                    foreach (var pIdx in paramIdxs)
+                        paramExprs.Add((FastExpressionCompiler.LightExpression.ParameterExpression)ToLightExpression(pIdx, ref paramMap));
+                var body = ToLightExpression(node.ChildIdx, ref paramMap);
+                return FastExpressionCompiler.LightExpression.Expression.Lambda(node.Type, body, paramExprs);
+            }
+
+            case ExpressionType.New:
+                return FastExpressionCompiler.LightExpression.Expression.New(
+                    (ConstructorInfo)node.Info, SiblingListLE(node.ChildIdx, ref paramMap));
+
+            case ExpressionType.NewArrayInit:
+                return FastExpressionCompiler.LightExpression.Expression.NewArrayInit(
+                    node.Type.GetElementType(), SiblingListLE(node.ChildIdx, ref paramMap));
+
+            case ExpressionType.NewArrayBounds:
+                return FastExpressionCompiler.LightExpression.Expression.NewArrayBounds(
+                    node.Type.GetElementType(), SiblingListLE(node.ChildIdx, ref paramMap));
+
+            case ExpressionType.Call:
+            {
+                var method = (MethodInfo)node.Info;
+                return method.IsStatic
+                    ? FastExpressionCompiler.LightExpression.Expression.Call(method, SiblingListLE(node.ChildIdx, ref paramMap))
+                    : FastExpressionCompiler.LightExpression.Expression.Call(ToLightExpression(node.ChildIdx, ref paramMap), method, SiblingListLE(node.ExtraIdx, ref paramMap));
+            }
+
+            case ExpressionType.Invoke:
+                return FastExpressionCompiler.LightExpression.Expression.Invoke(
+                    ToLightExpression(node.ChildIdx, ref paramMap), SiblingListLE(node.ExtraIdx, ref paramMap));
+
+            case ExpressionType.MemberAccess:
+            {
+                var member = (MemberInfo)node.Info;
+                var instance = node.ChildIdx.IsNil ? null : ToLightExpression(node.ChildIdx, ref paramMap);
+                if (member is FieldInfo fi)
+                    return FastExpressionCompiler.LightExpression.Expression.Field(instance, fi);
+                return FastExpressionCompiler.LightExpression.Expression.Property(instance, (PropertyInfo)member);
+            }
+
+            case ExpressionType.TypeIs:
+                return FastExpressionCompiler.LightExpression.Expression.TypeIs(
+                    ToLightExpression(node.ChildIdx, ref paramMap), (Type)node.Info);
+
+            case ExpressionType.TypeEqual:
+                return FastExpressionCompiler.LightExpression.Expression.TypeEqual(
+                    ToLightExpression(node.ChildIdx, ref paramMap), (Type)node.Info);
+
+            case ExpressionType.Conditional:
+                return FastExpressionCompiler.LightExpression.Expression.Condition(
+                    ToLightExpression(node.ChildIdx, ref paramMap),
+                    ToLightExpression(node.ExtraIdx, ref paramMap),
+                    ToLightExpression(NodeAt(node.ExtraIdx).NextIdx, ref paramMap),
+                    node.Type);
+
+            case ExpressionType.Block:
+            {
+                var exprs = SiblingListLE(node.ChildIdx, ref paramMap);
+                if (node.ExtraIdx.IsNil)
+                    return FastExpressionCompiler.LightExpression.Expression.Block(node.Type, exprs);
+                var vars = new List<FastExpressionCompiler.LightExpression.ParameterExpression>();
+                var vCur = node.ExtraIdx;
+                while (!vCur.IsNil)
+                {
+                    vars.Add((FastExpressionCompiler.LightExpression.ParameterExpression)ToLightExpression(vCur, ref paramMap));
+                    vCur = NodeAt(vCur).NextIdx;
+                }
+                return FastExpressionCompiler.LightExpression.Expression.Block(node.Type, vars, exprs);
+            }
+
+            default:
+                // All Binary and Unary node types: use ExtraIdx presence to distinguish.
+                if (!node.ExtraIdx.IsNil)
+                    return FastExpressionCompiler.LightExpression.Expression.MakeBinary(node.NodeType,
+                        ToLightExpression(node.ChildIdx, ref paramMap),
+                        ToLightExpression(node.ExtraIdx, ref paramMap),
+                        false, node.Info as MethodInfo);
+                return FastExpressionCompiler.LightExpression.Expression.MakeUnary(node.NodeType,
+                    ToLightExpression(node.ChildIdx, ref paramMap),
+                    node.Type, node.Info as MethodInfo);
+        }
+    }
+
+    [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode("FastExpressionCompiler is not supported in trimming scenarios.")]
+    private List<FastExpressionCompiler.LightExpression.Expression> SiblingListLE(
+        Idx head, ref SmallMap16<int, FastExpressionCompiler.LightExpression.ParameterExpression, IntEq> paramMap)
+    {
+        var list = new List<FastExpressionCompiler.LightExpression.Expression>();
+        var cur = head;
+        while (!cur.IsNil)
+        {
+            list.Add(ToLightExpression(cur, ref paramMap));
+            cur = NodeAt(cur).NextIdx;
+        }
+        return list;
+    }
+#endif
 
     // O(n) structural equality — no traversal, single pass over the flat arrays.
     /// <summary>O(n) structural equality check. Compares both trees node-by-node in a single pass — no recursive traversal.</summary>

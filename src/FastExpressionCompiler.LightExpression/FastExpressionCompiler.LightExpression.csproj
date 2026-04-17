@@ -120,6 +120,7 @@ https://github.com/dadhi/FastExpressionCompiler/compare/v5.3.3...v5.4.0
     </PropertyGroup>
     <ItemGroup>
         <Compile Include="..\FastExpressionCompiler\FastExpressionCompiler.cs"/>
+        <Compile Include="..\FastExpressionCompiler\FlatExpression.cs"/>
         <Compile Include="..\FastExpressionCompiler\ImTools.cs"/>
         <Compile Include="..\FastExpressionCompiler\ILReader.cs"/>
         <Compile Include="..\FastExpressionCompiler\TestTools.cs"/>
