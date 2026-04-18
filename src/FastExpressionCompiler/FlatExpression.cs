@@ -169,7 +169,6 @@ public struct ExpressionTree
         n.Obj = obj;
         n._childIdx = childIdx.It;
         n._extraIdx = extraIdx.It;
-        n._data = 0;
         n.NextIdx = 0;
         return Idx.Of(Nodes.Count); // Count already incremented by AddDefaultAndGetRef
     }
