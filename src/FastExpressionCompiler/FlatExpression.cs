@@ -122,9 +122,9 @@ public struct ExpressionNode  // 32 bytes: Type(8)+Obj(8)+_typeFlags(2)+NextIdx(
     /// <summary>True when this Constant node's value is stored inline in <see cref="Data"/>.</summary>
     public bool IsInplaceConst => (_typeFlags & 0x8000) != 0;
     /// <summary>First child, or 1-based closure slot for non-inline Constant nodes.</summary>
-    public Idx ChildIdx => Idx.Of((short)(_data & 0xFFFF));
+    public Idx ChildIdx => Idx.Of((int)(ushort)(_data & 0xFFFF));
     /// <summary>Second child (nil for unary nodes and for New/Call/Invoke args — only used for control nodes).</summary>
-    public Idx ExtraIdx => Idx.Of((short)((_data >> 32) & 0xFFFF));
+    public Idx ExtraIdx => Idx.Of((int)(ushort)((_data >> 32) & 0xFFFF));
     /// <summary>Raw 8-byte constant bits when <see cref="IsInplaceConst"/> is true.</summary>
     public long Data => _data;
 }
