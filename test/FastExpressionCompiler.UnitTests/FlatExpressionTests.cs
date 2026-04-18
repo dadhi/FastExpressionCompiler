@@ -72,9 +72,9 @@ public class FlatExpressionTests : ITest
         ref var node = ref tree.NodeAt(ci);
         Asserts.AreEqual(ExpressionType.Constant, node.NodeType);
         Asserts.AreEqual(typeof(int), node.Type);
-        Asserts.AreEqual(null, node.Info);
-        Asserts.AreEqual(-1, node.ExtraIdx.It);   // inline bits sentinel
-        Asserts.AreEqual(42, node.ChildIdx.It);   // inline int32 bits
+        Asserts.AreEqual(null, node.Obj);
+        Asserts.IsTrue(node.IsInplaceConst);       // bit 15 of _typeFlags set
+        Asserts.AreEqual(42L, node.Data);          // full 8-byte inline value
     }
 
     public void Build_constant_node_in_closure()
@@ -83,7 +83,7 @@ public class FlatExpressionTests : ITest
         var ci = tree.Constant("hello", putIntoClosure: true);
 
         ref var node = ref tree.NodeAt(ci);
-        Asserts.AreEqual(1, node.ExtraIdx.It);   // 1-based closure index
+        Asserts.AreEqual((short)1, node.ChildIdx.It);  // 1-based closure slot in ChildIdx
         Asserts.AreEqual(1, tree.ClosureConstants.Count);
         Asserts.AreEqual("hello", (string)tree.ClosureConstants.GetSurePresentRef(0));
     }
@@ -96,7 +96,7 @@ public class FlatExpressionTests : ITest
         ref var node = ref tree.NodeAt(pi);
         Asserts.AreEqual(ExpressionType.Parameter, node.NodeType);
         Asserts.AreEqual(typeof(int), node.Type);
-        Asserts.AreEqual("x", (string)node.Info);
+        Asserts.AreEqual("x", (string)node.Obj);
     }
 
     public void Build_add_two_constants()
@@ -126,8 +126,8 @@ public class FlatExpressionTests : ITest
         Asserts.AreEqual(ExpressionType.Lambda, lambda.NodeType);
         Asserts.AreEqual(p, lambda.ChildIdx);
 
-        // params stored as Idx[] in Info — not chained via NextIdx (see Lambda factory)
-        var parms = (Idx[])lambda.Info;
+        // params stored as Idx[] in Obj — not chained via NextIdx (see Lambda factory)
+        var parms = (Idx[])lambda.Obj;
         Asserts.AreEqual(1, parms.Length);
         Asserts.AreEqual(p, parms[0]);
     }
@@ -145,14 +145,14 @@ public class FlatExpressionTests : ITest
         ref var lambdaNode = ref tree.NodeAt(lambda);
         Asserts.AreEqual(add, lambdaNode.ChildIdx);
 
-        var parms = (Idx[])lambdaNode.Info;
+        var parms = (Idx[])lambdaNode.Obj;
         Asserts.AreEqual(2, parms.Length);
         Asserts.AreEqual(px, parms[0]);
         Asserts.AreEqual(py, parms[1]);
 
         // NextIdx is NOT touched — a param can still appear as a New/Call argument alongside being a lambda param
         ref var pxNode = ref tree.NodeAt(px);
-        Asserts.IsTrue(pxNode.NextIdx.IsNil);
+        Asserts.AreEqual((short)0, pxNode.NextIdx);
     }
 
     public void Build_new_expression()
@@ -166,7 +166,7 @@ public class FlatExpressionTests : ITest
         ref var newNode = ref tree.NodeAt(newIdx);
         Asserts.AreEqual(ExpressionType.New, newNode.NodeType);
         Asserts.AreEqual(typeof(Tuple<int, string>), newNode.Type);
-        Asserts.AreEqual(ctor, (ConstructorInfo)newNode.Info);
+        Asserts.AreEqual(ctor, (ConstructorInfo)newNode.Obj);
 
         var siblings = tree.Siblings(newNode.ChildIdx).ToArray();
         Asserts.AreEqual(2, siblings.Length);
@@ -183,7 +183,7 @@ public class FlatExpressionTests : ITest
 
         ref var callNode = ref tree.NodeAt(callIdx);
         Asserts.AreEqual(ExpressionType.Call, callNode.NodeType);
-        Asserts.AreEqual(method, (MethodInfo)callNode.Info);
+        Asserts.AreEqual(method, (MethodInfo)callNode.Obj);
     }
 
     public void Build_conditional()
@@ -200,9 +200,9 @@ public class FlatExpressionTests : ITest
         Asserts.AreEqual(ExpressionType.Conditional, condNode.NodeType);
         Asserts.AreEqual(test, condNode.ChildIdx);
         Asserts.AreEqual(xCopy, condNode.ExtraIdx);
-        // ifFalse is chained as ifTrue.NextIdx
+        // ifFalse is chained as ifTrue.NextIdx (raw short)
         ref var ifTrueNode = ref tree.NodeAt(xCopy);
-        Asserts.AreEqual(neg, ifTrueNode.NextIdx);
+        Asserts.AreEqual(neg.It, ifTrueNode.NextIdx);
     }
 
     public void Build_block_with_variable()
