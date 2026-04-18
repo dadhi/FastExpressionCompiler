@@ -79,8 +79,8 @@ public struct Idx : IEquatable<Idx>
 }
 
 /// <summary>
-/// Compact 32-byte node. Two reference fields first, then two shorts, then the packed 64-bit data word.
-/// Layout: Type(8) + Obj(8) + _typeFlags(2) + NextIdx(2) + pad(4) + _data(8) = 32 bytes.
+/// Compact 32-byte node. Two reference fields first, then four shorts, then the 64-bit constant word.
+/// Layout (no padding waste): Type(8) + Obj(8) + _typeFlags(2) + NextIdx(2) + _childIdx(2) + _extraIdx(2) + _data(8) = 32 bytes.
 /// <list type="table">
 ///   <item><term>Constant inline</term>
 ///     <description>IsInplaceConst = true; <see cref="Data"/> holds raw bits (up to 8 bytes: bool/int/long/float/double/DateTime/…).</description></item>
@@ -100,7 +100,7 @@ public struct Idx : IEquatable<Idx>
 /// <para>vs LightExpression heap objects (16-byte GC header + fields): Constant/Parameter ~40 bytes | Binary/Unary ~48–56 bytes.</para>
 /// </summary>
 [StructLayout(LayoutKind.Sequential)]
-public struct ExpressionNode  // 32 bytes: Type(8)+Obj(8)+_typeFlags(2)+NextIdx(2)+pad(4)+_data(8)
+public struct ExpressionNode  // 32 bytes: Type(8)+Obj(8)+_typeFlags(2)+NextIdx(2)+_childIdx(2)+_extraIdx(2)+_data(8)
 {
     /// <summary>Result type of this node.</summary>
     public Type Type;
@@ -110,11 +110,10 @@ public struct ExpressionNode  // 32 bytes: Type(8)+Obj(8)+_typeFlags(2)+NextIdx(
     internal short _typeFlags;
     /// <summary>Raw next-sibling index (0 = nil).</summary>
     public short NextIdx;
-    // Packed 16-bit indexes (or full 8-byte constant bits when IsInplaceConst):
-    // bits  0–15: ChildIdx  (first child / 1-based closure slot for Constant)
-    // bits 16–31: ChildCount (reserved, future use)
-    // bits 32–47: ExtraIdx  (second child; nil for Unary and non-control nodes)
-    // bits 48–63: ExtraCount (reserved, future use)
+    // Explicit shorts fill the 4 bytes that would otherwise be padding before the long.
+    internal short _childIdx; // first child, or 1-based closure slot for Constant
+    internal short _extraIdx; // second child; nil for Unary and non-control nodes
+    // Raw 8-byte constant bits when IsInplaceConst is true; zero for all other node types.
     internal long _data;
 
     /// <summary>Expression kind.</summary>
@@ -122,9 +121,9 @@ public struct ExpressionNode  // 32 bytes: Type(8)+Obj(8)+_typeFlags(2)+NextIdx(
     /// <summary>True when this Constant node's value is stored inline in <see cref="Data"/>.</summary>
     public bool IsInplaceConst => (_typeFlags & 0x8000) != 0;
     /// <summary>First child, or 1-based closure slot for non-inline Constant nodes.</summary>
-    public Idx ChildIdx => Idx.Of((int)(ushort)(_data & 0xFFFF));
+    public Idx ChildIdx => Idx.Of((int)(ushort)_childIdx);
     /// <summary>Second child (nil for unary nodes and for New/Call/Invoke args — only used for control nodes).</summary>
-    public Idx ExtraIdx => Idx.Of((int)(ushort)((_data >> 32) & 0xFFFF));
+    public Idx ExtraIdx => Idx.Of((int)(ushort)_extraIdx);
     /// <summary>Raw 8-byte constant bits when <see cref="IsInplaceConst"/> is true.</summary>
     public long Data => _data;
 }
@@ -168,7 +167,9 @@ public struct ExpressionTree
         n._typeFlags = (short)nodeType;
         n.Type = type;
         n.Obj = obj;
-        n._data = ((long)(ushort)extraIdx.It << 32) | (ushort)childIdx.It;
+        n._childIdx = childIdx.It;
+        n._extraIdx = extraIdx.It;
+        n._data = 0;
         n.NextIdx = 0;
         return Idx.Of(Nodes.Count); // Count already incremented by AddDefaultAndGetRef
     }
@@ -267,6 +268,8 @@ public struct ExpressionTree
                 n._typeFlags = unchecked((short)((int)ExpressionType.Constant | 0x8000));
                 n.Type = type;
                 n.Obj = null;
+                n._childIdx = 0;
+                n._extraIdx = 0;
                 n._data = ToInt64Bits(value, type);
                 n.NextIdx = 0;
                 return Idx.Of(Nodes.Count);
@@ -793,6 +796,8 @@ public struct ExpressionTree
             if (na.Type != nb.Type) return false;
             if (!ObjEqual(na.Obj, nb.Obj)) return false;
             if (na.NextIdx != nb.NextIdx) return false;
+            if (na._childIdx != nb._childIdx) return false;
+            if (na._extraIdx != nb._extraIdx) return false;
             if (na._data != nb._data) return false;
         }
         for (var i = 0; i < a.ClosureConstants.Count; i++)
