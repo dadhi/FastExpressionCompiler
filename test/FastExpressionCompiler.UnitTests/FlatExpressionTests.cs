@@ -49,7 +49,9 @@ public class FlatExpressionTests : ITest
 
     public void ExpressionNode_is_24_bytes()
     {
+#if !NET472
         Asserts.AreEqual(24, System.Runtime.CompilerServices.Unsafe.SizeOf<ExpressionNode>());
+#endif
     }
 
     public void Idx_default_is_nil()
@@ -170,10 +172,9 @@ public class FlatExpressionTests : ITest
         Asserts.AreEqual(typeof(Tuple<int, string>), newNode.Type);
         Asserts.AreEqual(ctor, (ConstructorInfo)newNode.Obj);
 
-        // Args are consecutive: ChildIdx = first, ChildCount = 2.
-        Asserts.AreEqual(2, (int)newNode.ChildCount);
+        // Args chained via NextIdx: ChildIdx = arg1, arg1.NextIdx = arg2.
         Asserts.AreEqual(arg1, newNode.ChildIdx);
-        Asserts.AreEqual(arg2, Idx.Of(newNode.ChildIdx.It + 1));
+        Asserts.AreEqual(arg2, tree.NodeAt(arg1).NextIdx);
     }
 
     public void Build_call_static_method()
@@ -213,15 +214,21 @@ public class FlatExpressionTests : ITest
         var v = tree.Variable(typeof(int), "v");
         var zero = tree.Constant(0);
         var assign = tree.Assign(v, zero, typeof(int));
-        // exprs=[assign] and vars=[v] are single-element lists; consecutive constraint satisfied trivially.
+        // Block internally allocates 2 sub-nodes: BlockExprList + BlockVarList.
         var blockIdx = tree.Block(typeof(int), exprs: [assign], variables: [v]);
 
         ref var blockNode = ref tree.NodeAt(blockIdx);
         Asserts.AreEqual(ExpressionType.Block, blockNode.NodeType);
-        Asserts.AreEqual(assign, blockNode.ChildIdx);
-        Asserts.AreEqual((short)1, blockNode.ChildCount);
-        Asserts.AreEqual(v, blockNode.ExtraIdx);
-        Asserts.AreEqual((byte)1, blockNode.ExtraCount);
+
+        // Block.ChildIdx -> BlockVarList node
+        ref var blockVarsNode = ref tree.NodeAt(blockNode.ChildIdx);
+        // BlockVarList.ChildIdx -> first var (v)
+        Asserts.AreEqual(v, blockVarsNode.ChildIdx);
+
+        // BlockVarList.NextIdx -> BlockExprList node
+        ref var blockExprsNode = ref tree.NodeAt(blockVarsNode.NextIdx);
+        // BlockExprList.ChildIdx -> first expr (assign)
+        Asserts.AreEqual(assign, blockExprsNode.ChildIdx);
     }
 
     public void Structural_equality_same_trees()

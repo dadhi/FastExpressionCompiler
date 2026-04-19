@@ -23,7 +23,8 @@ THE SOFTWARE.
 */
 
 // POC for issue #512: data-oriented flat expression tree.
-// Count-based children: ChildIdx (first child) + ChildCount (count), ExtraIdx + ExtraCount — children must be consecutively allocated.
+// NextIdx-based sibling chaining: children linked via node.NextIdx, no count fields.
+// Block uses two internal sub-nodes (BlockVarList, BlockExprList) chained via NextIdx to separate vars from exprs.
 // 0/default == nil.  ExpressionTree keeps ≤16 nodes on the stack via Stack16<ExpressionNode>.
 
 #nullable disable
@@ -92,14 +93,13 @@ public struct Idx : IEquatable<Idx>
 ///   <item><term>Parameter / Default</term><description>Obj = name (string or null).</description></item>
 ///   <item><term>Unary</term>  <description>Obj = MethodInfo?; ChildIdx = operand; ExtraIdx = nil.</description></item>
 ///   <item><term>Binary</term> <description>Obj = MethodInfo?; ChildIdx = left; ExtraIdx = right.</description></item>
-///   <item><term>New</term>    <description>Obj = ConstructorInfo; ChildIdx = first arg; ChildCount = arg count (consecutive nodes).</description></item>
-///   <item><term>Call static</term>  <description>Obj = MethodInfo; ChildIdx = first arg; ChildCount = arg count.</description></item>
-///   <item><term>Call instance</term><description>Obj = MethodInfo; ChildIdx = instance; ExtraIdx = first arg; ExtraCount = arg count.</description></item>
-///   <item><term>Lambda</term> <description>Obj = Idx[] of params (stored in Obj to avoid NextIdx aliasing); ChildIdx = body.</description></item>
-///   <item><term>Block</term>  <description>ChildIdx = first expr; ChildCount = expr count; ExtraIdx = first var; ExtraCount = var count.</description></item>
-///   <item><term>Conditional</term><description>ChildIdx = test; ExtraIdx = ifTrue; ifFalse is at ExtraIdx+1 (must be consecutively allocated).</description></item>
+///   <item><term>New / Call-static</term><description>Obj = CtorInfo/MethodInfo; ChildIdx = first arg (args chained via NextIdx).</description></item>
+///   <item><term>Call instance</term><description>Obj = MethodInfo; ChildIdx = instance; ExtraIdx = first arg (args chained via NextIdx).</description></item>
+///   <item><term>Lambda</term> <description>Obj = Idx[] of params (in Obj to avoid NextIdx aliasing); ChildIdx = body.</description></item>
+///   <item><term>Block</term>  <description>ChildIdx → internal BlockVarList node (ChildIdx=first var, NextIdx→BlockExprList); BlockExprList.ChildIdx=first expr.</description></item>
+///   <item><term>Conditional</term><description>ChildIdx = test; ExtraIdx = ifTrue; ifFalse must be at ExtraIdx+1 (consecutive).</description></item>
 /// </list>
-/// <para>_data bit layout (non-inline-const): bits[63:57]=NodeType(7) | bits[56:41]=ChildIdx(16) | bits[40:25]=ChildCount(16) | bits[24:9]=ExtraIdx(16) | bits[8:1]=ExtraCount(8) | bit[0]=spare.</para>
+/// <para>_data bit layout (non-inline-const): bits[63:57]=NodeType(7) | bits[56:41]=ChildIdx(16) | bits[40:25]=NextIdx(16) | bits[24:9]=ExtraIdx(16) | bits[8:0]=spare(9).</para>
 /// <para>vs LightExpression heap objects (16-byte GC header + fields): Constant/Parameter ~40 bytes | Binary/Unary ~48–56 bytes.</para>
 /// </summary>
 [StructLayout(LayoutKind.Sequential)]
@@ -119,14 +119,17 @@ public struct ExpressionNode  // 24 bytes: Type(8)+Obj(8)+_data(8)
     public ExpressionType NodeType => IsInplaceConst ? ExpressionType.Constant : (ExpressionType)((ulong)_data >> 57);
     /// <summary>First child index, or 1-based closure slot for non-inline Constant nodes.</summary>
     public Idx ChildIdx => Idx.Of((short)((_data >> 41) & 0xFFFF));
-    /// <summary>Count of consecutive children at <see cref="ChildIdx"/> (New/Call-static/NewArray/Block-exprs).</summary>
-    public short ChildCount => (short)((_data >> 25) & 0xFFFF);
-    /// <summary>Second child: right for Binary; ifTrue for Conditional; first arg for instance Call/Invoke; first var for Block.</summary>
-    public Idx ExtraIdx => Idx.Of((short)((_data >> 9) & 0xFFFF));
-    /// <summary>Count of consecutive extra children at <see cref="ExtraIdx"/> (instance Call/Invoke args; Block vars).</summary>
-    public byte ExtraCount => (byte)((_data >> 1) & 0xFF);
+    /// <summary>Next sibling index in a linked list (0 = end of list).</summary>
+    public Idx NextIdx  => Idx.Of((short)((_data >> 25) & 0xFFFF));
+    /// <summary>Second child: right for Binary; ifTrue for Conditional; first arg for instance Call/Invoke.</summary>
+    public Idx ExtraIdx => Idx.Of((short)((_data >> 9)  & 0xFFFF));
     /// <summary>Raw 8-byte constant bits when <see cref="IsInplaceConst"/> is true.</summary>
     public long Data => _data;
+
+    /// <summary>Sets the NextIdx bits in _data without touching other fields. Used by LinkList to chain sibling nodes.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void SetNextIdx(Idx next) =>
+        _data = (_data & ~(0xFFFFL << 25)) | ((long)(ushort)next.It << 25);
 }
 
 /// <summary>
@@ -159,22 +162,20 @@ public struct ExpressionTree
         return ref Nodes.GetSurePresentRef(idx.It - 1);
     }
 
-    // Packs NodeType + ChildIdx + ChildCount + ExtraIdx + ExtraCount into the 64-bit _data word.
+    // Packs NodeType + ChildIdx + NextIdx + ExtraIdx into the 64-bit _data word.
     // ExpressionType max value is 83 (IsFalse), well within the 7-bit (0–127) field.
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static long PackData(
         ExpressionType nodeType,
         short childIdx = 0,
-        short childCount = 0,
-        short extraIdx = 0,
-        byte extraCount = 0)
+        short nextIdx = 0,
+        short extraIdx = 0)
     {
         Debug.Assert((int)nodeType >= 0 && (int)nodeType <= 127, "ExpressionType must fit in 7 bits");
-        return ((long)nodeType << 57) |          // 7 bits at [63:57] — ExpressionType max 83, fits in 7 bits
-               ((long)(ushort)childIdx << 41) |  // 16 bits at [56:41]
-               ((long)(ushort)childCount << 25) | // 16 bits at [40:25]
-               ((long)(ushort)extraIdx << 9) |   // 16 bits at [24:9]
-               ((long)extraCount << 1);          // 8 bits at [8:1]
+        return ((long)nodeType << 57) |           // 7 bits at [63:57]
+               ((long)(ushort)childIdx << 41) |   // 16 bits at [56:41]
+               ((long)(ushort)nextIdx  << 25) |   // 16 bits at [40:25]
+               ((long)(ushort)extraIdx << 9);     // 16 bits at [24:9]
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -182,16 +183,26 @@ public struct ExpressionTree
         ExpressionType nodeType,
         Type type,
         object obj = null,
-        Idx childIdx = default,
-        short childCount = 0,
-        Idx extraIdx = default,
-        byte extraCount = 0)
+        short childIdx = 0,
+        short nextIdx = 0,
+        short extraIdx = 0)
     {
         ref var n = ref Nodes.AddDefaultAndGetRef();
         n.Type = type;
         n.Obj = obj;
-        n._data = PackData(nodeType, childIdx.It, childCount, extraIdx.It, extraCount);
+        n._data = PackData(nodeType, childIdx, nextIdx, extraIdx);
         return Idx.Of(Nodes.Count); // Count already incremented by AddDefaultAndGetRef
+    }
+
+    // Chains nodes[0]→nodes[1]→…→nil via SetNextIdx; returns nodes[0] (nil when empty).
+    // Arg nodes must not be shared across multiple sibling chains — NextIdx is intrusive.
+    private Idx LinkList(Idx[] nodes)
+    {
+        if (nodes == null || nodes.Length == 0) return Idx.Nil;
+        for (var i = 0; i < nodes.Length - 1; i++)
+            NodeAt(nodes[i]).SetNextIdx(nodes[i + 1]);
+        NodeAt(nodes[nodes.Length - 1]).SetNextIdx(Idx.Nil);
+        return nodes[0];
     }
 
     // Types whose value fits in 64 bits — stored inline in _data to avoid boxing.
@@ -297,7 +308,7 @@ public struct ExpressionTree
         var ci = ClosureConstants.Count;
         ClosureConstants.Add(value);
         // ChildIdx = 1-based closure slot.
-        return AddNode(ExpressionType.Constant, type, childIdx: Idx.Of(ci + 1));
+        return AddNode(ExpressionType.Constant, type, childIdx: (short)(ci + 1));
     }
 
     /// <summary>Typed overload of <see cref="Constant(object,bool)"/>.</summary>
@@ -318,7 +329,7 @@ public struct ExpressionTree
 
     /// <summary>Adds a unary expression node.</summary>
     public Idx Unary(ExpressionType nodeType, Idx operand, Type type, MethodInfo method = null) =>
-        AddNode(nodeType, type, obj: method, childIdx: operand);
+        AddNode(nodeType, type, obj: method, childIdx: operand.It);
 
     /// <summary>Adds a Convert node.</summary>
     public Idx Convert(Idx operand, Type toType) =>
@@ -334,7 +345,7 @@ public struct ExpressionTree
 
     /// <summary>Adds a binary expression node.</summary>
     public Idx Binary(ExpressionType nodeType, Idx left, Idx right, Type type, MethodInfo method = null) =>
-        AddNode(nodeType, type, obj: method, childIdx: left, extraIdx: right);
+        AddNode(nodeType, type, obj: method, childIdx: left.It, extraIdx: right.It);
 
     /// <summary>Adds an Add node.</summary>
     public Idx Add(Idx left, Idx right, Type type) =>
@@ -356,24 +367,17 @@ public struct ExpressionTree
     public Idx Assign(Idx target, Idx value, Type type) =>
         Binary(ExpressionType.Assign, target, value, type);
 
-    /// <summary>Adds a New node calling the given constructor with the provided arguments. Arguments must be consecutively allocated in <see cref="Nodes"/>.</summary>
+    /// <summary>Adds a New node calling the given constructor with the provided arguments. Arguments are chained via NextIdx.</summary>
     public Idx New(ConstructorInfo ctor, params Idx[] args) =>
-        AddNode(ExpressionType.New, ctor.DeclaringType, obj: ctor,
-            childIdx: args?.Length > 0 ? args[0] : Idx.Nil,
-            childCount: (short)(args?.Length ?? 0));
+        AddNode(ExpressionType.New, ctor.DeclaringType, obj: ctor, childIdx: LinkList(args).It);
 
-    /// <summary>Adds a Call node. Pass <see cref="Idx.Nil"/> for <paramref name="instance"/> for static calls. Arguments must be consecutively allocated in <see cref="Nodes"/>.</summary>
+    /// <summary>Adds a Call node. Pass <see cref="Idx.Nil"/> for <paramref name="instance"/> for static calls. Arguments are chained via NextIdx.</summary>
     public Idx Call(MethodInfo method, Idx instance, params Idx[] args)
     {
         var returnType = method.ReturnType == typeof(void) ? typeof(void) : method.ReturnType;
         return instance.IsNil
-            ? AddNode(ExpressionType.Call, returnType, obj: method,
-                childIdx: args?.Length > 0 ? args[0] : Idx.Nil,
-                childCount: (short)(args?.Length ?? 0))
-            : AddNode(ExpressionType.Call, returnType, obj: method,
-                childIdx: instance,
-                extraIdx: args?.Length > 0 ? args[0] : Idx.Nil,
-                extraCount: (byte)(args?.Length ?? 0));
+            ? AddNode(ExpressionType.Call, returnType, obj: method, childIdx: LinkList(args).It)
+            : AddNode(ExpressionType.Call, returnType, obj: method, childIdx: instance.It, extraIdx: LinkList(args).It);
     }
 
     // Parameters stored in Obj as Idx[] rather than chained via NextIdx, because the same
@@ -381,7 +385,7 @@ public struct ExpressionTree
     /// <summary>Adds a Lambda node. Sets <see cref="RootIdx"/> when <paramref name="isRoot"/> is true.</summary>
     public Idx Lambda(Type delegateType, Idx body, Idx[] parameters = null, bool isRoot = true)
     {
-        var lambdaIdx = AddNode(ExpressionType.Lambda, delegateType, obj: parameters, childIdx: body);
+        var lambdaIdx = AddNode(ExpressionType.Lambda, delegateType, obj: parameters, childIdx: body.It);
         if (isRoot)
             RootIdx = lambdaIdx;
         return lambdaIdx;
@@ -392,16 +396,25 @@ public struct ExpressionTree
     {
         Debug.Assert(ifFalse.It == ifTrue.It + 1, "ifTrue and ifFalse must be consecutively allocated for Conditional");
         // ExtraIdx = ifTrue; ifFalse is implicit at ExtraIdx+1 (consecutive).
-        return AddNode(ExpressionType.Conditional, type, childIdx: test, extraIdx: ifTrue);
+        return AddNode(ExpressionType.Conditional, type, childIdx: test.It, extraIdx: ifTrue.It);
     }
 
-    /// <summary>Adds a Block node. Both <paramref name="exprs"/> and <paramref name="variables"/> must each be consecutively allocated in <see cref="Nodes"/>.</summary>
-    public Idx Block(Type type, Idx[] exprs, Idx[] variables = null) =>
-        AddNode(ExpressionType.Block, type,
-            childIdx: exprs?.Length > 0 ? exprs[0] : Idx.Nil,
-            childCount: (short)(exprs?.Length ?? 0),
-            extraIdx: variables?.Length > 0 ? variables[0] : Idx.Nil,
-            extraCount: (byte)(variables?.Length ?? 0));
+    // Internal sentinel NodeTypes for Block sub-nodes — not in the public ExpressionType enum (max 83).
+    private const ExpressionType NodeTypeBlockVarList  = (ExpressionType)120;
+    private const ExpressionType NodeTypeBlockExprList = (ExpressionType)121;
+
+    /// <summary>
+    /// Adds a Block node. Internally allocates two sub-nodes: a BlockVarList node (ChildIdx = first var, NextIdx = BlockExprList)
+    /// and a BlockExprList node (ChildIdx = first expr). Vars and exprs are each chained via NextIdx.
+    /// </summary>
+    public Idx Block(Type type, Idx[] exprs, Idx[] variables = null)
+    {
+        // Build exprs sub-node first (so its index is known for blockVars.NextIdx).
+        var blockExprsIdx = AddNode(NodeTypeBlockExprList, typeof(void), childIdx: LinkList(exprs).It);
+        // Build vars sub-node, pointing NextIdx at blockExprs.
+        var blockVarsIdx  = AddNode(NodeTypeBlockVarList,  typeof(void), childIdx: LinkList(variables).It, nextIdx: blockExprsIdx.It);
+        return AddNode(ExpressionType.Block, type, childIdx: blockVarsIdx.It);
+    }
 
     // ── Additional convenience shorthands for binary ops ───────────────────────────────────────
 
@@ -469,7 +482,7 @@ public struct ExpressionTree
             memberType = fi.FieldType;
         else
             throw new ArgumentException($"MemberAccess requires a FieldInfo or PropertyInfo, got {member.GetType().Name}.", nameof(member));
-        return AddNode(ExpressionType.MemberAccess, memberType, obj: member, childIdx: instance);
+        return AddNode(ExpressionType.MemberAccess, memberType, obj: member, childIdx: instance.It);
     }
 
     /// <summary>Adds a MemberAccess node for a field.</summary>
@@ -479,47 +492,44 @@ public struct ExpressionTree
     public Idx Property(Idx instance, PropertyInfo property) => MemberAccess(instance, property);
 
     // ── Invoke ──────────────────────────────────────────────────────────────────────────────────
-    // ChildIdx = delegate expression; ExtraIdx = first argument (chained via NextIdx).
+    // ChildIdx = delegate expression; ExtraIdx = first argument (args chained via NextIdx).
 
-    /// <summary>Adds an Invoke node (delegate invocation). Arguments must be consecutively allocated.</summary>
+    /// <summary>Adds an Invoke node (delegate invocation). Arguments are chained via NextIdx.</summary>
     public Idx Invoke(Idx delegateExpr, Type returnType, params Idx[] args) =>
         AddNode(ExpressionType.Invoke, returnType,
-            childIdx: delegateExpr,
-            extraIdx: args?.Length > 0 ? args[0] : Idx.Nil,
-            extraCount: (byte)(args?.Length ?? 0));
+            childIdx: delegateExpr.It,
+            extraIdx: LinkList(args).It);
 
     // ── TypeIs / TypeEqual ──────────────────────────────────────────────────────────────────────
     // Obj = Type to test against; ChildIdx = expression.
 
     /// <summary>Adds a TypeIs node (returns bool; true when expr is a subtype of <paramref name="type"/>).</summary>
     public Idx TypeIs(Idx expr, Type type) =>
-        AddNode(ExpressionType.TypeIs, typeof(bool), obj: type, childIdx: expr);
+        AddNode(ExpressionType.TypeIs, typeof(bool), obj: type, childIdx: expr.It);
 
     /// <summary>Adds a TypeEqual node (returns bool; true when expr's exact runtime type equals <paramref name="type"/>).</summary>
     public Idx TypeEqual(Idx expr, Type type) =>
-        AddNode(ExpressionType.TypeEqual, typeof(bool), obj: type, childIdx: expr);
+        AddNode(ExpressionType.TypeEqual, typeof(bool), obj: type, childIdx: expr.It);
 
     // ── NewArrayInit / NewArrayBounds ───────────────────────────────────────────────────────────
-    // Type = array type; ChildIdx = first element/bound (chained via NextIdx).
+    // Type = array type; ChildIdx = first element/bound (elements chained via NextIdx).
 
-    /// <summary>Adds a NewArrayInit node (creates and initializes a 1D array). Elements must be consecutively allocated.</summary>
+    /// <summary>Adds a NewArrayInit node (creates and initializes a 1D array). Elements are chained via NextIdx.</summary>
     public Idx NewArrayInit(Type elementType, params Idx[] elements) =>
         AddNode(ExpressionType.NewArrayInit, elementType.MakeArrayType(),
-            childIdx: elements?.Length > 0 ? elements[0] : Idx.Nil,
-            childCount: (short)(elements?.Length ?? 0));
+            childIdx: LinkList(elements).It);
 
-    /// <summary>Adds a NewArrayBounds node (creates an array given dimension bounds). Bounds must be consecutively allocated.</summary>
+    /// <summary>Adds a NewArrayBounds node (creates an array given dimension bounds). Bounds are chained via NextIdx.</summary>
     public Idx NewArrayBounds(Type elementType, params Idx[] bounds) =>
         AddNode(ExpressionType.NewArrayBounds, elementType.MakeArrayType(),
-            childIdx: bounds?.Length > 0 ? bounds[0] : Idx.Nil,
-            childCount: (short)(bounds?.Length ?? 0));
+            childIdx: LinkList(bounds).It);
 
-    // Allocates an enumerator — suitable for tests and diagnostics; avoid in hot paths.
-    /// <summary>Enumerates <paramref name="count"/> consecutive nodes starting at <paramref name="firstIdx"/>. Allocates an enumerator — avoid in hot paths.</summary>
-    public IEnumerable<Idx> Children(Idx firstIdx, int count)
+    // Allocates an enumerator — suitable for tests/diagnostics; avoid in hot paths.
+    /// <summary>Enumerates the sibling chain starting at <paramref name="firstIdx"/> via NextIdx. Allocates an enumerator — avoid in hot paths.</summary>
+    public IEnumerable<Idx> Siblings(Idx firstIdx)
     {
-        for (var i = 0; i < count; i++)
-            yield return Idx.Of(firstIdx.It + i);
+        for (var cur = firstIdx; !cur.IsNil; cur = NodeAt(cur).NextIdx)
+            yield return cur;
     }
 
     // Builds body after registering params so they are found in paramMap when encountered in the body.
@@ -574,24 +584,24 @@ public struct ExpressionTree
             }
 
             case ExpressionType.New:
-                return SysExpr.New((ConstructorInfo)node.Obj, ChildListSE(node.ChildIdx, node.ChildCount, ref paramMap));
+                return SysExpr.New((ConstructorInfo)node.Obj, SiblingListSE(node.ChildIdx, ref paramMap));
 
             case ExpressionType.NewArrayInit:
-                return SysExpr.NewArrayInit(node.Type.GetElementType(), ChildListSE(node.ChildIdx, node.ChildCount, ref paramMap));
+                return SysExpr.NewArrayInit(node.Type.GetElementType(), SiblingListSE(node.ChildIdx, ref paramMap));
 
             case ExpressionType.NewArrayBounds:
-                return SysExpr.NewArrayBounds(node.Type.GetElementType(), ChildListSE(node.ChildIdx, node.ChildCount, ref paramMap));
+                return SysExpr.NewArrayBounds(node.Type.GetElementType(), SiblingListSE(node.ChildIdx, ref paramMap));
 
             case ExpressionType.Call:
             {
                 var method = (MethodInfo)node.Obj;
                 return method.IsStatic
-                    ? SysExpr.Call(method, ChildListSE(node.ChildIdx, node.ChildCount, ref paramMap))
-                    : SysExpr.Call(ToSystemExpression(node.ChildIdx, ref paramMap), method, ExtraListSE(node.ExtraIdx, node.ExtraCount, ref paramMap));
+                    ? SysExpr.Call(method, SiblingListSE(node.ChildIdx, ref paramMap))
+                    : SysExpr.Call(ToSystemExpression(node.ChildIdx, ref paramMap), method, SiblingListSE(node.ExtraIdx, ref paramMap));
             }
 
             case ExpressionType.Invoke:
-                return SysExpr.Invoke(ToSystemExpression(node.ChildIdx, ref paramMap), ExtraListSE(node.ExtraIdx, node.ExtraCount, ref paramMap));
+                return SysExpr.Invoke(ToSystemExpression(node.ChildIdx, ref paramMap), SiblingListSE(node.ExtraIdx, ref paramMap));
 
             case ExpressionType.MemberAccess:
             {
@@ -615,12 +625,13 @@ public struct ExpressionTree
 
             case ExpressionType.Block:
             {
-                var exprs = ChildListSE(node.ChildIdx, node.ChildCount, ref paramMap);
-                if (node.ExtraIdx.IsNil)
-                    return SysExpr.Block(node.Type, exprs);
-                var vars = new List<SysParam>();
-                for (var i = 0; i < node.ExtraCount; i++)
-                    vars.Add((SysParam)ToSystemExpression(Idx.Of(node.ExtraIdx.It + i), ref paramMap));
+                // Block.ChildIdx → BlockVarList node; BlockVarList.NextIdx → BlockExprList node.
+                ref var varsNode  = ref NodeAt(node.ChildIdx);
+                ref var exprsNode = ref NodeAt(varsNode.NextIdx);
+                var exprs = SiblingListSE(exprsNode.ChildIdx, ref paramMap);
+                var vars  = new List<SysParam>();
+                for (var vi = varsNode.ChildIdx; !vi.IsNil; vi = NodeAt(vi).NextIdx)
+                    vars.Add((SysParam)ToSystemExpression(vi, ref paramMap));
                 return SysExpr.Block(node.Type, vars, exprs);
             }
 
@@ -637,19 +648,11 @@ public struct ExpressionTree
         }
     }
 
-    private List<SysExpr> ChildListSE(Idx firstIdx, short count, ref SmallMap16<int, SysParam, IntEq> paramMap)
+    private List<SysExpr> SiblingListSE(Idx firstIdx, ref SmallMap16<int, SysParam, IntEq> paramMap)
     {
-        var list = new List<SysExpr>(count);
-        for (var i = 0; i < count; i++)
-            list.Add(ToSystemExpression(Idx.Of(firstIdx.It + i), ref paramMap));
-        return list;
-    }
-
-    private List<SysExpr> ExtraListSE(Idx firstIdx, byte count, ref SmallMap16<int, SysParam, IntEq> paramMap)
-    {
-        var list = new List<SysExpr>(count);
-        for (var i = 0; i < count; i++)
-            list.Add(ToSystemExpression(Idx.Of(firstIdx.It + i), ref paramMap));
+        var list = new List<SysExpr>();
+        for (var cur = firstIdx; !cur.IsNil; cur = NodeAt(cur).NextIdx)
+            list.Add(ToSystemExpression(cur, ref paramMap));
         return list;
     }
 
@@ -709,27 +712,27 @@ public struct ExpressionTree
 
             case ExpressionType.New:
                 return FastExpressionCompiler.LightExpression.Expression.New(
-                    (ConstructorInfo)node.Obj, ChildListLE(node.ChildIdx, node.ChildCount, ref paramMap));
+                    (ConstructorInfo)node.Obj, SiblingListLE(node.ChildIdx, ref paramMap));
 
             case ExpressionType.NewArrayInit:
                 return FastExpressionCompiler.LightExpression.Expression.NewArrayInit(
-                    node.Type.GetElementType(), ChildListLE(node.ChildIdx, node.ChildCount, ref paramMap));
+                    node.Type.GetElementType(), SiblingListLE(node.ChildIdx, ref paramMap));
 
             case ExpressionType.NewArrayBounds:
                 return FastExpressionCompiler.LightExpression.Expression.NewArrayBounds(
-                    node.Type.GetElementType(), ChildListLE(node.ChildIdx, node.ChildCount, ref paramMap));
+                    node.Type.GetElementType(), SiblingListLE(node.ChildIdx, ref paramMap));
 
             case ExpressionType.Call:
             {
                 var method = (MethodInfo)node.Obj;
                 return method.IsStatic
-                    ? FastExpressionCompiler.LightExpression.Expression.Call(method, ChildListLE(node.ChildIdx, node.ChildCount, ref paramMap))
-                    : FastExpressionCompiler.LightExpression.Expression.Call(ToLightExpression(node.ChildIdx, ref paramMap), method, ExtraListLE(node.ExtraIdx, node.ExtraCount, ref paramMap));
+                    ? FastExpressionCompiler.LightExpression.Expression.Call(method, SiblingListLE(node.ChildIdx, ref paramMap))
+                    : FastExpressionCompiler.LightExpression.Expression.Call(ToLightExpression(node.ChildIdx, ref paramMap), method, SiblingListLE(node.ExtraIdx, ref paramMap));
             }
 
             case ExpressionType.Invoke:
                 return FastExpressionCompiler.LightExpression.Expression.Invoke(
-                    ToLightExpression(node.ChildIdx, ref paramMap), ExtraListLE(node.ExtraIdx, node.ExtraCount, ref paramMap));
+                    ToLightExpression(node.ChildIdx, ref paramMap), SiblingListLE(node.ExtraIdx, ref paramMap));
 
             case ExpressionType.MemberAccess:
             {
@@ -758,12 +761,13 @@ public struct ExpressionTree
 
             case ExpressionType.Block:
             {
-                var exprs = ChildListLE(node.ChildIdx, node.ChildCount, ref paramMap);
-                if (node.ExtraIdx.IsNil)
-                    return FastExpressionCompiler.LightExpression.Expression.Block(node.Type, exprs);
-                var vars = new List<FastExpressionCompiler.LightExpression.ParameterExpression>();
-                for (var i = 0; i < node.ExtraCount; i++)
-                    vars.Add((FastExpressionCompiler.LightExpression.ParameterExpression)ToLightExpression(Idx.Of(node.ExtraIdx.It + i), ref paramMap));
+                // Block.ChildIdx → BlockVarList node; BlockVarList.NextIdx → BlockExprList node.
+                ref var varsNode  = ref NodeAt(node.ChildIdx);
+                ref var exprsNode = ref NodeAt(varsNode.NextIdx);
+                var exprs = SiblingListLE(exprsNode.ChildIdx, ref paramMap);
+                var vars  = new List<FastExpressionCompiler.LightExpression.ParameterExpression>();
+                for (var vi = varsNode.ChildIdx; !vi.IsNil; vi = NodeAt(vi).NextIdx)
+                    vars.Add((FastExpressionCompiler.LightExpression.ParameterExpression)ToLightExpression(vi, ref paramMap));
                 return FastExpressionCompiler.LightExpression.Expression.Block(node.Type, vars, exprs);
             }
 
@@ -781,22 +785,12 @@ public struct ExpressionTree
     }
 
     [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode("FastExpressionCompiler is not supported in trimming scenarios.")]
-    private List<FastExpressionCompiler.LightExpression.Expression> ChildListLE(
-        Idx firstIdx, short count, ref SmallMap16<int, FastExpressionCompiler.LightExpression.ParameterExpression, IntEq> paramMap)
+    private List<FastExpressionCompiler.LightExpression.Expression> SiblingListLE(
+        Idx firstIdx, ref SmallMap16<int, FastExpressionCompiler.LightExpression.ParameterExpression, IntEq> paramMap)
     {
-        var list = new List<FastExpressionCompiler.LightExpression.Expression>(count);
-        for (var i = 0; i < count; i++)
-            list.Add(ToLightExpression(Idx.Of(firstIdx.It + i), ref paramMap));
-        return list;
-    }
-
-    [System.Diagnostics.CodeAnalysis.RequiresUnreferencedCode("FastExpressionCompiler is not supported in trimming scenarios.")]
-    private List<FastExpressionCompiler.LightExpression.Expression> ExtraListLE(
-        Idx firstIdx, byte count, ref SmallMap16<int, FastExpressionCompiler.LightExpression.ParameterExpression, IntEq> paramMap)
-    {
-        var list = new List<FastExpressionCompiler.LightExpression.Expression>(count);
-        for (var i = 0; i < count; i++)
-            list.Add(ToLightExpression(Idx.Of(firstIdx.It + i), ref paramMap));
+        var list = new List<FastExpressionCompiler.LightExpression.Expression>();
+        for (var cur = firstIdx; !cur.IsNil; cur = NodeAt(cur).NextIdx)
+            list.Add(ToLightExpression(cur, ref paramMap));
         return list;
     }
 #endif
@@ -854,7 +848,7 @@ public struct ExpressionTree
             sb.AppendLine(
                 $"  [{i + 1}] {n.NodeType,-22} type={n.Type?.Name,-14} " +
                 $"{(constStr != null ? $"val={constStr,-28}" : $"obj={ObjStr(n.Obj),-28}")} " +
-                $"child={n.ChildIdx}[{n.ChildCount}]  extra={n.ExtraIdx}[{n.ExtraCount}]");
+                $"child={n.ChildIdx}  next={n.NextIdx}  extra={n.ExtraIdx}");
         }
         if (ClosureConstants.Count > 0)
         {
