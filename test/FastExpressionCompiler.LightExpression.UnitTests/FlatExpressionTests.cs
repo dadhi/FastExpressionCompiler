@@ -30,8 +30,6 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
         // ── helpers ───────────────────────────────────────────────────────────
 
-        private static ExprTree E => default;
-
         // ── tests ─────────────────────────────────────────────────────────────
 
         public void Constant_and_Lambda_roundtrip()

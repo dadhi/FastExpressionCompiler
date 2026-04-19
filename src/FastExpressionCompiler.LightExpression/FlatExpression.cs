@@ -84,6 +84,7 @@ public struct ExprNode
     ///   <item>Goto       – <see cref="GotoExpressionKind"/> value</item>
     ///   <item>Try        – variant: 0=Catch, 1=Finally, 2=CatchFinally, 3=Fault</item>
     ///   <item>Call       – 1 if first child is the instance, 0 if fully static</item>
+    ///   <item>MemberAccess – 1 if first child is the instance, 0 if static</item>
     ///   <item>Index      – 1 if first child is the instance (indexer or array), always 1 for this node type</item>
     /// </list>
     /// </summary>
@@ -272,7 +273,7 @@ public struct ExprTree
         var all = new ushort[1 + indexes.Length];
         all[0] = array;
         for (var i = 0; i < indexes.Length; i++) all[i + 1] = indexes[i];
-        return AddNodeWithChildren(ExpressionType.Index, elemType, null, extra: 0, all);
+        return AddNodeWithChildren(ExpressionType.Index, elemType, null, extra: 1, all);
     }
 
     /// <summary>Creates a property indexer node.</summary>
