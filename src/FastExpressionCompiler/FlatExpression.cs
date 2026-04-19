@@ -160,18 +160,22 @@ public struct ExpressionTree
     }
 
     // Packs NodeType + ChildIdx + ChildCount + ExtraIdx + ExtraCount into the 64-bit _data word.
+    // ExpressionType max value is 83 (IsFalse), well within the 7-bit (0–127) field.
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static long PackData(
         ExpressionType nodeType,
         short childIdx = 0,
         short childCount = 0,
         short extraIdx = 0,
-        byte extraCount = 0) =>
-        ((long)(int)nodeType << 57) |        // 7 bits at [63:57]
-        ((long)(ushort)childIdx << 41) |     // 16 bits at [56:41]
-        ((long)(ushort)childCount << 25) |   // 16 bits at [40:25]
-        ((long)(ushort)extraIdx << 9) |      // 16 bits at [24:9]
-        ((long)extraCount << 1);             // 8 bits at [8:1]
+        byte extraCount = 0)
+    {
+        Debug.Assert((int)nodeType >= 0 && (int)nodeType <= 127, "ExpressionType must fit in 7 bits");
+        return ((long)nodeType << 57) |          // 7 bits at [63:57] — ExpressionType max 83, fits in 7 bits
+               ((long)(ushort)childIdx << 41) |  // 16 bits at [56:41]
+               ((long)(ushort)childCount << 25) | // 16 bits at [40:25]
+               ((long)(ushort)extraIdx << 9) |   // 16 bits at [24:9]
+               ((long)extraCount << 1);          // 8 bits at [8:1]
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private Idx AddNode(
