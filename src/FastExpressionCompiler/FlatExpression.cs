@@ -200,7 +200,11 @@ public struct ExpressionTree
     {
         if (nodes == null || nodes.Length == 0) return Idx.Nil;
         for (var i = 0; i < nodes.Length - 1; i++)
+        {
+            Debug.Assert(!nodes[i].IsNil, "LinkList: nil index at position " + i);
             NodeAt(nodes[i]).SetNextIdx(nodes[i + 1]);
+        }
+        Debug.Assert(!nodes[nodes.Length - 1].IsNil, "LinkList: nil index at last position");
         NodeAt(nodes[nodes.Length - 1]).SetNextIdx(Idx.Nil);
         return nodes[0];
     }
@@ -399,7 +403,9 @@ public struct ExpressionTree
         return AddNode(ExpressionType.Conditional, type, childIdx: test.It, extraIdx: ifTrue.It);
     }
 
-    // Internal sentinel NodeTypes for Block sub-nodes — not in the public ExpressionType enum (max 83).
+    // Internal sentinel NodeTypes for Block sub-nodes — stored in _data's 7-bit NodeType field (max 127).
+    // The public ExpressionType enum currently tops out at 83 (IsFalse); 120/121 are safely in the
+    // reserved gap 84–127 and will never appear in public expression trees.
     private const ExpressionType NodeTypeBlockVarList  = (ExpressionType)120;
     private const ExpressionType NodeTypeBlockExprList = (ExpressionType)121;
 
