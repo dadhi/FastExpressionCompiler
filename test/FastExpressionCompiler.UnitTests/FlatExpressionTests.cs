@@ -13,6 +13,7 @@ public class FlatExpressionTests : ITest
 {
     public int Run()
     {
+        ExpressionNode_is_24_bytes();
         Idx_default_is_nil();
         Idx_of_is_one_based();
 
@@ -43,7 +44,12 @@ public class FlatExpressionTests : ITest
         // Closure constants can be swapped after tree construction without rebuilding.
         Closure_constant_is_mutable_after_build();
 
-        return 22;
+        return 23;
+    }
+
+    public void ExpressionNode_is_24_bytes()
+    {
+        Asserts.AreEqual(24, System.Runtime.CompilerServices.Unsafe.SizeOf<ExpressionNode>());
     }
 
     public void Idx_default_is_nil()
@@ -72,8 +78,8 @@ public class FlatExpressionTests : ITest
         ref var node = ref tree.NodeAt(ci);
         Asserts.AreEqual(ExpressionType.Constant, node.NodeType);
         Asserts.AreEqual(typeof(int), node.Type);
-        Asserts.AreEqual(null, node.Obj);
-        Asserts.IsTrue(node.IsInplaceConst);       // bit 15 of _typeFlags set
+        Asserts.IsTrue(ReferenceEquals(node.Obj, ExpressionTree.InplaceConstValueMarker));
+        Asserts.IsTrue(node.IsInplaceConst);       // Obj == InplaceConstValueMarker
         Asserts.AreEqual(42L, node.Data);          // full 8-byte inline value
     }
 
@@ -149,10 +155,6 @@ public class FlatExpressionTests : ITest
         Asserts.AreEqual(2, parms.Length);
         Asserts.AreEqual(px, parms[0]);
         Asserts.AreEqual(py, parms[1]);
-
-        // NextIdx is NOT touched — a param can still appear as a New/Call argument alongside being a lambda param
-        ref var pxNode = ref tree.NodeAt(px);
-        Asserts.AreEqual((short)0, pxNode.NextIdx);
     }
 
     public void Build_new_expression()
@@ -168,10 +170,10 @@ public class FlatExpressionTests : ITest
         Asserts.AreEqual(typeof(Tuple<int, string>), newNode.Type);
         Asserts.AreEqual(ctor, (ConstructorInfo)newNode.Obj);
 
-        var siblings = tree.Siblings(newNode.ChildIdx).ToArray();
-        Asserts.AreEqual(2, siblings.Length);
-        Asserts.AreEqual(arg1, siblings[0]);
-        Asserts.AreEqual(arg2, siblings[1]);
+        // Args are consecutive: ChildIdx = first, ChildCount = 2.
+        Asserts.AreEqual(2, (int)newNode.ChildCount);
+        Asserts.AreEqual(arg1, newNode.ChildIdx);
+        Asserts.AreEqual(arg2, Idx.Of(newNode.ChildIdx.It + 1));
     }
 
     public void Build_call_static_method()
@@ -192,17 +194,17 @@ public class FlatExpressionTests : ITest
         var x = tree.Parameter(typeof(int), "x");
         var zero = tree.Constant(0);
         var test = tree.Binary(ExpressionType.GreaterThan, x, zero, typeof(bool));
-        var neg = tree.Negate(x, typeof(int));
-        var xCopy = tree.Parameter(typeof(int), "x_copy");
+        // ifTrue and ifFalse must be allocated consecutively (ifFalse.It == ifTrue.It + 1).
+        var xCopy = tree.Parameter(typeof(int), "x_copy");  // ifTrue
+        var neg = tree.Negate(x, typeof(int));              // ifFalse (right after xCopy)
         var cond = tree.Conditional(test, xCopy, neg, typeof(int));
 
         ref var condNode = ref tree.NodeAt(cond);
         Asserts.AreEqual(ExpressionType.Conditional, condNode.NodeType);
         Asserts.AreEqual(test, condNode.ChildIdx);
         Asserts.AreEqual(xCopy, condNode.ExtraIdx);
-        // ifFalse is chained as ifTrue.NextIdx (raw short)
-        ref var ifTrueNode = ref tree.NodeAt(xCopy);
-        Asserts.AreEqual(neg.It, ifTrueNode.NextIdx);
+        // ifFalse is implicit at ExtraIdx+1
+        Asserts.AreEqual(neg, Idx.Of(condNode.ExtraIdx.It + 1));
     }
 
     public void Build_block_with_variable()
@@ -211,12 +213,15 @@ public class FlatExpressionTests : ITest
         var v = tree.Variable(typeof(int), "v");
         var zero = tree.Constant(0);
         var assign = tree.Assign(v, zero, typeof(int));
-        var blockIdx = tree.Block(typeof(int), exprs: [assign, v], variables: [v]);
+        // exprs=[assign] and vars=[v] are single-element lists; consecutive constraint satisfied trivially.
+        var blockIdx = tree.Block(typeof(int), exprs: [assign], variables: [v]);
 
         ref var blockNode = ref tree.NodeAt(blockIdx);
         Asserts.AreEqual(ExpressionType.Block, blockNode.NodeType);
-        Asserts.IsFalse(blockNode.ChildIdx.IsNil);
-        Asserts.IsFalse(blockNode.ExtraIdx.IsNil);
+        Asserts.AreEqual(assign, blockNode.ChildIdx);
+        Asserts.AreEqual((short)1, blockNode.ChildCount);
+        Asserts.AreEqual(v, blockNode.ExtraIdx);
+        Asserts.AreEqual((byte)1, blockNode.ExtraCount);
     }
 
     public void Structural_equality_same_trees()
