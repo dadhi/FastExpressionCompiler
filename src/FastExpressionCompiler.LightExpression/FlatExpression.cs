@@ -36,6 +36,8 @@ public enum ExprNodeKind : byte
     MemberListBinding,
     /// <summary>Represents an element initializer payload.</summary>
     ElementInit,
+    /// <summary>Represents an internal object-reference metadata node.</summary>
+    ObjectReference,
 }
 
 /// <summary>Stores one flat expression node plus its intrusive child-link metadata.</summary>
@@ -52,6 +54,8 @@ public struct ExprNode
 
     /// <summary>Gets or sets the runtime payload associated with the node.</summary>
     public object Obj;
+    internal int Data0;
+    internal int Data1;
     private ulong _data;
 
     /// <summary>Gets the expression kind encoded for this node.</summary>
@@ -69,10 +73,13 @@ public struct ExprNode
     /// <summary>Gets the first child index or an auxiliary payload index.</summary>
     public int ChildIdx => (int)(_data & IndexMask);
 
-    internal ExprNode(Type type, object obj, ExpressionType nodeType, ExprNodeKind kind, int childIdx = 0, int childCount = 0, int nextIdx = 0)
+    internal ExprNode(Type type, object obj, ExpressionType nodeType, ExprNodeKind kind, int childIdx = 0, int childCount = 0, int nextIdx = 0,
+        int data0 = 0, int data1 = 0)
     {
         Type = type;
         Obj = obj;
+        Data0 = data0;
+        Data1 = data1;
         _data = ((ulong)(byte)nodeType << NodeTypeShift)
             | ((ulong)(byte)kind << KindShift)
             | ((ulong)(ushort)nextIdx << NextShift)
@@ -107,7 +114,7 @@ public struct ExprTree
     public int Parameter(Type type, string name = null)
     {
         var id = Nodes.Count + 1;
-        return AddRawExpressionNode(type, new ParameterData(id, name, type.IsByRef), ExpressionType.Parameter);
+        return AddRawLeafExpressionNode(type, name, ExpressionType.Parameter, data0: id, data1: type.IsByRef ? 1 : 0);
     }
 
     /// <summary>Adds a typed parameter node and returns its index.</summary>
@@ -244,7 +251,7 @@ public struct ExprTree
     {
         var children = conversion.HasValue ? new[] { left, right, conversion.Value } : new[] { left, right };
         return AddFactoryExpressionNode(type ?? GetBinaryResultType(nodeType, Nodes[left].Type, Nodes[right].Type, method),
-            new BinaryData(method, isLiftedToNull), nodeType, children);
+            method, nodeType, children, isLiftedToNull ? 1 : 0);
     }
 
     /// <summary>Adds a conditional node.</summary>
@@ -274,7 +281,7 @@ public struct ExprTree
         for (var i = 0; i < expressions.Length; ++i)
             children.Add(expressions[i]);
         return AddFactoryExpressionNode(type ?? Nodes[expressions[expressions.Length - 1]].Type,
-            new BlockData(variableCount), ExpressionType.Block, children);
+            null, ExpressionType.Block, children, variableCount);
     }
 
     /// <summary>Adds a typed lambda node.</summary>
@@ -313,7 +320,7 @@ public struct ExprTree
     public int Label(Type type = null, string name = null)
     {
         var id = Nodes.Count + 1;
-        return AddRawAuxNode(type ?? typeof(void), new LabelTargetData(id, name), ExprNodeKind.LabelTarget);
+        return AddRawLeafAuxNode(type ?? typeof(void), name, ExprNodeKind.LabelTarget, data0: id);
     }
 
     /// <summary>Adds a label-expression node.</summary>
@@ -344,7 +351,8 @@ public struct ExprTree
             children.Add(@break.Value);
         if (@continue.HasValue)
             children.Add(@continue.Value);
-        return AddFactoryExpressionNode(typeof(void), new LoopData(@break.HasValue, @continue.HasValue), ExpressionType.Loop, children);
+        return AddFactoryExpressionNode(typeof(void), null, ExpressionType.Loop, children,
+            (@break.HasValue ? 1 : 0) | (@continue.HasValue ? 2 : 0));
     }
 
     /// <summary>Adds a switch-case node.</summary>
@@ -372,16 +380,16 @@ public struct ExprTree
         if (cases != null && cases.Length != 0)
             for (var i = 0; i < cases.Length; ++i)
                 children.Add(cases[i]);
-        return AddFactoryExpressionNode(type, new SwitchData(defaultBody.HasValue, comparison), ExpressionType.Switch, children);
+        return AddFactoryExpressionNode(type, comparison, ExpressionType.Switch, children, defaultBody.HasValue ? 1 : 0);
     }
 
     /// <summary>Adds a catch block with an exception variable.</summary>
     public int Catch(int variable, int body) =>
-        AddFactoryAuxNode(Nodes[variable].Type, new CatchData(true, false), ExprNodeKind.CatchBlock, new[] { variable, body });
+        AddFactoryAuxNode(Nodes[variable].Type, null, ExprNodeKind.CatchBlock, new[] { variable, body }, 1);
 
     /// <summary>Adds a catch block without an exception variable.</summary>
     public int Catch(Type test, int body) =>
-        AddFactoryAuxNode(test, new CatchData(false, false), ExprNodeKind.CatchBlock, new[] { body });
+        AddFactoryAuxNode(test, null, ExprNodeKind.CatchBlock, new[] { body });
 
     /// <summary>Adds a catch block with optional exception variable and filter.</summary>
     public int MakeCatchBlock(Type test, int? variable, int body, int? filter)
@@ -392,20 +400,21 @@ public struct ExprTree
         children.Add(body);
         if (filter.HasValue)
             children.Add(filter.Value);
-        return AddFactoryAuxNode(test, new CatchData(variable.HasValue, filter.HasValue), ExprNodeKind.CatchBlock, children);
+        return AddFactoryAuxNode(test, null, ExprNodeKind.CatchBlock, children,
+            (variable.HasValue ? 1 : 0) | (filter.HasValue ? 2 : 0));
     }
 
     /// <summary>Adds a try/catch node.</summary>
     public int TryCatch(int body, params int[] handlers) =>
-        AddFactoryExpressionNode(Nodes[body].Type, new TryData(false, false), ExpressionType.Try, Prepend(body, handlers));
+        AddFactoryExpressionNode(Nodes[body].Type, null, ExpressionType.Try, Prepend(body, handlers));
 
     /// <summary>Adds a try/finally node.</summary>
     public int TryFinally(int body, int @finally) =>
-        AddFactoryExpressionNode(Nodes[body].Type, new TryData(true, false), ExpressionType.Try, new[] { body, @finally });
+        AddFactoryExpressionNode(Nodes[body].Type, null, ExpressionType.Try, new[] { body, @finally }, 1);
 
     /// <summary>Adds a try/fault node.</summary>
     public int TryFault(int body, int fault) =>
-        AddFactoryExpressionNode(Nodes[body].Type, new TryData(false, true), ExpressionType.Try, new[] { body, fault });
+        AddFactoryExpressionNode(Nodes[body].Type, null, ExpressionType.Try, new[] { body, fault }, 2);
 
     /// <summary>Adds a try node with optional finally block and catch handlers.</summary>
     public int TryCatchFinally(int body, int? @finally, params int[] handlers)
@@ -417,7 +426,7 @@ public struct ExprTree
         if (handlers != null && handlers.Length != 0)
             for (var i = 0; i < handlers.Length; ++i)
                 children.Add(handlers[i]);
-        return AddFactoryExpressionNode(Nodes[body].Type, new TryData(@finally.HasValue, false), ExpressionType.Try, children);
+        return AddFactoryExpressionNode(Nodes[body].Type, null, ExpressionType.Try, children, @finally.HasValue ? 1 : 0);
     }
 
     /// <summary>Adds a type-test node.</summary>
@@ -429,8 +438,15 @@ public struct ExprTree
         AddFactoryExpressionNode(typeof(bool), type, ExpressionType.TypeEqual, expression);
 
     /// <summary>Adds a dynamic-expression node.</summary>
-    public int Dynamic(Type delegateType, CallSiteBinder binder, params int[] arguments) =>
-        AddFactoryExpressionNode(typeof(object), new DynamicData(delegateType, binder), ExpressionType.Dynamic, arguments);
+    public int Dynamic(Type delegateType, CallSiteBinder binder, params int[] arguments)
+    {
+        ChildList children = default;
+        children.Add(AddObjectReferenceNode(typeof(Type), delegateType));
+        if (arguments != null && arguments.Length != 0)
+            for (var i = 0; i < arguments.Length; ++i)
+                children.Add(arguments[i]);
+        return AddFactoryExpressionNode(typeof(object), binder, ExpressionType.Dynamic, children);
+    }
 
     /// <summary>Adds a runtime-variables node.</summary>
     public int RuntimeVariables(params int[] variables) =>
@@ -438,7 +454,8 @@ public struct ExprTree
 
     /// <summary>Adds a debug-info node.</summary>
     public int DebugInfo(string fileName, int startLine, int startColumn, int endLine, int endColumn) =>
-        AddRawExpressionNode(typeof(void), new DebugInfoData(fileName, startLine, startColumn, endLine, endColumn), ExpressionType.DebugInfo);
+        AddRawLeafExpressionNode(typeof(void), fileName, ExpressionType.DebugInfo,
+            childIdx: checked((ushort)startColumn), childCount: checked((ushort)endColumn), data0: startLine, data1: endLine);
 
     /// <summary>Flattens a System.Linq expression tree.</summary>
     public static ExprTree FromExpression(SysExpr expression)
@@ -481,10 +498,19 @@ public struct ExprTree
     private int AddFactoryExpressionNode(Type type, object obj, ExpressionType nodeType, params int[] children) =>
         AddRawExpressionNode(type, obj, nodeType, CloneChildrenToArray(children));
 
+    private int AddFactoryExpressionNode(Type type, object obj, ExpressionType nodeType, IEnumerable<int> children, int data0, int data1 = 0) =>
+        AddRawExpressionNode(type, obj, nodeType, CloneChildrenToArray(children), data0, data1);
+
     private int AddFactoryExpressionNode(Type type, object obj, ExpressionType nodeType, in ChildList children)
     {
         var cloned = CloneChildren(children);
         return AddRawExpressionNode(type, obj, nodeType, in cloned);
+    }
+
+    private int AddFactoryExpressionNode(Type type, object obj, ExpressionType nodeType, in ChildList children, int data0, int data1 = 0)
+    {
+        var cloned = CloneChildren(children);
+        return AddRawExpressionNode(type, obj, nodeType, in cloned, data0, data1);
     }
 
     private int AddFactoryExpressionNode(Type type, object obj, ExpressionType nodeType, IEnumerable<int> children) =>
@@ -496,14 +522,24 @@ public struct ExprTree
     private int AddRawExpressionNode(Type type, object obj, ExpressionType nodeType, params int[] children) =>
         AddNode(type, obj, nodeType, ExprNodeKind.Expression, children, 0);
 
+    private int AddRawExpressionNode(Type type, object obj, ExpressionType nodeType, int[] children, int data0, int data1 = 0) =>
+        AddNode(type, obj, nodeType, ExprNodeKind.Expression, children, 0, 0, 0, data0, data1);
+
     private int AddRawExpressionNode(Type type, object obj, ExpressionType nodeType, in ChildList children) =>
         AddNode(type, obj, nodeType, ExprNodeKind.Expression, in children, 0);
+
+    private int AddRawExpressionNode(Type type, object obj, ExpressionType nodeType, in ChildList children, int data0, int data1 = 0) =>
+        AddNode(type, obj, nodeType, ExprNodeKind.Expression, in children, 0, 0, 0, data0, data1);
 
     private int AddRawExpressionNode(Type type, object obj, ExpressionType nodeType, IEnumerable<int> children) =>
         AddNode(type, obj, nodeType, ExprNodeKind.Expression, children, 0);
 
     private int AddRawExpressionNodeWithChildIndex(Type type, object obj, ExpressionType nodeType, int childIdx) =>
-        AddNode(type, obj, nodeType, ExprNodeKind.Expression, null, childIdx);
+        AddRawLeafExpressionNode(type, obj, nodeType, childIdx: childIdx);
+
+    private int AddRawLeafExpressionNode(Type type, object obj, ExpressionType nodeType, int childIdx = 0, int childCount = 0,
+        int data0 = 0, int data1 = 0) =>
+        AddNode(type, obj, nodeType, ExprNodeKind.Expression, null, childIdx, childCount, 0, data0, data1);
 
     private int AddFactoryAuxNode(Type type, object obj, ExprNodeKind kind, int child) =>
         AddRawAuxNode(type, obj, kind, CloneChild(child));
@@ -511,10 +547,19 @@ public struct ExprTree
     private int AddFactoryAuxNode(Type type, object obj, ExprNodeKind kind, params int[] children) =>
         AddRawAuxNode(type, obj, kind, CloneChildrenToArray(children));
 
+    private int AddFactoryAuxNode(Type type, object obj, ExprNodeKind kind, IEnumerable<int> children, int data0, int data1 = 0) =>
+        AddRawAuxNode(type, obj, kind, CloneChildrenToArray(children), data0, data1);
+
     private int AddFactoryAuxNode(Type type, object obj, ExprNodeKind kind, in ChildList children)
     {
         var cloned = CloneChildren(children);
         return AddRawAuxNode(type, obj, kind, in cloned);
+    }
+
+    private int AddFactoryAuxNode(Type type, object obj, ExprNodeKind kind, in ChildList children, int data0, int data1 = 0)
+    {
+        var cloned = CloneChildren(children);
+        return AddRawAuxNode(type, obj, kind, in cloned, data0, data1);
     }
 
     private int AddFactoryAuxNode(Type type, object obj, ExprNodeKind kind, IEnumerable<int> children) =>
@@ -523,11 +568,24 @@ public struct ExprTree
     private int AddRawAuxNode(Type type, object obj, ExprNodeKind kind, params int[] children) =>
         AddNode(type, obj, ExpressionType.Extension, kind, children, 0);
 
+    private int AddRawAuxNode(Type type, object obj, ExprNodeKind kind, int[] children, int data0, int data1 = 0) =>
+        AddNode(type, obj, ExpressionType.Extension, kind, children, 0, 0, 0, data0, data1);
+
     private int AddRawAuxNode(Type type, object obj, ExprNodeKind kind, in ChildList children) =>
         AddNode(type, obj, ExpressionType.Extension, kind, in children, 0);
 
+    private int AddRawAuxNode(Type type, object obj, ExprNodeKind kind, in ChildList children, int data0, int data1 = 0) =>
+        AddNode(type, obj, ExpressionType.Extension, kind, in children, 0, 0, 0, data0, data1);
+
     private int AddRawAuxNode(Type type, object obj, ExprNodeKind kind, IEnumerable<int> children) =>
         AddNode(type, obj, ExpressionType.Extension, kind, children, 0);
+
+    private int AddRawLeafAuxNode(Type type, object obj, ExprNodeKind kind, int childIdx = 0, int childCount = 0,
+        int data0 = 0, int data1 = 0) =>
+        AddNode(type, obj, ExpressionType.Extension, kind, null, childIdx, childCount, 0, data0, data1);
+
+    private int AddObjectReferenceNode(Type type, object obj) =>
+        AddRawLeafAuxNode(type, obj, ExprNodeKind.ObjectReference);
 
     private sealed class Builder
     {
@@ -552,7 +610,8 @@ public struct ExprTree
                 case ExpressionType.Parameter:
                     {
                         var parameter = (SysParameterExpression)expression;
-                        return _tree.AddRawExpressionNode(expression.Type, new ParameterData(GetId(_parameterIds, parameter), parameter.Name, parameter.IsByRef), expression.NodeType);
+                        return _tree.AddRawLeafExpressionNode(expression.Type, parameter.Name, expression.NodeType,
+                            data0: GetId(_parameterIds, parameter), data1: parameter.IsByRef ? 1 : 0);
                     }
                 case ExpressionType.Lambda:
                     {
@@ -571,7 +630,7 @@ public struct ExprTree
                             children.Add(AddExpression(block.Variables[i]));
                         for (var i = 0; i < block.Expressions.Count; ++i)
                             children.Add(AddExpression(block.Expressions[i]));
-                        return _tree.AddRawExpressionNode(expression.Type, new BlockData(block.Variables.Count), expression.NodeType, children);
+                        return _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType, children, block.Variables.Count);
                     }
                 case ExpressionType.MemberAccess:
                     {
@@ -641,14 +700,14 @@ public struct ExprTree
                 case ExpressionType.Loop:
                     {
                         var loop = (System.Linq.Expressions.LoopExpression)expression;
-                        var data = new LoopData(loop.BreakLabel != null, loop.ContinueLabel != null);
                         ChildList children = default;
                         children.Add(AddExpression(loop.Body));
                         if (loop.BreakLabel != null)
                             children.Add(AddLabelTarget(loop.BreakLabel));
                         if (loop.ContinueLabel != null)
                             children.Add(AddLabelTarget(loop.ContinueLabel));
-                        return _tree.AddRawExpressionNode(expression.Type, data, expression.NodeType, children);
+                        return _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType, children,
+                            (loop.BreakLabel != null ? 1 : 0) | (loop.ContinueLabel != null ? 2 : 0));
                     }
                 case ExpressionType.Goto:
                     {
@@ -677,7 +736,8 @@ public struct ExprTree
                             children.Add(AddExpression(@switch.DefaultBody));
                         for (var i = 0; i < @switch.Cases.Count; ++i)
                             children.Add(AddSwitchCase(@switch.Cases[i]));
-                        return _tree.AddRawExpressionNode(expression.Type, new SwitchData(@switch.DefaultBody != null, @switch.Comparison), expression.NodeType, children);
+                        return _tree.AddRawExpressionNode(expression.Type, @switch.Comparison, expression.NodeType, children,
+                            @switch.DefaultBody != null ? 1 : 0);
                     }
                 case ExpressionType.Try:
                     {
@@ -690,7 +750,8 @@ public struct ExprTree
                             children.Add(AddExpression(@try.Finally));
                         for (var i = 0; i < @try.Handlers.Count; ++i)
                             children.Add(AddCatchBlock(@try.Handlers[i]));
-                        return _tree.AddRawExpressionNode(expression.Type, new TryData(@try.Finally != null, @try.Fault != null), expression.NodeType, children);
+                        return _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType, children,
+                            (@try.Finally != null ? 1 : 0) | (@try.Fault != null ? 2 : 0));
                     }
                 case ExpressionType.MemberInit:
                     {
@@ -723,9 +784,10 @@ public struct ExprTree
                     {
                         var dynamic = (System.Linq.Expressions.DynamicExpression)expression;
                         ChildList children = default;
+                        children.Add(_tree.AddObjectReferenceNode(typeof(Type), dynamic.DelegateType));
                         for (var i = 0; i < dynamic.Arguments.Count; ++i)
                             children.Add(AddExpression(dynamic.Arguments[i]));
-                        return _tree.AddRawExpressionNode(expression.Type, new DynamicData(dynamic.DelegateType, dynamic.Binder), expression.NodeType, children);
+                        return _tree.AddRawExpressionNode(expression.Type, dynamic.Binder, expression.NodeType, children);
                     }
                 case ExpressionType.RuntimeVariables:
                     {
@@ -738,9 +800,9 @@ public struct ExprTree
                 case ExpressionType.DebugInfo:
                     {
                         var debug = (System.Linq.Expressions.DebugInfoExpression)expression;
-                        return _tree.AddRawExpressionNode(expression.Type,
-                            new DebugInfoData(debug.Document.FileName, debug.StartLine, debug.StartColumn, debug.EndLine, debug.EndColumn),
-                            expression.NodeType);
+                        return _tree.AddRawLeafExpressionNode(expression.Type, debug.Document.FileName, expression.NodeType,
+                            childIdx: checked((ushort)debug.StartColumn), childCount: checked((ushort)debug.EndColumn),
+                            data0: debug.StartLine, data1: debug.EndLine);
                     }
                 default:
                     if (expression is System.Linq.Expressions.UnaryExpression unary)
@@ -758,7 +820,8 @@ public struct ExprTree
                         children.Add(AddExpression(binary.Right));
                         if (binary.Conversion != null)
                             children.Add(AddExpression(binary.Conversion));
-                        return _tree.AddRawExpressionNode(expression.Type, new BinaryData(binary.Method, binary.IsLiftedToNull), expression.NodeType, children);
+                        return _tree.AddRawExpressionNode(expression.Type, binary.Method, expression.NodeType, children,
+                            binary.IsLiftedToNull ? 1 : 0);
                     }
 
                     throw new NotSupportedException($"Flattening of `ExpressionType.{expression.NodeType}` is not supported yet.");
@@ -791,12 +854,12 @@ public struct ExprTree
             children.Add(AddExpression(catchBlock.Body));
             if (catchBlock.Filter != null)
                 children.Add(AddExpression(catchBlock.Filter));
-            return _tree.AddRawAuxNode(catchBlock.Test, new CatchData(catchBlock.Variable != null, catchBlock.Filter != null),
-                ExprNodeKind.CatchBlock, children);
+            return _tree.AddRawAuxNode(catchBlock.Test, null, ExprNodeKind.CatchBlock, children,
+                (catchBlock.Variable != null ? 1 : 0) | (catchBlock.Filter != null ? 2 : 0));
         }
 
         private int AddLabelTarget(SysLabelTarget target) =>
-            _tree.AddRawAuxNode(target.Type, new LabelTargetData(GetId(_labelIds, target), target.Name), ExprNodeKind.LabelTarget);
+            _tree.AddRawLeafAuxNode(target.Type, target.Name, ExprNodeKind.LabelTarget, data0: GetId(_labelIds, target));
 
         private int AddMemberBinding(SysMemberBinding binding)
         {
@@ -854,11 +917,12 @@ public struct ExprTree
         };
     }
 
-    private int AddNode(Type type, object obj, ExpressionType nodeType, ExprNodeKind kind, IEnumerable<int> children, int childIdx)
+    private int AddNode(Type type, object obj, ExpressionType nodeType, ExprNodeKind kind, IEnumerable<int> children, int childIdx,
+        int childCount = 0, int nextIdx = 0, int data0 = 0, int data1 = 0)
     {
         var nodeIndex = Nodes.Count;
         ref var newNode = ref Nodes.AddDefaultAndGetRef();
-        newNode = new ExprNode(type, obj, nodeType, kind, childIdx, 0, 0);
+        newNode = new ExprNode(type, obj, nodeType, kind, childIdx, childCount, nextIdx, data0, data1);
         if (children == null)
             return nodeIndex;
 
@@ -868,25 +932,26 @@ public struct ExprTree
 
         var firstChildIndex = enumerator.Current;
         var previousChildIndex = firstChildIndex;
-        var childCount = 1;
+        var linkedChildCount = 1;
         while (enumerator.MoveNext())
         {
             ref var child = ref Nodes[previousChildIndex];
             child.SetNextIdx(enumerator.Current);
             previousChildIndex = enumerator.Current;
-            ++childCount;
+            ++linkedChildCount;
         }
 
         ref var storedNode = ref Nodes[nodeIndex];
-        storedNode.SetChildInfo(firstChildIndex, childCount);
+        storedNode.SetChildInfo(firstChildIndex, linkedChildCount);
         return nodeIndex;
     }
 
-    private int AddNode(Type type, object obj, ExpressionType nodeType, ExprNodeKind kind, in ChildList children, int childIdx)
+    private int AddNode(Type type, object obj, ExpressionType nodeType, ExprNodeKind kind, in ChildList children, int childIdx,
+        int childCount = 0, int nextIdx = 0, int data0 = 0, int data1 = 0)
     {
         var nodeIndex = Nodes.Count;
         ref var newNode = ref Nodes.AddDefaultAndGetRef();
-        newNode = new ExprNode(type, obj, nodeType, kind, childIdx, 0, 0);
+        newNode = new ExprNode(type, obj, nodeType, kind, childIdx, childCount, nextIdx, data0, data1);
         if (children.Count == 0)
             return nodeIndex;
 
@@ -956,7 +1021,7 @@ public struct ExprTree
     {
         ref var node = ref Nodes[index];
         return ShouldCloneWhenLinking(node)
-            ? AddNode(node.Type, node.Obj, node.NodeType, node.Kind, null, node.ChildIdx)
+            ? AddNode(node.Type, node.Obj, node.NodeType, node.Kind, null, node.ChildIdx, node.ChildCount, 0, node.Data0, node.Data1)
             : index;
     }
 
@@ -997,7 +1062,11 @@ public struct ExprTree
     private static bool ShouldCloneWhenLinking(in ExprNode node) =>
         node.Kind == ExprNodeKind.LabelTarget ||
         node.NodeType == ExpressionType.Parameter ||
-        node.ChildCount == 0;
+        node.Kind == ExprNodeKind.ObjectReference ||
+        !HasLinkedChildren(node);
+
+    private static bool HasLinkedChildren(in ExprNode node) =>
+        node.NodeType != ExpressionType.DebugInfo && node.ChildCount != 0;
 
     private static IEnumerable<int> Single(int item)
     {
@@ -1045,13 +1114,12 @@ public struct ExprTree
                     return SysExpr.Default(node.Type);
                 case ExpressionType.Parameter:
                     {
-                        var data = (ParameterData)node.Obj;
-                        if (_parametersById.TryGetValue(data.Id, out var parameter))
+                        if (_parametersById.TryGetValue(node.Data0, out var parameter))
                             return parameter;
 
-                        var parameterType = data.IsByRef && !node.Type.IsByRef ? node.Type.MakeByRefType() : node.Type;
-                        parameter = SysExpr.Parameter(parameterType, data.Name);
-                        _parametersById[data.Id] = parameter;
+                        var parameterType = node.Data1 != 0 && !node.Type.IsByRef ? node.Type.MakeByRefType() : node.Type;
+                        parameter = SysExpr.Parameter(parameterType, (string)node.Obj);
+                        _parametersById[node.Data0] = parameter;
                         return parameter;
                     }
                 case ExpressionType.Lambda:
@@ -1065,14 +1133,13 @@ public struct ExprTree
                     }
                 case ExpressionType.Block:
                     {
-                        var data = (BlockData)node.Obj;
                         var children = GetChildren(index);
-                        var variables = new SysParameterExpression[data.VariableCount];
+                        var variables = new SysParameterExpression[node.Data0];
                         for (var i = 0; i < variables.Length; ++i)
                             variables[i] = (SysParameterExpression)ReadExpression(children[i]);
-                        var expressions = new SysExpr[children.Count - data.VariableCount];
-                        for (var i = data.VariableCount; i < children.Count; ++i)
-                            expressions[i - data.VariableCount] = ReadExpression(children[i]);
+                        var expressions = new SysExpr[children.Count - node.Data0];
+                        for (var i = node.Data0; i < children.Count; ++i)
+                            expressions[i - node.Data0] = ReadExpression(children[i]);
                         return SysExpr.Block(node.Type, variables, expressions);
                     }
                 case ExpressionType.MemberAccess:
@@ -1131,11 +1198,10 @@ public struct ExprTree
                     }
                 case ExpressionType.Loop:
                     {
-                        var data = (LoopData)node.Obj;
                         var children = GetChildren(index);
                         var childIndex = 1;
-                        var breakLabel = data.HasBreak ? ReadLabelTarget(children[childIndex++]) : null;
-                        var continueLabel = data.HasContinue ? ReadLabelTarget(children[childIndex]) : null;
+                        var breakLabel = (node.Data0 & 1) != 0 ? ReadLabelTarget(children[childIndex++]) : null;
+                        var continueLabel = (node.Data0 & 2) != 0 ? ReadLabelTarget(children[childIndex]) : null;
                         return SysExpr.Loop(ReadExpression(children[0]), breakLabel, continueLabel);
                     }
                 case ExpressionType.Goto:
@@ -1152,24 +1218,22 @@ public struct ExprTree
                     }
                 case ExpressionType.Switch:
                     {
-                        var data = (SwitchData)node.Obj;
                         var children = GetChildren(index);
                         var childIndex = 1;
-                        var defaultBody = data.HasDefault ? ReadExpression(children[childIndex++]) : null;
+                        var defaultBody = (node.Data0 & 1) != 0 ? ReadExpression(children[childIndex++]) : null;
                         var cases = new SysSwitchCase[children.Count - childIndex];
                         for (var i = childIndex; i < children.Count; ++i)
                             cases[i - childIndex] = ReadSwitchCase(children[i]);
-                        return SysExpr.Switch(node.Type, ReadExpression(children[0]), defaultBody, data.Comparison, cases);
+                        return SysExpr.Switch(node.Type, ReadExpression(children[0]), defaultBody, (System.Reflection.MethodInfo)node.Obj, cases);
                     }
                 case ExpressionType.Try:
                     {
-                        var data = (TryData)node.Obj;
                         var children = GetChildren(index);
                         var childIndex = 1;
-                        if (data.HasFault)
+                        if ((node.Data0 & 2) != 0)
                             return SysExpr.TryFault(ReadExpression(children[0]), ReadExpression(children[1]));
 
-                        var @finally = data.HasFinally ? ReadExpression(children[childIndex++]) : null;
+                        var @finally = (node.Data0 & 1) != 0 ? ReadExpression(children[childIndex++]) : null;
                         var handlers = new SysCatchBlock[children.Count - childIndex];
                         for (var i = childIndex; i < children.Count; ++i)
                             handlers[i - childIndex] = ReadCatchBlock(children[i]);
@@ -1197,8 +1261,12 @@ public struct ExprTree
                     return SysExpr.TypeEqual(ReadExpression(GetChildren(index)[0]), (Type)node.Obj);
                 case ExpressionType.Dynamic:
                     {
-                        var data = (DynamicData)node.Obj;
-                        return SysExpr.MakeDynamic(data.DelegateType, data.Binder, ReadExpressions(GetChildren(index)));
+                        var children = GetChildren(index);
+                        var delegateType = (Type)ReadObjectReference(children[0]);
+                        var arguments = new SysExpr[children.Count - 1];
+                        for (var i = 1; i < children.Count; ++i)
+                            arguments[i - 1] = ReadExpression(children[i]);
+                        return SysExpr.MakeDynamic(delegateType, (CallSiteBinder)node.Obj, arguments);
                     }
                 case ExpressionType.RuntimeVariables:
                     {
@@ -1210,9 +1278,8 @@ public struct ExprTree
                     }
                 case ExpressionType.DebugInfo:
                     {
-                        var data = (DebugInfoData)node.Obj;
-                        return SysExpr.DebugInfo(SysExpr.SymbolDocument(data.FileName),
-                            data.StartLine, data.StartColumn, data.EndLine, data.EndColumn);
+                        return SysExpr.DebugInfo(SysExpr.SymbolDocument((string)node.Obj),
+                            node.Data0, node.ChildIdx, node.Data1, node.ChildCount);
                     }
                 default:
                     if (node.ChildCount == 1)
@@ -1223,11 +1290,10 @@ public struct ExprTree
 
                     if (node.ChildCount >= 2)
                     {
-                        var data = node.Obj as BinaryData;
                         var children = GetChildren(index);
                         var conversion = children.Count > 2 ? (System.Linq.Expressions.LambdaExpression)ReadExpression(children[2]) : null;
                         return SysExpr.MakeBinary(node.NodeType, ReadExpression(children[0]), ReadExpression(children[1]),
-                            data != null && data.IsLiftedToNull, data?.Method, conversion);
+                            node.Data0 != 0, (System.Reflection.MethodInfo)node.Obj, conversion);
                     }
 
                     throw new NotSupportedException($"Reconstruction of `ExpressionType.{node.NodeType}` is not supported yet.");
@@ -1251,12 +1317,11 @@ public struct ExprTree
         {
             ref var node = ref _tree.Nodes[index];
             Debug.Assert(node.Kind == ExprNodeKind.CatchBlock);
-            var data = (CatchData)node.Obj;
             var children = GetChildren(index);
             var childIndex = 0;
-            var variable = data.HasVariable ? (SysParameterExpression)ReadExpression(children[childIndex++]) : null;
+            var variable = (node.Data0 & 1) != 0 ? (SysParameterExpression)ReadExpression(children[childIndex++]) : null;
             var body = ReadExpression(children[childIndex++]);
-            var filter = data.HasFilter ? ReadExpression(children[childIndex]) : null;
+            var filter = (node.Data0 & 2) != 0 ? ReadExpression(children[childIndex]) : null;
             return SysExpr.MakeCatchBlock(node.Type, variable, body, filter);
         }
 
@@ -1264,13 +1329,19 @@ public struct ExprTree
         {
             ref var node = ref _tree.Nodes[index];
             Debug.Assert(node.Kind == ExprNodeKind.LabelTarget);
-            var data = (LabelTargetData)node.Obj;
-            if (_labelsById.TryGetValue(data.Id, out var label))
+            if (_labelsById.TryGetValue(node.Data0, out var label))
                 return label;
 
-            label = SysExpr.Label(node.Type, data.Name);
-            _labelsById[data.Id] = label;
+            label = SysExpr.Label(node.Type, (string)node.Obj);
+            _labelsById[node.Data0] = label;
             return label;
+        }
+
+        private object ReadObjectReference(int index)
+        {
+            ref var node = ref _tree.Nodes[index];
+            Debug.Assert(node.Kind == ExprNodeKind.ObjectReference);
+            return node.Obj;
         }
 
         [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
@@ -1338,128 +1409,6 @@ public struct ExprTree
         [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2077",
             Justification = "Flat expression round-trip stores the runtime type metadata explicitly for reconstruction.")]
         private static System.Linq.Expressions.NewExpression CreateValueTypeNewExpression(Type type) => SysExpr.New(type);
-    }
-
-    private sealed class ParameterData
-    {
-        public readonly int Id;
-        public readonly string Name;
-        public readonly bool IsByRef;
-
-        public ParameterData(int id, string name, bool isByRef)
-        {
-            Id = id;
-            Name = name;
-            IsByRef = isByRef;
-        }
-    }
-
-    private sealed class LabelTargetData
-    {
-        public readonly int Id;
-        public readonly string Name;
-
-        public LabelTargetData(int id, string name)
-        {
-            Id = id;
-            Name = name;
-        }
-    }
-
-    private sealed class BlockData
-    {
-        public readonly int VariableCount;
-        public BlockData(int variableCount) => VariableCount = variableCount;
-    }
-
-    private sealed class SwitchData
-    {
-        public readonly bool HasDefault;
-        public readonly System.Reflection.MethodInfo Comparison;
-
-        public SwitchData(bool hasDefault, System.Reflection.MethodInfo comparison)
-        {
-            HasDefault = hasDefault;
-            Comparison = comparison;
-        }
-    }
-
-    private sealed class TryData
-    {
-        public readonly bool HasFinally;
-        public readonly bool HasFault;
-
-        public TryData(bool hasFinally, bool hasFault)
-        {
-            HasFinally = hasFinally;
-            HasFault = hasFault;
-        }
-    }
-
-    private sealed class LoopData
-    {
-        public readonly bool HasBreak;
-        public readonly bool HasContinue;
-
-        public LoopData(bool hasBreak, bool hasContinue)
-        {
-            HasBreak = hasBreak;
-            HasContinue = hasContinue;
-        }
-    }
-
-    private sealed class CatchData
-    {
-        public readonly bool HasVariable;
-        public readonly bool HasFilter;
-
-        public CatchData(bool hasVariable, bool hasFilter)
-        {
-            HasVariable = hasVariable;
-            HasFilter = hasFilter;
-        }
-    }
-
-    private sealed class BinaryData
-    {
-        public readonly System.Reflection.MethodInfo Method;
-        public readonly bool IsLiftedToNull;
-
-        public BinaryData(System.Reflection.MethodInfo method, bool isLiftedToNull)
-        {
-            Method = method;
-            IsLiftedToNull = isLiftedToNull;
-        }
-    }
-
-    private sealed class DynamicData
-    {
-        public readonly Type DelegateType;
-        public readonly CallSiteBinder Binder;
-
-        public DynamicData(Type delegateType, CallSiteBinder binder)
-        {
-            DelegateType = delegateType;
-            Binder = binder;
-        }
-    }
-
-    private sealed class DebugInfoData
-    {
-        public readonly string FileName;
-        public readonly int StartLine;
-        public readonly int StartColumn;
-        public readonly int EndLine;
-        public readonly int EndColumn;
-
-        public DebugInfoData(string fileName, int startLine, int startColumn, int endLine, int endColumn)
-        {
-            FileName = fileName;
-            StartLine = startLine;
-            StartColumn = startColumn;
-            EndLine = endLine;
-            EndColumn = endColumn;
-        }
     }
 
     private sealed class ReferenceEqComparer : IEqualityComparer<object>
