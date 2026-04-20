@@ -12,7 +12,7 @@ using SysExpr = System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.LightExpression.UnitTests
 {
 
-    public class LightExpressionTests : ITest
+    public partial class LightExpressionTests : ITest
     {
         public int Run()
         {
@@ -33,7 +33,8 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_convert_dynamic_runtime_variables_and_debug_info_to_light_expression_and_flat_expression();
             Can_build_flat_expression_directly_with_light_expression_like_api();
             Can_build_flat_expression_control_flow_directly();
-            return 16;
+            Can_property_test_generated_flat_expression_roundtrip_structurally();
+            return 17;
         }
 
 
