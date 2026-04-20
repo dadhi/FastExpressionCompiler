@@ -31,7 +31,9 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_roundtrip_light_expression_through_flat_expression();
             Flat_expression_preserves_parameter_and_label_identity_and_collects_closure_constants();
             Can_convert_dynamic_runtime_variables_and_debug_info_to_light_expression_and_flat_expression();
-            return 14;
+            Can_build_flat_expression_directly_with_light_expression_like_api();
+            Can_build_flat_expression_control_flow_directly();
+            return 16;
         }
 
 
@@ -424,6 +426,58 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.AreEqual(ExpressionType.Dynamic, dynamicLight.NodeType);
             Asserts.AreEqual(ExpressionType.Dynamic, dynamicRoundtrip.NodeType);
             Asserts.AreEqual(ExpressionType.Dynamic, dynamicLight.ToFlatExpression().ToExpression().NodeType);
+        }
+
+        public void Can_build_flat_expression_directly_with_light_expression_like_api()
+        {
+            var fe = default(ExprTree);
+            var state = fe.ParameterOf<object[]>("state");
+            var body = fe.MemberInit(
+                fe.New(_ctorOfA,
+                    fe.New(_ctorOfB),
+                    fe.Convert(
+                        fe.ArrayIndex(state, fe.ConstantInt(11)),
+                        typeof(string)),
+                    fe.NewArrayInit(typeof(ID),
+                        fe.New(_ctorOfD1),
+                        fe.New(_ctorOfD2))),
+                fe.Bind(_propAProp,
+                    fe.New(_ctorOfP,
+                        fe.New(_ctorOfB))),
+                fe.Bind(_fieldABop,
+                    fe.New(_ctorOfB)));
+            fe.RootIndex = fe.Lambda<Func<object[], object>>(body, state);
+
+            var lambda = (LambdaExpression)fe.ToLightExpression();
+            var func = lambda.CompileFast<Func<object[], object>>(true);
+            var runtimeState = new object[12];
+            runtimeState[11] = "direct";
+
+            var a = (A)func(runtimeState);
+
+            Asserts.AreEqual("direct", a.Sop);
+            Asserts.IsInstanceOf<P>(a.Prop);
+            Asserts.AreEqual(2, a.Dop.Count());
+        }
+
+        public void Can_build_flat_expression_control_flow_directly()
+        {
+            var fe = default(ExprTree);
+            var p = fe.Parameter(typeof(int), "p");
+            var target = fe.Label(typeof(int), "done");
+            fe.RootIndex = fe.Lambda<Func<int, int>>(
+                fe.Block(
+                    fe.Goto(target, p, typeof(int)),
+                    fe.Label(target, fe.ConstantInt(0))),
+                p);
+
+            var sysLambda = (System.Linq.Expressions.LambdaExpression)fe.ToExpression();
+            var block = (System.Linq.Expressions.BlockExpression)sysLambda.Body;
+            var @goto = (System.Linq.Expressions.GotoExpression)block.Expressions[0];
+            var label = (System.Linq.Expressions.LabelExpression)block.Expressions[1];
+
+            Asserts.AreSame(sysLambda.Parameters[0], @goto.Value);
+            Asserts.AreSame(@goto.Target, label.Target);
         }
 
         public class A
