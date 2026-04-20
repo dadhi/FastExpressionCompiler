@@ -473,11 +473,11 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
             var sysLambda = (System.Linq.Expressions.LambdaExpression)fe.ToExpression();
             var block = (System.Linq.Expressions.BlockExpression)sysLambda.Body;
-            var @goto = (System.Linq.Expressions.GotoExpression)block.Expressions[0];
+            var gotoExpr = (System.Linq.Expressions.GotoExpression)block.Expressions[0];
             var label = (System.Linq.Expressions.LabelExpression)block.Expressions[1];
 
-            Asserts.AreSame(sysLambda.Parameters[0], @goto.Value);
-            Asserts.AreSame(@goto.Target, label.Target);
+            Asserts.AreSame(sysLambda.Parameters[0], gotoExpr.Value);
+            Asserts.AreSame(gotoExpr.Target, label.Target);
         }
 
         public class A

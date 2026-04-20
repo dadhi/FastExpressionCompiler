@@ -783,10 +783,10 @@ public struct ExprTree
         };
     }
 
-    private static Type GetArrayElementType(Type arrayType, int rank)
+    private static Type GetArrayElementType(Type arrayType, int depth)
     {
         var elementType = arrayType;
-        for (var i = 0; i < rank; ++i)
+        for (var i = 0; i < depth; ++i)
             elementType = elementType.GetElementType();
         return elementType ?? typeof(object);
     }
@@ -794,7 +794,7 @@ public struct ExprTree
     private int CloneChild(int index)
     {
         ref var node = ref Nodes[index];
-        return node.ChildCount == 0
+        return ShouldCloneWhenLinking(node)
             ? AddNode(node.Type, node.Obj, node.NodeType, node.Kind, null, node.ChildIdx)
             : index;
     }
@@ -809,6 +809,14 @@ public struct ExprTree
             cloned.Add(CloneChild(child));
         return cloned.ToArray();
     }
+
+    // Any leaf reused in more than one parent would have its intrusive sibling link (`NextIdx`) overwritten.
+    // Clone the leaf before linking so the direct builder API may safely reuse returned indexes for
+    // parameters, labels, constants, default values and parameterless `new` expressions.
+    private static bool ShouldCloneWhenLinking(in ExprNode node) =>
+        node.Kind == ExprNodeKind.LabelTarget ||
+        node.NodeType == ExpressionType.Parameter ||
+        node.ChildCount == 0;
 
     private static IEnumerable<int> Single(int item)
     {
