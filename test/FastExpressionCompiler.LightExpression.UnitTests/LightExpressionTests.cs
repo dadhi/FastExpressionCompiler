@@ -236,6 +236,28 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             return expr;
         }
 
+        public static ExprTree CreateComplexFlatExpression(string p = null)
+        {
+            var fe = default(ExprTree);
+            var stateParamExpr = fe.ParameterOf<object[]>(p);
+            var body = fe.MemberInit(
+                fe.New(_ctorOfA,
+                    fe.New(_ctorOfB),
+                    fe.Convert(
+                        fe.ArrayIndex(stateParamExpr, fe.ConstantInt(11)),
+                        typeof(string)),
+                    fe.NewArrayInit(typeof(ID),
+                        fe.New(_ctorOfD1),
+                        fe.New(_ctorOfD2))),
+                fe.Bind(_propAProp,
+                    fe.New(_ctorOfP,
+                        fe.New(_ctorOfB))),
+                fe.Bind(_fieldABop,
+                    fe.New(_ctorOfB)));
+            fe.RootIndex = fe.Lambda<Func<object[], object>>(body, stateParamExpr);
+            return fe;
+        }
+
 
         public void Can_compile_complex_expr_with_Arrays_and_Casts()
         {
@@ -430,24 +452,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
         public void Can_build_flat_expression_directly_with_light_expression_like_api()
         {
-            var fe = default(ExprTree);
-            var state = fe.ParameterOf<object[]>("state");
-            var body = fe.MemberInit(
-                fe.New(_ctorOfA,
-                    fe.New(_ctorOfB),
-                    fe.Convert(
-                        fe.ArrayIndex(state, fe.ConstantInt(11)),
-                        typeof(string)),
-                    fe.NewArrayInit(typeof(ID),
-                        fe.New(_ctorOfD1),
-                        fe.New(_ctorOfD2))),
-                fe.Bind(_propAProp,
-                    fe.New(_ctorOfP,
-                        fe.New(_ctorOfB))),
-                fe.Bind(_fieldABop,
-                    fe.New(_ctorOfB)));
-            fe.RootIndex = fe.Lambda<Func<object[], object>>(body, state);
-
+            var fe = CreateComplexFlatExpression("state");
             var lambda = (LambdaExpression)fe.ToLightExpression();
             var func = lambda.CompileFast<Func<object[], object>>(true);
             var runtimeState = new object[12];
