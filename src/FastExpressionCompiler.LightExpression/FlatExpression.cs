@@ -41,11 +41,11 @@ public enum ExprNodeKind : byte
     ObjectReference,
     /// <summary>Represents an internal child-list metadata node.</summary>
     ChildList,
-    /// <summary>Represents an internal pair of ushort values.</summary>
+    /// <summary>Represents an internal pair of UInt16 values.</summary>
     UInt16Pair,
 }
 
-/// <summary>Stores one flat expression node plus its intrusive child-link metadata.</summary>
+/// <summary>Stores one flat expression node plus its intrusive child-link metadata in 24 bytes on 64-bit runtimes.</summary>
 [StructLayout(LayoutKind.Explicit, Size = 24)]
 public struct ExprNode
 {
@@ -630,6 +630,7 @@ public struct ExprTree
         return children;
     }
 
+    /// <summary>Builds the flat representation while preserving parameter and label identity with stack-friendly maps.</summary>
     private struct Builder
     {
         private SmallMap16<object, int, RefEq<object>> _parameterIds;
@@ -1131,6 +1132,7 @@ public struct ExprTree
 
     private static bool HasFlag(in ExprNode node, byte flag) => (node.Flags & flag) != 0;
 
+    /// <summary>Reconstructs System.Linq nodes from the flat representation while reusing parameter and label identities.</summary>
     private struct Reader
     {
         private readonly ExprTree _tree;
