@@ -7,6 +7,7 @@ namespace FastExpressionCompiler.Benchmarks
     [MemoryDiagnoser, RankColumn, Orderer(BenchmarkDotNet.Order.SummaryOrderPolicy.FastestToSlowest)]
     public class LightExprVsFlatExpr_Create_ComplexExpr
     {
+        // Keep the created values reachable so the construction work is not elided.
         private FastExpressionCompiler.LightExpression.Expression<System.Func<object[], object>> _lightExpr;
         private ExprTree _flatExpr;
 

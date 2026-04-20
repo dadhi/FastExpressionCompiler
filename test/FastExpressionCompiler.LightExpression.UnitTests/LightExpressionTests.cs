@@ -236,10 +236,10 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             return expr;
         }
 
-        public static ExprTree CreateComplexFlatExpression(string p = null)
+        public static ExprTree CreateComplexFlatExpression(string parameterName = null)
         {
             var fe = default(ExprTree);
-            var stateParamExpr = fe.ParameterOf<object[]>(p);
+            var stateParamExpr = fe.ParameterOf<object[]>(parameterName);
             var body = fe.MemberInit(
                 fe.New(_ctorOfA,
                     fe.New(_ctorOfB),
