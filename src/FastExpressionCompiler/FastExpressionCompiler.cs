@@ -616,10 +616,10 @@ namespace FastExpressionCompiler
             /// <summary>Tracks that the last emit was an address</summary>
             public bool LastEmitIsAddress;
 
-            /// <summary>Tracks the current expression emit stack to provide the full context for custom emitters.</summary>
+            /// <summary>Tracks the expressions currently being emitted; the most recently entered expression is at the end.</summary>
             internal SmallList<Expression, Stack16<Expression>, NoArrayPool<Expression>> EmitExpressions;
 
-            /// <summary>Tracks the minimal parent flags for each emitted expression in the <see cref="EmitExpressions"/> stack.</summary>
+            /// <summary>Tracks the parent flags for the corresponding entries in <see cref="EmitExpressions"/>.</summary>
             internal SmallList<ParentFlags, Stack16<ParentFlags>, NoArrayPool<ParentFlags>> EmitParentFlags;
 
             // Tracks the current block nesting count in the stack of blocks in Collect and Emit phase
