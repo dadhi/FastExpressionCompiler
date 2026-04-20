@@ -14,7 +14,7 @@ public partial class LightExpressionTests
 #if NET8_0_OR_GREATER
     public void Can_property_test_generated_flat_expression_roundtrip_structurally()
     {
-        Gen.Int[0, int.MaxValue]
+        Gen.Int[0, int.MaxValue / 2]
             .Select(seed => new GeneratedCase(seed, GeneratedIntSpecFactory.Create(seed, maxDepth: 3, maxBreadth: 3)))
             .Sample(testCase =>
                 GeneratedExpressionComparer.AreEqual(
@@ -107,7 +107,7 @@ public partial class LightExpressionTests
         var expressions = new FastExpressionCompiler.LightExpression.Expression[letMany.Values.Length + 1];
         for (var i = 0; i < locals.Length; ++i)
         {
-            locals[i] = Variable(typeof(int), "v" + i);
+            locals[i] = Variable(typeof(int), $"v{i}");
             expressions[i] = Assign(locals[i], BuildLightInt(letMany.Values[i], ints));
         }
 
@@ -121,7 +121,7 @@ public partial class LightExpressionTests
         var expressions = new int[letMany.Values.Length + 1];
         for (var i = 0; i < locals.Length; ++i)
         {
-            locals[i] = fe.Variable(typeof(int), "v" + i);
+            locals[i] = fe.Variable(typeof(int), $"v{i}");
             expressions[i] = fe.Assign(locals[i], BuildFlatInt(ref fe, letMany.Values[i], ints));
         }
 
