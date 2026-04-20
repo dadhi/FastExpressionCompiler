@@ -2824,6 +2824,30 @@ public static class FromSysExpressionConverter
                             return Expression.Lambda(exprType, body, pes, retType);
                     }
                 }
+            case ExpressionType.Dynamic:
+                {
+                    var de = (System.Linq.Expressions.DynamicExpression)sysExpr;
+                    var sysArgs = de.Arguments;
+                    var args = new Expression[sysArgs.Count];
+                    for (var i = 0; i < args.Length; ++i)
+                        args[i] = sysArgs[i].ToLightExpression(ref exprsConverted);
+                    return new DynamicExpression(de.DelegateType, de.Binder, args);
+                }
+            case ExpressionType.RuntimeVariables:
+                {
+                    var rve = (System.Linq.Expressions.RuntimeVariablesExpression)sysExpr;
+                    var sysVars = rve.Variables;
+                    var vars = new ParameterExpression[sysVars.Count];
+                    for (var i = 0; i < vars.Length; ++i)
+                        vars[i] = (ParameterExpression)sysVars[i].ToLightExpression(ref exprsConverted);
+                    return new RuntimeVariablesExpression(vars);
+                }
+            case ExpressionType.DebugInfo:
+                {
+                    var die = (System.Linq.Expressions.DebugInfoExpression)sysExpr;
+                    return Expression.DebugInfo(new SymbolDocumentInfo(die.Document.FileName),
+                        die.StartLine, die.StartColumn, die.EndLine, die.EndColumn);
+                }
             default:
                 if (sysExpr is System.Linq.Expressions.UnaryExpression ue)
                 {

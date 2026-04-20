@@ -1,7 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
+using FastExpressionCompiler.FlatExpression;
 
 using static FastExpressionCompiler.LightExpression.Expression;
 using System.Linq.Expressions;
@@ -26,7 +28,10 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Should_output_the_System_and_LightExpression_to_the_identical_CSharp_syntax();
             Expression_produced_by_ToExpressionString_should_compile();
             Multiple_methods_in_block_should_be_aligned_when_output_to_csharp();
-            return 11;
+            Can_roundtrip_light_expression_through_flat_expression();
+            Flat_expression_preserves_parameter_and_label_identity_and_collects_closure_constants();
+            Can_convert_dynamic_runtime_variables_and_debug_info_to_light_expression_and_flat_expression();
+            return 14;
         }
 
 
@@ -338,6 +343,86 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
         }
 
         public static void SayHi(int i, int j) { }
+
+        public void Can_roundtrip_light_expression_through_flat_expression()
+        {
+            var expr = CreateComplexLightExpression("state");
+
+            var flat = expr.ToFlatExpression();
+
+            Asserts.IsTrue(flat.Nodes.Count > 0);
+            Asserts.AreEqual(0, flat.ClosureConstants.Count);
+
+            var roundtrip = (LambdaExpression)flat.ToLightExpression();
+            var func = roundtrip.CompileFast<Func<object[], object>>(true);
+            var a = (A)func(new object[12] { null, null, null, null, null, null, null, null, null, null, null, "flat" });
+
+            Asserts.AreEqual("flat", a.Sop);
+            Asserts.IsInstanceOf<P>(a.Prop);
+            Asserts.AreEqual(2, a.Dop.Count());
+        }
+
+        public void Flat_expression_preserves_parameter_and_label_identity_and_collects_closure_constants()
+        {
+            var valueHolder = new S();
+            var valueField = typeof(S).GetField(nameof(S.Value));
+            var constExpr = Lambda<Func<string>>(Field(Constant(valueHolder), valueField));
+            var constFlat = constExpr.ToFlatExpression();
+
+            Asserts.AreEqual(1, constFlat.ClosureConstants.Count);
+            Asserts.AreSame(valueHolder, constFlat.ClosureConstants[0]);
+            Asserts.AreEqual(null, ((LambdaExpression)constFlat.ToLightExpression()).CompileFast<Func<string>>(true)());
+
+            var p = SysExpr.Parameter(typeof(int), "p");
+            var target = SysExpr.Label(typeof(int), "done");
+            var sysLambda = SysExpr.Lambda<Func<int, int>>(
+                SysExpr.Block(
+                    SysExpr.Goto(target, p, typeof(int)),
+                    SysExpr.Label(target, SysExpr.Constant(0))),
+                p);
+
+            var sysRoundtrip = (System.Linq.Expressions.LambdaExpression)sysLambda
+                .ToFlatExpression()
+                .ToExpression();
+
+            var block = (System.Linq.Expressions.BlockExpression)sysRoundtrip.Body;
+            var @goto = (System.Linq.Expressions.GotoExpression)block.Expressions[0];
+            var label = (System.Linq.Expressions.LabelExpression)block.Expressions[1];
+
+            Asserts.AreSame(sysRoundtrip.Parameters[0], @goto.Value);
+            Asserts.AreSame(@goto.Target, label.Target);
+        }
+
+        public void Can_convert_dynamic_runtime_variables_and_debug_info_to_light_expression_and_flat_expression()
+        {
+            var runtimeParameter = SysExpr.Parameter(typeof(int), "runtime");
+            var runtimeVariables = SysExpr.RuntimeVariables(runtimeParameter);
+            var runtimeVariablesLight = runtimeVariables.ToLightExpression();
+            var runtimeVariablesRoundtrip = runtimeVariablesLight.ToFlatExpression().ToLightExpression();
+
+            Asserts.AreEqual(ExpressionType.RuntimeVariables, runtimeVariablesLight.NodeType);
+            Asserts.AreEqual(ExpressionType.RuntimeVariables, runtimeVariablesRoundtrip.NodeType);
+
+            var document = SysExpr.SymbolDocument("flat-expression.cs");
+            var debugInfo = SysExpr.DebugInfo(document, 1, 1, 1, 10);
+            var debugInfoLight = debugInfo.ToLightExpression();
+            var debugInfoRoundtrip = debugInfoLight.ToFlatExpression().ToLightExpression();
+
+            Asserts.AreEqual(ExpressionType.DebugInfo, debugInfoLight.NodeType);
+            Asserts.AreEqual(ExpressionType.DebugInfo, debugInfoRoundtrip.NodeType);
+
+            var dynamicArgument = SysExpr.Parameter(typeof(object), "arg");
+            var binder = Microsoft.CSharp.RuntimeBinder.Binder.GetMember(Microsoft.CSharp.RuntimeBinder.CSharpBinderFlags.None, "Length", typeof(LightExpressionTests),
+                new[] { Microsoft.CSharp.RuntimeBinder.CSharpArgumentInfo.Create(Microsoft.CSharp.RuntimeBinder.CSharpArgumentInfoFlags.None, null) });
+            var dynamicExpression = SysExpr.MakeDynamic(typeof(Func<CallSite, object, object>), binder, new[] { dynamicArgument });
+
+            var dynamicLight = dynamicExpression.ToLightExpression();
+            var dynamicRoundtrip = dynamicLight.ToFlatExpression().ToLightExpression();
+
+            Asserts.AreEqual(ExpressionType.Dynamic, dynamicLight.NodeType);
+            Asserts.AreEqual(ExpressionType.Dynamic, dynamicRoundtrip.NodeType);
+            Asserts.AreEqual(ExpressionType.Dynamic, dynamicLight.ToFlatExpression().ToExpression().NodeType);
+        }
 
         public class A
         {
