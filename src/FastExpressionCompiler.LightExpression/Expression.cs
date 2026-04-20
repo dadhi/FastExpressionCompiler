@@ -74,7 +74,7 @@ public abstract class Expression
     /// and available in the `closure` structure. Find the expression examples below by searching `IsIntrinsic => true`.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
 
-    public virtual bool TryEmit(ref CompilerContext context, ILGenerator il, ParentFlags parent, int byRefIndex = -1) => false;
+    public virtual bool TryEmit(ref CompilerContext context, ILGenerator il, int byRefIndex = -1) => false;
 
     public virtual bool IsCustomToCSharpString => false;
 
@@ -3337,9 +3337,9 @@ public class ConvertDelegateIntrinsicExpression : UnaryExpression
         ExpressionCompiler.TryCollectInfo(ref context, Operand, nestedLambda, ref rootNestedLambdas);
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override bool TryEmit(ref CompilerContext context, ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    public override bool TryEmit(ref CompilerContext context, ILGenerator il, int byRefIndex = -1)
     {
-        if (!EmittingVisitor.TryEmit(Operand, il, ref context, parent, byRefIndex))
+        if (!EmittingVisitor.TryEmit(Operand, il, ref context, context.CurrentParentFlags, byRefIndex))
             return false;
         il.Demit(OpCodes.Ldftn, Operand.Type.FindDelegateInvokeMethod());
         il.Demit(OpCodes.Newobj, Type.GetConstructors()[0]);
@@ -3379,9 +3379,9 @@ public class ConvertIntrinsicExpression<T> : UnaryExpression where T : class
         ExpressionCompiler.TryCollectInfo(ref context, Operand, nestedLambda, ref rootNestedLambdas);
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override bool TryEmit(ref CompilerContext context, ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    public override bool TryEmit(ref CompilerContext context, ILGenerator il, int byRefIndex = -1)
     {
-        if (!EmittingVisitor.TryEmit(Operand, il, ref context, parent, byRefIndex))
+        if (!EmittingVisitor.TryEmit(Operand, il, ref context, context.CurrentParentFlags, byRefIndex))
             return false;
         if (Type == typeof(object))
         {
@@ -3930,7 +3930,7 @@ public sealed class NoArgsNewClassIntrinsicExpression : NewExpression
     public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) => 0;
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override bool TryEmit(ref CompilerContext context, ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    public override bool TryEmit(ref CompilerContext context, ILGenerator il, int byRefIndex = -1)
     {
         il.Demit(OpCodes.Newobj, Constructor);
         return true;
@@ -3957,9 +3957,9 @@ public sealed class NoByRefOneArgNewIntrinsicExpression : OneArgumentNewExpressi
         ExpressionCompiler.TryCollectInfo(ref context, Argument, nestedLambda, ref rootNestedLambdas);
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override bool TryEmit(ref CompilerContext context, ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    public override bool TryEmit(ref CompilerContext context, ILGenerator il, int byRefIndex = -1)
     {
-        var ok = EmittingVisitor.TryEmit(Argument, il, ref context, parent | ParentFlags.CtorCall, -1);
+        var ok = EmittingVisitor.TryEmit(Argument, il, ref context, context.CurrentParentFlags | ParentFlags.CtorCall, -1);
         il.Demit(OpCodes.Newobj, Constructor);
         return ok;
     }
@@ -3993,9 +3993,9 @@ public sealed class NoByRefTwoArgumentsNewIntrinsicExpression : TwoArgumentsNewE
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override bool TryEmit(ref CompilerContext context, ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    public override bool TryEmit(ref CompilerContext context, ILGenerator il, int byRefIndex = -1)
     {
-        var f = parent | ParentFlags.CtorCall;
+        var f = context.CurrentParentFlags | ParentFlags.CtorCall;
         var ok =
             EmittingVisitor.TryEmit(Argument0, il, ref context, f, -1) &&
             EmittingVisitor.TryEmit(Argument1, il, ref context, f, -1);
@@ -4036,9 +4036,9 @@ public sealed class NoByRefThreeArgumentsNewIntrinsicExpression : ThreeArguments
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override bool TryEmit(ref CompilerContext context, ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    public override bool TryEmit(ref CompilerContext context, ILGenerator il, int byRefIndex = -1)
     {
-        var f = parent | ParentFlags.CtorCall;
+        var f = context.CurrentParentFlags | ParentFlags.CtorCall;
         var ok =
             EmittingVisitor.TryEmit(Argument0, il, ref context, f, -1) &&
             EmittingVisitor.TryEmit(Argument1, il, ref context, f, -1) &&
@@ -4082,9 +4082,9 @@ public sealed class NoByRefFourArgumentsNewIntrinsicExpression : FourArgumentsNe
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override bool TryEmit(ref CompilerContext context, ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    public override bool TryEmit(ref CompilerContext context, ILGenerator il, int byRefIndex = -1)
     {
-        var f = parent | ParentFlags.CtorCall;
+        var f = context.CurrentParentFlags | ParentFlags.CtorCall;
         var ok =
             EmittingVisitor.TryEmit(Argument0, il, ref context, f, -1) &&
             EmittingVisitor.TryEmit(Argument1, il, ref context, f, -1) &&
@@ -4132,9 +4132,9 @@ public sealed class NoByRefFiveArgumentsNewIntrinsicExpression : FiveArgumentsNe
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override bool TryEmit(ref CompilerContext context, ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    public override bool TryEmit(ref CompilerContext context, ILGenerator il, int byRefIndex = -1)
     {
-        var f = parent | ParentFlags.CtorCall;
+        var f = context.CurrentParentFlags | ParentFlags.CtorCall;
         var ok =
             EmittingVisitor.TryEmit(Argument0, il, ref context, f, -1) &&
             EmittingVisitor.TryEmit(Argument1, il, ref context, f, -1) &&
@@ -4186,9 +4186,9 @@ public sealed class NoByRefSixArgumentsNewIntrinsicExpression : SixArgumentsNewE
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override bool TryEmit(ref CompilerContext context, ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    public override bool TryEmit(ref CompilerContext context, ILGenerator il, int byRefIndex = -1)
     {
-        var f = parent | ParentFlags.CtorCall;
+        var f = context.CurrentParentFlags | ParentFlags.CtorCall;
         var ok =
             EmittingVisitor.TryEmit(Argument0, il, ref context, f, -1) &&
             EmittingVisitor.TryEmit(Argument1, il, ref context, f, -1) &&
@@ -4243,9 +4243,9 @@ public sealed class NoByRefSevenArgumentsNewIntrinsicExpression : SevenArguments
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override bool TryEmit(ref CompilerContext context, ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    public override bool TryEmit(ref CompilerContext context, ILGenerator il, int byRefIndex = -1)
     {
-        var f = parent | ParentFlags.CtorCall;
+        var f = context.CurrentParentFlags | ParentFlags.CtorCall;
         var ok =
             EmittingVisitor.TryEmit(Argument0, il, ref context, f, -1) &&
             EmittingVisitor.TryEmit(Argument1, il, ref context, f, -1) &&
@@ -4285,9 +4285,9 @@ public sealed class NoByRefManyArgsNewIntrinsicExpression : ManyArgumentsNewExpr
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override bool TryEmit(ref CompilerContext context, ILGenerator il, ParentFlags parent, int byRefIndex = -1)
+    public override bool TryEmit(ref CompilerContext context, ILGenerator il, int byRefIndex = -1)
     {
-        var f = parent | ParentFlags.CtorCall;
+        var f = context.CurrentParentFlags | ParentFlags.CtorCall;
         var args = Args;
         for (var i = 0; i < args.Count; i++)
             if (!EmittingVisitor.TryEmit(args[i], il, ref context, f, -1))

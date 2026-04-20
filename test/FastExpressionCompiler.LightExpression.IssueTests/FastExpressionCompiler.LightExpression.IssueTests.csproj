@@ -4,6 +4,8 @@
         <TargetFrameworks Condition="'$(DevMode)' == 'true'">net472;net9.0</TargetFrameworks>
 
         <DefineConstants>LIGHT_EXPRESSION</DefineConstants>
+        <SignAssembly>true</SignAssembly>
+        <AssemblyOriginatorKeyFile>..\..\FastExpressionCompiler.snk</AssemblyOriginatorKeyFile>
     </PropertyGroup>
 
     <ItemGroup>

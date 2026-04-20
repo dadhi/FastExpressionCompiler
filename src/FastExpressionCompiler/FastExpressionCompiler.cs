@@ -616,6 +616,12 @@ namespace FastExpressionCompiler
             /// <summary>Tracks that the last emit was an address</summary>
             public bool LastEmitIsAddress;
 
+            /// <summary>Tracks the current expression emit stack to provide the full context for custom emitters.</summary>
+            internal SmallList<Expression, Stack16<Expression>, NoArrayPool<Expression>> EmitExpressions;
+
+            /// <summary>Tracks the minimal parent flags for each emitted expression in the <see cref="EmitExpressions"/> stack.</summary>
+            internal SmallList<ParentFlags, Stack16<ParentFlags>, NoArrayPool<ParentFlags>> EmitParentFlags;
+
             // Tracks the current block nesting count in the stack of blocks in Collect and Emit phase
             private ushort _blockCount;
 
@@ -674,6 +680,49 @@ namespace FastExpressionCompiler
                 CurrentInlinedLambdaInvokeIndex = -1;
                 ParamExprs = paramExprs;
                 CompilerFlags = compilerFlags;
+            }
+
+            /// <summary>The number of expressions in the current emit stack.</summary>
+            public int EmitExpressionCount
+            {
+                [MethodImpl((MethodImplOptions)256)]
+                get => EmitExpressions.Count;
+            }
+
+            /// <summary>The currently emitted expression or <c>null</c> when the emit stack is empty.</summary>
+            public Expression CurrentEmitExpression
+            {
+                [MethodImpl((MethodImplOptions)256)]
+                get => EmitExpressions.Count != 0 ? EmitExpressions.GetLastSurePresentItem() : null;
+            }
+
+            /// <summary>The parent flags for the currently emitted expression.</summary>
+            public ParentFlags CurrentParentFlags
+            {
+                [MethodImpl((MethodImplOptions)256)]
+                get => EmitParentFlags.Count != 0 ? EmitParentFlags.GetLastSurePresentItem() : ParentFlags.Empty;
+            }
+
+            /// <summary>Gets the current expression or its parent by zero-based distance from the current expression.</summary>
+            [MethodImpl((MethodImplOptions)256)]
+            public Expression GetEmitExpression(int indexFromCurrent = 0)
+            {
+                var exprIndex = EmitExpressions.Count - 1 - indexFromCurrent;
+                return exprIndex >= 0 ? EmitExpressions.GetSurePresentRef(exprIndex) : null;
+            }
+
+            [MethodImpl((MethodImplOptions)256)]
+            internal void PushEmitContext(Expression expr, ParentFlags parent)
+            {
+                EmitExpressions.Add(expr);
+                EmitParentFlags.Add(parent);
+            }
+
+            [MethodImpl((MethodImplOptions)256)]
+            internal void PopEmitContext()
+            {
+                EmitExpressions.RemoveLastSurePresentItem();
+                EmitParentFlags.RemoveLastSurePresentItem();
             }
 
             /// <summary>Populates info directly with provided closure object and constants.</summary>
@@ -1892,20 +1941,23 @@ namespace FastExpressionCompiler
 
             public static bool TryEmit(Expression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex = -1)
             {
-                var exprType = expr.Type;
-                while (true)
+                context.PushEmitContext(expr, parent);
+                try
                 {
-                    context.LastEmitIsAddress = false;
-#if LIGHT_EXPRESSION
-                    if (expr.IsIntrinsic)
-                        return expr.TryEmit(ref context, il, parent, byRefIndex);
-#endif
-                    var nodeType = expr.NodeType;
-                    switch (nodeType)
+                    var exprType = expr.Type;
+                    while (true)
                     {
-                        case ExpressionType.Parameter:
-                            return (parent & ParentFlags.IgnoreResult) != 0 ||
-                                TryEmitParameter((ParameterExpression)expr, il, ref context, parent, byRefIndex);
+                        context.LastEmitIsAddress = false;
+#if LIGHT_EXPRESSION
+                        if (expr.IsIntrinsic)
+                            return expr.TryEmit(ref context, il, byRefIndex);
+#endif
+                        var nodeType = expr.NodeType;
+                        switch (nodeType)
+                        {
+                            case ExpressionType.Parameter:
+                                return (parent & ParentFlags.IgnoreResult) != 0 ||
+                                    TryEmitParameter((ParameterExpression)expr, il, ref context, parent, byRefIndex);
 
                         case ExpressionType.TypeAs:
                         case ExpressionType.IsTrue:
@@ -2236,11 +2288,15 @@ namespace FastExpressionCompiler
                         case ExpressionType.DebugInfo: // todo: @feature - is not supported yet
                             return true;               // todo: @unclear - just ignoring the info for now
 
-                        case ExpressionType.Quote:     // todo: @feature - is not supported yet
-                        default:
-                            return false;
-
+                            case ExpressionType.Quote:     // todo: @feature - is not supported yet
+                            default:
+                                return false;
+                        }
                     }
+                }
+                finally
+                {
+                    context.PopEmitContext();
                 }
             }
 
