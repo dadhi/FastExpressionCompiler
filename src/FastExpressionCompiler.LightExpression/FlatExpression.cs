@@ -480,7 +480,8 @@ public struct ExprTree
                         if (_parametersById.TryGetValue(data.Id, out var parameter))
                             return parameter;
 
-                        parameter = SysExpr.Parameter(data.IsByRef ? node.Type.MakeByRefType() : node.Type, data.Name);
+                        var parameterType = data.IsByRef && !node.Type.IsByRef ? node.Type.MakeByRefType() : node.Type;
+                        parameter = SysExpr.Parameter(parameterType, data.Name);
                         _parametersById[data.Id] = parameter;
                         return parameter;
                     }
@@ -673,7 +674,7 @@ public struct ExprTree
             var testValues = new SysExpr[children.Count - 1];
             for (var i = 0; i < testValues.Length; ++i)
                 testValues[i] = ReadExpression(children[i]);
-            return SysExpr.SwitchCase(ReadExpression(children[^1]), testValues);
+            return SysExpr.SwitchCase(ReadExpression(children[children.Count - 1]), testValues);
         }
 
         [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]

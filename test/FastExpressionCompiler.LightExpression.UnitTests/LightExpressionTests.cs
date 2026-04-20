@@ -355,7 +355,9 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
             var roundtrip = (LambdaExpression)flat.ToLightExpression();
             var func = roundtrip.CompileFast<Func<object[], object>>(true);
-            var a = (A)func(new object[12] { null, null, null, null, null, null, null, null, null, null, null, "flat" });
+            var state = new object[12];
+            state[11] = "flat";
+            var a = (A)func(state);
 
             Asserts.AreEqual("flat", a.Sop);
             Asserts.IsInstanceOf<P>(a.Prop);
