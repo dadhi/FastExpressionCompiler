@@ -16,18 +16,28 @@ using SysMemberBinding = System.Linq.Expressions.MemberBinding;
 using SysParameterExpression = System.Linq.Expressions.ParameterExpression;
 using SysSwitchCase = System.Linq.Expressions.SwitchCase;
 
+/// <summary>Classifies the stored flat node payload.</summary>
 public enum ExprNodeKind : byte
 {
+    /// <summary>Represents a regular expression node.</summary>
     Expression,
+    /// <summary>Represents a switch case payload.</summary>
     SwitchCase,
+    /// <summary>Represents a catch block payload.</summary>
     CatchBlock,
+    /// <summary>Represents a label target payload.</summary>
     LabelTarget,
+    /// <summary>Represents a member-assignment binding payload.</summary>
     MemberAssignment,
+    /// <summary>Represents a nested member-binding payload.</summary>
     MemberMemberBinding,
+    /// <summary>Represents a list-binding payload.</summary>
     MemberListBinding,
+    /// <summary>Represents an element initializer payload.</summary>
     ElementInit,
 }
 
+/// <summary>Stores one flat expression node plus its intrusive child-link metadata.</summary>
 public struct ExprNode
 {
     private const int NodeTypeShift = 56;
@@ -36,14 +46,26 @@ public struct ExprNode
     private const int CountShift = 16;
     private const ulong IndexMask = 0xFFFF;
 
+    /// <summary>Gets or sets the runtime type of the represented node.</summary>
     public Type Type;
+
+    /// <summary>Gets or sets the runtime payload associated with the node.</summary>
     public object Obj;
     private ulong _data;
 
+    /// <summary>Gets the expression kind encoded for this node.</summary>
     public ExpressionType NodeType => (ExpressionType)((_data >> NodeTypeShift) & 0xFF);
+
+    /// <summary>Gets the payload classification for this node.</summary>
     public ExprNodeKind Kind => (ExprNodeKind)((_data >> KindShift) & 0xFF);
+
+    /// <summary>Gets the next sibling node index in the intrusive child chain.</summary>
     public int NextIdx => (int)((_data >> NextShift) & IndexMask);
+
+    /// <summary>Gets the number of direct children linked from this node.</summary>
     public int ChildCount => (int)((_data >> CountShift) & IndexMask);
+
+    /// <summary>Gets the first child index or an auxiliary payload index.</summary>
     public int ChildIdx => (int)(_data & IndexMask);
 
     internal ExprNode(Type type, object obj, ExpressionType nodeType, ExprNodeKind kind, int childIdx = 0, int childCount = 0, int nextIdx = 0)
@@ -66,29 +88,41 @@ public struct ExprNode
             | (ushort)childIdx;
 }
 
+/// <summary>Stores an expression tree as a flat node array plus out-of-line closure constants.</summary>
 public struct ExprTree
 {
     private static readonly object ClosureConstantMarker = new();
 
+    /// <summary>Gets or sets the root node index.</summary>
     public int RootIndex;
+
+    /// <summary>Gets or sets the flat node storage.</summary>
     public SmallList<ExprNode, Stack16<ExprNode>, NoArrayPool<ExprNode>> Nodes;
+
+    /// <summary>Gets or sets closure constants that are referenced from constant nodes.</summary>
     public SmallList<object, Stack16<object>, NoArrayPool<object>> ClosureConstants;
 
+    /// <summary>Adds a parameter node and returns its index.</summary>
     public int Parameter(Type type, string name = null)
     {
         var id = Nodes.Count + 1;
         return AddRawExpressionNode(type, new ParameterData(id, name, type.IsByRef), ExpressionType.Parameter);
     }
 
+    /// <summary>Adds a typed parameter node and returns its index.</summary>
     public int ParameterOf<T>(string name = null) => Parameter(typeof(T), name);
 
+    /// <summary>Adds a variable node and returns its index.</summary>
     public int Variable(Type type, string name = null) => Parameter(type, name);
 
+    /// <summary>Adds a default-value node and returns its index.</summary>
     public int Default(Type type) => AddRawExpressionNode(type, null, ExpressionType.Default);
 
+    /// <summary>Adds a constant node using the runtime type of the supplied value.</summary>
     public int Constant(object value) =>
         Constant(value, value?.GetType() ?? typeof(object));
 
+    /// <summary>Adds a constant node with an explicit constant type.</summary>
     public int Constant(object value, Type type)
     {
         if (ShouldInlineConstant(value, type))
@@ -98,12 +132,16 @@ public struct ExprTree
         return AddRawExpressionNodeWithChildIndex(type, ClosureConstantMarker, ExpressionType.Constant, constantIndex);
     }
 
+    /// <summary>Adds a null constant node.</summary>
     public int ConstantNull(Type type = null) => AddRawExpressionNode(type ?? typeof(object), null, ExpressionType.Constant);
 
+    /// <summary>Adds an <see cref="int"/> constant node.</summary>
     public int ConstantInt(int value) => AddRawExpressionNode(typeof(int), value, ExpressionType.Constant);
 
+    /// <summary>Adds a typed constant node.</summary>
     public int ConstantOf<T>(T value) => Constant(value, typeof(T));
 
+    /// <summary>Adds a parameterless <c>new</c> node for the specified type.</summary>
     [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
     public int New(Type type)
     {
@@ -117,67 +155,89 @@ public struct ExprTree
         throw new ArgumentException($"The type {type} is missing the default constructor");
     }
 
+    /// <summary>Adds a constructor call node.</summary>
     public int New(System.Reflection.ConstructorInfo constructor, params int[] arguments) =>
         AddFactoryExpressionNode(constructor.DeclaringType, constructor, ExpressionType.New, arguments);
 
+    /// <summary>Adds an array initialization node.</summary>
     public int NewArrayInit(Type elementType, params int[] expressions) =>
         AddFactoryExpressionNode(elementType.MakeArrayType(), null, ExpressionType.NewArrayInit, expressions);
 
+    /// <summary>Adds an array-bounds node.</summary>
     public int NewArrayBounds(Type elementType, params int[] bounds) =>
         AddFactoryExpressionNode(elementType.MakeArrayType(), null, ExpressionType.NewArrayBounds, bounds);
 
+    /// <summary>Adds an invocation node.</summary>
     public int Invoke(int expression, params int[] arguments) =>
         AddFactoryExpressionNode(Nodes[expression].Type, null, ExpressionType.Invoke, Prepend(expression, arguments));
 
+    /// <summary>Adds a static-call node.</summary>
     public int Call(System.Reflection.MethodInfo method, params int[] arguments) =>
         AddFactoryExpressionNode(method.ReturnType, method, ExpressionType.Call, arguments);
 
+    /// <summary>Adds an instance-call node.</summary>
     public int Call(int instance, System.Reflection.MethodInfo method, params int[] arguments) =>
         AddFactoryExpressionNode(method.ReturnType, method, ExpressionType.Call, Prepend(instance, arguments));
 
+    /// <summary>Adds a field or property access node.</summary>
     public int MakeMemberAccess(int? instance, System.Reflection.MemberInfo member) =>
         AddFactoryExpressionNode(GetMemberType(member), member, ExpressionType.MemberAccess,
             instance.HasValue ? Single(instance.Value) : null);
 
+    /// <summary>Adds a field-access node.</summary>
     public int Field(int instance, System.Reflection.FieldInfo field) => MakeMemberAccess(instance, field);
 
+    /// <summary>Adds a property-access node.</summary>
     public int Property(int instance, System.Reflection.PropertyInfo property) => MakeMemberAccess(instance, property);
 
+    /// <summary>Adds a static property-access node.</summary>
     public int Property(System.Reflection.PropertyInfo property) => MakeMemberAccess(null, property);
 
+    /// <summary>Adds an indexed property-access node.</summary>
     public int Property(int instance, System.Reflection.PropertyInfo property, params int[] arguments) =>
         arguments == null || arguments.Length == 0
             ? Property(instance, property)
             : AddFactoryExpressionNode(property.PropertyType, property, ExpressionType.Index, Prepend(instance, arguments));
 
+    /// <summary>Adds a one-dimensional array index node.</summary>
     public int ArrayIndex(int array, int index) => MakeBinary(ExpressionType.ArrayIndex, array, index);
 
+    /// <summary>Adds an array access node.</summary>
     public int ArrayAccess(int array, params int[] indexes) =>
         indexes != null && indexes.Length == 1
             ? ArrayIndex(array, indexes[0])
             : AddFactoryExpressionNode(GetArrayElementType(Nodes[array].Type, indexes?.Length ?? 0), null, ExpressionType.Index, Prepend(array, indexes));
 
+    /// <summary>Adds a conversion node.</summary>
     public int Convert(int operand, Type type, System.Reflection.MethodInfo method = null) =>
         AddFactoryExpressionNode(type, method, ExpressionType.Convert, operand);
 
+    /// <summary>Adds a type-as node.</summary>
     public int TypeAs(int operand, Type type) =>
         AddFactoryExpressionNode(type, null, ExpressionType.TypeAs, operand);
 
+    /// <summary>Adds a numeric negation node.</summary>
     public int Negate(int operand, System.Reflection.MethodInfo method = null) =>
         MakeUnary(ExpressionType.Negate, operand, method: method);
 
+    /// <summary>Adds a logical or bitwise not node.</summary>
     public int Not(int operand, System.Reflection.MethodInfo method = null) =>
         MakeUnary(ExpressionType.Not, operand, method: method);
 
+    /// <summary>Adds a unary node of the specified kind.</summary>
     public int MakeUnary(ExpressionType nodeType, int operand, Type type = null, System.Reflection.MethodInfo method = null) =>
         AddFactoryExpressionNode(type ?? GetUnaryResultType(nodeType, Nodes[operand].Type, method), method, nodeType, operand);
 
+    /// <summary>Adds an assignment node.</summary>
     public int Assign(int left, int right) => MakeBinary(ExpressionType.Assign, left, right);
 
+    /// <summary>Adds an addition node.</summary>
     public int Add(int left, int right, System.Reflection.MethodInfo method = null) => MakeBinary(ExpressionType.Add, left, right, method: method);
 
+    /// <summary>Adds an equality node.</summary>
     public int Equal(int left, int right, System.Reflection.MethodInfo method = null) => MakeBinary(ExpressionType.Equal, left, right, method: method);
 
+    /// <summary>Adds a binary node of the specified kind.</summary>
     public int MakeBinary(ExpressionType nodeType, int left, int right, bool isLiftedToNull = false,
         System.Reflection.MethodInfo method = null, int? conversion = null, Type type = null)
     {
@@ -186,12 +246,15 @@ public struct ExprTree
             new BinaryData(method, isLiftedToNull), nodeType, children);
     }
 
+    /// <summary>Adds a conditional node.</summary>
     public int Condition(int test, int ifTrue, int ifFalse, Type type = null) =>
         AddFactoryExpressionNode(type ?? Nodes[ifTrue].Type, null, ExpressionType.Conditional, new[] { test, ifTrue, ifFalse });
 
+    /// <summary>Adds a block node without explicit variables.</summary>
     public int Block(params int[] expressions) =>
         Block(null, null, expressions);
 
+    /// <summary>Adds a block node with optional explicit result type and variables.</summary>
     public int Block(Type type, IEnumerable<int> variables, params int[] expressions)
     {
         if (expressions == null || expressions.Length == 0)
@@ -212,40 +275,51 @@ public struct ExprTree
             new BlockData(variableCount), ExpressionType.Block, children);
     }
 
+    /// <summary>Adds a typed lambda node.</summary>
     public int Lambda<TDelegate>(int body, params int[] parameters) where TDelegate : Delegate =>
         Lambda(typeof(TDelegate), body, parameters);
 
+    /// <summary>Adds a lambda node.</summary>
     public int Lambda(Type delegateType, int body, params int[] parameters) =>
         AddFactoryExpressionNode(delegateType, null, ExpressionType.Lambda, Prepend(body, parameters));
 
+    /// <summary>Adds a member-assignment binding node.</summary>
     public int Bind(System.Reflection.MemberInfo member, int expression) =>
         AddFactoryAuxNode(GetMemberType(member), member, ExprNodeKind.MemberAssignment, expression);
 
+    /// <summary>Adds a nested member-binding node.</summary>
     public int MemberBind(System.Reflection.MemberInfo member, params int[] bindings) =>
         AddFactoryAuxNode(GetMemberType(member), member, ExprNodeKind.MemberMemberBinding, bindings);
 
+    /// <summary>Adds an element-initializer node.</summary>
     public int ElementInit(System.Reflection.MethodInfo addMethod, params int[] arguments) =>
         AddFactoryAuxNode(addMethod.DeclaringType, addMethod, ExprNodeKind.ElementInit, arguments);
 
+    /// <summary>Adds a list-binding node.</summary>
     public int ListBind(System.Reflection.MemberInfo member, params int[] initializers) =>
         AddFactoryAuxNode(GetMemberType(member), member, ExprNodeKind.MemberListBinding, initializers);
 
+    /// <summary>Adds a member-init node.</summary>
     public int MemberInit(int @new, params int[] bindings) =>
         AddFactoryExpressionNode(Nodes[@new].Type, null, ExpressionType.MemberInit, Prepend(@new, bindings));
 
+    /// <summary>Adds a list-init node.</summary>
     public int ListInit(int @new, params int[] initializers) =>
         AddFactoryExpressionNode(Nodes[@new].Type, null, ExpressionType.ListInit, Prepend(@new, initializers));
 
+    /// <summary>Adds a label-target node.</summary>
     public int Label(Type type = null, string name = null)
     {
         var id = Nodes.Count + 1;
         return AddRawAuxNode(type ?? typeof(void), new LabelTargetData(id, name), ExprNodeKind.LabelTarget);
     }
 
+    /// <summary>Adds a label-expression node.</summary>
     public int Label(int target, int? defaultValue = null) =>
         AddFactoryExpressionNode(Nodes[target].Type, null, ExpressionType.Label,
             defaultValue.HasValue ? new[] { target, defaultValue.Value } : new[] { target });
 
+    /// <summary>Adds a goto-family node.</summary>
     public int MakeGoto(GotoExpressionKind kind, int target, int? value = null, Type type = null)
     {
         var resultType = type ?? (value.HasValue ? Nodes[value.Value].Type : typeof(void));
@@ -253,10 +327,13 @@ public struct ExprTree
             value.HasValue ? new[] { target, value.Value } : new[] { target });
     }
 
+    /// <summary>Adds a goto node.</summary>
     public int Goto(int target, int? value = null, Type type = null) => MakeGoto(GotoExpressionKind.Goto, target, value, type);
 
+    /// <summary>Adds a return node.</summary>
     public int Return(int target, int value) => MakeGoto(GotoExpressionKind.Return, target, value, Nodes[value].Type);
 
+    /// <summary>Adds a loop node.</summary>
     public int Loop(int body, int? @break = null, int? @continue = null)
     {
         var children = new List<int> { body };
@@ -267,6 +344,7 @@ public struct ExprTree
         return AddFactoryExpressionNode(typeof(void), new LoopData(@break.HasValue, @continue.HasValue), ExpressionType.Loop, children);
     }
 
+    /// <summary>Adds a switch-case node.</summary>
     public int SwitchCase(int body, params int[] testValues)
     {
         var children = new List<int>(testValues?.Length + 1 ?? 1);
@@ -276,9 +354,11 @@ public struct ExprTree
         return AddFactoryAuxNode(Nodes[body].Type, null, ExprNodeKind.SwitchCase, children);
     }
 
+    /// <summary>Adds a switch node without an explicit default case or comparer.</summary>
     public int Switch(int switchValue, params int[] cases) =>
         Switch(Nodes[switchValue].Type, switchValue, null, null, cases);
 
+    /// <summary>Adds a switch node.</summary>
     public int Switch(Type type, int switchValue, int? defaultBody, System.Reflection.MethodInfo comparison, params int[] cases)
     {
         var children = new List<int>(cases?.Length + 2 ?? 1) { switchValue };
@@ -289,12 +369,15 @@ public struct ExprTree
         return AddFactoryExpressionNode(type, new SwitchData(defaultBody.HasValue, comparison), ExpressionType.Switch, children);
     }
 
+    /// <summary>Adds a catch block with an exception variable.</summary>
     public int Catch(int variable, int body) =>
         AddFactoryAuxNode(Nodes[variable].Type, new CatchData(true, false), ExprNodeKind.CatchBlock, new[] { variable, body });
 
+    /// <summary>Adds a catch block without an exception variable.</summary>
     public int Catch(Type test, int body) =>
         AddFactoryAuxNode(test, new CatchData(false, false), ExprNodeKind.CatchBlock, new[] { body });
 
+    /// <summary>Adds a catch block with optional exception variable and filter.</summary>
     public int MakeCatchBlock(Type test, int? variable, int body, int? filter)
     {
         var children = new List<int>(3);
@@ -306,15 +389,19 @@ public struct ExprTree
         return AddFactoryAuxNode(test, new CatchData(variable.HasValue, filter.HasValue), ExprNodeKind.CatchBlock, children);
     }
 
+    /// <summary>Adds a try/catch node.</summary>
     public int TryCatch(int body, params int[] handlers) =>
         AddFactoryExpressionNode(Nodes[body].Type, new TryData(false, false), ExpressionType.Try, Prepend(body, handlers));
 
+    /// <summary>Adds a try/finally node.</summary>
     public int TryFinally(int body, int @finally) =>
         AddFactoryExpressionNode(Nodes[body].Type, new TryData(true, false), ExpressionType.Try, new[] { body, @finally });
 
+    /// <summary>Adds a try/fault node.</summary>
     public int TryFault(int body, int fault) =>
         AddFactoryExpressionNode(Nodes[body].Type, new TryData(false, true), ExpressionType.Try, new[] { body, fault });
 
+    /// <summary>Adds a try node with optional finally block and catch handlers.</summary>
     public int TryCatchFinally(int body, int? @finally, params int[] handlers)
     {
         var children = new List<int> { body };
@@ -325,21 +412,27 @@ public struct ExprTree
         return AddFactoryExpressionNode(Nodes[body].Type, new TryData(@finally.HasValue, false), ExpressionType.Try, children);
     }
 
+    /// <summary>Adds a type-test node.</summary>
     public int TypeIs(int expression, Type type) =>
         AddFactoryExpressionNode(typeof(bool), type, ExpressionType.TypeIs, expression);
 
+    /// <summary>Adds a type-equality test node.</summary>
     public int TypeEqual(int expression, Type type) =>
         AddFactoryExpressionNode(typeof(bool), type, ExpressionType.TypeEqual, expression);
 
+    /// <summary>Adds a dynamic-expression node.</summary>
     public int Dynamic(Type delegateType, CallSiteBinder binder, params int[] arguments) =>
         AddFactoryExpressionNode(typeof(object), new DynamicData(delegateType, binder), ExpressionType.Dynamic, arguments);
 
+    /// <summary>Adds a runtime-variables node.</summary>
     public int RuntimeVariables(params int[] variables) =>
         AddFactoryExpressionNode(typeof(IRuntimeVariables), null, ExpressionType.RuntimeVariables, variables);
 
+    /// <summary>Adds a debug-info node.</summary>
     public int DebugInfo(string fileName, int startLine, int startColumn, int endLine, int endColumn) =>
         AddRawExpressionNode(typeof(void), new DebugInfoData(fileName, startLine, startColumn, endLine, endColumn), ExpressionType.DebugInfo);
 
+    /// <summary>Flattens a System.Linq expression tree.</summary>
     public static ExprTree FromExpression(SysExpr expression)
     {
         if (expression == null)
@@ -349,6 +442,7 @@ public struct ExprTree
         return builder.Build(expression);
     }
 
+    /// <summary>Flattens a LightExpression tree.</summary>
     public static ExprTree FromLightExpression(LightExpression expression)
     {
         if (expression == null)
@@ -357,6 +451,7 @@ public struct ExprTree
         return FromExpression(expression.ToExpression());
     }
 
+    /// <summary>Reconstructs the flat tree as a System.Linq expression tree.</summary>
     [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
     [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2077",
         Justification = "Flat expression round-trip stores the runtime type metadata explicitly for reconstruction.")]
@@ -368,6 +463,7 @@ public struct ExprTree
         return new Reader(this).ReadExpression(RootIndex);
     }
 
+    /// <summary>Reconstructs the flat tree as a LightExpression tree.</summary>
     [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
     public LightExpression ToLightExpression() => FastExpressionCompiler.LightExpression.FromSysExpressionConverter.ToLightExpression(ToExpression());
 
@@ -1289,9 +1385,12 @@ public struct ExprTree
     }
 }
 
+/// <summary>Provides conversions from System and LightExpression trees to <see cref="ExprTree"/>.</summary>
 public static class FlatExpressionExtensions
 {
+    /// <summary>Flattens a System.Linq expression tree.</summary>
     public static ExprTree ToFlatExpression(this SysExpr expression) => ExprTree.FromExpression(expression);
 
+    /// <summary>Flattens a LightExpression tree.</summary>
     public static ExprTree ToFlatExpression(this LightExpression expression) => ExprTree.FromLightExpression(expression);
 }
