@@ -271,8 +271,7 @@ public class Issue274_Failing_Expressions_in_Linq2DB : ITest
 #if LIGHT_EXPRESSION
     var sysExpr = expr.ToLambdaExpression();
     var restoredExpr = sysExpr.ToLightExpression();
-    // todo: @feature #431 compare the restored target and source expressions directly instead of strings
-    Asserts.AreEqual(expr.ToCSharpString(), restoredExpr.ToCSharpString());
+    Asserts.IsTrue(expr.EqualsTo(restoredExpr));
 #endif
 
         var fs = expr.CompileSys();

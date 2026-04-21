@@ -36,6 +36,7 @@ namespace FastExpressionCompiler.UnitTests
                 var t = (LightExpression.TestRun)state;
                 t.Run(new LightExpression.IssueTests.Issue183_NullableDecimal());
                 t.Run(new LightExpression.IssueTests.Issue398_Optimize_Switch_with_OpCodes_Switch());
+                t.Run(new LightExpression.IssueTests.Issue431_Add_structural_equality_comparison_to_LightExpression());
                 t.Run(new LightExpression.IssueTests.Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET());
                 t.Run(new LightExpression.IssueTests.Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_expressions_during_the_compilation());
                 t.Run(new LightExpression.IssueTests.Issue473_InvalidProgramException_when_using_Expression_Condition_with_converted_decimal_expression());
