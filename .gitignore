@@ -258,3 +258,5 @@ FastExpressionCompiler.Internal/
 
 # Scala Metals in VSCode
 metals.**.out
+*.out
+printcs_*.out
