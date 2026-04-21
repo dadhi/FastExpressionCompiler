@@ -1,4 +1,3 @@
-
 using System.Reflection.Emit;
 
 #if LIGHT_EXPRESSION
@@ -10,7 +9,6 @@ using static System.Linq.Expressions.Expression;
 
 namespace FastExpressionCompiler.IssueTests;
 #endif
-
 
 public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
 {
@@ -39,7 +37,6 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
     }
 
     delegate int MyDelegate(ref int x);
-
 
     public void Issue414_ReturnRefParameter()
     {
@@ -113,7 +110,6 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
 
     delegate int MyDelegateStruct(MyStruct x);
 
-
     public void Issue413_ParameterStructIndexer()
     {
         var p = Parameter(typeof(MyStruct));
@@ -142,7 +138,6 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
     }
 
     delegate int MyDelegateNoArgs();
-
 
     public void Issue413_VariableStructIndexer()
     {
@@ -249,7 +244,6 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
 
     public static ref int ReturnRef(ref int x) => ref x;
 
-    
     public void Issue415_ReturnRefParameterByRef_ReturnRefCall()
     {
         var p = Parameter(typeof(int).MakeByRefType());
@@ -275,7 +269,6 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
         Asserts.AreEqual(18, x);
     }
 
-    
     public void Issue415_ReturnRefParameter_ReturnRefCall()
     {
         var p = Parameter(typeof(int).MakeByRefType());
