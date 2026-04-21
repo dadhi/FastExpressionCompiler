@@ -71,7 +71,9 @@ public abstract class Expression
     public virtual Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) => 0;
 
     /// <summary>The second FEC state to emit the actual IL op-codes based on the information collected by the first traversal
-    /// and available in the `closure` structure. Find the expression examples below by searching `IsIntrinsic => true`.</summary>
+    /// and available in the `closure` structure. Find the expression examples below by searching `IsIntrinsic => true`.
+    /// When this method is called, the current expression is already on the <see cref="CompilerContext.ExprStack"/>,
+    /// so you can access the full ancestor expression chain via <c>context.ExprStack</c> or <c>context.GetParentExprContext()</c>.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
 
     public virtual bool TryEmit(ref CompilerContext context, ILGenerator il, ParentFlags parent, int byRefIndex = -1) => false;

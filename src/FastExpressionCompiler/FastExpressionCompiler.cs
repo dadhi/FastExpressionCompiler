@@ -610,6 +610,17 @@ namespace FastExpressionCompiler
             public Label ReturnLabel;
         }
 
+        /// <summary>An entry in the expression emit stack, representing the expression being emitted and its parent context.</summary>
+        public struct ExprStackEntry
+        {
+            /// <summary>The expression being emitted at this stack level.</summary>
+            public Expression Expr;
+            /// <summary>The parent flags describing the role of this expression within its parent.</summary>
+            public ParentFlags Flags;
+            /// <summary>The by-ref argument index, or -1 if not applicable.</summary>
+            public int ByRefIndex;
+        }
+
         /// <summary>Track the info required to build a closure object + some context information not directly related to closure.</summary>
         public struct CompilerContext
         {
@@ -664,6 +675,42 @@ namespace FastExpressionCompiler
 
             /// <summary>Compiler flags</summary>
             public CompilerFlags CompilerFlags;
+
+            /// <summary>Stack of expressions being emitted, providing full context to each emit level.
+            /// The stack is pushed by <see cref="EmittingVisitor.TryEmit"/> before processing each expression,
+            /// so at any point during emission the full ancestor expression chain is accessible via this stack.</summary>
+            public SmallList<ExprStackEntry, Stack16<ExprStackEntry>, NoArrayPool<ExprStackEntry>> ExprStack;
+
+            /// <summary>Pushes the expression context onto the emit stack.</summary>
+            [MethodImpl((MethodImplOptions)256)]
+            public void PushExprContext(Expression expr, ParentFlags flags, int byRefIndex = -1) =>
+                ExprStack.Add(new ExprStackEntry { Expr = expr, Flags = flags, ByRefIndex = byRefIndex });
+
+            /// <summary>Updates the top entry of the emit stack. Used when an expression is transparently
+            /// reduced to another (e.g. conditional optimization, block last-statement inlining, Extension.Reduce()).</summary>
+            [MethodImpl((MethodImplOptions)256)]
+            public void UpdateTopExprContext(Expression expr, ParentFlags flags, int byRefIndex = -1)
+            {
+                ref var top = ref ExprStack.GetLastSurePresentItem();
+                top.Expr = expr;
+                top.Flags = flags;
+                top.ByRefIndex = byRefIndex;
+            }
+
+            /// <summary>Pops the top entry from the emit stack.</summary>
+            [MethodImpl((MethodImplOptions)256)]
+            public void PopExprContext() => ExprStack.RemoveLastSurePresentItem();
+
+            /// <summary>Returns a ref to the expression context at a given depth offset from the current top of the emit stack.
+            /// When the depth offset exceeds the stack depth, returns a null ref (check with <c>System.Runtime.CompilerServices.Unsafe.IsNullRef</c>
+            /// or via <c>ExprStack.Count</c> to verify sufficient depth before accessing).</summary>
+            [UnscopedRef]
+            [MethodImpl((MethodImplOptions)256)]
+            public ref ExprStackEntry GetParentExprContext(int depthOffset = 1)
+            {
+                var idx = ExprStack.Count - 1 - depthOffset;
+                return ref idx >= 0 ? ref ExprStack.GetSurePresentRef(idx) : ref RefTools<ExprStackEntry>.GetNullRef();
+            }
 
             /// <summary>Populates the info</summary>
             public CompilerContext(ClosureStatus status, ParamExprs paramExprs, CompilerFlags compilerFlags)
@@ -1892,6 +1939,9 @@ namespace FastExpressionCompiler
 
             public static bool TryEmit(Expression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex = -1)
             {
+                context.PushExprContext(expr, parent, byRefIndex);
+                try
+                {
                 var exprType = expr.Type;
                 while (true)
                 {
@@ -2049,6 +2099,7 @@ namespace FastExpressionCompiler
                             if (Interpreter.TryInterpretBool(out var testIsTrue, testExpr, context.CompilerFlags))
                             {
                                 expr = testIsTrue ? condExpr.IfTrue : condExpr.IfFalse;
+                                context.UpdateTopExprContext(expr, parent, byRefIndex);
                                 continue; // no recursion, just continue with the left or right side of condition
                             }
                             return TryEmitConditional(testExpr, condExpr.IfTrue, condExpr.IfFalse, il, ref context, parent);
@@ -2188,7 +2239,10 @@ namespace FastExpressionCompiler
 
                                 parent |= ParentFlags.BlockResult;
                                 if (blockVarCount == 0)
+                                {
+                                    context.UpdateTopExprContext(expr, parent, byRefIndex);
                                     continue; // OMG! no recursion, continue with the last expression
+                                }
 
                                 if (!TryEmit(expr, il, ref context, parent))
                                     return false;
@@ -2231,6 +2285,7 @@ namespace FastExpressionCompiler
 
                         case ExpressionType.Extension:
                             expr = expr.Reduce();
+                            context.UpdateTopExprContext(expr, parent, byRefIndex);
                             continue;
 
                         case ExpressionType.DebugInfo: // todo: @feature - is not supported yet
@@ -2241,6 +2296,11 @@ namespace FastExpressionCompiler
                             return false;
 
                     }
+                }
+                } // end try
+                finally
+                {
+                    context.PopExprContext();
                 }
             }
 
