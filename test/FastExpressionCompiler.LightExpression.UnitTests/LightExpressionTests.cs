@@ -15,6 +15,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
         public int Run()
         {
             Can_compile_lambda_without_converting_to_expression();
+            Can_compile_nested_intrinsic_new_expressions();
             Can_compile_lambda_with_property();
             Can_compile_lambda_with_call_and_property();
             Nested_Func_using_outer_parameter();
@@ -26,7 +27,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Should_output_the_System_and_LightExpression_to_the_identical_CSharp_syntax();
             Expression_produced_by_ToExpressionString_should_compile();
             Multiple_methods_in_block_should_be_aligned_when_output_to_csharp();
-            return 11;
+            return 12;
         }
 
 
@@ -51,6 +52,20 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             {
                 Y = y;
             }
+        }
+
+        public void Can_compile_nested_intrinsic_new_expressions()
+        {
+            var expr = Lambda(
+                NewNoByRefArgs(typeof(X).GetTypeInfo().GetConstructors()[0],
+                    New(typeof(Y).GetTypeInfo().GetConstructors()[0])));
+
+            var func = expr.CompileFast<Func<X>>(true);
+            Asserts.IsNotNull(func);
+
+            var x = func();
+            Asserts.IsNotNull(x);
+            Asserts.IsInstanceOf<Y>(x.Y);
         }
 
 

@@ -613,8 +613,16 @@ namespace FastExpressionCompiler
         /// <summary>Track the info required to build a closure object + some context information not directly related to closure.</summary>
         public struct CompilerContext
         {
+            public struct EmittingExpressionContext
+            {
+                public Expression Expression;
+                public ParentFlags ParentFlags;
+            }
+
             /// <summary>Tracks that the last emit was an address</summary>
             public bool LastEmitIsAddress;
+
+            internal SmallList<EmittingExpressionContext, Stack16<EmittingExpressionContext>, NoArrayPool<EmittingExpressionContext>> EmittingExpressions;
 
             // Tracks the current block nesting count in the stack of blocks in Collect and Emit phase
             private ushort _blockCount;
@@ -694,6 +702,43 @@ namespace FastExpressionCompiler
 
             [MethodImpl((MethodImplOptions)256)]
             public bool ContainsConstantsOrNestedLambdas() => Constants.Count != 0 | NestedLambdas.Count != 0;
+
+            [MethodImpl((MethodImplOptions)256)]
+            internal void PushEmittingExpression(Expression expression, ParentFlags parentFlags)
+            {
+                ref var item = ref EmittingExpressions.AddDefaultAndGetRef();
+                item.Expression = expression;
+                item.ParentFlags = parentFlags;
+            }
+
+            [MethodImpl((MethodImplOptions)256)]
+            internal void ReplaceCurrentEmittingExpression(Expression expression) =>
+                EmittingExpressions.GetLastSurePresentItem().Expression = expression;
+
+            [MethodImpl((MethodImplOptions)256)]
+            internal void PopEmittingExpression() => EmittingExpressions.RemoveLastSurePresentItem();
+
+            public int EmittingExpressionCount => EmittingExpressions.Count;
+
+            [MethodImpl((MethodImplOptions)256)]
+            public Expression GetEmittingExpressionFromTop(int depth = 0)
+            {
+                var index = EmittingExpressions.Count - 1 - depth;
+                return index >= 0 ? EmittingExpressions.GetSurePresentRef(index).Expression : null;
+            }
+
+            [MethodImpl((MethodImplOptions)256)]
+            public ParentFlags GetParentFlagsFromTop(int depth = 0)
+            {
+                var index = EmittingExpressions.Count - 1 - depth;
+                return index >= 0 ? EmittingExpressions.GetSurePresentRef(index).ParentFlags : ParentFlags.Empty;
+            }
+
+            public Expression CurrentEmittingExpression => GetEmittingExpressionFromTop();
+
+            public Expression ParentEmittingExpression => GetEmittingExpressionFromTop(1);
+
+            public ParentFlags CurrentParentFlags => GetParentFlagsFromTop();
 
             public void AddConstantOrIncrementUsageCount(object value)
             {
@@ -1892,13 +1937,21 @@ namespace FastExpressionCompiler
 
             public static bool TryEmit(Expression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex = -1)
             {
+                context.PushEmittingExpression(expr, parent);
+                var emitted = TryEmitPushed(expr, il, ref context, parent, byRefIndex);
+                context.PopEmittingExpression();
+                return emitted;
+            }
+
+            private static bool TryEmitPushed(Expression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex)
+            {
                 var exprType = expr.Type;
                 while (true)
                 {
                     context.LastEmitIsAddress = false;
 #if LIGHT_EXPRESSION
                     if (expr.IsIntrinsic)
-                        return expr.TryEmit(ref context, il, parent, byRefIndex);
+                        return expr.TryEmit(ref context, il, byRefIndex);
 #endif
                     var nodeType = expr.NodeType;
                     switch (nodeType)
@@ -2231,6 +2284,7 @@ namespace FastExpressionCompiler
 
                         case ExpressionType.Extension:
                             expr = expr.Reduce();
+                            context.ReplaceCurrentEmittingExpression(expr);
                             continue;
 
                         case ExpressionType.DebugInfo: // todo: @feature - is not supported yet
