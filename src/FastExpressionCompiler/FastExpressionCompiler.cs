@@ -616,6 +616,9 @@ namespace FastExpressionCompiler
             /// <summary>Tracks that the last emit was an address</summary>
             public bool LastEmitIsAddress;
 
+            internal ParentFlags _currentParentFlags;
+            internal SmallList<Expression, Stack16<Expression>, NoArrayPool<Expression>> _emittingExpressions;
+
             // Tracks the current block nesting count in the stack of blocks in Collect and Emit phase
             private ushort _blockCount;
 
@@ -690,6 +693,23 @@ namespace FastExpressionCompiler
 
                 ParamExprs = paramExprs;
                 CompilerFlags = compilerFlags;
+            }
+
+            /// <summary>Returns the flags for the current emit frame.</summary>
+            public ParentFlags CurrentParentFlags => _currentParentFlags;
+
+            /// <summary>Returns the current expression being emitted, or <see langword="null"/> when emit is not in progress.</summary>
+            public Expression CurrentEmittingExpression => GetEmittingExpressionOrDefault();
+
+            /// <summary>Returns the immediate parent expression being emitted, or <see langword="null"/> when absent.</summary>
+            public Expression ParentEmittingExpression => GetEmittingExpressionOrDefault(1);
+
+            /// <summary>Returns the expression from the current emit stack at the specified depth, where 0 is the current expression.</summary>
+            [MethodImpl((MethodImplOptions)256)]
+            public Expression GetEmittingExpressionOrDefault(int depth = 0)
+            {
+                var index = _emittingExpressions.Count - 1 - depth;
+                return index < 0 ? null : _emittingExpressions.GetSurePresentRef(index);
             }
 
             [MethodImpl((MethodImplOptions)256)]
@@ -1895,17 +1915,23 @@ namespace FastExpressionCompiler
                 var exprType = expr.Type;
                 while (true)
                 {
-                    context.LastEmitIsAddress = false;
-#if LIGHT_EXPRESSION
-                    if (expr.IsIntrinsic)
-                        return expr.TryEmit(ref context, il, parent, byRefIndex);
-#endif
-                    var nodeType = expr.NodeType;
-                    switch (nodeType)
+                    var previousParentFlags = context._currentParentFlags;
+                    var previousEmittingExpressionCount = context._emittingExpressions.Count;
+                    context._currentParentFlags = parent;
+                    context._emittingExpressions.Add(expr);
+                    try
                     {
-                        case ExpressionType.Parameter:
-                            return (parent & ParentFlags.IgnoreResult) != 0 ||
-                                TryEmitParameter((ParameterExpression)expr, il, ref context, parent, byRefIndex);
+                        context.LastEmitIsAddress = false;
+#if LIGHT_EXPRESSION
+                        if (expr.IsIntrinsic)
+                            return expr.TryEmit(ref context, il, byRefIndex);
+#endif
+                        var nodeType = expr.NodeType;
+                        switch (nodeType)
+                        {
+                            case ExpressionType.Parameter:
+                                return (parent & ParentFlags.IgnoreResult) != 0 ||
+                                    TryEmitParameter((ParameterExpression)expr, il, ref context, parent, byRefIndex);
 
                         case ExpressionType.TypeAs:
                         case ExpressionType.IsTrue:
@@ -2236,10 +2262,16 @@ namespace FastExpressionCompiler
                         case ExpressionType.DebugInfo: // todo: @feature - is not supported yet
                             return true;               // todo: @unclear - just ignoring the info for now
 
-                        case ExpressionType.Quote:     // todo: @feature - is not supported yet
-                        default:
-                            return false;
+                            case ExpressionType.Quote:     // todo: @feature - is not supported yet
+                            default:
+                                return false;
 
+                        }
+                    }
+                    finally
+                    {
+                        context._emittingExpressions.Count = previousEmittingExpressionCount;
+                        context._currentParentFlags = previousParentFlags;
                     }
                 }
             }
@@ -3731,26 +3763,38 @@ namespace FastExpressionCompiler
                 else
 #endif
                 {
-                    var argExprs = newExpr.GetArgExprs();
-                    var argCount = argExprs.GetArgCount();
-                    if (argCount > 0)
+                    var previousParentFlags = context._currentParentFlags;
+                    var previousEmittingExpressionCount = context._emittingExpressions.Count;
+                    context._currentParentFlags = parent;
+                    context._emittingExpressions.Add(newExpr);
+                    try
                     {
-                        var args = newExpr.Constructor.GetParameters();
-                        for (var i = 0; i < argCount; i++)
-                            if (!TryEmit(argExprs.GetArgument(i), il, ref context, parent, args[i].ParameterType.IsByRef ? i : -1))
-                                return false;
-                    }
+                        var argExprs = newExpr.GetArgExprs();
+                        var argCount = argExprs.GetArgCount();
+                        if (argCount > 0)
+                        {
+                            var args = newExpr.Constructor.GetParameters();
+                            for (var i = 0; i < argCount; i++)
+                                if (!TryEmit(argExprs.GetArgument(i), il, ref context, parent, args[i].ParameterType.IsByRef ? i : -1))
+                                    return false;
+                        }
 
-                    if (newExpr.Constructor != null)
-                    {
-                        il.Demit(OpCodes.Newobj, newExpr.Constructor);
-                        if (valueVarIndex != -1)
-                            EmitStoreLocalVariable(il, valueVarIndex);
+                        if (newExpr.Constructor != null)
+                        {
+                            il.Demit(OpCodes.Newobj, newExpr.Constructor);
+                            if (valueVarIndex != -1)
+                                EmitStoreLocalVariable(il, valueVarIndex);
+                        }
+                        else if (valueVarIndex != -1)
+                            InitValueTypeVariable(il, exprType, valueVarIndex);
+                        else
+                            return false; // null constructor and not a value type, better to fallback
                     }
-                    else if (valueVarIndex != -1)
-                        InitValueTypeVariable(il, exprType, valueVarIndex);
-                    else
-                        return false; // null constructor and not a value type, better to fallback
+                    finally
+                    {
+                        context._emittingExpressions.Count = previousEmittingExpressionCount;
+                        context._currentParentFlags = previousParentFlags;
+                    }
                 }
 
                 var bindings = expr.GetBindings();
@@ -3804,26 +3848,38 @@ namespace FastExpressionCompiler
                     valueVarIndex = il.GetNextLocalVarIndex(exprType);
 
                 var newExpr = expr.NewExpression;
-                var argExprs = newExpr.GetArgExprs();
-                var argCount = argExprs.GetArgCount();
-                if (argCount > 0)
+                var previousParentFlags = context._currentParentFlags;
+                var previousEmittingExpressionCount = context._emittingExpressions.Count;
+                context._currentParentFlags = parent;
+                context._emittingExpressions.Add(newExpr);
+                try
                 {
-                    var args = newExpr.Constructor.GetParameters();
-                    for (var i = 0; i < argCount; i++)
-                        if (!TryEmit(argExprs.GetArgument(i), il, ref context, parent, args[i].ParameterType.IsByRef ? i : -1))
-                            return false;
-                }
+                    var argExprs = newExpr.GetArgExprs();
+                    var argCount = argExprs.GetArgCount();
+                    if (argCount > 0)
+                    {
+                        var args = newExpr.Constructor.GetParameters();
+                        for (var i = 0; i < argCount; i++)
+                            if (!TryEmit(argExprs.GetArgument(i), il, ref context, parent, args[i].ParameterType.IsByRef ? i : -1))
+                                return false;
+                    }
 
-                if (newExpr.Constructor != null)
-                {
-                    il.Demit(OpCodes.Newobj, newExpr.Constructor);
-                    if (valueVarIndex != -1)
-                        EmitStoreLocalVariable(il, valueVarIndex);
+                    if (newExpr.Constructor != null)
+                    {
+                        il.Demit(OpCodes.Newobj, newExpr.Constructor);
+                        if (valueVarIndex != -1)
+                            EmitStoreLocalVariable(il, valueVarIndex);
+                    }
+                    else if (valueVarIndex != -1)
+                        InitValueTypeVariable(il, exprType, valueVarIndex);
+                    else
+                        return false; // null constructor and not a value type, better to fallback
                 }
-                else if (valueVarIndex != -1)
-                    InitValueTypeVariable(il, exprType, valueVarIndex);
-                else
-                    return false; // null constructor and not a value type, better to fallback
+                finally
+                {
+                    context._emittingExpressions.Count = previousEmittingExpressionCount;
+                    context._currentParentFlags = previousParentFlags;
+                }
 
                 var inits = expr.Initializers;
                 var initCount = inits.Count;

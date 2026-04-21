@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
+using FastExpressionCompiler.LightExpression.ImTools;
 using static FastExpressionCompiler.LightExpression.Expression;
 using System.Linq.Expressions;
 using SysExpr = System.Linq.Expressions.Expression;
@@ -26,7 +27,8 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Should_output_the_System_and_LightExpression_to_the_identical_CSharp_syntax();
             Expression_produced_by_ToExpressionString_should_compile();
             Multiple_methods_in_block_should_be_aligned_when_output_to_csharp();
-            return 11;
+            Custom_intrinsic_expression_can_access_emit_expression_stack();
+            return 12;
         }
 
 
@@ -257,6 +259,76 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var x = func(input);
 
             Asserts.AreEqual("11", ((A)x).Sop);
+        }
+
+        public void Custom_intrinsic_expression_can_access_emit_expression_stack()
+        {
+            var stateParamExpr = ParameterOf<object[]>("state");
+            var customConvertExpr = new ParentTrackingConvertExpression(
+                ArrayIndex(stateParamExpr, ConstantInt(11)));
+
+            var memberInitExpr = MemberInit(
+                customConvertExpr.ExpectedParent = NewNoByRefArgs(_ctorOfA,
+                    New(_ctorOfB),
+                    customConvertExpr,
+                    NewArrayInit(typeof(ID),
+                        New(_ctorOfD1),
+                        New(_ctorOfD2))),
+                Bind(_propAProp,
+                    NewNoByRefArgs(_ctorOfP,
+                        New(_ctorOfB))),
+                Bind(_fieldABop,
+                    New(_ctorOfB)));
+
+            var expr = Lambda<Func<object[], object>>(memberInitExpr, stateParamExpr);
+            customConvertExpr.ExpectedGrandParent = memberInitExpr;
+
+            var func = expr.CompileFast(true);
+            Asserts.IsNotNull(func);
+
+            var input = new object[12];
+            input[11] = "11";
+            var x = func(input);
+
+            Asserts.AreEqual("11", ((A)x).Sop);
+            Asserts.AreSame(customConvertExpr, customConvertExpr.SeenCurrentExpression);
+            Asserts.AreSame(customConvertExpr.ExpectedParent, customConvertExpr.SeenParentExpression);
+            Asserts.AreSame(customConvertExpr.ExpectedGrandParent, customConvertExpr.SeenGrandParentExpression);
+            Asserts.IsNull(customConvertExpr.SeenGreatGrandParentExpression);
+        }
+
+        private sealed class ParentTrackingConvertExpression : UnaryExpression
+        {
+            public override ExpressionType NodeType => ExpressionType.Convert;
+            public override Type Type => typeof(string);
+            public override bool IsIntrinsic => true;
+
+            public Expression ExpectedParent;
+            public Expression ExpectedGrandParent;
+            public Expression SeenCurrentExpression;
+            public Expression SeenParentExpression;
+            public Expression SeenGrandParentExpression;
+            public Expression SeenGreatGrandParentExpression;
+
+            public ParentTrackingConvertExpression(Expression operand) : base(operand) { }
+
+            public override ExpressionCompiler.Result TryCollectInfo(ref ExpressionCompiler.CompilerContext context,
+                ExpressionCompiler.NestedLambdaInfo nestedLambda, ref SmallList<ExpressionCompiler.NestedLambdaInfo> rootNestedLambdas) =>
+                ExpressionCompiler.TryCollectInfo(ref context, Operand, nestedLambda, ref rootNestedLambdas);
+
+            public override bool TryEmit(ref ExpressionCompiler.CompilerContext context, System.Reflection.Emit.ILGenerator il, int byRefIndex = -1)
+            {
+                SeenCurrentExpression = context.CurrentEmittingExpression;
+                SeenParentExpression = context.ParentEmittingExpression;
+                SeenGrandParentExpression = context.GetEmittingExpressionOrDefault(2);
+                SeenGreatGrandParentExpression = context.GetEmittingExpressionOrDefault(3);
+
+                Asserts.AreSame(this, SeenCurrentExpression);
+                Asserts.AreSame(ExpectedParent, SeenParentExpression);
+                Asserts.AreSame(ExpectedGrandParent, SeenGrandParentExpression);
+
+                return ExpressionCompiler.EmittingVisitor.TryEmit(Operand, il, ref context, context.CurrentParentFlags, byRefIndex);
+            }
         }
 
 
