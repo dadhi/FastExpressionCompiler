@@ -593,6 +593,7 @@ public interface ISmallArrayPool<T>
     void ReuseIfPossible(T[] array);
 }
 
+// todo: @feat NoArrayPool and some other similar struct do no hold any state T, so we may move the T from the struct to its method, the we may provide linearity by returning Pooled<T> from the Rent methods
 /// <summary>Implementation of `ISmallArrayPool` which does not pool anything, just creates new arrays</summary>
 public struct NoArrayPool<T> : ISmallArrayPool<T>
 {
