@@ -3339,7 +3339,7 @@ public class ConvertDelegateIntrinsicExpression : UnaryExpression
     [RequiresUnreferencedCode(Trimming.Message)]
     public override bool TryEmit(ref CompilerContext context, ILGenerator il, int byRefIndex = -1)
     {
-        if (!EmittingVisitor.TryEmit(Operand, il, ref context, context.CurrentParentFlags, byRefIndex))
+        if (!EmittingVisitor.TryEmit(Operand, il, ref context, byRefIndex))
             return false;
         il.Demit(OpCodes.Ldftn, Operand.Type.FindDelegateInvokeMethod());
         il.Demit(OpCodes.Newobj, Type.GetConstructors()[0]);
@@ -3381,7 +3381,7 @@ public class ConvertIntrinsicExpression<T> : UnaryExpression where T : class
     [RequiresUnreferencedCode(Trimming.Message)]
     public override bool TryEmit(ref CompilerContext context, ILGenerator il, int byRefIndex = -1)
     {
-        if (!EmittingVisitor.TryEmit(Operand, il, ref context, context.CurrentParentFlags, byRefIndex))
+        if (!EmittingVisitor.TryEmit(Operand, il, ref context, byRefIndex))
             return false;
         if (Type == typeof(object))
         {

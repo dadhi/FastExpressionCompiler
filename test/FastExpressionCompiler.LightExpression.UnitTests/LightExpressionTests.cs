@@ -327,7 +327,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                 Asserts.AreSame(ExpectedParent, SeenParentExpression);
                 Asserts.AreSame(ExpectedGrandParent, SeenGrandParentExpression);
 
-                return ExpressionCompiler.EmittingVisitor.TryEmit(Operand, il, ref context, context.CurrentParentFlags, byRefIndex);
+                return ExpressionCompiler.EmittingVisitor.TryEmit(Operand, il, ref context, byRefIndex);
             }
         }
 

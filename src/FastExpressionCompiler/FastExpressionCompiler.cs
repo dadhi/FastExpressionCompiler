@@ -1912,6 +1912,10 @@ namespace FastExpressionCompiler
             private static readonly MethodInfo _objectEqualsMethod =
                 ((Func<object, object, bool>)object.Equals).Method;
 
+            [MethodImpl((MethodImplOptions)256)]
+            public static bool TryEmit(Expression expr, ILGenerator il, ref CompilerContext context, int byRefIndex = -1) =>
+                TryEmit(expr, il, ref context, context.CurrentParentFlags, byRefIndex);
+
             public static bool TryEmit(Expression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex = -1)
             {
                 var exprType = expr.Type;
