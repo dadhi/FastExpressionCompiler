@@ -22,9 +22,9 @@ namespace FastExpressionCompiler.UnitTests
             Can_sum_signed_bytes_converted_to_ints();
             Can_sum_all_primitive_numeric_types_that_define_binary_operator_add();
             Can_not_sum_with_checked_overflow();
-            Can_substract_all_primitive_numeric_types_that_define_binary_operator_substract();
-            Can_substract_with_unchecked_overflow();
-            Can_not_substract_with_checked_overflow();
+            Can_subtract_all_primitive_numeric_types_that_define_binary_operator_subtract();
+            Can_subtract_with_unchecked_overflow();
+            Can_not_subtract_with_checked_overflow();
             Can_modulus();
             Can_bit_or_1();
             Can_bit_and_1();
@@ -37,7 +37,7 @@ namespace FastExpressionCompiler.UnitTests
             Can_divide_bytes();
             Can_divide_signed_bytes();
             Can_sum_decimal_numbers();
-            Can_substract_decimal_numbers();
+            Can_subtract_decimal_numbers();
             Can_multiply_decimal_numbers();
             Can_divide_decimal_numbers();
             Can_divide_all_primitive_numeric_types_that_define_binary_operator_divide();
@@ -135,7 +135,7 @@ namespace FastExpressionCompiler.UnitTests
         }
 
 
-        public void Can_substract_all_primitive_numeric_types_that_define_binary_operator_substract()
+        public void Can_subtract_all_primitive_numeric_types_that_define_binary_operator_subtract()
         {
             AssertSub<byte, int>(5, 1, 4, true);
             AssertSub<sbyte, int>(5, 1, 4, true);
@@ -150,13 +150,13 @@ namespace FastExpressionCompiler.UnitTests
         }
 
 
-        public void Can_substract_with_unchecked_overflow()
+        public void Can_subtract_with_unchecked_overflow()
         {
             AssertSub<int, int>(int.MinValue, 1, int.MaxValue);
         }
 
 
-        public void Can_not_substract_with_checked_overflow()
+        public void Can_not_subtract_with_checked_overflow()
         {
             var a = Parameter(typeof(int), "a");
             var b = Parameter(typeof(int), "b");
@@ -385,7 +385,7 @@ namespace FastExpressionCompiler.UnitTests
         }
 
 
-        public void Can_substract_decimal_numbers()
+        public void Can_subtract_decimal_numbers()
         {
             AssertSub(2.0m, 1.0m, 2.0m - 1.0m);
         }

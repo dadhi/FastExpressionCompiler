@@ -5038,7 +5038,7 @@ public class BlockExpression : Expression, IArgumentProvider
     public override Type Type => Result.Type;
     public virtual IReadOnlyList<ParameterExpression> Variables => Tools.Empty<ParameterExpression>();
     public SmallList<Expression, Stack2<Expression>, NoArrayPool<Expression>> Expressions;
-    public Expression Result => Expressions.GetLastSurePresentItem(); // todo: @check what if no expressions?
+    public Expression Result => Expressions.GetLastSurePresentRef(); // todo: @check what if no expressions?
     public virtual int ArgumentCount => 0;
     public virtual Expression GetArgument(int index) => throw new NotImplementedException();
     internal BlockExpression(in SmallList<Expression, Stack2<Expression>, NoArrayPool<Expression>> expressions) =>

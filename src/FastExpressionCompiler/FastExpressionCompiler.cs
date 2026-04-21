@@ -806,7 +806,7 @@ namespace FastExpressionCompiler
             private void PushVarInBlockMap(ParameterExpression pe, ushort blockIndex, ushort varIndex)
             {
                 ref var blocks = ref _varInBlock.Map.AddOrGetValueRef(pe, out _);
-                if (blocks.Count == 0 || (blocks.GetLastSurePresentItem() >>> 16) != blockIndex)
+                if (blocks.Count == 0 || (blocks.GetLastSurePresentRef() >>> 16) != blockIndex)
                     blocks.Add((uint)(blockIndex << 16) | varIndex);
             }
 
@@ -818,7 +818,7 @@ namespace FastExpressionCompiler
                 {
                     ref var varBlocks = ref _varInBlock.Map.GetSurePresentEntryRef(i);
                     if (varBlocks.Value.Count == _blockCount)
-                        varBlocks.Value.RemoveLastSurePresentItem();
+                        varBlocks.Value.RemoveLastSurePresent();
                 }
                 --_blockCount;
             }
@@ -835,7 +835,7 @@ namespace FastExpressionCompiler
             {
                 ref var blocks = ref _varInBlock.Map.TryGetValueRef(varParamExpr, out var found);
                 return found && blocks.Count != 0 // rare case with the block count 0 may occur when we collected the block and vars, but not yet defined the variable for it
-                    ? (int)(blocks.GetLastSurePresentItem() & ushort.MaxValue)
+                    ? (int)(blocks.GetLastSurePresentRef() & ushort.MaxValue)
                     : -1;
             }
         }

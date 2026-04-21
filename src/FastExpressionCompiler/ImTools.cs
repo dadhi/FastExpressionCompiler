@@ -746,7 +746,7 @@ public interface ISmallList<T> : IIndexed<T>, IEnumerable<T>
     int TryGetIndex<TEq>(in T item, TEq eq = default) where TEq : struct, IEq<T>;
 
     /// <summary>Removes the last item from the list. List should not be empty.</summary>
-    void RemoveLastSurePresentItem();
+    void RemoveLastSurePresent();
 
     /// <summary>Clears the list.</summary>
     void Clear();
@@ -905,7 +905,7 @@ public struct SmallList<T, TStack, TPool> : ISmallList<T>
     /// <summary>Returns last present item ref, assumes that the list is not empty!</summary>
     [UnscopedRef]
     [MethodImpl((MethodImplOptions)256)]
-    public ref T GetLastSurePresentItem()
+    public ref T GetLastSurePresentRef()
     {
         Debug.Assert(_count > 0, "Expecting that the list is not empty");
         return ref GetSurePresentRef(_count - 1);
@@ -913,7 +913,7 @@ public struct SmallList<T, TStack, TPool> : ISmallList<T>
 
     /// <summary>Removes the last item from the list aka the Stack Pop. Assumes that the list is not empty!</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public void RemoveLastSurePresentItem()
+    public void RemoveLastSurePresent()
     {
         Debug.Assert(_count > 0, "SmallList.RemoveLastSurePresentItem: Expecting that the list is not empty");
         GetSurePresentRef(_count - 1) = default;

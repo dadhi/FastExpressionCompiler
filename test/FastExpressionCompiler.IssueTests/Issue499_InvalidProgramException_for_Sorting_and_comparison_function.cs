@@ -24,7 +24,7 @@ public struct Issue499_InvalidProgramException_for_Sorting_and_comparison_functi
     }
 
     // Reproduces the sorting use-case from https://github.com/dadhi/FastExpressionCompiler/issues/499
-    // using the same nested-loop pattern as SortCompiler.Compile but minimised to a plain int[].
+    // using the same nested-loop pattern as SortCompiler.Compile but minimized to a plain int[].
     // The outer loop drives a quicksort-style partition; two inner loops advance the i/j cursors.
     public void Quicksort_partition_with_nested_loops(TestContext t)
     {
@@ -108,7 +108,7 @@ public struct Issue499_InvalidProgramException_for_Sorting_and_comparison_functi
 
     // Reproduces the comparison-function use-case from https://github.com/dadhi/FastExpressionCompiler/issues/499
     // using the same Return(label, value) / goto pattern as SortCompiler.CompileComparisonFunction
-    // but minimised to a plain int comparison (DESC order, like the original failing test).
+    // but minimized to a plain int comparison (DESC order, like the original failing test).
     public void Comparison_function_with_goto_labels(TestContext t)
     {
         var left = Parameter(typeof(int), "left");
