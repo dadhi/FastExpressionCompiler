@@ -1,9 +1,29 @@
 name: Publish
 
+# Triggered automatically when a tag matching "v*.*.*" is pushed, e.g. `git tag v5.4.1 && git push --tags`
+
 on:
   push:
     tags:
       - "v*.*.*"
+
+# Required secrets / permissions:
+#
+# 1. secrets.GITHUB_TOKEN  — automatically injected by GitHub Actions for every run; no setup required.
+#    It is used to authenticate pushes to GitHub Packages (https://nuget.pkg.github.com/dadhi/index.json).
+#    The token only needs `packages: write` permission, which is already granted to GITHUB_TOKEN by default
+#    for public repos.  If you ever restrict default permissions, add:
+#      permissions:
+#        packages: write
+#    at the job level.
+#
+# 2. secrets.NUGET_API_KEY — a personal API key for https://www.nuget.org.
+#    How to obtain and store it:
+#      a. Log in to https://www.nuget.org → account menu → "API Keys" → "Create".
+#      b. Set the key scope to "Push" and select the relevant package IDs (or use a glob).
+#      c. Copy the generated key.
+#      d. In this GitHub repo go to Settings → Secrets and variables → Actions → "New repository secret".
+#      e. Name it exactly  NUGET_API_KEY  and paste the key as the value.
 
 jobs:
   build:
@@ -19,6 +39,10 @@ jobs:
         with:
           global-json-file: global.json
 
+      # The classic NuGet CLI is required because .nuspec files are not supported by `dotnet pack`.
+      - name: Install NuGet CLI
+        uses: nuget/setup-nuget@v2
+
       - name: Build
         run: dotnet build -c:Release
 
@@ -26,22 +50,31 @@ jobs:
         shell: pwsh
         run: ./BuildScripts/MakeInternal.ps1
 
-      - name: Pack with dotnet
+      - name: Pack
         run: |
-          arrTag=(${GITHUB_REF//\// })
-          VERSION="${arrTag[2]}"
-          VERSION="${VERSION//v}"
-          echo "$VERSION"
-
-          dotnet pack --no-build --output artifacts -p:Version=$VERSION -p:ContinuousIntegrationBuild=True ./nuspecs/FastExpressionCompiler.src.nuspec
-          dotnet pack --no-build --output artifacts -p:Version=$VERSION -p:ContinuousIntegrationBuild=True ./nuspecs/FastExpressionCompiler.LightExpression.src.nuspec
-          dotnet pack --no-build --output artifacts -p:Version=$VERSION -p:ContinuousIntegrationBuild=True ./nuspecs/FastExpressionCompiler.Internal.src.nuspec
-          dotnet pack --no-build --output artifacts -p:Version=$VERSION -p:ContinuousIntegrationBuild=True ./nuspecs/FastExpressionCompiler.LightExpression.Internal.src.nuspec
+          # GITHUB_REF_NAME is the tag name, e.g. "v5.4.1"; strip the leading "v" to get the NuGet version.
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "Packing version: $VERSION"
+          mkdir -p artifacts
+          nuget pack ./nuspecs/FastExpressionCompiler.src.nuspec -OutputDirectory artifacts -Version $VERSION -NonInteractive
+          nuget pack ./nuspecs/FastExpressionCompiler.LightExpression.src.nuspec -OutputDirectory artifacts -Version $VERSION -NonInteractive
+          nuget pack ./nuspecs/FastExpressionCompiler.Internal.src.nuspec -OutputDirectory artifacts -Version $VERSION -NonInteractive
+          nuget pack ./nuspecs/FastExpressionCompiler.LightExpression.Internal.src.nuspec -OutputDirectory artifacts -Version $VERSION -NonInteractive
 
       - uses: actions/upload-artifact@v4
         with:
           name: Packages
           path: ./artifacts
 
-    # - name: Push with dotnet
-    #   run: dotnet nuget push artifacts/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+      # Pushes to the GitHub Packages NuGet feed for this repository.
+      # GITHUB_TOKEN is provided automatically — no manual secret setup needed.
+      # --store-password-in-clear-text is required on Linux because the system credential store is unavailable;
+      # it is safe here because GitHub Actions runners are ephemeral and credentials are never persisted.
+      - name: Push to GitHub Packages
+        run: |
+          dotnet nuget add source --username dadhi --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/dadhi/index.json"
+          dotnet nuget push artifacts/*.nupkg --source github --skip-duplicate
+
+      # Pushes to nuget.org. Requires the NUGET_API_KEY secret (see setup instructions above).
+      - name: Push to NuGet.org
+        run: dotnet nuget push artifacts/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate

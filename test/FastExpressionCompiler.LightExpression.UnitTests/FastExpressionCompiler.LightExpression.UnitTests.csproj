@@ -15,4 +15,12 @@
         <ProjectReference Include="..\..\src\FastExpressionCompiler.LightExpression\FastExpressionCompiler.LightExpression.csproj" />
     </ItemGroup>
 
+    <ItemGroup Condition="'$(TargetFramework)' == 'net472'">
+        <Reference Include="Microsoft.CSharp" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(TargetFramework)' == 'net8.0' OR '$(TargetFramework)' == 'net9.0'">
+      <PackageReference Include="CsCheck" Version="4.6.2" />
+    </ItemGroup>
+
 </Project>

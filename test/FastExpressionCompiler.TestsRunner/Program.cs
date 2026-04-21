@@ -55,6 +55,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new Issue498_InvalidProgramException_when_using_loop());
             st.Run(new Issue495_Incomplete_pattern_detection_for_NotSupported_1007_Return_goto_from_TryCatch_with_Assign_generates_invalid_IL());
             st.Run(new Issue480_CLR_detected_an_invalid_program_exception());
+            st.Run(new Issue431_Add_structural_equality_comparison_to_LightExpression());
 #if NET8_0_OR_GREATER
             st.Run(new Issue487_Fix_ToCSharpString_output_for_boolean_equality_expressions());
             st.Run(new Issue475_Reuse_DynamicMethod_if_possible());
@@ -67,6 +68,7 @@ namespace FastExpressionCompiler.UnitTests
 #endif
 
             lt.Run(new LightExpression.IssueTests.Issue398_Optimize_Switch_with_OpCodes_Switch());
+            lt.Run(new LightExpression.IssueTests.Issue431_Add_structural_equality_comparison_to_LightExpression());
             lt.Run(new LightExpression.IssueTests.Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET());
             lt.Run(new LightExpression.IssueTests.Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_expressions_during_the_compilation());
             lt.Run(new LightExpression.IssueTests.Issue473_InvalidProgramException_when_using_Expression_Condition_with_converted_decimal_expression());
@@ -107,7 +109,7 @@ namespace FastExpressionCompiler.UnitTests
 
             Console.WriteLine("""
 
-            ### .NET Latest (Core): Running UnitTests and IssueTests in parallel...
+            //## .NET Latest (Core): Running UnitTests and IssueTests in parallel...
             """);
 
             var sw = Stopwatch.StartNew();
@@ -165,7 +167,7 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new ToCSharpStringTests().Run);
                 Run(new LightExpression.UnitTests.ToCSharpStringTests().Run);
 
-                Console.WriteLine($"{Environment.NewLine}UnitTests are passing in {sw.ElapsedMilliseconds} ms.");
+                Console.WriteLine($"{Environment.NewLine}//UnitTests are passing in {sw.ElapsedMilliseconds} ms.");
 
             });
 
@@ -427,7 +429,7 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue461_InvalidProgramException_when_null_checking_type_by_ref().Run);
                 Run(new LightExpression.IssueTests.Issue461_InvalidProgramException_when_null_checking_type_by_ref().Run);
 
-                Console.WriteLine($"{Environment.NewLine}IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
+                Console.WriteLine($"{Environment.NewLine}//IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
 
             Task.WaitAll(unitTests, issueTests);
@@ -439,7 +441,7 @@ namespace FastExpressionCompiler.UnitTests
                 return;
             }
 
-            Console.WriteLine($"ALL {totalTestsPassed,-4} tests are passing in {sw.ElapsedMilliseconds} ms.");
+            Console.WriteLine($"//ALL {totalTestsPassed,-4} tests are passing in {sw.ElapsedMilliseconds} ms.");
         }
     }
 }

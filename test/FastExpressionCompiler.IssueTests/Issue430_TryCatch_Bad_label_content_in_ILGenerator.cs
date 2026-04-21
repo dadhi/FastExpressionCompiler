@@ -42,7 +42,7 @@ public class Issue430_TryCatch_Bad_label_content_in_ILGenerator : ITest
         var sysExpr = expr.ToLambdaExpression();
         var restoredExpr = sysExpr.ToLightExpression();
         restoredExpr.PrintCSharp();
-        Asserts.AreEqual(expr.ToCSharpString(), restoredExpr.ToCSharpString());
+        Asserts.IsTrue(expr.EqualsTo(restoredExpr));
 #endif
 
         var fs = expr.CompileSys();

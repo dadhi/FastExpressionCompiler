@@ -376,6 +376,12 @@ public struct Stack2<T> : IStack<T, Size2, Stack2<T>>
     int IIndexed<T>.Count => Capacity;
 
     internal T _it0, _it1;
+    /// <summary>2 item constructor</summary>
+    public Stack2(T it0, T it1)
+    {
+        _it0 = it0;
+        _it1 = it1;
+    }
 
     /// <inheritdoc/>
     [UnscopedRef]
@@ -587,6 +593,7 @@ public interface ISmallArrayPool<T>
     void ReuseIfPossible(T[] array);
 }
 
+// todo: @feat NoArrayPool and some other similar struct do no hold any state T, so we may move the T from the struct to its method, the we may provide linearity by returning Pooled<T> from the Rent methods
 /// <summary>Implementation of `ISmallArrayPool` which does not pool anything, just creates new arrays</summary>
 public struct NoArrayPool<T> : ISmallArrayPool<T>
 {
@@ -739,7 +746,7 @@ public interface ISmallList<T> : IIndexed<T>, IEnumerable<T>
     int TryGetIndex<TEq>(in T item, TEq eq = default) where TEq : struct, IEq<T>;
 
     /// <summary>Removes the last item from the list. List should not be empty.</summary>
-    void RemoveLastSurePresentItem();
+    void RemoveLastSurePresent();
 
     /// <summary>Clears the list.</summary>
     void Clear();
@@ -898,7 +905,7 @@ public struct SmallList<T, TStack, TPool> : ISmallList<T>
     /// <summary>Returns last present item ref, assumes that the list is not empty!</summary>
     [UnscopedRef]
     [MethodImpl((MethodImplOptions)256)]
-    public ref T GetLastSurePresentItem()
+    public ref T GetLastSurePresentRef()
     {
         Debug.Assert(_count > 0, "Expecting that the list is not empty");
         return ref GetSurePresentRef(_count - 1);
@@ -906,7 +913,7 @@ public struct SmallList<T, TStack, TPool> : ISmallList<T>
 
     /// <summary>Removes the last item from the list aka the Stack Pop. Assumes that the list is not empty!</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public void RemoveLastSurePresentItem()
+    public void RemoveLastSurePresent()
     {
         Debug.Assert(_count > 0, "SmallList.RemoveLastSurePresentItem: Expecting that the list is not empty");
         GetSurePresentRef(_count - 1) = default;
