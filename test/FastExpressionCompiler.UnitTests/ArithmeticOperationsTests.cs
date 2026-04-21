@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Numerics;
+using System.Reflection.Emit;
 
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
@@ -18,6 +19,7 @@ namespace FastExpressionCompiler.UnitTests
             Can_modulus_custom_in_Action();
             Can_add_string_and_not_string();
             Can_modulus_custom();
+            Can_modulus_with_unsigned_block_local_variable();
             Can_sum_bytes_converted_to_ints();
             Can_sum_signed_bytes_converted_to_ints();
             Can_sum_all_primitive_numeric_types_that_define_binary_operator_add();
@@ -47,7 +49,7 @@ namespace FastExpressionCompiler.UnitTests
             Can_calculate_arithmetic_operation_with_vectors();
             Can_add_strings();
 
-            return 29;
+            return 30;
         }
 
         public void Can_sum_bytes_converted_to_ints()
@@ -227,6 +229,31 @@ namespace FastExpressionCompiler.UnitTests
 
             Asserts.IsNotNull(f);
             Asserts.AreEqual(1, f(7, 6));
+        }
+
+        public void Can_modulus_with_unsigned_block_local_variable()
+        {
+            var b = Parameter(typeof(uint), "b");
+            var a = Variable(typeof(uint), "a");
+            var expr = Lambda<Func<uint, uint>>(
+                Block(new[] { a },
+                    Assign(a, Constant(0x80000000u)),
+                    Modulo(a, b)),
+                b);
+
+            var fs = expr.CompileSys();
+            var ff = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
+
+            Asserts.AreEqual(2u, fs(3u));
+            Asserts.AreEqual(2u, ff(3u));
+            ff.AssertOpCodes(
+                OpCodes.Ldc_I4,
+                OpCodes.Stloc_0,
+                OpCodes.Ldloc_0,
+                OpCodes.Ldarg_1,
+                OpCodes.Rem_Un,
+                OpCodes.Ret
+            );
         }
 
 
