@@ -704,7 +704,9 @@ namespace FastExpressionCompiler
             /// <summary>Returns the immediate parent expression being emitted, or <see langword="null"/> when absent.</summary>
             public Expression ParentEmittingExpression => GetEmittingExpressionOrDefault(1);
 
-            /// <summary>Returns the expression from the current emit stack at the specified depth, where 0 is the current expression.</summary>
+            /// <summary>Returns the expression from the current emit stack at the specified depth.
+            /// Depth 0 is the current expression, depth 1 is its parent, and so on.
+            /// Returns <see langword="null"/> when the requested depth is outside of the available stack frames.</summary>
             [MethodImpl((MethodImplOptions)256)]
             public Expression GetEmittingExpressionOrDefault(int depth = 0)
             {

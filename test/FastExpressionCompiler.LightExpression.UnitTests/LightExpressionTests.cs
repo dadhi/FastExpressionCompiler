@@ -303,12 +303,12 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             public override Type Type => typeof(string);
             public override bool IsIntrinsic => true;
 
-            public Expression ExpectedParent;
-            public Expression ExpectedGrandParent;
-            public Expression SeenCurrentExpression;
-            public Expression SeenParentExpression;
-            public Expression SeenGrandParentExpression;
-            public Expression SeenGreatGrandParentExpression;
+            internal Expression ExpectedParent;
+            internal Expression ExpectedGrandParent;
+            internal Expression SeenCurrentExpression;
+            internal Expression SeenParentExpression;
+            internal Expression SeenGrandParentExpression;
+            internal Expression SeenGreatGrandParentExpression;
 
             public ParentTrackingConvertExpression(Expression operand) : base(operand) { }
 
