@@ -70,7 +70,7 @@ public struct Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_
         t.IsTrue(ff(false));
     }
 
-    // Branch elimination: Constant(null) == Default(typeof(X)) where X is a class → always true
+    // Branch elimination: Constant(null) == Default(typeof(X)) where X is a class -> always true
     // Models the AutoMapper pattern: after inlining a null argument into a null-check lambda
     public void Condition_with_null_constant_equal_to_default_of_class_type_is_eliminated(TestContext t)
     {
@@ -93,7 +93,7 @@ public struct Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_
         t.AreEqual("trueBranch", ff());
     }
 
-    // Branch elimination: Default(typeof(X)) == Constant(null) where X is a class → always true (symmetric)
+    // Branch elimination: Default(typeof(X)) == Constant(null) where X is a class -> always true (symmetric)
     public void Condition_with_default_class_type_equal_to_null_constant_is_eliminated(TestContext t)
     {
         var expr = Lambda<Func<string>>(
@@ -113,7 +113,7 @@ public struct Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_
         t.AreEqual("trueBranch", ff());
     }
 
-    // Branch elimination: Default(typeof(X)) == Default(typeof(X)) where X is a class → always true
+    // Branch elimination: Default(typeof(X)) == Default(typeof(X)) where X is a class -> always true
     public void Condition_with_two_defaults_of_class_type_is_eliminated(TestContext t)
     {
         var expr = Lambda<Func<string>>(
@@ -133,7 +133,7 @@ public struct Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_
         t.AreEqual("trueBranch", ff());
     }
 
-    // Branch elimination: Constant(null) != Default(typeof(X)) where X is a class → always false
+    // Branch elimination: Constant(null) != Default(typeof(X)) where X is a class -> always false
     public void Condition_with_not_equal_null_and_default_of_class_type_is_eliminated(TestContext t)
     {
         var expr = Lambda<Func<string>>(
@@ -153,7 +153,7 @@ public struct Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_
         t.AreEqual("falseBranch", ff());
     }
 
-    // Branch elimination: Constant(null) == Default(typeof(int?)) → always true (null == default(int?) is null == null)
+    // Branch elimination: Constant(null) == Default(typeof(int?)) -> always true (null == default(int?) is null == null)
     public void Condition_with_nullable_default_equal_to_null_is_eliminated(TestContext t)
     {
         var expr = Lambda<Func<int?>>(
@@ -259,7 +259,7 @@ public struct Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_
         t.AreEqual("green", ff());
     }
 
-    // Switch branch elimination (#489): constant int matches no case → default is emitted
+    // Switch branch elimination (#489): constant int matches no case -> default is emitted
     public void Switch_with_constant_int_matching_no_case_falls_through_to_default(TestContext t)
     {
         var expr = Lambda<Func<string>>(
@@ -282,7 +282,7 @@ public struct Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_
     // Switch branch elimination (#489): computed int (arithmetic on constants) selects case
     public void Switch_with_interpreted_int_expression_eliminates_dead_cases(TestContext t)
     {
-        // Switch(1 + 4, ...) → Switch(5, ...) → "C"
+        // Switch(1 + 4, ...) -> Switch(5, ...) -> "C"
         var expr = Lambda<Func<string>>(
             Switch(Add(Constant(1), Constant(4)),
                 Constant("Z"),

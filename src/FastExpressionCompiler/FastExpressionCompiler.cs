@@ -1470,7 +1470,7 @@ namespace FastExpressionCompiler
                                 expr = switchMatchedBody;
                                 continue;
                             }
-                            return r; // no matched body and no default → nothing to collect
+                            return r; // no matched body and no default -> nothing to collect
                         }
                         if ((r = TryCollectInfo(ref context, switchExpr.SwitchValue, nestedLambda, ref rootNestedLambdas)) != Result.OK ||
                             switchExpr.DefaultBody != null && // todo: @check is the order of collection affects the result?
@@ -2070,7 +2070,7 @@ namespace FastExpressionCompiler
                                 expr = testIsTrue ? condExpr.IfTrue : condExpr.IfFalse;
                                 continue; // no recursion, just continue with the left or right side of condition
                             }
-                            // Try structural branch elimination (e.g., null == Default(X) → always true/false)
+                            // Try structural branch elimination (e.g., null == Default(X) -> always true/false)
                             {
                                 var reducedCond = Tools.TryReduceConditional(condExpr);
                                 if (!ReferenceEquals(reducedCond, condExpr))

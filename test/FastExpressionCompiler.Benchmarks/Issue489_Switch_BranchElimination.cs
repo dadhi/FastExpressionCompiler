@@ -9,8 +9,8 @@ namespace FastExpressionCompiler.Benchmarks;
 /// Benchmarks for compile-time switch branch elimination introduced in #489.
 ///
 /// Two variants are compared:
-///   - Baseline:    Switch value is a runtime parameter — FEC cannot eliminate any branches.
-///   - Eliminated:  Switch value is a compile-time constant — FEC selects the single matching
+///   - Baseline:    Switch value is a runtime parameter - FEC cannot eliminate any branches.
+///   - Eliminated:  Switch value is a compile-time constant - FEC selects the single matching
 ///                  branch and emits only that, skipping closure collection and IL for all others.
 ///
 /// Each variant has two nested classes:
@@ -27,7 +27,7 @@ public class Issue489_Switch_BranchElimination
     // -----------------------------------------------------------------
 
     /// <summary>
-    /// Baseline: the switch value is a runtime parameter — no elimination possible.
+    /// Baseline: the switch value is a runtime parameter - no elimination possible.
     ///   switch (x) { case 1: "A"; case 2: "B"; case 5: "C"; default: "Z" }
     /// </summary>
     private static Expression<Func<int, string>> CreateExpr_Baseline()
@@ -70,7 +70,7 @@ public class Issue489_Switch_BranchElimination
     public class Compile
     {
         /*
-        ## Results placeholder — run with: dotnet run -c Release --project test/FastExpressionCompiler.Benchmarks -- --filter *Issue489*Compile*
+        ## Results placeholder - run with: dotnet run -c Release --project test/FastExpressionCompiler.Benchmarks -- --filter *Issue489*Compile*
 
         | Method                       | Mean      | Error    | StdDev   | Ratio | Rank | Allocated |
         |----------------------------- |----------:|---------:|---------:|------:|-----:|----------:|
@@ -109,7 +109,7 @@ public class Issue489_Switch_BranchElimination
     public class Invoke
     {
         /*
-        ## Results placeholder — run with: dotnet run -c Release --project test/FastExpressionCompiler.Benchmarks -- --filter *Issue489*Invoke*
+        ## Results placeholder - run with: dotnet run -c Release --project test/FastExpressionCompiler.Benchmarks -- --filter *Issue489*Invoke*
 
         | Method                          | Mean | Error | StdDev | Ratio | Rank | Allocated |
         |-------------------------------- |-----:|------:|-------:|------:|-----:|----------:|
