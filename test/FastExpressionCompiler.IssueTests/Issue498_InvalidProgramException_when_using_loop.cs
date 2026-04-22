@@ -96,9 +96,9 @@ public struct Issue498_InvalidProgramException_when_using_loop : ITestX
            OpCodes.Ldc_I4_1, //       at IL_0024
            OpCodes.Add, //            at IL_0025
            OpCodes.Stloc_1, //        at IL_0026
-           OpCodes.Br, // IL_0000     at IL_0027
-           OpCodes.Br, // IL_0000     at IL_0032
-           OpCodes.Ret  //            at IL_0037
+           OpCodes.Br_S, // IL_0000   at IL_0027 (short backward branch: fits in sbyte)
+           OpCodes.Br_S, // IL_0000   at IL_002A (short backward branch: fits in sbyte)
+           OpCodes.Ret  //            at IL_002C
         );
 
         calResult = ff();

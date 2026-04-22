@@ -616,7 +616,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
                 OpCodes.Stloc_1,
                 OpCodes.Br, //60
                 OpCodes.Br, //65
-                OpCodes.Br, //10
+                OpCodes.Br_S, //10 (short backward branch: loop back-jump fits in sbyte)
                 OpCodes.Ldloc_0,
                 OpCodes.Ret
             );
