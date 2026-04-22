@@ -1276,6 +1276,8 @@ public struct ExprTree
         RootIndex = canonical.RootIndex;
         ClosureConstants = canonical.ClosureConstants;
 
+        // Direct raw construction may reuse a previously built subtree by index, so canonicalization may
+        // need to materialize additional live nodes even while dropping unreachable ones.
         if ((flags & CanonicalizeFlags.CompactGaps) != 0 || Nodes.Count < canonical.Nodes.Count)
         {
             Nodes = canonical.Nodes;
@@ -1423,7 +1425,7 @@ public struct ExprTree
         private int CountMisplacedNodes()
         {
             var count = 0;
-            var compareCount = _source.Nodes.Count < _canonical.Nodes.Count ? _source.Nodes.Count : _canonical.Nodes.Count;
+            var compareCount = Math.Min(_source.Nodes.Count, _canonical.Nodes.Count);
             for (var i = 0; i < compareCount; ++i)
                 if (!AreCanonicalNodesEqual(_source.Nodes[i], _canonical.Nodes[i]))
                     ++count;
