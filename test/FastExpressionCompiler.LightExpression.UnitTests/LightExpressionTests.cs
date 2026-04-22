@@ -535,7 +535,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
             var ex = Asserts.Throws<InvalidOperationException>(() => fe.ToCanonical(true));
 
-            Asserts.Contains("non-linked node", ex.Message);
+            Asserts.Contains("orphan node", ex.Message);
         }
 
         private static void AssertFlatShapeIgnoringParameterNamesAndConstantValues(ExprTree expected, ExprTree actual)

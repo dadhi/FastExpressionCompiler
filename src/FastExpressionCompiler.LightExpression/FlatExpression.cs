@@ -1251,7 +1251,7 @@ public struct ExprTree
             {
                 for (var i = 0; i < _reachable.Length; ++i)
                     if (!_reachable[i] && _source.Nodes[i].Type != null)
-                        throw new InvalidOperationException($"Flat expression contains a non-linked node at index {i}.");
+                        throw new InvalidOperationException($"Flat expression contains an orphan node at index {i}.");
             }
 
             return _canonical;
