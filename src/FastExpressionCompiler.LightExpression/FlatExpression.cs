@@ -532,6 +532,13 @@ public struct ExprTree
     public static ExprTree FromLightExpression(LightExpression expression) =>
         FromExpression((expression ?? throw new ArgumentNullException(nameof(expression))).ToExpression());
 
+    /// <summary>Rebuilds the flat tree into the canonical root-reachable node order produced by <see cref="FromExpression(System.Linq.Expressions.Expression)"/>.</summary>
+    [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
+    public ExprTree ToCanonical() =>
+        Nodes.Count != 0
+            ? new Builder().Build(ToExpression())
+            : this;
+
     /// <summary>Reconstructs the flat tree as a System.Linq expression tree.</summary>
     [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
     [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2077",

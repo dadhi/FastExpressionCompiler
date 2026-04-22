@@ -33,8 +33,9 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_convert_dynamic_runtime_variables_and_debug_info_to_light_expression_and_flat_expression();
             Can_build_flat_expression_directly_with_light_expression_like_api();
             Can_build_flat_expression_control_flow_directly();
+            Can_canonicalize_directly_built_flat_expression();
             Can_property_test_generated_flat_expression_roundtrip_structurally();
-            return 17;
+            return 18;
         }
 
 
@@ -484,6 +485,67 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
             Asserts.AreSame(sysLambda.Parameters[0], gotoExpr.Value);
             Asserts.AreSame(gotoExpr.Target, label.Target);
+        }
+
+        public void Can_canonicalize_directly_built_flat_expression()
+        {
+            var fe = default(ExprTree);
+            _ = fe.ConstantInt(123);
+
+            var p = fe.Parameter(typeof(int), "source");
+            var local = fe.Variable(typeof(int), "temp");
+            var target = fe.Label(typeof(int), "done");
+            var nested = fe.Lambda<Func<int>>(fe.Add(local, fe.ConstantInt(1)));
+            fe.RootIndex = fe.Lambda<Func<int, int>>(
+                fe.Block(typeof(int), new[] { local },
+                    fe.Assign(local, p),
+                    fe.Goto(target, fe.Invoke(nested), typeof(int)),
+                    fe.Label(target, fe.ConstantInt(0))),
+                p);
+
+            var canonical = fe.ToCanonical();
+
+            var expectedParameter = SysExpr.Parameter(typeof(int), "p");
+            var expectedVariable = SysExpr.Variable(typeof(int), "v");
+            var expectedTarget = SysExpr.Label(typeof(int), "done");
+            var expected = SysExpr.Lambda<Func<int, int>>(
+                    SysExpr.Block(typeof(int), new[] { expectedVariable },
+                        SysExpr.Assign(expectedVariable, expectedParameter),
+                        SysExpr.Goto(expectedTarget,
+                            SysExpr.Invoke(SysExpr.Lambda<Func<int>>(SysExpr.Add(expectedVariable, SysExpr.Constant(1)))),
+                            typeof(int)),
+                        SysExpr.Label(expectedTarget, SysExpr.Constant(0))),
+                    expectedParameter)
+                .ToFlatExpression();
+
+            Asserts.IsTrue(fe.Nodes.Count > canonical.Nodes.Count);
+            AssertFlatShapeIgnoringParameterNamesAndConstantValues(expected, canonical);
+            Asserts.AreEqual(6, ((System.Linq.Expressions.Expression<Func<int, int>>)canonical.ToExpression()).Compile()(5));
+        }
+
+        private static void AssertFlatShapeIgnoringParameterNamesAndConstantValues(ExprTree expected, ExprTree actual)
+        {
+            Asserts.AreEqual(expected.RootIndex, actual.RootIndex);
+            Asserts.AreEqual(expected.Nodes.Count, actual.Nodes.Count);
+            Asserts.AreEqual(expected.ClosureConstants.Count, actual.ClosureConstants.Count);
+
+            for (var i = 0; i < expected.Nodes.Count; ++i)
+            {
+                var expectedNode = expected.Nodes[i];
+                var actualNode = actual.Nodes[i];
+
+                Asserts.AreEqual(expectedNode.NodeType, actualNode.NodeType);
+                Asserts.AreEqual(expectedNode.Kind, actualNode.Kind);
+                Asserts.AreSame(expectedNode.Type, actualNode.Type);
+                Asserts.AreEqual(expectedNode.ChildIdx, actualNode.ChildIdx);
+                Asserts.AreEqual(expectedNode.ChildCount, actualNode.ChildCount);
+                Asserts.AreEqual(expectedNode.NextIdx, actualNode.NextIdx);
+
+                if (expectedNode.NodeType != ExpressionType.Parameter &&
+                    expectedNode.NodeType != ExpressionType.Constant &&
+                    expectedNode.Kind != ExprNodeKind.LabelTarget)
+                    Asserts.AreEqual(expectedNode.Obj, actualNode.Obj);
+            }
         }
 
         public class A
