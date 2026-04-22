@@ -257,4 +257,6 @@ ApiKey.txt
 FastExpressionCompiler.Internal/
 
 # Scala Metals in VSCode
-metals.*
+metals.**.out
+*.out
+printcs_*.out
