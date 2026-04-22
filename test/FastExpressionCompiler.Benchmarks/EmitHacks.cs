@@ -1,4 +1,4 @@
-#if NET7_0 && !LIGHT_EXPRESSION
+#if NET8_0_OR_GREATER && !LIGHT_EXPRESSION
 
 using System;
 using System.Reflection;
@@ -107,6 +107,62 @@ namespace FastExpressionCompiler.Benchmarks
             public int MethodInfo_Invoke() =>
                 (int)EmitHacksTest.MethodStaticNoArgs.Invoke(null, null);
         }
+
+#if NET10_0_OR_GREATER
+        /// <summary>
+        /// Benchmarks comparing NET10+ fast-emit paths for a minimal DynamicMethod (Ldarg_1, Call, Ret):
+        ///   - Baseline: standard <c>il.Emit()</c>
+        ///   - Hack_UAT: manual byte-writes using UnsafeAccessorType (the raw NET10 approach)
+        ///   - Demit_NoHack: <c>Demit()</c> with <c>UseILEmitHack = false</c> (falls back to il.Emit)
+        ///   - Demit_WithHack: <c>Demit()</c> with <c>UseILEmitHack = true</c> (uses UAT fast path)
+        ///
+        /// Run with:  BenchmarkRunner.Run&lt;EmitHacks.Net10Emit&gt;();
+        /// </summary>
+        [MemoryDiagnoser(displayGenColumns: false)]
+        public class Net10Emit
+        {
+            [GlobalSetup]
+            public void Setup()
+            {
+                // pre-warm the static ctor so startup cost is not measured
+                _ = ILGeneratorTools.UseILEmitHack;
+            }
+
+            [Benchmark(Baseline = true)]
+            public int DynamicMethod_Emit_OpCodes_Call()
+            {
+                var f = EmitHacksTest.Get_DynamicMethod_Emit_OpCodes_Call();
+                return f(41);
+            }
+
+            [Benchmark]
+            public int DynamicMethod_Emit_Hack_UAT()
+            {
+                var f = EmitHacksTest.Get_DynamicMethod_Emit_Hack_Net10();
+                return f(41);
+            }
+
+            [Benchmark]
+            public int DynamicMethod_Demit_NoHack()
+            {
+                ILGeneratorTools.UseILEmitHack = false;
+                try
+                {
+                    var f = EmitHacksTest.Get_DynamicMethod_Demit();
+                    return f(41);
+                }
+                finally { ILGeneratorTools.UseILEmitHack = true; }
+            }
+
+            [Benchmark]
+            public int DynamicMethod_Demit_WithHack()
+            {
+                ILGeneratorTools.UseILEmitHack = true;
+                var f = EmitHacksTest.Get_DynamicMethod_Demit();
+                return f(41);
+            }
+        }
+#endif
 
     }
 }

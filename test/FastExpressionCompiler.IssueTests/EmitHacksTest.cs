@@ -17,7 +17,9 @@ namespace FastExpressionCompiler.IssueTests
             DynamicMethod_Emit_Hack();
 #if NET10_0_OR_GREATER
             DynamicMethod_Emit_Hack_Net10();
-            return 4;
+            DynamicMethod_Demit_WithHack();
+            DynamicMethod_Demit_NoHack();
+            return 6;
 #else
             return 3;
 #endif
@@ -355,6 +357,50 @@ namespace FastExpressionCompiler.IssueTests
         private static readonly ConstructorInfo _ctor = typeof(A).GetConstructor(Type.EmptyTypes);
         public static readonly MethodInfo MethodStaticNoArgs = typeof(A).GetMethod(nameof(A.M));
         public static readonly MethodInfo MethodStatic1Arg = typeof(A).GetMethod(nameof(A.M1));
+
+#if NET10_0_OR_GREATER
+        /// <summary>
+        /// Demonstrates using Demit() which (with UseILEmitHack=true, the NET10+ default) routes through
+        /// direct IL stream writes via UnsafeAccessorType instead of ILGenerator.Emit().
+        /// This is the production-ready counterpart to Get_DynamicMethod_Emit_Hack_Net10().
+        /// </summary>
+        public static Func<int, int> Get_DynamicMethod_Demit()
+        {
+            var dynMethod = new DynamicMethod(string.Empty,
+                typeof(int), new[] { typeof(ExpressionCompiler.ArrayClosure), typeof(int) },
+                typeof(ExpressionCompiler), skipVisibility: true);
+
+            var il = dynMethod.GetILGenerator(16);
+
+            // These Demit calls route through DynamicMethodHacks.HackEmitMethod (NET10+)
+            // when ILGeneratorTools.UseILEmitHack is true (the default).
+            il.Demit(OpCodes.Ldarg_1);
+            il.Demit(OpCodes.Call, MethodStatic1Arg);
+            il.Demit(OpCodes.Ret);
+
+            return (Func<int, int>)dynMethod.CreateDelegate(typeof(Func<int, int>), ExpressionCompiler.EmptyArrayClosure);
+        }
+
+        public void DynamicMethod_Demit_WithHack()
+        {
+            ILGeneratorTools.UseILEmitHack = true;
+            var f = Get_DynamicMethod_Demit();
+            var a = f(41);
+            Asserts.AreEqual(42, a);
+        }
+
+        public void DynamicMethod_Demit_NoHack()
+        {
+            ILGeneratorTools.UseILEmitHack = false;
+            try
+            {
+                var f = Get_DynamicMethod_Demit();
+                var a = f(41);
+                Asserts.AreEqual(42, a);
+            }
+            finally { ILGeneratorTools.UseILEmitHack = true; }
+        }
+#endif
     }
 }
 #endif
