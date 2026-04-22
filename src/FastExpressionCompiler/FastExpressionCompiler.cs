@@ -8373,8 +8373,8 @@ namespace FastExpressionCompiler
         public static bool DisableDemit;
 
         // Tracks the IL offset of each marked label per ILGenerator, used by smart branch emitters to select short form when possible
-        internal static readonly ConditionalWeakTable<ILGenerator, Dictionary<int, int>> _ilLabelPositions =
-            new ConditionalWeakTable<ILGenerator, Dictionary<int, int>>();
+        internal static readonly ConditionalWeakTable<ILGenerator, Dictionary<Label, int>> _ilLabelPositions =
+            new ConditionalWeakTable<ILGenerator, Dictionary<Label, int>>();
 
         // Maps a long-form branch opcode to its short-form equivalent, or returns the same opcode if no short form exists
         [MethodImpl((MethodImplOptions)256)]
@@ -8459,7 +8459,7 @@ namespace FastExpressionCompiler
             var shortFormOpCode = GetShortFormBranchOpCode(opcode);
             if (shortFormOpCode != opcode &&
                 _ilLabelPositions.TryGetValue(il, out var positions) &&
-                positions.TryGetValue(value.GetHashCode(), out var labelOffset))
+                positions.TryGetValue(value, out var labelOffset))
             {
                 // Short form instruction: 2 bytes (opcode + 1-byte offset), so next instruction is at ILOffset + 2
                 var delta = labelOffset - (il.ILOffset + 2);
@@ -8492,7 +8492,7 @@ namespace FastExpressionCompiler
         {
             il.MarkLabel(value);
             // Track the label position for smart branch selection (used by Demit with Label to select short form for backward branches)
-            _ilLabelPositions.GetOrCreateValue(il)[value.GetHashCode()] = il.ILOffset;
+            _ilLabelPositions.GetOrCreateValue(il)[value] = il.ILOffset;
             if (DisableDemit) return;
             Debug.WriteLine($"MarkLabel: {valueName ?? value.ToString()}  -- {emitterName}:{emitterLine}");
         }
@@ -8585,7 +8585,7 @@ namespace FastExpressionCompiler
             var shortFormOpCode = GetShortFormBranchOpCode(opcode);
             if (shortFormOpCode != opcode &&
                 _ilLabelPositions.TryGetValue(il, out var positions) &&
-                positions.TryGetValue(value.GetHashCode(), out var labelOffset))
+                positions.TryGetValue(value, out var labelOffset))
             {
                 // Short form instruction: 2 bytes (opcode + 1-byte offset), so next instruction is at ILOffset + 2
                 var delta = labelOffset - (il.ILOffset + 2);
@@ -8606,7 +8606,7 @@ namespace FastExpressionCompiler
         {
             il.MarkLabel(value);
             // Track the label position for smart branch selection (used by Demit with Label to select short form for backward branches)
-            _ilLabelPositions.GetOrCreateValue(il)[value.GetHashCode()] = il.ILOffset;
+            _ilLabelPositions.GetOrCreateValue(il)[value] = il.ILOffset;
         }
 
         [MethodImpl((MethodImplOptions)256)]
