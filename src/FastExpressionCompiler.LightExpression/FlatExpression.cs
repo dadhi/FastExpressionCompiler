@@ -1292,6 +1292,7 @@ public struct ExprTree
             Nodes[i] = default;
     }
 
+    /// <summary>Treats nodes with non-null <see cref="ExprNode.Type"/> as live and default-cleared nodes as ignorable gaps.</summary>
     private static bool HasLiveNode(in ExprNode node) => node.Type != null;
 
     private static bool AreCanonicalNodesEqual(in ExprNode x, in ExprNode y) =>

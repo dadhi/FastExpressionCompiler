@@ -550,7 +550,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.IsTrue(canonical.IsCanonical(out var misplacedAfter, out var unreachableAfter));
             Asserts.AreEqual(0, misplacedAfter);
             Asserts.AreEqual(0, unreachableAfter);
-            Asserts.AreEqual(null, canonical.Nodes[canonical.Nodes.Count - 1].Type);
+            Asserts.IsNull(canonical.Nodes[canonical.Nodes.Count - 1].Type);
 
             var compacted = fe.Copy();
             compacted.Canonicalize(out var compactedUnreachableNodeCount, CanonicalizeFlags.CompactGaps);
