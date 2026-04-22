@@ -1312,7 +1312,7 @@ public struct ExprTree
                 value32 = unchecked((int)(uint)value);
                 return true;
             case TypeCode.Single:
-                value32 = BitConverter.SingleToInt32Bits((float)value);
+                value32 = ConvertSingleToInt32Bits((float)value);
                 return true;
             default:
                 value32 = default;
@@ -1342,10 +1342,28 @@ public struct ExprTree
             TypeCode.UInt16 => (ushort)value32,
             TypeCode.Int32 => value32,
             TypeCode.UInt32 => unchecked((uint)value32),
-            TypeCode.Single => BitConverter.Int32BitsToSingle(value32),
+            TypeCode.Single => ConvertInt32BitsToSingle(value32),
             _ => Throw.UnsupportedInlineConstantType<object>(type)
         };
     }
+
+    [StructLayout(LayoutKind.Explicit)]
+    private struct SingleInt32Union
+    {
+        [FieldOffset(0)]
+        public float Single;
+
+        [FieldOffset(0)]
+        public int Int32;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int ConvertSingleToInt32Bits(float value) =>
+        new SingleInt32Union { Single = value }.Int32;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static float ConvertInt32BitsToSingle(int value) =>
+        new SingleInt32Union { Int32 = value }.Single;
 
     private ChildList GetChildren(int index)
     {
