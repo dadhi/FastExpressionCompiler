@@ -9050,6 +9050,15 @@ namespace FastExpressionCompiler
                     return localBuilder;
                 }
                 */
+#if NET10_0_OR_GREATER
+                // In .NET 10+, use UnsafeAccessorType to directly access RuntimeILGenerator's private fields
+                // without the need for reflection-based DynamicMethod generation at startup
+                GetNextLocalVarLocation = static (il, t) =>
+                {
+                    GetMLocalSignature(il).AddArgument(t, false);
+                    return PostInc(ref GetMLocalCount(il));
+                };
+#else
                 // Let's try to acquire the more efficient less allocating method
                 var m_localSignatureField = DynamicILGeneratorType.GetField("m_localSignature", instanceNonPublic);
                 if (m_localSignatureField == null)
@@ -9095,6 +9104,7 @@ namespace FastExpressionCompiler
 
                 ExpressionCompiler.FreePooledParamTypes(paramTypes);
             endOfGetNextVar:;
+#endif
             }
 
             // Restore the demit
@@ -9220,6 +9230,43 @@ namespace FastExpressionCompiler
             m_length += 4;
         }
         */
+
+#if NET10_0_OR_GREATER
+        // UnsafeAccessorType methods for accessing private fields of the non-public RuntimeILGenerator class.
+        // RuntimeILGenerator is the internal base class of DynamicILGenerator that holds the core IL generation state.
+        // Using UnsafeAccessorType avoids reflection at call time and is compatible with AOT compilation.
+
+        /// <summary>Gets a ref to the <c>m_localSignature</c> field of the ILGenerator (declared in the internal RuntimeILGenerator).</summary>
+        [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "m_localSignature")]
+        internal static extern ref SignatureHelper GetMLocalSignature(
+            [UnsafeAccessorType("System.Reflection.Emit.RuntimeILGenerator")] object il);
+
+        /// <summary>Gets a ref to the <c>m_localCount</c> field of the ILGenerator (declared in the internal RuntimeILGenerator).</summary>
+        [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "m_localCount")]
+        internal static extern ref int GetMLocalCount(
+            [UnsafeAccessorType("System.Reflection.Emit.RuntimeILGenerator")] object il);
+
+        /// <summary>Gets a ref to the <c>m_length</c> field of the ILGenerator (declared in the internal RuntimeILGenerator).</summary>
+        [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "m_length")]
+        internal static extern ref int GetMLength(
+            [UnsafeAccessorType("System.Reflection.Emit.RuntimeILGenerator")] object il);
+
+        /// <summary>Gets a ref to the <c>m_ILStream</c> field of the ILGenerator (declared in the internal RuntimeILGenerator).</summary>
+        [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "m_ILStream")]
+        internal static extern ref byte[] GetMILStream(
+            [UnsafeAccessorType("System.Reflection.Emit.RuntimeILGenerator")] object il);
+
+        /// <summary>Calls the internal <c>UpdateStackSize</c> method on the ILGenerator (declared in the internal RuntimeILGenerator).</summary>
+        [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "UpdateStackSize")]
+        internal static extern void UpdateStackSize(
+            [UnsafeAccessorType("System.Reflection.Emit.RuntimeILGenerator")] object il,
+            OpCode opcode, int stackchange);
+
+        /// <summary>Gets a ref to the <c>m_tokens</c> field on a DynamicScope instance (internal type).</summary>
+        [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "m_tokens")]
+        internal static extern ref System.Collections.Generic.List<object> GetMTokens(
+            [UnsafeAccessorType("System.Reflection.Emit.DynamicScope")] object scope);
+#endif
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]
