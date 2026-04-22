@@ -60,6 +60,7 @@ public struct ExprNode
     private const ulong ChildInfoMask = ChildCountMask | IndexMask;
     private const ulong KeepWithoutNextMask = ~NextMask;
     private const ulong KeepWithoutChildInfoMask = ~ChildInfoMask;
+    private const ulong KeepWithoutTagAndNextMask = ~(NextMask | (0xFFUL << TagShift));
     private const int FlagsShift = 4;
 
     /// <summary>Gets or sets the runtime type of the represented node.</summary>
@@ -89,6 +90,8 @@ public struct ExprNode
     /// <summary>Gets the first child index or an auxiliary payload index.</summary>
     public int ChildIdx => (int)(_data & IndexMask);
 
+    internal int Value32 => unchecked((int)(_data & 0xFFFFFFFF));
+
     internal ExprNode(Type type, object obj, ExpressionType nodeType, ExprNodeKind kind, byte flags = 0, int childIdx = 0, int childCount = 0, int nextIdx = 0)
     {
         Type = type;
@@ -102,14 +105,28 @@ public struct ExprNode
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal void SetNextIdx(int nextIdx) =>
-        _data = (_data & KeepWithoutNextMask) | ((ulong)(ushort)nextIdx << NextShift);
+    internal void SetNextIdx(int nextIdx, bool pointsToParent = false)
+    {
+        var tag = (byte)(_data >> TagShift);
+        var nextPointsToParentMask = (byte)(ExprTree.NextPointsToParentFlag << FlagsShift);
+        tag = pointsToParent
+            ? (byte)(tag | nextPointsToParentMask)
+            : (byte)(tag & ~nextPointsToParentMask);
+        _data = (_data & KeepWithoutTagAndNextMask)
+            | ((ulong)tag << TagShift)
+            | ((ulong)(ushort)nextIdx << NextShift);
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void SetChildInfo(int childIdx, int childCount) =>
         _data = (_data & KeepWithoutChildInfoMask)
             | ((ulong)(ushort)childCount << CountShift)
             | (ushort)childIdx;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void SetValue32(int value) =>
+        _data = (_data & KeepWithoutChildInfoMask)
+            | (uint)value;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool Is(ExprNodeKind kind) => Kind == kind;
@@ -121,6 +138,13 @@ public struct ExprNode
     internal bool HasFlag(byte flag) => (Flags & flag) != 0;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal bool NextPointsToParent() => HasFlag(ExprTree.NextPointsToParentFlag);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal bool IsParameterDeclaration() =>
+        NodeType == ExpressionType.Parameter && HasFlag(ExprTree.ParameterDeclarationFlag);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool ShouldCloneWhenLinked() =>
         Kind == ExprNodeKind.LabelTarget || NodeType == ExpressionType.Parameter || Kind == ExprNodeKind.ObjectReference || ChildCount == 0;
 }
@@ -128,14 +152,17 @@ public struct ExprNode
 /// <summary>Stores an expression tree as a flat node array plus out-of-line closure constants.</summary>
 public struct ExprTree
 {
-    private static readonly object ClosureConstantMarker = new();
-    private const byte ParameterByRefFlag = 1;
+    internal const byte ParameterByRefFlag = 1;
+    internal const byte ParameterDeclarationFlag = 2;
+    private const byte ConstantInlineValue32Flag = 1;
     private const byte BinaryLiftedToNullFlag = 1;
     private const byte LoopHasBreakFlag = 1;
     private const byte LoopHasContinueFlag = 2;
     private const byte CatchHasVariableFlag = 1;
     private const byte CatchHasFilterFlag = 2;
     private const byte TryFaultFlag = 1;
+    internal const byte NextPointsToParentFlag = 8;
+    private const ushort UnboundParameterScopeIndex = ushort.MaxValue;
 
     /// <summary>Gets or sets the root node index.</summary>
     public int RootIndex;
@@ -149,8 +176,10 @@ public struct ExprTree
     /// <summary>Adds a parameter node and returns its index.</summary>
     public int Parameter(Type type, string name = null)
     {
-        var id = Nodes.Count + 1;
-        return AddRawLeafExpressionNode(type, name, ExpressionType.Parameter, type.IsByRef ? ParameterByRefFlag : (byte)0, childIdx: id);
+        var parameterType = type.IsByRef ? type.GetElementType() ?? type : type;
+        return AddRawLeafExpressionNode(parameterType, name, ExpressionType.Parameter,
+            (byte)((type.IsByRef ? ParameterByRefFlag : 0) | ParameterDeclarationFlag),
+            childIdx: UnboundParameterScopeIndex);
     }
 
     /// <summary>Adds a typed parameter node and returns its index.</summary>
@@ -169,18 +198,17 @@ public struct ExprTree
     /// <summary>Adds a constant node with an explicit constant type.</summary>
     public int Constant(object value, Type type)
     {
-        if (ShouldInlineConstant(value, type))
-            return AddRawExpressionNode(type, value, ExpressionType.Constant);
+        if (TryGetInlineConstantValue32(value, type, out var value32))
+            return AddRawInlineConstantNode(type, value32);
 
-        var constantIndex = ClosureConstants.Add(value);
-        return AddRawExpressionNodeWithChildIndex(type, ClosureConstantMarker, ExpressionType.Constant, constantIndex);
+        return AddRawExpressionNode(type, value, ExpressionType.Constant);
     }
 
     /// <summary>Adds a null constant node.</summary>
     public int ConstantNull(Type type = null) => AddRawExpressionNode(type ?? typeof(object), null, ExpressionType.Constant);
 
     /// <summary>Adds an <see cref="int"/> constant node.</summary>
-    public int ConstantInt(int value) => AddRawExpressionNode(typeof(int), value, ExpressionType.Constant);
+    public int ConstantInt(int value) => AddRawInlineConstantNode(typeof(int), value);
 
     /// <summary>Adds a typed constant node.</summary>
     public int ConstantOf<T>(T value) => Constant(value, typeof(T));
@@ -314,15 +342,18 @@ public struct ExprTree
         {
             ChildList variableChildren = default;
             foreach (var variable in variables)
-                variableChildren.Add(variable);
+                variableChildren.Add(RequireParameterDeclarationIndex(variable));
             if (variableChildren.Count != 0)
                 children.Add(AddChildListNode(in variableChildren));
         }
         ChildList bodyChildren = default;
         for (var i = 0; i < expressions.Length; ++i)
-            bodyChildren.Add(expressions[i]);
+            bodyChildren.Add(CloneChild(expressions[i]));
         children.Add(AddChildListNode(in bodyChildren));
-        return AddFactoryExpressionNode(type ?? Nodes[expressions[expressions.Length - 1]].Type, null, ExpressionType.Block, in children);
+        var blockIndex = AddNode(type ?? Nodes.GetSurePresentRef(expressions[expressions.Length - 1]).Type, null, ExpressionType.Block, ExprNodeKind.Expression, 0, in children);
+        if (variables != null && children.Count == 2)
+            BindParameterDeclarations(blockIndex, GetChildren(children[0]));
+        return blockIndex;
     }
 
     /// <summary>Adds a typed lambda node.</summary>
@@ -330,10 +361,25 @@ public struct ExprTree
         Lambda(typeof(TDelegate), body, parameters);
 
     /// <summary>Adds a lambda node.</summary>
-    public int Lambda(Type delegateType, int body, params int[] parameters) =>
-        parameters == null || parameters.Length == 0
-            ? AddFactoryExpressionNode(delegateType, null, ExpressionType.Lambda, 0, body)
-            : AddFactoryExpressionNode(delegateType, null, ExpressionType.Lambda, PrependToChildList(body, parameters));
+    public int Lambda(Type delegateType, int body, params int[] parameters)
+    {
+        if (parameters == null || parameters.Length == 0)
+            return AddFactoryExpressionNode(delegateType, null, ExpressionType.Lambda, 0, body);
+
+        ChildList children = default;
+        children.Add(CloneChild(body));
+        ChildList declarations = default;
+        for (var i = 0; i < parameters.Length; ++i)
+        {
+            var declarationIndex = RequireParameterDeclarationIndex(parameters[i]);
+            declarations.Add(declarationIndex);
+            children.Add(declarationIndex);
+        }
+
+        var lambdaIndex = AddNode(delegateType, null, ExpressionType.Lambda, ExprNodeKind.Expression, 0, in children);
+        BindParameterDeclarations(lambdaIndex, declarations);
+        return lambdaIndex;
+    }
 
     /// <summary>Adds a member-assignment binding node.</summary>
     public int Bind(System.Reflection.MemberInfo member, int expression) =>
@@ -614,6 +660,10 @@ public struct ExprTree
     private int AddRawLeafExpressionNode(Type type, object obj, ExpressionType nodeType, byte flags = 0, int childIdx = 0, int childCount = 0) =>
         AddLeafNode(type, obj, nodeType, ExprNodeKind.Expression, flags, childIdx, childCount);
 
+    private int AddRawInlineConstantNode(Type type, int value32) =>
+        AddRawLeafExpressionNode(type, null, ExpressionType.Constant, ConstantInlineValue32Flag,
+            childIdx: (ushort)value32, childCount: (ushort)(value32 >> 16));
+
     private int AddRawExpressionNodeWithChildIndex(Type type, object obj, ExpressionType nodeType, int childIdx) =>
         AddRawLeafExpressionNode(type, obj, nodeType, childIdx: childIdx);
 
@@ -677,7 +727,7 @@ public struct ExprTree
     /// <summary>Builds the flat representation while preserving parameter and label identity with stack-friendly maps.</summary>
     private struct Builder
     {
-        private SmallMap16<object, int, RefEq<object>> _parameterIds;
+        private SmallMap16<object, int, RefEq<object>> _parameterDeclarations;
         private SmallMap16<object, int, RefEq<object>> _labelIds;
         private ExprTree _tree;
 
@@ -698,34 +748,42 @@ public struct ExprTree
                 case ExpressionType.Parameter:
                     {
                         var parameter = (SysParameterExpression)expression;
-                        return _tree.AddRawLeafExpressionNode(expression.Type, parameter.Name, expression.NodeType,
-                            parameter.IsByRef ? ParameterByRefFlag : (byte)0, childIdx: GetId(ref _parameterIds, parameter));
+                        return AddParameterUsage(parameter);
                     }
                 case ExpressionType.Lambda:
                     {
                         var lambda = (System.Linq.Expressions.LambdaExpression)expression;
-                        ChildList children = default;
-                        children.Add(AddExpression(lambda.Body));
+                        ChildList declarations = default;
                         for (var i = 0; i < lambda.Parameters.Count; ++i)
-                            children.Add(AddExpression(lambda.Parameters[i]));
-                        return _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType, children);
+                            declarations.Add(AddParameterDeclaration(lambda.Parameters[i]));
+                        var body = AddExpression(lambda.Body);
+                        ChildList children = default;
+                        children.Add(body);
+                        for (var i = 0; i < declarations.Count; ++i)
+                            children.Add(declarations[i]);
+                        var lambdaIndex = _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType, children);
+                        _tree.BindParameterDeclarations(lambdaIndex, declarations);
+                        return lambdaIndex;
                     }
                 case ExpressionType.Block:
                     {
                         var block = (System.Linq.Expressions.BlockExpression)expression;
                         ChildList children = default;
+                        ChildList variables = default;
                         if (block.Variables.Count != 0)
                         {
-                            ChildList variables = default;
                             for (var i = 0; i < block.Variables.Count; ++i)
-                                variables.Add(AddExpression(block.Variables[i]));
+                                variables.Add(AddParameterDeclaration(block.Variables[i]));
                             children.Add(_tree.AddChildListNode(in variables));
                         }
                         ChildList expressions = default;
                         for (var i = 0; i < block.Expressions.Count; ++i)
                             expressions.Add(AddExpression(block.Expressions[i]));
                         children.Add(_tree.AddChildListNode(in expressions));
-                        return _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType, in children);
+                        var blockIndex = _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType, in children);
+                        if (variables.Count != 0)
+                            _tree.BindParameterDeclarations(blockIndex, variables);
+                        return blockIndex;
                     }
                 case ExpressionType.MemberAccess:
                     {
@@ -936,11 +994,10 @@ public struct ExprTree
 
         private int AddConstant(System.Linq.Expressions.ConstantExpression constant)
         {
-            if (ShouldInlineConstant(constant.Value, constant.Type))
-                return _tree.AddRawExpressionNode(constant.Type, constant.Value, constant.NodeType);
+            if (TryGetInlineConstantValue32(constant.Value, constant.Type, out var value32))
+                return _tree.AddRawInlineConstantNode(constant.Type, value32);
 
-            var constantIndex = _tree.ClosureConstants.Add(constant.Value);
-            return _tree.AddRawExpressionNodeWithChildIndex(constant.Type, ClosureConstantMarker, constant.NodeType, constantIndex);
+            return _tree.AddRawExpressionNode(constant.Type, constant.Value, constant.NodeType);
         }
 
         private int AddSwitchCase(SysSwitchCase switchCase)
@@ -1005,6 +1062,33 @@ public struct ExprTree
             return _tree.AddRawAuxNode(init.AddMethod.DeclaringType, init.AddMethod, ExprNodeKind.ElementInit, children);
         }
 
+        private int AddParameterDeclaration(SysParameterExpression parameter)
+        {
+            ref var declarationIndex = ref _parameterDeclarations.Map.AddOrGetValueRef(parameter, out var found);
+            if (found)
+                return Throw.DuplicateParameterDeclaration<int>(parameter.Name);
+
+            var parameterType = parameter.IsByRef ? parameter.Type.GetElementType() ?? parameter.Type : parameter.Type;
+            declarationIndex = _tree.AddRawLeafExpressionNode(parameterType, parameter.Name, ExpressionType.Parameter,
+                (byte)((parameter.IsByRef ? ParameterByRefFlag : 0) | ParameterDeclarationFlag),
+                childIdx: UnboundParameterScopeIndex);
+            return declarationIndex;
+        }
+
+        private int AddParameterUsage(SysParameterExpression parameter)
+        {
+            ref var declarationIndex = ref _parameterDeclarations.Map.AddOrGetValueRef(parameter, out var found);
+            if (!found)
+            {
+                var parameterType = parameter.IsByRef ? parameter.Type.GetElementType() ?? parameter.Type : parameter.Type;
+                declarationIndex = _tree.AddRawLeafExpressionNode(parameterType, parameter.Name, ExpressionType.Parameter,
+                    (byte)((parameter.IsByRef ? ParameterByRefFlag : 0) | ParameterDeclarationFlag),
+                    childIdx: UnboundParameterScopeIndex);
+            }
+
+            return _tree.AddParameterUsageNode(in _tree.Nodes.GetSurePresentRef(declarationIndex), declarationIndex);
+        }
+
         private static int GetId(ref SmallMap16<object, int, RefEq<object>> ids, object item)
         {
             ref var id = ref ids.Map.AddOrGetValueRef(item, out var found);
@@ -1042,6 +1126,7 @@ public struct ExprTree
         var nodeIndex = Nodes.Count;
         ref var newNode = ref Nodes.AddDefaultAndGetRef();
         newNode = new ExprNode(type, obj, nodeType, kind, flags, child0, 1);
+        Nodes.GetSurePresentRef(child0).SetNextIdx(nodeIndex, pointsToParent: true);
         return nodeIndex;
     }
 
@@ -1050,7 +1135,8 @@ public struct ExprTree
         var nodeIndex = Nodes.Count;
         ref var newNode = ref Nodes.AddDefaultAndGetRef();
         newNode = new ExprNode(type, obj, nodeType, kind, flags, c0, 2);
-        Nodes[c0].SetNextIdx(c1);
+        Nodes.GetSurePresentRef(c0).SetNextIdx(c1);
+        Nodes.GetSurePresentRef(c1).SetNextIdx(nodeIndex, pointsToParent: true);
         return nodeIndex;
     }
 
@@ -1059,8 +1145,9 @@ public struct ExprTree
         var nodeIndex = Nodes.Count;
         ref var newNode = ref Nodes.AddDefaultAndGetRef();
         newNode = new ExprNode(type, obj, nodeType, kind, flags, c0, 3);
-        Nodes[c0].SetNextIdx(c1);
-        Nodes[c1].SetNextIdx(c2);
+        Nodes.GetSurePresentRef(c0).SetNextIdx(c1);
+        Nodes.GetSurePresentRef(c1).SetNextIdx(c2);
+        Nodes.GetSurePresentRef(c2).SetNextIdx(nodeIndex, pointsToParent: true);
         return nodeIndex;
     }
 
@@ -1069,9 +1156,10 @@ public struct ExprTree
         var nodeIndex = Nodes.Count;
         ref var newNode = ref Nodes.AddDefaultAndGetRef();
         newNode = new ExprNode(type, obj, nodeType, kind, flags, c0, 4);
-        Nodes[c0].SetNextIdx(c1);
-        Nodes[c1].SetNextIdx(c2);
-        Nodes[c2].SetNextIdx(c3);
+        Nodes.GetSurePresentRef(c0).SetNextIdx(c1);
+        Nodes.GetSurePresentRef(c1).SetNextIdx(c2);
+        Nodes.GetSurePresentRef(c2).SetNextIdx(c3);
+        Nodes.GetSurePresentRef(c3).SetNextIdx(nodeIndex, pointsToParent: true);
         return nodeIndex;
     }
 
@@ -1080,10 +1168,11 @@ public struct ExprTree
         var nodeIndex = Nodes.Count;
         ref var newNode = ref Nodes.AddDefaultAndGetRef();
         newNode = new ExprNode(type, obj, nodeType, kind, flags, c0, 5);
-        Nodes[c0].SetNextIdx(c1);
-        Nodes[c1].SetNextIdx(c2);
-        Nodes[c2].SetNextIdx(c3);
-        Nodes[c3].SetNextIdx(c4);
+        Nodes.GetSurePresentRef(c0).SetNextIdx(c1);
+        Nodes.GetSurePresentRef(c1).SetNextIdx(c2);
+        Nodes.GetSurePresentRef(c2).SetNextIdx(c3);
+        Nodes.GetSurePresentRef(c3).SetNextIdx(c4);
+        Nodes.GetSurePresentRef(c4).SetNextIdx(nodeIndex, pointsToParent: true);
         return nodeIndex;
     }
 
@@ -1092,11 +1181,12 @@ public struct ExprTree
         var nodeIndex = Nodes.Count;
         ref var newNode = ref Nodes.AddDefaultAndGetRef();
         newNode = new ExprNode(type, obj, nodeType, kind, flags, c0, 6);
-        Nodes[c0].SetNextIdx(c1);
-        Nodes[c1].SetNextIdx(c2);
-        Nodes[c2].SetNextIdx(c3);
-        Nodes[c3].SetNextIdx(c4);
-        Nodes[c4].SetNextIdx(c5);
+        Nodes.GetSurePresentRef(c0).SetNextIdx(c1);
+        Nodes.GetSurePresentRef(c1).SetNextIdx(c2);
+        Nodes.GetSurePresentRef(c2).SetNextIdx(c3);
+        Nodes.GetSurePresentRef(c3).SetNextIdx(c4);
+        Nodes.GetSurePresentRef(c4).SetNextIdx(c5);
+        Nodes.GetSurePresentRef(c5).SetNextIdx(nodeIndex, pointsToParent: true);
         return nodeIndex;
     }
 
@@ -1105,12 +1195,13 @@ public struct ExprTree
         var nodeIndex = Nodes.Count;
         ref var newNode = ref Nodes.AddDefaultAndGetRef();
         newNode = new ExprNode(type, obj, nodeType, kind, flags, c0, 7);
-        Nodes[c0].SetNextIdx(c1);
-        Nodes[c1].SetNextIdx(c2);
-        Nodes[c2].SetNextIdx(c3);
-        Nodes[c3].SetNextIdx(c4);
-        Nodes[c4].SetNextIdx(c5);
-        Nodes[c5].SetNextIdx(c6);
+        Nodes.GetSurePresentRef(c0).SetNextIdx(c1);
+        Nodes.GetSurePresentRef(c1).SetNextIdx(c2);
+        Nodes.GetSurePresentRef(c2).SetNextIdx(c3);
+        Nodes.GetSurePresentRef(c3).SetNextIdx(c4);
+        Nodes.GetSurePresentRef(c4).SetNextIdx(c5);
+        Nodes.GetSurePresentRef(c5).SetNextIdx(c6);
+        Nodes.GetSurePresentRef(c6).SetNextIdx(nodeIndex, pointsToParent: true);
         return nodeIndex;
     }
 
@@ -1123,7 +1214,8 @@ public struct ExprTree
         ref var newNode = ref Nodes.AddDefaultAndGetRef();
         newNode = new ExprNode(type, obj, nodeType, kind, flags, children[0], children.Length);
         for (var i = 1; i < children.Length; ++i)
-            Nodes[children[i - 1]].SetNextIdx(children[i]);
+            Nodes.GetSurePresentRef(children[i - 1]).SetNextIdx(children[i]);
+        Nodes.GetSurePresentRef(children[children.Length - 1]).SetNextIdx(nodeIndex, pointsToParent: true);
         return nodeIndex;
     }
 
@@ -1136,13 +1228,121 @@ public struct ExprTree
         ref var newNode = ref Nodes.AddDefaultAndGetRef();
         newNode = new ExprNode(type, obj, nodeType, kind, flags, children[0], children.Count);
         for (var i = 1; i < children.Count; ++i)
-            Nodes[children[i - 1]].SetNextIdx(children[i]);
+            Nodes.GetSurePresentRef(children[i - 1]).SetNextIdx(children[i]);
+        Nodes.GetSurePresentRef(children[children.Count - 1]).SetNextIdx(nodeIndex, pointsToParent: true);
         return nodeIndex;
     }
 
+    private int RequireParameterDeclarationIndex(int index)
+    {
+        ref var node = ref Nodes.GetSurePresentRef(index);
+        if (node.IsParameterDeclaration())
+            return index;
+        return Throw.ParameterDeclarationExpected<int>(index);
+    }
+
+    private void BindParameterDeclarations(int ownerIndex, in ChildList declarations)
+    {
+        for (var i = 0; i < declarations.Count; ++i)
+            BindParameterDeclaration(ownerIndex, declarations[i], i);
+    }
+
+    private void BindParameterDeclaration(int ownerIndex, int declarationIndex, int position)
+    {
+        ref var declaration = ref Nodes.GetSurePresentRef(declarationIndex);
+        if (!declaration.IsParameterDeclaration())
+            Throw.ParameterDeclarationExpected(declarationIndex);
+        if (declaration.ChildIdx != UnboundParameterScopeIndex)
+            Throw.DuplicateParameterDeclaration(declaration.Obj as string);
+
+        declaration.SetChildInfo(ownerIndex, position);
+    }
+
+    private int AddParameterUsageNode(in ExprNode node, int declarationIndex) =>
+        AddRawLeafExpressionNode(node.Type, node.Obj, ExpressionType.Parameter,
+            (byte)(node.Flags & ~(ParameterDeclarationFlag | NextPointsToParentFlag)), childIdx: declarationIndex);
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool ShouldInlineConstant(object value, Type type) =>
-        value == null || value is string || value is Type || type.IsEnum || Type.GetTypeCode(type) != TypeCode.Object;
+    private static bool TryGetInlineConstantValue32(object value, Type type, out int value32)
+    {
+        if (value == null)
+        {
+            value32 = default;
+            return false;
+        }
+
+        var valueType = type.IsEnum ? Enum.GetUnderlyingType(type) : type;
+        switch (Type.GetTypeCode(valueType))
+        {
+            case TypeCode.Boolean:
+                value32 = (bool)value ? 1 : 0;
+                return true;
+            case TypeCode.Char:
+                value32 = (char)value;
+                return true;
+            case TypeCode.SByte:
+                value32 = (sbyte)value;
+                return true;
+            case TypeCode.Byte:
+                value32 = (byte)value;
+                return true;
+            case TypeCode.Int16:
+                value32 = (short)value;
+                return true;
+            case TypeCode.UInt16:
+                value32 = (ushort)value;
+                return true;
+            case TypeCode.Int32:
+                value32 = (int)value;
+                return true;
+            case TypeCode.UInt32:
+                value32 = unchecked((int)(uint)value);
+                return true;
+            case TypeCode.Single:
+                value32 = BitConverter.SingleToInt32Bits((float)value);
+                return true;
+            default:
+                value32 = default;
+                return false;
+        }
+    }
+
+    private static object ReadInlineConstantValue32(Type type, int value32)
+    {
+        if (type.IsEnum)
+        {
+            var underlyingType = Enum.GetUnderlyingType(type);
+            return Enum.ToObject(type, ReadInlineConstantValue32(underlyingType, value32));
+        }
+
+        return Type.GetTypeCode(type) switch
+        {
+            TypeCode.Boolean => value32 != 0,
+            TypeCode.Char => (char)value32,
+            TypeCode.SByte => (sbyte)value32,
+            TypeCode.Byte => (byte)value32,
+            TypeCode.Int16 => (short)value32,
+            TypeCode.UInt16 => (ushort)value32,
+            TypeCode.Int32 => value32,
+            TypeCode.UInt32 => unchecked((uint)value32),
+            TypeCode.Single => BitConverter.Int32BitsToSingle(value32),
+            _ => Throw.UnsupportedInlineConstantType<object>(type)
+        };
+    }
+
+    private ChildList GetChildren(int index)
+    {
+        ref var node = ref Nodes.GetSurePresentRef(index);
+        var count = node.ChildCount;
+        ChildList children = default;
+        var childIndex = node.ChildIdx;
+        for (var i = 0; i < count; ++i)
+        {
+            children.Add(childIndex);
+            childIndex = Nodes.GetSurePresentRef(childIndex).NextIdx;
+        }
+        return children;
+    }
 
     private static Type GetMemberType(System.Reflection.MemberInfo member) => member switch
     {
@@ -1183,9 +1383,12 @@ public struct ExprTree
 
     private int CloneChild(int index)
     {
-        ref var node = ref Nodes[index];
+        ref var node = ref Nodes.GetSurePresentRef(index);
+        if (node.NodeType == ExpressionType.Parameter)
+            return AddParameterUsageNode(in node, node.IsParameterDeclaration() ? index : node.ChildIdx);
+
         return node.ShouldCloneWhenLinked()
-            ? AddLeafNode(node.Type, node.Obj, node.NodeType, node.Kind, node.Flags, node.ChildIdx, node.ChildCount)
+            ? AddLeafNode(node.Type, node.Obj, node.NodeType, node.Kind, (byte)(node.Flags & ~NextPointsToParentFlag), node.ChildIdx, node.ChildCount)
             : index;
     }
 
@@ -1212,13 +1415,13 @@ public struct ExprTree
     private struct Reader
     {
         private readonly ExprTree _tree;
-        private SmallMap16<int, SysParameterExpression, IntEq> _parametersById;
+        private SmallMap16<int, SysParameterExpression, IntEq> _parametersByDeclarationIndex;
         private SmallMap16<int, SysLabelTarget, IntEq> _labelsById;
 
         public Reader(ExprTree tree)
         {
             _tree = tree;
-            _parametersById = default;
+            _parametersByDeclarationIndex = default;
             _labelsById = default;
         }
 
@@ -1232,27 +1435,22 @@ public struct ExprTree
             switch (node.NodeType)
             {
                 case ExpressionType.Constant:
-                    return SysExpr.Constant(ReferenceEquals(node.Obj, ClosureConstantMarker)
-                        ? _tree.ClosureConstants[node.ChildIdx]
-                        : node.Obj, node.Type);
+                    return SysExpr.Constant(
+                        node.HasFlag(ConstantInlineValue32Flag)
+                            ? ReadInlineConstantValue32(node.Type, node.Value32)
+                            : node.Obj,
+                        node.Type);
                 case ExpressionType.Default:
                     return SysExpr.Default(node.Type);
                 case ExpressionType.Parameter:
-                    {
-                        ref var parameter = ref _parametersById.Map.AddOrGetValueRef(node.ChildIdx, out var found);
-                        if (found)
-                            return parameter;
-
-                        var parameterType = node.HasFlag(ParameterByRefFlag) && !node.Type.IsByRef ? node.Type.MakeByRefType() : node.Type;
-                        return parameter = SysExpr.Parameter(parameterType, (string)node.Obj);
-                    }
+                    return ReadParameter(index, in node);
                 case ExpressionType.Lambda:
                     {
                         var children = GetChildren(index);
-                        var body = ReadExpression(children[0]);
                         var parameters = new SysParameterExpression[children.Count - 1];
                         for (var i = 1; i < children.Count; ++i)
                             parameters[i - 1] = (SysParameterExpression)ReadExpression(children[i]);
+                        var body = ReadExpression(children[0]);
                         return SysExpr.Lambda(node.Type, body, parameters);
                     }
                 case ExpressionType.Block:
@@ -1451,6 +1649,25 @@ public struct ExprTree
             }
         }
 
+        private SysParameterExpression ReadParameter(int index, in ExprNode node)
+        {
+            var declarationIndex = node.IsParameterDeclaration() ? index : node.ChildIdx;
+            if (!node.IsParameterDeclaration())
+            {
+                ref var existing = ref _parametersByDeclarationIndex.Map.TryGetValueRef(declarationIndex, out var foundExisting);
+                return foundExisting && existing != null
+                    ? existing
+                    : ReadParameter(declarationIndex, in _tree.Nodes[declarationIndex]);
+            }
+
+            ref var parameter = ref _parametersByDeclarationIndex.Map.AddOrGetValueRef(declarationIndex, out var found);
+            if (found && parameter != null)
+                return parameter;
+
+            var parameterType = node.HasFlag(ParameterByRefFlag) && !node.Type.IsByRef ? node.Type.MakeByRefType() : node.Type;
+            return parameter = SysExpr.Parameter(parameterType, (string)node.Obj);
+        }
+
         [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
         private SysSwitchCase ReadSwitchCase(int index)
         {
@@ -1569,6 +1786,53 @@ public struct ExprTree
         private static System.Linq.Expressions.NewExpression CreateValueTypeNewExpression(Type type) => SysExpr.New(type);
     }
 
+}
+
+internal static class Throw
+{
+    [DoesNotReturn]
+    public static void DuplicateParameterDeclaration(string name) =>
+        throw new ArgumentException($"The parameter or variable `{name ?? "?"}` is declared more than once.");
+
+    [DoesNotReturn]
+    public static void ParameterDeclarationExpected(int index) =>
+        throw new ArgumentException($"Expected a parameter declaration node at index {index}.");
+
+    [DoesNotReturn]
+    public static void UndeclaredParameterUsage(string name) =>
+        throw new InvalidOperationException($"The parameter or variable `{name ?? "?"}` is used before it is declared.");
+
+    [DoesNotReturn]
+    public static void UnsupportedInlineConstantType(Type type) =>
+        throw new NotSupportedException($"Inline 32-bit constant storage does not support `{type}`.");
+
+    [DoesNotReturn]
+    public static T DuplicateParameterDeclaration<T>(string name)
+    {
+        DuplicateParameterDeclaration(name);
+        return default;
+    }
+
+    [DoesNotReturn]
+    public static T ParameterDeclarationExpected<T>(int index)
+    {
+        ParameterDeclarationExpected(index);
+        return default;
+    }
+
+    [DoesNotReturn]
+    public static T UndeclaredParameterUsage<T>(string name)
+    {
+        UndeclaredParameterUsage(name);
+        return default;
+    }
+
+    [DoesNotReturn]
+    public static T UnsupportedInlineConstantType<T>(Type type)
+    {
+        UnsupportedInlineConstantType(type);
+        return default;
+    }
 }
 
 /// <summary>Provides conversions from System and LightExpression trees to <see cref="ExprTree"/>.</summary>

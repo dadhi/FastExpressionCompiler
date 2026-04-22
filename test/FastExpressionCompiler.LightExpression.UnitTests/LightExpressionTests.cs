@@ -29,12 +29,13 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Expression_produced_by_ToExpressionString_should_compile();
             Multiple_methods_in_block_should_be_aligned_when_output_to_csharp();
             Can_roundtrip_light_expression_through_flat_expression();
-            Flat_expression_preserves_parameter_and_label_identity_and_collects_closure_constants();
+            Flat_expression_preserves_parameter_and_label_identity_without_closure_constant_storage();
+            Flat_expression_uses_parameter_declarations_parent_links_and_inline_constants();
             Can_convert_dynamic_runtime_variables_and_debug_info_to_light_expression_and_flat_expression();
             Can_build_flat_expression_directly_with_light_expression_like_api();
             Can_build_flat_expression_control_flow_directly();
             Can_property_test_generated_flat_expression_roundtrip_structurally();
-            return 17;
+            return 18;
         }
 
 
@@ -389,15 +390,14 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.AreEqual(2, a.Dop.Count());
         }
 
-        public void Flat_expression_preserves_parameter_and_label_identity_and_collects_closure_constants()
+        public void Flat_expression_preserves_parameter_and_label_identity_without_closure_constant_storage()
         {
             var valueHolder = new S();
             var valueField = typeof(S).GetField(nameof(S.Value));
             var constExpr = Lambda<Func<string>>(Field(Constant(valueHolder), valueField));
             var constFlat = constExpr.ToFlatExpression();
 
-            Asserts.AreEqual(1, constFlat.ClosureConstants.Count);
-            Asserts.AreSame(valueHolder, constFlat.ClosureConstants[0]);
+            Asserts.AreEqual(0, constFlat.ClosureConstants.Count);
             Asserts.AreEqual(null, ((LambdaExpression)constFlat.ToLightExpression()).CompileFast<Func<string>>(true)());
 
             var p = SysExpr.Parameter(typeof(int), "p");
@@ -418,6 +418,41 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
             Asserts.AreSame(sysRoundtrip.Parameters[0], @goto.Value);
             Asserts.AreSame(@goto.Target, label.Target);
+        }
+
+        public void Flat_expression_uses_parameter_declarations_parent_links_and_inline_constants()
+        {
+            var fe = default(ExprTree);
+            var parameter = fe.Parameter(typeof(int), "p");
+            var variable = fe.Variable(typeof(int), "v");
+            var assign = fe.Assign(variable, parameter);
+            var smallConstant = fe.ConstantOf(12.5f);
+            var largeConstant = fe.ConstantOf(42L);
+            var block = fe.Block(typeof(long), new[] { variable }, assign, smallConstant, largeConstant);
+            fe.RootIndex = fe.Lambda<Func<int, long>>(block, parameter);
+
+            var parameterDeclaration = fe.Nodes[parameter];
+            Asserts.AreEqual(fe.RootIndex, parameterDeclaration.ChildIdx);
+            Asserts.AreEqual(0, parameterDeclaration.ChildCount);
+
+            var variableDeclaration = fe.Nodes[variable];
+            Asserts.AreEqual(block, variableDeclaration.ChildIdx);
+            Asserts.AreEqual(0, variableDeclaration.ChildCount);
+
+            var assignNode = fe.Nodes[assign];
+            var leftUsageIndex = assignNode.ChildIdx;
+            var rightUsageIndex = fe.Nodes[leftUsageIndex].NextIdx;
+            Asserts.AreEqual(variable, fe.Nodes[leftUsageIndex].ChildIdx);
+            Asserts.AreEqual(parameter, fe.Nodes[rightUsageIndex].ChildIdx);
+            Asserts.AreEqual(assign, fe.Nodes[rightUsageIndex].NextIdx);
+
+            Asserts.AreEqual(0, fe.ClosureConstants.Count);
+            Asserts.AreEqual(null, fe.Nodes[smallConstant].Obj);
+            Asserts.AreEqual(42L, fe.Nodes[largeConstant].Obj);
+
+            var roundtrip = (System.Linq.Expressions.Expression<Func<int, long>>)fe.ToExpression();
+            var compiled = roundtrip.Compile();
+            Asserts.AreEqual(42L, compiled(7));
         }
 
         public void Can_convert_dynamic_runtime_variables_and_debug_info_to_light_expression_and_flat_expression()
