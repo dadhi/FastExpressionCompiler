@@ -518,7 +518,9 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                     expectedParameter)
                 .ToFlatExpression();
 
-            Asserts.IsTrue(fe.Nodes.Count > canonical.Nodes.Count);
+            // Direct construction keeps one unreachable constant plus four cloned linkable leaves
+            // (parameter, variable, label target, and nested-lambda capture) that disappear after canonical rebuild.
+            Asserts.AreEqual(expected.Nodes.Count + 5, fe.Nodes.Count);
             AssertFlatShapeIgnoringParameterNamesAndConstantValues(expected, canonical);
             Asserts.AreEqual(6, ((System.Linq.Expressions.Expression<Func<int, int>>)canonical.ToExpression()).Compile()(5));
         }
