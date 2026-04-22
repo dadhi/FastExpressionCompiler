@@ -49,18 +49,14 @@ public enum ExprNodeKind : byte
 [StructLayout(LayoutKind.Explicit, Size = 24)]
 public struct ExprNode
 {
-    private const int NodeTypeShift = 56;
-    private const int TagShift = 48;
-    private const int NextShift = 32;
+    private const int NodeTypeShift = 24;
+    private const int TagShift = 16;
     private const int CountShift = 16;
-    private const ulong IndexMask = 0xFFFF;
-    private const ulong KindMask = 0x0F;
-    private const ulong NextMask = IndexMask << NextShift;
-    private const ulong ChildCountMask = IndexMask << CountShift;
-    private const ulong ChildInfoMask = ChildCountMask | IndexMask;
-    private const ulong KeepWithoutNextMask = ~NextMask;
-    private const ulong KeepWithoutChildInfoMask = ~ChildInfoMask;
-    private const ulong KeepWithoutTagAndNextMask = ~(NextMask | (0xFFUL << TagShift));
+    private const uint IndexMask = 0xFFFF;
+    private const uint KindMask = 0x0F;
+    private const uint NextMask = IndexMask;
+    private const uint KeepWithoutNextMask = ~NextMask;
+    private const uint KeepWithoutTagAndNextMask = ~(NextMask | (0xFFU << TagShift));
     private const int FlagsShift = 4;
 
     /// <summary>Gets or sets the runtime type of the represented node.</summary>
@@ -71,18 +67,21 @@ public struct ExprNode
     [FieldOffset(8)]
     public object Obj;
     [FieldOffset(16)]
-    private ulong _data;
+    private uint _data;
+
+    [FieldOffset(20)]
+    private uint _nodeTypeAndKind;
 
     /// <summary>Gets the expression kind encoded for this node.</summary>
-    public ExpressionType NodeType => (ExpressionType)((_data >> NodeTypeShift) & 0xFF);
+    public ExpressionType NodeType => (ExpressionType)((_nodeTypeAndKind >> NodeTypeShift) & 0xFF);
 
     /// <summary>Gets the payload classification for this node.</summary>
-    public ExprNodeKind Kind => (ExprNodeKind)((_data >> TagShift) & KindMask);
+    public ExprNodeKind Kind => (ExprNodeKind)((_nodeTypeAndKind >> TagShift) & KindMask);
 
-    internal byte Flags => (byte)(((byte)(_data >> TagShift)) >> FlagsShift);
+    internal byte Flags => (byte)(((byte)(_nodeTypeAndKind >> TagShift)) >> FlagsShift);
 
     /// <summary>Gets the next sibling node index in the intrusive child chain.</summary>
-    public int NextIdx => (int)((_data >> NextShift) & IndexMask);
+    public int NextIdx => (int)(_nodeTypeAndKind & IndexMask);
 
     /// <summary>Gets the number of direct children linked from this node.</summary>
     public int ChildCount => (int)((_data >> CountShift) & IndexMask);
@@ -90,43 +89,41 @@ public struct ExprNode
     /// <summary>Gets the first child index or an auxiliary payload index.</summary>
     public int ChildIdx => (int)(_data & IndexMask);
 
-    internal int Value32 => unchecked((int)(_data & 0xFFFFFFFF));
+    internal int Value32 => unchecked((int)_data);
 
     internal ExprNode(Type type, object obj, ExpressionType nodeType, ExprNodeKind kind, byte flags = 0, int childIdx = 0, int childCount = 0, int nextIdx = 0)
     {
         Type = type;
         Obj = obj;
         var tag = (byte)((flags << FlagsShift) | (byte)kind);
-        _data = ((ulong)(byte)nodeType << NodeTypeShift)
-            | ((ulong)tag << TagShift)
-            | ((ulong)(ushort)nextIdx << NextShift)
-            | ((ulong)(ushort)childCount << CountShift)
+        _data = ((uint)(ushort)childCount << CountShift)
             | (ushort)childIdx;
+        _nodeTypeAndKind = ((uint)(byte)nodeType << NodeTypeShift)
+            | ((uint)tag << TagShift)
+            | (ushort)nextIdx;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void SetNextIdx(int nextIdx, bool pointsToParent = false)
     {
-        var tag = (byte)(_data >> TagShift);
+        var tag = (byte)(_nodeTypeAndKind >> TagShift);
         var nextPointsToParentMask = (byte)(ExprTree.NextPointsToParentFlag << FlagsShift);
         tag = pointsToParent
             ? (byte)(tag | nextPointsToParentMask)
             : (byte)(tag & ~nextPointsToParentMask);
-        _data = (_data & KeepWithoutTagAndNextMask)
-            | ((ulong)tag << TagShift)
-            | ((ulong)(ushort)nextIdx << NextShift);
+        _nodeTypeAndKind = (_nodeTypeAndKind & KeepWithoutTagAndNextMask)
+            | ((uint)tag << TagShift)
+            | (ushort)nextIdx;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void SetChildInfo(int childIdx, int childCount) =>
-        _data = (_data & KeepWithoutChildInfoMask)
-            | ((ulong)(ushort)childCount << CountShift)
+        _data = ((uint)(ushort)childCount << CountShift)
             | (ushort)childIdx;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void SetValue32(int value) =>
-        _data = (_data & KeepWithoutChildInfoMask)
-            | (uint)value;
+        _data = unchecked((uint)value);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool Is(ExprNodeKind kind) => Kind == kind;
