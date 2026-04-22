@@ -8396,6 +8396,26 @@ namespace FastExpressionCompiler
             return longFormOpCode; // no short form available
         }
 
+        // Returns the short-form opcode if the label is already marked (backward branch) and the branch delta fits in a signed byte.
+        // The delta is computed from the end of the short-form instruction (ILOffset + 2) to the target label position.
+        [MethodImpl((MethodImplOptions)256)]
+        private static bool TryGetShortFormOpCodeForBackwardBranch(ILGenerator il, OpCode opcode, Label label, out OpCode shortFormOpCode)
+        {
+            shortFormOpCode = GetShortFormBranchOpCode(opcode);
+            if (shortFormOpCode != opcode &&
+                _ilLabelPositions.TryGetValue(il, out var positions) &&
+                positions.TryGetValue(label, out var labelOffset))
+            {
+                // Short form branch: 2 bytes total (1-byte opcode + 1-byte signed offset).
+                // The offset is relative to the start of the next instruction (ILOffset + 2).
+                var delta = labelOffset - (il.ILOffset + 2);
+                if (delta >= -128 && delta <= 127)
+                    return true;
+            }
+            shortFormOpCode = opcode;
+            return false;
+        }
+
 #if DEMIT
         [MethodImpl((MethodImplOptions)256)]
         public static void Demit(this ILGenerator il, OpCode opcode, [CallerMemberName] string emitterName = "", [CallerLineNumber] int emitterLine = 0)
@@ -8455,21 +8475,12 @@ namespace FastExpressionCompiler
         public static void Demit(this ILGenerator il, OpCode opcode, Label value,
             [CallerArgumentExpression("value")] string valueName = null, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
-            // Check if label is already marked (backward branch) and if short form is possible
-            var shortFormOpCode = GetShortFormBranchOpCode(opcode);
-            if (shortFormOpCode != opcode &&
-                _ilLabelPositions.TryGetValue(il, out var positions) &&
-                positions.TryGetValue(value, out var labelOffset))
+            if (TryGetShortFormOpCodeForBackwardBranch(il, opcode, value, out var emitOpCode))
             {
-                // Short form instruction: 2 bytes (opcode + 1-byte offset), so next instruction is at ILOffset + 2
-                var delta = labelOffset - (il.ILOffset + 2);
-                if (delta >= -128 && delta <= 127)
-                {
-                    il.Emit(shortFormOpCode, value);
-                    if (DisableDemit) return;
-                    Debug.WriteLine($"{shortFormOpCode} {valueName ?? value.ToString()}  -- {emitterName}:{emitterLine}");
-                    return;
-                }
+                il.Emit(emitOpCode, value);
+                if (DisableDemit) return;
+                Debug.WriteLine($"{emitOpCode} {valueName ?? value.ToString()}  -- {emitterName}:{emitterLine}");
+                return;
             }
             il.Emit(opcode, value);
             if (DisableDemit) return;
@@ -8579,24 +8590,8 @@ namespace FastExpressionCompiler
         public static void Demit(this ILGenerator il, OpCode opcode, ConstructorInfo value) => il.Emit(opcode, value);
 
         [MethodImpl((MethodImplOptions)256)]
-        public static void Demit(this ILGenerator il, OpCode opcode, Label value) 
-        {
-            // Check if label is already marked (backward branch) and if short form is possible
-            var shortFormOpCode = GetShortFormBranchOpCode(opcode);
-            if (shortFormOpCode != opcode &&
-                _ilLabelPositions.TryGetValue(il, out var positions) &&
-                positions.TryGetValue(value, out var labelOffset))
-            {
-                // Short form instruction: 2 bytes (opcode + 1-byte offset), so next instruction is at ILOffset + 2
-                var delta = labelOffset - (il.ILOffset + 2);
-                if (delta >= -128 && delta <= 127)
-                {
-                    il.Emit(shortFormOpCode, value);
-                    return;
-                }
-            }
-            il.Emit(opcode, value);
-        }
+        public static void Demit(this ILGenerator il, OpCode opcode, Label value) =>
+            il.Emit(TryGetShortFormOpCodeForBackwardBranch(il, opcode, value, out var shortForm) ? shortForm : opcode, value);
 
         [MethodImpl((MethodImplOptions)256)]
         public static void DemitSwitch(this ILGenerator il, Label[] gotoLabels) => il.Emit(OpCodes.Switch, gotoLabels);
