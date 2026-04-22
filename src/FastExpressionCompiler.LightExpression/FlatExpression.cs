@@ -152,6 +152,7 @@ public struct ExprNode
 /// <summary>Stores an expression tree as a flat node array plus out-of-line closure constants.</summary>
 public struct ExprTree
 {
+    private static readonly object ClosureConstantMarker = new();
     internal const byte ParameterByRefFlag = 1;
     internal const byte ParameterDeclarationFlag = 2;
     private const byte ConstantInlineValue32Flag = 1;
@@ -200,6 +201,12 @@ public struct ExprTree
     {
         if (TryGetInlineConstantValue32(value, type, out var value32))
             return AddRawInlineConstantNode(type, value32);
+
+        if (ShouldStoreConstantInClosureConstants(value, type))
+        {
+            var constantIndex = ClosureConstants.Add(value);
+            return AddRawExpressionNodeWithChildIndex(type, ClosureConstantMarker, ExpressionType.Constant, constantIndex);
+        }
 
         return AddRawExpressionNode(type, value, ExpressionType.Constant);
     }
@@ -997,6 +1004,12 @@ public struct ExprTree
             if (TryGetInlineConstantValue32(constant.Value, constant.Type, out var value32))
                 return _tree.AddRawInlineConstantNode(constant.Type, value32);
 
+            if (ShouldStoreConstantInClosureConstants(constant.Value, constant.Type))
+            {
+                var constantIndex = _tree.ClosureConstants.Add(constant.Value);
+                return _tree.AddRawExpressionNodeWithChildIndex(constant.Type, ClosureConstantMarker, constant.NodeType, constantIndex);
+            }
+
             return _tree.AddRawExpressionNode(constant.Type, constant.Value, constant.NodeType);
         }
 
@@ -1307,6 +1320,10 @@ public struct ExprTree
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool ShouldStoreConstantInClosureConstants(object value, Type type) =>
+        value != null && value is not string && value is not Type && !type.IsEnum && Type.GetTypeCode(type) == TypeCode.Object;
+
     private static object ReadInlineConstantValue32(Type type, int value32)
     {
         if (type.IsEnum)
@@ -1438,7 +1455,9 @@ public struct ExprTree
                     return SysExpr.Constant(
                         node.HasFlag(ConstantInlineValue32Flag)
                             ? ReadInlineConstantValue32(node.Type, node.Value32)
-                            : node.Obj,
+                            : ReferenceEquals(node.Obj, ClosureConstantMarker)
+                                ? _tree.ClosureConstants[node.ChildIdx]
+                                : node.Obj,
                         node.Type);
                 case ExpressionType.Default:
                     return SysExpr.Default(node.Type);
@@ -1790,44 +1809,36 @@ public struct ExprTree
 
 internal static class Throw
 {
-    [DoesNotReturn]
     public static void DuplicateParameterDeclaration(string name) =>
         throw new ArgumentException($"The parameter or variable `{name ?? "?"}` is declared more than once.");
 
-    [DoesNotReturn]
     public static void ParameterDeclarationExpected(int index) =>
         throw new ArgumentException($"Expected a parameter declaration node at index {index}.");
 
-    [DoesNotReturn]
     public static void UndeclaredParameterUsage(string name) =>
         throw new InvalidOperationException($"The parameter or variable `{name ?? "?"}` is used before it is declared.");
 
-    [DoesNotReturn]
     public static void UnsupportedInlineConstantType(Type type) =>
         throw new NotSupportedException($"Inline 32-bit constant storage does not support `{type}`.");
 
-    [DoesNotReturn]
     public static T DuplicateParameterDeclaration<T>(string name)
     {
         DuplicateParameterDeclaration(name);
         return default;
     }
 
-    [DoesNotReturn]
     public static T ParameterDeclarationExpected<T>(int index)
     {
         ParameterDeclarationExpected(index);
         return default;
     }
 
-    [DoesNotReturn]
     public static T UndeclaredParameterUsage<T>(string name)
     {
         UndeclaredParameterUsage(name);
         return default;
     }
 
-    [DoesNotReturn]
     public static T UnsupportedInlineConstantType<T>(Type type)
     {
         UnsupportedInlineConstantType(type);

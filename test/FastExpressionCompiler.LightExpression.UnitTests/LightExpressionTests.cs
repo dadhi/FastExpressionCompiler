@@ -29,7 +29,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Expression_produced_by_ToExpressionString_should_compile();
             Multiple_methods_in_block_should_be_aligned_when_output_to_csharp();
             Can_roundtrip_light_expression_through_flat_expression();
-            Flat_expression_preserves_parameter_and_label_identity_without_closure_constant_storage();
+            Flat_expression_preserves_parameter_and_label_identity_and_collects_closure_constants();
             Flat_expression_uses_parameter_declarations_parent_links_and_inline_constants();
             Can_convert_dynamic_runtime_variables_and_debug_info_to_light_expression_and_flat_expression();
             Can_build_flat_expression_directly_with_light_expression_like_api();
@@ -390,14 +390,15 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.AreEqual(2, a.Dop.Count());
         }
 
-        public void Flat_expression_preserves_parameter_and_label_identity_without_closure_constant_storage()
+        public void Flat_expression_preserves_parameter_and_label_identity_and_collects_closure_constants()
         {
             var valueHolder = new S();
             var valueField = typeof(S).GetField(nameof(S.Value));
             var constExpr = Lambda<Func<string>>(Field(Constant(valueHolder), valueField));
             var constFlat = constExpr.ToFlatExpression();
 
-            Asserts.AreEqual(0, constFlat.ClosureConstants.Count);
+            Asserts.AreEqual(1, constFlat.ClosureConstants.Count);
+            Asserts.AreSame(valueHolder, constFlat.ClosureConstants[0]);
             Asserts.AreEqual(null, ((LambdaExpression)constFlat.ToLightExpression()).CompileFast<Func<string>>(true)());
 
             var p = SysExpr.Parameter(typeof(int), "p");
