@@ -15,9 +15,12 @@ namespace FastExpressionCompiler.IssueTests
         public int Run()
         {
             DynamicMethod_Emit_Hack();
-            // DynamicMethod_Emit_Newobj();
-            // DynamicMethod_Hack_Emit_Newobj();
+#if NET10_0_OR_GREATER
+            DynamicMethod_Emit_Hack_Net10();
+            return 4;
+#else
             return 3;
+#endif
         }
 
         public void DynamicMethod_Emit_Hack()
@@ -27,18 +30,27 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.AreEqual(42, a);
         }
 
-        static Type ilType = typeof(ILGenerator).Assembly.GetType("System.Reflection.Emit.DynamicILGenerator");
-        static FieldInfo mScopeField = ilType.GetField("m_scope", BindingFlags.Instance | BindingFlags.NonPublic);
+        static readonly Type ilType = typeof(ILGenerator).Assembly.GetType("System.Reflection.Emit.DynamicILGenerator");
 
-        static Type scopeType = ilType.Assembly.GetType("System.Reflection.Emit.DynamicScope");
-        static FieldInfo mTokensField = scopeType.GetField("m_tokens", BindingFlags.Instance | BindingFlags.NonPublic);
+        // m_scope field is on DynamicILGenerator (internal class) - accessed via reflection since
+        // the field type DynamicScope is also internal (UnsafeAccessorType can't return non-public types).
+        static readonly FieldInfo mScopeField = ilType?.GetField("m_scope", BindingFlags.Instance | BindingFlags.NonPublic);
 
-        static FieldInfo mLengthField = typeof(ILGenerator).GetField("m_length", BindingFlags.Instance | BindingFlags.NonPublic);
-        static FieldInfo mILStreamField = typeof(ILGenerator).GetField("m_ILStream", BindingFlags.Instance | BindingFlags.NonPublic);
-        static MethodInfo updateStackSize = typeof(ILGenerator).GetMethod("UpdateStackSize", BindingFlags.Instance | BindingFlags.NonPublic);
+        static readonly Type scopeType = ilType?.Assembly.GetType("System.Reflection.Emit.DynamicScope");
+        static readonly FieldInfo mTokensField = scopeType?.GetField("m_tokens", BindingFlags.Instance | BindingFlags.NonPublic);
+
+        // m_length, m_ILStream, and UpdateStackSize are on RuntimeILGenerator (the internal base class of DynamicILGenerator),
+        // NOT on the public ILGenerator class. Look up the fields on the correct type.
+        static readonly Type runtimeILGenType = ilType?.BaseType; // System.Reflection.Emit.RuntimeILGenerator
+        static readonly FieldInfo mLengthField = runtimeILGenType?.GetField("m_length", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
+        static readonly FieldInfo mILStreamField = runtimeILGenType?.GetField("m_ILStream", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
+        static readonly MethodInfo updateStackSizeMethod = runtimeILGenType?.GetMethod("UpdateStackSize", BindingFlags.Instance | BindingFlags.NonPublic);
 
         private static Func<ILGenerator, IList<object>> GetScopeTokens()
         {
+            if (mScopeField == null || mTokensField == null)
+                return null;
+
             var dynMethod = new DynamicMethod(string.Empty,
                 typeof(IList<object>), new[] { typeof(ExpressionCompiler.ArrayClosure), typeof(ILGenerator) },
                 typeof(ExpressionCompiler), skipVisibility: true);
@@ -57,6 +69,8 @@ namespace FastExpressionCompiler.IssueTests
 
         private static GetFieldRefDelegate<TFieldHolder, TField> CreateFieldAccessor<TFieldHolder, TField>(FieldInfo field)
         {
+            if (field == null) return null;
+
             var dynMethod = new DynamicMethod(string.Empty,
                 typeof(TField).MakeByRefType(), new[] { typeof(ExpressionCompiler.ArrayClosure), typeof(TFieldHolder) },
                 typeof(TFieldHolder), skipVisibility: true);
@@ -69,14 +83,34 @@ namespace FastExpressionCompiler.IssueTests
             return (GetFieldRefDelegate<TFieldHolder, TField>)dynMethod.CreateDelegate(typeof(GetFieldRefDelegate<TFieldHolder, TField>));
         }
 
-        static GetFieldRefDelegate<ILGenerator, int> mLengthFieldAccessor = CreateFieldAccessor<ILGenerator, int>(mLengthField);
-        static GetFieldRefDelegate<ILGenerator, byte[]> mILStreamAccessor = CreateFieldAccessor<ILGenerator, byte[]>(mILStreamField);
+        static readonly GetFieldRefDelegate<ILGenerator, int> mLengthFieldAccessor = CreateFieldAccessor<ILGenerator, int>(mLengthField);
+        static readonly GetFieldRefDelegate<ILGenerator, byte[]> mILStreamAccessor = CreateFieldAccessor<ILGenerator, byte[]>(mILStreamField);
 
-        static Action<ILGenerator, OpCode, int> updateStackSizeDelegate =
-            (Action<ILGenerator, OpCode, int>)Delegate.CreateDelegate(typeof(Action<ILGenerator, OpCode, int>), null, updateStackSize);
+        static readonly Action<ILGenerator, OpCode, int> updateStackSizeDelegate = GetUpdateStackSizeDelegate();
+
+        private static Action<ILGenerator, OpCode, int> GetUpdateStackSizeDelegate()
+        {
+            if (updateStackSizeMethod == null) return null;
+            // Cannot use Delegate.CreateDelegate with a method from a non-public declaring type (RuntimeILGenerator).
+            // Instead, wrap the call in a DynamicMethod with skipVisibility: true.
+            var dynMethod = new DynamicMethod(string.Empty,
+                typeof(void), new[] { typeof(ExpressionCompiler.ArrayClosure), typeof(ILGenerator), typeof(OpCode), typeof(int) },
+                typeof(ExpressionCompiler), skipVisibility: true);
+            var il = dynMethod.GetILGenerator();
+            il.Emit(OpCodes.Ldarg_1);  // ILGenerator (runtime type: DynamicILGenerator : RuntimeILGenerator)
+            il.Emit(OpCodes.Ldarg_2);  // OpCode
+            il.Emit(OpCodes.Ldarg_3);  // int stackchange
+            il.Emit(OpCodes.Call, updateStackSizeMethod);
+            il.Emit(OpCodes.Ret);
+            return (Action<ILGenerator, OpCode, int>)dynMethod.CreateDelegate(
+                typeof(Action<ILGenerator, OpCode, int>), ExpressionCompiler.EmptyArrayClosure);
+        }
 
         public static Func<int, int> Get_DynamicMethod_Emit_Hack()
         {
+            if (mLengthFieldAccessor == null || mILStreamAccessor == null || updateStackSizeDelegate == null || getScopeTokens == null)
+                return null;
+
             var meth = MethodStatic1Arg;
             var paramCount = 1;
 
@@ -127,6 +161,87 @@ namespace FastExpressionCompiler.IssueTests
 
             return (Func<int, int>)dynMethod.CreateDelegate(typeof(Func<int, int>), ExpressionCompiler.EmptyArrayClosure);
         }
+
+#if NET10_0_OR_GREATER
+        // In .NET 10+, use UnsafeAccessorType to access the private fields of non-public types directly,
+        // without the DynamicMethod-based delegation used in earlier .NET versions.
+        // RuntimeILGenerator is the internal base class of DynamicILGenerator that holds the IL stream state.
+
+        /// <summary>Directly accesses m_length on RuntimeILGenerator via UnsafeAccessorType (NET10+).</summary>
+        [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "m_length")]
+        private static extern ref int GetMLength_Net10(
+            [UnsafeAccessorType("System.Reflection.Emit.RuntimeILGenerator")] object il);
+
+        /// <summary>Directly accesses m_ILStream on RuntimeILGenerator via UnsafeAccessorType (NET10+).</summary>
+        [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "m_ILStream")]
+        private static extern ref byte[] GetMILStream_Net10(
+            [UnsafeAccessorType("System.Reflection.Emit.RuntimeILGenerator")] object il);
+
+        /// <summary>Directly calls UpdateStackSize on RuntimeILGenerator via UnsafeAccessorType (NET10+).</summary>
+        [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "UpdateStackSize")]
+        private static extern void UpdateStackSize_Net10(
+            [UnsafeAccessorType("System.Reflection.Emit.RuntimeILGenerator")] object il,
+            OpCode opcode, int stackchange);
+
+        /// <summary>Directly accesses m_tokens on DynamicScope via UnsafeAccessorType (NET10+).</summary>
+        [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "m_tokens")]
+        private static extern ref List<object> GetMTokens_Net10(
+            [UnsafeAccessorType("System.Reflection.Emit.DynamicScope")] object scope);
+
+        public void DynamicMethod_Emit_Hack_Net10()
+        {
+            var f = Get_DynamicMethod_Emit_Hack_Net10();
+            var a = f(41);
+            Asserts.AreEqual(42, a);
+        }
+
+        /// <summary>
+        /// Demonstrates using UnsafeAccessorType (NET10+) to directly access private fields
+        /// of non-public types (RuntimeILGenerator, DynamicScope) for fast IL emission.
+        /// Replaces the DynamicMethod-based delegation approach used in earlier .NET versions.
+        /// </summary>
+        public static Func<int, int> Get_DynamicMethod_Emit_Hack_Net10()
+        {
+            var meth = MethodStatic1Arg;
+            var paramCount = 1;
+
+            var dynMethod = new DynamicMethod(string.Empty,
+                typeof(int), new[] { typeof(ExpressionCompiler.ArrayClosure), typeof(int) },
+                typeof(ExpressionCompiler),
+                skipVisibility: true);
+
+            var il = dynMethod.GetILGenerator(16);
+
+            // Use UnsafeAccessorType to get refs to the internal IL stream fields directly
+            ref var mLength = ref GetMLength_Net10(il);
+            ref var mILStream = ref GetMILStream_Net10(il);
+
+            // il.Emit(OpCodes.Ldarg_1);
+            mILStream[mLength++] = (byte)OpCodes.Ldarg_1.Value;
+            UpdateStackSize_Net10(il, OpCodes.Ldarg_1, 1);
+
+            // il.Emit(OpCodes.Call, meth);
+            mILStream[mLength++] = (byte)OpCodes.Call.Value;
+            UpdateStackSize_Net10(il, OpCodes.Call, CalcStackChange(meth, paramCount));
+
+            // Access m_scope via reflection (DynamicILGenerator.m_scope returns DynamicScope which is a non-public type,
+            // so UnsafeAccessorType cannot currently be used for the return value).
+            // Then use UnsafeAccessorType to access m_tokens on the DynamicScope instance directly.
+            if (mScopeField == null) return null;
+            var scope = mScopeField.GetValue(il);
+            ref var mTokens = ref GetMTokens_Net10(scope);
+            mTokens.Add(meth.MethodHandle);
+            var token = mTokens.Count - 1 | (int)0x06000000; // MetadataTokenType.MethodDef
+            BinaryPrimitives.WriteInt32LittleEndian(mILStream.AsSpan(mLength), token);
+            mLength += 4;
+
+            // il.Emit(OpCodes.Ret);
+            mILStream[mLength++] = (byte)OpCodes.Ret.Value;
+            UpdateStackSize_Net10(il, OpCodes.Ret, 0);
+
+            return (Func<int, int>)dynMethod.CreateDelegate(typeof(Func<int, int>), ExpressionCompiler.EmptyArrayClosure);
+        }
+#endif
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int CalcStackChange(MethodInfo meth, int paramCount)
@@ -213,15 +328,15 @@ namespace FastExpressionCompiler.IssueTests
             // m_tokens.Add(rtConstructor.MethodHandle);
             // var tk = m_tokens.Count - 1 | (int)MetadataTokenType.MethodDef;
 
-            var mScopeField = ilType.GetField("m_scope", BindingFlags.Instance | BindingFlags.NonPublic);
-            if (mScopeField == null)
+            var scopeField = ilType.GetField("m_scope", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (scopeField == null)
                 return null;
-            var mScope = mScopeField.GetValue(il);
+            var mScope = scopeField.GetValue(il);
 
-            var mTokensField = mScope.GetType().GetField("m_tokens", BindingFlags.Instance | BindingFlags.NonPublic);
-            if (mTokensField == null)
+            var tokensField = mScope.GetType().GetField("m_tokens", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (tokensField == null)
                 return null;
-            var mTokens = mTokensField.GetValue(mScope);
+            var mTokens = tokensField.GetValue(mScope);
 
 
             il.Emit(OpCodes.Ret);

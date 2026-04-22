@@ -1361,6 +1361,15 @@ namespace FastExpressionCompiler
                         }
                     case ExpressionType.Conditional:
                         var condExpr = (ConditionalExpression)expr;
+                        // Try structural branch elimination - skip collecting dead branch info
+                        {
+                            var reducedCond = Tools.TryReduceConditional(condExpr);
+                            if (!ReferenceEquals(reducedCond, condExpr))
+                            {
+                                expr = reducedCond;
+                                continue;
+                            }
+                        }
                         if ((r = TryCollectInfo(ref context, condExpr.Test, nestedLambda, ref rootNestedLambdas)) != Result.OK ||
                             (r = TryCollectInfo(ref context, condExpr.IfFalse, nestedLambda, ref rootNestedLambdas)) != Result.OK)
                             return r;
@@ -1453,6 +1462,16 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Switch:
                         var switchExpr = ((SwitchExpression)expr);
+                        // Compile-time switch branch elimination (#489): if switch value is interpretable, collect only the matching branch
+                        if (Interpreter.TryFindSwitchBranch(switchExpr, context.CompilerFlags, out var switchMatchedBody))
+                        {
+                            if (switchMatchedBody != null)
+                            {
+                                expr = switchMatchedBody;
+                                continue;
+                            }
+                            return r; // no matched body and no default -> nothing to collect
+                        }
                         if ((r = TryCollectInfo(ref context, switchExpr.SwitchValue, nestedLambda, ref rootNestedLambdas)) != Result.OK ||
                             switchExpr.DefaultBody != null && // todo: @check is the order of collection affects the result?
                             (r = TryCollectInfo(ref context, switchExpr.DefaultBody, nestedLambda, ref rootNestedLambdas)) != Result.OK)
@@ -2050,6 +2069,15 @@ namespace FastExpressionCompiler
                             {
                                 expr = testIsTrue ? condExpr.IfTrue : condExpr.IfFalse;
                                 continue; // no recursion, just continue with the left or right side of condition
+                            }
+                            // Try structural branch elimination (e.g., null == Default(X) -> always true/false)
+                            {
+                                var reducedCond = Tools.TryReduceConditional(condExpr);
+                                if (!ReferenceEquals(reducedCond, condExpr))
+                                {
+                                    expr = reducedCond;
+                                    continue;
+                                }
                             }
                             return TryEmitConditional(testExpr, condExpr.IfTrue, condExpr.IfFalse, il, ref context, parent);
 
@@ -5002,25 +5030,8 @@ namespace FastExpressionCompiler
                 public int MultiTestValCaseBodyIdxPlusOne; // 0 means not multi-test case, otherwise index+1
             }
 
-            private static long ConvertValueObjectToLong(object valObj)
-            {
-                Debug.Assert(valObj != null);
-                var type = valObj.GetType();
-                type = type.IsEnum ? Enum.GetUnderlyingType(type) : type;
-                return Type.GetTypeCode(type) switch
-                {
-                    TypeCode.Char => (long)(char)valObj,
-                    TypeCode.SByte => (long)(sbyte)valObj,
-                    TypeCode.Byte => (long)(byte)valObj,
-                    TypeCode.Int16 => (long)(short)valObj,
-                    TypeCode.UInt16 => (long)(ushort)valObj,
-                    TypeCode.Int32 => (long)(int)valObj,
-                    TypeCode.UInt32 => (long)(uint)valObj,
-                    TypeCode.Int64 => (long)valObj,
-                    TypeCode.UInt64 => (long)(ulong)valObj,
-                    _ => 0 // unreachable
-                };
-            }
+            private static long ConvertValueObjectToLong(object valObj) =>
+                Interpreter.ConvertValueObjectToLong(valObj);
 
             private static bool TryEmitSwitch(SwitchExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
@@ -5029,6 +5040,10 @@ namespace FastExpressionCompiler
                 var cases = expr.Cases;
                 var caseCount = cases.Count;
                 var defaultBody = expr.DefaultBody;
+
+                // Compile-time switch branch elimination (#489): if the switch value is interpretable, select the matching branch
+                if (Interpreter.TryFindSwitchBranch(expr, context.CompilerFlags, out var matchedBody))
+                    return matchedBody == null || TryEmit(matchedBody, il, ref context, parent);
 
                 // Optimization for the single case
                 if (caseCount == 1 & defaultBody != null)
@@ -6808,6 +6823,28 @@ namespace FastExpressionCompiler
                 _ => UnreachableCase(code, (object)null)
             };
 
+            /// <summary>Converts an integer/enum/char boxed value to <c>long</c> for uniform comparison.</summary>
+            [MethodImpl((MethodImplOptions)256)]
+            internal static long ConvertValueObjectToLong(object valObj)
+            {
+                Debug.Assert(valObj != null);
+                var type = valObj.GetType();
+                type = type.IsEnum ? Enum.GetUnderlyingType(type) : type;
+                return Type.GetTypeCode(type) switch
+                {
+                    TypeCode.Char => (long)(char)valObj,
+                    TypeCode.SByte => (long)(sbyte)valObj,
+                    TypeCode.Byte => (long)(byte)valObj,
+                    TypeCode.Int16 => (long)(short)valObj,
+                    TypeCode.UInt16 => (long)(ushort)valObj,
+                    TypeCode.Int32 => (long)(int)valObj,
+                    TypeCode.UInt32 => (long)(uint)valObj,
+                    TypeCode.Int64 => (long)valObj,
+                    TypeCode.UInt64 => (long)(ulong)valObj,
+                    _ => 0 // unreachable
+                };
+            }
+
             internal static bool ComparePrimitiveValues(ref PValue left, ref PValue right, TypeCode code, ExpressionType nodeType)
             {
                 switch (nodeType)
@@ -7140,7 +7177,7 @@ namespace FastExpressionCompiler
             {
                 var exprType = expr.Type;
                 Debug.Assert(exprType.IsPrimitive, // todo: @feat nullables are not supported yet // || Nullable.GetUnderlyingType(exprType)?.IsPrimitive == true,
-                    "Can only reduce the boolean for the expressions of primitive types but found " + expr.Type);
+                    "Can only reduce the boolean for the expressions of primitive type but found " + expr.Type);
                 result = false;
                 if ((flags & CompilerFlags.DisableInterpreter) != 0)
                     return false;
@@ -7158,6 +7195,95 @@ namespace FastExpressionCompiler
                     return false;
                 }
             }
+
+            /// <summary>
+            /// Tries to determine at compile time which branch a switch expression will take.
+            /// Works for integer/enum and string switch values with no custom equality method.
+            /// Returns true when the switch value is deterministic; <paramref name="matchedBody"/> is set to
+            /// the branch body to emit (null means use default body which may itself be null).
+            /// </summary>
+            public static bool TryFindSwitchBranch(SwitchExpression switchExpr, CompilerFlags flags, out Expression matchedBody)
+            {
+                matchedBody = null;
+                if (switchExpr.Comparison != null) return false; // custom equality: can't interpret statically
+                if ((flags & CompilerFlags.DisableInterpreter) != 0) return false;
+                var switchValueExpr = switchExpr.SwitchValue;
+                var switchValueType = switchValueExpr.Type;
+                var cases = switchExpr.Cases;
+                try
+                {
+                    // String switch: only constant switch values supported
+                    if (switchValueType == typeof(string))
+                    {
+                        if (switchValueExpr is not ConstantExpression ce) return false;
+                        var switchStr = ce.Value;
+                        for (var i = 0; i < cases.Count; i++)
+                        {
+                            var testValues = cases[i].TestValues;
+                            for (var j = 0; j < testValues.Count; j++)
+                            {
+                                if (testValues[j] is not ConstantExpression testConst) return false;
+                                if (Equals(switchStr, testConst.Value)) { matchedBody = cases[i].Body; return true; }
+                            }
+                        }
+                        matchedBody = switchExpr.DefaultBody;
+                        return true;
+                    }
+
+                    // Integer / enum / char switch
+                    var effectiveType = switchValueType.IsEnum ? Enum.GetUnderlyingType(switchValueType) : switchValueType;
+                    var typeCode = Type.GetTypeCode(effectiveType);
+                    if (typeCode < TypeCode.Char || typeCode > TypeCode.UInt64) return false; // non-integral (e.g. float, decimal)
+
+                    long switchValLong;
+                    if (switchValueExpr is ConstantExpression switchConst && switchConst.Value != null)
+                        switchValLong = ConvertValueObjectToLong(switchConst.Value);
+                    else if (typeCode == TypeCode.Int32)
+                    {
+                        var intVal = 0;
+                        if (!TryInterpretInt(ref intVal, switchValueExpr, switchValueExpr.NodeType)) return false;
+                        switchValLong = intVal;
+                    }
+                    else
+                    {
+                        PValue pv = default;
+                        if (!TryInterpretPrimitiveValue(ref pv, switchValueExpr, typeCode, switchValueExpr.NodeType)) return false;
+                        switchValLong = PValueToLong(ref pv, typeCode);
+                    }
+
+                    for (var i = 0; i < cases.Count; i++)
+                    {
+                        var testValues = cases[i].TestValues;
+                        for (var j = 0; j < testValues.Count; j++)
+                        {
+                            if (testValues[j] is not ConstantExpression testConst || testConst.Value == null) continue;
+                            if (switchValLong == ConvertValueObjectToLong(testConst.Value)) { matchedBody = cases[i].Body; return true; }
+                        }
+                    }
+                    matchedBody = switchExpr.DefaultBody;
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+
+            /// <summary>Converts a <see cref="PValue"/> union to a <c>long</c> for integer/char comparison.</summary>
+            [MethodImpl((MethodImplOptions)256)]
+            internal static long PValueToLong(ref PValue value, TypeCode code) => code switch
+            {
+                TypeCode.Char   => (long)value.CharValue,
+                TypeCode.SByte  => (long)value.SByteValue,
+                TypeCode.Byte   => (long)value.ByteValue,
+                TypeCode.Int16  => (long)value.Int16Value,
+                TypeCode.UInt16 => (long)value.UInt16Value,
+                TypeCode.Int32  => (long)value.Int32Value,
+                TypeCode.UInt32 => (long)value.UInt32Value,
+                TypeCode.Int64  => value.Int64Value,
+                TypeCode.UInt64 => (long)value.UInt64Value,
+                _ => 0L,
+            };
 
             // todo: @perf try split to `TryInterpretBinary` overload to streamline the calls for TryEmitConditional and similar
             /// <summary>Tries to interpret the expression of the Primitive type of Constant, Convert, Logical, Comparison, Arithmetic.</summary>
@@ -8197,7 +8323,9 @@ namespace FastExpressionCompiler
             var testExpr = TryReduceConditionalTest(condExpr.Test);
             if (testExpr is BinaryExpression bi && (bi.NodeType == ExpressionType.Equal || bi.NodeType == ExpressionType.NotEqual))
             {
-                if (bi.Left is ConstantExpression lc && bi.Right is ConstantExpression rc)
+                var left = bi.Left;
+                var right = bi.Right;
+                if (left is ConstantExpression lc && right is ConstantExpression rc)
                 {
 #if INTERPRETATION_DIAGNOSTICS
                     Console.WriteLine("//Reduced Conditional in Interpretation: " + condExpr);
@@ -8207,12 +8335,33 @@ namespace FastExpressionCompiler
                         ? (equals ? condExpr.IfTrue : condExpr.IfFalse)
                         : (equals ? condExpr.IfFalse: condExpr.IfTrue);
                 }
+
+                // Handle compile-time branch elimination for null/default equality:
+                // e.g. Constant(null) == Default(typeof(X)) or Default(typeof(X)) == Constant(null)
+                // where X is a reference, interface, or nullable type - both represent null, so they are always equal
+                var leftIsNull = left is ConstantExpression lnc && lnc.Value == null ||
+                                 left is DefaultExpression lde && IsNullDefault(lde.Type);
+                var rightIsNull = right is ConstantExpression rnc && rnc.Value == null ||
+                                  right is DefaultExpression rde && IsNullDefault(rde.Type);
+                if (leftIsNull && rightIsNull)
+                {
+#if INTERPRETATION_DIAGNOSTICS
+                    Console.WriteLine("//Reduced Conditional (null/default equality) in Interpretation: " + condExpr);
+#endif
+                    // both sides represent null, so they are equal
+                    return bi.NodeType == ExpressionType.Equal ? condExpr.IfTrue : condExpr.IfFalse;
+                }
             }
 
             return testExpr is ConstantExpression constExpr && constExpr.Value is bool testBool
                 ? (testBool ? condExpr.IfTrue : condExpr.IfFalse)
                 : condExpr;
         }
+
+        // Returns true if the type's default value is null (reference types, interfaces, and Nullable<T>)
+        [MethodImpl((MethodImplOptions)256)]
+        internal static bool IsNullDefault(Type type) =>
+            type.IsClass || type.IsInterface || Nullable.GetUnderlyingType(type) != null;
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]
@@ -8901,6 +9050,15 @@ namespace FastExpressionCompiler
                     return localBuilder;
                 }
                 */
+#if NET10_0_OR_GREATER
+                // In .NET 10+, use UnsafeAccessorType to directly access RuntimeILGenerator's private fields
+                // without the need for reflection-based DynamicMethod generation at startup
+                GetNextLocalVarLocation = static (il, t) =>
+                {
+                    GetMLocalSignature(il).AddArgument(t, false);
+                    return PostInc(ref GetMLocalCount(il));
+                };
+#else
                 // Let's try to acquire the more efficient less allocating method
                 var m_localSignatureField = DynamicILGeneratorType.GetField("m_localSignature", instanceNonPublic);
                 if (m_localSignatureField == null)
@@ -8946,6 +9104,7 @@ namespace FastExpressionCompiler
 
                 ExpressionCompiler.FreePooledParamTypes(paramTypes);
             endOfGetNextVar:;
+#endif
             }
 
             // Restore the demit
@@ -9071,6 +9230,43 @@ namespace FastExpressionCompiler
             m_length += 4;
         }
         */
+
+#if NET10_0_OR_GREATER
+        // UnsafeAccessorType methods for accessing private fields of the non-public RuntimeILGenerator class.
+        // RuntimeILGenerator is the internal base class of DynamicILGenerator that holds the core IL generation state.
+        // Using UnsafeAccessorType avoids reflection at call time and is compatible with AOT compilation.
+
+        /// <summary>Gets a ref to the <c>m_localSignature</c> field of the ILGenerator (declared in the internal RuntimeILGenerator).</summary>
+        [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "m_localSignature")]
+        internal static extern ref SignatureHelper GetMLocalSignature(
+            [UnsafeAccessorType("System.Reflection.Emit.RuntimeILGenerator")] object il);
+
+        /// <summary>Gets a ref to the <c>m_localCount</c> field of the ILGenerator (declared in the internal RuntimeILGenerator).</summary>
+        [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "m_localCount")]
+        internal static extern ref int GetMLocalCount(
+            [UnsafeAccessorType("System.Reflection.Emit.RuntimeILGenerator")] object il);
+
+        /// <summary>Gets a ref to the <c>m_length</c> field of the ILGenerator (declared in the internal RuntimeILGenerator).</summary>
+        [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "m_length")]
+        internal static extern ref int GetMLength(
+            [UnsafeAccessorType("System.Reflection.Emit.RuntimeILGenerator")] object il);
+
+        /// <summary>Gets a ref to the <c>m_ILStream</c> field of the ILGenerator (declared in the internal RuntimeILGenerator).</summary>
+        [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "m_ILStream")]
+        internal static extern ref byte[] GetMILStream(
+            [UnsafeAccessorType("System.Reflection.Emit.RuntimeILGenerator")] object il);
+
+        /// <summary>Calls the internal <c>UpdateStackSize</c> method on the ILGenerator (declared in the internal RuntimeILGenerator).</summary>
+        [UnsafeAccessor(UnsafeAccessorKind.Method, Name = "UpdateStackSize")]
+        internal static extern void UpdateStackSize(
+            [UnsafeAccessorType("System.Reflection.Emit.RuntimeILGenerator")] object il,
+            OpCode opcode, int stackchange);
+
+        /// <summary>Gets a ref to the <c>m_tokens</c> field on a DynamicScope instance (internal type).</summary>
+        [UnsafeAccessor(UnsafeAccessorKind.Field, Name = "m_tokens")]
+        internal static extern ref System.Collections.Generic.List<object> GetMTokens(
+            [UnsafeAccessorType("System.Reflection.Emit.DynamicScope")] object scope);
+#endif
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]
