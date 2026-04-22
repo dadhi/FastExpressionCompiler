@@ -214,8 +214,8 @@ public struct ExprTree
     /// <summary>Adds an invocation node.</summary>
     public int Invoke(int expression, params int[] arguments) =>
         arguments == null || arguments.Length == 0
-            ? AddFactoryExpressionNode(Nodes[expression].Type, null, ExpressionType.Invoke, expression)
-            : AddFactoryExpressionNode(Nodes[expression].Type, null, ExpressionType.Invoke, PrependToChildList(expression, arguments));
+            ? AddFactoryExpressionNode(GetInvokeResultType(Nodes[expression].Type), null, ExpressionType.Invoke, expression)
+            : AddFactoryExpressionNode(GetInvokeResultType(Nodes[expression].Type), null, ExpressionType.Invoke, PrependToChildList(expression, arguments));
 
     /// <summary>Adds a static-call node.</summary>
     public int Call(System.Reflection.MethodInfo method, params int[] arguments) =>
@@ -532,11 +532,11 @@ public struct ExprTree
     public static ExprTree FromLightExpression(LightExpression expression) =>
         FromExpression((expression ?? throw new ArgumentNullException(nameof(expression))).ToExpression());
 
-    /// <summary>Rebuilds the flat tree into the canonical root-reachable node order produced by <see cref="FromExpression(System.Linq.Expressions.Expression)"/>.</summary>
+    /// <summary>Reorders the flat tree into a canonical post-order where each node immediately follows its child subtree.</summary>
     [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
-    public ExprTree ToCanonical() =>
+    public ExprTree ToCanonical(bool throwOnOrphanNodes = false) =>
         Nodes.Count != 0
-            ? new Builder().Build(ToExpression())
+            ? new Canonicalizer(this).Canonicalize(throwOnOrphanNodes)
             : this;
 
     /// <summary>Reconstructs the flat tree as a System.Linq expression tree.</summary>
@@ -1188,6 +1188,11 @@ public struct ExprTree
         return elementType ?? typeof(object);
     }
 
+    [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2070",
+        Justification = "Flat expression direct invoke stores the runtime delegate type metadata explicitly.")]
+    private static Type GetInvokeResultType(Type delegateType) =>
+        delegateType.GetMethod("Invoke")?.ReturnType ?? typeof(object);
+
     private int CloneChild(int index)
     {
         ref var node = ref Nodes[index];
@@ -1213,6 +1218,118 @@ public struct ExprTree
         for (var i = 0; i < children.Count; ++i)
             cloned.Add(CloneChild(children[i]));
         return cloned;
+    }
+
+    /// <summary>Rebuilds the reachable flat nodes into a canonical post-order without round-tripping through <see cref="System.Linq.Expressions.Expression"/>.</summary>
+    private struct Canonicalizer
+    {
+        private readonly ExprTree _source;
+        private SmallMap16<int, int, IntEq> _parameterIds;
+        private SmallMap16<int, int, IntEq> _labelIds;
+        private bool[] _reachable;
+        private bool[] _visiting;
+        private ExprTree _canonical;
+
+        public Canonicalizer(ExprTree source)
+        {
+            _source = source;
+            _parameterIds = default;
+            _labelIds = default;
+            _reachable = null;
+            _visiting = null;
+            _canonical = default;
+        }
+
+        [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
+        public ExprTree Canonicalize(bool throwOnOrphanNodes)
+        {
+            _reachable = new bool[_source.Nodes.Count];
+            _visiting = new bool[_source.Nodes.Count];
+            _canonical.RootIndex = CopyNode(_source.RootIndex);
+
+            if (throwOnOrphanNodes)
+            {
+                for (var i = 0; i < _reachable.Length; ++i)
+                    if (!_reachable[i] && _source.Nodes[i].Type != null)
+                        throw new InvalidOperationException($"Flat expression contains a non-linked node at index {i}.");
+            }
+
+            return _canonical;
+        }
+
+        private int CopyNode(int index)
+        {
+            if ((uint)index >= (uint)_source.Nodes.Count)
+                throw new InvalidOperationException($"Flat expression references node index {index} outside of the node list.");
+
+            if (_visiting[index])
+                throw new InvalidOperationException($"Flat expression contains a cycle at node index {index}.");
+
+            _reachable[index] = true;
+            _visiting[index] = true;
+
+            ref var node = ref _source.Nodes[index];
+            int newIndex;
+            switch (node.Kind)
+            {
+                case ExprNodeKind.LabelTarget:
+                    newIndex = _canonical.AddRawLeafAuxNode(node.Type, node.Obj, node.Kind, childIdx: GetCanonicalId(ref _labelIds, node.ChildIdx));
+                    break;
+                case ExprNodeKind.ObjectReference:
+                case ExprNodeKind.UInt16Pair:
+                    newIndex = _canonical.AddLeafNode(node.Type, node.Obj, node.NodeType, node.Kind, node.Flags, node.ChildIdx, node.ChildCount);
+                    break;
+                default:
+                    if (node.NodeType == ExpressionType.Parameter)
+                    {
+                        newIndex = _canonical.AddRawLeafExpressionNode(node.Type, node.Obj, node.NodeType, node.Flags,
+                            childIdx: GetCanonicalId(ref _parameterIds, node.ChildIdx));
+                    }
+                    else if (node.NodeType == ExpressionType.Constant && ReferenceEquals(node.Obj, ClosureConstantMarker))
+                    {
+                        var constantIndex = _canonical.ClosureConstants.Add(_source.ClosureConstants[node.ChildIdx]);
+                        newIndex = _canonical.AddRawExpressionNodeWithChildIndex(node.Type, ClosureConstantMarker, node.NodeType, constantIndex);
+                    }
+                    else if (HasLinkedChildren(node))
+                    {
+                        var children = CopyChildren(index);
+                        newIndex = _canonical.AddNode(node.Type, node.Obj, node.NodeType, node.Kind, node.Flags, in children);
+                    }
+                    else
+                    {
+                        newIndex = _canonical.AddLeafNode(node.Type, node.Obj, node.NodeType, node.Kind, node.Flags, node.ChildIdx, node.ChildCount);
+                    }
+                    break;
+            }
+
+            _visiting[index] = false;
+            return newIndex;
+        }
+
+        private ChildList CopyChildren(int index)
+        {
+            ref var node = ref _source.Nodes[index];
+            ChildList children = default;
+            var childIndex = node.ChildIdx;
+            for (var i = 0; i < node.ChildCount; ++i)
+            {
+                children.Add(CopyNode(childIndex));
+                childIndex = _source.Nodes[childIndex].NextIdx;
+            }
+            return children;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool HasLinkedChildren(in ExprNode node) =>
+            node.Kind != ExprNodeKind.UInt16Pair && node.ChildCount != 0;
+
+        private static int GetCanonicalId(ref SmallMap16<int, int, IntEq> ids, int sourceId)
+        {
+            ref var id = ref ids.Map.AddOrGetValueRef(sourceId, out var found);
+            if (!found)
+                id = ids.Map.Count;
+            return id;
+        }
     }
 
     /// <summary>Reconstructs System.Linq nodes from the flat representation while reusing parameter and label identities.</summary>

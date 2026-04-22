@@ -34,8 +34,9 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_build_flat_expression_directly_with_light_expression_like_api();
             Can_build_flat_expression_control_flow_directly();
             Can_canonicalize_directly_built_flat_expression();
+            Can_throw_for_non_linked_nodes_while_canonicalizing();
             Can_property_test_generated_flat_expression_roundtrip_structurally();
-            return 18;
+            return 19;
         }
 
 
@@ -523,6 +524,18 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.AreEqual(expected.Nodes.Count + 5, fe.Nodes.Count);
             AssertFlatShapeIgnoringParameterNamesAndConstantValues(expected, canonical);
             Asserts.AreEqual(6, ((System.Linq.Expressions.Expression<Func<int, int>>)canonical.ToExpression()).Compile()(5));
+        }
+
+        public void Can_throw_for_non_linked_nodes_while_canonicalizing()
+        {
+            var fe = default(ExprTree);
+            _ = fe.ConstantInt(123);
+            var p = fe.Parameter(typeof(int), "p");
+            fe.RootIndex = fe.Lambda<Func<int, int>>(p, p);
+
+            var ex = Asserts.Throws<InvalidOperationException>(() => fe.ToCanonical(true));
+
+            Asserts.Contains("non-linked node", ex.Message);
         }
 
         private static void AssertFlatShapeIgnoringParameterNamesAndConstantValues(ExprTree expected, ExprTree actual)
