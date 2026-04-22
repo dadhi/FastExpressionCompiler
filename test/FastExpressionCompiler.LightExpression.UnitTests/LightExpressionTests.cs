@@ -34,7 +34,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_build_flat_expression_directly_with_light_expression_like_api();
             Can_build_flat_expression_control_flow_directly();
             Can_canonicalize_directly_built_flat_expression();
-            Can_throw_for_non_linked_nodes_while_canonicalizing();
+            Can_report_and_clear_orphan_nodes_while_canonicalizing();
             Can_property_test_generated_flat_expression_roundtrip_structurally();
             return 19;
         }
@@ -504,7 +504,12 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                     fe.Label(target, fe.ConstantInt(0))),
                 p);
 
-            var canonical = fe.ToCanonical();
+            Asserts.IsFalse(fe.IsCanonical(out var misplacedBefore, out var unreachableBefore));
+            Asserts.IsTrue(misplacedBefore > 0);
+            Asserts.AreEqual(5, unreachableBefore);
+
+            var canonical = fe.Copy();
+            var misplaced = canonical.Canonicalize(out var unreachableNodeCount, CanonicalizeFlags.CompactGaps);
 
             var expectedParameter = SysExpr.Parameter(typeof(int), "p");
             var expectedVariable = SysExpr.Variable(typeof(int), "v");
@@ -522,20 +527,35 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             // Direct construction keeps one unreachable constant plus four cloned linkable leaves
             // (parameter, variable, label target, and nested-lambda capture) that disappear after canonical rebuild.
             Asserts.AreEqual(expected.Nodes.Count + 5, fe.Nodes.Count);
+            Asserts.IsTrue(misplaced > 0);
+            Asserts.AreEqual(5, unreachableNodeCount);
             AssertFlatShapeIgnoringParameterNamesAndConstantValues(expected, canonical);
+            Asserts.IsTrue(canonical.IsCanonical(out var misplacedAfter, out var unreachableAfter));
+            Asserts.AreEqual(0, misplacedAfter);
+            Asserts.AreEqual(0, unreachableAfter);
             Asserts.AreEqual(6, ((System.Linq.Expressions.Expression<Func<int, int>>)canonical.ToExpression()).Compile()(5));
         }
 
-        public void Can_throw_for_non_linked_nodes_while_canonicalizing()
+        public void Can_report_and_clear_orphan_nodes_while_canonicalizing()
         {
-            var fe = default(ExprTree);
+            var p = SysExpr.Parameter(typeof(int), "p");
+            var fe = SysExpr.Lambda<Func<int, int>>(p, p).ToFlatExpression();
             _ = fe.ConstantInt(123);
-            var p = fe.Parameter(typeof(int), "p");
-            fe.RootIndex = fe.Lambda<Func<int, int>>(p, p);
 
-            var ex = Asserts.Throws<InvalidOperationException>(() => fe.ToCanonical(true));
+            var canonical = fe.Copy();
+            var misplaced = canonical.Canonicalize(out var unreachableNodeCount);
 
-            Asserts.Contains("orphan node", ex.Message);
+            Asserts.AreEqual(0, misplaced);
+            Asserts.AreEqual(1, unreachableNodeCount);
+            Asserts.IsTrue(canonical.IsCanonical(out var misplacedAfter, out var unreachableAfter));
+            Asserts.AreEqual(0, misplacedAfter);
+            Asserts.AreEqual(0, unreachableAfter);
+            Asserts.AreEqual(null, canonical.Nodes[canonical.Nodes.Count - 1].Type);
+
+            var compacted = fe.Copy();
+            compacted.Canonicalize(out var compactedUnreachableNodeCount, CanonicalizeFlags.CompactGaps);
+            Asserts.AreEqual(1, compactedUnreachableNodeCount);
+            Asserts.AreEqual(3, compacted.Nodes.Count);
         }
 
         private static void AssertFlatShapeIgnoringParameterNamesAndConstantValues(ExprTree expected, ExprTree actual)

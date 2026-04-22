@@ -45,6 +45,17 @@ public enum ExprNodeKind : byte
     UInt16Pair,
 }
 
+/// <summary>Controls how <see cref="ExprTree.Canonicalize"/> rewrites unreachable or empty nodes.</summary>
+[Flags]
+public enum CanonicalizeFlags : byte
+{
+    /// <summary>Canonicalize live nodes in-place and clear unreachable ones without shrinking the node storage.</summary>
+    None = 0,
+
+    /// <summary>Compact cleared gaps so only live canonical nodes remain in the storage.</summary>
+    CompactGaps = 1,
+}
+
 /// <summary>Stores one flat expression node plus its intrusive child-link metadata in 24 bytes on 64-bit runtimes.</summary>
 [StructLayout(LayoutKind.Explicit, Size = 24)]
 public struct ExprNode
@@ -532,12 +543,41 @@ public struct ExprTree
     public static ExprTree FromLightExpression(LightExpression expression) =>
         FromExpression((expression ?? throw new ArgumentNullException(nameof(expression))).ToExpression());
 
-    /// <summary>Reorders the flat tree into a canonical post-order where each node immediately follows its child subtree.</summary>
-    [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
-    public ExprTree ToCanonical(bool throwOnOrphanNodes = false) =>
-        Nodes.Count != 0
-            ? new Canonicalizer(this).Canonicalize(throwOnOrphanNodes)
-            : this;
+    /// <summary>Creates a copy of the flat tree storage so the caller may canonicalize it independently.</summary>
+    public ExprTree Copy() => new()
+    {
+        RootIndex = RootIndex,
+        Nodes = CopySmallList(in Nodes),
+        ClosureConstants = CopySmallList(in ClosureConstants),
+    };
+
+    /// <summary>Checks whether the live nodes are already in canonical child-before-parent order.</summary>
+    public bool IsCanonical(out int misplacedNodeCount, out int unreachableNodeCount)
+    {
+        if (Nodes.Count == 0)
+        {
+            misplacedNodeCount = 0;
+            unreachableNodeCount = 0;
+            return true;
+        }
+
+        _ = new Canonicalizer(this).BuildCanonical(out misplacedNodeCount, out unreachableNodeCount);
+        return misplacedNodeCount == 0 && unreachableNodeCount == 0;
+    }
+
+    /// <summary>Canonicalizes the live nodes in-place and returns the number of misplaced live nodes that had to move.</summary>
+    public int Canonicalize(out int unreachableNodeCount, CanonicalizeFlags flags = CanonicalizeFlags.None)
+    {
+        if (Nodes.Count == 0)
+        {
+            unreachableNodeCount = 0;
+            return 0;
+        }
+
+        var canonical = new Canonicalizer(this).BuildCanonical(out var misplacedNodeCount, out unreachableNodeCount);
+        RewriteCanonical(in canonical, flags);
+        return misplacedNodeCount;
+    }
 
     /// <summary>Reconstructs the flat tree as a System.Linq expression tree.</summary>
     [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
@@ -1220,14 +1260,64 @@ public struct ExprTree
         return cloned;
     }
 
-    /// <summary>Rebuilds the reachable flat nodes into a canonical post-order without round-tripping through <see cref="System.Linq.Expressions.Expression"/>.</summary>
+    private static SmallList<T, TStack, TPool> CopySmallList<T, TStack, TPool>(in SmallList<T, TStack, TPool> source)
+        where TStack : struct, IStack<T, TStack>
+        where TPool : struct, ISmallArrayPool<T>
+    {
+        SmallList<T, TStack, TPool> copy = default;
+        copy.InitCount(source.Count);
+        for (var i = 0; i < source.Count; ++i)
+            copy[i] = source[i];
+        return copy;
+    }
+
+    private void RewriteCanonical(in ExprTree canonical, CanonicalizeFlags flags)
+    {
+        RootIndex = canonical.RootIndex;
+        ClosureConstants = canonical.ClosureConstants;
+
+        if ((flags & CanonicalizeFlags.CompactGaps) != 0 || Nodes.Count < canonical.Nodes.Count)
+        {
+            Nodes = canonical.Nodes;
+            return;
+        }
+
+        var liveCount = canonical.Nodes.Count;
+        var totalCount = Nodes.Count;
+        for (var i = 0; i < liveCount; ++i)
+            Nodes[i] = canonical.Nodes[i];
+        for (var i = liveCount; i < totalCount; ++i)
+            Nodes[i] = default;
+    }
+
+    private static bool HasLiveNode(in ExprNode node) => node.Type != null;
+
+    private static bool AreCanonicalNodesEqual(in ExprNode x, in ExprNode y) =>
+        x.Type == y.Type &&
+        x.Obj == y.Obj &&
+        x.NodeType == y.NodeType &&
+        x.Kind == y.Kind &&
+        x.Flags == y.Flags &&
+        x.ChildIdx == y.ChildIdx &&
+        x.ChildCount == y.ChildCount &&
+        x.NextIdx == y.NextIdx;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int ThrowNodeIndexOutsideOfRange(int index) =>
+        throw new InvalidOperationException($"Flat expression references node index {index} outside of the node list.");
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int ThrowCycleDetected(int index) =>
+        throw new InvalidOperationException($"Flat expression contains a cycle at node index {index}.");
+
+    /// <summary>Rebuilds the reachable flat nodes into canonical child-before-parent order without round-tripping through <see cref="System.Linq.Expressions.Expression"/>.</summary>
     private struct Canonicalizer
     {
         private readonly ExprTree _source;
         private SmallMap16<int, int, IntEq> _parameterIds;
         private SmallMap16<int, int, IntEq> _labelIds;
-        private bool[] _reachable;
-        private bool[] _visiting;
+        private ChildList _reachable;
+        private ChildList _path;
         private ExprTree _canonical;
 
         public Canonicalizer(ExprTree source)
@@ -1235,38 +1325,29 @@ public struct ExprTree
             _source = source;
             _parameterIds = default;
             _labelIds = default;
-            _reachable = null;
-            _visiting = null;
+            _reachable = default;
+            _path = default;
             _canonical = default;
         }
 
-        [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
-        public ExprTree Canonicalize(bool throwOnOrphanNodes)
+        public ExprTree BuildCanonical(out int misplacedNodeCount, out int unreachableNodeCount)
         {
-            _reachable = new bool[_source.Nodes.Count];
-            _visiting = new bool[_source.Nodes.Count];
             _canonical.RootIndex = CopyNode(_source.RootIndex);
-
-            if (throwOnOrphanNodes)
-            {
-                for (var i = 0; i < _reachable.Length; ++i)
-                    if (!_reachable[i] && _source.Nodes[i].Type != null)
-                        throw new InvalidOperationException($"Flat expression contains an orphan node at index {i}.");
-            }
-
+            misplacedNodeCount = CountMisplacedNodes();
+            unreachableNodeCount = CountUnreachableNodes();
             return _canonical;
         }
 
         private int CopyNode(int index)
         {
             if ((uint)index >= (uint)_source.Nodes.Count)
-                throw new InvalidOperationException($"Flat expression references node index {index} outside of the node list.");
+                return ThrowNodeIndexOutsideOfRange(index);
 
-            if (_visiting[index])
-                throw new InvalidOperationException($"Flat expression contains a cycle at node index {index}.");
+            if (ContainsInPath(index))
+                return ThrowCycleDetected(index);
 
-            _reachable[index] = true;
-            _visiting[index] = true;
+            AddIfAbsent(ref _reachable, index);
+            _path.Add(index);
 
             ref var node = ref _source.Nodes[index];
             int newIndex;
@@ -1302,7 +1383,7 @@ public struct ExprTree
                     break;
             }
 
-            _visiting[index] = false;
+            _path.RemoveLastSurePresent();
             return newIndex;
         }
 
@@ -1322,6 +1403,56 @@ public struct ExprTree
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool HasLinkedChildren(in ExprNode node) =>
             node.Kind != ExprNodeKind.UInt16Pair && node.ChildCount != 0;
+
+        private bool ContainsInPath(int index)
+        {
+            for (var i = 0; i < _path.Count; ++i)
+                if (_path[i] == index)
+                    return true;
+            return false;
+        }
+
+        private static void AddIfAbsent(ref ChildList list, int index)
+        {
+            for (var i = 0; i < list.Count; ++i)
+                if (list[i] == index)
+                    return;
+            list.Add(index);
+        }
+
+        private int CountMisplacedNodes()
+        {
+            var count = 0;
+            var compareCount = _source.Nodes.Count < _canonical.Nodes.Count ? _source.Nodes.Count : _canonical.Nodes.Count;
+            for (var i = 0; i < compareCount; ++i)
+                if (!AreCanonicalNodesEqual(_source.Nodes[i], _canonical.Nodes[i]))
+                    ++count;
+            if (_canonical.Nodes.Count > _source.Nodes.Count)
+                count += _canonical.Nodes.Count - _source.Nodes.Count;
+            return count;
+        }
+
+        private int CountUnreachableNodes()
+        {
+            var count = 0;
+            for (var i = 0; i < _source.Nodes.Count; ++i)
+            {
+                if (!HasLiveNode(_source.Nodes[i]))
+                    continue;
+
+                if (!Contains(_reachable, i))
+                    ++count;
+            }
+            return count;
+        }
+
+        private static bool Contains(in ChildList list, int index)
+        {
+            for (var i = 0; i < list.Count; ++i)
+                if (list[i] == index)
+                    return true;
+            return false;
+        }
 
         private static int GetCanonicalId(ref SmallMap16<int, int, IntEq> ids, int sourceId)
         {
