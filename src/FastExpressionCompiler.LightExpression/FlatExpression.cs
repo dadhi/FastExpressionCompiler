@@ -62,6 +62,29 @@ public struct ExprNode
     private const ulong KeepWithoutChildInfoMask = ~ChildInfoMask;
     private const int FlagsShift = 4;
 
+    /// <summary>
+    /// Bit 63 of _data: set on the last child node in a chain to indicate that its NextIdx
+    /// field contains the parent node index rather than a next-sibling index.
+    /// Safe to use because ExpressionType values only reach 84 (0x54), leaving bit 7 of the
+    /// NodeType byte (bit 63 of _data) permanently zero for all real node types.
+    /// </summary>
+    private const ulong ParentLinkBit = 1UL << 63;
+
+    /// <summary>
+    /// Flags bit 2 (value 4): set on Constant nodes whose 32-bit primitive value is stored
+    /// inline in the lower 32 bits of _data instead of being boxed in Obj.
+    /// Covers bool, char, sbyte, byte, short, ushort, int, uint, float, and int-sized enums.
+    /// </summary>
+    internal const byte InlineInt32ConstantFlag = 4;
+
+    /// <summary>
+    /// Flags bit 3 (value 8): set on Parameter/variable declaration nodes to distinguish them
+    /// from parameter usage nodes.  Declaration nodes store the owner scope index in ChildIdx
+    /// and the position within that scope in ChildCount; usage nodes store the declaration
+    /// node index in ChildIdx.
+    /// </summary>
+    internal const byte ParameterDeclFlag = 8;
+
     /// <summary>Gets or sets the runtime type of the represented node.</summary>
     [FieldOffset(0)]
     public Type Type;
@@ -69,11 +92,21 @@ public struct ExprNode
     /// <summary>Gets or sets the runtime payload associated with the node.</summary>
     [FieldOffset(8)]
     public object Obj;
+
     [FieldOffset(16)]
     private ulong _data;
 
     /// <summary>Gets the expression kind encoded for this node.</summary>
-    public ExpressionType NodeType => (ExpressionType)((_data >> NodeTypeShift) & 0xFF);
+    /// <remarks>
+    /// The NodeType byte occupies bits [62:56] of _data.  Bit 63 is reserved for
+    /// <see cref="ParentLinkBit"/> and is masked out here.  The mask value 0x7F (127)
+    /// therefore covers all currently defined <see cref="ExpressionType"/> values (max 84)
+    /// while also stripping the parent-link sentinel bit; if the enum is ever extended
+    /// beyond 127 this constant must be widened.
+    /// </remarks>
+    private const ulong NodeTypeMask = 0x7F;
+    /// <inheritdoc cref="NodeTypeMask"/>
+    public ExpressionType NodeType => (ExpressionType)((_data >> NodeTypeShift) & NodeTypeMask);
 
     /// <summary>Gets the payload classification for this node.</summary>
     public ExprNodeKind Kind => (ExprNodeKind)((_data >> TagShift) & KindMask);
@@ -81,6 +114,7 @@ public struct ExprNode
     internal byte Flags => (byte)(((byte)(_data >> TagShift)) >> FlagsShift);
 
     /// <summary>Gets the next sibling node index in the intrusive child chain.</summary>
+    /// <remarks>When <see cref="HasParentLink"/> is true this field contains the parent index instead.</remarks>
     public int NextIdx => (int)((_data >> NextShift) & IndexMask);
 
     /// <summary>Gets the number of direct children linked from this node.</summary>
@@ -88,6 +122,18 @@ public struct ExprNode
 
     /// <summary>Gets the first child index or an auxiliary payload index.</summary>
     public int ChildIdx => (int)(_data & IndexMask);
+
+    /// <summary>
+    /// Returns true when this node is the last child in its parent's chain and its
+    /// <see cref="NextIdx"/> field holds the parent node index rather than a sibling index.
+    /// </summary>
+    public bool HasParentLink => (_data & ParentLinkBit) != 0;
+
+    /// <summary>
+    /// Returns the inline 32-bit integer value stored in the lower 32 bits of _data.
+    /// Only valid when <see cref="HasFlag"/>(<see cref="InlineInt32ConstantFlag"/>) is true.
+    /// </summary>
+    internal int InlineInt32 => unchecked((int)(uint)_data);
 
     internal ExprNode(Type type, object obj, ExpressionType nodeType, ExprNodeKind kind, byte flags = 0, int childIdx = 0, int childCount = 0, int nextIdx = 0)
     {
@@ -101,15 +147,53 @@ public struct ExprNode
             | (ushort)childIdx;
     }
 
+    /// <summary>
+    /// Constructs an inline-int32 constant node.  The <paramref name="inlineInt32"/> value is
+    /// stored in the lower 32 bits of _data (overlapping the ChildIdx/ChildCount fields which
+    /// are unused for this leaf variant); <see cref="InlineInt32ConstantFlag"/> must be set in
+    /// <paramref name="flags"/>.
+    /// </summary>
+    internal ExprNode(Type type, ExpressionType nodeType, byte flags, int inlineInt32, int nextIdx = 0)
+    {
+        Type = type;
+        Obj = null;
+        var tag = (byte)((flags << FlagsShift) | (byte)ExprNodeKind.Expression);
+        _data = ((ulong)(byte)nodeType << NodeTypeShift)
+            | ((ulong)tag << TagShift)
+            | ((ulong)(ushort)nextIdx << NextShift)
+            | (uint)inlineInt32;
+    }
+
+    /// <summary>
+    /// Sets the NextIdx field to a sibling node index and clears <see cref="ParentLinkBit"/>
+    /// so the node is no longer marked as the last child in its parent's chain.
+    /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void SetNextIdx(int nextIdx) =>
-        _data = (_data & KeepWithoutNextMask) | ((ulong)(ushort)nextIdx << NextShift);
+        _data = (_data & KeepWithoutNextMask & ~ParentLinkBit) | ((ulong)(ushort)nextIdx << NextShift);
+
+    /// <summary>
+    /// Marks this node as the last child in its parent's chain by storing
+    /// <paramref name="parentIdx"/> in the NextIdx field and setting <see cref="ParentLinkBit"/>.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void SetParentIdx(int parentIdx) =>
+        _data = (_data & KeepWithoutNextMask) | ((ulong)(ushort)parentIdx << NextShift) | ParentLinkBit;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void SetChildInfo(int childIdx, int childCount) =>
         _data = (_data & KeepWithoutChildInfoMask)
             | ((ulong)(ushort)childCount << CountShift)
             | (ushort)childIdx;
+
+    /// <summary>
+    /// Records ownership of a parameter or variable declaration node by storing the
+    /// <paramref name="ownerIdx"/> (lambda or block node index) in ChildIdx and the
+    /// <paramref name="positionInOwner"/> (0-based parameter/variable position) in ChildCount.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void SetOwner(int ownerIdx, int positionInOwner) =>
+        SetChildInfo(ownerIdx, positionInOwner);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool Is(ExprNodeKind kind) => Kind == kind;
@@ -122,7 +206,11 @@ public struct ExprNode
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool ShouldCloneWhenLinked() =>
-        Kind == ExprNodeKind.LabelTarget || NodeType == ExpressionType.Parameter || Kind == ExprNodeKind.ObjectReference || ChildCount == 0;
+        Kind == ExprNodeKind.LabelTarget || NodeType == ExpressionType.Parameter || Kind == ExprNodeKind.ObjectReference
+        // Inline-int32 constants store their value in bits [31:0] of _data, which overlaps
+        // ChildIdx/ChildCount.  If an inline constant with value >= 65536 were reused without
+        // cloning its NextIdx would be shared across chains; always clone to prevent that.
+        || ChildCount == 0 || HasFlag(InlineInt32ConstantFlag);
 }
 
 /// <summary>Stores an expression tree as a flat node array plus out-of-line closure constants.</summary>
@@ -147,10 +235,19 @@ public struct ExprTree
     public SmallList<object, Stack16<object>, NoArrayPool<object>> ClosureConstants;
 
     /// <summary>Adds a parameter node and returns its index.</summary>
+    /// <remarks>
+    /// The returned index identifies a <em>declaration</em> node (distinguished by the
+    /// <see cref="ExprNode.ParameterDeclFlag"/> flag).  Ownership metadata (owner lambda/block
+    /// index and position) is written by <see cref="Lambda(Type,int,int[])"/> or
+    /// <see cref="Block(Type,System.Collections.Generic.IEnumerable{int},int[])"/> when the
+    /// parameter is registered as a formal parameter or variable.  Every time this index is
+    /// passed to any other factory method it is transparently promoted to a lightweight
+    /// <em>usage</em> node by <see cref="CloneChild"/>.
+    /// </remarks>
     public int Parameter(Type type, string name = null)
     {
-        var id = Nodes.Count + 1;
-        return AddRawLeafExpressionNode(type, name, ExpressionType.Parameter, type.IsByRef ? ParameterByRefFlag : (byte)0, childIdx: id);
+        var flags = (byte)(ExprNode.ParameterDeclFlag | (type.IsByRef ? ParameterByRefFlag : 0));
+        return AddRawLeafExpressionNode(type, name, ExpressionType.Parameter, flags, childIdx: 0);
     }
 
     /// <summary>Adds a typed parameter node and returns its index.</summary>
@@ -169,6 +266,16 @@ public struct ExprTree
     /// <summary>Adds a constant node with an explicit constant type.</summary>
     public int Constant(object value, Type type)
     {
+        // null, string, and Type values are stored as-is in Obj (no boxing).
+        if (value == null || value is string || value is Type)
+            return AddRawExpressionNode(type, value, ExpressionType.Constant);
+
+        // 32-bit primitive types (bool, char, int, float, int-sized enums…) are stored inline
+        // in the lower 32 bits of _data to avoid heap allocation.
+        if (TryGetInlineInt32Bits(value, type, out var inlineBits))
+            return AddInlineInt32ConstantNode(type, inlineBits);
+
+        // Remaining inline types (long, double, decimal…) stay boxed in Obj.
         if (ShouldInlineConstant(value, type))
             return AddRawExpressionNode(type, value, ExpressionType.Constant);
 
@@ -180,7 +287,7 @@ public struct ExprTree
     public int ConstantNull(Type type = null) => AddRawExpressionNode(type ?? typeof(object), null, ExpressionType.Constant);
 
     /// <summary>Adds an <see cref="int"/> constant node.</summary>
-    public int ConstantInt(int value) => AddRawExpressionNode(typeof(int), value, ExpressionType.Constant);
+    public int ConstantInt(int value) => AddInlineInt32ConstantNode(typeof(int), value);
 
     /// <summary>Adds a typed constant node.</summary>
     public int ConstantOf<T>(T value) => Constant(value, typeof(T));
@@ -304,6 +411,11 @@ public struct ExprTree
         Block(null, null, expressions);
 
     /// <summary>Adds a block node with optional explicit result type and variables.</summary>
+    /// <remarks>
+    /// Variable declaration nodes passed via <paramref name="variables"/> are placed directly
+    /// in the ChildList meta-node without cloning.  After the block node is created each
+    /// declaration node's ownership metadata is updated.
+    /// </remarks>
     public int Block(Type type, IEnumerable<int> variables, params int[] expressions)
     {
         if (expressions == null || expressions.Length == 0)
@@ -320,9 +432,25 @@ public struct ExprTree
         }
         ChildList bodyChildren = default;
         for (var i = 0; i < expressions.Length; ++i)
-            bodyChildren.Add(expressions[i]);
+            bodyChildren.Add(CloneChild(expressions[i])); // clone to turn decl nodes into usage nodes
         children.Add(AddChildListNode(in bodyChildren));
-        return AddFactoryExpressionNode(type ?? Nodes[expressions[expressions.Length - 1]].Type, null, ExpressionType.Block, in children);
+
+        var blockIdx = AddNode(type ?? Nodes[expressions[expressions.Length - 1]].Type, null, ExpressionType.Block, ExprNodeKind.Expression, 0, in children);
+
+        // Write ownership into each variable declaration node now that the block index is known.
+        if (variables != null)
+        {
+            var pos = 0;
+            foreach (var variable in variables)
+            {
+                ref var varNode = ref Nodes[variable];
+                if (varNode.NodeType == ExpressionType.Parameter && varNode.HasFlag(ExprNode.ParameterDeclFlag))
+                    varNode.SetOwner(blockIdx, pos);
+                pos++;
+            }
+        }
+
+        return blockIdx;
     }
 
     /// <summary>Adds a typed lambda node.</summary>
@@ -330,10 +458,34 @@ public struct ExprTree
         Lambda(typeof(TDelegate), body, parameters);
 
     /// <summary>Adds a lambda node.</summary>
-    public int Lambda(Type delegateType, int body, params int[] parameters) =>
-        parameters == null || parameters.Length == 0
-            ? AddFactoryExpressionNode(delegateType, null, ExpressionType.Lambda, 0, body)
-            : AddFactoryExpressionNode(delegateType, null, ExpressionType.Lambda, PrependToChildList(body, parameters));
+    /// <remarks>
+    /// Parameter declaration nodes passed via <paramref name="parameters"/> are recorded
+    /// directly in the child chain without cloning (each is promoted to a usage node only when
+    /// passed to other factory methods).  After the lambda node is created each declaration
+    /// node's ownership metadata (owner index and position) is updated.
+    /// </remarks>
+    public int Lambda(Type delegateType, int body, params int[] parameters)
+    {
+        ChildList children = default;
+        children.Add(CloneChild(body));
+
+        if (parameters != null)
+            for (var i = 0; i < parameters.Length; ++i)
+                children.Add(parameters[i]); // decl nodes are placed directly, not cloned
+
+        var lambdaIdx = AddNode(delegateType, null, ExpressionType.Lambda, ExprNodeKind.Expression, 0, in children);
+
+        // Write ownership into each parameter declaration node now that the lambda index is known.
+        if (parameters != null)
+            for (var i = 0; i < parameters.Length; ++i)
+            {
+                ref var pNode = ref Nodes[parameters[i]];
+                if (pNode.NodeType == ExpressionType.Parameter && pNode.HasFlag(ExprNode.ParameterDeclFlag))
+                    pNode.SetOwner(lambdaIdx, i);
+            }
+
+        return lambdaIdx;
+    }
 
     /// <summary>Adds a member-assignment binding node.</summary>
     public int Bind(System.Reflection.MemberInfo member, int expression) =>
@@ -696,36 +848,57 @@ public struct ExprTree
                 case ExpressionType.Default:
                     return _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType);
                 case ExpressionType.Parameter:
-                    {
-                        var parameter = (SysParameterExpression)expression;
-                        return _tree.AddRawLeafExpressionNode(expression.Type, parameter.Name, expression.NodeType,
-                            parameter.IsByRef ? ParameterByRefFlag : (byte)0, childIdx: GetId(ref _parameterIds, parameter));
-                    }
+                    return AddParameterUsage((SysParameterExpression)expression);
                 case ExpressionType.Lambda:
                     {
                         var lambda = (System.Linq.Expressions.LambdaExpression)expression;
+
+                        // Create declaration nodes for formal parameters BEFORE processing the body so
+                        // that body uses create usage nodes pointing to the correct decl indices.
+                        var paramDecls = lambda.Parameters.Count > 0 ? new int[lambda.Parameters.Count] : System.Array.Empty<int>();
+                        for (var i = 0; i < lambda.Parameters.Count; ++i)
+                            paramDecls[i] = AddParameterDecl(lambda.Parameters[i]);
+
                         ChildList children = default;
                         children.Add(AddExpression(lambda.Body));
-                        for (var i = 0; i < lambda.Parameters.Count; ++i)
-                            children.Add(AddExpression(lambda.Parameters[i]));
-                        return _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType, children);
+                        for (var i = 0; i < paramDecls.Length; ++i)
+                            children.Add(paramDecls[i]);
+
+                        var lambdaIdx = _tree.AddNode(expression.Type, null, expression.NodeType, ExprNodeKind.Expression, 0, in children);
+
+                        for (var i = 0; i < paramDecls.Length; ++i)
+                            _tree.Nodes[paramDecls[i]].SetOwner(lambdaIdx, i);
+
+                        return lambdaIdx;
                     }
                 case ExpressionType.Block:
                     {
                         var block = (System.Linq.Expressions.BlockExpression)expression;
+
+                        // Create declaration nodes for variables BEFORE processing body expressions.
+                        var varDecls = block.Variables.Count > 0 ? new int[block.Variables.Count] : System.Array.Empty<int>();
+                        for (var i = 0; i < block.Variables.Count; ++i)
+                            varDecls[i] = AddParameterDecl(block.Variables[i]);
+
                         ChildList children = default;
-                        if (block.Variables.Count != 0)
+                        if (varDecls.Length != 0)
                         {
                             ChildList variables = default;
-                            for (var i = 0; i < block.Variables.Count; ++i)
-                                variables.Add(AddExpression(block.Variables[i]));
+                            for (var i = 0; i < varDecls.Length; ++i)
+                                variables.Add(varDecls[i]);
                             children.Add(_tree.AddChildListNode(in variables));
                         }
                         ChildList expressions = default;
                         for (var i = 0; i < block.Expressions.Count; ++i)
                             expressions.Add(AddExpression(block.Expressions[i]));
                         children.Add(_tree.AddChildListNode(in expressions));
-                        return _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType, in children);
+
+                        var blockIdx = _tree.AddNode(expression.Type, null, expression.NodeType, ExprNodeKind.Expression, 0, in children);
+
+                        for (var i = 0; i < varDecls.Length; ++i)
+                            _tree.Nodes[varDecls[i]].SetOwner(blockIdx, i);
+
+                        return blockIdx;
                     }
                 case ExpressionType.MemberAccess:
                     {
@@ -934,14 +1107,8 @@ public struct ExprTree
             }
         }
 
-        private int AddConstant(System.Linq.Expressions.ConstantExpression constant)
-        {
-            if (ShouldInlineConstant(constant.Value, constant.Type))
-                return _tree.AddRawExpressionNode(constant.Type, constant.Value, constant.NodeType);
-
-            var constantIndex = _tree.ClosureConstants.Add(constant.Value);
-            return _tree.AddRawExpressionNodeWithChildIndex(constant.Type, ClosureConstantMarker, constant.NodeType, constantIndex);
-        }
+        private int AddConstant(System.Linq.Expressions.ConstantExpression constant) =>
+            _tree.Constant(constant.Value, constant.Type);
 
         private int AddSwitchCase(SysSwitchCase switchCase)
         {
@@ -956,7 +1123,7 @@ public struct ExprTree
         {
             ChildList children = default;
             if (catchBlock.Variable != null)
-                children.Add(AddExpression(catchBlock.Variable));
+                children.Add(AddParameterDecl(catchBlock.Variable)); // catch variable is a declaration
             children.Add(AddExpression(catchBlock.Body));
             if (catchBlock.Filter != null)
                 children.Add(AddExpression(catchBlock.Filter));
@@ -966,6 +1133,34 @@ public struct ExprTree
 
         private int AddLabelTarget(SysLabelTarget target) =>
             _tree.AddRawLeafAuxNode(target.Type, target.Name, ExprNodeKind.LabelTarget, childIdx: GetId(ref _labelIds, target));
+
+        /// <summary>
+        /// Ensures a declaration node exists for <paramref name="parameter"/> and returns its index.
+        /// If this is the first encounter the declaration node is created with
+        /// <see cref="ExprNode.ParameterDeclFlag"/> set and its ChildIdx initialised to zero
+        /// (ownership is written later by the Lambda/Block handler).
+        /// </summary>
+        private int AddParameterDecl(SysParameterExpression parameter)
+        {
+            ref var declIdx = ref _parameterIds.Map.AddOrGetValueRef(parameter, out var found);
+            if (!found)
+            {
+                var flags = (byte)(ExprNode.ParameterDeclFlag | (parameter.IsByRef ? ParameterByRefFlag : 0));
+                declIdx = _tree.AddRawLeafExpressionNode(parameter.Type, parameter.Name, ExpressionType.Parameter, flags, childIdx: 0);
+            }
+            return declIdx;
+        }
+
+        /// <summary>
+        /// Creates a lightweight parameter usage node that inherits the type and name of the
+        /// declaration for cheap checks while storing the declaration node index in ChildIdx.
+        /// </summary>
+        private int AddParameterUsage(SysParameterExpression parameter)
+        {
+            var declIdx = AddParameterDecl(parameter); // guarantees the decl node exists
+            var byRefFlag = parameter.IsByRef ? ParameterByRefFlag : (byte)0;
+            return _tree.AddRawLeafExpressionNode(parameter.Type, parameter.Name, ExpressionType.Parameter, byRefFlag, childIdx: declIdx);
+        }
 
         private int AddMemberBinding(SysMemberBinding binding)
         {
@@ -1042,6 +1237,7 @@ public struct ExprTree
         var nodeIndex = Nodes.Count;
         ref var newNode = ref Nodes.AddDefaultAndGetRef();
         newNode = new ExprNode(type, obj, nodeType, kind, flags, child0, 1);
+        Nodes[child0].SetParentIdx(nodeIndex);
         return nodeIndex;
     }
 
@@ -1051,6 +1247,7 @@ public struct ExprTree
         ref var newNode = ref Nodes.AddDefaultAndGetRef();
         newNode = new ExprNode(type, obj, nodeType, kind, flags, c0, 2);
         Nodes[c0].SetNextIdx(c1);
+        Nodes[c1].SetParentIdx(nodeIndex);
         return nodeIndex;
     }
 
@@ -1061,6 +1258,7 @@ public struct ExprTree
         newNode = new ExprNode(type, obj, nodeType, kind, flags, c0, 3);
         Nodes[c0].SetNextIdx(c1);
         Nodes[c1].SetNextIdx(c2);
+        Nodes[c2].SetParentIdx(nodeIndex);
         return nodeIndex;
     }
 
@@ -1072,6 +1270,7 @@ public struct ExprTree
         Nodes[c0].SetNextIdx(c1);
         Nodes[c1].SetNextIdx(c2);
         Nodes[c2].SetNextIdx(c3);
+        Nodes[c3].SetParentIdx(nodeIndex);
         return nodeIndex;
     }
 
@@ -1084,6 +1283,7 @@ public struct ExprTree
         Nodes[c1].SetNextIdx(c2);
         Nodes[c2].SetNextIdx(c3);
         Nodes[c3].SetNextIdx(c4);
+        Nodes[c4].SetParentIdx(nodeIndex);
         return nodeIndex;
     }
 
@@ -1097,6 +1297,7 @@ public struct ExprTree
         Nodes[c2].SetNextIdx(c3);
         Nodes[c3].SetNextIdx(c4);
         Nodes[c4].SetNextIdx(c5);
+        Nodes[c5].SetParentIdx(nodeIndex);
         return nodeIndex;
     }
 
@@ -1111,6 +1312,7 @@ public struct ExprTree
         Nodes[c3].SetNextIdx(c4);
         Nodes[c4].SetNextIdx(c5);
         Nodes[c5].SetNextIdx(c6);
+        Nodes[c6].SetParentIdx(nodeIndex);
         return nodeIndex;
     }
 
@@ -1124,6 +1326,7 @@ public struct ExprTree
         newNode = new ExprNode(type, obj, nodeType, kind, flags, children[0], children.Length);
         for (var i = 1; i < children.Length; ++i)
             Nodes[children[i - 1]].SetNextIdx(children[i]);
+        Nodes[children[children.Length - 1]].SetParentIdx(nodeIndex);
         return nodeIndex;
     }
 
@@ -1137,12 +1340,91 @@ public struct ExprTree
         newNode = new ExprNode(type, obj, nodeType, kind, flags, children[0], children.Count);
         for (var i = 1; i < children.Count; ++i)
             Nodes[children[i - 1]].SetNextIdx(children[i]);
+        Nodes[children[children.Count - 1]].SetParentIdx(nodeIndex);
         return nodeIndex;
     }
+
+    /// <summary>
+    /// Tiny union struct used to reinterpret a <see cref="float"/> bit-pattern as an
+    /// <see cref="int"/> (and vice-versa) without platform-specific APIs.
+    /// </summary>
+    [StructLayout(LayoutKind.Explicit)]
+    private struct FloatInt32Union
+    {
+        [FieldOffset(0)] public float Float;
+        [FieldOffset(0)] public int Int;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int FloatToInt32Bits(float value) => new FloatInt32Union { Float = value }.Int;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static float Int32BitsToFloat(int bits) => new FloatInt32Union { Int = bits }.Float;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool ShouldInlineConstant(object value, Type type) =>
         value == null || value is string || value is Type || type.IsEnum || Type.GetTypeCode(type) != TypeCode.Object;
+
+    /// <summary>
+    /// Returns true and the 32-bit bit pattern in <paramref name="bits"/> when <paramref name="value"/>
+    /// is a primitive that fits in 32 bits (bool, char, sbyte, byte, short, ushort, int, uint,
+    /// float, or an enum with a 32-bit-or-smaller underlying type).
+    /// </summary>
+    private static bool TryGetInlineInt32Bits(object value, Type type, out int bits)
+    {
+        if (value == null)
+        {
+            bits = 0;
+            return false;
+        }
+
+        var inlineType = type.IsEnum ? Enum.GetUnderlyingType(type) : type;
+        switch (Type.GetTypeCode(inlineType))
+        {
+            case TypeCode.Boolean:  bits = (bool)value ? 1 : 0;              return true;
+            case TypeCode.Char:     bits = (char)value;                      return true;
+            case TypeCode.SByte:    bits = (sbyte)value;                     return true;
+            case TypeCode.Byte:     bits = (byte)value;                      return true;
+            case TypeCode.Int16:    bits = (short)value;                     return true;
+            case TypeCode.UInt16:   bits = (ushort)value;                    return true;
+            case TypeCode.Int32:    bits = (int)value;                       return true;
+            case TypeCode.UInt32:   bits = (int)(uint)value;                 return true;
+            case TypeCode.Single:   bits = FloatToInt32Bits((float)value);   return true;
+            default:                bits = 0;                                return false;
+        }
+    }
+
+    /// <summary>
+    /// Reconstructs the boxed constant value from a 32-bit inline bit pattern stored in
+    /// an <see cref="ExprNode"/> whose <see cref="ExprNode.InlineInt32ConstantFlag"/> is set.
+    /// </summary>
+    private static object GetValueFromInlineInt32(int bits, Type type)
+    {
+        var inlineType = type.IsEnum ? Enum.GetUnderlyingType(type) : type;
+        object value = Type.GetTypeCode(inlineType) switch
+        {
+            TypeCode.Boolean => bits != 0,
+            TypeCode.Char    => (char)(bits & 0xFFFF), // mask to lower 16 bits; chars are 0–65535
+            TypeCode.SByte   => (sbyte)bits,
+            TypeCode.Byte    => (byte)bits,
+            TypeCode.Int16   => (short)bits,
+            TypeCode.UInt16  => (ushort)bits,
+            TypeCode.Int32   => bits,
+            TypeCode.UInt32  => (uint)bits,
+            TypeCode.Single  => Int32BitsToFloat(bits),
+            _                => bits
+        };
+        return type.IsEnum ? Enum.ToObject(type, value) : value;
+    }
+
+    /// <summary>Adds an inline-int32 constant leaf node without boxing the primitive value.</summary>
+    private int AddInlineInt32ConstantNode(Type type, int bits)
+    {
+        var nodeIndex = Nodes.Count;
+        ref var newNode = ref Nodes.AddDefaultAndGetRef();
+        newNode = new ExprNode(type, ExpressionType.Constant, ExprNode.InlineInt32ConstantFlag, bits);
+        return nodeIndex;
+    }
 
     private static Type GetMemberType(System.Reflection.MemberInfo member) => member switch
     {
@@ -1184,6 +1466,14 @@ public struct ExprTree
     private int CloneChild(int index)
     {
         ref var node = ref Nodes[index];
+        if (node.NodeType == ExpressionType.Parameter && node.HasFlag(ExprNode.ParameterDeclFlag))
+        {
+            // Declaration node used as an expression value: create a lightweight usage node.
+            // The usage node inherits Type and Name for cheap checks while pointing back to the decl.
+            var byRefFlag = node.HasFlag(ParameterByRefFlag) ? ParameterByRefFlag : (byte)0;
+            return AddLeafNode(node.Type, node.Obj, ExpressionType.Parameter, ExprNodeKind.Expression, byRefFlag, childIdx: index, childCount: 0);
+        }
+
         return node.ShouldCloneWhenLinked()
             ? AddLeafNode(node.Type, node.Obj, node.NodeType, node.Kind, node.Flags, node.ChildIdx, node.ChildCount)
             : index;
@@ -1232,6 +1522,8 @@ public struct ExprTree
             switch (node.NodeType)
             {
                 case ExpressionType.Constant:
+                    if (node.HasFlag(ExprNode.InlineInt32ConstantFlag))
+                        return SysExpr.Constant(GetValueFromInlineInt32(node.InlineInt32, node.Type), node.Type);
                     return SysExpr.Constant(ReferenceEquals(node.Obj, ClosureConstantMarker)
                         ? _tree.ClosureConstants[node.ChildIdx]
                         : node.Obj, node.Type);
@@ -1239,12 +1531,18 @@ public struct ExprTree
                     return SysExpr.Default(node.Type);
                 case ExpressionType.Parameter:
                     {
-                        ref var parameter = ref _parametersById.Map.AddOrGetValueRef(node.ChildIdx, out var found);
-                        if (found)
-                            return parameter;
-
-                        var parameterType = node.HasFlag(ParameterByRefFlag) && !node.Type.IsByRef ? node.Type.MakeByRefType() : node.Type;
-                        return parameter = SysExpr.Parameter(parameterType, (string)node.Obj);
+                        // For declaration nodes the canonical lookup key is the node's own index.
+                        // For usage nodes it is the declaration node index stored in ChildIdx.
+                        var isDecl = node.HasFlag(ExprNode.ParameterDeclFlag);
+                        var declIdx = isDecl ? index : node.ChildIdx;
+                        ref var parameter = ref _parametersById.Map.AddOrGetValueRef(declIdx, out var found);
+                        if (!found)
+                        {
+                            // Reconstruct from this node; both decl and usage carry the same Type and Name.
+                            var parameterType = node.HasFlag(ParameterByRefFlag) && !node.Type.IsByRef ? node.Type.MakeByRefType() : node.Type;
+                            parameter = SysExpr.Parameter(parameterType, (string)node.Obj);
+                        }
+                        return parameter;
                     }
                 case ExpressionType.Lambda:
                     {
