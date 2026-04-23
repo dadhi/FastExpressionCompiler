@@ -146,6 +146,46 @@ public struct ExprNode
         Kind == ExprNodeKind.LabelTarget || NodeType == ExpressionType.Parameter || Kind == ExprNodeKind.ObjectReference || ChildCount == 0;
 }
 
+/// <summary>Stores owner-side metadata for a lambda node.</summary>
+public struct LambdaInfo
+{
+    /// <summary>Gets or sets the lambda owner node index.</summary>
+    public int LambdaIndex;
+
+    /// <summary>Gets or sets the lambda body node index.</summary>
+    public int BodyIndex;
+
+    /// <summary>Gets or sets the declaration node indexes owned by the lambda.</summary>
+    public ChildList ParameterDeclarations;
+
+    internal LambdaInfo(int lambdaIndex, int bodyIndex, in ChildList parameterDeclarations)
+    {
+        LambdaIndex = lambdaIndex;
+        BodyIndex = bodyIndex;
+        ParameterDeclarations = parameterDeclarations;
+    }
+}
+
+/// <summary>Stores owner-side metadata for a block node.</summary>
+public struct BlockInfo
+{
+    /// <summary>Gets or sets the block owner node index.</summary>
+    public int BlockIndex;
+
+    /// <summary>Gets or sets the child-list node index containing the block body expressions.</summary>
+    public int BodyExpressionsIndex;
+
+    /// <summary>Gets or sets the declaration node indexes owned by the block.</summary>
+    public ChildList VariableDeclarations;
+
+    internal BlockInfo(int blockIndex, int bodyExpressionsIndex, in ChildList variableDeclarations)
+    {
+        BlockIndex = blockIndex;
+        BodyExpressionsIndex = bodyExpressionsIndex;
+        VariableDeclarations = variableDeclarations;
+    }
+}
+
 /// <summary>Stores an expression tree as a flat node array plus out-of-line closure constants.</summary>
 public struct ExprTree
 {
@@ -170,6 +210,40 @@ public struct ExprTree
 
     /// <summary>Gets or sets closure constants that are referenced from constant nodes.</summary>
     public SmallList<object, Stack16<object>, NoArrayPool<object>> ClosureConstants;
+
+    /// <summary>Gets or sets owner-side metadata for lambda nodes, populated during FE construction.</summary>
+    public SmallList<LambdaInfo, Stack16<LambdaInfo>, NoArrayPool<LambdaInfo>> Lambdas;
+
+    /// <summary>Gets or sets owner-side metadata for block nodes, populated during FE construction.</summary>
+    public SmallList<BlockInfo, Stack16<BlockInfo>, NoArrayPool<BlockInfo>> Blocks;
+
+    /// <summary>Returns the owner-side metadata for the specified lambda node, if present.</summary>
+    public bool TryGetLambdaInfo(int lambdaIndex, out LambdaInfo info)
+    {
+        for (var i = 0; i < Lambdas.Count; ++i)
+        {
+            info = Lambdas.GetSurePresentRef(i);
+            if (info.LambdaIndex == lambdaIndex)
+                return true;
+        }
+
+        info = default;
+        return false;
+    }
+
+    /// <summary>Returns the owner-side metadata for the specified block node, if present.</summary>
+    public bool TryGetBlockInfo(int blockIndex, out BlockInfo info)
+    {
+        for (var i = 0; i < Blocks.Count; ++i)
+        {
+            info = Blocks.GetSurePresentRef(i);
+            if (info.BlockIndex == blockIndex)
+                return true;
+        }
+
+        info = default;
+        return false;
+    }
 
     /// <summary>Adds a parameter node and returns its index.</summary>
     public int Parameter(Type type, string name = null)
@@ -348,21 +422,23 @@ public struct ExprTree
             throw new ArgumentException("Block should contain at least one expression.", nameof(expressions));
 
         ChildList children = default;
+        ChildList variableDeclarations = default;
         if (variables != null)
         {
-            ChildList variableChildren = default;
             foreach (var variable in variables)
-                variableChildren.Add(RequireParameterDeclarationIndex(variable));
-            if (variableChildren.Count != 0)
-                children.Add(AddChildListNode(in variableChildren));
+                variableDeclarations.Add(RequireParameterDeclarationIndex(variable));
+            if (variableDeclarations.Count != 0)
+                children.Add(AddChildListNode(in variableDeclarations));
         }
         ChildList bodyChildren = default;
         for (var i = 0; i < expressions.Length; ++i)
             bodyChildren.Add(CloneChild(expressions[i]));
-        children.Add(AddChildListNode(in bodyChildren));
+        var bodyExpressionsIndex = AddChildListNode(in bodyChildren);
+        children.Add(bodyExpressionsIndex);
         var blockIndex = AddNode(type ?? Nodes.GetSurePresentRef(expressions[expressions.Length - 1]).Type, null, ExpressionType.Block, ExprNodeKind.Expression, 0, in children);
-        if (variables != null && children.Count == 2)
-            BindParameterDeclarations(blockIndex, GetChildren(children[0]));
+        if (variableDeclarations.Count != 0)
+            BindParameterDeclarations(blockIndex, variableDeclarations);
+        AddBlockInfo(blockIndex, bodyExpressionsIndex, variableDeclarations);
         return blockIndex;
     }
 
@@ -378,7 +454,12 @@ public struct ExprTree
         // Each declaration node is later bound to this lambda via ChildIdx = lambdaIndex and ChildCount = parameter position.
         // Parameter references inside the body are separate usage nodes with ChildIdx = declaration index.
         if (parameters == null || parameters.Length == 0)
-            return AddFactoryExpressionNode(delegateType, null, ExpressionType.Lambda, 0, body);
+        {
+            var lambdaIndexWithoutParameters = AddFactoryExpressionNode(delegateType, null, ExpressionType.Lambda, 0, body);
+            ChildList emptyDeclarations = default;
+            AddLambdaInfo(lambdaIndexWithoutParameters, body, emptyDeclarations);
+            return lambdaIndexWithoutParameters;
+        }
 
         ChildList children = default;
         children.Add(CloneChild(body));
@@ -392,6 +473,7 @@ public struct ExprTree
 
         var lambdaIndex = AddNode(delegateType, null, ExpressionType.Lambda, ExprNodeKind.Expression, 0, in children);
         BindParameterDeclarations(lambdaIndex, declarations);
+        AddLambdaInfo(lambdaIndex, body, declarations);
         return lambdaIndex;
     }
 
@@ -776,7 +858,9 @@ public struct ExprTree
                         for (var i = 0; i < declarations.Count; ++i)
                             children.Add(declarations[i]);
                         var lambdaIndex = _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType, children);
-                        _tree.BindParameterDeclarations(lambdaIndex, declarations);
+                        if (declarations.Count != 0)
+                            _tree.BindParameterDeclarations(lambdaIndex, declarations);
+                        _tree.AddLambdaInfo(lambdaIndex, body, declarations);
                         return lambdaIndex;
                     }
                 case ExpressionType.Block:
@@ -793,10 +877,12 @@ public struct ExprTree
                         ChildList expressions = default;
                         for (var i = 0; i < block.Expressions.Count; ++i)
                             expressions.Add(AddExpression(block.Expressions[i]));
-                        children.Add(_tree.AddChildListNode(in expressions));
+                        var bodyExpressionsIndex = _tree.AddChildListNode(in expressions);
+                        children.Add(bodyExpressionsIndex);
                         var blockIndex = _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType, in children);
                         if (variables.Count != 0)
                             _tree.BindParameterDeclarations(blockIndex, variables);
+                        _tree.AddBlockInfo(blockIndex, bodyExpressionsIndex, variables);
                         return blockIndex;
                     }
                 case ExpressionType.MemberAccess:
@@ -1280,6 +1366,14 @@ public struct ExprTree
 
         declaration.SetChildInfo(ownerIndex, position);
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void AddLambdaInfo(int lambdaIndex, int bodyIndex, in ChildList declarations) =>
+        Lambdas.Add(new LambdaInfo(lambdaIndex, bodyIndex, declarations));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void AddBlockInfo(int blockIndex, int bodyExpressionsIndex, in ChildList declarations) =>
+        Blocks.Add(new BlockInfo(blockIndex, bodyExpressionsIndex, declarations));
 
     private int AddParameterUsageNode(in ExprNode node, int declarationIndex) =>
         AddRawLeafExpressionNode(node.Type, node.Obj, ExpressionType.Parameter,
