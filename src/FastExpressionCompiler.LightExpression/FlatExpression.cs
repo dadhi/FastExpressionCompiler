@@ -338,6 +338,12 @@ public struct ExprTree
     /// <summary>Adds a block node with optional explicit result type and variables.</summary>
     public int Block(Type type, IEnumerable<int> variables, params int[] expressions)
     {
+        // Block shape:
+        // - without variables: children = [body-expressions-child-list]
+        // - with variables: children = [declarations-child-list, body-expressions-child-list]
+        // The declarations child list contains parameter declaration nodes.
+        // Each declaration node is later bound to this block via ChildIdx = blockIndex and ChildCount = declaration position.
+        // Parameter references inside the body are separate usage nodes with ChildIdx = declaration index.
         if (expressions == null || expressions.Length == 0)
             throw new ArgumentException("Block should contain at least one expression.", nameof(expressions));
 
@@ -367,6 +373,10 @@ public struct ExprTree
     /// <summary>Adds a lambda node.</summary>
     public int Lambda(Type delegateType, int body, params int[] parameters)
     {
+        // Lambda shape: children = [body, declaration0, declaration1, ...]
+        // The lambda stores declaration nodes directly after the body.
+        // Each declaration node is later bound to this lambda via ChildIdx = lambdaIndex and ChildCount = parameter position.
+        // Parameter references inside the body are separate usage nodes with ChildIdx = declaration index.
         if (parameters == null || parameters.Length == 0)
             return AddFactoryExpressionNode(delegateType, null, ExpressionType.Lambda, 0, body);
 
@@ -1259,6 +1269,9 @@ public struct ExprTree
 
     private void BindParameterDeclaration(int ownerIndex, int declarationIndex, int position)
     {
+        // Parameter node contract:
+        // - declaration node: ParameterDeclarationFlag set, ChildIdx = owning lambda/block index, ChildCount = position in that owner
+        // - usage node: ParameterDeclarationFlag clear, ChildIdx = declaration node index, ChildCount = 0
         ref var declaration = ref Nodes.GetSurePresentRef(declarationIndex);
         if (!declaration.IsParameterDeclaration())
             Throw.ParameterDeclarationExpected(declarationIndex);
