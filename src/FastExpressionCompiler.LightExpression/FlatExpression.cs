@@ -217,32 +217,23 @@ public struct ExprTree
     /// <summary>Gets or sets owner-side metadata for block nodes, populated during FE construction.</summary>
     public SmallList<BlockInfo, Stack16<BlockInfo>, NoArrayPool<BlockInfo>> Blocks;
 
+    private SmallMap16<int, int, IntEq> _lambdaInfoIndexesByNodeIndex;
+    private SmallMap16<int, int, IntEq> _blockInfoIndexesByNodeIndex;
+
     /// <summary>Returns the owner-side metadata for the specified lambda node, if present.</summary>
     public bool TryGetLambdaInfo(int lambdaIndex, out LambdaInfo info)
     {
-        for (var i = 0; i < Lambdas.Count; ++i)
-        {
-            info = Lambdas.GetSurePresentRef(i);
-            if (info.LambdaIndex == lambdaIndex)
-                return true;
-        }
-
-        info = default;
-        return false;
+        ref var infoIndex = ref _lambdaInfoIndexesByNodeIndex.Map.TryGetValueRef(lambdaIndex, out var found);
+        info = found ? Lambdas.GetSurePresentRef(infoIndex) : default;
+        return found;
     }
 
     /// <summary>Returns the owner-side metadata for the specified block node, if present.</summary>
     public bool TryGetBlockInfo(int blockIndex, out BlockInfo info)
     {
-        for (var i = 0; i < Blocks.Count; ++i)
-        {
-            info = Blocks.GetSurePresentRef(i);
-            if (info.BlockIndex == blockIndex)
-                return true;
-        }
-
-        info = default;
-        return false;
+        ref var infoIndex = ref _blockInfoIndexesByNodeIndex.Map.TryGetValueRef(blockIndex, out var found);
+        info = found ? Blocks.GetSurePresentRef(infoIndex) : default;
+        return found;
     }
 
     /// <summary>Adds a parameter node and returns its index.</summary>
@@ -1368,12 +1359,32 @@ public struct ExprTree
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void AddLambdaInfo(int lambdaIndex, int bodyIndex, in ChildList declarations) =>
-        Lambdas.Add(new LambdaInfo(lambdaIndex, bodyIndex, declarations));
+    private void AddLambdaInfo(int lambdaIndex, int bodyIndex, in ChildList declarations)
+    {
+        ref var infoIndex = ref _lambdaInfoIndexesByNodeIndex.Map.AddOrGetValueRef(lambdaIndex, out var found);
+        var info = new LambdaInfo(lambdaIndex, bodyIndex, declarations);
+        if (found)
+            Lambdas.GetSurePresentRef(infoIndex) = info;
+        else
+        {
+            infoIndex = Lambdas.Count;
+            Lambdas.Add(info);
+        }
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void AddBlockInfo(int blockIndex, int bodyExpressionsIndex, in ChildList declarations) =>
-        Blocks.Add(new BlockInfo(blockIndex, bodyExpressionsIndex, declarations));
+    private void AddBlockInfo(int blockIndex, int bodyExpressionsIndex, in ChildList declarations)
+    {
+        ref var infoIndex = ref _blockInfoIndexesByNodeIndex.Map.AddOrGetValueRef(blockIndex, out var found);
+        var info = new BlockInfo(blockIndex, bodyExpressionsIndex, declarations);
+        if (found)
+            Blocks.GetSurePresentRef(infoIndex) = info;
+        else
+        {
+            infoIndex = Blocks.Count;
+            Blocks.Add(info);
+        }
+    }
 
     private int AddParameterUsageNode(in ExprNode node, int declarationIndex) =>
         AddRawLeafExpressionNode(node.Type, node.Obj, ExpressionType.Parameter,

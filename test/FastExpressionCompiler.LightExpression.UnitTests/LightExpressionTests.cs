@@ -31,11 +31,12 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_roundtrip_light_expression_through_flat_expression();
             Flat_expression_preserves_parameter_and_label_identity_and_collects_closure_constants();
             Flat_expression_uses_parameter_declarations_parent_links_and_inline_constants();
+            Flat_expression_collects_lambda_and_block_owner_metadata_when_flattening_system_expression();
             Can_convert_dynamic_runtime_variables_and_debug_info_to_light_expression_and_flat_expression();
             Can_build_flat_expression_directly_with_light_expression_like_api();
             Can_build_flat_expression_control_flow_directly();
             Can_property_test_generated_flat_expression_roundtrip_structurally();
-            return 18;
+            return 19;
         }
 
 
