@@ -30,11 +30,13 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Multiple_methods_in_block_should_be_aligned_when_output_to_csharp();
             Can_roundtrip_light_expression_through_flat_expression();
             Flat_expression_preserves_parameter_and_label_identity_and_collects_closure_constants();
+            Flat_expression_uses_parameter_declarations_parent_links_and_inline_constants();
+            Flat_expression_collects_lambda_and_block_owner_metadata_when_flattening_system_expression();
             Can_convert_dynamic_runtime_variables_and_debug_info_to_light_expression_and_flat_expression();
             Can_build_flat_expression_directly_with_light_expression_like_api();
             Can_build_flat_expression_control_flow_directly();
             Can_property_test_generated_flat_expression_roundtrip_structurally();
-            return 17;
+            return 19;
         }
 
 
@@ -418,6 +420,87 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
             Asserts.AreSame(sysRoundtrip.Parameters[0], @goto.Value);
             Asserts.AreSame(@goto.Target, label.Target);
+        }
+
+        public void Flat_expression_uses_parameter_declarations_parent_links_and_inline_constants()
+        {
+            var fe = default(ExprTree);
+            var parameter = fe.Parameter(typeof(int), "p");
+            var variable = fe.Variable(typeof(int), "v");
+            var assign = fe.Assign(variable, parameter);
+            var smallConstant = fe.ConstantOf(12.5f);
+            var largeConstant = fe.ConstantOf(42L);
+            var block = fe.Block(typeof(long), new[] { variable }, assign, smallConstant, largeConstant);
+            fe.RootIndex = fe.Lambda<Func<int, long>>(block, parameter);
+
+            Asserts.AreEqual(1, fe.Lambdas.Count);
+            Asserts.IsTrue(fe.TryGetLambdaInfo(fe.RootIndex, out var lambdaInfo));
+            Asserts.AreEqual(fe.RootIndex, lambdaInfo.LambdaIndex);
+            Asserts.AreEqual(block, lambdaInfo.BodyIndex);
+            Asserts.AreEqual(1, lambdaInfo.ParameterDeclarations.Count);
+            Asserts.AreEqual(parameter, lambdaInfo.ParameterDeclarations[0]);
+
+            Asserts.AreEqual(1, fe.Blocks.Count);
+            Asserts.IsTrue(fe.TryGetBlockInfo(block, out var blockInfo));
+            Asserts.AreEqual(block, blockInfo.BlockIndex);
+            Asserts.AreEqual(1, blockInfo.VariableDeclarations.Count);
+            Asserts.AreEqual(variable, blockInfo.VariableDeclarations[0]);
+            Asserts.AreEqual(3, fe.Nodes[blockInfo.BodyExpressionsIndex].ChildCount);
+
+            var parameterDeclaration = fe.Nodes[parameter];
+            Asserts.AreEqual(fe.RootIndex, parameterDeclaration.ChildIdx);
+            Asserts.AreEqual(0, parameterDeclaration.ChildCount);
+
+            var variableDeclaration = fe.Nodes[variable];
+            Asserts.AreEqual(block, variableDeclaration.ChildIdx);
+            Asserts.AreEqual(0, variableDeclaration.ChildCount);
+
+            var assignNode = fe.Nodes[assign];
+            var leftUsageIndex = assignNode.ChildIdx;
+            var rightUsageIndex = fe.Nodes[leftUsageIndex].NextIdx;
+            Asserts.AreEqual(variable, fe.Nodes[leftUsageIndex].ChildIdx);
+            Asserts.AreEqual(parameter, fe.Nodes[rightUsageIndex].ChildIdx);
+            Asserts.AreEqual(assign, fe.Nodes[rightUsageIndex].NextIdx);
+
+            Asserts.AreEqual(0, fe.ClosureConstants.Count);
+            Asserts.AreEqual(null, fe.Nodes[smallConstant].Obj);
+            Asserts.AreEqual(42L, fe.Nodes[largeConstant].Obj);
+
+            var roundtrip = (System.Linq.Expressions.Expression<Func<int, long>>)fe.ToExpression();
+            var compiled = roundtrip.Compile();
+            Asserts.AreEqual(42L, compiled(7));
+        }
+
+        public void Flat_expression_collects_lambda_and_block_owner_metadata_when_flattening_system_expression()
+        {
+            var outer = SysExpr.Parameter(typeof(int), "outer");
+            var local = SysExpr.Parameter(typeof(int), "local");
+            var nested = SysExpr.Lambda<Func<int>>(
+                SysExpr.Block(
+                    typeof(int),
+                    new[] { local },
+                    SysExpr.Assign(local, outer),
+                    local));
+            var lambda = SysExpr.Lambda<Func<int, Func<int>>>(nested, outer);
+
+            var fe = lambda.ToFlatExpression();
+
+            Asserts.AreEqual(2, fe.Lambdas.Count);
+            Asserts.AreEqual(1, fe.Blocks.Count);
+
+            Asserts.IsTrue(fe.TryGetLambdaInfo(fe.RootIndex, out var outerLambda));
+            Asserts.AreEqual(fe.RootIndex, outerLambda.LambdaIndex);
+            Asserts.AreEqual(1, outerLambda.ParameterDeclarations.Count);
+
+            Asserts.IsTrue(fe.TryGetLambdaInfo(outerLambda.BodyIndex, out var nestedLambda));
+            Asserts.AreEqual(ExpressionType.Lambda, fe.Nodes[nestedLambda.LambdaIndex].NodeType);
+            Asserts.AreEqual(0, nestedLambda.ParameterDeclarations.Count);
+            Asserts.AreEqual(ExpressionType.Block, fe.Nodes[nestedLambda.BodyIndex].NodeType);
+
+            Asserts.IsTrue(fe.TryGetBlockInfo(nestedLambda.BodyIndex, out var blockInfo));
+            Asserts.AreEqual(nestedLambda.BodyIndex, blockInfo.BlockIndex);
+            Asserts.AreEqual(1, blockInfo.VariableDeclarations.Count);
+            Asserts.AreEqual(2, fe.Nodes[blockInfo.BodyExpressionsIndex].ChildCount);
         }
 
         public void Can_convert_dynamic_runtime_variables_and_debug_info_to_light_expression_and_flat_expression()
