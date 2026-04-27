@@ -3205,10 +3205,13 @@ namespace FastExpressionCompiler
                         EmitStoreAndLoadLocalVariableAddress(il, sourceType);
                         EmitMethodCall(il, sourceType.GetNullableValueGetterMethod());
                     }
-                    else if (methodParamType != sourceType) // This is an unlikely case of Target(Source? source)
+                    else if (methodParamType != sourceType) // This is an unlikely case of Target(Source? source), or a polymorphic base type
                     {
-                        Debug.Assert(Nullable.GetUnderlyingType(methodParamType) == sourceType, "Expecting that the parameter type is the Nullable<sourceType>");
-                        il.Demit(OpCodes.Newobj, methodParamType.GetNullableConstructor());
+                        if (Nullable.GetUnderlyingType(methodParamType) == sourceType)
+                            il.Demit(OpCodes.Newobj, methodParamType.GetNullableConstructor());
+                        // else: methodParamType is a base type/interface of sourceType - the value on the stack is already assignment-compatible, no additional emit needed
+                        else Debug.Assert(methodParamType.IsAssignableFrom(sourceType),
+                            $"Expected the conversion operator parameter type `{methodParamType}` to be either Nullable<{sourceType}> or a base type of `{sourceType}`");
                     }
 
                     EmitMethodCallOrVirtualCall(il, convertMethod);
