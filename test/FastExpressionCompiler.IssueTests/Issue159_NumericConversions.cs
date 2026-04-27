@@ -365,7 +365,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Cgt_Un,
                 OpCodes.Ldc_I4_0,
                 OpCodes.Ceq,
-                OpCodes.Br,
+                OpCodes.Br_S,   // short form: jumps over Ldc_I4_0 (1 byte) = 1 byte
                 OpCodes.Ldc_I4_0,
                 OpCodes.Ret);
 

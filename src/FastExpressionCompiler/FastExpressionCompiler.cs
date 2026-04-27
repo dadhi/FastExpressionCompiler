@@ -2568,7 +2568,7 @@ namespace FastExpressionCompiler
                         il.DmarkLabel(labelFalse);
                     else
                     {
-                        il.Demit(OpCodes.Br, labelDone);
+                        il.Demit(OpCodes.Br_S, labelDone); // safe: jumps over Castclass (5 bytes) = 5 bytes
                         il.DmarkLabel(labelFalse); // todo: @bug? should we insert the boxing for the Nullable value type before the Castclass
                         il.Demit(OpCodes.Castclass, exprType);
                         il.DmarkLabel(labelDone);
@@ -2947,9 +2947,9 @@ namespace FastExpressionCompiler
                 {
                     var falseLabel = il.DefineLabel();
                     var continueLabel = il.DefineLabel();
-                    il.Demit(OpCodes.Brfalse, falseLabel);
+                    il.Demit(OpCodes.Brfalse_S, falseLabel); // safe: jumps over Ldc_I4_0 (1 byte) + Br_S (2 bytes) = 3 bytes
                     il.Demit(OpCodes.Ldc_I4_0);
-                    il.Demit(OpCodes.Br, continueLabel);
+                    il.Demit(OpCodes.Br_S, continueLabel);   // safe: jumps over Ldc_I4_1 (1 byte) = 1 byte
                     il.DmarkLabel(falseLabel);
                     il.Demit(OpCodes.Ldc_I4_1);
                     il.DmarkLabel(continueLabel);
@@ -5770,9 +5770,9 @@ namespace FastExpressionCompiler
                         var resultLabel = il.DefineLabel();
                         var isNullLabel = il.DefineLabel();
                         EmitLoadLocalVariable(il, leftHasValueVar);
-                        il.Demit(OpCodes.Brfalse, isNullLabel);
+                        il.Demit(OpCodes.Brfalse_S, isNullLabel); // safe: jumps over EmitLoadLocalVariable (1-4 bytes) + Brtrue_S (2 bytes) = 3-6 bytes
                         EmitLoadLocalVariable(il, rightHasValueVar);
-                        il.Demit(OpCodes.Brtrue, resultLabel);
+                        il.Demit(OpCodes.Brtrue_S, resultLabel);  // safe: jumps over Pop (1 byte) + Ldnull (1 byte) = 2 bytes
                         il.DmarkLabel(isNullLabel);
                         il.Demit(OpCodes.Pop);
                         il.Demit(OpCodes.Ldnull);
@@ -5977,7 +5977,7 @@ namespace FastExpressionCompiler
                     return false;
 
                 var labelDone = il.DefineLabel();
-                il.Demit(OpCodes.Br, labelDone);
+                il.Demit(OpCodes.Br_S, labelDone); // safe: jumps over Ldc_I4_0 or Ldc_I4_1 (1 byte) = 1 byte
 
                 il.DmarkLabel(labelSkipRight); // label the second branch
                 il.Demit(nodeType == ExpressionType.AndAlso ? OpCodes.Ldc_I4_0 : OpCodes.Ldc_I4_1);
