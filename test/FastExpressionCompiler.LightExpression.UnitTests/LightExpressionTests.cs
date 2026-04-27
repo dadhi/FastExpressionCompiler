@@ -486,6 +486,55 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.AreSame(gotoExpr.Target, label.Target);
         }
 
+        public void Flat_expression_splits_parameter_declarations_and_usages_with_scope_metadata()
+        {
+            var fe = default(ExprTree);
+            var p = fe.Parameter(typeof(int), "p");
+            var body = fe.Add(p, p);
+            fe.RootIndex = fe.Lambda<Func<int, int>>(body, p);
+
+            var declaration = fe.Nodes[p];
+            Asserts.AreEqual(ExprNodeKind.ParameterDeclaration, declaration.Kind);
+            Asserts.AreEqual(fe.RootIndex, declaration.ChildIdx);
+            Asserts.AreEqual(0, declaration.ChildCount);
+
+            var add = fe.Nodes[body];
+            var firstUsageIndex = add.ChildIdx;
+            var secondUsageIndex = fe.Nodes[firstUsageIndex].NextIdx;
+            var firstUsage = fe.Nodes[firstUsageIndex];
+            var secondUsage = fe.Nodes[secondUsageIndex];
+
+            Asserts.AreEqual(ExprNodeKind.ParameterUsage, firstUsage.Kind);
+            Asserts.AreEqual(ExprNodeKind.ParameterUsage, secondUsage.Kind);
+            Asserts.AreEqual(p, firstUsage.ChildIdx);
+            Asserts.AreEqual(p, secondUsage.ChildIdx);
+            Asserts.AreEqual(typeof(int), firstUsage.Type);
+            Asserts.AreEqual("p", (string)firstUsage.Obj);
+        }
+
+        public void Flat_expression_links_last_child_to_parent_and_uses_reference_node_on_reuse()
+        {
+            var fe = default(ExprTree);
+            var shared = fe.ConstantInt(42);
+            var left = fe.Add(shared, fe.ConstantInt(1));
+            var right = fe.Add(shared, fe.ConstantInt(2));
+            var body = fe.Add(left, right);
+            fe.RootIndex = fe.Lambda<Func<int>>(body);
+
+            var leftNode = fe.Nodes[left];
+            var leftSecondChildIndex = fe.Nodes[leftNode.ChildIdx].NextIdx;
+            Asserts.AreEqual(left, fe.Nodes[leftSecondChildIndex].NextIdx);
+
+            var rightNode = fe.Nodes[right];
+            var rightFirstChild = fe.Nodes[rightNode.ChildIdx];
+            Asserts.AreEqual(ExprNodeKind.NodeReference, rightFirstChild.Kind);
+            Asserts.AreEqual(shared, rightFirstChild.ChildIdx);
+            var rightSecondChildIndex = fe.Nodes[rightNode.ChildIdx].NextIdx;
+            Asserts.AreEqual(right, fe.Nodes[rightSecondChildIndex].NextIdx);
+
+            Asserts.AreEqual(87, ((LambdaExpression)fe.ToLightExpression()).CompileFast<Func<int>>(true)());
+        }
+
         public class A
         {
             public P Prop { get; set; }
