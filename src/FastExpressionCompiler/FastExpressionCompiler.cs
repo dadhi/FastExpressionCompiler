@@ -8372,50 +8372,6 @@ namespace FastExpressionCompiler
         /// <summary>Configuration option to disable the ILGenerator Emit debug output</summary>
         public static bool DisableDemit;
 
-        // Tracks the IL offset of each marked label per ILGenerator, used by smart branch emitters to select short form when possible
-        internal static readonly ConditionalWeakTable<ILGenerator, Dictionary<Label, int>> _ilLabelPositions =
-            new ConditionalWeakTable<ILGenerator, Dictionary<Label, int>>();
-
-        // Maps a long-form branch opcode to its short-form equivalent, or returns the same opcode if no short form exists
-        [MethodImpl((MethodImplOptions)256)]
-        private static OpCode GetShortFormBranchOpCode(OpCode longFormOpCode)
-        {
-            if (longFormOpCode == OpCodes.Br)      return OpCodes.Br_S;
-            if (longFormOpCode == OpCodes.Brtrue)  return OpCodes.Brtrue_S;
-            if (longFormOpCode == OpCodes.Brfalse) return OpCodes.Brfalse_S;
-            if (longFormOpCode == OpCodes.Beq)     return OpCodes.Beq_S;
-            if (longFormOpCode == OpCodes.Bne_Un)  return OpCodes.Bne_Un_S;
-            if (longFormOpCode == OpCodes.Blt)     return OpCodes.Blt_S;
-            if (longFormOpCode == OpCodes.Blt_Un)  return OpCodes.Blt_Un_S;
-            if (longFormOpCode == OpCodes.Bgt)     return OpCodes.Bgt_S;
-            if (longFormOpCode == OpCodes.Bgt_Un)  return OpCodes.Bgt_Un_S;
-            if (longFormOpCode == OpCodes.Ble)     return OpCodes.Ble_S;
-            if (longFormOpCode == OpCodes.Ble_Un)  return OpCodes.Ble_Un_S;
-            if (longFormOpCode == OpCodes.Bge)     return OpCodes.Bge_S;
-            if (longFormOpCode == OpCodes.Bge_Un)  return OpCodes.Bge_Un_S;
-            return longFormOpCode; // no short form available
-        }
-
-        // Returns the short-form opcode if the label is already marked (backward branch) and the branch delta fits in a signed byte.
-        // The delta is computed from the end of the short-form instruction (ILOffset + 2) to the target label position.
-        [MethodImpl((MethodImplOptions)256)]
-        private static bool TryGetShortFormOpCodeForBackwardBranch(ILGenerator il, OpCode opcode, Label label, out OpCode shortFormOpCode)
-        {
-            shortFormOpCode = GetShortFormBranchOpCode(opcode);
-            if (shortFormOpCode != opcode &&
-                _ilLabelPositions.TryGetValue(il, out var positions) &&
-                positions.TryGetValue(label, out var labelOffset))
-            {
-                // Short form branch: 2 bytes total (1-byte opcode + 1-byte signed offset).
-                // The offset is relative to the start of the next instruction (ILOffset + 2).
-                var delta = labelOffset - (il.ILOffset + 2);
-                if (delta >= -128 && delta <= 127)
-                    return true;
-            }
-            shortFormOpCode = opcode;
-            return false;
-        }
-
 #if DEMIT
         [MethodImpl((MethodImplOptions)256)]
         public static void Demit(this ILGenerator il, OpCode opcode, [CallerMemberName] string emitterName = "", [CallerLineNumber] int emitterLine = 0)
@@ -8475,13 +8431,6 @@ namespace FastExpressionCompiler
         public static void Demit(this ILGenerator il, OpCode opcode, Label value,
             [CallerArgumentExpression("value")] string valueName = null, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
-            if (TryGetShortFormOpCodeForBackwardBranch(il, opcode, value, out var emitOpCode))
-            {
-                il.Emit(emitOpCode, value);
-                if (DisableDemit) return;
-                Debug.WriteLine($"{emitOpCode} {valueName ?? value.ToString()}  -- {emitterName}:{emitterLine}");
-                return;
-            }
             il.Emit(opcode, value);
             if (DisableDemit) return;
             Debug.WriteLine($"{opcode} {valueName ?? value.ToString()}  -- {emitterName}:{emitterLine}");
@@ -8502,8 +8451,6 @@ namespace FastExpressionCompiler
             [CallerArgumentExpression("value")] string valueName = null, [CallerMemberName] string emitterName = null, [CallerLineNumber] int emitterLine = 0)
         {
             il.MarkLabel(value);
-            // Track the label position for smart branch selection (used by Demit with Label to select short form for backward branches)
-            _ilLabelPositions.GetOrCreateValue(il)[value] = il.ILOffset;
             if (DisableDemit) return;
             Debug.WriteLine($"MarkLabel: {valueName ?? value.ToString()}  -- {emitterName}:{emitterLine}");
         }
@@ -8590,19 +8537,13 @@ namespace FastExpressionCompiler
         public static void Demit(this ILGenerator il, OpCode opcode, ConstructorInfo value) => il.Emit(opcode, value);
 
         [MethodImpl((MethodImplOptions)256)]
-        public static void Demit(this ILGenerator il, OpCode opcode, Label value) =>
-            il.Emit(TryGetShortFormOpCodeForBackwardBranch(il, opcode, value, out var shortForm) ? shortForm : opcode, value);
+        public static void Demit(this ILGenerator il, OpCode opcode, Label value) => il.Emit(opcode, value);
 
         [MethodImpl((MethodImplOptions)256)]
         public static void DemitSwitch(this ILGenerator il, Label[] gotoLabels) => il.Emit(OpCodes.Switch, gotoLabels);
 
         [MethodImpl((MethodImplOptions)256)]
-        public static void DmarkLabel(this ILGenerator il, Label value)
-        {
-            il.MarkLabel(value);
-            // Track the label position for smart branch selection (used by Demit with Label to select short form for backward branches)
-            _ilLabelPositions.GetOrCreateValue(il)[value] = il.ILOffset;
-        }
+        public static void DmarkLabel(this ILGenerator il, Label value) => il.MarkLabel(value);
 
         [MethodImpl((MethodImplOptions)256)]
         public static void Demit(this ILGenerator il, OpCode opcode, byte value) => il.Emit(opcode, value);
@@ -8652,9 +8593,6 @@ namespace FastExpressionCompiler
                 if (pooledIL != null)
                 {
                     reuseILGenerator(dynMethod, pooledIL, returnType, paramTypes);
-                    // Clear any stale label positions from the previous compilation to prevent incorrect branch optimization
-                    if (ILGeneratorTools._ilLabelPositions.TryGetValue(pooledIL, out var positions))
-                        positions.Clear();
                     return pooledIL;
                 }
                 else
