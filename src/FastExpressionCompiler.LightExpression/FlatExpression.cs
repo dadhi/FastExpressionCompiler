@@ -359,7 +359,7 @@ public struct ExprTree
         }
         ChildList bodyChildren = default;
         for (var i = 0; i < expressions.Length; ++i)
-            bodyChildren.Add(expressions[i]);
+            bodyChildren.Add(CloneChild(expressions[i]));
         children.Add(AddChildListNode(in bodyChildren));
         var blockIndex = AddFactoryExpressionNode(type ?? Nodes[expressions[expressions.Length - 1]].Type, null, ExpressionType.Block, in children);
         for (var i = 0; i < variableDeclarations.Count; ++i)
