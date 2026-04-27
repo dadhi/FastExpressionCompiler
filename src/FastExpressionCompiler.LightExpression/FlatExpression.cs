@@ -61,6 +61,7 @@ public struct ExprNode
     private const int CountShift = 16;
     private const ulong IndexMask = 0xFFFF;
     private const ulong KindMask = 0x0F;
+    private const byte NextReservedFlag = 0x4;
     private const byte NextPointsParentFlag = 0x8;
     private const ulong TagMask = 0xFFUL << TagShift;
     private const ulong NextMask = IndexMask << NextShift;
@@ -93,7 +94,7 @@ public struct ExprNode
 
     internal bool IsParentLink => (Flags & NextPointsParentFlag) != 0;
 
-    internal bool HasNextLink => (_data & NextMask) != 0 || IsParentLink;
+    internal bool HasNextLink => (_data & NextMask) != 0 || (Flags & (NextPointsParentFlag | NextReservedFlag)) != 0;
 
     /// <summary>Gets the number of direct children linked from this node.</summary>
     public int ChildCount => (int)((_data >> CountShift) & IndexMask);
@@ -117,16 +118,14 @@ public struct ExprNode
     internal void SetNextSiblingIdx(int nextIdx)
     {
         _data = (_data & KeepWithoutNextMask) | ((ulong)(ushort)nextIdx << NextShift);
-        if (IsParentLink)
-            SetFlags((byte)(Flags & ~NextPointsParentFlag));
+        SetFlags((byte)(Flags & ~(NextPointsParentFlag | NextReservedFlag)));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void SetParentIdx(int parentIdx)
     {
         _data = (_data & KeepWithoutNextMask) | ((ulong)(ushort)parentIdx << NextShift);
-        if (!IsParentLink)
-            SetFlags((byte)(Flags | NextPointsParentFlag));
+        SetFlags((byte)((Flags | NextPointsParentFlag) & ~NextReservedFlag));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -145,7 +144,10 @@ public struct ExprNode
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool HasFlag(byte flag) => (Flags & flag) != 0;
 
-    internal byte CopyableFlags => (byte)(Flags & ~NextPointsParentFlag);
+    internal byte CopyableFlags => (byte)(Flags & ~(NextPointsParentFlag | NextReservedFlag));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void ReserveAsLinked() => SetFlags((byte)(Flags | NextReservedFlag));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void SetFlags(byte flags)
@@ -1305,8 +1307,17 @@ public struct ExprTree
         if (node.HasNextLink)
             return AddNodeReference(index);
 
-        node.SetParentIdx(index); // reserve first use so repeated child arguments in the same parent become references
+        ReserveChildLinkForReuse(ref node);
         return index;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void ReserveChildLinkForReuse(ref ExprNode node)
+    {
+        // Mark the node as "already linked" before wiring siblings/parent on the enclosing AddNode call.
+        // This ensures that repeated use of the same index in a single parent (e.g. Add(x, x))
+        // keeps the first occurrence in-place and emits a reference node for later occurrences.
+        node.ReserveAsLinked();
     }
 
     private ChildList CloneChildren(int[] children)
