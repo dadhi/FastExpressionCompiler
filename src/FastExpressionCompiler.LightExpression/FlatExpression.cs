@@ -55,6 +55,8 @@ public enum ExprNodeKind : byte
 [StructLayout(LayoutKind.Explicit, Size = 24)]
 public struct ExprNode
 {
+    // Packed layout of `_data` (MSB -> LSB):
+    // [ 8 bits NodeType ][ 8 bits Tag(flags+kind) ][ 16 bits NextIdx ][ 16 bits ChildCount ][ 16 bits ChildIdx ]
     private const int NodeTypeShift = 56;
     private const int TagShift = 48;
     private const int NextShift = 32;
@@ -82,11 +84,14 @@ public struct ExprNode
     private ulong _data;
 
     /// <summary>Gets the expression kind encoded for this node.</summary>
+    // Extracts bits [63..56].
     public ExpressionType NodeType => (ExpressionType)((_data >> NodeTypeShift) & 0xFF);
 
     /// <summary>Gets the payload classification for this node.</summary>
+    // Extracts low 4 bits from Tag [51..48].
     public ExprNodeKind Kind => (ExprNodeKind)((_data >> TagShift) & KindMask);
 
+    // Extracts high 4 bits from Tag [55..52].
     internal byte Flags => (byte)(((byte)(_data >> TagShift)) >> FlagsShift);
 
     /// <summary>Gets the next sibling node index in the intrusive child chain.</summary>
@@ -117,6 +122,7 @@ public struct ExprNode
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void SetNextSiblingIdx(int nextIdx)
     {
+        // Replace NextIdx [47..32] and clear link-state flags to "regular sibling link".
         _data = (_data & KeepWithoutNextMask) | ((ulong)(ushort)nextIdx << NextShift);
         SetFlags((byte)(Flags & ~(NextPointsParentFlag | NextReservedFlag)));
     }
@@ -124,12 +130,14 @@ public struct ExprNode
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void SetParentIdx(int parentIdx)
     {
+        // Replace NextIdx [47..32] and mark it as "points to parent" (not sibling).
         _data = (_data & KeepWithoutNextMask) | ((ulong)(ushort)parentIdx << NextShift);
         SetFlags((byte)((Flags | NextPointsParentFlag) & ~NextReservedFlag));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void SetChildInfo(int childIdx, int childCount) =>
+        // Replace ChildCount [31..16] and ChildIdx [15..0] together as one logical payload.
         _data = (_data & KeepWithoutChildInfoMask)
             | ((ulong)(ushort)childCount << CountShift)
             | (ushort)childIdx;
@@ -152,6 +160,7 @@ public struct ExprNode
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void SetFlags(byte flags)
     {
+        // Rebuild Tag [55..48] as [flags(4 bits) | kind(4 bits)] and replace in place.
         var tag = (byte)((flags << FlagsShift) | (byte)Kind);
         _data = (_data & ~TagMask) | ((ulong)tag << TagShift);
     }
