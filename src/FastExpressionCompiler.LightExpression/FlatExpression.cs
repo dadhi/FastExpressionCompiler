@@ -156,8 +156,8 @@ public struct ExprNode
 /// <summary>Stores an expression tree as a flat node array plus out-of-line closure constants.</summary>
 public struct ExprTree
 {
-    private static readonly object ClosureConstantMarker = new();
     private const byte ParameterByRefFlag = 1;
+    private const byte ConstantInClosureFlag = 2;
     private const int UnboundParameterPosition = ushort.MaxValue;
     private const byte BinaryLiftedToNullFlag = 1;
     private const byte LoopHasBreakFlag = 1;
@@ -172,7 +172,7 @@ public struct ExprTree
     /// <summary>Gets or sets the flat node storage.</summary>
     public SmallList<ExprNode, Stack16<ExprNode>, NoArrayPool<ExprNode>> Nodes;
 
-    /// <summary>Gets or sets closure constants that are referenced from constant nodes.</summary>
+    /// <summary>Gets or sets non-inlined constants referenced from constant nodes via <see cref="ExprNode.ChildIdx"/>.</summary>
     public SmallList<object, Stack16<object>, NoArrayPool<object>> ClosureConstants;
 
     /// <summary>Adds a parameter node and returns its index.</summary>
@@ -203,7 +203,7 @@ public struct ExprTree
             return AddRawExpressionNode(type, value, ExpressionType.Constant);
 
         var constantIndex = ClosureConstants.Add(value);
-        return AddRawExpressionNodeWithChildIndex(type, ClosureConstantMarker, ExpressionType.Constant, constantIndex);
+        return AddRawExpressionNodeWithChildIndex(type, null, ExpressionType.Constant, ConstantInClosureFlag, constantIndex);
     }
 
     /// <summary>Adds a null constant node.</summary>
@@ -696,8 +696,8 @@ public struct ExprTree
     private int AddRawLeafExpressionNode(Type type, object obj, ExpressionType nodeType, byte flags = 0, int childIdx = 0, int childCount = 0) =>
         AddLeafNode(type, obj, nodeType, ExprNodeKind.Expression, flags, childIdx, childCount);
 
-    private int AddRawExpressionNodeWithChildIndex(Type type, object obj, ExpressionType nodeType, int childIdx) =>
-        AddRawLeafExpressionNode(type, obj, nodeType, childIdx: childIdx);
+    private int AddRawExpressionNodeWithChildIndex(Type type, object obj, ExpressionType nodeType, byte flags, int childIdx) =>
+        AddRawLeafExpressionNode(type, obj, nodeType, flags, childIdx, 0);
 
     private int AddFactoryAuxNode(Type type, object obj, ExprNodeKind kind, byte flags, int child) =>
         AddNode(type, obj, ExpressionType.Extension, kind, flags, CloneChild(child));
@@ -1037,7 +1037,7 @@ public struct ExprTree
                 return _tree.AddRawExpressionNode(constant.Type, constant.Value, constant.NodeType);
 
             var constantIndex = _tree.ClosureConstants.Add(constant.Value);
-            return _tree.AddRawExpressionNodeWithChildIndex(constant.Type, ClosureConstantMarker, constant.NodeType, constantIndex);
+            return _tree.AddRawExpressionNodeWithChildIndex(constant.Type, null, constant.NodeType, ConstantInClosureFlag, constantIndex);
         }
 
         private int AddSwitchCase(SysSwitchCase switchCase)
@@ -1256,6 +1256,7 @@ public struct ExprTree
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool ShouldInlineConstant(object value, Type type) =>
+        // Inlined constants are stored directly in ExprNode.Obj (boxed for value types).
         value == null || value is string || value is Type || type.IsEnum || Type.GetTypeCode(type) != TypeCode.Object;
 
     private static Type GetMemberType(System.Reflection.MemberInfo member) => member switch
@@ -1360,7 +1361,7 @@ public struct ExprTree
             switch (node.NodeType)
             {
                 case ExpressionType.Constant:
-                    return SysExpr.Constant(ReferenceEquals(node.Obj, ClosureConstantMarker)
+                    return SysExpr.Constant(node.HasFlag(ConstantInClosureFlag)
                         ? _tree.ClosureConstants[node.ChildIdx]
                         : node.Obj, node.Type);
                 case ExpressionType.Default:
