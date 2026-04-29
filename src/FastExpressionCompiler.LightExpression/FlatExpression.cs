@@ -143,6 +143,15 @@ public struct ExprNode
 /// <summary>Stores an expression tree as a flat node array plus out-of-line closure constants.</summary>
 public struct ExprTree
 {
+    [StructLayout(LayoutKind.Explicit)]
+    private struct UInt32SingleBits
+    {
+        [FieldOffset(0)]
+        public uint UInt32;
+        [FieldOffset(0)]
+        public float Single;
+    }
+
     private static readonly object ClosureConstantMarker = new();
     private const byte ParameterByRefFlag = 1;
     private const byte BinaryLiftedToNullFlag = 1;
@@ -1245,8 +1254,7 @@ public struct ExprTree
                 data = (uint)value;
                 return true;
             case TypeCode.Single:
-                var floatValue = (float)value;
-                data = Unsafe.As<float, uint>(ref floatValue);
+                data = new UInt32SingleBits { Single = (float)value }.UInt32;
                 return true;
             default:
                 return false;
@@ -1280,8 +1288,7 @@ public struct ExprTree
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static float UInt32BitsToSingle(uint data)
     {
-        var floatData = data;
-        return Unsafe.As<uint, float>(ref floatData);
+        return new UInt32SingleBits { UInt32 = data }.Single;
     }
 
     private static Type GetMemberType(System.Reflection.MemberInfo member) => member switch
