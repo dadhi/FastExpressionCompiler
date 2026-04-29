@@ -40,7 +40,11 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Flat_nested_lambda_captures_outer_parameter_identity();
             Flat_out_of_order_decl_block_in_lambda_compiles_correctly();
             Flat_enum_constant_stored_inline_roundtrip();
-            return 23;
+            Flat_lambda_nodes_tracks_all_lambdas_during_direct_construction();
+            Flat_lambda_nodes_tracks_deeply_nested_lambdas_during_direct_construction();
+            Flat_lambda_nodes_tracks_lambdas_from_expression_conversion();
+            Flat_lambda_nodes_has_single_entry_for_root_only_lambda();
+            return 27;
         }
 
 
@@ -685,6 +689,112 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Check(IntEnum.B);
             Check(UIntEnum.A);
             Check(UIntEnum.B);
+        }
+
+        /// <summary>
+        /// When building a flat expression directly, calling Lambda() for a nested lambda
+        /// and then for the root lambda should result in both indices recorded in LambdaNodes.
+        /// The root is identified by RootIndex; all others are nested.
+        /// </summary>
+        public void Flat_lambda_nodes_tracks_all_lambdas_during_direct_construction()
+        {
+            var fe = default(ExprTree);
+            var x = fe.ParameterOf<int>("x");
+
+            // Build: outer: x => () => x
+            var inner = fe.Lambda<Func<int>>(x);
+            fe.RootIndex = fe.Lambda<Func<int, Func<int>>>(inner, x);
+
+            // Both the root and nested lambda indices should be recorded
+            Asserts.AreEqual(2, fe.LambdaNodes.Count);
+
+            // Check that inner and root are both in LambdaNodes
+            var foundInner = false;
+            var foundRoot = false;
+            for (var i = 0; i < fe.LambdaNodes.Count; i++)
+            {
+                if (fe.LambdaNodes[i] == inner) foundInner = true;
+                if (fe.LambdaNodes[i] == fe.RootIndex) foundRoot = true;
+            }
+            Asserts.IsTrue(foundInner);
+            Asserts.IsTrue(foundRoot);
+
+            // Nested lambdas are all LambdaNodes entries that are not the root
+            var nestedCount = 0;
+            for (var i = 0; i < fe.LambdaNodes.Count; i++)
+                if (fe.LambdaNodes[i] != fe.RootIndex)
+                    ++nestedCount;
+            Asserts.AreEqual(1, nestedCount);
+        }
+
+        /// <summary>
+        /// When building a flat expression with multiple levels of nesting,
+        /// all lambda node indices are captured in LambdaNodes.
+        /// </summary>
+        public void Flat_lambda_nodes_tracks_deeply_nested_lambdas_during_direct_construction()
+        {
+            var fe = default(ExprTree);
+            var x = fe.ParameterOf<int>("x");
+
+            // Build: outer: x => (() => (() => x))
+            var innermost = fe.Lambda<Func<int>>(x);
+            var middle = fe.Lambda<Func<Func<int>>>(innermost);
+            fe.RootIndex = fe.Lambda<Func<int, Func<Func<int>>>>(middle, x);
+
+            // All three lambda nodes should be recorded
+            Asserts.AreEqual(3, fe.LambdaNodes.Count);
+
+            // Count nested (non-root) lambdas
+            var nestedCount = 0;
+            for (var i = 0; i < fe.LambdaNodes.Count; i++)
+                if (fe.LambdaNodes[i] != fe.RootIndex)
+                    ++nestedCount;
+            Asserts.AreEqual(2, nestedCount);
+        }
+
+        /// <summary>
+        /// When converting a System.Linq expression tree with nested lambdas via FromExpression,
+        /// the resulting ExprTree should have all lambda indices populated in LambdaNodes.
+        /// </summary>
+        public void Flat_lambda_nodes_tracks_lambdas_from_expression_conversion()
+        {
+            var p = SysExpr.Parameter(typeof(int), "p");
+            // Build: p => () => p  using System.Linq.Expressions
+            var sysLambda = SysExpr.Lambda<Func<int, Func<int>>>(
+                SysExpr.Lambda<Func<int>>(p),
+                p);
+
+            var fe = sysLambda.ToFlatExpression();
+
+            // Both root and nested lambda indices should be recorded
+            Asserts.AreEqual(2, fe.LambdaNodes.Count);
+
+            // The root lambda must be in the list
+            var foundRoot = false;
+            for (var i = 0; i < fe.LambdaNodes.Count; i++)
+                if (fe.LambdaNodes[i] == fe.RootIndex) { foundRoot = true; break; }
+            Asserts.IsTrue(foundRoot);
+
+            // Exactly one nested lambda
+            var nestedCount = 0;
+            for (var i = 0; i < fe.LambdaNodes.Count; i++)
+                if (fe.LambdaNodes[i] != fe.RootIndex)
+                    ++nestedCount;
+            Asserts.AreEqual(1, nestedCount);
+        }
+
+        /// <summary>
+        /// A flat expression with no nested lambdas (root-only) should have exactly one
+        /// entry in LambdaNodes (the root itself).
+        /// </summary>
+        public void Flat_lambda_nodes_has_single_entry_for_root_only_lambda()
+        {
+            var fe = default(ExprTree);
+            var p = fe.ParameterOf<int>("p");
+            fe.RootIndex = fe.Lambda<Func<int, int>>(fe.Add(p, fe.ConstantInt(1)), p);
+
+            Asserts.AreEqual(1, fe.LambdaNodes.Count);
+            Asserts.AreEqual(fe.RootIndex, fe.LambdaNodes[0]);
         }
     }
 }

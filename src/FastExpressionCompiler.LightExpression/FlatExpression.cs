@@ -167,6 +167,12 @@ public struct ExprTree
     /// <summary>Gets or sets closure constants that are referenced from constant nodes.</summary>
     public SmallList<object, Stack16<object>, NoArrayPool<object>> ClosureConstants;
 
+    /// <summary>Gets or sets the indices of all lambda nodes added during construction.
+    /// The root lambda index is stored in <see cref="RootIndex"/>; all other entries are nested lambdas.
+    /// Populated automatically by <see cref="Lambda(Type,int,int[])"/> and <see cref="ExprTree.FromExpression"/>,
+    /// enabling callers to discover nested lambdas without a full tree traversal.</summary>
+    public SmallList<int, Stack16<int>, NoArrayPool<int>> LambdaNodes;
+
     /// <summary>Adds a parameter node and returns its index.</summary>
     public int Parameter(Type type, string name = null)
     {
@@ -414,11 +420,17 @@ public struct ExprTree
     /// out-of-order decl pattern. The Reader resolves identity through a shared id map
     /// so that all refs and the single decl resolve to the same
     /// <see cref="System.Linq.Expressions.ParameterExpression"/> object.
+    /// <para>The lambda node index is recorded in <see cref="LambdaNodes"/> so callers can discover
+    /// nested lambdas (all entries except <see cref="RootIndex"/>) without a full tree traversal.</para>
     /// </remarks>
-    public int Lambda(Type delegateType, int body, params int[] parameters) =>
-        parameters == null || parameters.Length == 0
+    public int Lambda(Type delegateType, int body, params int[] parameters)
+    {
+        var index = parameters == null || parameters.Length == 0
             ? AddFactoryExpressionNode(delegateType, null, ExpressionType.Lambda, 0, body)
             : AddFactoryExpressionNode(delegateType, null, ExpressionType.Lambda, PrependToChildList(body, parameters));
+        LambdaNodes.Add(index);
+        return index;
+    }
 
     /// <summary>Adds a member-assignment binding node.</summary>
     public int Bind(System.Reflection.MemberInfo member, int expression) =>
@@ -823,7 +835,9 @@ public struct ExprTree
                         children.Add(AddExpression(lambda.Body));
                         for (var i = 0; i < lambda.Parameters.Count; ++i)
                             children.Add(AddExpression(lambda.Parameters[i]));
-                        return _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType, children);
+                        var lambdaIndex = _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType, children);
+                        _tree.LambdaNodes.Add(lambdaIndex);
+                        return lambdaIndex;
                     }
                 case ExpressionType.Block:
                     {
