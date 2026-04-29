@@ -39,7 +39,8 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Flat_block_variables_and_refs_yield_same_identity();
             Flat_nested_lambda_captures_outer_parameter_identity();
             Flat_out_of_order_decl_block_in_lambda_compiles_correctly();
-            return 22;
+            Flat_enum_constant_stored_inline_roundtrip();
+            return 23;
         }
 
 
@@ -648,6 +649,42 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.AreEqual(9, func(3));
             // p=0 → v1 = 0, v2 = 0
             Asserts.AreEqual(0, func(0));
+        }
+
+        enum ByteEnum : byte { A = 1, B = 200 }
+        enum SByteEnum : sbyte { A = -1, B = 50 }
+        enum ShortEnum : short { A = -1000, B = 30000 }
+        enum UShortEnum : ushort { A = 0, B = 60000 }
+        enum IntEnum : int { A = int.MinValue, B = 42 }
+        enum UIntEnum : uint { A = 0, B = uint.MaxValue }
+
+        public void Flat_enum_constant_stored_inline_roundtrip()
+        {
+            // Verify that enum constants with ≤32-bit underlying types are stored inline
+            // (no ClosureConstants entry, no boxing) and round-trip correctly.
+            void Check<TEnum>(TEnum enumValue) where TEnum : Enum
+            {
+                var fe = default(ExprTree);
+                var idx = fe.Constant(enumValue, typeof(TEnum));
+                Asserts.AreEqual(0, fe.ClosureConstants.Count,
+                    $"{typeof(TEnum).Name}.{enumValue} should be inline (no ClosureConstants), but got {fe.ClosureConstants.Count}");
+                fe.RootIndex = fe.Lambda<Func<TEnum>>(idx);
+                var result = (TEnum)((System.Linq.Expressions.LambdaExpression)fe.ToExpression()).Compile().DynamicInvoke()!;
+                Asserts.AreEqual(enumValue, result, $"Round-trip failed for {typeof(TEnum).Name}.{enumValue}");
+            }
+
+            Check(ByteEnum.A);
+            Check(ByteEnum.B);
+            Check(SByteEnum.A);
+            Check(SByteEnum.B);
+            Check(ShortEnum.A);
+            Check(ShortEnum.B);
+            Check(UShortEnum.A);
+            Check(UShortEnum.B);
+            Check(IntEnum.A);
+            Check(IntEnum.B);
+            Check(UIntEnum.A);
+            Check(UIntEnum.B);
         }
     }
 }

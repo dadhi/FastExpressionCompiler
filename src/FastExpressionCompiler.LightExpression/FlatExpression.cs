@@ -190,8 +190,17 @@ public struct ExprTree
     /// <summary>Adds a constant node with an explicit constant type.</summary>
     public int Constant(object value, Type type)
     {
-        if (value == null || value is string || value is Type || type.IsEnum || value is decimal)
+        if (value == null || value is string || value is Type || value is decimal)
             return AddRawExpressionNode(type, value, ExpressionType.Constant);
+
+        if (type.IsEnum)
+        {
+            var underlyingTc = Type.GetTypeCode(Enum.GetUnderlyingType(type));
+            if (IsSmallPrimitive(underlyingTc))
+                return AddInlineConstantNode(type, (uint)System.Convert.ToInt64(value));
+            // long/ulong-backed enum (extremely rare): store boxed in Obj
+            return AddRawExpressionNode(type, value, ExpressionType.Constant);
+        }
 
         if (type.IsPrimitive)
         {
@@ -1003,8 +1012,17 @@ public struct ExprTree
             var value = constant.Value;
             var type = constant.Type;
 
-            if (value == null || value is string || value is Type || type.IsEnum || value is decimal)
+            if (value == null || value is string || value is Type || value is decimal)
                 return _tree.AddRawExpressionNode(type, value, ExpressionType.Constant);
+
+            if (type.IsEnum)
+            {
+                var underlyingTc = Type.GetTypeCode(Enum.GetUnderlyingType(type));
+                if (IsSmallPrimitive(underlyingTc))
+                    return _tree.AddInlineConstantNode(type, (uint)System.Convert.ToInt64(value));
+                // long/ulong-backed enum (extremely rare): store boxed in Obj
+                return _tree.AddRawExpressionNode(type, value, ExpressionType.Constant);
+            }
 
             if (type.IsPrimitive)
             {
@@ -1669,8 +1687,21 @@ public struct ExprTree
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static object ReadInlineValue(Type type, uint data) =>
-            Type.GetTypeCode(type) switch
+        private static object ReadInlineValue(Type type, uint data)
+        {
+            if (type.IsEnum)
+                return Enum.ToObject(type, Type.GetTypeCode(Enum.GetUnderlyingType(type)) switch
+                {
+                    TypeCode.Byte => (object)(byte)data,
+                    TypeCode.SByte => (object)(sbyte)(byte)data,
+                    TypeCode.Char => (object)(char)(ushort)data,
+                    TypeCode.Int16 => (object)(short)(ushort)data,
+                    TypeCode.UInt16 => (object)(ushort)data,
+                    TypeCode.Int32 => (object)(int)data,
+                    TypeCode.UInt32 => (object)data,
+                    var tc => FlatExpressionThrow.UnsupportedInlineConstantType<object>(type, tc)
+                });
+            return Type.GetTypeCode(type) switch
             {
                 TypeCode.Boolean => (object)(data != 0),
                 TypeCode.Byte => (object)(byte)data,
@@ -1683,6 +1714,7 @@ public struct ExprTree
                 TypeCode.Single => (object)FloatBits.ToFloat(data),
                 _ => FlatExpressionThrow.UnsupportedInlineConstantType<object>(type)
             };
+        }
 
         [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
         private SysExpr[] ReadExpressions(in ChildList childIndexes)
@@ -1721,6 +1753,10 @@ internal static class FlatExpressionThrow
     [MethodImpl(MethodImplOptions.NoInlining)]
     internal static T UnsupportedInlineConstantType<T>(Type type) =>
         throw new NotSupportedException($"Cannot reconstruct inline constant of type {type}");
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    internal static T UnsupportedInlineConstantType<T>(Type type, TypeCode tc) =>
+        throw new NotSupportedException($"Cannot reconstruct inline constant of type {type} with TypeCode {tc}");
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     internal static T UnsupportedInlineConstantType<T>(object value, TypeCode tc) =>
