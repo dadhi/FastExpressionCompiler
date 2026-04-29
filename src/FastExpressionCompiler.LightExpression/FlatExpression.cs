@@ -190,13 +190,19 @@ public struct ExprTree
     /// <summary>Adds a constant node with an explicit constant type.</summary>
     public int Constant(object value, Type type)
     {
-        if (value == null || value is string || value is Type || type.IsEnum)
+        if (value == null || value is string || value is Type || type.IsEnum || value is decimal)
             return AddRawExpressionNode(type, value, ExpressionType.Constant);
 
-        var tc = Type.GetTypeCode(type);
-        if (IsSmallPrimitive(tc))
-            return AddInlineConstantNode(type, ToInlineValue(value, tc));
+        if (type.IsPrimitive)
+        {
+            var tc = Type.GetTypeCode(type);
+            if (IsSmallPrimitive(tc))
+                return AddInlineConstantNode(type, ToInlineValue(value, tc));
+            // long, ulong, double: primitive but too wide for _data, store boxed in Obj
+            return AddRawExpressionNode(type, value, ExpressionType.Constant);
+        }
 
+        // Delegate, array types, and user-defined reference/value types go to ClosureConstants
         var constantIndex = ClosureConstants.Add(value);
         return AddRawExpressionNodeWithChildIndex(type, ClosureConstantMarker, ExpressionType.Constant, constantIndex);
     }
@@ -964,12 +970,17 @@ public struct ExprTree
             var value = constant.Value;
             var type = constant.Type;
 
-            if (value == null || value is string || value is Type || type.IsEnum)
+            if (value == null || value is string || value is Type || type.IsEnum || value is decimal)
                 return _tree.AddRawExpressionNode(type, value, ExpressionType.Constant);
 
-            var tc = Type.GetTypeCode(type);
-            if (IsSmallPrimitive(tc))
-                return _tree.AddInlineConstantNode(type, ToInlineValue(value, tc));
+            if (type.IsPrimitive)
+            {
+                var tc = Type.GetTypeCode(type);
+                if (IsSmallPrimitive(tc))
+                    return _tree.AddInlineConstantNode(type, ToInlineValue(value, tc));
+                // long, ulong, double: primitive but too wide for _data, store boxed in Obj
+                return _tree.AddRawExpressionNode(type, value, ExpressionType.Constant);
+            }
 
             var constantIndex = _tree.ClosureConstants.Add(value);
             return _tree.AddRawExpressionNodeWithChildIndex(type, ClosureConstantMarker, ExpressionType.Constant, constantIndex);
