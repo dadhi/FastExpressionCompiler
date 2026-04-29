@@ -44,7 +44,13 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Flat_lambda_nodes_tracks_deeply_nested_lambdas_during_direct_construction();
             Flat_lambda_nodes_tracks_lambdas_from_expression_conversion();
             Flat_lambda_nodes_has_single_entry_for_root_only_lambda();
-            return 27;
+            Flat_blocks_with_variables_tracked_during_direct_construction();
+            Flat_goto_and_label_nodes_tracked_during_direct_construction();
+            Flat_try_catch_nodes_tracked_during_direct_construction();
+            Flat_blocks_with_variables_tracked_from_expression_conversion();
+            Flat_goto_and_label_nodes_tracked_from_expression_conversion();
+            Flat_try_catch_nodes_tracked_from_expression_conversion();
+            return 33;
         }
 
 
@@ -795,6 +801,135 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
             Asserts.AreEqual(1, fe.LambdaNodes.Count);
             Asserts.AreEqual(fe.RootIndex, fe.LambdaNodes[0]);
+        }
+
+        /// <summary>
+        /// Block nodes with explicit variable declarations are recorded in BlocksWithVariables;
+        /// blocks without variables produce no entry.
+        /// </summary>
+        public void Flat_blocks_with_variables_tracked_during_direct_construction()
+        {
+            var fe = default(ExprTree);
+            var p = fe.ParameterOf<int>("p");
+            var v = fe.Variable(typeof(int), "v");
+
+            // Block with one variable: should be tracked
+            var blockWithVar = fe.Block(typeof(int), new[] { v }, fe.Assign(v, p), v);
+            // Block without variables: should NOT be tracked
+            var blockNoVar = fe.Block(fe.Add(p, fe.ConstantInt(1)));
+
+            fe.RootIndex = fe.Lambda<Func<int, int>>(fe.Block(blockWithVar, blockNoVar), p);
+
+            Asserts.AreEqual(1, fe.BlocksWithVariables.Count);
+            Asserts.AreEqual(blockWithVar, fe.BlocksWithVariables[0]);
+        }
+
+        /// <summary>
+        /// Goto and label expression nodes are recorded in GotoNodes and LabelNodes respectively.
+        /// </summary>
+        public void Flat_goto_and_label_nodes_tracked_during_direct_construction()
+        {
+            var fe = default(ExprTree);
+            var p = fe.ParameterOf<int>("p");
+            var target = fe.Label(typeof(int), "done");
+
+            var gotoNode = fe.Goto(target, p, typeof(int));
+            var labelNode = fe.Label(target, fe.ConstantInt(0));
+
+            fe.RootIndex = fe.Lambda<Func<int, int>>(fe.Block(gotoNode, labelNode), p);
+
+            Asserts.AreEqual(1, fe.GotoNodes.Count);
+            Asserts.AreEqual(gotoNode, fe.GotoNodes[0]);
+
+            Asserts.AreEqual(1, fe.LabelNodes.Count);
+            Asserts.AreEqual(labelNode, fe.LabelNodes[0]);
+        }
+
+        /// <summary>
+        /// Try/catch, try/finally and try/fault node indices are all recorded in TryCatchNodes.
+        /// </summary>
+        public void Flat_try_catch_nodes_tracked_during_direct_construction()
+        {
+            var fe = default(ExprTree);
+            var p = fe.ParameterOf<int>("p");
+
+            var tryCatchNode = fe.TryCatch(
+                fe.Add(p, fe.ConstantInt(1)),
+                fe.Catch(typeof(Exception), fe.ConstantInt(-1)));
+
+            var tryFinallyNode = fe.TryFinally(
+                fe.Add(p, fe.ConstantInt(2)),
+                fe.Default(typeof(void)));
+
+            fe.RootIndex = fe.Lambda<Func<int, int>>(
+                fe.Block(tryCatchNode, tryFinallyNode), p);
+
+            Asserts.AreEqual(2, fe.TryCatchNodes.Count);
+
+            var foundTryCatch = false;
+            var foundTryFinally = false;
+            for (var i = 0; i < fe.TryCatchNodes.Count; i++)
+            {
+                if (fe.TryCatchNodes[i] == tryCatchNode) foundTryCatch = true;
+                if (fe.TryCatchNodes[i] == tryFinallyNode) foundTryFinally = true;
+            }
+            Asserts.IsTrue(foundTryCatch);
+            Asserts.IsTrue(foundTryFinally);
+        }
+
+        /// <summary>
+        /// When converting a System.Linq expression tree, blocks with variables are
+        /// recorded in BlocksWithVariables; plain blocks are not.
+        /// </summary>
+        public void Flat_blocks_with_variables_tracked_from_expression_conversion()
+        {
+            var p = SysExpr.Parameter(typeof(int), "p");
+            var v = SysExpr.Variable(typeof(int), "v");
+            // block with variable
+            var sysBlock = SysExpr.Block(new[] { v }, SysExpr.Assign(v, p), v);
+            var sysLambda = SysExpr.Lambda<Func<int, int>>(sysBlock, p);
+
+            var fe = sysLambda.ToFlatExpression();
+
+            Asserts.AreEqual(1, fe.BlocksWithVariables.Count);
+        }
+
+        /// <summary>
+        /// When converting a System.Linq expression tree with goto/label, both
+        /// GotoNodes and LabelNodes are populated.
+        /// </summary>
+        public void Flat_goto_and_label_nodes_tracked_from_expression_conversion()
+        {
+            var p = SysExpr.Parameter(typeof(int), "p");
+            var target = SysExpr.Label(typeof(int), "done");
+            var sysLambda = SysExpr.Lambda<Func<int, int>>(
+                SysExpr.Block(
+                    SysExpr.Goto(target, p, typeof(int)),
+                    SysExpr.Label(target, SysExpr.Constant(0))),
+                p);
+
+            var fe = sysLambda.ToFlatExpression();
+
+            Asserts.AreEqual(1, fe.GotoNodes.Count);
+            Asserts.AreEqual(1, fe.LabelNodes.Count);
+        }
+
+        /// <summary>
+        /// When converting a System.Linq expression tree with a try/catch,
+        /// TryCatchNodes is populated.
+        /// </summary>
+        public void Flat_try_catch_nodes_tracked_from_expression_conversion()
+        {
+            var p = SysExpr.Parameter(typeof(int), "p");
+            var sysLambda = SysExpr.Lambda<Func<int, int>>(
+                SysExpr.TryCatch(
+                    SysExpr.Add(p, SysExpr.Constant(1)),
+                    SysExpr.Catch(typeof(Exception), SysExpr.Constant(-1))),
+                p);
+
+            var fe = sysLambda.ToFlatExpression();
+
+            Asserts.AreEqual(1, fe.TryCatchNodes.Count);
         }
     }
 }
