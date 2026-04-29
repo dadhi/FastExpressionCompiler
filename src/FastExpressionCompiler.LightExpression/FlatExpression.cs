@@ -1198,7 +1198,7 @@ public struct ExprTree
         TypeCode.Int32 => (uint)(int)value,
         TypeCode.UInt32 => (uint)value,
         TypeCode.Single => FloatBits.ToUInt((float)value),
-        _ => 0u
+        _ => FlatExpressionThrow.UnsupportedInlineConstantType<uint>(value, tc)
     };
 
     private static Type GetMemberType(System.Reflection.MemberInfo member) => member switch
@@ -1618,7 +1618,7 @@ public struct ExprTree
         private static object ReadInlineValue(Type type, uint data) =>
             Type.GetTypeCode(type) switch
             {
-                TypeCode.Boolean => (object)((data & 1u) != 0),
+                TypeCode.Boolean => (object)(data != 0),
                 TypeCode.Byte => (object)(byte)data,
                 TypeCode.SByte => (object)(sbyte)(byte)data,
                 TypeCode.Char => (object)(char)(ushort)data,
@@ -1651,14 +1651,14 @@ public struct ExprTree
 [StructLayout(LayoutKind.Explicit)]
 internal struct FloatBits
 {
-    [FieldOffset(0)] private float _f;
-    [FieldOffset(0)] private uint _u;
+    [FieldOffset(0)] private float _floatValue;
+    [FieldOffset(0)] private uint _uintValue;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static uint ToUInt(float value) => new FloatBits { _f = value }._u;
+    internal static uint ToUInt(float value) => new FloatBits { _floatValue = value }._uintValue;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static float ToFloat(uint value) => new FloatBits { _u = value }._f;
+    internal static float ToFloat(uint value) => new FloatBits { _uintValue = value }._floatValue;
 }
 
 /// <summary>Throw helpers that prevent bare <c>throw</c> from blocking inlining of hot-path callers.</summary>
@@ -1667,6 +1667,10 @@ internal static class FlatExpressionThrow
     [MethodImpl(MethodImplOptions.NoInlining)]
     internal static T UnsupportedInlineConstantType<T>(Type type) =>
         throw new NotSupportedException($"Cannot reconstruct inline constant of type {type}");
+
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    internal static T UnsupportedInlineConstantType<T>(object value, TypeCode tc) =>
+        throw new NotSupportedException($"Cannot convert value '{value}' of TypeCode {tc} to an inline constant");
 }
 
 /// <summary>Provides conversions from System and LightExpression trees to <see cref="ExprTree"/>.</summary>
