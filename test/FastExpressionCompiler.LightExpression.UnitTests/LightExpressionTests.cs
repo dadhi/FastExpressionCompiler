@@ -33,8 +33,9 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_convert_dynamic_runtime_variables_and_debug_info_to_light_expression_and_flat_expression();
             Can_build_flat_expression_directly_with_light_expression_like_api();
             Can_build_flat_expression_control_flow_directly();
+            Flat_expression_packs_small_constants_and_reuses_children_via_reference_nodes();
             Can_property_test_generated_flat_expression_roundtrip_structurally();
-            return 17;
+            return 18;
         }
 
 
@@ -484,6 +485,34 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
             Asserts.AreSame(sysLambda.Parameters[0], gotoExpr.Value);
             Asserts.AreSame(gotoExpr.Target, label.Target);
+        }
+
+        public void Flat_expression_packs_small_constants_and_reuses_children_via_reference_nodes()
+        {
+            Asserts.AreEqual(24, Unsafe.SizeOf<ExprNode>());
+
+            var constantTree = default(ExprTree);
+            var constant = constantTree.ConstantInt(42);
+            Asserts.AreEqual(null, constantTree.Nodes[constant].Obj);
+            Asserts.AreEqual(0, constantTree.ClosureConstants.Count);
+
+            var fe = default(ExprTree);
+            var p = fe.Parameter(typeof(int), "p");
+            var sum = fe.Add(p, p);
+            fe.RootIndex = fe.Lambda<Func<int, int>>(sum, p);
+
+            var addNode = fe.Nodes[sum];
+            var rightParameterRef = fe.Nodes[addNode.ChildIdx].NextIdx;
+
+            Asserts.AreEqual(5, fe.Nodes.Count);
+            Asserts.AreEqual(ExpressionType.Parameter, fe.Nodes[rightParameterRef].NodeType);
+            Asserts.AreEqual(p, fe.Nodes[rightParameterRef].ChildIdx);
+            Asserts.AreEqual(sum, fe.Nodes[rightParameterRef].NextIdx);
+
+            var lambda = (System.Linq.Expressions.LambdaExpression)fe.ToExpression();
+            var add = (System.Linq.Expressions.BinaryExpression)lambda.Body;
+            Asserts.AreSame(lambda.Parameters[0], add.Left);
+            Asserts.AreSame(lambda.Parameters[0], add.Right);
         }
 
         public class A
