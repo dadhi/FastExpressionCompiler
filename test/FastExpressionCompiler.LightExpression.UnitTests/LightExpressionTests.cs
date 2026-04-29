@@ -513,6 +513,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var add = (System.Linq.Expressions.BinaryExpression)lambda.Body;
             Asserts.AreSame(lambda.Parameters[0], add.Left);
             Asserts.AreSame(lambda.Parameters[0], add.Right);
+            Asserts.AreEqual(10, ((System.Linq.Expressions.Expression<Func<int, int>>)lambda).Compile()(5));
         }
 
         public class A
