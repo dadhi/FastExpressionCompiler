@@ -335,6 +335,18 @@ public struct ExprTree
         Block(null, null, expressions);
 
     /// <summary>Adds a block node with optional explicit result type and variables.</summary>
+    /// <remarks>
+    /// Child layout of the Block node depends on whether there are explicit variables:
+    /// <list type="bullet">
+    ///   <item>With variables:    children[0] = ChildList(variable₀, variable₁, …)
+    ///                            children[1] = ChildList(expr₀, expr₁, …)</item>
+    ///   <item>Without variables: children[0] = ChildList(expr₀, expr₁, …)</item>
+    /// </list>
+    /// A <c>children.Count == 2</c> check is therefore the canonical way to detect variables.
+    /// Variable parameter nodes share the same id-slot as the refs used inside the body
+    /// (out-of-order: the variable decl nodes appear in children[0] before the body expressions
+    /// that reference them in children[1]).
+    /// </remarks>
     public int Block(Type type, IEnumerable<int> variables, params int[] expressions)
     {
         if (expressions == null || expressions.Length == 0)
@@ -361,6 +373,19 @@ public struct ExprTree
         Lambda(typeof(TDelegate), body, parameters);
 
     /// <summary>Adds a lambda node.</summary>
+    /// <remarks>
+    /// Child layout of the Lambda node:
+    /// <list type="bullet">
+    ///   <item>children[0]   = body expression</item>
+    ///   <item>children[1…n] = parameter decl nodes (parameter₀, parameter₁, …)</item>
+    /// </list>
+    /// The body is stored first; parameter decl nodes follow. This means that when the
+    /// body contains refs to those parameters, the ref nodes are encountered by the
+    /// <see cref="Reader"/> before the corresponding decl node — an intentional
+    /// out-of-order decl pattern. The Reader resolves identity through a shared id map
+    /// so that all refs and the single decl resolve to the same
+    /// <see cref="System.Linq.Expressions.ParameterExpression"/> object.
+    /// </remarks>
     public int Lambda(Type delegateType, int body, params int[] parameters) =>
         parameters == null || parameters.Length == 0
             ? AddFactoryExpressionNode(delegateType, null, ExpressionType.Lambda, 0, body)
@@ -734,6 +759,10 @@ public struct ExprTree
                     }
                 case ExpressionType.Lambda:
                     {
+                        // Layout: children[0] = body, children[1..n] = parameter decl nodes.
+                        // Body is stored before parameters so that the Reader encounters parameter
+                        // refs in the body before their decl nodes (out-of-order decl); identity
+                        // is preserved via the shared _parametersById id-map.
                         var lambda = (System.Linq.Expressions.LambdaExpression)expression;
                         ChildList children = default;
                         children.Add(AddExpression(lambda.Body));
@@ -743,6 +772,10 @@ public struct ExprTree
                     }
                 case ExpressionType.Block:
                     {
+                        // Layout (with variables):    children[0] = ChildList(var₀, var₁, …)
+                        //                             children[1] = ChildList(expr₀, expr₁, …)
+                        // Layout (without variables): children[0] = ChildList(expr₀, expr₁, …)
+                        // children.Count == 2 is the canonical test for the presence of variables.
                         var block = (System.Linq.Expressions.BlockExpression)expression;
                         ChildList children = default;
                         if (block.Variables.Count != 0)
@@ -1319,6 +1352,9 @@ public struct ExprTree
                     }
                 case ExpressionType.Lambda:
                     {
+                        // Layout: children[0] = body, children[1..n] = parameter decl nodes.
+                        // Body is read first; parameter refs inside it are resolved via _parametersById
+                        // even before the decl nodes at children[1..n] are visited (out-of-order decl).
                         var children = GetChildren(index);
                         var body = ReadExpression(children[0]);
                         var parameters = new SysParameterExpression[children.Count - 1];
@@ -1328,6 +1364,13 @@ public struct ExprTree
                     }
                 case ExpressionType.Block:
                     {
+                        // Layout (with variables):    children[0] = ChildList(var₀, var₁, …)
+                        //                             children[1] = ChildList(expr₀, expr₁, …)
+                        // Layout (without variables): children[0] = ChildList(expr₀, expr₁, …)
+                        // children.Count == 2 is the canonical test for the presence of variables.
+                        // Variable decl nodes in children[0] are registered in _parametersById before
+                        // the body expressions in children[1] are read, so refs in the body resolve
+                        // to the same SysParameterExpression object as the decl (normal order here).
                         var children = GetChildren(index);
                         var hasVariables = children.Count == 2;
                         var variableIndexes = hasVariables ? GetChildren(children[0]) : default;
