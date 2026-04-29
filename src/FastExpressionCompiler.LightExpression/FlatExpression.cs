@@ -134,7 +134,7 @@ public struct ExprNode
     internal bool HasNextIdx() => (_meta & IndexMask) != 0;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static uint EncodeNext(int nextIdx) => nextIdx >= 0 ? (uint)(ushort)(nextIdx + 1) : 0;
+    private static uint EncodeNext(int nextIdx) => nextIdx >= 0 ? (uint)checked((ushort)(nextIdx + 1)) : 0;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int DecodeNext(uint encodedNext) => encodedNext == 0 ? -1 : (int)encodedNext - 1;
@@ -1206,7 +1206,7 @@ public struct ExprTree
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool ShouldStoreBoxedConstant(object value, Type type) =>
-        value == null || value is string || value is Type || (type?.IsValueType ?? false);
+        value == null || value is string || value is Type || (type != null && type.IsValueType);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool TryGetInplaceConstantData(object value, Type type, out uint data)
@@ -1272,9 +1272,16 @@ public struct ExprTree
             TypeCode.UInt16 => (ushort)data,
             TypeCode.Int32 => unchecked((int)data),
             TypeCode.UInt32 => data,
-            TypeCode.Single => Unsafe.As<uint, float>(ref data),
+            TypeCode.Single => UInt32BitsToSingle(data),
             _ => throw new NotSupportedException($"Unsupported inline constant type `{type}`.")
         };
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static float UInt32BitsToSingle(uint data)
+    {
+        var floatData = data;
+        return Unsafe.As<uint, float>(ref floatData);
     }
 
     private static Type GetMemberType(System.Reflection.MemberInfo member) => member switch
