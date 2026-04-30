@@ -972,7 +972,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.AreEqual(pId, usage.ParameterId);
         }
 
-        private static int GetSingleNestedLambdaIndex(ref ExprTree fe)
+        private static short GetSingleNestedLambdaIndex(ref ExprTree fe)
         {
             var nestedLambdaIndex = -1;
             for (var i = 0; i < fe.LambdaNodes.Count; ++i)
@@ -984,16 +984,16 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                     throw new InvalidOperationException("Expected a single nested lambda.");
                 nestedLambdaIndex = lambdaIndex;
             }
-            return nestedLambdaIndex;
+            return checked((short)nestedLambdaIndex);
         }
 
-        private static int GetParameterIdByName(ref ExprTree fe, string name)
+        private static short GetParameterIdByName(ref ExprTree fe, string name)
         {
             for (var i = 0; i < fe.Nodes.Count; ++i)
             {
                 ref var node = ref fe.Nodes[i];
                 if (node.NodeType == ExpressionType.Parameter && string.Equals((string)node.Obj, name, StringComparison.Ordinal))
-                    return node.ChildIdx;
+                    return checked((short)node.ChildIdx);
             }
             throw new InvalidOperationException($"Parameter node '{name}' was not found.");
         }

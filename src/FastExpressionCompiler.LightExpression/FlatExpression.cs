@@ -46,15 +46,16 @@ public enum ExprNodeKind : byte
 }
 
 /// <summary>Maps a lambda node to a parameter identity used from an outer scope and therefore captured in closure.</summary>
+[StructLayout(LayoutKind.Sequential, Pack = 2)]
 public readonly struct LambdaClosureParameterUsage
 {
     /// <summary>The lambda node index containing the parameter usage.</summary>
-    public readonly int LambdaNodeIndex;
+    public readonly short LambdaNodeIndex;
 
     /// <summary>The parameter identity id (<see cref="ExprNode.ChildIdx"/>) referenced from outer scope.</summary>
-    public readonly int ParameterId;
+    public readonly short ParameterId;
 
-    public LambdaClosureParameterUsage(int lambdaNodeIndex, int parameterId)
+    public LambdaClosureParameterUsage(short lambdaNodeIndex, short parameterId)
     {
         LambdaNodeIndex = lambdaNodeIndex;
         ParameterId = parameterId;
@@ -1170,8 +1171,9 @@ public struct ExprTree
 
             var captured = collector.CapturedParameters;
             for (var i = 0; i < captured.Count; ++i)
-                _tree.LambdaClosureParameterUsages.Add(new LambdaClosureParameterUsage(lambdaNodeIndex,
-                    GetId(ref _parameterIds, captured[i])));
+                _tree.LambdaClosureParameterUsages.Add(new LambdaClosureParameterUsage(
+                    checked((short)lambdaNodeIndex),
+                    checked((short)GetId(ref _parameterIds, captured[i]))));
         }
 
         private sealed class LambdaClosureUsageCollector : System.Linq.Expressions.ExpressionVisitor
