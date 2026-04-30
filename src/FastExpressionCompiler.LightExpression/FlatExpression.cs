@@ -167,6 +167,36 @@ public struct ExprTree
     /// <summary>Gets or sets closure constants that are referenced from constant nodes.</summary>
     public SmallList<object, Stack16<object>, NoArrayPool<object>> ClosureConstants;
 
+    /// <summary>Gets or sets the indices of all lambda nodes added during construction.
+    /// The root lambda index is stored in <see cref="RootIndex"/>; all other entries are nested lambdas.
+    /// Populated automatically by <see cref="Lambda(Type,int,int[])"/> and <see cref="ExprTree.FromExpression"/>,
+    /// enabling callers to discover nested lambdas without a full tree traversal.</summary>
+    public SmallList<int, Stack16<int>, NoArrayPool<int>> LambdaNodes;
+
+    /// <summary>Gets or sets the indices of all block nodes that carry explicit variable declarations.
+    /// These are the block nodes where <c>children.Count == 2</c> (variable list + expression list).
+    /// Populated automatically by <see cref="Block(Type,IEnumerable{int},int[])"/> and <see cref="ExprTree.FromExpression"/>,
+    /// enabling callers to enumerate block-scoped variables without a full tree traversal.</summary>
+    public SmallList<int, Stack16<int>, NoArrayPool<int>> BlocksWithVariables;
+
+    /// <summary>Gets or sets the indices of all <see cref="ExpressionType.Goto"/> nodes
+    /// (including <c>return</c> and <c>break</c>/<c>continue</c> goto-family nodes).
+    /// Populated automatically by <see cref="MakeGoto"/> and <see cref="ExprTree.FromExpression"/>,
+    /// enabling callers to link gotos to their label targets without a full tree traversal.</summary>
+    public SmallList<int, Stack16<int>, NoArrayPool<int>> GotoNodes;
+
+    /// <summary>Gets or sets the indices of all <see cref="ExpressionType.Label"/> expression nodes.
+    /// Populated automatically by <see cref="Label(int,int?)"/> and <see cref="ExprTree.FromExpression"/>,
+    /// enabling callers to link label expressions to their targets without a full tree traversal.</summary>
+    public SmallList<int, Stack16<int>, NoArrayPool<int>> LabelNodes;
+
+    /// <summary>Gets or sets the indices of all <see cref="ExpressionType.Try"/> nodes
+    /// (try/catch, try/finally, try/fault, and combined forms).
+    /// Populated automatically by <see cref="TryCatch"/>, <see cref="TryFinally"/>,
+    /// <see cref="TryFault"/>, <see cref="TryCatchFinally"/> and <see cref="ExprTree.FromExpression"/>,
+    /// enabling callers to locate all try regions without a full tree traversal.</summary>
+    public SmallList<int, Stack16<int>, NoArrayPool<int>> TryCatchNodes;
+
     /// <summary>Adds a parameter node and returns its index.</summary>
     public int Parameter(Type type, string name = null)
     {
@@ -374,6 +404,9 @@ public struct ExprTree
     /// Variable parameter nodes share the same id-slot as the refs used inside the body
     /// (out-of-order: the variable decl nodes appear in children[0] before the body expressions
     /// that reference them in children[1]).
+    /// <para>When the block has explicit variable declarations its node index is recorded in
+    /// <see cref="BlocksWithVariables"/>, enabling callers to enumerate block-scoped variables
+    /// without a full tree traversal.</para>
     /// </remarks>
     public int Block(Type type, IEnumerable<int> variables, params int[] expressions)
     {
@@ -381,19 +414,26 @@ public struct ExprTree
             throw new ArgumentException("Block should contain at least one expression.", nameof(expressions));
 
         ChildList children = default;
+        var hasVariables = false;
         if (variables != null)
         {
             ChildList variableChildren = default;
             foreach (var variable in variables)
                 variableChildren.Add(variable);
             if (variableChildren.Count != 0)
+            {
                 children.Add(AddChildListNode(in variableChildren));
+                hasVariables = true;
+            }
         }
         ChildList bodyChildren = default;
         for (var i = 0; i < expressions.Length; ++i)
             bodyChildren.Add(expressions[i]);
         children.Add(AddChildListNode(in bodyChildren));
-        return AddFactoryExpressionNode(type ?? Nodes[expressions[expressions.Length - 1]].Type, null, ExpressionType.Block, in children);
+        var index = AddFactoryExpressionNode(type ?? Nodes[expressions[expressions.Length - 1]].Type, null, ExpressionType.Block, in children);
+        if (hasVariables)
+            BlocksWithVariables.Add(index);
+        return index;
     }
 
     /// <summary>Adds a typed lambda node.</summary>
@@ -414,11 +454,17 @@ public struct ExprTree
     /// out-of-order decl pattern. The Reader resolves identity through a shared id map
     /// so that all refs and the single decl resolve to the same
     /// <see cref="System.Linq.Expressions.ParameterExpression"/> object.
+    /// <para>The lambda node index is recorded in <see cref="LambdaNodes"/> so callers can discover
+    /// nested lambdas (all entries except <see cref="RootIndex"/>) without a full tree traversal.</para>
     /// </remarks>
-    public int Lambda(Type delegateType, int body, params int[] parameters) =>
-        parameters == null || parameters.Length == 0
+    public int Lambda(Type delegateType, int body, params int[] parameters)
+    {
+        var index = parameters == null || parameters.Length == 0
             ? AddFactoryExpressionNode(delegateType, null, ExpressionType.Lambda, 0, body)
             : AddFactoryExpressionNode(delegateType, null, ExpressionType.Lambda, PrependToChildList(body, parameters));
+        LambdaNodes.Add(index);
+        return index;
+    }
 
     /// <summary>Adds a member-assignment binding node.</summary>
     public int Bind(System.Reflection.MemberInfo member, int expression) =>
@@ -456,18 +502,26 @@ public struct ExprTree
     }
 
     /// <summary>Adds a label-expression node.</summary>
-    public int Label(int target, int? defaultValue = null) =>
-        defaultValue.HasValue
+    /// <remarks>The node index is recorded in <see cref="LabelNodes"/>.</remarks>
+    public int Label(int target, int? defaultValue = null)
+    {
+        var index = defaultValue.HasValue
             ? AddFactoryExpressionNode(Nodes[target].Type, null, ExpressionType.Label, 0, target, defaultValue.Value)
             : AddFactoryExpressionNode(Nodes[target].Type, null, ExpressionType.Label, 0, target);
+        LabelNodes.Add(index);
+        return index;
+    }
 
     /// <summary>Adds a goto-family node.</summary>
+    /// <remarks>The node index is recorded in <see cref="GotoNodes"/>.</remarks>
     public int MakeGoto(GotoExpressionKind kind, int target, int? value = null, Type type = null)
     {
         var resultType = type ?? (value.HasValue ? Nodes[value.Value].Type : typeof(void));
-        return value.HasValue
+        var index = value.HasValue
             ? AddFactoryExpressionNode(resultType, kind, ExpressionType.Goto, 0, target, value.Value)
             : AddFactoryExpressionNode(resultType, kind, ExpressionType.Goto, 0, target);
+        GotoNodes.Add(index);
+        return index;
     }
 
     /// <summary>Adds a goto node.</summary>
@@ -545,29 +599,48 @@ public struct ExprTree
     }
 
     /// <summary>Adds a try/catch node.</summary>
+    /// <remarks>The node index is recorded in <see cref="TryCatchNodes"/>.</remarks>
     public int TryCatch(int body, params int[] handlers)
     {
+        int index;
         if (handlers == null || handlers.Length == 0)
-            return AddFactoryExpressionNode(Nodes[body].Type, null, ExpressionType.Try, 0, body);
-
-        ChildList handlerChildren = default;
-        for (var i = 0; i < handlers.Length; ++i)
-            handlerChildren.Add(handlers[i]);
-        ChildList children = default;
-        children.Add(body);
-        children.Add(AddChildListNode(in handlerChildren));
-        return AddFactoryExpressionNode(Nodes[body].Type, null, ExpressionType.Try, in children);
+        {
+            index = AddFactoryExpressionNode(Nodes[body].Type, null, ExpressionType.Try, 0, body);
+        }
+        else
+        {
+            ChildList handlerChildren = default;
+            for (var i = 0; i < handlers.Length; ++i)
+                handlerChildren.Add(handlers[i]);
+            ChildList children = default;
+            children.Add(body);
+            children.Add(AddChildListNode(in handlerChildren));
+            index = AddFactoryExpressionNode(Nodes[body].Type, null, ExpressionType.Try, in children);
+        }
+        TryCatchNodes.Add(index);
+        return index;
     }
 
     /// <summary>Adds a try/finally node.</summary>
-    public int TryFinally(int body, int @finally) =>
-        AddFactoryExpressionNode(Nodes[body].Type, null, ExpressionType.Try, 0, body, @finally);
+    /// <remarks>The node index is recorded in <see cref="TryCatchNodes"/>.</remarks>
+    public int TryFinally(int body, int @finally)
+    {
+        var index = AddFactoryExpressionNode(Nodes[body].Type, null, ExpressionType.Try, 0, body, @finally);
+        TryCatchNodes.Add(index);
+        return index;
+    }
 
     /// <summary>Adds a try/fault node.</summary>
-    public int TryFault(int body, int fault) =>
-        AddFactoryExpressionNode(Nodes[body].Type, null, ExpressionType.Try, TryFaultFlag, body, fault);
+    /// <remarks>The node index is recorded in <see cref="TryCatchNodes"/>.</remarks>
+    public int TryFault(int body, int fault)
+    {
+        var index = AddFactoryExpressionNode(Nodes[body].Type, null, ExpressionType.Try, TryFaultFlag, body, fault);
+        TryCatchNodes.Add(index);
+        return index;
+    }
 
     /// <summary>Adds a try node with optional finally block and catch handlers.</summary>
+    /// <remarks>The node index is recorded in <see cref="TryCatchNodes"/>.</remarks>
     public int TryCatchFinally(int body, int? @finally, params int[] handlers)
     {
         ChildList children = default;
@@ -581,7 +654,9 @@ public struct ExprTree
                 handlerChildren.Add(handlers[i]);
             children.Add(AddChildListNode(in handlerChildren));
         }
-        return AddFactoryExpressionNode(Nodes[body].Type, null, ExpressionType.Try, 0, in children);
+        var index = AddFactoryExpressionNode(Nodes[body].Type, null, ExpressionType.Try, 0, in children);
+        TryCatchNodes.Add(index);
+        return index;
     }
 
     /// <summary>Adds a type-test node.</summary>
@@ -823,7 +898,9 @@ public struct ExprTree
                         children.Add(AddExpression(lambda.Body));
                         for (var i = 0; i < lambda.Parameters.Count; ++i)
                             children.Add(AddExpression(lambda.Parameters[i]));
-                        return _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType, children);
+                        var lambdaIndex = _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType, children);
+                        _tree.LambdaNodes.Add(lambdaIndex);
+                        return lambdaIndex;
                     }
                 case ExpressionType.Block:
                     {
@@ -833,7 +910,8 @@ public struct ExprTree
                         // children.Count == 2 is the canonical test for the presence of variables.
                         var block = (System.Linq.Expressions.BlockExpression)expression;
                         ChildList children = default;
-                        if (block.Variables.Count != 0)
+                        var hasVariables = block.Variables.Count != 0;
+                        if (hasVariables)
                         {
                             ChildList variables = default;
                             for (var i = 0; i < block.Variables.Count; ++i)
@@ -844,7 +922,10 @@ public struct ExprTree
                         for (var i = 0; i < block.Expressions.Count; ++i)
                             expressions.Add(AddExpression(block.Expressions[i]));
                         children.Add(_tree.AddChildListNode(in expressions));
-                        return _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType, in children);
+                        var blockIndex = _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType, in children);
+                        if (hasVariables)
+                            _tree.BlocksWithVariables.Add(blockIndex);
+                        return blockIndex;
                     }
                 case ExpressionType.MemberAccess:
                     {
@@ -930,7 +1011,9 @@ public struct ExprTree
                         children.Add(AddLabelTarget(@goto.Target));
                         if (@goto.Value != null)
                             children.Add(AddExpression(@goto.Value));
-                        return _tree.AddRawExpressionNode(expression.Type, @goto.Kind, expression.NodeType, children);
+                        var gotoIndex = _tree.AddRawExpressionNode(expression.Type, @goto.Kind, expression.NodeType, children);
+                        _tree.GotoNodes.Add(gotoIndex);
+                        return gotoIndex;
                     }
                 case ExpressionType.Label:
                     {
@@ -939,7 +1022,9 @@ public struct ExprTree
                         children.Add(AddLabelTarget(label.Target));
                         if (label.DefaultValue != null)
                             children.Add(AddExpression(label.DefaultValue));
-                        return _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType, children);
+                        var labelIndex = _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType, children);
+                        _tree.LabelNodes.Add(labelIndex);
+                        return labelIndex;
                     }
                 case ExpressionType.Switch:
                     {
@@ -977,7 +1062,9 @@ public struct ExprTree
                                 handlers.Add(AddCatchBlock(@try.Handlers[i]));
                             children.Add(_tree.AddChildListNode(in handlers));
                         }
-                        return _tree.AddNode(expression.Type, null, expression.NodeType, ExprNodeKind.Expression, flags, in children);
+                        var tryIndex = _tree.AddNode(expression.Type, null, expression.NodeType, ExprNodeKind.Expression, flags, in children);
+                        _tree.TryCatchNodes.Add(tryIndex);
+                        return tryIndex;
                     }
                 case ExpressionType.MemberInit:
                     {

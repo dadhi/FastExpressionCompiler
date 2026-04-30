@@ -40,7 +40,17 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Flat_nested_lambda_captures_outer_parameter_identity();
             Flat_out_of_order_decl_block_in_lambda_compiles_correctly();
             Flat_enum_constant_stored_inline_roundtrip();
-            return 23;
+            Flat_lambda_nodes_tracks_all_lambdas_during_direct_construction();
+            Flat_lambda_nodes_tracks_deeply_nested_lambdas_during_direct_construction();
+            Flat_lambda_nodes_tracks_lambdas_from_expression_conversion();
+            Flat_lambda_nodes_has_single_entry_for_root_only_lambda();
+            Flat_blocks_with_variables_tracked_during_direct_construction();
+            Flat_goto_and_label_nodes_tracked_during_direct_construction();
+            Flat_try_catch_nodes_tracked_during_direct_construction();
+            Flat_blocks_with_variables_tracked_from_expression_conversion();
+            Flat_goto_and_label_nodes_tracked_from_expression_conversion();
+            Flat_try_catch_nodes_tracked_from_expression_conversion();
+            return 33;
         }
 
 
@@ -685,6 +695,241 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Check(IntEnum.B);
             Check(UIntEnum.A);
             Check(UIntEnum.B);
+        }
+
+        /// <summary>
+        /// When building a flat expression directly, calling Lambda() for a nested lambda
+        /// and then for the root lambda should result in both indices recorded in LambdaNodes.
+        /// The root is identified by RootIndex; all others are nested.
+        /// </summary>
+        public void Flat_lambda_nodes_tracks_all_lambdas_during_direct_construction()
+        {
+            var fe = default(ExprTree);
+            var x = fe.ParameterOf<int>("x");
+
+            // Build: outer: x => () => x
+            var inner = fe.Lambda<Func<int>>(x);
+            fe.RootIndex = fe.Lambda<Func<int, Func<int>>>(inner, x);
+
+            // Both the root and nested lambda indices should be recorded
+            Asserts.AreEqual(2, fe.LambdaNodes.Count);
+
+            // Check that inner and root are both in LambdaNodes
+            var foundInner = false;
+            var foundRoot = false;
+            for (var i = 0; i < fe.LambdaNodes.Count; i++)
+            {
+                if (fe.LambdaNodes[i] == inner) foundInner = true;
+                if (fe.LambdaNodes[i] == fe.RootIndex) foundRoot = true;
+            }
+            Asserts.IsTrue(foundInner);
+            Asserts.IsTrue(foundRoot);
+
+            // Nested lambdas are all LambdaNodes entries that are not the root
+            var nestedCount = 0;
+            for (var i = 0; i < fe.LambdaNodes.Count; i++)
+                if (fe.LambdaNodes[i] != fe.RootIndex)
+                    ++nestedCount;
+            Asserts.AreEqual(1, nestedCount);
+        }
+
+        /// <summary>
+        /// When building a flat expression with multiple levels of nesting,
+        /// all lambda node indices are captured in LambdaNodes.
+        /// </summary>
+        public void Flat_lambda_nodes_tracks_deeply_nested_lambdas_during_direct_construction()
+        {
+            var fe = default(ExprTree);
+            var x = fe.ParameterOf<int>("x");
+
+            // Build: outer: x => (() => (() => x))
+            var innermost = fe.Lambda<Func<int>>(x);
+            var middle = fe.Lambda<Func<Func<int>>>(innermost);
+            fe.RootIndex = fe.Lambda<Func<int, Func<Func<int>>>>(middle, x);
+
+            // All three lambda nodes should be recorded
+            Asserts.AreEqual(3, fe.LambdaNodes.Count);
+
+            // Count nested (non-root) lambdas
+            var nestedCount = 0;
+            for (var i = 0; i < fe.LambdaNodes.Count; i++)
+                if (fe.LambdaNodes[i] != fe.RootIndex)
+                    ++nestedCount;
+            Asserts.AreEqual(2, nestedCount);
+        }
+
+        /// <summary>
+        /// When converting a System.Linq expression tree with nested lambdas via FromExpression,
+        /// the resulting ExprTree should have all lambda indices populated in LambdaNodes.
+        /// </summary>
+        public void Flat_lambda_nodes_tracks_lambdas_from_expression_conversion()
+        {
+            var p = SysExpr.Parameter(typeof(int), "p");
+            // Build: p => () => p  using System.Linq.Expressions
+            var sysLambda = SysExpr.Lambda<Func<int, Func<int>>>(
+                SysExpr.Lambda<Func<int>>(p),
+                p);
+
+            var fe = sysLambda.ToFlatExpression();
+
+            // Both root and nested lambda indices should be recorded
+            Asserts.AreEqual(2, fe.LambdaNodes.Count);
+
+            // The root lambda must be in the list
+            var foundRoot = false;
+            for (var i = 0; i < fe.LambdaNodes.Count; i++)
+                if (fe.LambdaNodes[i] == fe.RootIndex) { foundRoot = true; break; }
+            Asserts.IsTrue(foundRoot);
+
+            // Exactly one nested lambda
+            var nestedCount = 0;
+            for (var i = 0; i < fe.LambdaNodes.Count; i++)
+                if (fe.LambdaNodes[i] != fe.RootIndex)
+                    ++nestedCount;
+            Asserts.AreEqual(1, nestedCount);
+        }
+
+        /// <summary>
+        /// A flat expression with no nested lambdas (root-only) should have exactly one
+        /// entry in LambdaNodes (the root itself).
+        /// </summary>
+        public void Flat_lambda_nodes_has_single_entry_for_root_only_lambda()
+        {
+            var fe = default(ExprTree);
+            var p = fe.ParameterOf<int>("p");
+            fe.RootIndex = fe.Lambda<Func<int, int>>(fe.Add(p, fe.ConstantInt(1)), p);
+
+            Asserts.AreEqual(1, fe.LambdaNodes.Count);
+            Asserts.AreEqual(fe.RootIndex, fe.LambdaNodes[0]);
+        }
+
+        /// <summary>
+        /// Block nodes with explicit variable declarations are recorded in BlocksWithVariables;
+        /// blocks without variables produce no entry.
+        /// </summary>
+        public void Flat_blocks_with_variables_tracked_during_direct_construction()
+        {
+            var fe = default(ExprTree);
+            var p = fe.ParameterOf<int>("p");
+            var v = fe.Variable(typeof(int), "v");
+
+            // Block with one variable: should be tracked
+            var blockWithVar = fe.Block(typeof(int), new[] { v }, fe.Assign(v, p), v);
+            // Block without variables: should NOT be tracked
+            var blockNoVar = fe.Block(fe.Add(p, fe.ConstantInt(1)));
+
+            fe.RootIndex = fe.Lambda<Func<int, int>>(fe.Block(blockWithVar, blockNoVar), p);
+
+            Asserts.AreEqual(1, fe.BlocksWithVariables.Count);
+            Asserts.AreEqual(blockWithVar, fe.BlocksWithVariables[0]);
+        }
+
+        /// <summary>
+        /// Goto and label expression nodes are recorded in GotoNodes and LabelNodes respectively.
+        /// </summary>
+        public void Flat_goto_and_label_nodes_tracked_during_direct_construction()
+        {
+            var fe = default(ExprTree);
+            var p = fe.ParameterOf<int>("p");
+            var target = fe.Label(typeof(int), "done");
+
+            var gotoNode = fe.Goto(target, p, typeof(int));
+            var labelNode = fe.Label(target, fe.ConstantInt(0));
+
+            fe.RootIndex = fe.Lambda<Func<int, int>>(fe.Block(gotoNode, labelNode), p);
+
+            Asserts.AreEqual(1, fe.GotoNodes.Count);
+            Asserts.AreEqual(gotoNode, fe.GotoNodes[0]);
+
+            Asserts.AreEqual(1, fe.LabelNodes.Count);
+            Asserts.AreEqual(labelNode, fe.LabelNodes[0]);
+        }
+
+        /// <summary>
+        /// Try/catch, try/finally and try/fault node indices are all recorded in TryCatchNodes.
+        /// </summary>
+        public void Flat_try_catch_nodes_tracked_during_direct_construction()
+        {
+            var fe = default(ExprTree);
+            var p = fe.ParameterOf<int>("p");
+
+            var tryCatchNode = fe.TryCatch(
+                fe.Add(p, fe.ConstantInt(1)),
+                fe.Catch(typeof(Exception), fe.ConstantInt(-1)));
+
+            var tryFinallyNode = fe.TryFinally(
+                fe.Add(p, fe.ConstantInt(2)),
+                fe.Default(typeof(void)));
+
+            fe.RootIndex = fe.Lambda<Func<int, int>>(
+                fe.Block(tryCatchNode, tryFinallyNode), p);
+
+            Asserts.AreEqual(2, fe.TryCatchNodes.Count);
+
+            var foundTryCatch = false;
+            var foundTryFinally = false;
+            for (var i = 0; i < fe.TryCatchNodes.Count; i++)
+            {
+                if (fe.TryCatchNodes[i] == tryCatchNode) foundTryCatch = true;
+                if (fe.TryCatchNodes[i] == tryFinallyNode) foundTryFinally = true;
+            }
+            Asserts.IsTrue(foundTryCatch);
+            Asserts.IsTrue(foundTryFinally);
+        }
+
+        /// <summary>
+        /// When converting a System.Linq expression tree, blocks with variables are
+        /// recorded in BlocksWithVariables; plain blocks are not.
+        /// </summary>
+        public void Flat_blocks_with_variables_tracked_from_expression_conversion()
+        {
+            var p = SysExpr.Parameter(typeof(int), "p");
+            var v = SysExpr.Variable(typeof(int), "v");
+            // block with variable
+            var sysBlock = SysExpr.Block(new[] { v }, SysExpr.Assign(v, p), v);
+            var sysLambda = SysExpr.Lambda<Func<int, int>>(sysBlock, p);
+
+            var fe = sysLambda.ToFlatExpression();
+
+            Asserts.AreEqual(1, fe.BlocksWithVariables.Count);
+        }
+
+        /// <summary>
+        /// When converting a System.Linq expression tree with goto/label, both
+        /// GotoNodes and LabelNodes are populated.
+        /// </summary>
+        public void Flat_goto_and_label_nodes_tracked_from_expression_conversion()
+        {
+            var p = SysExpr.Parameter(typeof(int), "p");
+            var target = SysExpr.Label(typeof(int), "done");
+            var sysLambda = SysExpr.Lambda<Func<int, int>>(
+                SysExpr.Block(
+                    SysExpr.Goto(target, p, typeof(int)),
+                    SysExpr.Label(target, SysExpr.Constant(0))),
+                p);
+
+            var fe = sysLambda.ToFlatExpression();
+
+            Asserts.AreEqual(1, fe.GotoNodes.Count);
+            Asserts.AreEqual(1, fe.LabelNodes.Count);
+        }
+
+        /// <summary>
+        /// When converting a System.Linq expression tree with a try/catch,
+        /// TryCatchNodes is populated.
+        /// </summary>
+        public void Flat_try_catch_nodes_tracked_from_expression_conversion()
+        {
+            var p = SysExpr.Parameter(typeof(int), "p");
+            var sysLambda = SysExpr.Lambda<Func<int, int>>(
+                SysExpr.TryCatch(
+                    SysExpr.Add(p, SysExpr.Constant(1)),
+                    SysExpr.Catch(typeof(Exception), SysExpr.Constant(-1))),
+                p);
+
+            var fe = sysLambda.ToFlatExpression();
+
+            Asserts.AreEqual(1, fe.TryCatchNodes.Count);
         }
     }
 }
