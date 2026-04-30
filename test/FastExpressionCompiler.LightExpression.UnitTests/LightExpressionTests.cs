@@ -968,8 +968,8 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var pId = GetParameterIdByName(ref fe, "p");
             var localId = GetParameterIdByName(ref fe, "local");
             var usage = fe.LambdaClosureParameterUsages[0];
+            Asserts.IsFalse(pId == localId);
             Asserts.AreEqual(pId, usage.ParameterId);
-            Asserts.IsFalse(usage.ParameterId == localId);
         }
 
         private static int GetSingleNestedLambdaIndex(ref ExprTree fe)

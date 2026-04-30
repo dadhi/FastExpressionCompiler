@@ -1178,6 +1178,8 @@ public struct ExprTree
         {
             private readonly System.Linq.Expressions.LambdaExpression _lambda;
             private readonly List<SysParameterExpression> _scopedParameters = new();
+            private readonly HashSet<SysParameterExpression> _scopedParameterSet = new(ReferenceParameterComparer.Instance);
+            private readonly HashSet<SysParameterExpression> _capturedParameterSet = new(ReferenceParameterComparer.Instance);
 
             public readonly List<SysParameterExpression> CapturedParameters = new();
 
@@ -1185,15 +1187,21 @@ public struct ExprTree
             {
                 _lambda = lambda;
                 for (var i = 0; i < lambda.Parameters.Count; ++i)
-                    _scopedParameters.Add(lambda.Parameters[i]);
+                {
+                    var parameter = lambda.Parameters[i];
+                    _scopedParameters.Add(parameter);
+                    _scopedParameterSet.Add(parameter);
+                }
             }
 
             protected override Expression VisitLambda<T>(System.Linq.Expressions.Expression<T> node) =>
+                // Intentionally skip nested lambdas: each lambda closure map is collected independently
+                // when that lambda node is visited by the parent Builder traversal.
                 ReferenceEquals(node, _lambda) ? base.VisitLambda(node) : node;
 
             protected override Expression VisitParameter(SysParameterExpression node)
             {
-                if (!ContainsReference(_scopedParameters, node) && !ContainsReference(CapturedParameters, node))
+                if (!_scopedParameterSet.Contains(node) && _capturedParameterSet.Add(node))
                     CapturedParameters.Add(node);
                 return node;
             }
@@ -1202,8 +1210,14 @@ public struct ExprTree
             {
                 var initialScopeCount = _scopedParameters.Count;
                 for (var i = 0; i < node.Variables.Count; ++i)
-                    _scopedParameters.Add(node.Variables[i]);
+                {
+                    var variable = node.Variables[i];
+                    _scopedParameters.Add(variable);
+                    _scopedParameterSet.Add(variable);
+                }
                 var result = base.VisitBlock(node);
+                for (var i = _scopedParameters.Count - 1; i >= initialScopeCount; --i)
+                    _scopedParameterSet.Remove(_scopedParameters[i]);
                 _scopedParameters.RemoveRange(initialScopeCount, _scopedParameters.Count - initialScopeCount);
                 return result;
             }
@@ -1212,18 +1226,24 @@ public struct ExprTree
             {
                 var initialScopeCount = _scopedParameters.Count;
                 if (node.Variable != null)
+                {
                     _scopedParameters.Add(node.Variable);
+                    _scopedParameterSet.Add(node.Variable);
+                }
                 var result = base.VisitCatchBlock(node);
+                for (var i = _scopedParameters.Count - 1; i >= initialScopeCount; --i)
+                    _scopedParameterSet.Remove(_scopedParameters[i]);
                 _scopedParameters.RemoveRange(initialScopeCount, _scopedParameters.Count - initialScopeCount);
                 return result;
             }
 
-            private static bool ContainsReference(List<SysParameterExpression> parameters, SysParameterExpression parameter)
+            private sealed class ReferenceParameterComparer : IEqualityComparer<SysParameterExpression>
             {
-                for (var i = 0; i < parameters.Count; ++i)
-                    if (ReferenceEquals(parameters[i], parameter))
-                        return true;
-                return false;
+                public static readonly ReferenceParameterComparer Instance = new();
+
+                public bool Equals(SysParameterExpression x, SysParameterExpression y) => ReferenceEquals(x, y);
+
+                public int GetHashCode(SysParameterExpression obj) => RuntimeHelpers.GetHashCode(obj);
             }
         }
 
