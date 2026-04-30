@@ -45,6 +45,22 @@ public enum ExprNodeKind : byte
     UInt16Pair,
 }
 
+/// <summary>Maps a lambda node to a parameter identity used from an outer scope and therefore captured in closure.</summary>
+public readonly struct LambdaClosureParameterUsage
+{
+    /// <summary>The lambda node index containing the parameter usage.</summary>
+    public readonly int LambdaNodeIndex;
+
+    /// <summary>The parameter identity id (<see cref="ExprNode.ChildIdx"/>) referenced from outer scope.</summary>
+    public readonly int ParameterId;
+
+    public LambdaClosureParameterUsage(int lambdaNodeIndex, int parameterId)
+    {
+        LambdaNodeIndex = lambdaNodeIndex;
+        ParameterId = parameterId;
+    }
+}
+
 /// <summary>Stores one flat expression node plus its intrusive child-link metadata in 24 bytes on 64-bit runtimes.</summary>
 /// <remarks>
 /// Layout (64-bit): Type(8) | Obj(8) | _meta(4) | _data(4) = 24 bytes.
@@ -196,6 +212,12 @@ public struct ExprTree
     /// <see cref="TryFault"/>, <see cref="TryCatchFinally"/> and <see cref="ExprTree.FromExpression"/>,
     /// enabling callers to locate all try regions without a full tree traversal.</summary>
     public SmallList<int, Stack16<int>, NoArrayPool<int>> TryCatchNodes;
+
+    /// <summary>Gets or sets mappings of lambda-node index to captured parameter id for nested-lambda closures.
+    /// Populated by <see cref="ExprTree.FromExpression"/> while flattening System.Linq lambdas;
+    /// each entry means that the lambda body references a parameter that is not declared as that lambda parameter
+    /// and not declared as a local block/catch variable in that lambda body scope.</summary>
+    public SmallList<LambdaClosureParameterUsage, Stack16<LambdaClosureParameterUsage>, NoArrayPool<LambdaClosureParameterUsage>> LambdaClosureParameterUsages;
 
     /// <summary>Adds a parameter node and returns its index.</summary>
     public int Parameter(Type type, string name = null)
@@ -900,6 +922,7 @@ public struct ExprTree
                             children.Add(AddExpression(lambda.Parameters[i]));
                         var lambdaIndex = _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType, children);
                         _tree.LambdaNodes.Add(lambdaIndex);
+                        CollectLambdaClosureParameterUsages(lambda, lambdaIndex);
                         return lambdaIndex;
                     }
                 case ExpressionType.Block:
@@ -1137,6 +1160,70 @@ public struct ExprTree
                     }
 
                     throw new NotSupportedException($"Flattening of `ExpressionType.{expression.NodeType}` is not supported yet.");
+            }
+        }
+
+        private void CollectLambdaClosureParameterUsages(System.Linq.Expressions.LambdaExpression lambda, int lambdaNodeIndex)
+        {
+            var collector = new LambdaClosureUsageCollector(lambda);
+            collector.Visit(lambda.Body);
+
+            var captured = collector.CapturedParameters;
+            for (var i = 0; i < captured.Count; ++i)
+                _tree.LambdaClosureParameterUsages.Add(new LambdaClosureParameterUsage(lambdaNodeIndex,
+                    GetId(ref _parameterIds, captured[i])));
+        }
+
+        private sealed class LambdaClosureUsageCollector : System.Linq.Expressions.ExpressionVisitor
+        {
+            private readonly System.Linq.Expressions.LambdaExpression _lambda;
+            private readonly List<SysParameterExpression> _scopedParameters = new();
+
+            public readonly List<SysParameterExpression> CapturedParameters = new();
+
+            public LambdaClosureUsageCollector(System.Linq.Expressions.LambdaExpression lambda)
+            {
+                _lambda = lambda;
+                for (var i = 0; i < lambda.Parameters.Count; ++i)
+                    _scopedParameters.Add(lambda.Parameters[i]);
+            }
+
+            protected override Expression VisitLambda<T>(System.Linq.Expressions.Expression<T> node) =>
+                ReferenceEquals(node, _lambda) ? base.VisitLambda(node) : node;
+
+            protected override Expression VisitParameter(SysParameterExpression node)
+            {
+                if (!ContainsReference(_scopedParameters, node) && !ContainsReference(CapturedParameters, node))
+                    CapturedParameters.Add(node);
+                return node;
+            }
+
+            protected override Expression VisitBlock(System.Linq.Expressions.BlockExpression node)
+            {
+                var initialScopeCount = _scopedParameters.Count;
+                for (var i = 0; i < node.Variables.Count; ++i)
+                    _scopedParameters.Add(node.Variables[i]);
+                var result = base.VisitBlock(node);
+                _scopedParameters.RemoveRange(initialScopeCount, _scopedParameters.Count - initialScopeCount);
+                return result;
+            }
+
+            protected override SysCatchBlock VisitCatchBlock(SysCatchBlock node)
+            {
+                var initialScopeCount = _scopedParameters.Count;
+                if (node.Variable != null)
+                    _scopedParameters.Add(node.Variable);
+                var result = base.VisitCatchBlock(node);
+                _scopedParameters.RemoveRange(initialScopeCount, _scopedParameters.Count - initialScopeCount);
+                return result;
+            }
+
+            private static bool ContainsReference(List<SysParameterExpression> parameters, SysParameterExpression parameter)
+            {
+                for (var i = 0; i < parameters.Count; ++i)
+                    if (ReferenceEquals(parameters[i], parameter))
+                        return true;
+                return false;
             }
         }
 

@@ -50,7 +50,9 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Flat_blocks_with_variables_tracked_from_expression_conversion();
             Flat_goto_and_label_nodes_tracked_from_expression_conversion();
             Flat_try_catch_nodes_tracked_from_expression_conversion();
-            return 33;
+            Flat_lambda_closure_parameter_usages_tracked_for_nested_lambda_from_expression_conversion();
+            Flat_lambda_closure_parameter_usages_excludes_nested_lambda_locals();
+            return 35;
         }
 
 
@@ -930,6 +932,70 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var fe = sysLambda.ToFlatExpression();
 
             Asserts.AreEqual(1, fe.TryCatchNodes.Count);
+        }
+
+        public void Flat_lambda_closure_parameter_usages_tracked_for_nested_lambda_from_expression_conversion()
+        {
+            var p = SysExpr.Parameter(typeof(int), "p");
+            var sysLambda = SysExpr.Lambda<Func<int, Func<int>>>(
+                SysExpr.Lambda<Func<int>>(p),
+                p);
+
+            var fe = sysLambda.ToFlatExpression();
+
+            Asserts.AreEqual(1, fe.LambdaClosureParameterUsages.Count);
+
+            var nestedLambdaIndex = GetSingleNestedLambdaIndex(ref fe);
+            var pId = GetParameterIdByName(ref fe, "p");
+
+            var usage = fe.LambdaClosureParameterUsages[0];
+            Asserts.AreEqual(nestedLambdaIndex, usage.LambdaNodeIndex);
+            Asserts.AreEqual(pId, usage.ParameterId);
+        }
+
+        public void Flat_lambda_closure_parameter_usages_excludes_nested_lambda_locals()
+        {
+            var p = SysExpr.Parameter(typeof(int), "p");
+            var local = SysExpr.Variable(typeof(int), "local");
+            var nested = SysExpr.Lambda<Func<int>>(
+                SysExpr.Block(new[] { local }, SysExpr.Assign(local, p), local));
+            var sysLambda = SysExpr.Lambda<Func<int, Func<int>>>(nested, p);
+
+            var fe = sysLambda.ToFlatExpression();
+
+            Asserts.AreEqual(1, fe.LambdaClosureParameterUsages.Count);
+
+            var pId = GetParameterIdByName(ref fe, "p");
+            var localId = GetParameterIdByName(ref fe, "local");
+            var usage = fe.LambdaClosureParameterUsages[0];
+            Asserts.AreEqual(pId, usage.ParameterId);
+            Asserts.IsFalse(usage.ParameterId == localId);
+        }
+
+        private static int GetSingleNestedLambdaIndex(ref ExprTree fe)
+        {
+            var nestedLambdaIndex = -1;
+            for (var i = 0; i < fe.LambdaNodes.Count; ++i)
+            {
+                var lambdaIndex = fe.LambdaNodes[i];
+                if (lambdaIndex == fe.RootIndex)
+                    continue;
+                if (nestedLambdaIndex != -1)
+                    throw new InvalidOperationException("Expected a single nested lambda.");
+                nestedLambdaIndex = lambdaIndex;
+            }
+            return nestedLambdaIndex;
+        }
+
+        private static int GetParameterIdByName(ref ExprTree fe, string name)
+        {
+            for (var i = 0; i < fe.Nodes.Count; ++i)
+            {
+                ref var node = ref fe.Nodes[i];
+                if (node.NodeType == ExpressionType.Parameter && string.Equals((string)node.Obj, name, StringComparison.Ordinal))
+                    return node.ChildIdx;
+            }
+            throw new InvalidOperationException($"Parameter node '{name}' was not found.");
         }
     }
 }
