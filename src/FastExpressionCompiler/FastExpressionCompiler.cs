@@ -157,10 +157,13 @@ namespace FastExpressionCompiler
             if ((context.Status & ClosureStatus.HasClosure) != 0)
                 return false;
 
-            var parent = lambdaExpr.ReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
+            var returnType = lambdaExpr.ReturnType;
+            var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
             if (!EmittingVisitor.TryEmit(bodyExpr, il, ref context, parent))
                 return false;
 
+            if (bodyExpr.Type.IsByRef && !returnType.IsByRef) // don't forget to de-ref the reference if the lambda should return de-ref value of the body and not itself by-ref return, see #414
+                EmittingVisitor.EmitLoadIndirectlyByRef(il, bodyExpr.Type);
             il.Demit(OpCodes.Ret);
             return true;
         }
@@ -331,10 +334,14 @@ namespace FastExpressionCompiler
             var il = method.GetILGenerator();
             EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref context);
 
-            var parent = lambdaExpr.ReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
-            if (!EmittingVisitor.TryEmit(lambdaExpr.Body, il, ref context, parent))
+            var bodyExpr = lambdaExpr.Body;
+            var returnType = lambdaExpr.ReturnType;
+            var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
+            if (!EmittingVisitor.TryEmit(bodyExpr, il, ref context, parent))
                 return null;
 
+            if (bodyExpr.Type.IsByRef && !returnType.IsByRef) // don't forget to de-ref the reference if the lambda should return de-ref value of the body and not itself by-ref return, see #414
+                EmittingVisitor.EmitLoadIndirectlyByRef(il, bodyExpr.Type);
             il.Demit(OpCodes.Ret);
 
             var delegateType = typeof(TDelegate) != typeof(Delegate) ? typeof(TDelegate) : lambdaExpr.Type;
@@ -355,10 +362,15 @@ namespace FastExpressionCompiler
                 skipVisibility: true);
 
             var il = method.GetILGenerator();
-            var parent = lambdaExpr.ReturnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
-            if (!EmittingVisitor.TryEmit(lambdaExpr.Body, il, ref context, parent))
+
+            var bodyExpr = lambdaExpr.Body;
+            var returnType = lambdaExpr.ReturnType;
+            var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
+            if (!EmittingVisitor.TryEmit(bodyExpr, il, ref context, parent))
                 return null;
 
+            if (bodyExpr.Type.IsByRef && !returnType.IsByRef) // don't forget to de-ref the reference if the lambda should return de-ref value of the body and not itself by-ref return, see #414
+                EmittingVisitor.EmitLoadIndirectlyByRef(il, bodyExpr.Type);
             il.Demit(OpCodes.Ret);
 
             var delegateType = typeof(TDelegate) != typeof(Delegate) ? typeof(TDelegate) : lambdaExpr.Type;
@@ -440,6 +452,8 @@ namespace FastExpressionCompiler
 
                 if (EmittingVisitor.TryEmit(bodyExpr, il, ref context, parent))
                 {
+                    if (bodyExpr.Type.IsByRef && !returnType.IsByRef) // don't forget to de-ref the reference if the lambda should return de-ref value of the body and not itself by-ref return, see #414
+                        EmittingVisitor.EmitLoadIndirectlyByRef(il, bodyExpr.Type);
                     il.Demit(OpCodes.Ret);
                     compiledDelegate = dynMethod.CreateDelegate(delegateType, closure);
                     if (closure is DebugArrayClosure diagClosure)
@@ -4506,8 +4520,10 @@ namespace FastExpressionCompiler
                 il.Demit(OpCodes.Stelem_Ref); // put the variable into non-passed parameters (variables) array
             }
 
-            private static void EmitLoadIndirectlyByRef(ILGenerator il, Type type)
+            internal static void EmitLoadIndirectlyByRef(ILGenerator il, Type type)
             {
+                if (type.IsByRef)
+                    type = type.GetElementType();
                 if (type.IsEnum)
                     type = Enum.GetUnderlyingType(type);
                 switch (Type.GetTypeCode(type))
@@ -10513,8 +10529,7 @@ namespace FastExpressionCompiler
                     }
                 case ExpressionType.Parameter:
                     {
-                        if (isReturnByRef)
-                            sb.Append("ref ");
+                        if (isReturnByRef) sb.AppendRefOnce();
                         return sb.AppendName(e, ((ParameterExpression)e).Name, e.Type.ToCode(stripNamespace, printType), ref ctx);
                     }
                 case ExpressionType.New:
@@ -10550,7 +10565,8 @@ namespace FastExpressionCompiler
 
                         var method = mc.Method;
                         var methodReturnType = method.ReturnType;
-                        if (enclosedIn != EnclosedIn.Instance && methodReturnType.IsByRef)
+                        if (methodReturnType.IsByRef &&
+                            (enclosedIn == EnclosedIn.LambdaBody ? isReturnByRef : (enclosedIn != EnclosedIn.Instance))) // todo: @improv generalize
                             sb.AppendRefOnce();
 
                         // output convert only if it is required, e.g. it may happen for custom expressions designed by users

@@ -61,16 +61,18 @@ public static class TestTools
     public static void AssertOpCodes(this IDelegateDebugInfo debugInfo, params OpCode[] expectedCodes) =>
         AssertOpCodes(debugInfo.ILInstructions, expectedCodes);
 
+    private static IEnumerable<OpCode> GetOpsCodes(this IEnumerable<ILInstruction> il)
+    {
+        if (il == null) yield break;
+        // todo: @wip add explicit ILFormat.SkipNop option (set by default)
+        foreach (var i in il) if (i.OpCode != OpCodes.Nop) yield return i.OpCode;
+    }
+
     public static void AssertOpCodes(this IEnumerable<ILInstruction> il, params OpCode[] expectedCodes)
     {
 #if NET8_0_OR_GREATER
         if (DisableAssertOpCodes) return;
-        // todo: @perf replace the linq with explicit loop for better perf
-        Asserts.AreEqual(expectedCodes, il?
-            .Select(x => x.OpCode)
-            // todo: @wip add explicit ILFormat.SkipNop option (set by default)
-            .Where(op => op != OpCodes.Nop)
-            ?? []);
+        Asserts.AreEqual(expectedCodes, il.GetOpsCodes());
 #endif
     }
 

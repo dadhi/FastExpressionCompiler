@@ -26,8 +26,7 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
 
 #if LIGHT_EXPRESSION && !NET472
         // NET472 does not support ref returns
-        // todo: @fixme very hard thing to do
-        // Issue415_ReturnRefParameter_ReturnRefCall();
+        Issue415_ReturnRefParameter_ReturnRefCall();
         Issue415_ReturnRefParameterByRef();
         Issue415_ReturnRefParameterByRef_ReturnRefCall();
         return 8;
@@ -278,21 +277,21 @@ public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
 
         expr.PrintCSharp();
         // var @cs = (MyDelegate)((ref int int__32854180) => //Int32
-        //     ref Issue414_Incorrect_il_when_passing_by_ref_value.ReturnRef(ref int__32854180));
+        //     Issue414_Incorrect_il_when_passing_by_ref_value.ReturnRef(ref int__32854180));
 
         var ff = expr.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo | CompilerFlags.ThrowOnNotSupportedExpression);
         ff.PrintIL();
 
-        // ff.AssertOpCodes(
-        //     OpCodes.Ldarg_1,
-        //     OpCodes.Call,
-        //     OpCodes.Ldind_I4,
-        //     OpCodes.Ret
-        // );
+        ff.AssertOpCodes(
+            OpCodes.Ldarg_1,
+            OpCodes.Call,
+            OpCodes.Ldind_I4,
+            OpCodes.Ret
+        );
 
         var x = 17;
         var y = ff(ref x);
-        Asserts.AreEqual(18, y);
+        Asserts.AreEqual(17, y);
     }
 
 #endif
