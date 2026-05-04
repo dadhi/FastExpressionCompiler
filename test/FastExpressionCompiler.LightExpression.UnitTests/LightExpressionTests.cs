@@ -635,6 +635,80 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.AreSame(sysOuter.Parameters[0], sysInner.Body);
         }
 
+        public void Flat_lambda_closure_parameter_usages_track_captured_outer_parameter_during_direct_construction()
+        {
+            var fe = default(ExprTree);
+            var x = fe.ParameterOf<int>("x");
+            var inner = fe.Lambda<Func<int>>(x);
+            fe.RootIndex = fe.Lambda<Func<int, Func<int>>>(inner, x);
+
+            Asserts.AreEqual(1, fe.LambdaClosureParameterUsages.Count);
+            Asserts.AreEqual(inner, fe.LambdaClosureParameterUsages[0].LambdaIndex);
+            Asserts.AreEqual(fe.Nodes[x].ChildIdx, fe.LambdaClosureParameterUsages[0].ParameterId);
+        }
+
+        public void Flat_lambda_closure_parameter_usages_propagate_across_nested_lambdas_during_direct_construction()
+        {
+            var fe = default(ExprTree);
+            var x = fe.ParameterOf<int>("x");
+            var inner = fe.Lambda<Func<int>>(x);
+            var middle = fe.Lambda<Func<Func<int>>>(inner);
+            fe.RootIndex = fe.Lambda<Func<int, Func<Func<int>>>>(middle, x);
+
+            Asserts.AreEqual(2, fe.LambdaClosureParameterUsages.Count);
+
+            var foundInner = false;
+            var foundMiddle = false;
+            for (var i = 0; i < fe.LambdaClosureParameterUsages.Count; ++i)
+            {
+                ref var usage = ref fe.LambdaClosureParameterUsages[i];
+                Asserts.AreEqual(fe.Nodes[x].ChildIdx, usage.ParameterId);
+                if (usage.LambdaIndex == inner) foundInner = true;
+                if (usage.LambdaIndex == middle) foundMiddle = true;
+            }
+
+            Asserts.IsTrue(foundInner);
+            Asserts.IsTrue(foundMiddle);
+        }
+
+        public void Flat_lambda_closure_parameter_usages_track_captured_block_variable_during_direct_construction()
+        {
+            var fe = default(ExprTree);
+            var v = fe.Variable(typeof(int), "v");
+            var inner = fe.Lambda<Func<int>>(v);
+            fe.RootIndex = fe.Lambda<Func<Func<int>>>(
+                fe.Block(typeof(Func<int>), new[] { v },
+                    fe.Assign(v, fe.ConstantInt(42)),
+                    inner));
+
+            Asserts.AreEqual(1, fe.LambdaClosureParameterUsages.Count);
+            Asserts.AreEqual(inner, fe.LambdaClosureParameterUsages[0].LambdaIndex);
+            Asserts.AreEqual(fe.Nodes[v].ChildIdx, fe.LambdaClosureParameterUsages[0].ParameterId);
+        }
+
+        public void Flat_lambda_closure_parameter_usages_track_captures_from_expression_conversion()
+        {
+            var x = SysExpr.Parameter(typeof(int), "x");
+            var sysLambda = SysExpr.Lambda<Func<int, Func<int>>>(
+                SysExpr.Lambda<Func<int>>(x),
+                x);
+
+            var fe = sysLambda.ToFlatExpression();
+
+            Asserts.AreEqual(1, fe.LambdaClosureParameterUsages.Count);
+            Asserts.AreEqual(fe.Nodes[fe.LambdaClosureParameterUsages[0].ParameterIndex].ChildIdx, fe.LambdaClosureParameterUsages[0].ParameterId);
+
+            var nestedLambdaCount = 0;
+            for (var i = 0; i < fe.LambdaNodes.Count; ++i)
+                if (fe.LambdaNodes[i] != fe.RootIndex)
+                {
+                    ++nestedLambdaCount;
+                    Asserts.AreEqual(fe.LambdaNodes[i], fe.LambdaClosureParameterUsages[0].LambdaIndex);
+                }
+
+            Asserts.AreEqual(1, nestedLambdaCount);
+        }
+
         /// <summary>
         /// End-to-end compile-and-run test with a block containing two variables,
         /// verifying that out-of-order parameter decls and variable refs produce
