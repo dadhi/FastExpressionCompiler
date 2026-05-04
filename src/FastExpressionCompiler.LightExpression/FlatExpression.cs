@@ -151,6 +151,7 @@ public struct LambdaClosureParameterUsage
 {
     public int LambdaIndex;
     public int ParameterIndex;
+    /// <summary>The shared parameter/variable identity stored in <see cref="ExprNode.ChildIdx"/>.</summary>
     public int ParameterId;
 
     public LambdaClosureParameterUsage(int lambdaIndex, int parameterIndex, int parameterId)

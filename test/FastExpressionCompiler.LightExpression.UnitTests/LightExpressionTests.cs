@@ -38,6 +38,10 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Flat_lambda_multiple_parameter_refs_all_yield_same_identity();
             Flat_block_variables_and_refs_yield_same_identity();
             Flat_nested_lambda_captures_outer_parameter_identity();
+            Flat_lambda_closure_parameter_usages_track_captured_outer_parameter_during_direct_construction();
+            Flat_lambda_closure_parameter_usages_propagate_across_nested_lambdas_during_direct_construction();
+            Flat_lambda_closure_parameter_usages_track_captured_block_variable_during_direct_construction();
+            Flat_lambda_closure_parameter_usages_track_captures_from_expression_conversion();
             Flat_out_of_order_decl_block_in_lambda_compiles_correctly();
             Flat_enum_constant_stored_inline_roundtrip();
             Flat_lambda_nodes_tracks_all_lambdas_during_direct_construction();
@@ -50,7 +54,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Flat_blocks_with_variables_tracked_from_expression_conversion();
             Flat_goto_and_label_nodes_tracked_from_expression_conversion();
             Flat_try_catch_nodes_tracked_from_expression_conversion();
-            return 33;
+            return 37;
         }
 
 
