@@ -55,7 +55,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Flat_blocks_with_variables_tracked_from_expression_conversion();
             Flat_goto_and_label_nodes_tracked_from_expression_conversion();
             Flat_try_catch_nodes_tracked_from_expression_conversion();
-            Flat_expression_order_check_accepts_canonical_post_order_layout();
+            Flat_expression_created_from_conversion_is_in_canonical_order();
             Flat_expression_put_in_order_compacts_reachable_nodes_and_rebuilds_metadata();
             return 40;
         }
@@ -1026,7 +1026,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.AreEqual(1, fe.TryCatchNodes.Count);
         }
 
-        public void Flat_expression_order_check_accepts_canonical_post_order_layout()
+        public void Flat_expression_created_from_conversion_is_in_canonical_order()
         {
             var fe = CreateComplexLightExpression("state").ToFlatExpression();
 
@@ -1039,8 +1039,8 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
             var fe = default(ExprTree);
             var parameter = fe.ParameterOf<int>("p");
-            _ = fe.Constant(new S { Value = "unused" }, typeof(S));
-            _ = fe.Label(typeof(int), "unused");
+            _ = fe.Constant(new S { Value = "unreachable_constant" }, typeof(S));
+            _ = fe.Label(typeof(int), "unreachable_label");
             var returnTarget = fe.Label(typeof(string), "done");
             var closureValue = fe.Field(fe.Constant(valueHolder, typeof(S)), typeof(S).GetField(nameof(S.Value)));
             var tryCatch = fe.TryCatch(

@@ -740,7 +740,7 @@ public struct ExprTree
         if (Nodes.Count == 0)
             return 0;
         if ((uint)RootIdx >= (uint)Nodes.Count)
-            throw new InvalidOperationException($"Root idx {RootIdx} is outside of the node range.");
+            throw new InvalidOperationException($"Root index {RootIdx} is outside of the node range.");
 
         SmallList<int, Stack16<int>, NoArrayPool<int>> ordered = default;
         var visitStates = new byte[Nodes.Count];
@@ -771,6 +771,7 @@ public struct ExprTree
             ref var oldNode = ref Nodes.GetSurePresentRef(ordered[i]);
             ref var newNode = ref reorderedNodes.AddDefaultAndGetRef();
             newNode = oldNode;
+            // Clear all sibling links first; the next loop rewires them using the remapped child order.
             newNode.SetNextIdx(0);
         }
 
