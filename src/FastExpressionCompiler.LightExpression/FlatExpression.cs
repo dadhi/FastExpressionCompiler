@@ -146,7 +146,8 @@ public struct ExprNode
         Kind == ExprNodeKind.ObjectReference || ChildCount == 0;
 }
 
-/// <summary>Maps a lambda node to a captured outer parameter/variable identity used for closure creation.</summary>
+/// <summary>Maps a lambda node to a captured outer parameter/variable identity used for closure creation.
+/// Uses the same 16-bit index range already used by flat-expression node links and identities.</summary>
 [StructLayout(LayoutKind.Explicit, Size = 6)]
 public struct LambdaClosureParameterUsage
 {
@@ -225,7 +226,8 @@ public struct ExprTree
     /// <summary>Gets or sets the captured outer parameter/variable usages for lambdas.
     /// Populated automatically by <see cref="Lambda(Type,int,int[])"/> and <see cref="ExprTree.FromExpression"/>,
     /// mirroring the nested-lambda non-passed-parameter information collected by <c>TryCollectInfo</c>
-    /// so closure preparation data is available directly on the flat tree.</summary>
+    /// so closure preparation data is available directly on the flat tree.
+    /// The stored indexes use the same 16-bit range as <see cref="ExprNode.ChildIdx"/> and <see cref="ExprNode.NextIdx"/>.</summary>
     public SmallList<LambdaClosureParameterUsage, Stack16<LambdaClosureParameterUsage>, NoArrayPool<LambdaClosureParameterUsage>> LambdaClosureParameterUsages;
 
     /// <summary>Adds a parameter node and returns its index.</summary>
@@ -1478,11 +1480,11 @@ public struct ExprTree
 
         SmallList<ushort, Stack8<ushort>, NoArrayPool<ushort>> lambdaParameterIds = default;
         for (var i = 1; i < children.Count; ++i)
-            lambdaParameterIds.Add(checked((ushort)Nodes[children[i]].ChildIdx));
+            lambdaParameterIds.Add(ToStoredUShortIdx(Nodes[children[i]].ChildIdx));
 
         SmallList<ushort, Stack16<ushort>, NoArrayPool<ushort>> localParameterIds = default;
         SmallList<LambdaClosureParameterUsage, Stack8<LambdaClosureParameterUsage>, NoArrayPool<LambdaClosureParameterUsage>> captures = default;
-        CollectClosureParameterUsages(children[0], checked((ushort)lambdaIndex), ref lambdaParameterIds, ref localParameterIds, ref captures);
+        CollectClosureParameterUsages(children[0], ToStoredUShortIdx(lambdaIndex), ref lambdaParameterIds, ref localParameterIds, ref captures);
 
         for (var i = 0; i < captures.Count; ++i)
             LambdaClosureParameterUsages.Add(captures[i]);
@@ -1500,14 +1502,14 @@ public struct ExprTree
         {
             case ExpressionType.Parameter:
                 {
-                    var parameterId = checked((ushort)node.ChildIdx);
+                    var parameterId = ToStoredUShortIdx(node.ChildIdx);
                     if (!Contains(ref lambdaParameterIds, parameterId) &&
                         !Contains(ref localParameterIds, parameterId))
-                        AddClosureParameterUsage(lambdaIdx, checked((ushort)index), parameterId, ref captures);
+                        AddClosureParameterUsage(lambdaIdx, ToStoredUShortIdx(index), parameterId, ref captures);
                     return;
                 }
             case ExpressionType.Lambda:
-                PropagateNestedLambdaClosureParameterUsages(checked((ushort)index), lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
+                PropagateNestedLambdaClosureParameterUsages(ToStoredUShortIdx(index), lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
                 return;
             case ExpressionType.Block:
                 {
@@ -1518,7 +1520,7 @@ public struct ExprTree
                     {
                         var variableIndexes = GetChildren(children[0]);
                         for (var i = 0; i < variableIndexes.Count; ++i)
-                            localParameterIds.Add(checked((ushort)Nodes[variableIndexes[i]].ChildIdx));
+                            localParameterIds.Add(ToStoredUShortIdx(Nodes[variableIndexes[i]].ChildIdx));
                     }
 
                     var expressionIndexes = GetChildren(children[children.Count - 1]);
@@ -1570,7 +1572,7 @@ public struct ExprTree
         var localCount = localParameterIds.Count;
         var childIndex = 0;
         if (node.HasFlag(CatchHasVariableFlag))
-            localParameterIds.Add(checked((ushort)Nodes[children[childIndex++]].ChildIdx));
+            localParameterIds.Add(ToStoredUShortIdx(Nodes[children[childIndex++]].ChildIdx));
 
         var bodyIndex = children[childIndex++];
         if (node.HasFlag(CatchHasFilterFlag))
@@ -1635,6 +1637,9 @@ public struct ExprTree
                 return true;
         return false;
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static ushort ToStoredUShortIdx(int idx) => checked((ushort)idx);
 
     /// <summary>Reconstructs System.Linq nodes from the flat representation while reusing parameter and label identities.</summary>
     private struct Reader
