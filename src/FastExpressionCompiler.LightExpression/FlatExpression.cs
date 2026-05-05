@@ -147,17 +147,26 @@ public struct ExprNode
 }
 
 /// <summary>Maps a lambda node to a captured outer parameter/variable identity used for closure creation.</summary>
+[StructLayout(LayoutKind.Explicit, Size = 6)]
 public struct LambdaClosureParameterUsage
 {
-    public int LambdaIndex;
-    public int ParameterIndex;
-    /// <summary>The shared parameter/variable identity stored in <see cref="ExprNode.ChildIdx"/>.</summary>
-    public int ParameterId;
+    /// <summary>The lambda node index in the flat-expression node array.</summary>
+    [FieldOffset(0)]
+    public ushort LambdaIdx;
 
-    public LambdaClosureParameterUsage(int lambdaIndex, int parameterIndex, int parameterId)
+    /// <summary>The parameter-usage expression node index in the flat-expression node array.</summary>
+    [FieldOffset(2)]
+    public ushort ParameterIdx;
+
+    /// <summary>The shared parameter/variable identity stored in <see cref="ExprNode.ChildIdx"/>.</summary>
+    [FieldOffset(4)]
+    public ushort ParameterId;
+
+    /// <summary>Creates the lambda capture mapping.</summary>
+    public LambdaClosureParameterUsage(ushort lambdaIdx, ushort parameterIdx, ushort parameterId)
     {
-        LambdaIndex = lambdaIndex;
-        ParameterIndex = parameterIndex;
+        LambdaIdx = lambdaIdx;
+        ParameterIdx = parameterIdx;
         ParameterId = parameterId;
     }
 }
@@ -1467,13 +1476,13 @@ public struct ExprTree
         if (children.Count == 0)
             return;
 
-        SmallList<int, Stack8<int>, NoArrayPool<int>> lambdaParameterIds = default;
+        SmallList<ushort, Stack8<ushort>, NoArrayPool<ushort>> lambdaParameterIds = default;
         for (var i = 1; i < children.Count; ++i)
-            lambdaParameterIds.Add(Nodes[children[i]].ChildIdx);
+            lambdaParameterIds.Add(checked((ushort)Nodes[children[i]].ChildIdx));
 
-        SmallList<int, Stack16<int>, NoArrayPool<int>> localParameterIds = default;
+        SmallList<ushort, Stack16<ushort>, NoArrayPool<ushort>> localParameterIds = default;
         SmallList<LambdaClosureParameterUsage, Stack8<LambdaClosureParameterUsage>, NoArrayPool<LambdaClosureParameterUsage>> captures = default;
-        CollectClosureParameterUsages(children[0], lambdaIndex, ref lambdaParameterIds, ref localParameterIds, ref captures);
+        CollectClosureParameterUsages(children[0], checked((ushort)lambdaIndex), ref lambdaParameterIds, ref localParameterIds, ref captures);
 
         for (var i = 0; i < captures.Count; ++i)
             LambdaClosureParameterUsages.Add(captures[i]);
@@ -1481,9 +1490,9 @@ public struct ExprTree
 
     private void CollectClosureParameterUsages(
         int index,
-        int lambdaIndex,
-        ref SmallList<int, Stack8<int>, NoArrayPool<int>> lambdaParameterIds,
-        ref SmallList<int, Stack16<int>, NoArrayPool<int>> localParameterIds,
+        ushort lambdaIdx,
+        ref SmallList<ushort, Stack8<ushort>, NoArrayPool<ushort>> lambdaParameterIds,
+        ref SmallList<ushort, Stack16<ushort>, NoArrayPool<ushort>> localParameterIds,
         ref SmallList<LambdaClosureParameterUsage, Stack8<LambdaClosureParameterUsage>, NoArrayPool<LambdaClosureParameterUsage>> captures)
     {
         ref var node = ref Nodes.GetSurePresentRef(index);
@@ -1491,14 +1500,14 @@ public struct ExprTree
         {
             case ExpressionType.Parameter:
                 {
-                    var parameterId = node.ChildIdx;
+                    var parameterId = checked((ushort)node.ChildIdx);
                     if (!Contains(ref lambdaParameterIds, parameterId) &&
                         !Contains(ref localParameterIds, parameterId))
-                        AddClosureParameterUsage(lambdaIndex, index, parameterId, ref captures);
+                        AddClosureParameterUsage(lambdaIdx, checked((ushort)index), parameterId, ref captures);
                     return;
                 }
             case ExpressionType.Lambda:
-                PropagateNestedLambdaClosureParameterUsages(index, lambdaIndex, ref lambdaParameterIds, ref localParameterIds, ref captures);
+                PropagateNestedLambdaClosureParameterUsages(checked((ushort)index), lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
                 return;
             case ExpressionType.Block:
                 {
@@ -1509,12 +1518,12 @@ public struct ExprTree
                     {
                         var variableIndexes = GetChildren(children[0]);
                         for (var i = 0; i < variableIndexes.Count; ++i)
-                            localParameterIds.Add(Nodes[variableIndexes[i]].ChildIdx);
+                            localParameterIds.Add(checked((ushort)Nodes[variableIndexes[i]].ChildIdx));
                     }
 
                     var expressionIndexes = GetChildren(children[children.Count - 1]);
                     for (var i = 0; i < expressionIndexes.Count; ++i)
-                        CollectClosureParameterUsages(expressionIndexes[i], lambdaIndex, ref lambdaParameterIds, ref localParameterIds, ref captures);
+                        CollectClosureParameterUsages(expressionIndexes[i], lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
 
                     localParameterIds.Count = localCount;
                     return;
@@ -1522,19 +1531,19 @@ public struct ExprTree
             case ExpressionType.Try:
                 {
                     var children = GetChildren(index);
-                    CollectClosureParameterUsages(children[0], lambdaIndex, ref lambdaParameterIds, ref localParameterIds, ref captures);
+                    CollectClosureParameterUsages(children[0], lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
 
                     var lastChildIndex = children.Count - 1;
                     if (lastChildIndex > 0 && Nodes[children[lastChildIndex]].Is(ExprNodeKind.ChildList))
                     {
                         var handlerIndexes = GetChildren(children[lastChildIndex]);
                         for (var i = 0; i < handlerIndexes.Count; ++i)
-                            CollectCatchBlockClosureParameterUsages(handlerIndexes[i], lambdaIndex, ref lambdaParameterIds, ref localParameterIds, ref captures);
+                            CollectCatchBlockClosureParameterUsages(handlerIndexes[i], lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
                         lastChildIndex--;
                     }
 
                     for (var i = 1; i <= lastChildIndex; ++i)
-                        CollectClosureParameterUsages(children[i], lambdaIndex, ref lambdaParameterIds, ref localParameterIds, ref captures);
+                        CollectClosureParameterUsages(children[i], lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
                     return;
                 }
         }
@@ -1544,14 +1553,14 @@ public struct ExprTree
 
         var childIndexes = GetChildren(index);
         for (var i = 0; i < childIndexes.Count; ++i)
-            CollectClosureParameterUsages(childIndexes[i], lambdaIndex, ref lambdaParameterIds, ref localParameterIds, ref captures);
+            CollectClosureParameterUsages(childIndexes[i], lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
     }
 
     private void CollectCatchBlockClosureParameterUsages(
         int index,
-        int lambdaIndex,
-        ref SmallList<int, Stack8<int>, NoArrayPool<int>> lambdaParameterIds,
-        ref SmallList<int, Stack16<int>, NoArrayPool<int>> localParameterIds,
+        ushort lambdaIdx,
+        ref SmallList<ushort, Stack8<ushort>, NoArrayPool<ushort>> lambdaParameterIds,
+        ref SmallList<ushort, Stack16<ushort>, NoArrayPool<ushort>> localParameterIds,
         ref SmallList<LambdaClosureParameterUsage, Stack8<LambdaClosureParameterUsage>, NoArrayPool<LambdaClosureParameterUsage>> captures)
     {
         ref var node = ref Nodes.GetSurePresentRef(index);
@@ -1561,44 +1570,44 @@ public struct ExprTree
         var localCount = localParameterIds.Count;
         var childIndex = 0;
         if (node.HasFlag(CatchHasVariableFlag))
-            localParameterIds.Add(Nodes[children[childIndex++]].ChildIdx);
+            localParameterIds.Add(checked((ushort)Nodes[children[childIndex++]].ChildIdx));
 
         var bodyIndex = children[childIndex++];
         if (node.HasFlag(CatchHasFilterFlag))
-            CollectClosureParameterUsages(children[childIndex], lambdaIndex, ref lambdaParameterIds, ref localParameterIds, ref captures);
-        CollectClosureParameterUsages(bodyIndex, lambdaIndex, ref lambdaParameterIds, ref localParameterIds, ref captures);
+            CollectClosureParameterUsages(children[childIndex], lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
+        CollectClosureParameterUsages(bodyIndex, lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
         localParameterIds.Count = localCount;
     }
 
     private void PropagateNestedLambdaClosureParameterUsages(
-        int nestedLambdaIndex,
-        int lambdaIndex,
-        ref SmallList<int, Stack8<int>, NoArrayPool<int>> lambdaParameterIds,
-        ref SmallList<int, Stack16<int>, NoArrayPool<int>> localParameterIds,
+        ushort nestedLambdaIdx,
+        ushort lambdaIdx,
+        ref SmallList<ushort, Stack8<ushort>, NoArrayPool<ushort>> lambdaParameterIds,
+        ref SmallList<ushort, Stack16<ushort>, NoArrayPool<ushort>> localParameterIds,
         ref SmallList<LambdaClosureParameterUsage, Stack8<LambdaClosureParameterUsage>, NoArrayPool<LambdaClosureParameterUsage>> captures)
     {
         for (var i = 0; i < LambdaClosureParameterUsages.Count; ++i)
         {
             ref var usage = ref LambdaClosureParameterUsages[i];
-            if (usage.LambdaIndex != nestedLambdaIndex)
+            if (usage.LambdaIdx != nestedLambdaIdx)
                 continue;
             if (Contains(ref lambdaParameterIds, usage.ParameterId) ||
                 Contains(ref localParameterIds, usage.ParameterId))
                 continue;
-            AddClosureParameterUsage(lambdaIndex, usage.ParameterIndex, usage.ParameterId, ref captures);
+            AddClosureParameterUsage(lambdaIdx, usage.ParameterIdx, usage.ParameterId, ref captures);
         }
     }
 
     private static void AddClosureParameterUsage(
-        int lambdaIndex,
-        int parameterIndex,
-        int parameterId,
+        ushort lambdaIdx,
+        ushort parameterIdx,
+        ushort parameterId,
         ref SmallList<LambdaClosureParameterUsage, Stack8<LambdaClosureParameterUsage>, NoArrayPool<LambdaClosureParameterUsage>> captures)
     {
         for (var i = 0; i < captures.Count; ++i)
             if (captures[i].ParameterId == parameterId)
                 return;
-        captures.Add(new LambdaClosureParameterUsage(lambdaIndex, parameterIndex, parameterId));
+        captures.Add(new LambdaClosureParameterUsage(lambdaIdx, parameterIdx, parameterId));
     }
 
     private ChildList GetChildren(int index)
@@ -1617,9 +1626,9 @@ public struct ExprTree
         return children;
     }
 
-    private static bool Contains<TStack, TPool>(ref SmallList<int, TStack, TPool> ids, int value)
-        where TStack : struct, IStack<int, TStack>
-        where TPool : struct, ISmallArrayPool<int>
+    private static bool Contains<TStack, TPool>(ref SmallList<ushort, TStack, TPool> ids, ushort value)
+        where TStack : struct, IStack<ushort, TStack>
+        where TPool : struct, ISmallArrayPool<ushort>
     {
         for (var i = 0; i < ids.Count; ++i)
             if (ids[i] == value)

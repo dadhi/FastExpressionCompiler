@@ -647,7 +647,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             fe.RootIndex = fe.Lambda<Func<int, Func<int>>>(inner, x);
 
             Asserts.AreEqual(1, fe.LambdaClosureParameterUsages.Count);
-            Asserts.AreEqual(inner, fe.LambdaClosureParameterUsages[0].LambdaIndex);
+            Asserts.AreEqual(inner, fe.LambdaClosureParameterUsages[0].LambdaIdx);
             Asserts.AreEqual(fe.Nodes[x].ChildIdx, fe.LambdaClosureParameterUsages[0].ParameterId);
         }
 
@@ -667,8 +667,8 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             {
                 ref var usage = ref fe.LambdaClosureParameterUsages[i];
                 Asserts.AreEqual(fe.Nodes[x].ChildIdx, usage.ParameterId);
-                if (usage.LambdaIndex == inner) foundInner = true;
-                if (usage.LambdaIndex == middle) foundMiddle = true;
+                if (usage.LambdaIdx == inner) foundInner = true;
+                if (usage.LambdaIdx == middle) foundMiddle = true;
             }
 
             Asserts.IsTrue(foundInner);
@@ -686,7 +686,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                     inner));
 
             Asserts.AreEqual(1, fe.LambdaClosureParameterUsages.Count);
-            Asserts.AreEqual(inner, fe.LambdaClosureParameterUsages[0].LambdaIndex);
+            Asserts.AreEqual(inner, fe.LambdaClosureParameterUsages[0].LambdaIdx);
             Asserts.AreEqual(fe.Nodes[v].ChildIdx, fe.LambdaClosureParameterUsages[0].ParameterId);
         }
 
@@ -700,14 +700,14 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var fe = sysLambda.ToFlatExpression();
 
             Asserts.AreEqual(1, fe.LambdaClosureParameterUsages.Count);
-            Asserts.AreEqual(fe.Nodes[fe.LambdaClosureParameterUsages[0].ParameterIndex].ChildIdx, fe.LambdaClosureParameterUsages[0].ParameterId);
+            Asserts.AreEqual(fe.Nodes[fe.LambdaClosureParameterUsages[0].ParameterIdx].ChildIdx, fe.LambdaClosureParameterUsages[0].ParameterId);
 
             var nestedLambdaCount = 0;
             for (var i = 0; i < fe.LambdaNodes.Count; ++i)
                 if (fe.LambdaNodes[i] != fe.RootIndex)
                 {
                     ++nestedLambdaCount;
-                    Asserts.AreEqual(fe.LambdaNodes[i], fe.LambdaClosureParameterUsages[0].LambdaIndex);
+                    Asserts.AreEqual(fe.LambdaNodes[i], fe.LambdaClosureParameterUsages[0].LambdaIdx);
                 }
 
             Asserts.AreEqual(1, nestedLambdaCount);
