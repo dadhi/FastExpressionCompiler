@@ -709,6 +709,96 @@ public struct ExprTree
     [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
     public LightExpression ToLightExpression() => FastExpressionCompiler.LightExpression.FromSysExpressionConverter.ToLightExpression(ToExpression());
 
+    /// <summary>Returns <c>true</c> when all reachable nodes are compacted into a canonical post-order layout.</summary>
+    /// <remarks>
+    /// Canonical post-order means that each child is placed before its parent, the root is the last node,
+    /// and there are no unreachable nodes left in <see cref="Nodes"/>.
+    /// </remarks>
+    public bool IsInOrder()
+    {
+        if (Nodes.Count == 0)
+            return true;
+        if ((uint)RootIdx >= (uint)Nodes.Count)
+            return false;
+
+        SmallList<int, Stack16<int>, NoArrayPool<int>> ordered = default;
+        var visitStates = new byte[Nodes.Count];
+        if (!TryCollectReachablePostOrder(RootIdx, visitStates, ref ordered) || ordered.Count != Nodes.Count)
+            return false;
+
+        for (var i = 0; i < ordered.Count; ++i)
+            if (ordered[i] != i)
+                return false;
+
+        return true;
+    }
+
+    /// <summary>Compacts the current tree into the canonical post-order layout and drops unreachable nodes.</summary>
+    /// <returns>The number of removed unreachable nodes.</returns>
+    public int PutInOrder()
+    {
+        if (Nodes.Count == 0)
+            return 0;
+        if ((uint)RootIdx >= (uint)Nodes.Count)
+            throw new InvalidOperationException($"Root idx {RootIdx} is outside of the node range.");
+
+        SmallList<int, Stack16<int>, NoArrayPool<int>> ordered = default;
+        var visitStates = new byte[Nodes.Count];
+        if (!TryCollectReachablePostOrder(RootIdx, visitStates, ref ordered))
+            throw new InvalidOperationException("The flat expression contains an invalid or cyclic child link.");
+
+        var removedCount = Nodes.Count - ordered.Count;
+        var alreadyInOrder = removedCount == 0;
+        if (alreadyInOrder)
+            for (var i = 0; i < ordered.Count; ++i)
+                if (ordered[i] != i)
+                {
+                    alreadyInOrder = false;
+                    break;
+                }
+
+        if (alreadyInOrder)
+            return 0;
+
+        var remap = new int[Nodes.Count];
+        Array.Fill(remap, -1);
+        for (var i = 0; i < ordered.Count; ++i)
+            remap[ordered[i]] = i;
+
+        SmallList<ExprNode, Stack16<ExprNode>, NoArrayPool<ExprNode>> reorderedNodes = default;
+        for (var i = 0; i < ordered.Count; ++i)
+        {
+            ref var oldNode = ref Nodes.GetSurePresentRef(ordered[i]);
+            ref var newNode = ref reorderedNodes.AddDefaultAndGetRef();
+            newNode = oldNode;
+            newNode.SetNextIdx(0);
+        }
+
+        for (var i = 0; i < ordered.Count; ++i)
+        {
+            ref var oldNode = ref Nodes.GetSurePresentRef(ordered[i]);
+            if (!HasStructuralChildren(in oldNode))
+                continue;
+
+            var oldChildIdx = oldNode.ChildIdx;
+            ref var newNode = ref reorderedNodes.GetSurePresentRef(i);
+            newNode.SetChildInfo(remap[oldChildIdx], oldNode.ChildCount);
+
+            for (var childNumber = 1; childNumber < oldNode.ChildCount; ++childNumber)
+            {
+                var nextOldChildIdx = Nodes.GetSurePresentRef(oldChildIdx).NextIdx;
+                reorderedNodes.GetSurePresentRef(remap[oldChildIdx]).SetNextIdx(remap[nextOldChildIdx]);
+                oldChildIdx = nextOldChildIdx;
+            }
+        }
+
+        Nodes = reorderedNodes;
+        RootIdx = remap[RootIdx];
+        ClosureConstants = CompactClosureConstants();
+        RebuildMetadata();
+        return removedCount;
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private int AddFactoryExpressionNode(Type type, object obj, ExpressionType nodeType, int child) =>
         AddNode(type, obj, nodeType, ExprNodeKind.Expression, 0, CloneChild(child));
@@ -1409,6 +1499,12 @@ public struct ExprTree
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool HasStructuralChildren(in ExprNode node) =>
+        node.ChildCount != 0 &&
+        !ReferenceEquals(node.Obj, ExprNode.InlineValueMarker) &&
+        node.Kind != ExprNodeKind.UInt16Pair;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private int CloneChild(int idx)
     {
         ref var node = ref Nodes[idx];
@@ -1605,6 +1701,106 @@ public struct ExprTree
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static ushort ToStoredUShortIdx(int idx) => checked((ushort)idx);
+
+    private bool TryCollectReachablePostOrder(
+        int idx,
+        byte[] visitStates,
+        ref SmallList<int, Stack16<int>, NoArrayPool<int>> ordered)
+    {
+        if ((uint)idx >= (uint)Nodes.Count)
+            return false;
+
+        var visitState = visitStates[idx];
+        if (visitState == 2)
+            return true;
+        if (visitState == 1)
+            return false;
+
+        visitStates[idx] = 1;
+
+        ref var node = ref Nodes.GetSurePresentRef(idx);
+        if (HasStructuralChildren(in node))
+        {
+            var childIdx = node.ChildIdx;
+            for (var i = 0; i < node.ChildCount; ++i)
+            {
+                var currentChildIdx = childIdx;
+                if (!TryCollectReachablePostOrder(currentChildIdx, visitStates, ref ordered))
+                    return false;
+                childIdx = Nodes.GetSurePresentRef(currentChildIdx).NextIdx;
+            }
+        }
+
+        visitStates[idx] = 2;
+        ordered.Add(idx);
+        return true;
+    }
+
+    private SmallList<object, Stack16<object>, NoArrayPool<object>> CompactClosureConstants()
+    {
+        SmallList<object, Stack16<object>, NoArrayPool<object>> compacted = default;
+        if (ClosureConstants.Count == 0)
+            return compacted;
+
+        var remap = new int[ClosureConstants.Count];
+        Array.Fill(remap, -1);
+        for (var i = 0; i < Nodes.Count; ++i)
+        {
+            ref var node = ref Nodes.GetSurePresentRef(i);
+            if (node.NodeType != ExpressionType.Constant || !ReferenceEquals(node.Obj, ClosureConstantMarker))
+                continue;
+
+            var newConstIdx = remap[node.ChildIdx];
+            if (newConstIdx < 0)
+            {
+                newConstIdx = compacted.Count;
+                remap[node.ChildIdx] = newConstIdx;
+                compacted.Add(ClosureConstants[node.ChildIdx]);
+            }
+
+            node.SetChildInfo(newConstIdx, 0);
+        }
+
+        return compacted;
+    }
+
+    private void RebuildMetadata()
+    {
+        LambdaNodes = default;
+        BlocksWithVariables = default;
+        GotoNodes = default;
+        LabelNodes = default;
+        TryCatchNodes = default;
+        LambdaClosureParameterUsages = default;
+
+        for (var i = 0; i < Nodes.Count; ++i)
+        {
+            ref var node = ref Nodes.GetSurePresentRef(i);
+            if (!node.IsExpression())
+                continue;
+
+            switch (node.NodeType)
+            {
+                case ExpressionType.Lambda:
+                    LambdaNodes.Add(i);
+                    CollectLambdaClosureParameterUsages(i);
+                    break;
+                case ExpressionType.Block:
+                    if (HasStructuralChildren(in node) && node.ChildCount == 2)
+                        BlocksWithVariables.Add(i);
+                    break;
+                case ExpressionType.Goto:
+                    GotoNodes.Add(i);
+                    break;
+                case ExpressionType.Label:
+                    LabelNodes.Add(i);
+                    break;
+                case ExpressionType.Try:
+                    TryCatchNodes.Add(i);
+                    break;
+            }
+        }
+    }
 
     /// <summary>Reconstructs System.Linq nodes from the flat representation while reusing parameter and label identities.</summary>
     private struct Reader

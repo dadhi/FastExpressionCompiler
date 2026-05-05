@@ -55,7 +55,9 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Flat_blocks_with_variables_tracked_from_expression_conversion();
             Flat_goto_and_label_nodes_tracked_from_expression_conversion();
             Flat_try_catch_nodes_tracked_from_expression_conversion();
-            return 38;
+            Flat_expression_order_check_accepts_canonical_post_order_layout();
+            Flat_expression_put_in_order_compacts_reachable_nodes_and_rebuilds_metadata();
+            return 40;
         }
 
 
@@ -1022,6 +1024,51 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var fe = sysLambda.ToFlatExpression();
 
             Asserts.AreEqual(1, fe.TryCatchNodes.Count);
+        }
+
+        public void Flat_expression_order_check_accepts_canonical_post_order_layout()
+        {
+            var fe = CreateComplexLightExpression("state").ToFlatExpression();
+
+            Asserts.IsTrue(fe.IsInOrder());
+        }
+
+        public void Flat_expression_put_in_order_compacts_reachable_nodes_and_rebuilds_metadata()
+        {
+            var valueHolder = new S { Value = "ordered" };
+
+            var fe = default(ExprTree);
+            var parameter = fe.ParameterOf<int>("p");
+            _ = fe.Constant(new S { Value = "unused" }, typeof(S));
+            _ = fe.Label(typeof(int), "unused");
+            var returnTarget = fe.Label(typeof(string), "done");
+            var closureValue = fe.Field(fe.Constant(valueHolder, typeof(S)), typeof(S).GetField(nameof(S.Value)));
+            var tryCatch = fe.TryCatch(
+                fe.Add(parameter, fe.ConstantInt(1)),
+                fe.Catch(typeof(Exception), fe.ConstantInt(-1)));
+            fe.RootIdx = fe.Lambda<Func<int, string>>(
+                fe.Block(typeof(string), new[] { fe.Variable(typeof(int), "temp") },
+                    tryCatch,
+                    fe.Label(returnTarget, closureValue)),
+                parameter);
+
+            Asserts.IsFalse(fe.IsInOrder());
+            Asserts.AreEqual(2, fe.ClosureConstants.Count);
+
+            var removedNodes = fe.PutInOrder();
+
+            Asserts.IsTrue(removedNodes >= 2);
+            Asserts.IsTrue(fe.IsInOrder());
+            Asserts.AreEqual(fe.Nodes.Count - 1, fe.RootIdx);
+            Asserts.AreEqual(1, fe.ClosureConstants.Count);
+            Asserts.AreSame(valueHolder, fe.ClosureConstants[0]);
+            Asserts.AreEqual(1, fe.LambdaNodes.Count);
+            Asserts.AreEqual(fe.RootIdx, fe.LambdaNodes[0]);
+            Asserts.AreEqual(1, fe.BlocksWithVariables.Count);
+            Asserts.AreEqual(1, fe.LabelNodes.Count);
+            Asserts.AreEqual(0, fe.GotoNodes.Count);
+            Asserts.AreEqual(1, fe.TryCatchNodes.Count);
+            Asserts.AreEqual("ordered", ((LambdaExpression)fe.ToLightExpression()).CompileFast<Func<int, string>>(true)(41));
         }
     }
 }
