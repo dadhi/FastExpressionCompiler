@@ -778,8 +778,8 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
         public void Flat_metadata_uses_16_bit_idx_storage()
         {
-            Asserts.AreEqual(24, Unsafe.SizeOf<ExprNode>());
-            Asserts.AreEqual(6, Unsafe.SizeOf<LambdaClosureParameterUsage>());
+            Asserts.AreEqual(24, typeof(ExprNode).StructLayoutAttribute.Size);
+            Asserts.AreEqual(6, typeof(LambdaClosureParameterUsage).StructLayoutAttribute.Size);
 
             var fe = default(ExprTree);
             for (var i = 0; i < ushort.MaxValue; ++i)
