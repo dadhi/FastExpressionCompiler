@@ -38,6 +38,10 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Flat_lambda_multiple_parameter_refs_all_yield_same_identity();
             Flat_block_variables_and_refs_yield_same_identity();
             Flat_nested_lambda_captures_outer_parameter_identity();
+            Flat_lambda_closure_parameter_usages_track_captured_outer_parameter_during_direct_construction();
+            Flat_lambda_closure_parameter_usages_propagate_across_nested_lambdas_during_direct_construction();
+            Flat_lambda_closure_parameter_usages_track_captured_block_variable_during_direct_construction();
+            Flat_lambda_closure_parameter_usages_track_captures_from_expression_conversion();
             Flat_out_of_order_decl_block_in_lambda_compiles_correctly();
             Flat_enum_constant_stored_inline_roundtrip();
             Flat_lambda_nodes_tracks_all_lambdas_during_direct_construction();
@@ -50,7 +54,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Flat_blocks_with_variables_tracked_from_expression_conversion();
             Flat_goto_and_label_nodes_tracked_from_expression_conversion();
             Flat_try_catch_nodes_tracked_from_expression_conversion();
-            return 33;
+            return 37;
         }
 
 
@@ -633,6 +637,80 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
             // The inner lambda body (the x ref) must be the same object as the outer param decl
             Asserts.AreSame(sysOuter.Parameters[0], sysInner.Body);
+        }
+
+        public void Flat_lambda_closure_parameter_usages_track_captured_outer_parameter_during_direct_construction()
+        {
+            var fe = default(ExprTree);
+            var x = fe.ParameterOf<int>("x");
+            var inner = fe.Lambda<Func<int>>(x);
+            fe.RootIndex = fe.Lambda<Func<int, Func<int>>>(inner, x);
+
+            Asserts.AreEqual(1, fe.LambdaClosureParameterUsages.Count);
+            Asserts.AreEqual(inner, fe.LambdaClosureParameterUsages[0].LambdaIdx);
+            Asserts.AreEqual(fe.Nodes[x].ChildIdx, fe.LambdaClosureParameterUsages[0].ParameterId);
+        }
+
+        public void Flat_lambda_closure_parameter_usages_propagate_across_nested_lambdas_during_direct_construction()
+        {
+            var fe = default(ExprTree);
+            var x = fe.ParameterOf<int>("x");
+            var inner = fe.Lambda<Func<int>>(x);
+            var middle = fe.Lambda<Func<Func<int>>>(inner);
+            fe.RootIndex = fe.Lambda<Func<int, Func<Func<int>>>>(middle, x);
+
+            Asserts.AreEqual(2, fe.LambdaClosureParameterUsages.Count);
+
+            var foundInner = false;
+            var foundMiddle = false;
+            for (var i = 0; i < fe.LambdaClosureParameterUsages.Count; ++i)
+            {
+                ref var usage = ref fe.LambdaClosureParameterUsages[i];
+                Asserts.AreEqual(fe.Nodes[x].ChildIdx, usage.ParameterId);
+                if (usage.LambdaIdx == inner) foundInner = true;
+                if (usage.LambdaIdx == middle) foundMiddle = true;
+            }
+
+            Asserts.IsTrue(foundInner);
+            Asserts.IsTrue(foundMiddle);
+        }
+
+        public void Flat_lambda_closure_parameter_usages_track_captured_block_variable_during_direct_construction()
+        {
+            var fe = default(ExprTree);
+            var v = fe.Variable(typeof(int), "v");
+            var inner = fe.Lambda<Func<int>>(v);
+            fe.RootIndex = fe.Lambda<Func<Func<int>>>(
+                fe.Block(typeof(Func<int>), new[] { v },
+                    fe.Assign(v, fe.ConstantInt(42)),
+                    inner));
+
+            Asserts.AreEqual(1, fe.LambdaClosureParameterUsages.Count);
+            Asserts.AreEqual(inner, fe.LambdaClosureParameterUsages[0].LambdaIdx);
+            Asserts.AreEqual(fe.Nodes[v].ChildIdx, fe.LambdaClosureParameterUsages[0].ParameterId);
+        }
+
+        public void Flat_lambda_closure_parameter_usages_track_captures_from_expression_conversion()
+        {
+            var x = SysExpr.Parameter(typeof(int), "x");
+            var sysLambda = SysExpr.Lambda<Func<int, Func<int>>>(
+                SysExpr.Lambda<Func<int>>(x),
+                x);
+
+            var fe = sysLambda.ToFlatExpression();
+
+            Asserts.AreEqual(1, fe.LambdaClosureParameterUsages.Count);
+            Asserts.AreEqual(fe.Nodes[fe.LambdaClosureParameterUsages[0].ParameterIdx].ChildIdx, fe.LambdaClosureParameterUsages[0].ParameterId);
+
+            var nestedLambdaCount = 0;
+            for (var i = 0; i < fe.LambdaNodes.Count; ++i)
+                if (fe.LambdaNodes[i] != fe.RootIndex)
+                {
+                    ++nestedLambdaCount;
+                    Asserts.AreEqual(fe.LambdaNodes[i], fe.LambdaClosureParameterUsages[0].LambdaIdx);
+                }
+
+            Asserts.AreEqual(1, nestedLambdaCount);
         }
 
         /// <summary>
