@@ -1,6 +1,8 @@
 using System;
 using System.Reflection;
 
+#nullable enable
+
 #if LIGHT_EXPRESSION
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.IssueTests;
