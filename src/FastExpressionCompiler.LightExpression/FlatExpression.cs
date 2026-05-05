@@ -45,7 +45,7 @@ public enum ExprNodeKind : byte
     UInt16Pair,
 }
 
-/// <summary>Stores one flat expression node plus its intrusive child-link metadata in 24 bytes on 64-bit runtimes.</summary>
+/// <summary>Stores one flat expression node and its child-link metadata in 24 bytes on 64-bit runtimes.</summary>
 /// <remarks>
 /// Layout (64-bit): Type(8) | Obj(8) | _meta(4) | _data(4) = 24 bytes.
 /// _meta bits: NodeType(8)|Tag(8)|NextIdx(16).
@@ -80,7 +80,7 @@ public struct ExprNode
     [FieldOffset(16)]
     private uint _meta;
 
-    /// <summary>ChildCount(16b) | ChildIdx(16b)  —OR—  raw 32-bit inline constant value.</summary>
+    /// <summary>ChildCount(16b) | ChildIdx(16b) or raw 32-bit inline constant value.</summary>
     [FieldOffset(20)]
     private uint _data;
 
@@ -92,13 +92,13 @@ public struct ExprNode
 
     internal byte Flags => (byte)((_meta >> (MetaTagShift + FlagsShift)) & 0xFu);
 
-    /// <summary>Gets the next sibling node index in the intrusive child chain.</summary>
+    /// <summary>Gets the next sibling node idx.</summary>
     public int NextIdx => (int)(_meta & 0xFFFFu);
 
     /// <summary>Gets the number of direct children linked from this node.</summary>
     public int ChildCount => (int)(_data >> DataCountShift);
 
-    /// <summary>Gets the first child index or an auxiliary payload index.</summary>
+    /// <summary>Gets the first child idx or an auxiliary payload idx.</summary>
     public int ChildIdx => (int)(_data & DataIdxMask);
 
     /// <summary>Gets the raw 32-bit value for inline primitive constants. Only valid when <see cref="Obj"/> == <see cref="InlineValueMarker"/>.</summary>
@@ -109,8 +109,8 @@ public struct ExprNode
         Type = type;
         Obj = obj;
         var tag = (byte)((flags << FlagsShift) | (byte)kind);
-        _meta = ((uint)(byte)nodeType << MetaNodeTypeShift) | ((uint)tag << MetaTagShift) | (ushort)nextIdx;
-        _data = ((uint)(ushort)childCount << DataCountShift) | (ushort)childIdx;
+        _meta = ((uint)(byte)nodeType << MetaNodeTypeShift) | ((uint)tag << MetaTagShift) | checked((ushort)nextIdx);
+        _data = ((uint)checked((ushort)childCount) << DataCountShift) | checked((ushort)childIdx);
     }
 
     /// <summary>Constructs an inline primitive constant node; <see cref="Obj"/> is set to <see cref="InlineValueMarker"/>.</summary>
@@ -124,11 +124,11 @@ public struct ExprNode
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void SetNextIdx(int nextIdx) =>
-        _meta = (_meta & MetaKeepWithoutNext) | (ushort)nextIdx;
+        _meta = (_meta & MetaKeepWithoutNext) | checked((ushort)nextIdx);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void SetChildInfo(int childIdx, int childCount) =>
-        _data = ((uint)(ushort)childCount << DataCountShift) | (ushort)childIdx;
+        _data = ((uint)checked((ushort)childCount) << DataCountShift) | checked((ushort)childIdx);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool Is(ExprNodeKind kind) => Kind == kind;
@@ -146,16 +146,16 @@ public struct ExprNode
         Kind == ExprNodeKind.ObjectReference || ChildCount == 0;
 }
 
-/// <summary>Maps a lambda node to a captured outer parameter/variable identity used for closure creation.
-/// Uses the same 16-bit index range already used by flat-expression node links and identities.</summary>
+/// <summary>Maps a lambda node to a captured outer parameter or variable.
+/// Uses the same 16-bit storage range as the flat node links and identities.</summary>
 [StructLayout(LayoutKind.Explicit, Size = 6)]
 public struct LambdaClosureParameterUsage
 {
-    /// <summary>The lambda node index in the flat-expression node array.</summary>
+    /// <summary>The lambda node idx in the flat-expression node array.</summary>
     [FieldOffset(0)]
     public ushort LambdaIdx;
 
-    /// <summary>The parameter-usage expression node index in the flat-expression node array.</summary>
+    /// <summary>The parameter-usage expression node idx in the flat-expression node array.</summary>
     [FieldOffset(2)]
     public ushort ParameterIdx;
 
@@ -172,7 +172,7 @@ public struct LambdaClosureParameterUsage
     }
 }
 
-/// <summary>Stores an expression tree as a flat node array plus out-of-line closure constants.</summary>
+/// <summary>Stores an expression tree as flat nodes plus separate closure constants.</summary>
 public struct ExprTree
 {
     private static readonly object ClosureConstantMarker = new();
@@ -184,8 +184,8 @@ public struct ExprTree
     private const byte CatchHasFilterFlag = 2;
     private const byte TryFaultFlag = 1;
 
-    /// <summary>Gets or sets the root node index.</summary>
-    public int RootIndex;
+    /// <summary>Gets or sets the root node idx.</summary>
+    public int RootIdx;
 
     /// <summary>Gets or sets the flat node storage.</summary>
     public SmallList<ExprNode, Stack16<ExprNode>, NoArrayPool<ExprNode>> Nodes;
@@ -193,59 +193,44 @@ public struct ExprTree
     /// <summary>Gets or sets closure constants that are referenced from constant nodes.</summary>
     public SmallList<object, Stack16<object>, NoArrayPool<object>> ClosureConstants;
 
-    /// <summary>Gets or sets the indices of all lambda nodes added during construction.
-    /// The root lambda index is stored in <see cref="RootIndex"/>; all other entries are nested lambdas.
-    /// Populated automatically by <see cref="Lambda(Type,int,int[])"/> and <see cref="ExprTree.FromExpression"/>,
-    /// enabling callers to discover nested lambdas without a full tree traversal.</summary>
+    /// <summary>Gets or sets all lambda node idxs added during construction.
+    /// The root lambda idx is stored in <see cref="RootIdx"/>; other entries are nested lambdas.</summary>
     public SmallList<int, Stack16<int>, NoArrayPool<int>> LambdaNodes;
 
-    /// <summary>Gets or sets the indices of all block nodes that carry explicit variable declarations.
-    /// These are the block nodes where <c>children.Count == 2</c> (variable list + expression list).
-    /// Populated automatically by <see cref="Block(Type,IEnumerable{int},int[])"/> and <see cref="ExprTree.FromExpression"/>,
-    /// enabling callers to enumerate block-scoped variables without a full tree traversal.</summary>
+    /// <summary>Gets or sets all block node idxs that carry explicit variable declarations.
+    /// A tracked block uses <c>children.Count == 2</c>: one child list for variables and one for expressions.</summary>
     public SmallList<int, Stack16<int>, NoArrayPool<int>> BlocksWithVariables;
 
-    /// <summary>Gets or sets the indices of all <see cref="ExpressionType.Goto"/> nodes
-    /// (including <c>return</c> and <c>break</c>/<c>continue</c> goto-family nodes).
-    /// Populated automatically by <see cref="MakeGoto"/> and <see cref="ExprTree.FromExpression"/>,
-    /// enabling callers to link gotos to their label targets without a full tree traversal.</summary>
+    /// <summary>Gets or sets all <see cref="ExpressionType.Goto"/> node idxs,
+    /// including <c>return</c>, <c>break</c>, and <c>continue</c>.</summary>
     public SmallList<int, Stack16<int>, NoArrayPool<int>> GotoNodes;
 
-    /// <summary>Gets or sets the indices of all <see cref="ExpressionType.Label"/> expression nodes.
-    /// Populated automatically by <see cref="Label(int,int?)"/> and <see cref="ExprTree.FromExpression"/>,
-    /// enabling callers to link label expressions to their targets without a full tree traversal.</summary>
+    /// <summary>Gets or sets all <see cref="ExpressionType.Label"/> expression node idxs.</summary>
     public SmallList<int, Stack16<int>, NoArrayPool<int>> LabelNodes;
 
-    /// <summary>Gets or sets the indices of all <see cref="ExpressionType.Try"/> nodes
-    /// (try/catch, try/finally, try/fault, and combined forms).
-    /// Populated automatically by <see cref="TryCatch"/>, <see cref="TryFinally"/>,
-    /// <see cref="TryFault"/>, <see cref="TryCatchFinally"/> and <see cref="ExprTree.FromExpression"/>,
-    /// enabling callers to locate all try regions without a full tree traversal.</summary>
+    /// <summary>Gets or sets all <see cref="ExpressionType.Try"/> node idxs for try/catch, try/finally, try/fault, and combined forms.</summary>
     public SmallList<int, Stack16<int>, NoArrayPool<int>> TryCatchNodes;
 
-    /// <summary>Gets or sets the captured outer parameter/variable usages for lambdas.
-    /// Populated automatically by <see cref="Lambda(Type,int,int[])"/> and <see cref="ExprTree.FromExpression"/>,
-    /// mirroring the nested-lambda non-passed-parameter information collected by <c>TryCollectInfo</c>
-    /// so closure preparation data is available directly on the flat tree.
-    /// The stored indexes use the same 16-bit range as <see cref="ExprNode.ChildIdx"/> and <see cref="ExprNode.NextIdx"/>.</summary>
+    /// <summary>Gets or sets captured outer parameter and variable usages for lambdas.
+    /// The stored idxs use the same 16-bit range as <see cref="ExprNode.ChildIdx"/> and <see cref="ExprNode.NextIdx"/>.</summary>
     public SmallList<LambdaClosureParameterUsage, Stack16<LambdaClosureParameterUsage>, NoArrayPool<LambdaClosureParameterUsage>> LambdaClosureParameterUsages;
 
-    /// <summary>Adds a parameter node and returns its index.</summary>
+    /// <summary>Adds a parameter node and returns its idx.</summary>
     public int Parameter(Type type, string name = null)
     {
         var id = Nodes.Count + 1;
         return AddRawLeafExpressionNode(type, name, ExpressionType.Parameter, type.IsByRef ? ParameterByRefFlag : (byte)0, childIdx: id);
     }
 
-    /// <summary>Adds a typed parameter node and returns its index.</summary>
+    /// <summary>Adds a typed parameter node and returns its idx.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int ParameterOf<T>(string name = null) => Parameter(typeof(T), name);
 
-    /// <summary>Adds a variable node and returns its index.</summary>
+    /// <summary>Adds a variable node and returns its idx.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int Variable(Type type, string name = null) => Parameter(type, name);
 
-    /// <summary>Adds a default-value node and returns its index.</summary>
+    /// <summary>Adds a default-value node and returns its idx.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int Default(Type type) => AddRawExpressionNode(type, null, ExpressionType.Default);
 
@@ -279,8 +264,8 @@ public struct ExprTree
         }
 
         // Delegate, array types, and user-defined reference/value types go to ClosureConstants
-        var constantIndex = ClosureConstants.Add(value);
-        return AddRawLeafExpressionNode(type, ClosureConstantMarker, ExpressionType.Constant, childIdx: constantIndex);
+        var constantIdx = ClosureConstants.Add(value);
+        return AddRawLeafExpressionNode(type, ClosureConstantMarker, ExpressionType.Constant, childIdx: constantIdx);
     }
 
     /// <summary>Adds a null constant node.</summary>
@@ -363,13 +348,13 @@ public struct ExprTree
 
     /// <summary>Adds a one-dimensional array index node.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public int ArrayIndex(int array, int index) => MakeBinary(ExpressionType.ArrayIndex, array, index);
+    public int ArrayIndex(int array, int idx) => MakeBinary(ExpressionType.ArrayIndex, array, idx);
 
     /// <summary>Adds an array access node.</summary>
-    public int ArrayAccess(int array, params int[] indexes) =>
-        indexes != null && indexes.Length == 1
-            ? ArrayIndex(array, indexes[0])
-            : AddFactoryExpressionNode(GetArrayElementType(Nodes[array].Type, indexes?.Length ?? 0), null, ExpressionType.Index, PrependToChildList(array, indexes));
+    public int ArrayAccess(int array, params int[] idxs) =>
+        idxs != null && idxs.Length == 1
+            ? ArrayIndex(array, idxs[0])
+            : AddFactoryExpressionNode(GetArrayElementType(Nodes[array].Type, idxs?.Length ?? 0), null, ExpressionType.Index, PrependToChildList(array, idxs));
 
     /// <summary>Adds a conversion node.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -427,19 +412,10 @@ public struct ExprTree
 
     /// <summary>Adds a block node with optional explicit result type and variables.</summary>
     /// <remarks>
-    /// Child layout of the Block node depends on whether there are explicit variables:
-    /// <list type="bullet">
-    ///   <item>With variables:    children[0] = ChildList(variable₀, variable₁, …)
-    ///                            children[1] = ChildList(expr₀, expr₁, …)</item>
-    ///   <item>Without variables: children[0] = ChildList(expr₀, expr₁, …)</item>
-    /// </list>
-    /// A <c>children.Count == 2</c> check is therefore the canonical way to detect variables.
-    /// Variable parameter nodes share the same id-slot as the refs used inside the body
-    /// (out-of-order: the variable decl nodes appear in children[0] before the body expressions
-    /// that reference them in children[1]).
-    /// <para>When the block has explicit variable declarations its node index is recorded in
-    /// <see cref="BlocksWithVariables"/>, enabling callers to enumerate block-scoped variables
-    /// without a full tree traversal.</para>
+    /// Blocks with variables use two child lists: variables first, then expressions.
+    /// Blocks without variables use one child list for expressions.
+    /// Variable declarations share the same id slot as their later references so identity is preserved.
+    /// When variables are present, the block idx is recorded in <see cref="BlocksWithVariables"/>.
     /// </remarks>
     public int Block(Type type, IEnumerable<int> variables, params int[] expressions)
     {
@@ -463,10 +439,10 @@ public struct ExprTree
         for (var i = 0; i < expressions.Length; ++i)
             bodyChildren.Add(expressions[i]);
         children.Add(AddChildListNode(in bodyChildren));
-        var index = AddFactoryExpressionNode(type ?? Nodes[expressions[expressions.Length - 1]].Type, null, ExpressionType.Block, in children);
+        var idx = AddFactoryExpressionNode(type ?? Nodes[expressions[expressions.Length - 1]].Type, null, ExpressionType.Block, in children);
         if (hasVariables)
-            BlocksWithVariables.Add(index);
-        return index;
+            BlocksWithVariables.Add(idx);
+        return idx;
     }
 
     /// <summary>Adds a typed lambda node.</summary>
@@ -476,28 +452,18 @@ public struct ExprTree
 
     /// <summary>Adds a lambda node.</summary>
     /// <remarks>
-    /// Child layout of the Lambda node:
-    /// <list type="bullet">
-    ///   <item>children[0]   = body expression</item>
-    ///   <item>children[1…n] = parameter decl nodes (parameter₀, parameter₁, …)</item>
-    /// </list>
-    /// The body is stored first; parameter decl nodes follow. This means that when the
-    /// body contains refs to those parameters, the ref nodes are encountered by the
-    /// <see cref="Reader"/> before the corresponding decl node — an intentional
-    /// out-of-order decl pattern. The Reader resolves identity through a shared id map
-    /// so that all refs and the single decl resolve to the same
-    /// <see cref="System.Linq.Expressions.ParameterExpression"/> object.
-    /// <para>The lambda node index is recorded in <see cref="LambdaNodes"/> so callers can discover
-    /// nested lambdas (all entries except <see cref="RootIndex"/>) without a full tree traversal.</para>
+    /// Lambda children store the body first and parameter declarations after it.
+    /// That keeps parameter identity stable even when the body refers to a parameter before its declaration node is read.
+    /// The lambda idx is also recorded in <see cref="LambdaNodes"/>.
     /// </remarks>
     public int Lambda(Type delegateType, int body, params int[] parameters)
     {
-        var index = parameters == null || parameters.Length == 0
+        var idx = parameters == null || parameters.Length == 0
             ? AddFactoryExpressionNode(delegateType, null, ExpressionType.Lambda, 0, body)
             : AddFactoryExpressionNode(delegateType, null, ExpressionType.Lambda, PrependToChildList(body, parameters));
-        LambdaNodes.Add(index);
-        CollectLambdaClosureParameterUsages(index);
-        return index;
+        LambdaNodes.Add(idx);
+        CollectLambdaClosureParameterUsages(idx);
+        return idx;
     }
 
     /// <summary>Adds a member-assignment binding node.</summary>
@@ -536,26 +502,26 @@ public struct ExprTree
     }
 
     /// <summary>Adds a label-expression node.</summary>
-    /// <remarks>The node index is recorded in <see cref="LabelNodes"/>.</remarks>
+    /// <remarks>The node idx is recorded in <see cref="LabelNodes"/>.</remarks>
     public int Label(int target, int? defaultValue = null)
     {
-        var index = defaultValue.HasValue
+        var idx = defaultValue.HasValue
             ? AddFactoryExpressionNode(Nodes[target].Type, null, ExpressionType.Label, 0, target, defaultValue.Value)
             : AddFactoryExpressionNode(Nodes[target].Type, null, ExpressionType.Label, 0, target);
-        LabelNodes.Add(index);
-        return index;
+        LabelNodes.Add(idx);
+        return idx;
     }
 
     /// <summary>Adds a goto-family node.</summary>
-    /// <remarks>The node index is recorded in <see cref="GotoNodes"/>.</remarks>
+    /// <remarks>The node idx is recorded in <see cref="GotoNodes"/>.</remarks>
     public int MakeGoto(GotoExpressionKind kind, int target, int? value = null, Type type = null)
     {
         var resultType = type ?? (value.HasValue ? Nodes[value.Value].Type : typeof(void));
-        var index = value.HasValue
+        var idx = value.HasValue
             ? AddFactoryExpressionNode(resultType, kind, ExpressionType.Goto, 0, target, value.Value)
             : AddFactoryExpressionNode(resultType, kind, ExpressionType.Goto, 0, target);
-        GotoNodes.Add(index);
-        return index;
+        GotoNodes.Add(idx);
+        return idx;
     }
 
     /// <summary>Adds a goto node.</summary>
@@ -633,13 +599,13 @@ public struct ExprTree
     }
 
     /// <summary>Adds a try/catch node.</summary>
-    /// <remarks>The node index is recorded in <see cref="TryCatchNodes"/>.</remarks>
+    /// <remarks>The node idx is recorded in <see cref="TryCatchNodes"/>.</remarks>
     public int TryCatch(int body, params int[] handlers)
     {
-        int index;
+        int idx;
         if (handlers == null || handlers.Length == 0)
         {
-            index = AddFactoryExpressionNode(Nodes[body].Type, null, ExpressionType.Try, 0, body);
+            idx = AddFactoryExpressionNode(Nodes[body].Type, null, ExpressionType.Try, 0, body);
         }
         else
         {
@@ -649,32 +615,32 @@ public struct ExprTree
             ChildList children = default;
             children.Add(body);
             children.Add(AddChildListNode(in handlerChildren));
-            index = AddFactoryExpressionNode(Nodes[body].Type, null, ExpressionType.Try, in children);
+            idx = AddFactoryExpressionNode(Nodes[body].Type, null, ExpressionType.Try, in children);
         }
-        TryCatchNodes.Add(index);
-        return index;
+        TryCatchNodes.Add(idx);
+        return idx;
     }
 
     /// <summary>Adds a try/finally node.</summary>
-    /// <remarks>The node index is recorded in <see cref="TryCatchNodes"/>.</remarks>
+    /// <remarks>The node idx is recorded in <see cref="TryCatchNodes"/>.</remarks>
     public int TryFinally(int body, int @finally)
     {
-        var index = AddFactoryExpressionNode(Nodes[body].Type, null, ExpressionType.Try, 0, body, @finally);
-        TryCatchNodes.Add(index);
-        return index;
+        var idx = AddFactoryExpressionNode(Nodes[body].Type, null, ExpressionType.Try, 0, body, @finally);
+        TryCatchNodes.Add(idx);
+        return idx;
     }
 
     /// <summary>Adds a try/fault node.</summary>
-    /// <remarks>The node index is recorded in <see cref="TryCatchNodes"/>.</remarks>
+    /// <remarks>The node idx is recorded in <see cref="TryCatchNodes"/>.</remarks>
     public int TryFault(int body, int fault)
     {
-        var index = AddFactoryExpressionNode(Nodes[body].Type, null, ExpressionType.Try, TryFaultFlag, body, fault);
-        TryCatchNodes.Add(index);
-        return index;
+        var idx = AddFactoryExpressionNode(Nodes[body].Type, null, ExpressionType.Try, TryFaultFlag, body, fault);
+        TryCatchNodes.Add(idx);
+        return idx;
     }
 
     /// <summary>Adds a try node with optional finally block and catch handlers.</summary>
-    /// <remarks>The node index is recorded in <see cref="TryCatchNodes"/>.</remarks>
+    /// <remarks>The node idx is recorded in <see cref="TryCatchNodes"/>.</remarks>
     public int TryCatchFinally(int body, int? @finally, params int[] handlers)
     {
         ChildList children = default;
@@ -688,9 +654,9 @@ public struct ExprTree
                 handlerChildren.Add(handlers[i]);
             children.Add(AddChildListNode(in handlerChildren));
         }
-        var index = AddFactoryExpressionNode(Nodes[body].Type, null, ExpressionType.Try, 0, in children);
-        TryCatchNodes.Add(index);
-        return index;
+        var idx = AddFactoryExpressionNode(Nodes[body].Type, null, ExpressionType.Try, 0, in children);
+        TryCatchNodes.Add(idx);
+        return idx;
     }
 
     /// <summary>Adds a type-test node.</summary>
@@ -736,7 +702,7 @@ public struct ExprTree
         Justification = "Flat expression round-trip stores the runtime type metadata explicitly for reconstruction.")]
     public SysExpr ToExpression() =>
         Nodes.Count != 0
-            ? new Reader(this).ReadExpression(RootIndex)
+            ? new Reader(this).ReadExpression(RootIdx)
             : throw new InvalidOperationException("Flat expression tree is empty.");
 
     /// <summary>Reconstructs the flat tree as a LightExpression tree.</summary>
@@ -894,7 +860,7 @@ public struct ExprTree
         return children;
     }
 
-    /// <summary>Builds the flat representation while preserving parameter and label identity with stack-friendly maps.</summary>
+    /// <summary>Builds the flat representation while preserving parameter and label identity.</summary>
     private struct Builder
     {
         private SmallMap16<object, int, RefEq<object>> _parameterIds;
@@ -903,7 +869,7 @@ public struct ExprTree
 
         public ExprTree Build(SysExpr expression)
         {
-            _tree.RootIndex = AddExpression(expression);
+            _tree.RootIdx = AddExpression(expression);
             return _tree;
         }
 
@@ -932,17 +898,16 @@ public struct ExprTree
                         children.Add(AddExpression(lambda.Body));
                         for (var i = 0; i < lambda.Parameters.Count; ++i)
                             children.Add(AddExpression(lambda.Parameters[i]));
-                        var lambdaIndex = _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType, children);
-                        _tree.LambdaNodes.Add(lambdaIndex);
-                        _tree.CollectLambdaClosureParameterUsages(lambdaIndex);
-                        return lambdaIndex;
+                        var lambdaIdx = _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType, children);
+                        _tree.LambdaNodes.Add(lambdaIdx);
+                        _tree.CollectLambdaClosureParameterUsages(lambdaIdx);
+                        return lambdaIdx;
                     }
                 case ExpressionType.Block:
                     {
-                        // Layout (with variables):    children[0] = ChildList(var₀, var₁, …)
-                        //                             children[1] = ChildList(expr₀, expr₁, …)
-                        // Layout (without variables): children[0] = ChildList(expr₀, expr₁, …)
-                        // children.Count == 2 is the canonical test for the presence of variables.
+                        // With variables: children[0] is the variable list and children[1] is the expression list.
+                        // Without variables: children[0] is the expression list.
+                        // children.Count == 2 means the block has explicit variables.
                         var block = (System.Linq.Expressions.BlockExpression)expression;
                         ChildList children = default;
                         var hasVariables = block.Variables.Count != 0;
@@ -957,10 +922,10 @@ public struct ExprTree
                         for (var i = 0; i < block.Expressions.Count; ++i)
                             expressions.Add(AddExpression(block.Expressions[i]));
                         children.Add(_tree.AddChildListNode(in expressions));
-                        var blockIndex = _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType, in children);
+                        var blockIdx = _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType, in children);
                         if (hasVariables)
-                            _tree.BlocksWithVariables.Add(blockIndex);
-                        return blockIndex;
+                            _tree.BlocksWithVariables.Add(blockIdx);
+                        return blockIdx;
                     }
                 case ExpressionType.MemberAccess:
                     {
@@ -1009,13 +974,13 @@ public struct ExprTree
                     }
                 case ExpressionType.Index:
                     {
-                        var index = (System.Linq.Expressions.IndexExpression)expression;
+                        var indexExpr = (System.Linq.Expressions.IndexExpression)expression;
                         ChildList children = default;
-                        if (index.Object != null)
-                            children.Add(AddExpression(index.Object));
-                        for (var i = 0; i < index.Arguments.Count; ++i)
-                            children.Add(AddExpression(index.Arguments[i]));
-                        return _tree.AddRawExpressionNode(expression.Type, index.Indexer, expression.NodeType, children);
+                        if (indexExpr.Object != null)
+                            children.Add(AddExpression(indexExpr.Object));
+                        for (var i = 0; i < indexExpr.Arguments.Count; ++i)
+                            children.Add(AddExpression(indexExpr.Arguments[i]));
+                        return _tree.AddRawExpressionNode(expression.Type, indexExpr.Indexer, expression.NodeType, children);
                     }
                 case ExpressionType.Conditional:
                     {
@@ -1046,9 +1011,9 @@ public struct ExprTree
                         children.Add(AddLabelTarget(@goto.Target));
                         if (@goto.Value != null)
                             children.Add(AddExpression(@goto.Value));
-                        var gotoIndex = _tree.AddRawExpressionNode(expression.Type, @goto.Kind, expression.NodeType, children);
-                        _tree.GotoNodes.Add(gotoIndex);
-                        return gotoIndex;
+                        var gotoIdx = _tree.AddRawExpressionNode(expression.Type, @goto.Kind, expression.NodeType, children);
+                        _tree.GotoNodes.Add(gotoIdx);
+                        return gotoIdx;
                     }
                 case ExpressionType.Label:
                     {
@@ -1057,9 +1022,9 @@ public struct ExprTree
                         children.Add(AddLabelTarget(label.Target));
                         if (label.DefaultValue != null)
                             children.Add(AddExpression(label.DefaultValue));
-                        var labelIndex = _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType, children);
-                        _tree.LabelNodes.Add(labelIndex);
-                        return labelIndex;
+                        var labelIdx = _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType, children);
+                        _tree.LabelNodes.Add(labelIdx);
+                        return labelIdx;
                     }
                 case ExpressionType.Switch:
                     {
@@ -1097,9 +1062,9 @@ public struct ExprTree
                                 handlers.Add(AddCatchBlock(@try.Handlers[i]));
                             children.Add(_tree.AddChildListNode(in handlers));
                         }
-                        var tryIndex = _tree.AddNode(expression.Type, null, expression.NodeType, ExprNodeKind.Expression, flags, in children);
-                        _tree.TryCatchNodes.Add(tryIndex);
-                        return tryIndex;
+                        var tryIdx = _tree.AddNode(expression.Type, null, expression.NodeType, ExprNodeKind.Expression, flags, in children);
+                        _tree.TryCatchNodes.Add(tryIdx);
+                        return tryIdx;
                     }
                 case ExpressionType.MemberInit:
                     {
@@ -1259,82 +1224,82 @@ public struct ExprTree
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private int AddLeafNode(Type type, object obj, ExpressionType nodeType, ExprNodeKind kind, byte flags, int childIdx, int childCount)
     {
-        var nodeIndex = Nodes.Count;
+        var nodeIdx = Nodes.Count;
         ref var newNode = ref Nodes.AddDefaultAndGetRef();
         newNode = new ExprNode(type, obj, nodeType, kind, flags, childIdx, childCount);
-        return nodeIndex;
+        return nodeIdx;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private int AddInlineConstantNode(Type type, uint inlineValue)
     {
-        var nodeIndex = Nodes.Count;
+        var nodeIdx = Nodes.Count;
         ref var newNode = ref Nodes.AddDefaultAndGetRef();
         newNode = new ExprNode(type, inlineValue);
-        return nodeIndex;
+        return nodeIdx;
     }
 
     private int AddNode(Type type, object obj, ExpressionType nodeType, ExprNodeKind kind, byte flags)
     {
-        var nodeIndex = Nodes.Count;
+        var nodeIdx = Nodes.Count;
         ref var newNode = ref Nodes.AddDefaultAndGetRef();
         newNode = new ExprNode(type, obj, nodeType, kind, flags);
-        return nodeIndex;
+        return nodeIdx;
     }
 
     private int AddNode(Type type, object obj, ExpressionType nodeType, ExprNodeKind kind, byte flags, int child0)
     {
-        var nodeIndex = Nodes.Count;
+        var nodeIdx = Nodes.Count;
         ref var newNode = ref Nodes.AddDefaultAndGetRef();
         newNode = new ExprNode(type, obj, nodeType, kind, flags, child0, 1);
-        return nodeIndex;
+        return nodeIdx;
     }
 
     private int AddNode(Type type, object obj, ExpressionType nodeType, ExprNodeKind kind, byte flags, int c0, int c1)
     {
-        var nodeIndex = Nodes.Count;
+        var nodeIdx = Nodes.Count;
         ref var newNode = ref Nodes.AddDefaultAndGetRef();
         newNode = new ExprNode(type, obj, nodeType, kind, flags, c0, 2);
         Nodes.GetSurePresentRef(c0).SetNextIdx(c1);
-        return nodeIndex;
+        return nodeIdx;
     }
 
     private int AddNode(Type type, object obj, ExpressionType nodeType, ExprNodeKind kind, byte flags, int c0, int c1, int c2)
     {
-        var nodeIndex = Nodes.Count;
+        var nodeIdx = Nodes.Count;
         ref var newNode = ref Nodes.AddDefaultAndGetRef();
         newNode = new ExprNode(type, obj, nodeType, kind, flags, c0, 3);
         Nodes.GetSurePresentRef(c0).SetNextIdx(c1);
         Nodes.GetSurePresentRef(c1).SetNextIdx(c2);
-        return nodeIndex;
+        return nodeIdx;
     }
 
     private int AddNode(Type type, object obj, ExpressionType nodeType, ExprNodeKind kind, byte flags, int c0, int c1, int c2, int c3)
     {
-        var nodeIndex = Nodes.Count;
+        var nodeIdx = Nodes.Count;
         ref var newNode = ref Nodes.AddDefaultAndGetRef();
         newNode = new ExprNode(type, obj, nodeType, kind, flags, c0, 4);
         Nodes.GetSurePresentRef(c0).SetNextIdx(c1);
         Nodes.GetSurePresentRef(c1).SetNextIdx(c2);
         Nodes.GetSurePresentRef(c2).SetNextIdx(c3);
-        return nodeIndex;
+        return nodeIdx;
     }
 
     private int AddNode(Type type, object obj, ExpressionType nodeType, ExprNodeKind kind, byte flags, int c0, int c1, int c2, int c3, int c4)
     {
-        var nodeIndex = Nodes.Count;
+        var nodeIdx = Nodes.Count;
         ref var newNode = ref Nodes.AddDefaultAndGetRef();
         newNode = new ExprNode(type, obj, nodeType, kind, flags, c0, 5);
         Nodes.GetSurePresentRef(c0).SetNextIdx(c1);
         Nodes.GetSurePresentRef(c1).SetNextIdx(c2);
         Nodes.GetSurePresentRef(c2).SetNextIdx(c3);
         Nodes.GetSurePresentRef(c3).SetNextIdx(c4);
-        return nodeIndex;
+        return nodeIdx;
     }
 
     private int AddNode(Type type, object obj, ExpressionType nodeType, ExprNodeKind kind, byte flags, int c0, int c1, int c2, int c3, int c4, int c5)
     {
-        var nodeIndex = Nodes.Count;
+        var nodeIdx = Nodes.Count;
         ref var newNode = ref Nodes.AddDefaultAndGetRef();
         newNode = new ExprNode(type, obj, nodeType, kind, flags, c0, 6);
         Nodes.GetSurePresentRef(c0).SetNextIdx(c1);
@@ -1342,12 +1307,12 @@ public struct ExprTree
         Nodes.GetSurePresentRef(c2).SetNextIdx(c3);
         Nodes.GetSurePresentRef(c3).SetNextIdx(c4);
         Nodes.GetSurePresentRef(c4).SetNextIdx(c5);
-        return nodeIndex;
+        return nodeIdx;
     }
 
     private int AddNode(Type type, object obj, ExpressionType nodeType, ExprNodeKind kind, byte flags, int c0, int c1, int c2, int c3, int c4, int c5, int c6)
     {
-        var nodeIndex = Nodes.Count;
+        var nodeIdx = Nodes.Count;
         ref var newNode = ref Nodes.AddDefaultAndGetRef();
         newNode = new ExprNode(type, obj, nodeType, kind, flags, c0, 7);
         Nodes.GetSurePresentRef(c0).SetNextIdx(c1);
@@ -1356,7 +1321,7 @@ public struct ExprTree
         Nodes.GetSurePresentRef(c3).SetNextIdx(c4);
         Nodes.GetSurePresentRef(c4).SetNextIdx(c5);
         Nodes.GetSurePresentRef(c5).SetNextIdx(c6);
-        return nodeIndex;
+        return nodeIdx;
     }
 
     private int AddNode(Type type, object obj, ExpressionType nodeType, ExprNodeKind kind, byte flags, int[] children)
@@ -1364,12 +1329,12 @@ public struct ExprTree
         if (children == null || children.Length == 0)
             return AddNode(type, obj, nodeType, kind, flags);
 
-        var nodeIndex = Nodes.Count;
+        var nodeIdx = Nodes.Count;
         ref var newNode = ref Nodes.AddDefaultAndGetRef();
         newNode = new ExprNode(type, obj, nodeType, kind, flags, children[0], children.Length);
         for (var i = 1; i < children.Length; ++i)
             Nodes.GetSurePresentRef(children[i - 1]).SetNextIdx(children[i]);
-        return nodeIndex;
+        return nodeIdx;
     }
 
     private int AddNode(Type type, object obj, ExpressionType nodeType, ExprNodeKind kind, byte flags, in ChildList children)
@@ -1377,12 +1342,12 @@ public struct ExprTree
         if (children.Count == 0)
             return AddNode(type, obj, nodeType, kind, flags);
 
-        var nodeIndex = Nodes.Count;
+        var nodeIdx = Nodes.Count;
         ref var newNode = ref Nodes.AddDefaultAndGetRef();
         newNode = new ExprNode(type, obj, nodeType, kind, flags, children[0], children.Count);
         for (var i = 1; i < children.Count; ++i)
             Nodes.GetSurePresentRef(children[i - 1]).SetNextIdx(children[i]);
-        return nodeIndex;
+        return nodeIdx;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1444,10 +1409,10 @@ public struct ExprTree
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private int CloneChild(int index)
+    private int CloneChild(int idx)
     {
-        ref var node = ref Nodes[index];
-        if (!node.ShouldCloneWhenLinked()) return index;
+        ref var node = ref Nodes[idx];
+        if (!node.ShouldCloneWhenLinked()) return idx;
         if (ReferenceEquals(node.Obj, ExprNode.InlineValueMarker))
             return AddInlineConstantNode(node.Type, node.InlineValue);
         return AddLeafNode(node.Type, node.Obj, node.NodeType, node.Kind, node.Flags, node.ChildIdx, node.ChildCount);
@@ -1472,9 +1437,9 @@ public struct ExprTree
         return cloned;
     }
 
-    private void CollectLambdaClosureParameterUsages(int lambdaIndex)
+    private void CollectLambdaClosureParameterUsages(int lambdaIdx)
     {
-        var children = GetChildren(lambdaIndex);
+        var children = GetChildren(lambdaIdx);
         if (children.Count == 0)
             return;
 
@@ -1484,20 +1449,20 @@ public struct ExprTree
 
         SmallList<ushort, Stack16<ushort>, NoArrayPool<ushort>> localParameterIds = default;
         SmallList<LambdaClosureParameterUsage, Stack8<LambdaClosureParameterUsage>, NoArrayPool<LambdaClosureParameterUsage>> captures = default;
-        CollectClosureParameterUsages(children[0], ToStoredUShortIdx(lambdaIndex), ref lambdaParameterIds, ref localParameterIds, ref captures);
+        CollectClosureParameterUsages(children[0], ToStoredUShortIdx(lambdaIdx), ref lambdaParameterIds, ref localParameterIds, ref captures);
 
         for (var i = 0; i < captures.Count; ++i)
             LambdaClosureParameterUsages.Add(captures[i]);
     }
 
     private void CollectClosureParameterUsages(
-        int index,
+        int idx,
         ushort lambdaIdx,
         ref SmallList<ushort, Stack8<ushort>, NoArrayPool<ushort>> lambdaParameterIds,
         ref SmallList<ushort, Stack16<ushort>, NoArrayPool<ushort>> localParameterIds,
         ref SmallList<LambdaClosureParameterUsage, Stack8<LambdaClosureParameterUsage>, NoArrayPool<LambdaClosureParameterUsage>> captures)
     {
-        ref var node = ref Nodes.GetSurePresentRef(index);
+        ref var node = ref Nodes.GetSurePresentRef(idx);
         switch (node.NodeType)
         {
             case ExpressionType.Parameter:
@@ -1505,46 +1470,46 @@ public struct ExprTree
                     var parameterId = ToStoredUShortIdx(node.ChildIdx);
                     if (!Contains(ref lambdaParameterIds, parameterId) &&
                         !Contains(ref localParameterIds, parameterId))
-                        AddClosureParameterUsage(lambdaIdx, ToStoredUShortIdx(index), parameterId, ref captures);
+                        AddClosureParameterUsage(lambdaIdx, ToStoredUShortIdx(idx), parameterId, ref captures);
                     return;
                 }
             case ExpressionType.Lambda:
-                PropagateNestedLambdaClosureParameterUsages(ToStoredUShortIdx(index), lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
+                PropagateNestedLambdaClosureParameterUsages(ToStoredUShortIdx(idx), lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
                 return;
             case ExpressionType.Block:
                 {
-                    var children = GetChildren(index);
+                    var children = GetChildren(idx);
                     var localCount = localParameterIds.Count;
                     var hasVariables = children.Count == 2;
                     if (hasVariables)
                     {
-                        var variableIndexes = GetChildren(children[0]);
-                        for (var i = 0; i < variableIndexes.Count; ++i)
-                            localParameterIds.Add(ToStoredUShortIdx(Nodes[variableIndexes[i]].ChildIdx));
+                        var variableIdxs = GetChildren(children[0]);
+                        for (var i = 0; i < variableIdxs.Count; ++i)
+                            localParameterIds.Add(ToStoredUShortIdx(Nodes[variableIdxs[i]].ChildIdx));
                     }
 
-                    var expressionIndexes = GetChildren(children[children.Count - 1]);
-                    for (var i = 0; i < expressionIndexes.Count; ++i)
-                        CollectClosureParameterUsages(expressionIndexes[i], lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
+                    var expressionIdxs = GetChildren(children[children.Count - 1]);
+                    for (var i = 0; i < expressionIdxs.Count; ++i)
+                        CollectClosureParameterUsages(expressionIdxs[i], lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
 
                     localParameterIds.Count = localCount;
                     return;
                 }
             case ExpressionType.Try:
                 {
-                    var children = GetChildren(index);
+                    var children = GetChildren(idx);
                     CollectClosureParameterUsages(children[0], lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
 
-                    var lastChildIndex = children.Count - 1;
-                    if (lastChildIndex > 0 && Nodes[children[lastChildIndex]].Is(ExprNodeKind.ChildList))
+                    var lastChildIdx = children.Count - 1;
+                    if (lastChildIdx > 0 && Nodes[children[lastChildIdx]].Is(ExprNodeKind.ChildList))
                     {
-                        var handlerIndexes = GetChildren(children[lastChildIndex]);
-                        for (var i = 0; i < handlerIndexes.Count; ++i)
-                            CollectCatchBlockClosureParameterUsages(handlerIndexes[i], lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
-                        lastChildIndex--;
+                        var handlerIdxs = GetChildren(children[lastChildIdx]);
+                        for (var i = 0; i < handlerIdxs.Count; ++i)
+                            CollectCatchBlockClosureParameterUsages(handlerIdxs[i], lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
+                        lastChildIdx--;
                     }
 
-                    for (var i = 1; i <= lastChildIndex; ++i)
+                    for (var i = 1; i <= lastChildIdx; ++i)
                         CollectClosureParameterUsages(children[i], lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
                     return;
                 }
@@ -1553,31 +1518,31 @@ public struct ExprTree
         if (ReferenceEquals(node.Obj, ExprNode.InlineValueMarker) || node.ChildCount == 0)
             return;
 
-        var childIndexes = GetChildren(index);
-        for (var i = 0; i < childIndexes.Count; ++i)
-            CollectClosureParameterUsages(childIndexes[i], lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
+        var childIdxs = GetChildren(idx);
+        for (var i = 0; i < childIdxs.Count; ++i)
+            CollectClosureParameterUsages(childIdxs[i], lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
     }
 
     private void CollectCatchBlockClosureParameterUsages(
-        int index,
+        int idx,
         ushort lambdaIdx,
         ref SmallList<ushort, Stack8<ushort>, NoArrayPool<ushort>> lambdaParameterIds,
         ref SmallList<ushort, Stack16<ushort>, NoArrayPool<ushort>> localParameterIds,
         ref SmallList<LambdaClosureParameterUsage, Stack8<LambdaClosureParameterUsage>, NoArrayPool<LambdaClosureParameterUsage>> captures)
     {
-        ref var node = ref Nodes.GetSurePresentRef(index);
+        ref var node = ref Nodes.GetSurePresentRef(idx);
         Debug.Assert(node.Is(ExprNodeKind.CatchBlock));
 
-        var children = GetChildren(index);
+        var children = GetChildren(idx);
         var localCount = localParameterIds.Count;
-        var childIndex = 0;
+        var childIdx = 0;
         if (node.HasFlag(CatchHasVariableFlag))
-            localParameterIds.Add(ToStoredUShortIdx(Nodes[children[childIndex++]].ChildIdx));
+            localParameterIds.Add(ToStoredUShortIdx(Nodes[children[childIdx++]].ChildIdx));
 
-        var bodyIndex = children[childIndex++];
+        var bodyIdx = children[childIdx++];
         if (node.HasFlag(CatchHasFilterFlag))
-            CollectClosureParameterUsages(children[childIndex], lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
-        CollectClosureParameterUsages(bodyIndex, lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
+            CollectClosureParameterUsages(children[childIdx], lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
+        CollectClosureParameterUsages(bodyIdx, lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
         localParameterIds.Count = localCount;
     }
 
@@ -1612,18 +1577,18 @@ public struct ExprTree
         captures.Add(new LambdaClosureParameterUsage(lambdaIdx, parameterIdx, parameterId));
     }
 
-    private ChildList GetChildren(int index)
+    private ChildList GetChildren(int idx)
     {
-        ref var node = ref Nodes.GetSurePresentRef(index);
+        ref var node = ref Nodes.GetSurePresentRef(idx);
         if (ReferenceEquals(node.Obj, ExprNode.InlineValueMarker) || node.ChildCount == 0)
             return default;
         var count = node.ChildCount;
         ChildList children = default;
-        var childIndex = node.ChildIdx;
+        var childIdx = node.ChildIdx;
         for (var i = 0; i < count; ++i)
         {
-            children.Add(childIndex);
-            childIndex = Nodes.GetSurePresentRef(childIndex).NextIdx;
+            children.Add(childIdx);
+            childIdx = Nodes.GetSurePresentRef(childIdx).NextIdx;
         }
         return children;
     }
@@ -1656,11 +1621,11 @@ public struct ExprTree
         }
 
         [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
-        public SysExpr ReadExpression(int index)
+        public SysExpr ReadExpression(int idx)
         {
-            ref var node = ref _tree.Nodes[index];
+            ref var node = ref _tree.Nodes[idx];
             if (!node.IsExpression())
-                throw new InvalidOperationException($"Node at index {index} is not an expression node.");
+                throw new InvalidOperationException($"Node at idx {idx} is not an expression node.");
 
             switch (node.NodeType)
             {
@@ -1686,7 +1651,7 @@ public struct ExprTree
                         // Layout: children[0] = body, children[1..n] = parameter decl nodes.
                         // Body is read first; parameter refs inside it are resolved via _parametersById
                         // even before the decl nodes at children[1..n] are visited (out-of-order decl).
-                        var children = GetChildren(index);
+                        var children = GetChildren(idx);
                         var body = ReadExpression(children[0]);
                         var parameters = new SysParameterExpression[children.Count - 1];
                         for (var i = 1; i < children.Count; ++i)
@@ -1695,34 +1660,33 @@ public struct ExprTree
                     }
                 case ExpressionType.Block:
                     {
-                        // Layout (with variables):    children[0] = ChildList(var₀, var₁, …)
-                        //                             children[1] = ChildList(expr₀, expr₁, …)
-                        // Layout (without variables): children[0] = ChildList(expr₀, expr₁, …)
-                        // children.Count == 2 is the canonical test for the presence of variables.
+                        // With variables: children[0] is the variable list and children[1] is the expression list.
+                        // Without variables: children[0] is the expression list.
+                        // children.Count == 2 means the block has explicit variables.
                         // Variable decl nodes in children[0] are registered in _parametersById before
                         // the body expressions in children[1] are read, so refs in the body resolve
                         // to the same SysParameterExpression object as the decl (normal order here).
-                        var children = GetChildren(index);
+                        var children = GetChildren(idx);
                         var hasVariables = children.Count == 2;
-                        var variableIndexes = hasVariables ? GetChildren(children[0]) : default;
-                        var expressionIndexes = GetChildren(children[children.Count - 1]);
-                        var variables = new SysParameterExpression[variableIndexes.Count];
+                        var variableIdxs = hasVariables ? GetChildren(children[0]) : default;
+                        var expressionIdxs = GetChildren(children[children.Count - 1]);
+                        var variables = new SysParameterExpression[variableIdxs.Count];
                         for (var i = 0; i < variables.Length; ++i)
-                            variables[i] = (SysParameterExpression)ReadExpression(variableIndexes[i]);
-                        var expressions = new SysExpr[expressionIndexes.Count];
+                            variables[i] = (SysParameterExpression)ReadExpression(variableIdxs[i]);
+                        var expressions = new SysExpr[expressionIdxs.Count];
                         for (var i = 0; i < expressions.Length; ++i)
-                            expressions[i] = ReadExpression(expressionIndexes[i]);
+                            expressions[i] = ReadExpression(expressionIdxs[i]);
                         return SysExpr.Block(node.Type, variables, expressions);
                     }
                 case ExpressionType.MemberAccess:
                     {
-                        var children = GetChildren(index);
+                        var children = GetChildren(idx);
                         return SysExpr.MakeMemberAccess(children.Count != 0 ? ReadExpression(children[0]) : null, (System.Reflection.MemberInfo)node.Obj);
                     }
                 case ExpressionType.Call:
                     {
                         var method = (System.Reflection.MethodInfo)node.Obj;
-                        var children = GetChildren(index);
+                        var children = GetChildren(idx);
                         var hasInstance = !method.IsStatic;
                         var instance = hasInstance ? ReadExpression(children[0]) : null;
                         var arguments = new SysExpr[children.Count - (hasInstance ? 1 : 0)];
@@ -1732,19 +1696,19 @@ public struct ExprTree
                     }
                 case ExpressionType.New:
                     {
-                        var children = GetChildren(index);
+                        var children = GetChildren(idx);
                         var arguments = ReadExpressions(children);
                         return node.Obj is System.Reflection.ConstructorInfo ctor
                             ? SysExpr.New(ctor, arguments)
                             : CreateValueTypeNewExpression(node.Type);
                     }
                 case ExpressionType.NewArrayInit:
-                    return SysExpr.NewArrayInit(node.Type.GetElementType(), ReadExpressions(GetChildren(index)));
+                    return SysExpr.NewArrayInit(node.Type.GetElementType(), ReadExpressions(GetChildren(idx)));
                 case ExpressionType.NewArrayBounds:
-                    return SysExpr.NewArrayBounds(node.Type.GetElementType(), ReadExpressions(GetChildren(index)));
+                    return SysExpr.NewArrayBounds(node.Type.GetElementType(), ReadExpressions(GetChildren(idx)));
                 case ExpressionType.Invoke:
                     {
-                        var children = GetChildren(index);
+                        var children = GetChildren(idx);
                         var arguments = new SysExpr[children.Count - 1];
                         for (var i = 1; i < children.Count; ++i)
                             arguments[i - 1] = ReadExpression(children[i]);
@@ -1752,7 +1716,7 @@ public struct ExprTree
                     }
                 case ExpressionType.Index:
                     {
-                        var children = GetChildren(index);
+                        var children = GetChildren(idx);
                         var property = (System.Reflection.PropertyInfo)node.Obj;
                         var hasInstance = property != null || children.Count > 1;
                         var instance = hasInstance ? ReadExpression(children[0]) : null;
@@ -1765,54 +1729,54 @@ public struct ExprTree
                     }
                 case ExpressionType.Conditional:
                     {
-                        var children = GetChildren(index);
+                        var children = GetChildren(idx);
                         return SysExpr.Condition(ReadExpression(children[0]), ReadExpression(children[1]), ReadExpression(children[2]), node.Type);
                     }
                 case ExpressionType.Loop:
                     {
-                        var children = GetChildren(index);
-                        var childIndex = 1;
-                        var breakLabel = node.HasFlag(LoopHasBreakFlag) ? ReadLabelTarget(children[childIndex++]) : null;
-                        var continueLabel = node.HasFlag(LoopHasContinueFlag) ? ReadLabelTarget(children[childIndex]) : null;
+                        var children = GetChildren(idx);
+                        var childIdx = 1;
+                        var breakLabel = node.HasFlag(LoopHasBreakFlag) ? ReadLabelTarget(children[childIdx++]) : null;
+                        var continueLabel = node.HasFlag(LoopHasContinueFlag) ? ReadLabelTarget(children[childIdx]) : null;
                         return SysExpr.Loop(ReadExpression(children[0]), breakLabel, continueLabel);
                     }
                 case ExpressionType.Goto:
                     {
-                        var children = GetChildren(index);
+                        var children = GetChildren(idx);
                         var value = children.Count > 1 ? ReadExpression(children[1]) : null;
                         return SysExpr.MakeGoto((GotoExpressionKind)node.Obj, ReadLabelTarget(children[0]), value, node.Type);
                     }
                 case ExpressionType.Label:
                     {
-                        var children = GetChildren(index);
+                        var children = GetChildren(idx);
                         var defaultValue = children.Count > 1 ? ReadExpression(children[1]) : null;
                         return SysExpr.Label(ReadLabelTarget(children[0]), defaultValue);
                     }
                 case ExpressionType.Switch:
                     {
-                        var children = GetChildren(index);
+                        var children = GetChildren(idx);
                         var defaultBody = default(SysExpr);
-                        ChildList caseIndexes = default;
+                        ChildList caseIdxs = default;
                         if (children.Count > 1)
                         {
                             ref var lastChild = ref _tree.Nodes[children[children.Count - 1]];
                             if (lastChild.Is(ExprNodeKind.ChildList))
                             {
-                                caseIndexes = GetChildren(children[children.Count - 1]);
+                                caseIdxs = GetChildren(children[children.Count - 1]);
                                 if (children.Count == 3)
                                     defaultBody = ReadExpression(children[1]);
                             }
                             else
                                 defaultBody = ReadExpression(children[1]);
                         }
-                        var cases = new SysSwitchCase[caseIndexes.Count];
+                        var cases = new SysSwitchCase[caseIdxs.Count];
                         for (var i = 0; i < cases.Length; ++i)
-                            cases[i] = ReadSwitchCase(caseIndexes[i]);
+                            cases[i] = ReadSwitchCase(caseIdxs[i]);
                         return SysExpr.Switch(node.Type, ReadExpression(children[0]), defaultBody, (System.Reflection.MethodInfo)node.Obj, cases);
                     }
                 case ExpressionType.Try:
                     {
-                        var children = GetChildren(index);
+                        var children = GetChildren(idx);
                         if (node.HasFlag(TryFaultFlag))
                             return SysExpr.TryFault(ReadExpression(children[0]), ReadExpression(children[1]));
 
@@ -1820,10 +1784,10 @@ public struct ExprTree
                         var lastChildIsHandlerList = children.Count > 1 && _tree.Nodes[children[children.Count - 1]].Is(ExprNodeKind.ChildList);
                         if (lastChildIsHandlerList)
                         {
-                            var handlerIndexes = GetChildren(children[children.Count - 1]);
-                            handlers = new SysCatchBlock[handlerIndexes.Count];
+                            var handlerIdxs = GetChildren(children[children.Count - 1]);
+                            handlers = new SysCatchBlock[handlerIdxs.Count];
                             for (var i = 0; i < handlers.Length; ++i)
-                                handlers[i] = ReadCatchBlock(handlerIndexes[i]);
+                                handlers[i] = ReadCatchBlock(handlerIdxs[i]);
                         }
                         else
                             handlers = Array.Empty<SysCatchBlock>();
@@ -1835,7 +1799,7 @@ public struct ExprTree
                     }
                 case ExpressionType.MemberInit:
                     {
-                        var children = GetChildren(index);
+                        var children = GetChildren(idx);
                         var bindings = new SysMemberBinding[children.Count - 1];
                         for (var i = 1; i < children.Count; ++i)
                             bindings[i - 1] = ReadMemberBinding(children[i]);
@@ -1843,19 +1807,19 @@ public struct ExprTree
                     }
                 case ExpressionType.ListInit:
                     {
-                        var children = GetChildren(index);
+                        var children = GetChildren(idx);
                         var initializers = new SysElementInit[children.Count - 1];
                         for (var i = 1; i < children.Count; ++i)
                             initializers[i - 1] = ReadElementInit(children[i]);
                         return SysExpr.ListInit((System.Linq.Expressions.NewExpression)ReadExpression(children[0]), initializers);
                     }
                 case ExpressionType.TypeIs:
-                    return SysExpr.TypeIs(ReadExpression(GetChildren(index)[0]), (Type)node.Obj);
+                    return SysExpr.TypeIs(ReadExpression(GetChildren(idx)[0]), (Type)node.Obj);
                 case ExpressionType.TypeEqual:
-                    return SysExpr.TypeEqual(ReadExpression(GetChildren(index)[0]), (Type)node.Obj);
+                    return SysExpr.TypeEqual(ReadExpression(GetChildren(idx)[0]), (Type)node.Obj);
                 case ExpressionType.Dynamic:
                     {
-                        var children = GetChildren(index);
+                        var children = GetChildren(idx);
                         var delegateType = (Type)ReadObjectReference(children[0]);
                         var arguments = new SysExpr[children.Count - 1];
                         for (var i = 1; i < children.Count; ++i)
@@ -1864,7 +1828,7 @@ public struct ExprTree
                     }
                 case ExpressionType.RuntimeVariables:
                     {
-                        var children = GetChildren(index);
+                        var children = GetChildren(idx);
                         var variables = new SysParameterExpression[children.Count];
                         for (var i = 0; i < children.Count; ++i)
                             variables[i] = (SysParameterExpression)ReadExpression(children[i]);
@@ -1872,7 +1836,7 @@ public struct ExprTree
                     }
                 case ExpressionType.DebugInfo:
                     {
-                        var children = GetChildren(index);
+                        var children = GetChildren(idx);
                         ReadUInt16Pair(children[0], out var startLine, out var startColumn);
                         ReadUInt16Pair(children[1], out var endLine, out var endColumn);
                         return SysExpr.DebugInfo(SysExpr.SymbolDocument((string)node.Obj), startLine, startColumn, endLine, endColumn);
@@ -1881,12 +1845,12 @@ public struct ExprTree
                     if (node.ChildCount == 1)
                     {
                         var method = node.Obj as System.Reflection.MethodInfo;
-                        return SysExpr.MakeUnary(node.NodeType, ReadExpression(GetChildren(index)[0]), node.Type, method);
+                        return SysExpr.MakeUnary(node.NodeType, ReadExpression(GetChildren(idx)[0]), node.Type, method);
                     }
 
                     if (node.ChildCount >= 2)
                     {
-                        var children = GetChildren(index);
+                        var children = GetChildren(idx);
                         var conversion = children.Count > 2 ? (System.Linq.Expressions.LambdaExpression)ReadExpression(children[2]) : null;
                         return SysExpr.MakeBinary(node.NodeType, ReadExpression(children[0]), ReadExpression(children[1]),
                             node.HasFlag(BinaryLiftedToNullFlag), (System.Reflection.MethodInfo)node.Obj, conversion);
@@ -1897,11 +1861,11 @@ public struct ExprTree
         }
 
         [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
-        private SysSwitchCase ReadSwitchCase(int index)
+        private SysSwitchCase ReadSwitchCase(int idx)
         {
-            ref var node = ref _tree.Nodes[index];
+            ref var node = ref _tree.Nodes[idx];
             Debug.Assert(node.Is(ExprNodeKind.SwitchCase));
-            var children = GetChildren(index);
+            var children = GetChildren(idx);
             var testValues = new SysExpr[children.Count - 1];
             for (var i = 0; i < testValues.Length; ++i)
                 testValues[i] = ReadExpression(children[i]);
@@ -1909,21 +1873,21 @@ public struct ExprTree
         }
 
         [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
-        private SysCatchBlock ReadCatchBlock(int index)
+        private SysCatchBlock ReadCatchBlock(int idx)
         {
-            ref var node = ref _tree.Nodes[index];
+            ref var node = ref _tree.Nodes[idx];
             Debug.Assert(node.Is(ExprNodeKind.CatchBlock));
-            var children = GetChildren(index);
-            var childIndex = 0;
-            var variable = node.HasFlag(CatchHasVariableFlag) ? (SysParameterExpression)ReadExpression(children[childIndex++]) : null;
-            var body = ReadExpression(children[childIndex++]);
-            var filter = node.HasFlag(CatchHasFilterFlag) ? ReadExpression(children[childIndex]) : null;
+            var children = GetChildren(idx);
+            var childIdx = 0;
+            var variable = node.HasFlag(CatchHasVariableFlag) ? (SysParameterExpression)ReadExpression(children[childIdx++]) : null;
+            var body = ReadExpression(children[childIdx++]);
+            var filter = node.HasFlag(CatchHasFilterFlag) ? ReadExpression(children[childIdx]) : null;
             return SysExpr.MakeCatchBlock(node.Type, variable, body, filter);
         }
 
-        private SysLabelTarget ReadLabelTarget(int index)
+        private SysLabelTarget ReadLabelTarget(int idx)
         {
-            ref var node = ref _tree.Nodes[index];
+            ref var node = ref _tree.Nodes[idx];
             Debug.Assert(node.Is(ExprNodeKind.LabelTarget));
             ref var label = ref _labelsById.Map.AddOrGetValueRef(node.ChildIdx, out var found);
             if (found)
@@ -1932,69 +1896,69 @@ public struct ExprTree
             return label = SysExpr.Label(node.Type, (string)node.Obj);
         }
 
-        private object ReadObjectReference(int index)
+        private object ReadObjectReference(int idx)
         {
-            ref var node = ref _tree.Nodes[index];
+            ref var node = ref _tree.Nodes[idx];
             Debug.Assert(node.Is(ExprNodeKind.ObjectReference));
             return node.Obj;
         }
 
-        private void ReadUInt16Pair(int index, out int first, out int second)
+        private void ReadUInt16Pair(int idx, out int first, out int second)
         {
-            ref var node = ref _tree.Nodes[index];
+            ref var node = ref _tree.Nodes[idx];
             Debug.Assert(node.Is(ExprNodeKind.UInt16Pair));
             first = node.ChildIdx;
             second = node.ChildCount;
         }
 
         [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
-        private SysMemberBinding ReadMemberBinding(int index)
+        private SysMemberBinding ReadMemberBinding(int idx)
         {
-            ref var node = ref _tree.Nodes[index];
+            ref var node = ref _tree.Nodes[idx];
             var member = (System.Reflection.MemberInfo)node.Obj;
             switch (node.Kind)
             {
                 case ExprNodeKind.MemberAssignment:
-                    return SysExpr.Bind(member, ReadExpression(GetChildren(index)[0]));
+                    return SysExpr.Bind(member, ReadExpression(GetChildren(idx)[0]));
                 case ExprNodeKind.MemberMemberBinding:
                     {
-                        var childIndexes = GetChildren(index);
-                        var bindings = new SysMemberBinding[childIndexes.Count];
-                        for (var i = 0; i < childIndexes.Count; ++i)
-                            bindings[i] = ReadMemberBinding(childIndexes[i]);
+                        var childIdxs = GetChildren(idx);
+                        var bindings = new SysMemberBinding[childIdxs.Count];
+                        for (var i = 0; i < childIdxs.Count; ++i)
+                            bindings[i] = ReadMemberBinding(childIdxs[i]);
                         return SysExpr.MemberBind(member, bindings);
                     }
                 case ExprNodeKind.MemberListBinding:
                     {
-                        var childIndexes = GetChildren(index);
-                        var initializers = new SysElementInit[childIndexes.Count];
-                        for (var i = 0; i < childIndexes.Count; ++i)
-                            initializers[i] = ReadElementInit(childIndexes[i]);
+                        var childIdxs = GetChildren(idx);
+                        var initializers = new SysElementInit[childIdxs.Count];
+                        for (var i = 0; i < childIdxs.Count; ++i)
+                            initializers[i] = ReadElementInit(childIdxs[i]);
                         return SysExpr.ListBind(member, initializers);
                     }
                 default:
-                    throw new InvalidOperationException($"Node at index {index} is not a member binding node.");
+                    throw new InvalidOperationException($"Node at idx {idx} is not a member binding node.");
             }
         }
 
         [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
-        private SysElementInit ReadElementInit(int index)
+        private SysElementInit ReadElementInit(int idx)
         {
-            ref var node = ref _tree.Nodes[index];
+            ref var node = ref _tree.Nodes[idx];
             Debug.Assert(node.Is(ExprNodeKind.ElementInit));
-            return SysExpr.ElementInit((System.Reflection.MethodInfo)node.Obj, ReadExpressions(GetChildren(index)));
+            return SysExpr.ElementInit((System.Reflection.MethodInfo)node.Obj, ReadExpressions(GetChildren(idx)));
         }
 
-        private ChildList GetChildren(int index)
+        private ChildList GetChildren(int idx)
         {
-            ref var node = ref _tree.Nodes.GetSurePresentRef(index);
+            ref var node = ref _tree.Nodes.GetSurePresentRef(idx);
             var count = node.ChildCount;
             ChildList children = default;
-            var childIndex = node.ChildIdx;
+            var childIdx = node.ChildIdx;
             for (var i = 0; i < count; ++i)
             {
-                children.Add(childIndex);
-                childIndex = _tree.Nodes.GetSurePresentRef(childIndex).NextIdx;
+                children.Add(childIdx);
+                childIdx = _tree.Nodes.GetSurePresentRef(childIdx).NextIdx;
             }
             return children;
         }
@@ -2030,11 +1994,11 @@ public struct ExprTree
         }
 
         [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
-        private SysExpr[] ReadExpressions(in ChildList childIndexes)
+        private SysExpr[] ReadExpressions(in ChildList childIdxs)
         {
-            var expressions = new SysExpr[childIndexes.Count];
+            var expressions = new SysExpr[childIdxs.Count];
             for (var i = 0; i < expressions.Length; ++i)
-                expressions[i] = ReadExpression(childIndexes[i]);
+                expressions[i] = ReadExpression(childIdxs[i]);
             return expressions;
         }
 

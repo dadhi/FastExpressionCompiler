@@ -44,6 +44,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Flat_lambda_closure_parameter_usages_track_captures_from_expression_conversion();
             Flat_out_of_order_decl_block_in_lambda_compiles_correctly();
             Flat_enum_constant_stored_inline_roundtrip();
+            Flat_metadata_uses_16_bit_idx_storage();
             Flat_lambda_nodes_tracks_all_lambdas_during_direct_construction();
             Flat_lambda_nodes_tracks_deeply_nested_lambdas_during_direct_construction();
             Flat_lambda_nodes_tracks_lambdas_from_expression_conversion();
@@ -54,7 +55,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Flat_blocks_with_variables_tracked_from_expression_conversion();
             Flat_goto_and_label_nodes_tracked_from_expression_conversion();
             Flat_try_catch_nodes_tracked_from_expression_conversion();
-            return 37;
+            return 38;
         }
 
 
@@ -275,7 +276,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                         fe.New(_ctorOfB))),
                 fe.Bind(_fieldABop,
                     fe.New(_ctorOfB)));
-            fe.RootIndex = fe.Lambda<Func<object[], object>>(body, stateParamExpr);
+            fe.RootIdx = fe.Lambda<Func<object[], object>>(body, stateParamExpr);
             return fe;
         }
 
@@ -491,7 +492,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var fe = default(ExprTree);
             var p = fe.Parameter(typeof(int), "p");
             var target = fe.Label(typeof(int), "done");
-            fe.RootIndex = fe.Lambda<Func<int, int>>(
+            fe.RootIdx = fe.Lambda<Func<int, int>>(
                 fe.Block(
                     fe.Goto(target, p, typeof(int)),
                     fe.Label(target, fe.ConstantInt(0))),
@@ -550,7 +551,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var fe = default(ExprTree);
             var p = fe.ParameterOf<int>("p");
             // body uses p: ref nodes come first when the lambda is encoded/read
-            fe.RootIndex = fe.Lambda<Func<int, int>>(fe.Add(p, fe.ConstantInt(1)), p);
+            fe.RootIdx = fe.Lambda<Func<int, int>>(fe.Add(p, fe.ConstantInt(1)), p);
 
             var sysLambda = (System.Linq.Expressions.LambdaExpression)fe.ToExpression();
             var add = (System.Linq.Expressions.BinaryExpression)sysLambda.Body;
@@ -569,7 +570,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var fe = default(ExprTree);
             var p = fe.ParameterOf<int>("p");
             // p * p + p: three independent refs to the same parameter
-            fe.RootIndex = fe.Lambda<Func<int, int>>(
+            fe.RootIdx = fe.Lambda<Func<int, int>>(
                 fe.Add(fe.MakeBinary(System.Linq.Expressions.ExpressionType.Multiply, p, p), p),
                 p);
 
@@ -585,7 +586,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
         /// <summary>
         /// Block variables are read before body expressions (normal order),
-        /// but each variable index is cloned whenever it appears as a child.
+        /// but each variable idx is cloned whenever it appears as a child.
         /// All clones must resolve to the same SysParameterExpression.
         /// </summary>
         public void Flat_block_variables_and_refs_yield_same_identity()
@@ -600,7 +601,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                 fe.Assign(v1, p),
                 fe.Assign(v2, fe.Add(v1, fe.ConstantInt(1))),
                 v2);
-            fe.RootIndex = fe.Lambda<Func<int, int>>(block, p);
+            fe.RootIdx = fe.Lambda<Func<int, int>>(block, p);
 
             var sysLambda = (System.Linq.Expressions.LambdaExpression)fe.ToExpression();
             var sysBlock = (System.Linq.Expressions.BlockExpression)sysLambda.Body;
@@ -630,7 +631,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var x = fe.ParameterOf<int>("x");
             // outer: x => () => x  (inner lambda closes over outer param)
             var inner = fe.Lambda<Func<int>>(x);
-            fe.RootIndex = fe.Lambda<Func<int, Func<int>>>(inner, x);
+            fe.RootIdx = fe.Lambda<Func<int, Func<int>>>(inner, x);
 
             var sysOuter = (System.Linq.Expressions.LambdaExpression)fe.ToExpression();
             var sysInner = (System.Linq.Expressions.LambdaExpression)sysOuter.Body;
@@ -644,7 +645,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var fe = default(ExprTree);
             var x = fe.ParameterOf<int>("x");
             var inner = fe.Lambda<Func<int>>(x);
-            fe.RootIndex = fe.Lambda<Func<int, Func<int>>>(inner, x);
+            fe.RootIdx = fe.Lambda<Func<int, Func<int>>>(inner, x);
 
             Asserts.AreEqual(1, fe.LambdaClosureParameterUsages.Count);
             Asserts.AreEqual(inner, fe.LambdaClosureParameterUsages[0].LambdaIdx);
@@ -657,7 +658,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var x = fe.ParameterOf<int>("x");
             var inner = fe.Lambda<Func<int>>(x);
             var middle = fe.Lambda<Func<Func<int>>>(inner);
-            fe.RootIndex = fe.Lambda<Func<int, Func<Func<int>>>>(middle, x);
+            fe.RootIdx = fe.Lambda<Func<int, Func<Func<int>>>>(middle, x);
 
             Asserts.AreEqual(2, fe.LambdaClosureParameterUsages.Count);
 
@@ -680,7 +681,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var fe = default(ExprTree);
             var v = fe.Variable(typeof(int), "v");
             var inner = fe.Lambda<Func<int>>(v);
-            fe.RootIndex = fe.Lambda<Func<Func<int>>>(
+            fe.RootIdx = fe.Lambda<Func<Func<int>>>(
                 fe.Block(typeof(Func<int>), new[] { v },
                     fe.Assign(v, fe.ConstantInt(42)),
                     inner));
@@ -704,7 +705,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
             var nestedLambdaCount = 0;
             for (var i = 0; i < fe.LambdaNodes.Count; ++i)
-                if (fe.LambdaNodes[i] != fe.RootIndex)
+                if (fe.LambdaNodes[i] != fe.RootIdx)
                 {
                     ++nestedLambdaCount;
                     Asserts.AreEqual(fe.LambdaNodes[i], fe.LambdaClosureParameterUsages[0].LambdaIdx);
@@ -730,7 +731,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                 fe.Assign(v1, fe.MakeBinary(System.Linq.Expressions.ExpressionType.Multiply, p, fe.ConstantInt(2))),
                 fe.Assign(v2, fe.Add(v1, p)),
                 v2);
-            fe.RootIndex = fe.Lambda<Func<int, int>>(block, p);
+            fe.RootIdx = fe.Lambda<Func<int, int>>(block, p);
 
             var func = (Func<int, int>)((System.Linq.Expressions.LambdaExpression)fe.ToExpression()).Compile();
             // p=3 → v1 = 3*2=6, v2 = 6+3=9
@@ -756,7 +757,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                 var idx = fe.Constant(enumValue, typeof(TEnum));
                 Asserts.AreEqual(0, fe.ClosureConstants.Count,
                     $"{typeof(TEnum).Name}.{enumValue} should be inline (no ClosureConstants), but got {fe.ClosureConstants.Count}");
-                fe.RootIndex = fe.Lambda<Func<TEnum>>(idx);
+                fe.RootIdx = fe.Lambda<Func<TEnum>>(idx);
                 var result = (TEnum)((System.Linq.Expressions.LambdaExpression)fe.ToExpression()).Compile().DynamicInvoke()!;
                 Asserts.AreEqual(enumValue, result, $"Round-trip failed for {typeof(TEnum).Name}.{enumValue}");
             }
@@ -775,10 +776,23 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Check(UIntEnum.B);
         }
 
+        public void Flat_metadata_uses_16_bit_idx_storage()
+        {
+            Asserts.AreEqual(24, Unsafe.SizeOf<ExprNode>());
+            Asserts.AreEqual(6, Unsafe.SizeOf<LambdaClosureParameterUsage>());
+
+            var fe = default(ExprTree);
+            for (var i = 0; i < ushort.MaxValue; ++i)
+                fe.Default(typeof(int));
+
+            Asserts.AreEqual(ushort.MaxValue, fe.Nodes.Count);
+            Asserts.Throws<OverflowException>(() => fe.ParameterOf<int>("overflow"));
+        }
+
         /// <summary>
         /// When building a flat expression directly, calling Lambda() for a nested lambda
         /// and then for the root lambda should result in both indices recorded in LambdaNodes.
-        /// The root is identified by RootIndex; all others are nested.
+        /// The root is identified by RootIdx; all others are nested.
         /// </summary>
         public void Flat_lambda_nodes_tracks_all_lambdas_during_direct_construction()
         {
@@ -787,7 +801,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
             // Build: outer: x => () => x
             var inner = fe.Lambda<Func<int>>(x);
-            fe.RootIndex = fe.Lambda<Func<int, Func<int>>>(inner, x);
+            fe.RootIdx = fe.Lambda<Func<int, Func<int>>>(inner, x);
 
             // Both the root and nested lambda indices should be recorded
             Asserts.AreEqual(2, fe.LambdaNodes.Count);
@@ -798,7 +812,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             for (var i = 0; i < fe.LambdaNodes.Count; i++)
             {
                 if (fe.LambdaNodes[i] == inner) foundInner = true;
-                if (fe.LambdaNodes[i] == fe.RootIndex) foundRoot = true;
+                if (fe.LambdaNodes[i] == fe.RootIdx) foundRoot = true;
             }
             Asserts.IsTrue(foundInner);
             Asserts.IsTrue(foundRoot);
@@ -806,7 +820,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             // Nested lambdas are all LambdaNodes entries that are not the root
             var nestedCount = 0;
             for (var i = 0; i < fe.LambdaNodes.Count; i++)
-                if (fe.LambdaNodes[i] != fe.RootIndex)
+                if (fe.LambdaNodes[i] != fe.RootIdx)
                     ++nestedCount;
             Asserts.AreEqual(1, nestedCount);
         }
@@ -823,7 +837,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             // Build: outer: x => (() => (() => x))
             var innermost = fe.Lambda<Func<int>>(x);
             var middle = fe.Lambda<Func<Func<int>>>(innermost);
-            fe.RootIndex = fe.Lambda<Func<int, Func<Func<int>>>>(middle, x);
+            fe.RootIdx = fe.Lambda<Func<int, Func<Func<int>>>>(middle, x);
 
             // All three lambda nodes should be recorded
             Asserts.AreEqual(3, fe.LambdaNodes.Count);
@@ -831,7 +845,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             // Count nested (non-root) lambdas
             var nestedCount = 0;
             for (var i = 0; i < fe.LambdaNodes.Count; i++)
-                if (fe.LambdaNodes[i] != fe.RootIndex)
+                if (fe.LambdaNodes[i] != fe.RootIdx)
                     ++nestedCount;
             Asserts.AreEqual(2, nestedCount);
         }
@@ -856,13 +870,13 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             // The root lambda must be in the list
             var foundRoot = false;
             for (var i = 0; i < fe.LambdaNodes.Count; i++)
-                if (fe.LambdaNodes[i] == fe.RootIndex) { foundRoot = true; break; }
+                if (fe.LambdaNodes[i] == fe.RootIdx) { foundRoot = true; break; }
             Asserts.IsTrue(foundRoot);
 
             // Exactly one nested lambda
             var nestedCount = 0;
             for (var i = 0; i < fe.LambdaNodes.Count; i++)
-                if (fe.LambdaNodes[i] != fe.RootIndex)
+                if (fe.LambdaNodes[i] != fe.RootIdx)
                     ++nestedCount;
             Asserts.AreEqual(1, nestedCount);
         }
@@ -875,10 +889,10 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
         {
             var fe = default(ExprTree);
             var p = fe.ParameterOf<int>("p");
-            fe.RootIndex = fe.Lambda<Func<int, int>>(fe.Add(p, fe.ConstantInt(1)), p);
+            fe.RootIdx = fe.Lambda<Func<int, int>>(fe.Add(p, fe.ConstantInt(1)), p);
 
             Asserts.AreEqual(1, fe.LambdaNodes.Count);
-            Asserts.AreEqual(fe.RootIndex, fe.LambdaNodes[0]);
+            Asserts.AreEqual(fe.RootIdx, fe.LambdaNodes[0]);
         }
 
         /// <summary>
@@ -896,7 +910,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             // Block without variables: should NOT be tracked
             var blockNoVar = fe.Block(fe.Add(p, fe.ConstantInt(1)));
 
-            fe.RootIndex = fe.Lambda<Func<int, int>>(fe.Block(blockWithVar, blockNoVar), p);
+            fe.RootIdx = fe.Lambda<Func<int, int>>(fe.Block(blockWithVar, blockNoVar), p);
 
             Asserts.AreEqual(1, fe.BlocksWithVariables.Count);
             Asserts.AreEqual(blockWithVar, fe.BlocksWithVariables[0]);
@@ -914,7 +928,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var gotoNode = fe.Goto(target, p, typeof(int));
             var labelNode = fe.Label(target, fe.ConstantInt(0));
 
-            fe.RootIndex = fe.Lambda<Func<int, int>>(fe.Block(gotoNode, labelNode), p);
+            fe.RootIdx = fe.Lambda<Func<int, int>>(fe.Block(gotoNode, labelNode), p);
 
             Asserts.AreEqual(1, fe.GotoNodes.Count);
             Asserts.AreEqual(gotoNode, fe.GotoNodes[0]);
@@ -939,7 +953,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                 fe.Add(p, fe.ConstantInt(2)),
                 fe.Default(typeof(void)));
 
-            fe.RootIndex = fe.Lambda<Func<int, int>>(
+            fe.RootIdx = fe.Lambda<Func<int, int>>(
                 fe.Block(tryCatchNode, tryFinallyNode), p);
 
             Asserts.AreEqual(2, fe.TryCatchNodes.Count);

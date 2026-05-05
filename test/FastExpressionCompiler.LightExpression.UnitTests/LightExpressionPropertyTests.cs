@@ -36,7 +36,7 @@ public partial class LightExpressionTests
     {
         var fe = default(ExprTree);
         var parameter = fe.ParameterOf<int>("p");
-        fe.RootIndex = fe.Lambda<Func<int, int>>(BuildFlatInt(ref fe, spec, [parameter]), parameter);
+        fe.RootIdx = fe.Lambda<Func<int, int>>(BuildFlatInt(ref fe, spec, [parameter]), parameter);
         return fe;
     }
 
