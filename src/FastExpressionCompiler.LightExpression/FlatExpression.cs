@@ -1783,6 +1783,7 @@ public struct ExprTree : IEquatable<ExprTree>
                     continue;
                 }
 
+                var advanced = false;
                 while (true)
                 {
                     if (remainingSiblings != 0)
@@ -1790,7 +1791,8 @@ public struct ExprTree : IEquatable<ExprTree>
                         xIdx = x.NextIdx;
                         yIdx = y.NextIdx;
                         remainingSiblings--;
-                        goto ContinueTraversal;
+                        advanced = true;
+                        break;
                     }
 
                     if (_eqFrames.Count == 0)
@@ -1804,11 +1806,12 @@ public struct ExprTree : IEquatable<ExprTree>
                         xIdx = frame.XNextIdx;
                         yIdx = frame.YNextIdx;
                         remainingSiblings = frame.RemainingSiblingsAfterNode - 1;
-                        goto ContinueTraversal;
+                        advanced = true;
+                        break;
                     }
                 }
-
-            ContinueTraversal:;
+                if (advanced)
+                    continue;
             }
         }
 
