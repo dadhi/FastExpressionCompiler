@@ -1627,6 +1627,7 @@ public struct ExprTree : IEquatable<ExprTree>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static ushort ToStoredUShortIdx(int idx) => checked((ushort)idx);
 
+    /// <summary>Reconstructs the boxed constant value from the node's inline 32-bit payload.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static object ReadInlineConstantValue(Type type, uint data)
     {
