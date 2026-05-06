@@ -173,7 +173,7 @@ public struct LambdaClosureParameterUsage
 }
 
 /// <summary>Stores an expression tree as flat nodes plus separate closure constants.</summary>
-public struct ExprTree
+public struct ExprTree : IEquatable<ExprTree>
 {
     private static readonly object ClosureConstantMarker = new();
     private const byte ParameterByRefFlag = 1;
@@ -708,6 +708,27 @@ public struct ExprTree
     /// <summary>Reconstructs the flat tree as a LightExpression tree.</summary>
     [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
     public LightExpression ToLightExpression() => FastExpressionCompiler.LightExpression.FromSysExpressionConverter.ToLightExpression(ToExpression());
+
+    /// <summary>Structurally compares two flat expression trees.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool Equals(ExprTree other) =>
+        new StructuralComparer().Eq(this, other);
+
+    /// <summary>Structurally compares this tree with another object.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override bool Equals(object obj) =>
+        obj is ExprTree other && Equals(other);
+
+    /// <summary>Computes a content-addressable hash for the flat expression tree.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public override int GetHashCode() =>
+        new StructuralComparer().Hash(this);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool operator ==(ExprTree left, ExprTree right) => left.Equals(right);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static bool operator !=(ExprTree left, ExprTree right) => !left.Equals(right);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private int AddFactoryExpressionNode(Type type, object obj, ExpressionType nodeType, int child) =>
@@ -1605,6 +1626,360 @@ public struct ExprTree
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static ushort ToStoredUShortIdx(int idx) => checked((ushort)idx);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static object ReadInlineConstantValue(Type type, uint data)
+    {
+        if (type.IsEnum)
+            return Enum.ToObject(type, Type.GetTypeCode(Enum.GetUnderlyingType(type)) switch
+            {
+                TypeCode.Byte => (object)(byte)data,
+                TypeCode.SByte => (object)(sbyte)(byte)data,
+                TypeCode.Char => (object)(char)(ushort)data,
+                TypeCode.Int16 => (object)(short)(ushort)data,
+                TypeCode.UInt16 => (object)(ushort)data,
+                TypeCode.Int32 => (object)(int)data,
+                TypeCode.UInt32 => (object)data,
+                var tc => FlatExpressionThrow.UnsupportedInlineConstantType<object>(type, tc)
+            });
+        return Type.GetTypeCode(type) switch
+        {
+            TypeCode.Boolean => (object)(data != 0),
+            TypeCode.Byte => (object)(byte)data,
+            TypeCode.SByte => (object)(sbyte)(byte)data,
+            TypeCode.Char => (object)(char)(ushort)data,
+            TypeCode.Int16 => (object)(short)(ushort)data,
+            TypeCode.UInt16 => (object)(ushort)data,
+            TypeCode.Int32 => (object)(int)data,
+            TypeCode.UInt32 => (object)data,
+            TypeCode.Single => (object)FloatBits.ToFloat(data),
+            _ => FlatExpressionThrow.UnsupportedInlineConstantType<object>(type)
+        };
+    }
+
+    private struct StructuralComparer
+    {
+        private SmallList<ushort, Stack16<ushort>, NoArrayPool<ushort>> _xParameterIds, _yParameterIds;
+        private SmallList<ushort, Stack8<ushort>, NoArrayPool<ushort>> _xLabelIds, _yLabelIds;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Eq(ExprTree xTree, ExprTree yTree)
+        {
+            if (xTree.Nodes.Count == 0 || yTree.Nodes.Count == 0)
+                return xTree.Nodes.Count == yTree.Nodes.Count;
+
+            return EqNode(xTree, xTree.RootIdx, yTree, yTree.RootIdx);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int Hash(ExprTree tree) =>
+            tree.Nodes.Count == 0 ? 0 : HashNode(tree, tree.RootIdx);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int Combine(int h1, int h2) =>
+            unchecked(h1 ^ (h2 + (int)0x9e3779b9 + (h1 << 6) + (h1 >> 2)));
+
+        private bool EqNode(ExprTree xTree, int xIdx, ExprTree yTree, int yIdx)
+        {
+            ref var x = ref xTree.Nodes.GetSurePresentRef(xIdx);
+            ref var y = ref yTree.Nodes.GetSurePresentRef(yIdx);
+            if (x.Kind != y.Kind || x.NodeType != y.NodeType || x.Type != y.Type || x.Flags != y.Flags)
+                return false;
+
+            if (x.Kind == ExprNodeKind.LabelTarget)
+                return EqLabelTarget(ref x, ref y);
+
+            if (x.Kind == ExprNodeKind.CatchBlock)
+                return EqCatchBlock(xTree, xIdx, yTree, yIdx);
+
+            if (x.Kind == ExprNodeKind.UInt16Pair)
+                return x.ChildIdx == y.ChildIdx && x.ChildCount == y.ChildCount;
+
+            switch (x.NodeType)
+            {
+                case ExpressionType.Parameter:
+                    return EqParameter(ref x, ref y);
+
+                case ExpressionType.Constant:
+                    return Equals(GetConstantValue(xTree, ref x), GetConstantValue(yTree, ref y));
+
+                case ExpressionType.Lambda:
+                    return EqLambda(xTree, xIdx, yTree, yIdx);
+
+                case ExpressionType.Block:
+                    return EqBlock(xTree, xIdx, yTree, yIdx);
+            }
+
+            if (!EqObj(xTree, ref x, yTree, ref y))
+                return false;
+
+            return EqChildren(xTree.GetChildren(xIdx), xTree, yTree.GetChildren(yIdx), yTree);
+        }
+
+        private bool EqLambda(ExprTree xTree, int xIdx, ExprTree yTree, int yIdx)
+        {
+            var xChildren = xTree.GetChildren(xIdx);
+            var yChildren = yTree.GetChildren(yIdx);
+            if (xChildren.Count != yChildren.Count || xChildren.Count == 0)
+                return false;
+
+            var scopeCount = _xParameterIds.Count;
+            for (var i = 1; i < xChildren.Count; ++i)
+            {
+                ref var xp = ref xTree.Nodes.GetSurePresentRef(xChildren[i]);
+                ref var yp = ref yTree.Nodes.GetSurePresentRef(yChildren[i]);
+                if (xp.NodeType != ExpressionType.Parameter || yp.NodeType != ExpressionType.Parameter ||
+                    xp.Kind != ExprNodeKind.Expression || yp.Kind != ExprNodeKind.Expression ||
+                    xp.Type != yp.Type || xp.HasFlag(ParameterByRefFlag) != yp.HasFlag(ParameterByRefFlag))
+                    return false;
+
+                _xParameterIds.Add(ToStoredUShortIdx(xp.ChildIdx));
+                _yParameterIds.Add(ToStoredUShortIdx(yp.ChildIdx));
+            }
+
+            var eq = EqNode(xTree, xChildren[0], yTree, yChildren[0]);
+            _xParameterIds.Count = scopeCount;
+            _yParameterIds.Count = scopeCount;
+            return eq;
+        }
+
+        private bool EqBlock(ExprTree xTree, int xIdx, ExprTree yTree, int yIdx)
+        {
+            var xChildren = xTree.GetChildren(xIdx);
+            var yChildren = yTree.GetChildren(yIdx);
+            if (xChildren.Count != yChildren.Count || xChildren.Count == 0)
+                return false;
+
+            var hasVariables = xChildren.Count == 2;
+            if (hasVariables != (yChildren.Count == 2))
+                return false;
+
+            var scopeCount = _xParameterIds.Count;
+            if (hasVariables)
+            {
+                var xVariables = xTree.GetChildren(xChildren[0]);
+                var yVariables = yTree.GetChildren(yChildren[0]);
+                if (xVariables.Count != yVariables.Count)
+                    return false;
+
+                for (var i = 0; i < xVariables.Count; ++i)
+                {
+                    ref var xv = ref xTree.Nodes.GetSurePresentRef(xVariables[i]);
+                    ref var yv = ref yTree.Nodes.GetSurePresentRef(yVariables[i]);
+                    if (xv.NodeType != ExpressionType.Parameter || yv.NodeType != ExpressionType.Parameter ||
+                        xv.Kind != ExprNodeKind.Expression || yv.Kind != ExprNodeKind.Expression ||
+                        xv.Type != yv.Type || xv.HasFlag(ParameterByRefFlag) != yv.HasFlag(ParameterByRefFlag))
+                        return false;
+
+                    _xParameterIds.Add(ToStoredUShortIdx(xv.ChildIdx));
+                    _yParameterIds.Add(ToStoredUShortIdx(yv.ChildIdx));
+                }
+            }
+
+            var eq = EqNode(xTree, xChildren[xChildren.Count - 1], yTree, yChildren[yChildren.Count - 1]);
+            _xParameterIds.Count = scopeCount;
+            _yParameterIds.Count = scopeCount;
+            return eq;
+        }
+
+        private bool EqCatchBlock(ExprTree xTree, int xIdx, ExprTree yTree, int yIdx)
+        {
+            var xChildren = xTree.GetChildren(xIdx);
+            var yChildren = yTree.GetChildren(yIdx);
+            if (xChildren.Count != yChildren.Count)
+                return false;
+
+            var scopeCount = _xParameterIds.Count;
+            var childIdx = 0;
+            if (xTree.Nodes[xIdx].HasFlag(CatchHasVariableFlag))
+            {
+                ref var xv = ref xTree.Nodes.GetSurePresentRef(xChildren[childIdx]);
+                ref var yv = ref yTree.Nodes.GetSurePresentRef(yChildren[childIdx]);
+                if (xv.NodeType != ExpressionType.Parameter || yv.NodeType != ExpressionType.Parameter ||
+                    xv.Type != yv.Type || xv.HasFlag(ParameterByRefFlag) != yv.HasFlag(ParameterByRefFlag))
+                    return false;
+
+                _xParameterIds.Add(ToStoredUShortIdx(xv.ChildIdx));
+                _yParameterIds.Add(ToStoredUShortIdx(yv.ChildIdx));
+                childIdx++;
+            }
+
+            var eq = EqNode(xTree, xChildren[childIdx], yTree, yChildren[childIdx]);
+            childIdx++;
+            if (eq && xTree.Nodes[xIdx].HasFlag(CatchHasFilterFlag))
+                eq = EqNode(xTree, xChildren[childIdx], yTree, yChildren[childIdx]);
+
+            _xParameterIds.Count = scopeCount;
+            _yParameterIds.Count = scopeCount;
+            return eq;
+        }
+
+        private bool EqChildren(ChildList xChildren, ExprTree xTree, ChildList yChildren, ExprTree yTree)
+        {
+            if (xChildren.Count != yChildren.Count)
+                return false;
+
+            for (var i = 0; i < xChildren.Count; ++i)
+                if (!EqNode(xTree, xChildren[i], yTree, yChildren[i]))
+                    return false;
+
+            return true;
+        }
+
+        private bool EqParameter(ref ExprNode x, ref ExprNode y)
+        {
+            var xId = ToStoredUShortIdx(x.ChildIdx);
+            for (var i = 0; i < _xParameterIds.Count; ++i)
+                if (_xParameterIds[i] == xId)
+                    return _yParameterIds[i] == ToStoredUShortIdx(y.ChildIdx);
+
+            return x.HasFlag(ParameterByRefFlag) == y.HasFlag(ParameterByRefFlag) &&
+                Equals(x.Obj, y.Obj);
+        }
+
+        private bool EqLabelTarget(ref ExprNode x, ref ExprNode y)
+        {
+            var xId = ToStoredUShortIdx(x.ChildIdx);
+            for (var i = 0; i < _xLabelIds.Count; ++i)
+                if (_xLabelIds[i] == xId)
+                    return _yLabelIds[i] == ToStoredUShortIdx(y.ChildIdx);
+
+            _xLabelIds.Add(xId);
+            _yLabelIds.Add(ToStoredUShortIdx(y.ChildIdx));
+            return Equals(x.Obj, y.Obj);
+        }
+
+        private static bool EqObj(ExprTree xTree, ref ExprNode x, ExprTree yTree, ref ExprNode y)
+        {
+            if (ReferenceEquals(x.Obj, ExprNode.InlineValueMarker) || ReferenceEquals(y.Obj, ExprNode.InlineValueMarker))
+                return ReferenceEquals(x.Obj, ExprNode.InlineValueMarker) &&
+                    ReferenceEquals(y.Obj, ExprNode.InlineValueMarker) &&
+                    x.InlineValue == y.InlineValue;
+
+            if (ReferenceEquals(x.Obj, ClosureConstantMarker) || ReferenceEquals(y.Obj, ClosureConstantMarker))
+                return Equals(GetConstantValue(xTree, ref x), GetConstantValue(yTree, ref y));
+
+            return ReferenceEquals(x.Obj, y.Obj) || Equals(x.Obj, y.Obj);
+        }
+
+        private int HashNode(ExprTree tree, int idx)
+        {
+            ref var node = ref tree.Nodes.GetSurePresentRef(idx);
+            if (node.Kind == ExprNodeKind.LabelTarget)
+                return Combine(Combine((int)node.Kind, node.Type?.GetHashCode() ?? 0), node.Obj?.GetHashCode() ?? 0);
+
+            if (node.Kind == ExprNodeKind.CatchBlock)
+                return HashCatchBlock(tree, idx, ref node);
+
+            if (node.Kind == ExprNodeKind.UInt16Pair)
+                return Combine(Combine((int)node.Kind, node.ChildIdx), node.ChildCount);
+
+            var h = Combine(Combine((int)node.Kind, (int)node.NodeType), node.Type?.GetHashCode() ?? 0);
+            h = Combine(h, node.Flags);
+
+            switch (node.NodeType)
+            {
+                case ExpressionType.Parameter:
+                    {
+                        var id = ToStoredUShortIdx(node.ChildIdx);
+                        for (var i = 0; i < _xParameterIds.Count; ++i)
+                            if (_xParameterIds[i] == id)
+                                return Combine(h, i);
+                        return Combine(h, node.Obj?.GetHashCode() ?? 0);
+                    }
+
+                case ExpressionType.Constant:
+                    return Combine(h, GetConstantValue(tree, ref node)?.GetHashCode() ?? 0);
+
+                case ExpressionType.Lambda:
+                    return HashLambda(tree, idx, h);
+
+                case ExpressionType.Block:
+                    return HashBlock(tree, idx, h);
+            }
+
+            h = Combine(h, GetObjHashCode(tree, ref node));
+            var children = tree.GetChildren(idx);
+            for (var i = 0; i < children.Count; ++i)
+                h = Combine(h, HashNode(tree, children[i]));
+            return h;
+        }
+
+        private int HashLambda(ExprTree tree, int idx, int h)
+        {
+            var children = tree.GetChildren(idx);
+            var scopeCount = _xParameterIds.Count;
+            for (var i = 1; i < children.Count; ++i)
+            {
+                ref var parameter = ref tree.Nodes.GetSurePresentRef(children[i]);
+                _xParameterIds.Add(ToStoredUShortIdx(parameter.ChildIdx));
+                h = Combine(h, Combine(parameter.Type?.GetHashCode() ?? 0, parameter.HasFlag(ParameterByRefFlag) ? 1 : 0));
+            }
+
+            h = Combine(h, HashNode(tree, children[0]));
+            _xParameterIds.Count = scopeCount;
+            return h;
+        }
+
+        private int HashBlock(ExprTree tree, int idx, int h)
+        {
+            var children = tree.GetChildren(idx);
+            var scopeCount = _xParameterIds.Count;
+            if (children.Count == 2)
+            {
+                var variables = tree.GetChildren(children[0]);
+                for (var i = 0; i < variables.Count; ++i)
+                {
+                    ref var variable = ref tree.Nodes.GetSurePresentRef(variables[i]);
+                    _xParameterIds.Add(ToStoredUShortIdx(variable.ChildIdx));
+                    h = Combine(h, Combine(variable.Type?.GetHashCode() ?? 0, variable.HasFlag(ParameterByRefFlag) ? 1 : 0));
+                }
+            }
+
+            h = Combine(h, HashNode(tree, children[children.Count - 1]));
+            _xParameterIds.Count = scopeCount;
+            return h;
+        }
+
+        private int HashCatchBlock(ExprTree tree, int idx, ref ExprNode node)
+        {
+            var h = Combine(Combine((int)node.Kind, node.Type?.GetHashCode() ?? 0), node.Flags);
+            var children = tree.GetChildren(idx);
+            var scopeCount = _xParameterIds.Count;
+            var childIdx = 0;
+            if (node.HasFlag(CatchHasVariableFlag))
+            {
+                ref var variable = ref tree.Nodes.GetSurePresentRef(children[childIdx++]);
+                _xParameterIds.Add(ToStoredUShortIdx(variable.ChildIdx));
+                h = Combine(h, Combine(variable.Type?.GetHashCode() ?? 0, variable.HasFlag(ParameterByRefFlag) ? 1 : 0));
+            }
+
+            h = Combine(h, HashNode(tree, children[childIdx++]));
+            if (node.HasFlag(CatchHasFilterFlag))
+                h = Combine(h, HashNode(tree, children[childIdx]));
+
+            _xParameterIds.Count = scopeCount;
+            return h;
+        }
+
+        private static int GetObjHashCode(ExprTree tree, ref ExprNode node)
+        {
+            if (ReferenceEquals(node.Obj, ExprNode.InlineValueMarker))
+                return GetConstantValue(tree, ref node)?.GetHashCode() ?? 0;
+            if (ReferenceEquals(node.Obj, ClosureConstantMarker))
+                return GetConstantValue(tree, ref node)?.GetHashCode() ?? 0;
+            return node.Obj?.GetHashCode() ?? 0;
+        }
+
+        private static object GetConstantValue(ExprTree tree, ref ExprNode node)
+        {
+            if (ReferenceEquals(node.Obj, ClosureConstantMarker))
+                return tree.ClosureConstants[node.ChildIdx];
+            if (ReferenceEquals(node.Obj, ExprNode.InlineValueMarker))
+                return ReadInlineConstantValue(node.Type, node.InlineValue);
+            return node.Obj;
+        }
+    }
 
     /// <summary>Reconstructs System.Linq nodes from the flat representation while reusing parameter and label identities.</summary>
     private struct Reader

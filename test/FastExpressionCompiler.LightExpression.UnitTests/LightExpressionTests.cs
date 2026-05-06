@@ -55,7 +55,11 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Flat_blocks_with_variables_tracked_from_expression_conversion();
             Flat_goto_and_label_nodes_tracked_from_expression_conversion();
             Flat_try_catch_nodes_tracked_from_expression_conversion();
-            return 38;
+            Flat_equal_lambdas_with_different_parameter_names_are_structurally_equal_and_hash_equal();
+            Flat_equal_nested_lambdas_with_captures_are_structurally_equal_and_hash_equal();
+            Flat_standalone_parameters_use_name_in_structural_equality();
+            Flat_structural_hash_supports_dictionary_lookup();
+            return 42;
         }
 
 
@@ -1022,6 +1026,57 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var fe = sysLambda.ToFlatExpression();
 
             Asserts.AreEqual(1, fe.TryCatchNodes.Count);
+        }
+
+        public void Flat_equal_lambdas_with_different_parameter_names_are_structurally_equal_and_hash_equal()
+        {
+            var x = Parameter(typeof(int), "x");
+            var left = Lambda<Func<int, int>>(Add(x, Constant(1)), x).ToFlatExpression();
+
+            var y = Parameter(typeof(int), "y");
+            var right = Lambda<Func<int, int>>(Add(y, Constant(1)), y).ToFlatExpression();
+
+            Asserts.IsTrue(left.Equals(right));
+            Asserts.IsTrue(left == right);
+            Asserts.AreEqual(left.GetHashCode(), right.GetHashCode());
+        }
+
+        public void Flat_equal_nested_lambdas_with_captures_are_structurally_equal_and_hash_equal()
+        {
+            var x = Parameter(typeof(int), "x");
+            var left = Lambda<Func<int, Func<int>>>(
+                Lambda<Func<int>>(Add(x, Constant(1))),
+                x).ToFlatExpression();
+
+            var y = Parameter(typeof(int), "value");
+            var right = Lambda<Func<int, Func<int>>>(
+                Lambda<Func<int>>(Add(y, Constant(1))),
+                y).ToFlatExpression();
+
+            Asserts.IsTrue(left.Equals(right));
+            Asserts.AreEqual(left.GetHashCode(), right.GetHashCode());
+        }
+
+        public void Flat_standalone_parameters_use_name_in_structural_equality()
+        {
+            var left = Parameter(typeof(int), "x").ToFlatExpression();
+            var right = Parameter(typeof(int), "y").ToFlatExpression();
+
+            Asserts.IsFalse(left.Equals(right));
+        }
+
+        public void Flat_structural_hash_supports_dictionary_lookup()
+        {
+            var x = Parameter(typeof(int), "x");
+            var key = Lambda<Func<int, int>>(Add(x, Constant(1)), x).ToFlatExpression();
+            var dict = new Dictionary<ExprTree, string> { [key] = "found" };
+
+            var lookup = default(ExprTree);
+            var y = lookup.ParameterOf<int>("arg");
+            lookup.RootIdx = lookup.Lambda<Func<int, int>>(lookup.Add(y, lookup.ConstantInt(1)), y);
+
+            Asserts.IsTrue(dict.TryGetValue(lookup, out var value));
+            Asserts.AreEqual("found", value);
         }
     }
 }
