@@ -1697,7 +1697,7 @@ public struct ExprTree : IEquatable<ExprTree>
                             break;
 
                         case ExpressionType.Constant:
-                            if (!ConstantEquals(ref xTree, ref x, ref yTree, ref y))
+                            if (!AreConstantsEqual(ref xTree, ref x, ref yTree, ref y))
                                 return false;
                             break;
 
@@ -1987,7 +1987,7 @@ public struct ExprTree : IEquatable<ExprTree>
             return GetStoredConstantValue(ref tree, ref node)?.GetHashCode() ?? 0;
         }
 
-        private static bool ConstantEquals(ref ExprTree xTree, ref ExprNode x, ref ExprTree yTree, ref ExprNode y)
+        private static bool AreConstantsEqual(ref ExprTree xTree, ref ExprNode x, ref ExprTree yTree, ref ExprNode y)
         {
             var xObj = GetStoredConstantValue(ref xTree, ref x);
             var yObj = GetStoredConstantValue(ref yTree, ref y);
