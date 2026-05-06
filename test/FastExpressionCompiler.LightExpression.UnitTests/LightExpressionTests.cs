@@ -56,7 +56,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Flat_goto_and_label_nodes_tracked_from_expression_conversion();
             Flat_try_catch_nodes_tracked_from_expression_conversion();
             Flat_expression_created_from_conversion_is_in_canonical_order();
-            Flat_expression_put_in_order_compacts_reachable_nodes_and_rebuilds_metadata();
+            Flat_expression_put_in_order_rebuilds_direct_helper_tree_with_compact_indexes();
             return 40;
         }
 
@@ -1033,42 +1033,44 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.IsTrue(fe.IsInOrder());
         }
 
-        public void Flat_expression_put_in_order_compacts_reachable_nodes_and_rebuilds_metadata()
+        public void Flat_expression_put_in_order_rebuilds_direct_helper_tree_with_compact_indexes()
         {
-            var valueHolder = new S { Value = "ordered" };
-
             var fe = default(ExprTree);
             var parameter = fe.ParameterOf<int>("p");
-            _ = fe.Constant(new S { Value = "unreachable_constant" }, typeof(S));
-            _ = fe.Label(typeof(int), "unreachable_label");
-            var returnTarget = fe.Label(typeof(string), "done");
-            var closureValue = fe.Field(fe.Constant(valueHolder, typeof(S)), typeof(S).GetField(nameof(S.Value)));
-            var tryCatch = fe.TryCatch(
-                fe.Add(parameter, fe.ConstantInt(1)),
-                fe.Catch(typeof(Exception), fe.ConstantInt(-1)));
-            fe.RootIdx = fe.Lambda<Func<int, string>>(
-                fe.Block(typeof(string), new[] { fe.Variable(typeof(int), "temp") },
-                    tryCatch,
-                    fe.Label(returnTarget, closureValue)),
-                parameter);
+            var one = fe.ConstantInt(1);
+            var add = fe.Add(parameter, one);
+            fe.RootIdx = fe.Lambda<Func<int, int>>(add, parameter);
 
+            Asserts.AreEqual(0, parameter);
+            Asserts.AreEqual(1, one);
+            Asserts.AreEqual(4, add);
+            Asserts.AreEqual(6, fe.RootIdx);
+            Asserts.AreEqual(7, fe.Nodes.Count);
             Asserts.IsFalse(fe.IsInOrder());
-            Asserts.AreEqual(2, fe.ClosureConstants.Count);
 
             var removedNodes = fe.PutInOrder();
 
-            Asserts.IsTrue(removedNodes >= 2);
+            Asserts.AreEqual(2, removedNodes);
             Asserts.IsTrue(fe.IsInOrder());
-            Asserts.AreEqual(fe.Nodes.Count - 1, fe.RootIdx);
-            Asserts.AreEqual(1, fe.ClosureConstants.Count);
-            Asserts.AreSame(valueHolder, fe.ClosureConstants[0]);
+            Asserts.AreEqual(5, fe.Nodes.Count);
+            Asserts.AreEqual(4, fe.RootIdx);
             Asserts.AreEqual(1, fe.LambdaNodes.Count);
             Asserts.AreEqual(fe.RootIdx, fe.LambdaNodes[0]);
-            Asserts.AreEqual(1, fe.BlocksWithVariables.Count);
-            Asserts.AreEqual(1, fe.LabelNodes.Count);
             Asserts.AreEqual(0, fe.GotoNodes.Count);
-            Asserts.AreEqual(1, fe.TryCatchNodes.Count);
-            Asserts.AreEqual("ordered", ((LambdaExpression)fe.ToLightExpression()).CompileFast<Func<int, string>>(true)(41));
+            Asserts.AreEqual(0, fe.LabelNodes.Count);
+            Asserts.AreEqual(0, fe.TryCatchNodes.Count);
+            Asserts.AreEqual(ExpressionType.Parameter, fe.Nodes[0].NodeType);
+            Asserts.AreEqual(ExpressionType.Constant, fe.Nodes[1].NodeType);
+            Asserts.AreEqual(ExpressionType.Add, fe.Nodes[2].NodeType);
+            Asserts.AreEqual(ExpressionType.Parameter, fe.Nodes[3].NodeType);
+            Asserts.AreEqual(ExpressionType.Lambda, fe.Nodes[4].NodeType);
+            Asserts.AreEqual(0, fe.Nodes[2].ChildIdx);
+            Asserts.AreEqual(2, fe.Nodes[2].ChildCount);
+            Asserts.AreEqual(1, fe.Nodes[0].NextIdx);
+            Asserts.AreEqual(2, fe.Nodes[4].ChildIdx);
+            Asserts.AreEqual(2, fe.Nodes[4].ChildCount);
+            Asserts.AreEqual(3, fe.Nodes[2].NextIdx);
+            Asserts.AreEqual(42, ((LambdaExpression)fe.ToLightExpression()).CompileFast<Func<int, int>>(true)(41));
         }
     }
 }
