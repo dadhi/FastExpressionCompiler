@@ -61,6 +61,7 @@ public struct ExprNode
     private const uint MetaKeepWithoutNext = 0xFFFF0000u;
     // _data layout: bits [31:16]=ChildCount | [15:0]=ChildIdx  (or full uint for inline constants)
     private const int DataCountShift = 16;
+    private const uint DataKeepWithoutChildIdx = 0xFFFF0000u;
     private const uint DataIdxMask = 0xFFFFu;
     private const int FlagsShift = 4;
     private const uint KindMask = 0x0Fu;
@@ -138,6 +139,19 @@ public struct ExprNode
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool HasFlag(byte flag) => (Flags & flag) != 0;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal bool HasSameHeaderExceptNext(ref ExprNode other) =>
+        Type == other.Type && (_meta & MetaKeepWithoutNext) == (other._meta & MetaKeepWithoutNext);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal bool HasSameShapeExceptLinks(ref ExprNode other) =>
+        HasSameHeaderExceptNext(ref other) &&
+        (_data & DataKeepWithoutChildIdx) == (other._data & DataKeepWithoutChildIdx);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal bool HasSameShapeExceptNext(ref ExprNode other) =>
+        HasSameHeaderExceptNext(ref other) && _data == other._data;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool ShouldCloneWhenLinked() =>
@@ -1646,7 +1660,17 @@ public struct ExprTree : IEquatable<ExprTree>
             {
                 ref var x = ref xTree.Nodes.GetSurePresentRef(xIdx);
                 ref var y = ref yTree.Nodes.GetSurePresentRef(yIdx);
-                if (x.Kind != y.Kind || x.NodeType != y.NodeType || x.Type != y.Type || x.Flags != y.Flags)
+                if (x.Kind == ExprNodeKind.UInt16Pair)
+                {
+                    if (!x.HasSameShapeExceptNext(ref y))
+                        return false;
+                }
+                else if (x.NodeType == ExpressionType.Constant)
+                {
+                    if (!x.HasSameHeaderExceptNext(ref y))
+                        return false;
+                }
+                else if (!x.HasSameShapeExceptLinks(ref y))
                     return false;
 
                 var descendX = 0;
@@ -1655,122 +1679,117 @@ public struct ExprTree : IEquatable<ExprTree>
                 var restoreXParameterCount = -1;
                 var restoreYParameterCount = -1;
 
-                if (x.Kind == ExprNodeKind.LabelTarget)
+                if (x.Kind != ExprNodeKind.UInt16Pair)
                 {
-                    if (!EqLabelTarget(ref x, ref y))
-                        return false;
-                }
-                else if (x.Kind == ExprNodeKind.UInt16Pair)
-                {
-                    if (x.ChildIdx != y.ChildIdx || x.ChildCount != y.ChildCount)
-                        return false;
-                }
-                else if (x.Kind == ExprNodeKind.CatchBlock)
-                {
-                    if (x.ChildCount != y.ChildCount)
-                        return false;
-
-                    restoreXParameterCount = _xParameterIds.Count;
-                    restoreYParameterCount = _yParameterIds.Count;
-                    descendX = x.ChildIdx;
-                    descendY = y.ChildIdx;
-                    descendChildCount = x.ChildCount - (x.HasFlag(CatchHasVariableFlag) ? 1 : 0);
-                    if (x.HasFlag(CatchHasVariableFlag))
+                    if (x.Kind == ExprNodeKind.LabelTarget)
                     {
-                        ref var xv = ref xTree.Nodes.GetSurePresentRef(descendX);
-                        ref var yv = ref yTree.Nodes.GetSurePresentRef(descendY);
-                        if (!AreEquivalentParameterDeclarations(ref xv, ref yv))
+                        if (!EqLabelTarget(ref x, ref y))
                             return false;
-                        _xParameterIds.Add(ToStoredUShortIdx(xv.ChildIdx));
-                        _yParameterIds.Add(ToStoredUShortIdx(yv.ChildIdx));
-                        descendX = xv.NextIdx;
-                        descendY = yv.NextIdx;
                     }
-                }
-                else
-                {
-                    switch (x.NodeType)
+                    else if (x.Kind == ExprNodeKind.CatchBlock)
                     {
-                        case ExpressionType.Parameter:
-                            if (!EqParameter(ref x, ref y))
+                        restoreXParameterCount = _xParameterIds.Count;
+                        restoreYParameterCount = _yParameterIds.Count;
+                        descendX = x.ChildIdx;
+                        descendY = y.ChildIdx;
+                        descendChildCount = x.ChildCount - (x.HasFlag(CatchHasVariableFlag) ? 1 : 0);
+                        if (x.HasFlag(CatchHasVariableFlag))
+                        {
+                            ref var xv = ref xTree.Nodes.GetSurePresentRef(descendX);
+                            ref var yv = ref yTree.Nodes.GetSurePresentRef(descendY);
+                            if (!AreEquivalentParameterDeclarations(ref xv, ref yv))
                                 return false;
-                            break;
-
-                        case ExpressionType.Constant:
-                            if (!AreConstantsEqual(ref xTree, ref x, ref yTree, ref y))
-                                return false;
-                            break;
-
-                        case ExpressionType.Lambda:
-                            if (x.ChildCount != y.ChildCount || x.ChildCount == 0)
-                                return false;
-
-                            restoreXParameterCount = _xParameterIds.Count;
-                            restoreYParameterCount = _yParameterIds.Count;
-                            descendX = x.ChildIdx;
-                            descendY = y.ChildIdx;
-                            descendChildCount = 1;
-                            var xParameterIdx = xTree.Nodes.GetSurePresentRef(descendX).NextIdx;
-                            var yParameterIdx = yTree.Nodes.GetSurePresentRef(descendY).NextIdx;
-                            for (var i = 1; i < x.ChildCount; ++i)
-                            {
-                                ref var xp = ref xTree.Nodes.GetSurePresentRef(xParameterIdx);
-                                ref var yp = ref yTree.Nodes.GetSurePresentRef(yParameterIdx);
-                                if (!AreEquivalentParameterDeclarations(ref xp, ref yp))
+                            _xParameterIds.Add(ToStoredUShortIdx(xv.ChildIdx));
+                            _yParameterIds.Add(ToStoredUShortIdx(yv.ChildIdx));
+                            descendX = xv.NextIdx;
+                            descendY = yv.NextIdx;
+                        }
+                    }
+                    else
+                    {
+                        switch (x.NodeType)
+                        {
+                            case ExpressionType.Parameter:
+                                if (!EqParameter(ref x, ref y))
                                     return false;
-                                _xParameterIds.Add(ToStoredUShortIdx(xp.ChildIdx));
-                                _yParameterIds.Add(ToStoredUShortIdx(yp.ChildIdx));
-                                xParameterIdx = xp.NextIdx;
-                                yParameterIdx = yp.NextIdx;
-                            }
-                            break;
+                                break;
 
-                        case ExpressionType.Block:
-                            if (x.ChildCount != y.ChildCount || x.ChildCount == 0)
-                                return false;
+                            case ExpressionType.Constant:
+                                if (!AreConstantsEqual(ref xTree, ref x, ref yTree, ref y))
+                                    return false;
+                                break;
 
-                            restoreXParameterCount = _xParameterIds.Count;
-                            restoreYParameterCount = _yParameterIds.Count;
-                            descendX = x.ChildIdx;
-                            descendY = y.ChildIdx;
-                            descendChildCount = 1;
-                            if (x.ChildCount == 2)
-                            {
-                                ref var xVariables = ref xTree.Nodes.GetSurePresentRef(descendX);
-                                ref var yVariables = ref yTree.Nodes.GetSurePresentRef(descendY);
-                                if (xVariables.Kind != ExprNodeKind.ChildList || yVariables.Kind != ExprNodeKind.ChildList ||
-                                    xVariables.ChildCount != yVariables.ChildCount)
+                            case ExpressionType.Lambda:
+                                if (x.ChildCount == 0)
                                     return false;
 
-                                var xVariableIdx = xVariables.ChildIdx;
-                                var yVariableIdx = yVariables.ChildIdx;
-                                for (var i = 0; i < xVariables.ChildCount; ++i)
-                                {
-                                    ref var xv = ref xTree.Nodes.GetSurePresentRef(xVariableIdx);
-                                    ref var yv = ref yTree.Nodes.GetSurePresentRef(yVariableIdx);
-                                    if (!AreEquivalentParameterDeclarations(ref xv, ref yv))
-                                        return false;
-                                    _xParameterIds.Add(ToStoredUShortIdx(xv.ChildIdx));
-                                    _yParameterIds.Add(ToStoredUShortIdx(yv.ChildIdx));
-                                    xVariableIdx = xv.NextIdx;
-                                    yVariableIdx = yv.NextIdx;
-                                }
-
-                                descendX = xVariables.NextIdx;
-                                descendY = yVariables.NextIdx;
-                            }
-                            break;
-
-                        default:
-                            if (x.ChildCount != y.ChildCount || !EqObj(ref x, ref y))
-                                return false;
-                            if (x.ChildCount != 0)
-                            {
+                                restoreXParameterCount = _xParameterIds.Count;
+                                restoreYParameterCount = _yParameterIds.Count;
                                 descendX = x.ChildIdx;
                                 descendY = y.ChildIdx;
-                                descendChildCount = x.ChildCount;
-                            }
-                            break;
+                                descendChildCount = 1;
+                                var xParameterIdx = xTree.Nodes.GetSurePresentRef(descendX).NextIdx;
+                                var yParameterIdx = yTree.Nodes.GetSurePresentRef(descendY).NextIdx;
+                                for (var i = 1; i < x.ChildCount; ++i)
+                                {
+                                    ref var xp = ref xTree.Nodes.GetSurePresentRef(xParameterIdx);
+                                    ref var yp = ref yTree.Nodes.GetSurePresentRef(yParameterIdx);
+                                    if (!AreEquivalentParameterDeclarations(ref xp, ref yp))
+                                        return false;
+                                    _xParameterIds.Add(ToStoredUShortIdx(xp.ChildIdx));
+                                    _yParameterIds.Add(ToStoredUShortIdx(yp.ChildIdx));
+                                    xParameterIdx = xp.NextIdx;
+                                    yParameterIdx = yp.NextIdx;
+                                }
+                                break;
+
+                            case ExpressionType.Block:
+                                if (x.ChildCount == 0)
+                                    return false;
+
+                                restoreXParameterCount = _xParameterIds.Count;
+                                restoreYParameterCount = _yParameterIds.Count;
+                                descendX = x.ChildIdx;
+                                descendY = y.ChildIdx;
+                                descendChildCount = 1;
+                                if (x.ChildCount == 2)
+                                {
+                                    ref var xVariables = ref xTree.Nodes.GetSurePresentRef(descendX);
+                                    ref var yVariables = ref yTree.Nodes.GetSurePresentRef(descendY);
+                                    if (xVariables.Kind != ExprNodeKind.ChildList || yVariables.Kind != ExprNodeKind.ChildList ||
+                                        xVariables.ChildCount != yVariables.ChildCount)
+                                        return false;
+
+                                    var xVariableIdx = xVariables.ChildIdx;
+                                    var yVariableIdx = yVariables.ChildIdx;
+                                    for (var i = 0; i < xVariables.ChildCount; ++i)
+                                    {
+                                        ref var xv = ref xTree.Nodes.GetSurePresentRef(xVariableIdx);
+                                        ref var yv = ref yTree.Nodes.GetSurePresentRef(yVariableIdx);
+                                        if (!AreEquivalentParameterDeclarations(ref xv, ref yv))
+                                            return false;
+                                        _xParameterIds.Add(ToStoredUShortIdx(xv.ChildIdx));
+                                        _yParameterIds.Add(ToStoredUShortIdx(yv.ChildIdx));
+                                        xVariableIdx = xv.NextIdx;
+                                        yVariableIdx = yv.NextIdx;
+                                    }
+
+                                    descendX = xVariables.NextIdx;
+                                    descendY = yVariables.NextIdx;
+                                }
+                                break;
+
+                            default:
+                                if (!EqObj(ref x, ref y))
+                                    return false;
+                                if (x.ChildCount != 0)
+                                {
+                                    descendX = x.ChildIdx;
+                                    descendY = y.ChildIdx;
+                                    descendChildCount = x.ChildCount;
+                                }
+                                break;
+                        }
                     }
                 }
 
@@ -1848,9 +1867,9 @@ public struct ExprTree : IEquatable<ExprTree>
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool AreEquivalentParameterDeclarations(ref ExprNode x, ref ExprNode y) =>
-            x.NodeType == ExpressionType.Parameter && y.NodeType == ExpressionType.Parameter &&
-            x.Kind == ExprNodeKind.Expression && y.Kind == ExprNodeKind.Expression &&
-            x.Type == y.Type && x.HasFlag(ParameterByRefFlag) == y.HasFlag(ParameterByRefFlag);
+            x.NodeType == ExpressionType.Parameter &&
+            y.NodeType == ExpressionType.Parameter &&
+            x.HasSameShapeExceptLinks(ref y);
 
         private static bool EqObj(ref ExprNode x, ref ExprNode y)
         {
