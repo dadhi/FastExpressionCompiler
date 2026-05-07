@@ -738,9 +738,11 @@ public struct ExprTree : IEquatable<ExprTree>
     public override int GetHashCode() =>
         new StructuralComparer().Hash(ref this);
 
+    /// <summary>Determines whether two flat expression trees are structurally equal.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool operator ==(ExprTree left, ExprTree right) => left.Equals(right);
 
+    /// <summary>Determines whether two flat expression trees are not structurally equal.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static bool operator !=(ExprTree left, ExprTree right) => !left.Equals(right);
 
