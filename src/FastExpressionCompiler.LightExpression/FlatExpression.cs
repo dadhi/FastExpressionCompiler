@@ -288,7 +288,7 @@ public struct ExprTree : IEquatable<ExprTree>
 
     /// <summary>Adds an <see cref="int"/> constant node.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public int ConstantInt(int value) => AddRawExpressionNode(typeof(int), value, ExpressionType.Constant);
+    public int ConstantInt(int value) => AddInlineConstantNode(typeof(int), unchecked((uint)value));
 
     /// <summary>Adds a typed constant node.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2012,37 +2012,27 @@ public struct ExprTree : IEquatable<ExprTree>
         {
             var xObj = GetStoredConstantValue(ref xTree, ref x);
             var yObj = GetStoredConstantValue(ref yTree, ref y);
-            if (!ReferenceEquals(x.Obj, ExprNode.InlineValueMarker) && !ReferenceEquals(y.Obj, ExprNode.InlineValueMarker))
+            var xInline = ReferenceEquals(x.Obj, ExprNode.InlineValueMarker);
+            var yInline = ReferenceEquals(y.Obj, ExprNode.InlineValueMarker);
+            if (!(xInline && yInline))
                 return ReferenceEquals(xObj, yObj) || Equals(xObj, yObj);
 
             if (x.Type.IsEnum)
             {
-                if (ReferenceEquals(x.Obj, ExprNode.InlineValueMarker) && ReferenceEquals(y.Obj, ExprNode.InlineValueMarker))
-                    return x.InlineValue == y.InlineValue;
-                return Type.GetTypeCode(Enum.GetUnderlyingType(x.Type)) switch
-                {
-                    TypeCode.Byte => GetInlineOrConvertedByte(ref xTree, ref x) == GetInlineOrConvertedByte(ref yTree, ref y),
-                    TypeCode.SByte => GetInlineOrConvertedSByte(ref xTree, ref x) == GetInlineOrConvertedSByte(ref yTree, ref y),
-                    TypeCode.Char => GetInlineOrConvertedChar(ref xTree, ref x) == GetInlineOrConvertedChar(ref yTree, ref y),
-                    TypeCode.Int16 => GetInlineOrConvertedInt16(ref xTree, ref x) == GetInlineOrConvertedInt16(ref yTree, ref y),
-                    TypeCode.UInt16 => GetInlineOrConvertedUInt16(ref xTree, ref x) == GetInlineOrConvertedUInt16(ref yTree, ref y),
-                    TypeCode.Int32 => GetInlineOrConvertedInt32(ref xTree, ref x) == GetInlineOrConvertedInt32(ref yTree, ref y),
-                    TypeCode.UInt32 => GetInlineOrConvertedUInt32(ref xTree, ref x) == GetInlineOrConvertedUInt32(ref yTree, ref y),
-                    var tc => FlatExpressionThrow.UnsupportedInlineConstantType<bool>(x.Type, tc)
-                };
+                return x.InlineValue == y.InlineValue;
             }
 
             return Type.GetTypeCode(x.Type) switch
             {
-                TypeCode.Boolean => GetInlineOrStoredBoolean(ref xTree, ref x) == GetInlineOrStoredBoolean(ref yTree, ref y),
-                TypeCode.Byte => GetInlineOrStoredByte(ref xTree, ref x) == GetInlineOrStoredByte(ref yTree, ref y),
-                TypeCode.SByte => GetInlineOrStoredSByte(ref xTree, ref x) == GetInlineOrStoredSByte(ref yTree, ref y),
-                TypeCode.Char => GetInlineOrStoredChar(ref xTree, ref x) == GetInlineOrStoredChar(ref yTree, ref y),
-                TypeCode.Int16 => GetInlineOrStoredInt16(ref xTree, ref x) == GetInlineOrStoredInt16(ref yTree, ref y),
-                TypeCode.UInt16 => GetInlineOrStoredUInt16(ref xTree, ref x) == GetInlineOrStoredUInt16(ref yTree, ref y),
-                TypeCode.Int32 => GetInlineOrStoredInt32(ref xTree, ref x) == GetInlineOrStoredInt32(ref yTree, ref y),
-                TypeCode.UInt32 => GetInlineOrStoredUInt32(ref xTree, ref x) == GetInlineOrStoredUInt32(ref yTree, ref y),
-                TypeCode.Single => GetInlineOrStoredSingle(ref xTree, ref x).Equals(GetInlineOrStoredSingle(ref yTree, ref y)),
+                TypeCode.Boolean => GetInlineBoolean(ref x) == GetInlineBoolean(ref y),
+                TypeCode.Byte => GetInlineByte(ref x) == GetInlineByte(ref y),
+                TypeCode.SByte => GetInlineSByte(ref x) == GetInlineSByte(ref y),
+                TypeCode.Char => GetInlineChar(ref x) == GetInlineChar(ref y),
+                TypeCode.Int16 => GetInlineInt16(ref x) == GetInlineInt16(ref y),
+                TypeCode.UInt16 => GetInlineUInt16(ref x) == GetInlineUInt16(ref y),
+                TypeCode.Int32 => GetInlineInt32(ref x) == GetInlineInt32(ref y),
+                TypeCode.UInt32 => GetInlineUInt32(ref x) == GetInlineUInt32(ref y),
+                TypeCode.Single => GetInlineSingle(ref x).Equals(GetInlineSingle(ref y)),
                 _ => ReferenceEquals(xObj, yObj) || Equals(xObj, yObj)
             };
         }
@@ -2081,68 +2071,31 @@ public struct ExprTree : IEquatable<ExprTree>
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool GetInlineOrStoredBoolean(ref ExprTree tree, ref ExprNode node) =>
-            ReferenceEquals(node.Obj, ExprNode.InlineValueMarker) ? node.InlineValue != 0 : (bool)GetStoredConstantValue(ref tree, ref node);
+        private static bool GetInlineBoolean(ref ExprNode node) => node.InlineValue != 0;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static byte GetInlineOrStoredByte(ref ExprTree tree, ref ExprNode node) =>
-            ReferenceEquals(node.Obj, ExprNode.InlineValueMarker) ? (byte)node.InlineValue : (byte)GetStoredConstantValue(ref tree, ref node);
+        private static byte GetInlineByte(ref ExprNode node) => (byte)node.InlineValue;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static sbyte GetInlineOrStoredSByte(ref ExprTree tree, ref ExprNode node) =>
-            ReferenceEquals(node.Obj, ExprNode.InlineValueMarker) ? (sbyte)(byte)node.InlineValue : (sbyte)GetStoredConstantValue(ref tree, ref node);
+        private static sbyte GetInlineSByte(ref ExprNode node) => (sbyte)(byte)node.InlineValue;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static char GetInlineOrStoredChar(ref ExprTree tree, ref ExprNode node) =>
-            ReferenceEquals(node.Obj, ExprNode.InlineValueMarker) ? (char)(ushort)node.InlineValue : (char)GetStoredConstantValue(ref tree, ref node);
+        private static char GetInlineChar(ref ExprNode node) => (char)(ushort)node.InlineValue;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static short GetInlineOrStoredInt16(ref ExprTree tree, ref ExprNode node) =>
-            ReferenceEquals(node.Obj, ExprNode.InlineValueMarker) ? (short)(ushort)node.InlineValue : (short)GetStoredConstantValue(ref tree, ref node);
+        private static short GetInlineInt16(ref ExprNode node) => (short)(ushort)node.InlineValue;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static ushort GetInlineOrStoredUInt16(ref ExprTree tree, ref ExprNode node) =>
-            ReferenceEquals(node.Obj, ExprNode.InlineValueMarker) ? (ushort)node.InlineValue : (ushort)GetStoredConstantValue(ref tree, ref node);
+        private static ushort GetInlineUInt16(ref ExprNode node) => (ushort)node.InlineValue;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int GetInlineOrStoredInt32(ref ExprTree tree, ref ExprNode node) =>
-            ReferenceEquals(node.Obj, ExprNode.InlineValueMarker) ? (int)node.InlineValue : (int)GetStoredConstantValue(ref tree, ref node);
+        private static int GetInlineInt32(ref ExprNode node) => (int)node.InlineValue;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static uint GetInlineOrStoredUInt32(ref ExprTree tree, ref ExprNode node) =>
-            ReferenceEquals(node.Obj, ExprNode.InlineValueMarker) ? node.InlineValue : (uint)GetStoredConstantValue(ref tree, ref node);
+        private static uint GetInlineUInt32(ref ExprNode node) => node.InlineValue;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static float GetInlineOrStoredSingle(ref ExprTree tree, ref ExprNode node) =>
-            ReferenceEquals(node.Obj, ExprNode.InlineValueMarker) ? FloatBits.ToFloat(node.InlineValue) : (float)GetStoredConstantValue(ref tree, ref node);
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static byte GetInlineOrConvertedByte(ref ExprTree tree, ref ExprNode node) =>
-            ReferenceEquals(node.Obj, ExprNode.InlineValueMarker) ? (byte)node.InlineValue : System.Convert.ToByte(GetStoredConstantValue(ref tree, ref node));
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static sbyte GetInlineOrConvertedSByte(ref ExprTree tree, ref ExprNode node) =>
-            ReferenceEquals(node.Obj, ExprNode.InlineValueMarker) ? (sbyte)(byte)node.InlineValue : System.Convert.ToSByte(GetStoredConstantValue(ref tree, ref node));
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static char GetInlineOrConvertedChar(ref ExprTree tree, ref ExprNode node) =>
-            ReferenceEquals(node.Obj, ExprNode.InlineValueMarker) ? (char)(ushort)node.InlineValue : System.Convert.ToChar(GetStoredConstantValue(ref tree, ref node));
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static short GetInlineOrConvertedInt16(ref ExprTree tree, ref ExprNode node) =>
-            ReferenceEquals(node.Obj, ExprNode.InlineValueMarker) ? (short)(ushort)node.InlineValue : System.Convert.ToInt16(GetStoredConstantValue(ref tree, ref node));
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static ushort GetInlineOrConvertedUInt16(ref ExprTree tree, ref ExprNode node) =>
-            ReferenceEquals(node.Obj, ExprNode.InlineValueMarker) ? (ushort)node.InlineValue : System.Convert.ToUInt16(GetStoredConstantValue(ref tree, ref node));
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int GetInlineOrConvertedInt32(ref ExprTree tree, ref ExprNode node) =>
-            ReferenceEquals(node.Obj, ExprNode.InlineValueMarker) ? (int)node.InlineValue : System.Convert.ToInt32(GetStoredConstantValue(ref tree, ref node));
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static uint GetInlineOrConvertedUInt32(ref ExprTree tree, ref ExprNode node) =>
-            ReferenceEquals(node.Obj, ExprNode.InlineValueMarker) ? node.InlineValue : System.Convert.ToUInt32(GetStoredConstantValue(ref tree, ref node));
+        private static float GetInlineSingle(ref ExprNode node) => FloatBits.ToFloat(node.InlineValue);
 
         private struct TraversalFrame
         {
