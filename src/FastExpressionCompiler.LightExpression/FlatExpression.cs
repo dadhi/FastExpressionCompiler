@@ -107,6 +107,7 @@ public struct ExprNode
 
     internal ExprNode(Type type, object obj, ExpressionType nodeType, ExprNodeKind kind, byte flags = 0, int childIdx = 0, int childCount = 0, int nextIdx = 0)
     {
+        Debug.Assert(!RequiresInlineConstantStorage(type, obj, nodeType));
         Type = type;
         Obj = obj;
         var tag = (byte)((flags << FlagsShift) | (byte)kind);
@@ -136,6 +137,23 @@ public struct ExprNode
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool IsExpression() => Kind == ExprNodeKind.Expression;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static bool RequiresInlineConstantStorage(Type type, object obj, ExpressionType nodeType)
+    {
+        if (nodeType != ExpressionType.Constant || obj == null || ReferenceEquals(obj, InlineValueMarker))
+            return false;
+
+        return type.IsEnum
+            ? IsSmallPrimitive(Type.GetTypeCode(Enum.GetUnderlyingType(type)))
+            : type.IsPrimitive && IsSmallPrimitive(Type.GetTypeCode(type));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool IsSmallPrimitive(TypeCode tc) =>
+        tc == TypeCode.Boolean || tc == TypeCode.Byte || tc == TypeCode.SByte ||
+        tc == TypeCode.Char || tc == TypeCode.Int16 || tc == TypeCode.UInt16 ||
+        tc == TypeCode.Int32 || tc == TypeCode.UInt32 || tc == TypeCode.Single;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool HasFlag(byte flag) => (Flags & flag) != 0;
@@ -2005,22 +2023,29 @@ public struct ExprTree : IEquatable<ExprTree>
         {
             if (ReferenceEquals(node.Obj, ExprNode.InlineValueMarker))
                 return GetInlineConstantHashCode(node.Type, node.InlineValue);
+
+            Debug.Assert(!ExprNode.RequiresInlineConstantStorage(node.Type, node.Obj, node.NodeType));
             return GetStoredConstantValue(ref tree, ref node)?.GetHashCode() ?? 0;
         }
 
         private static bool AreConstantsEqual(ref ExprTree xTree, ref ExprNode x, ref ExprTree yTree, ref ExprNode y)
         {
-            var xObj = GetStoredConstantValue(ref xTree, ref x);
-            var yObj = GetStoredConstantValue(ref yTree, ref y);
             var xInline = ReferenceEquals(x.Obj, ExprNode.InlineValueMarker);
             var yInline = ReferenceEquals(y.Obj, ExprNode.InlineValueMarker);
-            if (!(xInline && yInline))
+            Debug.Assert(xInline == yInline);
+            if (xInline != yInline)
+                return false;
+
+            if (!xInline)
+            {
+                Debug.Assert(!ExprNode.RequiresInlineConstantStorage(x.Type, x.Obj, x.NodeType));
+                var xObj = GetStoredConstantValue(ref xTree, ref x);
+                var yObj = GetStoredConstantValue(ref yTree, ref y);
                 return ReferenceEquals(xObj, yObj) || Equals(xObj, yObj);
+            }
 
             if (x.Type.IsEnum)
-            {
                 return x.InlineValue == y.InlineValue;
-            }
 
             return Type.GetTypeCode(x.Type) switch
             {
@@ -2033,7 +2058,7 @@ public struct ExprTree : IEquatable<ExprTree>
                 TypeCode.Int32 => GetInlineInt32(ref x) == GetInlineInt32(ref y),
                 TypeCode.UInt32 => GetInlineUInt32(ref x) == GetInlineUInt32(ref y),
                 TypeCode.Single => GetInlineSingle(ref x).Equals(GetInlineSingle(ref y)),
-                _ => ReferenceEquals(xObj, yObj) || Equals(xObj, yObj)
+                _ => FlatExpressionThrow.UnsupportedInlineConstantType<bool>(x.Type)
             };
         }
 
