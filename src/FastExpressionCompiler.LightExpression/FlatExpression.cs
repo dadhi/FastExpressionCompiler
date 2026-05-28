@@ -2049,15 +2049,15 @@ public struct ExprTree : IEquatable<ExprTree>
 
             return Type.GetTypeCode(x.Type) switch
             {
-                TypeCode.Boolean => GetInlineBoolean(ref x) == GetInlineBoolean(ref y),
-                TypeCode.Byte => GetInlineByte(ref x) == GetInlineByte(ref y),
-                TypeCode.SByte => GetInlineSByte(ref x) == GetInlineSByte(ref y),
-                TypeCode.Char => GetInlineChar(ref x) == GetInlineChar(ref y),
-                TypeCode.Int16 => GetInlineInt16(ref x) == GetInlineInt16(ref y),
-                TypeCode.UInt16 => GetInlineUInt16(ref x) == GetInlineUInt16(ref y),
-                TypeCode.Int32 => GetInlineInt32(ref x) == GetInlineInt32(ref y),
-                TypeCode.UInt32 => GetInlineUInt32(ref x) == GetInlineUInt32(ref y),
-                TypeCode.Single => GetInlineSingle(ref x).Equals(GetInlineSingle(ref y)),
+                TypeCode.Boolean => x.InlineValue == y.InlineValue,
+                TypeCode.Byte => x.InlineValue == y.InlineValue,
+                TypeCode.SByte => x.InlineValue == y.InlineValue,
+                TypeCode.Char => x.InlineValue == y.InlineValue,
+                TypeCode.Int16 => x.InlineValue == y.InlineValue,
+                TypeCode.UInt16 => x.InlineValue == y.InlineValue,
+                TypeCode.Int32 => x.InlineValue == y.InlineValue,
+                TypeCode.UInt32 => x.InlineValue == y.InlineValue,
+                TypeCode.Single => FloatBits.ToFloat(x.InlineValue).Equals(FloatBits.ToFloat(y.InlineValue)),
                 _ => FlatExpressionThrow.UnsupportedInlineConstantType<bool>(x.Type)
             };
         }
@@ -2094,33 +2094,6 @@ public struct ExprTree : IEquatable<ExprTree>
                 _ => FlatExpressionThrow.UnsupportedInlineConstantType<int>(type)
             };
         }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool GetInlineBoolean(ref ExprNode node) => node.InlineValue != 0;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static byte GetInlineByte(ref ExprNode node) => (byte)node.InlineValue;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static sbyte GetInlineSByte(ref ExprNode node) => (sbyte)(byte)node.InlineValue;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static char GetInlineChar(ref ExprNode node) => (char)(ushort)node.InlineValue;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static short GetInlineInt16(ref ExprNode node) => (short)(ushort)node.InlineValue;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static ushort GetInlineUInt16(ref ExprNode node) => (ushort)node.InlineValue;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int GetInlineInt32(ref ExprNode node) => (int)node.InlineValue;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static uint GetInlineUInt32(ref ExprNode node) => node.InlineValue;
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static float GetInlineSingle(ref ExprNode node) => FloatBits.ToFloat(node.InlineValue);
 
         private struct TraversalFrame
         {
