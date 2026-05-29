@@ -1839,7 +1839,10 @@ public struct ExprTree : IEquatable<ExprTree>
 
                     var frame = _eqFrames[_eqFrames.Count - 1];
                     _eqFrames.Count--;
-                    RestoreParameterScope(frame.XParameterCount, frame.YParameterCount);
+                    if (frame.XParameterCount >= 0)
+                        _xParameterIds.Count = frame.XParameterCount;
+                    if (frame.YParameterCount >= 0)
+                        _yParameterIds.Count = frame.YParameterCount;
                     if (frame.RemainingSiblingsAfterNode != 0)
                     {
                         xIdx = frame.XNextIdx;
@@ -1891,19 +1894,8 @@ public struct ExprTree : IEquatable<ExprTree>
             y.NodeType == ExpressionType.Parameter &&
             x.HasSameShapeExceptLinks(ref y);
 
-        private static bool EqObj(ref ExprNode x, ref ExprNode y)
-        {
-            return ReferenceEquals(x.Obj, y.Obj) || Equals(x.Obj, y.Obj);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void RestoreParameterScope(int xParameterCount, int yParameterCount)
-        {
-            if (xParameterCount >= 0)
-                _xParameterIds.Count = xParameterCount;
-            if (yParameterCount >= 0)
-                _yParameterIds.Count = yParameterCount;
-        }
+        private static bool EqObj(ref ExprNode x, ref ExprNode y) =>
+            ReferenceEquals(x.Obj, y.Obj) || Equals(x.Obj, y.Obj);
 
         private int HashNode(ref ExprTree tree, int idx)
         {
@@ -2041,25 +2033,17 @@ public struct ExprTree : IEquatable<ExprTree>
                 Debug.Assert(!ExprNode.RequiresInlineConstantStorage(x.Type, x.Obj, x.NodeType));
                 var xObj = GetStoredConstantValue(ref xTree, ref x);
                 var yObj = GetStoredConstantValue(ref yTree, ref y);
-                return ReferenceEquals(xObj, yObj) || Equals(xObj, yObj);
+                return xObj?.Equals(yObj) ?? yObj == null;
             }
 
             if (x.Type.IsEnum)
                 return x.InlineValue == y.InlineValue;
 
-            return Type.GetTypeCode(x.Type) switch
-            {
-                TypeCode.Boolean => x.InlineValue == y.InlineValue,
-                TypeCode.Byte => x.InlineValue == y.InlineValue,
-                TypeCode.SByte => x.InlineValue == y.InlineValue,
-                TypeCode.Char => x.InlineValue == y.InlineValue,
-                TypeCode.Int16 => x.InlineValue == y.InlineValue,
-                TypeCode.UInt16 => x.InlineValue == y.InlineValue,
-                TypeCode.Int32 => x.InlineValue == y.InlineValue,
-                TypeCode.UInt32 => x.InlineValue == y.InlineValue,
-                TypeCode.Single => FloatBits.ToFloat(x.InlineValue).Equals(FloatBits.ToFloat(y.InlineValue)),
-                _ => FlatExpressionThrow.UnsupportedInlineConstantType<bool>(x.Type)
-            };
+            var typeCode = Type.GetTypeCode(x.Type);
+            Debug.Assert(IsSmallPrimitive(typeCode));
+            return typeCode != TypeCode.Single
+                ? x.InlineValue == y.InlineValue
+                : FloatBits.ToFloat(x.InlineValue).Equals(FloatBits.ToFloat(y.InlineValue));
         }
 
         private static object GetStoredConstantValue(ref ExprTree tree, ref ExprNode node) =>
@@ -2067,49 +2051,33 @@ public struct ExprTree : IEquatable<ExprTree>
 
         private static int GetInlineConstantHashCode(Type type, uint data)
         {
-            if (type.IsEnum)
-                return Type.GetTypeCode(Enum.GetUnderlyingType(type)) switch
-                {
-                    TypeCode.Byte => ((byte)data).GetHashCode(),
-                    TypeCode.SByte => ((sbyte)(byte)data).GetHashCode(),
-                    TypeCode.Char => ((char)(ushort)data).GetHashCode(),
-                    TypeCode.Int16 => ((short)(ushort)data).GetHashCode(),
-                    TypeCode.UInt16 => ((ushort)data).GetHashCode(),
-                    TypeCode.Int32 => ((int)data).GetHashCode(),
-                    TypeCode.UInt32 => data.GetHashCode(),
-                    var tc => FlatExpressionThrow.UnsupportedInlineConstantType<int>(type, tc)
-                };
-
-            return Type.GetTypeCode(type) switch
+            if (!type.IsEnum)
             {
-                TypeCode.Boolean => (data != 0).GetHashCode(),
-                TypeCode.Byte => ((byte)data).GetHashCode(),
-                TypeCode.SByte => ((sbyte)(byte)data).GetHashCode(),
-                TypeCode.Char => ((char)(ushort)data).GetHashCode(),
-                TypeCode.Int16 => ((short)(ushort)data).GetHashCode(),
-                TypeCode.UInt16 => ((ushort)data).GetHashCode(),
-                TypeCode.Int32 => ((int)data).GetHashCode(),
-                TypeCode.UInt32 => data.GetHashCode(),
-                TypeCode.Single => FloatBits.ToFloat(data).GetHashCode(),
-                _ => FlatExpressionThrow.UnsupportedInlineConstantType<int>(type)
-            };
+                var typeCode = Type.GetTypeCode(type);
+                Debug.Assert(IsSmallPrimitive(typeCode));
+                if (typeCode == TypeCode.Single)
+                    return FloatBits.ToFloat(data).GetHashCode();
+            }
+
+            return data.GetHashCode();
         }
 
+        [StructLayout(LayoutKind.Sequential)]
         private struct TraversalFrame
         {
-            public readonly int XNextIdx;
-            public readonly int YNextIdx;
             public readonly int RemainingSiblingsAfterNode;
             public readonly int XParameterCount;
             public readonly int YParameterCount;
+            public readonly ushort XNextIdx;
+            public readonly ushort YNextIdx;
 
             public TraversalFrame(int xNextIdx, int yNextIdx, int remainingSiblingsAfterNode, int xParameterCount, int yParameterCount)
             {
-                XNextIdx = xNextIdx;
-                YNextIdx = yNextIdx;
                 RemainingSiblingsAfterNode = remainingSiblingsAfterNode;
                 XParameterCount = xParameterCount;
                 YParameterCount = yParameterCount;
+                XNextIdx = checked((ushort)xNextIdx);
+                YNextIdx = checked((ushort)yNextIdx);
             }
         }
     }
