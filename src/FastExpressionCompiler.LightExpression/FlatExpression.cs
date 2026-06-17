@@ -139,15 +139,11 @@ public struct ExprNode
     internal bool IsExpression() => Kind == ExprNodeKind.Expression;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static bool RequiresInlineConstantStorage(Type type, object obj, ExpressionType nodeType)
-    {
-        if (nodeType != ExpressionType.Constant || obj == null || ReferenceEquals(obj, InlineValueMarker))
-            return false;
-
-        return type.IsEnum
+    internal static bool RequiresInlineConstantStorage(Type type, object obj, ExpressionType nodeType) =>
+        nodeType == ExpressionType.Constant && obj != null && !ReferenceEquals(obj, InlineValueMarker) &&
+        (type.IsEnum
             ? IsSmallPrimitive(Type.GetTypeCode(Enum.GetUnderlyingType(type)))
-            : type.IsPrimitive && IsSmallPrimitive(Type.GetTypeCode(type));
-    }
+            : type.IsPrimitive && IsSmallPrimitive(Type.GetTypeCode(type)));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool IsSmallPrimitive(TypeCode tc) =>
@@ -155,8 +151,16 @@ public struct ExprNode
         tc == TypeCode.Char || tc == TypeCode.Int16 || tc == TypeCode.UInt16 ||
         tc == TypeCode.Int32 || tc == TypeCode.UInt32 || tc == TypeCode.Single;
 
+    [Flags]
+    private enum NodeFlags : byte { None = 0 }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal bool HasFlag(byte flag) => (Flags & flag) != 0;
+    internal bool HasFlag(byte flag) =>
+#if NET6_0_OR_GREATER
+        ((NodeFlags)Flags).HasFlag((NodeFlags)flag);
+#else
+        (Flags & flag) != 0;
+#endif
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool HasSameHeaderExceptNext(ref ExprNode other) =>
@@ -1712,8 +1716,9 @@ public struct ExprTree : IEquatable<ExprTree>
                         restoreYParameterCount = _yParameterIds.Count;
                         descendX = x.ChildIdx;
                         descendY = y.ChildIdx;
-                        descendChildCount = x.ChildCount - (x.HasFlag(CatchHasVariableFlag) ? 1 : 0);
-                        if (x.HasFlag(CatchHasVariableFlag))
+                        var hasVariable = x.Flags & CatchHasVariableFlag;
+                        descendChildCount = x.ChildCount - hasVariable;
+                        if (hasVariable != 0)
                         {
                             ref var xv = ref xTree.Nodes.GetSurePresentRef(descendX);
                             ref var yv = ref yTree.Nodes.GetSurePresentRef(descendY);
@@ -1838,7 +1843,7 @@ public struct ExprTree : IEquatable<ExprTree>
                         return true;
 
                     var frame = _eqFrames[_eqFrames.Count - 1];
-                    _eqFrames.Count--;
+                    _eqFrames.Count -= 1;
                     if (frame.XParameterCount >= 0)
                         _xParameterIds.Count = frame.XParameterCount;
                     if (frame.YParameterCount >= 0)
@@ -2065,11 +2070,11 @@ public struct ExprTree : IEquatable<ExprTree>
         [StructLayout(LayoutKind.Sequential)]
         private struct TraversalFrame
         {
-            public readonly int RemainingSiblingsAfterNode;
-            public readonly int XParameterCount;
-            public readonly int YParameterCount;
-            public readonly ushort XNextIdx;
-            public readonly ushort YNextIdx;
+            public int RemainingSiblingsAfterNode;
+            public int XParameterCount;
+            public int YParameterCount;
+            public ushort XNextIdx;
+            public ushort YNextIdx;
 
             public TraversalFrame(int xNextIdx, int yNextIdx, int remainingSiblingsAfterNode, int xParameterCount, int yParameterCount)
             {
