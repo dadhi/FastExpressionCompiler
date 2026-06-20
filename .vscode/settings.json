@@ -12,6 +12,7 @@
         "Funcs",
         "gotos",
         "Hasher",
+        "idxs",
         "iface",
         "ifaces",
         "ifthen",

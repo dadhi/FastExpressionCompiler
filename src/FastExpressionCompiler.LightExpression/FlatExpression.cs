@@ -22,7 +22,7 @@ using SysSwitchCase = System.Linq.Expressions.SwitchCase;
 public enum ExprNodeKind : byte
 {
     /// <summary>Represents a regular expression node.</summary>
-    Expression,
+    Expression = 0,
     /// <summary>Represents a switch case payload.</summary>
     SwitchCase,
     /// <summary>Represents a catch block payload.</summary>
@@ -252,11 +252,8 @@ public struct ExprTree : IEquatable<ExprTree>
     public SmallList<LambdaClosureParameterUsage, Stack16<LambdaClosureParameterUsage>, NoArrayPool<LambdaClosureParameterUsage>> LambdaClosureParameterUsages;
 
     /// <summary>Adds a parameter node and returns its idx.</summary>
-    public int Parameter(Type type, string name = null)
-    {
-        var id = Nodes.Count + 1;
-        return AddRawLeafExpressionNode(type, name, ExpressionType.Parameter, type.IsByRef ? ParameterByRefFlag : (byte)0, childIdx: id);
-    }
+    public int Parameter(Type type, string name = null) => 
+        AddLeafNode(type, name, ExpressionType.Parameter, flags: type.IsByRef ? ParameterByRefFlag : (byte)0, childIdx: Nodes.Count + 1);
 
     /// <summary>Adds a typed parameter node and returns its idx.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -268,7 +265,7 @@ public struct ExprTree : IEquatable<ExprTree>
 
     /// <summary>Adds a default-value node and returns its idx.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public int Default(Type type) => AddRawExpressionNode(type, null, ExpressionType.Default);
+    public int Default(Type type) => AddLeafNode(type, null, ExpressionType.Default);
 
     /// <summary>Adds a constant node using the runtime type of the supplied value.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -279,34 +276,28 @@ public struct ExprTree : IEquatable<ExprTree>
     public int Constant(object value, Type type)
     {
         if (value == null || value is string || value is Type || value is decimal)
-            return AddRawExpressionNode(type, value, ExpressionType.Constant);
+            return AddLeafNode(type, value, ExpressionType.Constant);
 
         if (type.IsEnum)
-        {
-            var underlyingTc = Type.GetTypeCode(Enum.GetUnderlyingType(type));
-            if (IsSmallPrimitive(underlyingTc))
-                return AddInlineConstantNode(type, (uint)System.Convert.ToInt64(value));
-            // long/ulong-backed enum (extremely rare): store boxed in Obj
-            return AddRawExpressionNode(type, value, ExpressionType.Constant);
-        }
+            return IsSmallPrimitive(Type.GetTypeCode(Enum.GetUnderlyingType(type)))
+                ? AddInlineConstantNode(type, (uint)System.Convert.ToInt64(value))
+                : AddLeafNode(type, value, ExpressionType.Constant); // long/ulong-backed enum (extremely rare): store boxed in Obj
 
         if (type.IsPrimitive)
         {
             var tc = Type.GetTypeCode(type);
-            if (IsSmallPrimitive(tc))
-                return AddInlineConstantNode(type, ToInlineValue(value, tc));
-            // long, ulong, double: primitive but too wide for _data, store boxed in Obj
-            return AddRawExpressionNode(type, value, ExpressionType.Constant);
+            return IsSmallPrimitive(tc)
+                ? AddInlineConstantNode(type, ToInlineValue(value, tc))
+                : AddLeafNode(type, value, ExpressionType.Constant); // long, ulong, double: primitive but too wide for _data, store boxed in Obj
         }
 
         // Delegate, array types, and user-defined reference/value types go to ClosureConstants
-        var constantIdx = ClosureConstants.Add(value);
-        return AddRawLeafExpressionNode(type, ClosureConstantMarker, ExpressionType.Constant, childIdx: constantIdx);
+        return AddLeafNode(type, ClosureConstantMarker, ExpressionType.Constant, childIdx: ClosureConstants.Add(value));
     }
 
     /// <summary>Adds a null constant node.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public int ConstantNull(Type type = null) => AddRawExpressionNode(type ?? typeof(object), null, ExpressionType.Constant);
+    public int ConstantNull(Type type = null) => AddLeafNode(type ?? typeof(object), null, ExpressionType.Constant);
 
     /// <summary>Adds an <see cref="int"/> constant node.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -321,7 +312,7 @@ public struct ExprTree : IEquatable<ExprTree>
     public int New(Type type)
     {
         if (type.IsValueType)
-            return AddRawExpressionNode(type, null, ExpressionType.New);
+            return AddLeafNode(type, null, ExpressionType.New);
 
         foreach (var ctor in type.GetConstructors())
             if (ctor.GetParameters().Length == 0)
@@ -362,7 +353,7 @@ public struct ExprTree : IEquatable<ExprTree>
     public int MakeMemberAccess(int? instance, System.Reflection.MemberInfo member) =>
         instance.HasValue
             ? AddFactoryExpressionNode(GetMemberType(member), member, ExpressionType.MemberAccess, instance.Value)
-            : AddRawExpressionNode(GetMemberType(member), member, ExpressionType.MemberAccess);
+            : AddLeafNode(GetMemberType(member), member, ExpressionType.MemberAccess);
 
     /// <summary>Adds a field-access node.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -833,10 +824,6 @@ public struct ExprTree : IEquatable<ExprTree>
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private int AddRawExpressionNode(Type type, object obj, ExpressionType nodeType) =>
-        AddLeafNode(type, obj, nodeType, ExprNodeKind.Expression, 0, 0, 0);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private int AddRawExpressionNode(Type type, object obj, ExpressionType nodeType, in ChildList children) =>
         AddNode(type, obj, nodeType, ExprNodeKind.Expression, 0, in children);
 
@@ -847,10 +834,6 @@ public struct ExprTree : IEquatable<ExprTree>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private int AddRawExpressionNode(Type type, object obj, ExpressionType nodeType, int child0, int child1, int child2) =>
         AddNode(type, obj, nodeType, ExprNodeKind.Expression, 0, child0, child1, child2);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private int AddRawLeafExpressionNode(Type type, object obj, ExpressionType nodeType, byte flags = 0, int childIdx = 0, int childCount = 0) =>
-        AddLeafNode(type, obj, nodeType, ExprNodeKind.Expression, flags, childIdx, childCount);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private int AddFactoryAuxNode(Type type, object obj, ExprNodeKind kind, byte flags, int child) =>
@@ -939,12 +922,12 @@ public struct ExprTree : IEquatable<ExprTree>
                 case ExpressionType.Constant:
                     return AddConstant((System.Linq.Expressions.ConstantExpression)expression);
                 case ExpressionType.Default:
-                    return _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType);
+                    return _tree.AddLeafNode(expression.Type, null, expression.NodeType);
                 case ExpressionType.Parameter:
                     {
                         var parameter = (SysParameterExpression)expression;
-                        return _tree.AddRawLeafExpressionNode(expression.Type, parameter.Name, expression.NodeType,
-                            parameter.IsByRef ? ParameterByRefFlag : (byte)0, childIdx: GetId(ref _parameterIds, parameter));
+                        return _tree.AddLeafNode(expression.Type, parameter.Name, expression.NodeType,
+                            flags: parameter.IsByRef ? ParameterByRefFlag : (byte)0, childIdx: GetId(ref _parameterIds, parameter));
                     }
                 case ExpressionType.Lambda:
                     {
@@ -957,7 +940,7 @@ public struct ExprTree : IEquatable<ExprTree>
                         children.Add(AddExpression(lambda.Body));
                         for (var i = 0; i < lambda.Parameters.Count; ++i)
                             children.Add(AddExpression(lambda.Parameters[i]));
-                        var lambdaIdx = _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType, children);
+                        var lambdaIdx = _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType, in children);
                         _tree.LambdaNodes.Add(lambdaIdx);
                         _tree.CollectLambdaClosureParameterUsages(lambdaIdx);
                         return lambdaIdx;
@@ -1048,8 +1031,7 @@ public struct ExprTree : IEquatable<ExprTree>
                         children.Add(AddExpression(conditional.Test));
                         children.Add(AddExpression(conditional.IfTrue));
                         children.Add(AddExpression(conditional.IfFalse));
-                        return _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType,
-                            children[0], children[1], children[2]);
+                        return _tree.AddRawExpressionNode(expression.Type, null, expression.NodeType, children[0], children[1], children[2]);
                     }
                 case ExpressionType.Loop:
                     {
@@ -1281,7 +1263,8 @@ public struct ExprTree : IEquatable<ExprTree>
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private int AddLeafNode(Type type, object obj, ExpressionType nodeType, ExprNodeKind kind, byte flags, int childIdx, int childCount)
+    private int AddLeafNode(Type type, object obj, ExpressionType nodeType, 
+        ExprNodeKind kind = ExprNodeKind.Expression, byte flags = default, int childIdx = default, int childCount = default)
     {
         var nodeIdx = Nodes.Count;
         ref var newNode = ref Nodes.AddDefaultAndGetRef();

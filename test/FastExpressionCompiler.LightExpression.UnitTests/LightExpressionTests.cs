@@ -11,7 +11,6 @@ using SysExpr = System.Linq.Expressions.Expression;
 
 namespace FastExpressionCompiler.LightExpression.UnitTests
 {
-
     public partial class LightExpressionTests : ITest
     {
         public int Run()
@@ -61,7 +60,6 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Flat_structural_hash_supports_dictionary_lookup();
             return 42;
         }
-
 
         public void Can_compile_lambda_without_converting_to_expression()
         {
