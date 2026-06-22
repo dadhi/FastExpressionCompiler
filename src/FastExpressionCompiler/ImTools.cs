@@ -851,6 +851,10 @@ public struct SmallList<T, TStack, TPool> : ISmallList<T>
         return index;
     }
 
+   /// <summary>Adds the item copy to the end of the list aka the Stack.Push. Returns the index of the added item.</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public int AddCopy(T item) => Add(in item);
+ 
     /// <summary>Looks for the item in the list and return its index if found or -1 for the absent item</summary>
     [MethodImpl((MethodImplOptions)256)]
     public int TryGetIndex<TEq>(in T item, TEq eq = default) where TEq : struct, IEq<T>
