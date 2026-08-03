@@ -3700,10 +3700,12 @@ namespace FastExpressionCompiler
             {
                 var bounds = expr.GetArgExprs();
                 var boundCount = bounds.GetArgCount();
+                var flags = ParentFlags.CtorCall;
+                for (var i = 0; i < boundCount; i++)
+                    if (!TryEmit(bounds.GetArgument(i), il, ref context, flags))
+                        return false;
                 if (boundCount == 1)
                 {
-                    if (!TryEmit(bounds.GetArgument(0), il, ref context, parent))
-                        return false;
                     var elemType = expr.Type.GetElementType();
                     if (elemType == null)
                         return false;
@@ -3711,11 +3713,9 @@ namespace FastExpressionCompiler
                 }
                 else
                 {
-                    for (var i = 0; i < boundCount; i++)
-                        if (!TryEmit(bounds.GetArgument(i), il, ref context, parent))
-                            return false;
                     il.Demit(OpCodes.Newobj, expr.Type.GetTypeInfo().DeclaredConstructors.GetFirst());
                 }
+                il.EmitPopIfIgnoreResult(parent);
                 return true;
             }
 
@@ -3743,17 +3743,18 @@ namespace FastExpressionCompiler
                     if (isElemOfValueType) // loading element address for later copying of value into it.
                     {
                         il.Demit(OpCodes.Ldelema, elemType);
-                        if (!TryEmit(elems.GetArgument(i), il, ref context, parent))
+                        if (!TryEmit(elems.GetArgument(i), il, ref context, ParentFlags.Empty))
                             return false;
                         il.Demit(OpCodes.Stobj, elemType); // store element of value type by array element address
                     }
                     else
                     {
-                        if (!TryEmit(elems.GetArgument(i), il, ref context, parent))
+                        if (!TryEmit(elems.GetArgument(i), il, ref context, ParentFlags.Empty))
                             return false;
                         il.Demit(OpCodes.Stelem_Ref);
                     }
                 }
+                il.EmitPopIfIgnoreResult(parent);
                 return true;
             }
 
