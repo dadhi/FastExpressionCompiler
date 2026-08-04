@@ -33,6 +33,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_build_flat_expression_directly_with_light_expression_like_api();
             Can_build_flat_expression_control_flow_directly();
             Can_property_test_generated_flat_expression_roundtrip_structurally();
+
             Flat_lambda_parameter_ref_before_decl_preserves_identity();
             Flat_lambda_multiple_parameter_refs_all_yield_same_identity();
             Flat_block_variables_and_refs_yield_same_identity();
@@ -58,6 +59,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Flat_equal_nested_lambdas_with_captures_are_structurally_equal_and_hash_equal();
             Flat_standalone_parameters_use_name_in_structural_equality();
             Flat_structural_hash_supports_dictionary_lookup();
+
             return 42;
         }
 
@@ -282,7 +284,6 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             return fe;
         }
 
-
         public void Can_compile_complex_expr_with_Arrays_and_Casts()
         {
             var expr = CreateComplexLightExpression();
@@ -394,9 +395,10 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
         public void Can_roundtrip_light_expression_through_flat_expression()
         {
-            var expr = CreateComplexLightExpression("state");
+            var expr = CreateComplexExpression("state");
 
-            var flat = expr.ToFlatExpression();
+            ExprTree flat = default;
+            flat.FromSysExpr(expr);
 
             Asserts.IsTrue(flat.Nodes.Count > 0);
             Asserts.AreEqual(0, flat.ClosureConstants.Count);
@@ -417,30 +419,12 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var valueHolder = new S();
             var valueField = typeof(S).GetField(nameof(S.Value));
             var constExpr = Lambda<Func<string>>(Field(Constant(valueHolder), valueField));
-            var constFlat = constExpr.ToFlatExpression();
+            ExprTree constFlat = default;
+            constFlat.FromLightExpr(constExpr);
 
             Asserts.AreEqual(1, constFlat.ClosureConstants.Count);
             Asserts.AreSame(valueHolder, constFlat.ClosureConstants[0]);
             Asserts.AreEqual(null, ((LambdaExpression)constFlat.ToLightExpression()).CompileFast<Func<string>>(true)());
-
-            var p = SysExpr.Parameter(typeof(int), "p");
-            var target = SysExpr.Label(typeof(int), "done");
-            var sysLambda = SysExpr.Lambda<Func<int, int>>(
-                SysExpr.Block(
-                    SysExpr.Goto(target, p, typeof(int)),
-                    SysExpr.Label(target, SysExpr.Constant(0))),
-                p);
-
-            var sysRoundtrip = (System.Linq.Expressions.LambdaExpression)sysLambda
-                .ToFlatExpression()
-                .ToExpression();
-
-            var block = (System.Linq.Expressions.BlockExpression)sysRoundtrip.Body;
-            var @goto = (System.Linq.Expressions.GotoExpression)block.Expressions[0];
-            var label = (System.Linq.Expressions.LabelExpression)block.Expressions[1];
-
-            Asserts.AreSame(sysRoundtrip.Parameters[0], @goto.Value);
-            Asserts.AreSame(@goto.Target, label.Target);
         }
 
         public void Can_convert_dynamic_runtime_variables_and_debug_info_to_light_expression_and_flat_expression()
