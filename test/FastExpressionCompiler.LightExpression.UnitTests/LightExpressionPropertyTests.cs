@@ -56,7 +56,7 @@ public partial class LightExpressionTests
             _ => throw new NotSupportedException(spec.GetType().Name)
         };
 
-    private static int BuildFlatInt(ref ExprTree fe, IntSpec spec, int[] ints) =>
+    private static ushort BuildFlatInt(ref ExprTree fe, IntSpec spec, ushort[] ints) =>
         spec switch
         {
             IntSpec.ParameterRef parameter => ints[parameter.Index],
@@ -86,7 +86,7 @@ public partial class LightExpressionTests
             _ => throw new NotSupportedException(spec.GetType().Name)
         };
 
-    private static int BuildFlatBool(ref ExprTree fe, BoolSpec spec, int[] ints) =>
+    private static ushort BuildFlatBool(ref ExprTree fe, BoolSpec spec, ushort[] ints) =>
         spec switch
         {
             BoolSpec.Constant constant => fe.ConstantOf(constant.Value),
@@ -115,10 +115,10 @@ public partial class LightExpressionTests
         return Block(locals, expressions);
     }
 
-    private static int BuildFlatBlock(ref ExprTree fe, IntSpec.LetMany letMany, int[] ints)
+    private static ushort BuildFlatBlock(ref ExprTree fe, IntSpec.LetMany letMany, ushort[] ints)
     {
-        var locals = new int[letMany.Values.Length];
-        var expressions = new int[letMany.Values.Length + 1];
+        var locals = new ushort[letMany.Values.Length];
+        var expressions = new ushort[letMany.Values.Length + 1];
         for (var i = 0; i < locals.Length; ++i)
         {
             locals[i] = fe.Variable(typeof(int), $"v{i}");

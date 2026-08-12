@@ -326,14 +326,18 @@ public interface ISize
     /// <summary>Returns the size of the collection or container</summary>
     int Size { get; }
 }
-/// <summary>Marker for collection or container holding 2 or items</summary>
-public interface ISize2Plus : ISize { }
+/// <summary>Marker for collection or container holding 1 or more items</summary>
+public interface ISize1Plus : ISize { }
+/// <summary>Marker for collection or container holding 2 or more items</summary>
+public interface ISize2Plus : ISize1Plus { }
 /// <summary>Marker for collection or container holding 4 or more items</summary>
 public interface ISize4Plus : ISize2Plus { }
 /// <summary>Marker for collection or container holding 8 or more items</summary>
 public interface ISize8Plus : ISize4Plus { }
 /// <summary>Marker for collection or container holding 16 or more items</summary>
 public interface ISize16Plus : ISize8Plus { }
+/// <summary>Marker for collection or container holding 32 or more items</summary>
+public interface ISize32Plus : ISize16Plus { }
 
 /// <summary>Marker for collection or container holding 0 items</summary>
 public struct Size0 : ISize
@@ -342,7 +346,14 @@ public struct Size0 : ISize
     public int Size => 0;
 }
 
-/// <summary>Marker for collection or container holding 4 items</summary>
+/// <summary>Marker for collection or container holding 1 item</summary>
+public struct Size1 : ISize1Plus
+{
+    /// <inheritdoc/>
+    public int Size => 1;
+}
+
+/// <summary>Marker for collection or container holding 2 items</summary>
 public struct Size2 : ISize2Plus
 {
     /// <inheritdoc/>
@@ -366,6 +377,13 @@ public struct Size16 : ISize16Plus
     /// <inheritdoc/>
     public int Size => 16;
 }
+/// <summary>Marker for collection or container holding 32 items</summary>
+public struct Size32 : ISize32Plus
+{
+    /// <inheritdoc/>
+    public int Size => 32;
+}
+
 
 /// <summary>Implementation of `IStack` for 2 items on stack</summary>
 [StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -556,6 +574,86 @@ public struct Stack16<T> : IStack<T, Size16, Stack16<T>>
             case 13: return ref _it13;
             case 14: return ref _it14;
             default: return ref _it15;
+        }
+#endif
+    }
+
+    /// <inheritdoc/>
+    [UnscopedRef]
+    public ref T this[int index]
+    {
+        [MethodImpl((MethodImplOptions)256)]
+        get
+        {
+            if (index >= 0 & index < Capacity)
+                return ref GetSurePresentRef(index);
+            return ref Stack.ThrowIndexOutOfBounds<T>(index, Capacity);
+        }
+    }
+
+#if SUPPORTS_CREATE_SPAN
+    /// <inheritdoc/>
+    [MethodImpl((MethodImplOptions)256)]
+    public Span<T> AsSpan() => MemoryMarshal.CreateSpan(ref _it0, Capacity);
+#endif
+}
+
+// todo: @perf create variant with Stack32
+/// <summary>Implementation of `IStack` for 16 items on stack</summary>
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+public struct Stack32<T> : IStack<T, Size32, Stack32<T>>
+{
+    /// <inheritdoc/>
+    public int Capacity => 32;
+    int IIndexed<T>.Count => Capacity;
+
+    internal T _it0, _it1, _it2, _it3, _it4, _it5, _it6, _it7;
+    internal T _it8, _it9, _it10, _it11, _it12, _it13, _it14, _it15;
+    internal T _it16, _it17, _it18, _it19, _it20, _it21, _it22, _it23;
+    internal T _it24, _it25, _it26, _it27, _it28, _it29, _it30, _it31;
+
+    /// <inheritdoc/>
+    [UnscopedRef]
+    [MethodImpl((MethodImplOptions)256)]
+    public ref T GetSurePresentRef(int index)
+    {
+#if SUPPORTS_UNSAFE
+        return ref Unsafe.Add(ref _it0, index);
+#else
+        switch (index)
+        {
+            case 0: return ref _it0;
+            case 1: return ref _it1;
+            case 2: return ref _it2;
+            case 3: return ref _it3;
+            case 4: return ref _it4;
+            case 5: return ref _it5;
+            case 6: return ref _it6;
+            case 7: return ref _it7;
+            case 8: return ref _it8;
+            case 9: return ref _it9;
+            case 10: return ref _it10;
+            case 11: return ref _it11;
+            case 12: return ref _it12;
+            case 13: return ref _it13;
+            case 14: return ref _it14;
+            case 15: return ref _it15;
+            case 16: return ref _it16;
+            case 17: return ref _it17;
+            case 18: return ref _it18;
+            case 19: return ref _it19;
+            case 20: return ref _it20;
+            case 21: return ref _it21;
+            case 22: return ref _it22;
+            case 23: return ref _it23;
+            case 24: return ref _it24;
+            case 25: return ref _it25;
+            case 26: return ref _it26;
+            case 27: return ref _it27;
+            case 28: return ref _it28;
+            case 29: return ref _it29;
+            case 30: return ref _it30;
+            default: return ref _it31;
         }
 #endif
     }
@@ -851,10 +949,6 @@ public struct SmallList<T, TStack, TPool> : ISmallList<T>
         return index;
     }
 
-   /// <summary>Adds the item copy to the end of the list aka the Stack.Push. Returns the index of the added item.</summary>
-    [MethodImpl((MethodImplOptions)256)]
-    public int AddCopy(T item) => Add(in item);
- 
     /// <summary>Looks for the item in the list and return its index if found or -1 for the absent item</summary>
     [MethodImpl((MethodImplOptions)256)]
     public int TryGetIndex<TEq>(in T item, TEq eq = default) where TEq : struct, IEq<T>

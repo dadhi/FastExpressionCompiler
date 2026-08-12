@@ -570,6 +570,19 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.AreSame(paramDecl, add.Right);
         }
 
+        public void Flat_repeated_child_references_do_not_create_self_cycle()
+        {
+            var fe = default(ExprTree);
+            var p = fe.ParameterOf<int>("p");
+            fe.RootIdx = fe.Lambda<Func<int, int>>(fe.Add(p, p), p);
+
+            var sysLambda = (System.Linq.Expressions.LambdaExpression)fe.ToExpression();
+            var add = (System.Linq.Expressions.BinaryExpression)sysLambda.Body;
+
+            Asserts.AreSame(sysLambda.Parameters[0], add.Left);
+            Asserts.AreSame(sysLambda.Parameters[0], add.Right);
+        }
+
         /// <summary>
         /// Block variables are read before body expressions (normal order),
         /// but each variable idx is cloned whenever it appears as a child.
@@ -768,7 +781,8 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.AreEqual(6, typeof(LambdaClosureParameterUsage).StructLayoutAttribute.Size);
 
             var fe = default(ExprTree);
-            for (var i = 0; i < ushort.MaxValue; ++i)
+            // Index 0 is reserved as the absent-child sentinel, so MaxValue-1 real nodes fill storage.
+            for (var i = 1; i < ushort.MaxValue; ++i)
                 fe.Default(typeof(int));
 
             Asserts.AreEqual(ushort.MaxValue, fe.Nodes.Count);
