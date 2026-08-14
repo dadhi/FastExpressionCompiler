@@ -200,7 +200,7 @@ public struct ExprTree : IEquatable<ExprTree>
     public int RootIdx;
 
     /// <summary>Gets or sets the flat node storage.</summary>
-    public SmallList<ExprNode, Stack16<ExprNode>, NoArrayPool<ExprNode>> Nodes;
+    public SmallList<ExprNode, Stack32<ExprNode>, NoArrayPool<ExprNode>> Nodes;
 
     /// <summary>Gets or sets closure constants that are referenced from constant nodes.</summary>
     public SmallList<object, Stack16<object>, NoArrayPool<object>> ClosureConstants;
@@ -215,10 +215,10 @@ public struct ExprTree : IEquatable<ExprTree>
 
     /// <summary>Gets or sets all <see cref="ExpressionType.Goto"/> node idxs,
     /// including <c>return</c>, <c>break</c>, and <c>continue</c>.</summary>
-    public SmallList<int, Stack8<int>, NoArrayPool<int>> GotoNodes;
+    public SmallList<int, Stack4<int>, NoArrayPool<int>> GotoNodes;
 
     /// <summary>Gets or sets all <see cref="ExpressionType.Label"/> expression node idxs.</summary>
-    public SmallList<int, Stack8<int>, NoArrayPool<int>> LabelNodes;
+    public SmallList<int, Stack4<int>, NoArrayPool<int>> LabelNodes;
 
     /// <summary>Gets or sets all <see cref="ExpressionType.Try"/> node idxs for try/catch, try/finally, try/fault, and combined forms.</summary>
     public SmallList<int, Stack4<int>, NoArrayPool<int>> TryCatchNodes;
@@ -361,14 +361,6 @@ public struct ExprTree : IEquatable<ExprTree>
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private ushort ReserveOwner(ExpressionType nodeType, Type type, object obj, byte flags, ExprNodeKind kind)
-    {
-        EnsureIndexZeroSentinel();
-        var owner = new ExprNode(nodeType, type, obj, flags, kind);
-        return checked((ushort)Nodes.Add(in owner));
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void AppendPreparedChild(ushort childIdx, ref ushort firstChildIdx, ref ushort prevChildIdx, ref ushort childCount)
     {
         if (childCount == 0)
@@ -382,7 +374,7 @@ public struct ExprTree : IEquatable<ExprTree>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private ushort WithOneChild(ExpressionType nodeType, Type type, object obj, byte flags, ExprNodeKind kind, ushort ch0)
     {
-        var ownerIdx = ReserveOwner(nodeType, type, obj, flags, kind);
+        var ownerIdx = AddNode(nodeType, type, obj, flags, kind);
         ushort first = 0;
         ushort count = 0;
         if (ch0 != 0)
@@ -397,7 +389,7 @@ public struct ExprTree : IEquatable<ExprTree>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private ushort WithTwoChildren(ExpressionType nodeType, Type type, object obj, byte flags, ExprNodeKind kind, ushort ch0, ushort ch1)
     {
-        var ownerIdx = ReserveOwner(nodeType, type, obj, flags, kind);
+        var ownerIdx = AddNode(nodeType, type, obj, flags, kind);
         ushort first = 0, prev = 0, count = 0;
 
         if (ch0 != 0)
@@ -412,7 +404,7 @@ public struct ExprTree : IEquatable<ExprTree>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private ushort WithThreeChildren(ExpressionType nodeType, Type type, object obj, byte flags, ExprNodeKind kind, ushort ch0, ushort ch1, ushort ch2)
     {
-        var ownerIdx = ReserveOwner(nodeType, type, obj, flags, kind);
+        var ownerIdx = AddNode(nodeType, type, obj, flags, kind);
         ushort first = 0, prev = 0, count = 0;
 
         if (ch0 != 0)
@@ -428,7 +420,7 @@ public struct ExprTree : IEquatable<ExprTree>
 
     private ushort WithTwoOrMoreChildren(ExpressionType nodeType, Type type, object obj, byte flags, ExprNodeKind kind, ushort ch0, ushort ch1, ushort[] more)
     {
-        var ownerIdx = ReserveOwner(nodeType, type, obj, flags, kind);
+        var ownerIdx = AddNode(nodeType, type, obj, flags, kind);
         ushort first = 0, prev = 0, count = 0;
 
         if (ch0 != 0)
@@ -450,56 +442,75 @@ public struct ExprTree : IEquatable<ExprTree>
         return ownerIdx;
     }
 
+#if NET10_0_OR_GREATER
+    private ushort WithOneOrMoreChildren(ExpressionType nodeType, Type type, object obj, byte flags, ExprNodeKind kind, ushort ch0, ReadOnlySpan<ushort> more)
+    {
+#else
     private ushort WithOneOrMoreChildren(ExpressionType nodeType, Type type, object obj, byte flags, ExprNodeKind kind, ushort ch0, ushort[] more)
     {
-        var ownerIdx = ReserveOwner(nodeType, type, obj, flags, kind);
+        more ??= Array.Empty<ushort>();
+#endif
+        var ownerIdx = AddNode(nodeType, type, obj, flags, kind);
         ushort first = 0, prev = 0, count = 0;
 
         if (ch0 != 0)
-            AppendPreparedChild(MayBeCloneChildForOwner(ch0, ownerIdx), ref first, ref prev, ref count);
-
-        if (more != null)
         {
-            for (var i = 0; i < more.Length; ++i)
-            {
-                var ch = more[i];
-                if (ch == 0) continue;
-                AppendPreparedChild(MayBeCloneChildForOwner(ch, ownerIdx), ref first, ref prev, ref count);
-            }
+            prev = first = MayBeCloneChildForOwner(ch0, ownerIdx);
+            ++count;
         }
+
+        foreach (var ch in more)
+            if (ch != 0)
+                AppendPreparedChild(MayBeCloneChildForOwner(ch, ownerIdx), ref first, ref prev, ref count);
 
         Nodes.GetSurePresentRef(ownerIdx).SetChildrenInfo(count, first);
         return ownerIdx;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#if NET10_0_OR_GREATER
+    private ushort WithChildren(ExpressionType nodeType, Type type, object obj, byte flags, ExprNodeKind kind, params ReadOnlySpan<ushort> children) =>
+#else
     private ushort WithChildren(ExpressionType nodeType, Type type, object obj, byte flags, ExprNodeKind kind, params ushort[] children) =>
+#endif
         WithOneOrMoreChildren(nodeType, type, obj, flags, kind, 0, children);
 
     /// <summary>Adds a constructor call node.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#if NET10_0_OR_GREATER
+    public ushort New(ConstructorInfo ctor, params ReadOnlySpan<ushort> args) =>
+#else
     public ushort New(ConstructorInfo ctor, params ushort[] args) =>
+#endif
         WithChildren(ExpressionType.New, ctor.DeclaringType, ctor, default, default, args);
 
     /// <summary>Adds an array initialization node.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ushort NewArrayInit(Type elementType, params ushort[] expressions) =>
         WithChildren(ExpressionType.NewArrayInit, elementType.MakeArrayType(), null, default, default, expressions);
 
     /// <summary>Adds an array-bounds node.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ushort NewArrayBounds(Type elementType, params ushort[] bounds) =>
         WithChildren(ExpressionType.NewArrayBounds, elementType.MakeArrayType(), null, default, default, bounds);
 
     /// <summary>Adds an invocation node.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ushort Invoke(ushort expr, params ushort[] args) =>
         WithOneOrMoreChildren(ExpressionType.Invoke, Nodes[expr].Type, null, default, default, expr, args);
 
     /// <summary>Adds a static-call node.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ushort Call(MethodInfo method, params ushort[] args) =>
         WithChildren(ExpressionType.Call, method.ReturnType, method, default, default, args);
 
     /// <summary>Adds an instance-call node.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ushort Call(ushort instance, MethodInfo method, params ushort[] args) =>
         WithOneOrMoreChildren(ExpressionType.Call, method.ReturnType, method, default, default, instance, args);
 
     /// <summary>Adds a field or property access node.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ushort MakeMemberAccess(MemberInfo member) =>
         AddNode(ExpressionType.MemberAccess, GetMemberType(member), member);
 
@@ -507,6 +518,7 @@ public struct ExprTree : IEquatable<ExprTree>
     /// <param name="instance">The node index representing the instance target.</param>
     /// <param name="member">The member to access.</param>
     /// <returns>The node index of the added member-access node.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ushort MakeMemberAccess(ushort instance, MemberInfo member) =>
         WithOneChild(ExpressionType.MemberAccess, GetMemberType(member), member, default, default, instance);
 
@@ -533,8 +545,9 @@ public struct ExprTree : IEquatable<ExprTree>
             : WithOneOrMoreChildren(ExpressionType.Index, prop.PropertyType, prop, default, default, instance, args);
 
     /// <summary>Adds a binary node of the specified kind.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ushort MakeBinary(ExpressionType nodeType, ushort left, ushort right, bool isLiftedToNull = false,
-        MethodInfo method = null, ushort conversion = 0, Type type = null) => 
+        MethodInfo method = null, ushort conversion = 0, Type type = null) =>
         WithThreeChildren(
             nodeType, type ?? GetBinaryResultType(nodeType, Nodes[left].Type, method), method, isLiftedToNull ? BinaryLiftedToNullFlag : (byte)0, default,
             left, right, conversion);
@@ -603,7 +616,7 @@ public struct ExprTree : IEquatable<ExprTree>
         type ??= Nodes[exprs[exprs.Length - 1]].Type;
         var blockIdx = WithOneOrMoreChildren(ExpressionType.Block, type, null, default, default, exprsSubNode, vars);
         if (vars != null && vars.Length != 0)
-            BlocksWithVariables.Add(blockIdx);
+        BlocksWithVariables.Add(blockIdx);
         return blockIdx;
     }
 
@@ -613,7 +626,12 @@ public struct ExprTree : IEquatable<ExprTree>
         Block(null, null, exprs);
 
     /// <summary>Adds a lambda node. Layout: body then parameters. Tracks <see cref="LambdaNodes"/> and captures.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#if NET10_0_OR_GREATER
+    public ushort Lambda(Type delegateType, ushort bodyIdx, params ReadOnlySpan<ushort> pars)
+#else
     public ushort Lambda(Type delegateType, ushort bodyIdx, params ushort[] pars)
+#endif
     {
         var idx = WithOneOrMoreChildren(ExpressionType.Lambda, delegateType, null, default, default, bodyIdx, pars);
         LambdaNodes.Add(idx);
@@ -623,18 +641,25 @@ public struct ExprTree : IEquatable<ExprTree>
 
     /// <summary>Adds a typed lambda node.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#if NET10_0_OR_GREATER
+    public ushort Lambda<TDelegate>(ushort bodyIdx, params ReadOnlySpan<ushort> parameters) where TDelegate : Delegate =>
+#else
     public ushort Lambda<TDelegate>(ushort bodyIdx, params ushort[] parameters) where TDelegate : Delegate =>
+#endif
         Lambda(typeof(TDelegate), bodyIdx, parameters);
 
     /// <summary>Adds a member-assignment binding node.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ushort Bind(MemberInfo member, ushort expr) =>
         WithOneChild(default, GetMemberType(member), member, default, ExprNodeKind.MemberAssignment, expr);
 
     /// <summary>Adds a nested member-binding node.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ushort MemberBind(MemberInfo member, params ushort[] bindings) =>
         WithChildren(default, GetMemberType(member), member, default, ExprNodeKind.MemberMemberBinding, bindings);
 
     /// <summary>Adds an element-initializer node.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ushort ElementInit(MethodInfo addMethod, params ushort[] args) =>
         WithChildren(default, addMethod.DeclaringType, addMethod, default, ExprNodeKind.ElementInit, args);
 
@@ -643,14 +668,21 @@ public struct ExprTree : IEquatable<ExprTree>
         WithChildren(default, GetMemberType(member), member, default, ExprNodeKind.MemberListBinding, initializers);
 
     /// <summary>Adds a member-init node.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#if NET10_0_OR_GREATER
+    public ushort MemberInit(ushort expr, params ReadOnlySpan<ushort> bindings) =>
+#else
     public ushort MemberInit(ushort expr, params ushort[] bindings) =>
+#endif
         WithOneOrMoreChildren(ExpressionType.MemberInit, Nodes[expr].Type, null, default, default, expr, bindings);
 
     /// <summary>Adds a list-init node.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ushort ListInit(ushort @new, params ushort[] initializers) =>
         WithOneOrMoreChildren(ExpressionType.ListInit, Nodes[@new].Type, null, default, default, @new, initializers);
 
     /// <summary>Adds a label-target node with a stable identity in <see cref="ExprNode.ChildIdx"/>.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ushort Label(Type type = null, string name = null) =>
         LabelTargetWithId(type ?? typeof(void), name, checked((ushort)(Nodes.Count + 1)));
 
@@ -659,6 +691,7 @@ public struct ExprTree : IEquatable<ExprTree>
         AddNode(ExpressionType.Extension, type, name, 0, ExprNodeKind.LabelTarget, childIdx: id);
 
     /// <summary>Adds a label-expression node.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ushort Label(ushort target, ushort defaultValue = 0)
     {
         var idx = defaultValue == 0
@@ -669,6 +702,7 @@ public struct ExprTree : IEquatable<ExprTree>
     }
 
     /// <summary>Adds a goto-family node. Kind is stored in flags.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ushort MakeGoto(GotoExpressionKind gotoKind, ushort target, ushort value = 0, Type type = null)
     {
         var resultType = type ?? (value != 0 ? Nodes[value].Type : typeof(void));
@@ -686,6 +720,7 @@ public struct ExprTree : IEquatable<ExprTree>
     public ushort Return(ushort target, ushort value) => MakeGoto(GotoExpressionKind.Return, target, value, Nodes[value].Type);
 
     /// <summary>Adds a loop node.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ushort Loop(ushort body, ushort @break = 0, ushort @continue = 0)
     {
         byte flags = 0;
@@ -694,7 +729,9 @@ public struct ExprTree : IEquatable<ExprTree>
         return WithThreeChildren(ExpressionType.Loop, typeof(void), null, flags, default, body, @break, @continue);
     }
 
+    // @perf use params ReadOnlySpan
     /// <summary>Adds a switch-case node. Layout: test values then body.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ushort SwitchCase(ushort body, params ushort[] testValues) =>
         WithOneOrMoreChildren(default, null, null, default, ExprNodeKind.SwitchCase, 0,
             AppendUShort(testValues, body));

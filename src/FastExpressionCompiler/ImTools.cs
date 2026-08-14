@@ -897,12 +897,11 @@ public struct SmallList<T, TStack, TPool> : ISmallList<T>
         Debug.Assert(_count != 0, "List should not be empty");
         Debug.Assert(index >= 0 & index < _count, $"Index {index} should be less than Count {_count}");
 
-        var stackCap = Stack.Capacity;
-        if (index < stackCap)
+        if (index < Stack.Capacity)
             return ref Stack.GetSurePresentRef(index);
 
         Debug.Assert(Rest != null);
-        return ref Rest.GetSurePresentRef(index - stackCap);
+        return ref Rest.GetSurePresentRef(index - Stack.Capacity);
     }
 
     /// <summary>Returns surely present item by ref</summary>
@@ -934,6 +933,16 @@ public struct SmallList<T, TStack, TPool> : ISmallList<T>
         if (index < stackCap)
             return ref Stack.GetSurePresentRef(index);
         return ref SmallList.AddDefaultAndGetRef(ref Rest, ref Pool, index - stackCap);
+    }
+
+    /// <summary>Adds the item to the end of the list aka the Stack.Push. Returns the ref to the added item.</summary>
+    [UnscopedRef]
+    [MethodImpl((MethodImplOptions)256)]
+    public ref T AddAndGetRef(in T item)
+    {
+        ref T r = ref AddDefaultAndGetRef();
+        r = item;
+        return ref r;
     }
 
     /// <summary>Adds the item to the end of the list aka the Stack.Push. Returns the index of the added item.</summary>

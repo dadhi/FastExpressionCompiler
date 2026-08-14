@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFrameworks Condition="'$(DevMode)' != 'true'">net9.0;net8.0</TargetFrameworks>
-        <TargetFrameworks Condition="'$(DevMode)' == 'true'">net9.0</TargetFrameworks>
+        <TargetFrameworks Condition="'$(DevMode)' != 'true'">net10.0;net9.0;net8.0</TargetFrameworks>
+        <TargetFrameworks Condition="'$(DevMode)' == 'true'">net10.0</TargetFrameworks>
 
         <OutputType>Exe</OutputType>
         <IsTestProject>false</IsTestProject>
@@ -17,8 +17,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="BenchmarkDotNet" Version="0.15.0"/>
-        <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.15.0" />
+        <PackageReference Include="BenchmarkDotNet" Version="0.15.8"/>
+        <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.15.8" />
     </ItemGroup>
 
     <ItemGroup>

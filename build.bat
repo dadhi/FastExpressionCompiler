@@ -21,7 +21,7 @@ dotnet run --no-build -f:net10.0 -c:Release --project test/FastExpressionCompile
 if %ERRORLEVEL% neq 0 goto :error
 
 echo:
-echo:running on .NET 9.0 (Latest)
+echo:running on .NET 9.0
 dotnet run --no-build -f:net9.0 -c:Release --project test/FastExpressionCompiler.TestsRunner
 if %ERRORLEVEL% neq 0 goto :error
 

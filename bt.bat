@@ -3,7 +3,7 @@
 echo: 
 echo:## Running TESTS on the Latest Supported .NET...
 echo:
-dotnet run -p:DevMode=true -f:net9.0 -c:Release --project test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
+dotnet run -p:DevMode=true -f:net10.0 -c:Release --project test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
 if %ERRORLEVEL% neq 0 goto :error
 
 echo:
