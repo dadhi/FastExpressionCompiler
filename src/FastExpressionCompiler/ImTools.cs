@@ -935,7 +935,20 @@ public struct SmallList<T, TStack, TPool> : ISmallList<T>
         return ref SmallList.AddDefaultAndGetRef(ref Rest, ref Pool, index - stackCap);
     }
 
-    /// <summary>Adds the item to the end of the list aka the Stack.Push. Returns the ref to the added item.</summary>
+    // todo: @wip add to interface
+    /// <summary>Appends the default item to the end of the list and returns the reference to it and its index</summary>
+    [UnscopedRef]
+    [MethodImpl((MethodImplOptions)256)]
+    public ref T AddDefaultAndGetRef(out int index)
+    {
+        index = _count++;
+        var stackCap = Stack.Capacity;
+        if (index < stackCap)
+            return ref Stack.GetSurePresentRef(index);
+        return ref SmallList.AddDefaultAndGetRef(ref Rest, ref Pool, index - stackCap);
+    }
+
+    /// <summary>Appends the item to the end of the list aka the Stack.Push. Returns the ref to the added item.</summary>
     [UnscopedRef]
     [MethodImpl((MethodImplOptions)256)]
     public ref T AddAndGetRef(in T item)
@@ -945,7 +958,7 @@ public struct SmallList<T, TStack, TPool> : ISmallList<T>
         return ref r;
     }
 
-    /// <summary>Adds the item to the end of the list aka the Stack.Push. Returns the index of the added item.</summary>
+    /// <summary>Appends the item to the end of the list aka the Stack.Push. Returns the index of the added item.</summary>
     [MethodImpl((MethodImplOptions)256)]
     public int Add(in T item)
     {

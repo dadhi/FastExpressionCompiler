@@ -101,31 +101,46 @@ public struct ExprNode
     /// <summary>Gets the first child idx or an auxiliary payload idx (parameter/label id, closure constant idx).</summary>
     public ushort ChildIdx => (ushort)(_child & FirstChildIdxMask);
 
+    /// <summary>Gets the raw 32-bit value for inline primitive constants. Only valid when <see cref="Obj"/> == <see cref="InlineValueMarker"/>.</summary>
+    internal uint InlineValue => _child;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void Set(ref ExprNode n, ExpressionType nodeType, Type type, object obj = null)
+    {
+        n.Type = type;
+        n.Obj = obj;
+        n._nodeType = (byte)nodeType;
+    }
+
     /// <summary>Sets the child-link metadata for the node.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetChildrenInfo(ushort childCount, ushort childIdx) => _child = ((uint)childCount << ChildCountShift) | childIdx;
 
-    /// <summary>Gets the raw 32-bit value for inline primitive constants. Only valid when <see cref="Obj"/> == <see cref="InlineValueMarker"/>.</summary>
-    internal uint InlineValue => _child;
+    /// <summary>Sets the child-link metadata for the node.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static void SetChildrenInfo(ref ExprNode n, ushort childCount, ushort childIdx) =>
+        n._child = ((uint)childCount << ChildCountShift) | childIdx;
 
-    internal ExprNode(ExpressionType nodeType, Type type, object obj, byte flags, ExprNodeKind kind,
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void Set(ref ExprNode n, ExpressionType nodeType, Type type, object obj, byte flags, ExprNodeKind kind,
         ushort childIdx = 0, ushort childCount = 0, ushort nextIdx = 0)
     {
-        Type = type;
-        Obj = obj;
-        _child = ((uint)childCount << ChildCountShift) | childIdx;
-        NextIdx = nextIdx;
-        _nodeType = (byte)nodeType;
-        FlagsAndKind = (byte)((flags << 4) | ((byte)kind & 0b1111));
+        n.Type = type;
+        n.Obj = obj;
+        n._child = ((uint)childCount << ChildCountShift) | childIdx;
+        n.NextIdx = nextIdx;
+        n._nodeType = (byte)nodeType;
+        n.FlagsAndKind = (byte)((flags << 4) | ((byte)kind & 0b1111));
     }
 
     /// <summary>Constructs an inline primitive constant node, <see cref="Obj"/> is set to <see cref="InlineValueMarker"/>.</summary>
-    internal ExprNode(Type type, uint inlineValue)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void Set(ref ExprNode n, Type type, uint inlineValue)
     {
-        Type = type;
-        Obj = InlineValueMarker;
-        _nodeType = (byte)ExpressionType.Constant;
-        _child = inlineValue;
+        n.Type = type;
+        n.Obj = InlineValueMarker;
+        n._nodeType = (byte)ExpressionType.Constant;
+        n._child = inlineValue;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -240,12 +255,31 @@ public struct ExprTree : IEquatable<ExprTree>
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private ushort AddNode(ExpressionType nodType, Type type, object obj = null, byte flags = 0, ExprNodeKind kind = default,
+    private ushort LastNodeIdx() => checked((ushort)(Nodes.Count - 1));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private ushort AddNode(ExpressionType nodeType, Type type, object obj = null)
+    {
+        EnsureIndexZeroSentinel();
+        ExprNode.Set(ref Nodes.AddDefaultAndGetRef(out var idx), nodeType, type, obj);
+        return (ushort)idx;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private ushort AddNode(ExpressionType nodeType, Type type, object obj, byte flags = 0, ExprNodeKind kind = default,
         ushort childIdx = 0, ushort childCount = 0)
     {
         EnsureIndexZeroSentinel();
-        var node = new ExprNode(nodType, type, obj, flags, kind, childIdx, childCount);
-        return checked((ushort)Nodes.Add(in node));
+        ExprNode.Set(ref Nodes.AddDefaultAndGetRef(out var idx), nodeType, type, obj, flags, kind, childIdx, childCount);
+        return (ushort)idx;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void AddNode(ref ExprNode n, ExpressionType nodeType, Type type, object obj, byte flags = 0, ExprNodeKind kind = default,
+        ushort childIdx = 0, ushort childCount = 0)
+    {
+        EnsureIndexZeroSentinel();
+        ExprNode.Set(ref n, nodeType, type, obj, flags, kind, childIdx, childCount);
     }
 
     /// <summary>Adds a parameter node and returns its idx.</summary>
@@ -281,7 +315,9 @@ public struct ExprTree : IEquatable<ExprTree>
             if (!In32BitRange(Type.GetTypeCode(Enum.GetUnderlyingType(type))))
                 return AddNode(ExpressionType.Constant, type, value);
             EnsureIndexZeroSentinel();
-            return checked((ushort)Nodes.Add(new ExprNode(type, unchecked((uint)System.Convert.ToInt64(value)))));
+            ref var n = ref Nodes.AddDefaultAndGetRef();
+            ExprNode.Set(ref n, type, unchecked((uint)System.Convert.ToInt64(value)));
+            return LastNodeIdx();
         }
 
         if (type.IsPrimitive)
@@ -290,11 +326,12 @@ public struct ExprTree : IEquatable<ExprTree>
             if (!In32BitRange(tc))
                 return AddNode(ExpressionType.Constant, type, value);
             EnsureIndexZeroSentinel();
-            return checked((ushort)Nodes.Add(new ExprNode(type, ToInlineValue(value, tc))));
+            ref var n = ref Nodes.AddDefaultAndGetRef();
+            ExprNode.Set(ref n, type, ToInlineValue(value, tc));
+            return LastNodeIdx();
         }
 
-        return AddNode(ExpressionType.Constant, type, ClosureConstantMarker,
-            childIdx: checked((ushort)ClosureConstants.Add(value)));
+        return AddNode(ExpressionType.Constant, type, ClosureConstantMarker, childIdx: checked((ushort)ClosureConstants.Add(value)));
     }
 
     /// <summary>Adds a constant node using the runtime type of the supplied value.</summary>
@@ -310,7 +347,9 @@ public struct ExprTree : IEquatable<ExprTree>
     public ushort ConstantInt(int value)
     {
         EnsureIndexZeroSentinel();
-        return checked((ushort)Nodes.Add(new ExprNode(typeof(int), unchecked((uint)value))));
+        ref var n = ref Nodes.AddDefaultAndGetRef();
+        ExprNode.Set(ref n, typeof(int), unchecked((uint)value));
+        return LastNodeIdx();
     }
 
     /// <summary>Adds a typed constant node.</summary>
@@ -374,7 +413,10 @@ public struct ExprTree : IEquatable<ExprTree>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private ushort WithOneChild(ExpressionType nodeType, Type type, object obj, byte flags, ExprNodeKind kind, ushort ch0)
     {
-        var ownerIdx = AddNode(nodeType, type, obj, flags, kind);
+        ref var ownerRef = ref Nodes.AddDefaultAndGetRef(out var idx);
+        var ownerIdx = (ushort)idx;
+        AddNode(ref ownerRef, nodeType, type, obj, flags, kind);
+        
         ushort first = 0;
         ushort count = 0;
         if (ch0 != 0)
@@ -382,7 +424,7 @@ public struct ExprTree : IEquatable<ExprTree>
             first = MayBeCloneChildForOwner(ch0, ownerIdx);
             count = 1;
         }
-        Nodes.GetSurePresentRef(ownerIdx).SetChildrenInfo(count, first);
+        ExprNode.SetChildrenInfo(ref ownerRef, count, first);
         return ownerIdx;
     }
 
@@ -486,7 +528,11 @@ public struct ExprTree : IEquatable<ExprTree>
 
     /// <summary>Adds an array initialization node.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#if NET10_0_OR_GREATER
+    public ushort NewArrayInit(Type elementType, params ReadOnlySpan<ushort> expressions) =>
+#else
     public ushort NewArrayInit(Type elementType, params ushort[] expressions) =>
+#endif
         WithChildren(ExpressionType.NewArrayInit, elementType.MakeArrayType(), null, default, default, expressions);
 
     /// <summary>Adds an array-bounds node.</summary>
@@ -616,7 +662,7 @@ public struct ExprTree : IEquatable<ExprTree>
         type ??= Nodes[exprs[exprs.Length - 1]].Type;
         var blockIdx = WithOneOrMoreChildren(ExpressionType.Block, type, null, default, default, exprsSubNode, vars);
         if (vars != null && vars.Length != 0)
-        BlocksWithVariables.Add(blockIdx);
+            BlocksWithVariables.Add(blockIdx);
         return blockIdx;
     }
 
@@ -629,14 +675,56 @@ public struct ExprTree : IEquatable<ExprTree>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #if NET10_0_OR_GREATER
     public ushort Lambda(Type delegateType, ushort bodyIdx, params ReadOnlySpan<ushort> pars)
+    {
 #else
     public ushort Lambda(Type delegateType, ushort bodyIdx, params ushort[] pars)
-#endif
     {
-        var idx = WithOneOrMoreChildren(ExpressionType.Lambda, delegateType, null, default, default, bodyIdx, pars);
-        LambdaNodes.Add(idx);
-        CollectLambdaClosureParameterUsages(idx);
-        return idx;
+        pars ??= Array.Empty<ushort>();
+#endif
+        EnsureIndexZeroSentinel();
+        ref var lambdaRef = ref Nodes.AddDefaultAndGetRef(out var idx);
+        ExprNode.Set(ref lambdaRef, ExpressionType.Lambda, delegateType);
+        var lambdaIdx = (ushort)idx;
+
+        ushort firstIdx = 0;
+
+        ref var prevRef = ref Nodes.GetSurePresentRef(bodyIdx);
+        if (bodyIdx != 0)
+        {
+            if (prevRef.NextIdx != 0 || prevRef.NodeType == ExpressionType.Parameter)
+            {
+                var bodyCopyRef = prevRef;
+                prevRef = ref Nodes.AddDefaultAndGetRef(out var bodyCopyIdx);
+                prevRef = bodyCopyRef;
+                bodyIdx = (ushort)bodyCopyIdx;
+            }
+            prevRef.NextIdx = lambdaIdx; // set next to lambda by default, then it can be overridden by the first parameter if present
+            firstIdx = bodyIdx;
+        }
+        else
+        {
+            ref var defaultRef = ref Nodes.AddDefaultAndGetRef(out var defaultIdx);
+            ExprNode.Set(ref defaultRef, ExpressionType.Default, typeof(void));
+            firstIdx = (ushort)defaultIdx;
+        }
+
+        var count = (ushort)(pars.Length + 1);
+        ExprNode.SetChildrenInfo(ref lambdaRef, count, firstIdx);
+
+        foreach (var parIdx in pars)
+        {
+            Debug.Assert(parIdx != 0, "The parameter should be defined - otherwise what is the matter");
+            // We do not clone the parameters defined in the Lambda, because this the place where they are defined
+            prevRef.NextIdx = parIdx;
+            prevRef = ref Nodes.GetSurePresentRef(parIdx);
+            Debug.Assert(prevRef.NextIdx == 0, "The parameter should not be linked to any other node - otherwise what is the matter");
+        }
+
+        prevRef.NextIdx = lambdaIdx; // close the child chain with a link back to the lambda node
+
+        LambdaNodes.Add(lambdaIdx);
+        CollectLambdaClosureParameterUsages(lambdaIdx);
+        return lambdaIdx;
     }
 
     /// <summary>Adds a typed lambda node.</summary>
