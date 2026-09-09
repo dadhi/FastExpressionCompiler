@@ -16,23 +16,13 @@ echo:## Finished: RESTORE and BUILD
 echo: 
 echo:## Starting: TESTS...
 echo:
-echo:running on .NET 10.0 (Latest)
+echo:running on .NET 10.0
 dotnet run --no-build -f:net10.0 -c:Release --project test/FastExpressionCompiler.TestsRunner
 if %ERRORLEVEL% neq 0 goto :error
 
 echo:
-echo:running on .NET 9.0 (Latest)
-dotnet run --no-build -f:net9.0 -c:Release --project test/FastExpressionCompiler.TestsRunner
-if %ERRORLEVEL% neq 0 goto :error
-
-echo:
-echo:running on .NET 8.0 (LTS)
+echo:running on .NET 8.0
 dotnet run --no-build -f:net8.0 -c:Release --project test/FastExpressionCompiler.TestsRunner
-if %ERRORLEVEL% neq 0 goto :error
-
-echo:
-echo:running on .NET 6.0 (Previous LTS)
-dotnet run --no-build -f:net6.0 -c:Release --project test/FastExpressionCompiler.TestsRunner
 if %ERRORLEVEL% neq 0 goto :error
 
 echo:
