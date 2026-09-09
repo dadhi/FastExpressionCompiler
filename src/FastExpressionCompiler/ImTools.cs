@@ -942,10 +942,9 @@ public struct SmallList<T, TStack, TPool> : ISmallList<T>
     public ref T AddDefaultAndGetRef(out int index)
     {
         index = _count++;
-        var stackCap = Stack.Capacity;
-        if (index < stackCap)
+        if (index < Stack.Capacity)
             return ref Stack.GetSurePresentRef(index);
-        return ref SmallList.AddDefaultAndGetRef(ref Rest, ref Pool, index - stackCap);
+        return ref SmallList.AddDefaultAndGetRef(ref Rest, ref Pool, index - Stack.Capacity);
     }
 
     /// <summary>Appends the item to the end of the list aka the Stack.Push. Returns the ref to the added item.</summary>

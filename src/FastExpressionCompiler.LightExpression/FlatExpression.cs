@@ -126,11 +126,11 @@ public struct ExprNode
         ushort childIdx = 0, ushort childCount = 0, ushort nextIdx = 0)
     {
         n.Type = type;
+        n._nodeType = (byte)nodeType;
         n.Obj = obj;
         n._child = ((uint)childCount << ChildCountShift) | childIdx;
-        n.NextIdx = nextIdx;
-        n._nodeType = (byte)nodeType;
         n.FlagsAndKind = (byte)((flags << 4) | ((byte)kind & 0b1111));
+        n.NextIdx = nextIdx;
     }
 
     /// <summary>Constructs an inline primitive constant node, <see cref="Obj"/> is set to <see cref="InlineValueMarker"/>.</summary>
@@ -255,9 +255,6 @@ public struct ExprTree : IEquatable<ExprTree>
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private ushort LastNodeIdx() => checked((ushort)(Nodes.Count - 1));
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private ushort AddNode(ExpressionType nodeType, Type type, object obj = null)
     {
         EnsureIndexZeroSentinel();
@@ -315,9 +312,9 @@ public struct ExprTree : IEquatable<ExprTree>
             if (!In32BitRange(Type.GetTypeCode(Enum.GetUnderlyingType(type))))
                 return AddNode(ExpressionType.Constant, type, value);
             EnsureIndexZeroSentinel();
-            ref var n = ref Nodes.AddDefaultAndGetRef();
+            ref var n = ref Nodes.AddDefaultAndGetRef(out var idx);
             ExprNode.Set(ref n, type, unchecked((uint)System.Convert.ToInt64(value)));
-            return LastNodeIdx();
+            return (ushort)idx;
         }
 
         if (type.IsPrimitive)
@@ -326,9 +323,9 @@ public struct ExprTree : IEquatable<ExprTree>
             if (!In32BitRange(tc))
                 return AddNode(ExpressionType.Constant, type, value);
             EnsureIndexZeroSentinel();
-            ref var n = ref Nodes.AddDefaultAndGetRef();
+            ref var n = ref Nodes.AddDefaultAndGetRef(out var idx);
             ExprNode.Set(ref n, type, ToInlineValue(value, tc));
-            return LastNodeIdx();
+            return (ushort)idx;
         }
 
         return AddNode(ExpressionType.Constant, type, ClosureConstantMarker, childIdx: checked((ushort)ClosureConstants.Add(value)));
@@ -347,9 +344,9 @@ public struct ExprTree : IEquatable<ExprTree>
     public ushort ConstantInt(int value)
     {
         EnsureIndexZeroSentinel();
-        ref var n = ref Nodes.AddDefaultAndGetRef();
+        ref var n = ref Nodes.AddDefaultAndGetRef(out var idx);
         ExprNode.Set(ref n, typeof(int), unchecked((uint)value));
-        return LastNodeIdx();
+        return (ushort)idx;
     }
 
     /// <summary>Adds a typed constant node.</summary>
@@ -386,16 +383,19 @@ public struct ExprTree : IEquatable<ExprTree>
     private ushort MayBeCloneChildForOwner(ushort childIdx, ushort ownerIdx)
     {
         Debug.Assert(childIdx != 0);
+        Debug.Assert(ownerIdx != 0);
         ref var childRef = ref Nodes.GetSurePresentRef(childIdx);
-        if (childRef.NextIdx == 0 && childRef.NodeType != ExpressionType.Parameter)
-            childRef.NextIdx = ownerIdx;
-        else
+
+        // Clone the child node that is already in some child chain (NextIdx != 0) or is parameter (we always split parameter definition - original and usage - clone).
+        if (childRef.NextIdx != 0 || childRef.NodeType == ExpressionType.Parameter)
         {
-            // Clone the child node that is already in some child chain (NextIdx != 0) or is parameter (we always split parameter definition - original and usage - clone).
             ExprNode childCopy = childRef;
-            childCopy.NextIdx = ownerIdx;
-            childIdx = checked((ushort)Nodes.Add(in childCopy));
+            childRef = ref Nodes.AddDefaultAndGetRef(out var idx);
+            childRef = childCopy;
+            childIdx = (ushort)idx;
         }
+
+        childRef.NextIdx = ownerIdx;
         return childIdx;
     }
 
@@ -492,18 +492,18 @@ public struct ExprTree : IEquatable<ExprTree>
     {
         more ??= Array.Empty<ushort>();
 #endif
-        var ownerIdx = AddNode(nodeType, type, obj, flags, kind);
-        ushort first = 0, prev = 0, count = 0;
+        Debug.Assert(ch0 != 0, "At least one child must be provided.");
 
-        if (ch0 != 0)
-        {
-            prev = first = MayBeCloneChildForOwner(ch0, ownerIdx);
-            ++count;
-        }
+        var ownerIdx = AddNode(nodeType, type, obj, flags, kind);
+        ushort first = 0, prev = 0, count = 1;
+
+        prev = first = MayBeCloneChildForOwner(ch0, ownerIdx);
 
         foreach (var ch in more)
-            if (ch != 0)
-                AppendPreparedChild(MayBeCloneChildForOwner(ch, ownerIdx), ref first, ref prev, ref count);
+        {
+            Debug.Assert(ch != 0, "Child index must not be zero.");
+            AppendPreparedChild(MayBeCloneChildForOwner(ch, ownerIdx), ref first, ref prev, ref count);
+        }
 
         Nodes.GetSurePresentRef(ownerIdx).SetChildrenInfo(count, first);
         return ownerIdx;
@@ -511,11 +511,27 @@ public struct ExprTree : IEquatable<ExprTree>
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #if NET10_0_OR_GREATER
-    private ushort WithChildren(ExpressionType nodeType, Type type, object obj, byte flags, ExprNodeKind kind, params ReadOnlySpan<ushort> children) =>
+    private ushort WithChildren(ExpressionType nodeType, Type type, object obj, byte flags, ExprNodeKind kind, params ReadOnlySpan<ushort> children)
+    {
 #else
-    private ushort WithChildren(ExpressionType nodeType, Type type, object obj, byte flags, ExprNodeKind kind, params ushort[] children) =>
+    private ushort WithChildren(ExpressionType nodeType, Type type, object obj, byte flags, ExprNodeKind kind, params ushort[] children)
+    {
+        children ??= Array.Empty<ushort>();
 #endif
-        WithOneOrMoreChildren(nodeType, type, obj, flags, kind, 0, children);
+        Debug.Assert(children.Length != 0, "At least one child must be provided.");
+
+        var ownerIdx = AddNode(nodeType, type, obj, flags, kind);
+        ushort first = 0, prev = 0, count = 0;
+
+        foreach (var ch in children)
+        {
+            Debug.Assert(ch != 0, "Child index must not be zero.");
+            AppendPreparedChild(MayBeCloneChildForOwner(ch, ownerIdx), ref first, ref prev, ref count);
+        }
+
+        Nodes.GetSurePresentRef(ownerIdx).SetChildrenInfo(count, first);
+        return ownerIdx;
+    }
 
     /// <summary>Adds a constructor call node.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
