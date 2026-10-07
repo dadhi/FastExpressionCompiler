@@ -21,8 +21,10 @@ public class Program
         // BenchmarkRunner.Run<ManuallyComposedLambdaBenchmark.Create_and_Compile>(); // not included in README.md, may be it needs to
 
         // BenchmarkRunner.Run<LightExprVsExpr_Create_ComplexExpr>();
-        // BenchmarkRunner.Run<LightExprVsFlatExpr_Create_ComplexExpr>();
+        BenchmarkRunner.Run<LightExprVsFlatExpr_Create_ComplexExpr>();
         // BenchmarkRunner.Run<LightExprVsExpr_CreateAndCompile_ComplexExpr>();
+
+        // BenchmarkRunner.Run<Expand_vs_Expand2>();
 
         //--------------------------------------------
 
@@ -54,7 +56,7 @@ public class Program
         // BenchmarkRunner.Run<Issue489_Switch_BranchElimination.Compile>();
         // BenchmarkRunner.Run<Issue489_Switch_BranchElimination.Invoke>();
 
-        BenchmarkRunner.Run<StackSearch>();
+        // BenchmarkRunner.Run<StackSearch>();
         // BenchmarkRunner.Run<SmallList_Switch_vs_AsSpan_ByRef_Add>();
         // BenchmarkRunner.Run<SmallList_Switch_vs_AsSpan_ByRef_Access>();
         // BenchmarkRunner.Run<ArrayCopy_vs_ArrayResize_vs_ForLoop>();

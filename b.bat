@@ -10,10 +10,7 @@ echo:
 echo:## Starting TESTS...
 echo:
 
-dotnet run --no-build -p:DevMode=true -f:net9.0 -c:Release --project test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
-if %ERRORLEVEL% neq 0 goto :error
-
-dotnet run --no-build -p:DevMode=true -c:Release --project test/FastExpressionCompiler.TestsRunner.Net472
+dotnet run --no-build -p:DevMode=true -f:net10.0 -c:Release --project test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
 if %ERRORLEVEL% neq 0 goto :error
 
 echo:

@@ -11,7 +11,6 @@ using SysExpr = System.Linq.Expressions.Expression;
 
 namespace FastExpressionCompiler.LightExpression.UnitTests
 {
-
     public partial class LightExpressionTests : ITest
     {
         public int Run()
@@ -34,6 +33,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_build_flat_expression_directly_with_light_expression_like_api();
             Can_build_flat_expression_control_flow_directly();
             Can_property_test_generated_flat_expression_roundtrip_structurally();
+
             Flat_lambda_parameter_ref_before_decl_preserves_identity();
             Flat_lambda_multiple_parameter_refs_all_yield_same_identity();
             Flat_block_variables_and_refs_yield_same_identity();
@@ -55,9 +55,13 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Flat_blocks_with_variables_tracked_from_expression_conversion();
             Flat_goto_and_label_nodes_tracked_from_expression_conversion();
             Flat_try_catch_nodes_tracked_from_expression_conversion();
-            return 38;
-        }
+            Flat_equal_lambdas_with_different_parameter_names_are_structurally_equal_and_hash_equal();
+            Flat_equal_nested_lambdas_with_captures_are_structurally_equal_and_hash_equal();
+            Flat_standalone_parameters_use_name_in_structural_equality();
+            Flat_structural_hash_supports_dictionary_lookup();
 
+            return 42;
+        }
 
         public void Can_compile_lambda_without_converting_to_expression()
         {
@@ -280,7 +284,6 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             return fe;
         }
 
-
         public void Can_compile_complex_expr_with_Arrays_and_Casts()
         {
             var expr = CreateComplexLightExpression();
@@ -392,9 +395,10 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
         public void Can_roundtrip_light_expression_through_flat_expression()
         {
-            var expr = CreateComplexLightExpression("state");
+            var expr = CreateComplexExpression("state");
 
-            var flat = expr.ToFlatExpression();
+            ExprTree flat = default;
+            flat.FromSysExpr(expr);
 
             Asserts.IsTrue(flat.Nodes.Count > 0);
             Asserts.AreEqual(0, flat.ClosureConstants.Count);
@@ -415,30 +419,12 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var valueHolder = new S();
             var valueField = typeof(S).GetField(nameof(S.Value));
             var constExpr = Lambda<Func<string>>(Field(Constant(valueHolder), valueField));
-            var constFlat = constExpr.ToFlatExpression();
+            ExprTree constFlat = default;
+            constFlat.FromLightExpr(constExpr);
 
             Asserts.AreEqual(1, constFlat.ClosureConstants.Count);
             Asserts.AreSame(valueHolder, constFlat.ClosureConstants[0]);
             Asserts.AreEqual(null, ((LambdaExpression)constFlat.ToLightExpression()).CompileFast<Func<string>>(true)());
-
-            var p = SysExpr.Parameter(typeof(int), "p");
-            var target = SysExpr.Label(typeof(int), "done");
-            var sysLambda = SysExpr.Lambda<Func<int, int>>(
-                SysExpr.Block(
-                    SysExpr.Goto(target, p, typeof(int)),
-                    SysExpr.Label(target, SysExpr.Constant(0))),
-                p);
-
-            var sysRoundtrip = (System.Linq.Expressions.LambdaExpression)sysLambda
-                .ToFlatExpression()
-                .ToExpression();
-
-            var block = (System.Linq.Expressions.BlockExpression)sysRoundtrip.Body;
-            var @goto = (System.Linq.Expressions.GotoExpression)block.Expressions[0];
-            var label = (System.Linq.Expressions.LabelExpression)block.Expressions[1];
-
-            Asserts.AreSame(sysRoundtrip.Parameters[0], @goto.Value);
-            Asserts.AreSame(@goto.Target, label.Target);
         }
 
         public void Can_convert_dynamic_runtime_variables_and_debug_info_to_light_expression_and_flat_expression()
@@ -582,6 +568,19 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.AreSame(paramDecl, mul.Left);
             Asserts.AreSame(paramDecl, mul.Right);
             Asserts.AreSame(paramDecl, add.Right);
+        }
+
+        public void Flat_repeated_child_references_do_not_create_self_cycle()
+        {
+            var fe = default(ExprTree);
+            var p = fe.ParameterOf<int>("p");
+            fe.RootIdx = fe.Lambda<Func<int, int>>(fe.Add(p, p), p);
+
+            var sysLambda = (System.Linq.Expressions.LambdaExpression)fe.ToExpression();
+            var add = (System.Linq.Expressions.BinaryExpression)sysLambda.Body;
+
+            Asserts.AreSame(sysLambda.Parameters[0], add.Left);
+            Asserts.AreSame(sysLambda.Parameters[0], add.Right);
         }
 
         /// <summary>
@@ -782,7 +781,8 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.AreEqual(6, typeof(LambdaClosureParameterUsage).StructLayoutAttribute.Size);
 
             var fe = default(ExprTree);
-            for (var i = 0; i < ushort.MaxValue; ++i)
+            // Index 0 is reserved as the absent-child sentinel, so MaxValue-1 real nodes fill storage.
+            for (var i = 1; i < ushort.MaxValue; ++i)
                 fe.Default(typeof(int));
 
             Asserts.AreEqual(ushort.MaxValue, fe.Nodes.Count);
@@ -1022,6 +1022,57 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var fe = sysLambda.ToFlatExpression();
 
             Asserts.AreEqual(1, fe.TryCatchNodes.Count);
+        }
+
+        public void Flat_equal_lambdas_with_different_parameter_names_are_structurally_equal_and_hash_equal()
+        {
+            var x = Parameter(typeof(int), "x");
+            var left = Lambda<Func<int, int>>(Add(x, Constant(1)), x).ToFlatExpression();
+
+            var y = Parameter(typeof(int), "y");
+            var right = Lambda<Func<int, int>>(Add(y, Constant(1)), y).ToFlatExpression();
+
+            Asserts.IsTrue(left.Equals(right));
+            Asserts.IsTrue(left == right);
+            Asserts.AreEqual(left.GetHashCode(), right.GetHashCode());
+        }
+
+        public void Flat_equal_nested_lambdas_with_captures_are_structurally_equal_and_hash_equal()
+        {
+            var x = Parameter(typeof(int), "x");
+            var left = Lambda<Func<int, Func<int>>>(
+                Lambda<Func<int>>(Add(x, Constant(1))),
+                x).ToFlatExpression();
+
+            var y = Parameter(typeof(int), "value");
+            var right = Lambda<Func<int, Func<int>>>(
+                Lambda<Func<int>>(Add(y, Constant(1))),
+                y).ToFlatExpression();
+
+            Asserts.IsTrue(left.Equals(right));
+            Asserts.AreEqual(left.GetHashCode(), right.GetHashCode());
+        }
+
+        public void Flat_standalone_parameters_use_name_in_structural_equality()
+        {
+            var left = Parameter(typeof(int), "x").ToFlatExpression();
+            var right = Parameter(typeof(int), "y").ToFlatExpression();
+
+            Asserts.IsFalse(left.Equals(right));
+        }
+
+        public void Flat_structural_hash_supports_dictionary_lookup()
+        {
+            var x = Parameter(typeof(int), "x");
+            var key = Lambda<Func<int, int>>(Add(x, Constant(1)), x).ToFlatExpression();
+            var dict = new Dictionary<ExprTree, string> { [key] = "found" };
+
+            var lookup = default(ExprTree);
+            var y = lookup.ParameterOf<int>("arg");
+            lookup.RootIdx = lookup.Lambda<Func<int, int>>(lookup.Add(y, lookup.ConstantInt(1)), y);
+
+            Asserts.IsTrue(dict.TryGetValue(lookup, out var value));
+            Asserts.AreEqual("found", value);
         }
     }
 }

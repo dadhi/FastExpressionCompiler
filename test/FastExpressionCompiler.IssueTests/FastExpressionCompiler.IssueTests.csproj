@@ -1,16 +1,16 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
-        <TargetFrameworks Condition="'$(DevMode)' != 'true'">net472;net6.0;net8.0;net9.0;net10.0</TargetFrameworks>
-        <TargetFrameworks Condition="'$(DevMode)' == 'true'">net472;net9.0;net10.0</TargetFrameworks>
+        <TargetFrameworks Condition="'$(DevMode)' != 'true'">net472;net8.0;net10.0</TargetFrameworks>
+        <TargetFrameworks Condition="'$(DevMode)' == 'true'">net472;net10.0</TargetFrameworks>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="System.Reflection.Emit" Version="4.7.0"/>
-        <PackageReference Include="System.Linq.Dynamic.Core" Version="1.6.1"/>
+        <PackageReference Include="System.Linq.Dynamic.Core" Version="1.7.4"/>
     </ItemGroup>
 
     <ItemGroup Condition=" '$(TargetFramework)' != 'net472' ">
-        <PackageReference Include="Mapster" Version="7.4.0" />
+        <PackageReference Include="Mapster" Version="10.0.12" />
     </ItemGroup>
 
     <ItemGroup>
