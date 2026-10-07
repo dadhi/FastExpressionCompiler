@@ -416,6 +416,12 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new Issue461_InvalidProgramException_when_null_checking_type_by_ref().Run);
                 Run(new LightExpression.IssueTests.Issue461_InvalidProgramException_when_null_checking_type_by_ref().Run);
 
+                Run(new Issue500_IndexOutOfRangeException_with_value_objects_implicit_conversions().Run);
+                Run(new LightExpression.IssueTests.Issue500_IndexOutOfRangeException_with_value_objects_implicit_conversions().Run);
+
+                Run(new Issue553_CompileFast_returns_wrong_values_when_a_member_is_accessed_on_an_interface_converted_to_a_struct().Run);
+                Run(new LightExpression.IssueTests.Issue553_CompileFast_returns_wrong_values_when_a_member_is_accessed_on_an_interface_converted_to_a_struct().Run);
+
                 Console.WriteLine($"{Environment.NewLine}//IssueTests are passing in {sw.ElapsedMilliseconds} ms.");
             });
 

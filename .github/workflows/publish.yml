@@ -1,6 +1,6 @@
 name: Publish
 
-# Triggered automatically when a tag matching "v*.*.*" is pushed, e.g. `git tag v5.4.1 && git push --tags`
+# Triggered automatically when a tag matching "v*.*.*" is pushed, e.g. `git tag v6.0.0 && git push --tags`
 
 on:
   push:
@@ -52,7 +52,7 @@ jobs:
 
       - name: Pack
         run: |
-          # GITHUB_REF_NAME is the tag name, e.g. "v5.4.1"; strip the leading "v" to get the NuGet version.
+          # GITHUB_REF_NAME is the tag name, e.g. "v6.0.0"; strip the leading "v" to get the NuGet version.
           VERSION="${GITHUB_REF_NAME#v}"
           echo "Packing version: $VERSION"
           mkdir -p artifacts

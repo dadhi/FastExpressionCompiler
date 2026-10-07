@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata minClientVersion="3.3.0">
         <id>FastExpressionCompiler.LightExpression.Internal.src</id>
-        <version>5.4.1</version>
+        <version>6.0.0</version>
         <authors>Maksim Volkau</authors>
         <copyright>Copyright © 2016-2026 Maksim Volkau</copyright>
         <projectUrl>https://github.com/dadhi/FastExpressionCompiler</projectUrl>
@@ -12,123 +12,28 @@
         <description>FastExpressionCompiler is 10-40x times faster than Expression.Compile()</description>
         <tags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit;DryIoc;ExpressionToCodeLib</tags>
         <releaseNotes><![CDATA[
-## v5.4.1 Bug-fix release
+## v6.0.0 Major release
 
-- #498 System.InvalidProgramException when using loop
-- #499 System.InvalidProgramException for Sorting and comparison function
+### Changes
 
-**Contributions**: @bluewingHuang
-
-**Full Changelog**: https://github.com/dadhi/FastExpressionCompiler/compare/v5.4.0...v5.4.1
-
-
-## v5.4.0 Feature and bug-fix release
-
-### Features
-
-- #398 Optimize Switch with OpCodes.Switch  
-- #484 PrintIL options to output op-codes in the format directly copyable to AssertOpCodes method 
-- #482 [impl] Update to the modern optimized and fixed versions of ImTools SmallList and SmallMap
+- The new supported target frameworks are .NET 8.0, .NET 10.0, .NET 4.7.2, .NET Standard 2.1
+- Drops .NET 6, 9 and .NET Standard 2.0 support
+- #516 Change ClosureInfo into CompilerContext (should be transparent for existing code)
 
 ### Fixes
 
-- Multiple fixes in `ToCSharpString`, `PrintCSharp`
-- #480 "CLR detected an invalid program" exception
-- #483 fix recursive PrintIL output for Label Offset and Argument Ordinal
-- #485 PrintCSharp for Switch does not prints "break" when required
-- #487 Fix ToCSharpString output for boolean equality expressions
-- #490 Regression in compiling lambdas with ref struct parameters
-- by [exyi](https://github.com/exyi) #491 Fix unsigned int to floating point number conversion
-- by [exyi](https://github.com/exyi) #493 Fix ParentFlags propagating in TryEmitNewExpression
-- #495 Incomplete pattern detection for error 1007: Return goto from TryCatch with Assign generates invalid IL instead of failing gracefully
+- #553 CompileFast returns wrong values when a member is accessed on an interface converted to a struct
+- #536 Exception System.IndexOutOfRangeException with value objects implicit conversions starting from v5.0.3
 
-### Full Changelog
+### Performance Improvements
 
-https://github.com/dadhi/FastExpressionCompiler/compare/v5.3.3...v5.4.0
+- #489 Try interpret a switch expression - if switch value is interpretable (constant) then select a single matched branch
+- #375 Use UnsafeAccess in net8+ and UnsafeAccessType in net10+
+- #135 Optimize Branches to Small Branches
+- #351 Use internals of DynamicMethod
 
-
-## v5.3.3 Bug-fix release (src packages only)
-
-- fixed: #488 Fix warnings in src package
-
-
-## v5.3.2 Bug-fix release (src packages only)
-
-- fixed: #481 The 5.3.0 source package is broken and doesn't include all required source files
-
-
-## v5.3.0 Feature release
-
-- feat: [performance] Reuse the ILGenerator used by the nested lambda compilation 
-- feat: [performance] Reuse DynamicMethod if possible
-- feat: Add debug diagnostics to the nested lambdas
-- fix: System.ExecutionEngineException with nullables on repeated calls to ConcurrentDictionary
-
-**Full Changelog**: https://github.com/dadhi/FastExpressionCompiler/compare/v5.2.0...v5.3.0
-
-
-## v5.2.0 Feature release
-
-- feat: #466 Simplify creation of the updateable value that can be put into Closure with the Expression.ConstantRef
-- feat: #472 Interpreter to reduce the IL emitted by the Logical, Comparison, Arithmetics expressions, by calculating them during compile time and using the calculation result in IL
-- feat: Expose TestTools and FastExpressionCompiler.ILDecoder to enable testing and diagnostic in the consumer code
-
-
-## v5.1.1. Bug-fix release
-
-- fix: #461 InvalidProgramException when null checking type by ref
-- fix: #462 Optimize Equality comparison with null
-
-**Full Changelog**: https://github.com/dadhi/FastExpressionCompiler/compare/v5.1.0...v5.1.1
-
-
-## v5.1.0 Small feature release
-
-- add: #458 Add Support for TryFault
-- fix: #460 ArgumentException when converting from object to type with explicit operator
-
-**Full Changelog**: https://github.com/dadhi/FastExpressionCompiler/compare/v5.0.3...v5.1.0
-
-
-## v5.0.3 Bug-fix release
-
-- fix: #451 Operator implicit/explicit produces InvalidProgram
-- fix: #455 TypeAs should return null when it cannot cast to a nullable #455
- 
-**Full Changelog**: https://github.com/dadhi/FastExpressionCompiler/compare/v5.0.2...v5.0.3
-
-
-## v5.0.2 Bug-fix release
-
--fix: #449 MemberInit produces InvalidProgram
-
-**Full Changelog**: https://github.com/dadhi/FastExpressionCompiler/compare/v5.0.1...v5.0.2
-
-
-## v5.0.1 Bug-fix release
-
-- fix: #437 Shared variables with nested lambdas returning incorrect values
-- fix: #439 Support unused Field access in Block
-- fix: #440 Errors with simplified Switch cases
-- fix: #441 Fails to pass Constant as call parameter by-reference
-- fix: #442 TryCatch and the Goto outside problems
-- fix: #443 Nested Calls with Lambda Parameters Throwing NotSupportedExpressionException
-
-
-## v5.0.0 Major feature release
-
-- feat: #271 Add conversion from the System Expression to the Light Expression to allow hoisted system expression embedding in the larger light expression
-- feat: #432 Add explicit target for .NET 9
-- feat: #434 ToCSharpString should generate stable names for the unnamed variables, parameters and labels
-
-- fix: #262 Optimize OpCode.Ceq plus Branch into a single compare-and-branch
-- fix: #424 TryCatch expression as argument in Call expression produces invalid program
-- fix: #426 Directly passing a method result to another method by ref, fails with InvalidProgramException
-- fix: #427 CSharp output with more consistency, robustness and more understandable code
-- fix: #428 Expression.Switch without a default case incorrectly calls first case for unmatched values
-- fix: #430 TryCatch - Bad label content in ILGenerator
-
-        ]]>        </releaseNotes>
+        ]]>
+        </releaseNotes>
         <contentFiles>
             <files include="cs/**/*.*" buildAction="Compile" />
         </contentFiles>
@@ -137,7 +42,7 @@ https://github.com/dadhi/FastExpressionCompiler/compare/v5.3.3...v5.4.0
             <group targetFramework="net472">
                 <dependency id="System.ValueTuple" version="4.5.0" />
             </group>
-            <group targetFramework="netstandard2.0">
+            <group targetFramework="netstandard2.1">
                 <dependency id="System.Dynamic.Runtime" version="4.3.0" />
                 <dependency id="System.Reflection.Emit.Lightweight" version="4.7.0" />
             </group>
@@ -150,7 +55,7 @@ https://github.com/dadhi/FastExpressionCompiler/compare/v5.3.3...v5.4.0
 
         <file src="_._" target="lib\net8.0\" />
         <file src="_._" target="lib\net472\" />
-        <file src="_._" target="lib\netstandard2.0\" />
+        <file src="_._" target="lib\netstandard2.1\" />
 
         <file src="..\src\FastExpressionCompiler.Internal\FastExpressionCompiler.cs" target="contentFiles\cs\net472\FastExpressionCompiler.LightExpression" />
         <file src="..\src\FastExpressionCompiler.Internal\ImTools.cs" target="contentFiles\cs\net472\FastExpressionCompiler.LightExpression" />
@@ -160,13 +65,13 @@ https://github.com/dadhi/FastExpressionCompiler/compare/v5.3.3...v5.4.0
         <file src="..\src\FastExpressionCompiler.Internal\ExpressionVisitor.cs" target="contentFiles\cs\net472\FastExpressionCompiler.LightExpression" />
         <file src="..\src\FastExpressionCompiler.Internal\FlatExpression.cs" target="contentFiles\cs\net472\FastExpressionCompiler.LightExpression" />
 
-        <file src="..\src\FastExpressionCompiler.Internal\FastExpressionCompiler.cs" target="contentFiles\cs\netstandard2.0\FastExpressionCompiler.LightExpression" />
-        <file src="..\src\FastExpressionCompiler.Internal\ImTools.cs" target="contentFiles\cs\netstandard2.0\FastExpressionCompiler.LightExpression" />
-        <file src="..\src\FastExpressionCompiler.Internal\ILReader.cs" target="contentFiles\cs\netstandard2.0\FastExpressionCompiler.LightExpression" />
-        <file src="..\src\FastExpressionCompiler.Internal\TestTools.cs" target="contentFiles\cs\netstandard2.0\FastExpressionCompiler.LightExpression" />
-        <file src="..\src\FastExpressionCompiler.Internal\Expression.cs" target="contentFiles\cs\netstandard2.0\FastExpressionCompiler.LightExpression" />
-        <file src="..\src\FastExpressionCompiler.Internal\ExpressionVisitor.cs" target="contentFiles\cs\netstandard2.0\FastExpressionCompiler.LightExpression" />
-        <file src="..\src\FastExpressionCompiler.Internal\FlatExpression.cs" target="contentFiles\cs\netstandard2.0\FastExpressionCompiler.LightExpression" />
+        <file src="..\src\FastExpressionCompiler.Internal\FastExpressionCompiler.cs" target="contentFiles\cs\netstandard2.1\FastExpressionCompiler.LightExpression" />
+        <file src="..\src\FastExpressionCompiler.Internal\ImTools.cs" target="contentFiles\cs\netstandard2.1\FastExpressionCompiler.LightExpression" />
+        <file src="..\src\FastExpressionCompiler.Internal\ILReader.cs" target="contentFiles\cs\netstandard2.1\FastExpressionCompiler.LightExpression" />
+        <file src="..\src\FastExpressionCompiler.Internal\TestTools.cs" target="contentFiles\cs\netstandard2.1\FastExpressionCompiler.LightExpression" />
+        <file src="..\src\FastExpressionCompiler.Internal\Expression.cs" target="contentFiles\cs\netstandard2.1\FastExpressionCompiler.LightExpression" />
+        <file src="..\src\FastExpressionCompiler.Internal\ExpressionVisitor.cs" target="contentFiles\cs\netstandard2.1\FastExpressionCompiler.LightExpression" />
+        <file src="..\src\FastExpressionCompiler.Internal\FlatExpression.cs" target="contentFiles\cs\netstandard2.1\FastExpressionCompiler.LightExpression" />
 
         <file src="..\src\FastExpressionCompiler.Internal\FastExpressionCompiler.cs" target="contentFiles\cs\net8.0\FastExpressionCompiler.LightExpression" />
         <file src="..\src\FastExpressionCompiler.Internal\ImTools.cs" target="contentFiles\cs\net8.0\FastExpressionCompiler.LightExpression" />

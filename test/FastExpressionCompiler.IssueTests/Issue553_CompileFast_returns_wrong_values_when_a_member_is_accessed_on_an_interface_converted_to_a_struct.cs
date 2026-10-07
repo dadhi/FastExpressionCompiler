@@ -14,7 +14,7 @@ public class Issue553_CompileFast_returns_wrong_values_when_a_member_is_accessed
     public int Run()
     {
         Interface_to_struct_members();
-        return 4;
+        return 1;
     }
 
     public interface IHasId { }
