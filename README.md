@@ -18,7 +18,7 @@
 
 [![Latest Release Notes](https://img.shields.io/badge/latest%20release%20notes-v5.4.1-blue)](https://github.com/dadhi/FastExpressionCompiler/releases/tag/v5.4.1)[![License](https://img.shields.io/github/license/dadhi/FastExpressionCompiler.svg)](http://opensource.org/licenses/MIT)[![Build Windows,Ubuntu](https://github.com/dadhi/FastExpressionCompiler/actions/workflows/build.yml/badge.svg)](https://github.com/dadhi/FastExpressionCompiler/actions/workflows/build.yml)
 
-Targets .NET 6+, .NET 4.7.2+, .NET Standard 2.0+
+Targets .NET 8, 10, .NET 4.7.2, .NET Standard 2.1
 
 NuGet packages:
 
