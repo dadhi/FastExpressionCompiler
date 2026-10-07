@@ -3087,6 +3087,7 @@ namespace FastExpressionCompiler
                     }
 
                     if (sourceType == typeof(object) && targetType.IsValueType ||
+                        sourceType.IsInterface && targetType.IsValueType && sourceType.IsAssignableFrom(targetType) ||
                         sourceType == typeof(Enum) && targetType.IsEnum // a special case, see the AutoMapper test `StringToEnumConverter.Should_work`
                     )
                     {
