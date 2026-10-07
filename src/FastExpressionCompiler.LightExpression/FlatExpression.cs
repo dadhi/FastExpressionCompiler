@@ -1,7 +1,6 @@
 namespace FastExpressionCompiler.FlatExpression;
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
@@ -115,11 +114,6 @@ public struct ExprNode
     /// <summary>Sets the child-link metadata for the node.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void SetChildrenInfo(ushort childCount, ushort childIdx) => _child = ((uint)childCount << ChildCountShift) | childIdx;
-
-    /// <summary>Sets the child-link metadata for the node.</summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void SetChildrenInfo(ref ExprNode n, ushort childCount, ushort childIdx) =>
-        n._child = ((uint)childCount << ChildCountShift) | childIdx;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void Set(ref ExprNode n, ExpressionType nodeType, Type type, object obj, byte flags, ExprNodeKind kind,
@@ -360,7 +354,7 @@ public struct ExprTree : IEquatable<ExprTree>
     public ushort New(ConstructorInfo ctor) => AddNode(ExpressionType.New, ctor.DeclaringType, ctor);
 
     /// <summary>Adds a parameterless <c>new</c> node for the specified type.</summary>
-    [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
+    [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
     public ushort New(Type type)
     {
         if (type.IsValueType)
@@ -413,18 +407,14 @@ public struct ExprTree : IEquatable<ExprTree>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private ushort WithOneChild(ExpressionType nodeType, Type type, object obj, byte flags, ExprNodeKind kind, ushort ch0)
     {
+        EnsureIndexZeroSentinel();
         ref var ownerRef = ref Nodes.AddDefaultAndGetRef(out var idx);
+        ExprNode.Set(ref ownerRef, nodeType, type, obj, flags, kind);
         var ownerIdx = (ushort)idx;
-        AddNode(ref ownerRef, nodeType, type, obj, flags, kind);
-        
-        ushort first = 0;
-        ushort count = 0;
+
         if (ch0 != 0)
-        {
-            first = MayBeCloneChildForOwner(ch0, ownerIdx);
-            count = 1;
-        }
-        ExprNode.SetChildrenInfo(ref ownerRef, count, first);
+            Nodes.GetSurePresentRef(ownerIdx).SetChildrenInfo(1, MayBeCloneChildForOwner(ch0, ownerIdx));
+
         return ownerIdx;
     }
 
@@ -446,7 +436,11 @@ public struct ExprTree : IEquatable<ExprTree>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private ushort WithThreeChildren(ExpressionType nodeType, Type type, object obj, byte flags, ExprNodeKind kind, ushort ch0, ushort ch1, ushort ch2)
     {
-        var ownerIdx = AddNode(nodeType, type, obj, flags, kind);
+        EnsureIndexZeroSentinel();
+        ref var ownerRef = ref Nodes.AddDefaultAndGetRef(out var idx);
+        ExprNode.Set(ref ownerRef, nodeType, type, obj, flags, kind);
+        var ownerIdx = (ushort)idx;
+
         ushort first = 0, prev = 0, count = 0;
 
         if (ch0 != 0)
@@ -465,6 +459,7 @@ public struct ExprTree : IEquatable<ExprTree>
         var ownerIdx = AddNode(nodeType, type, obj, flags, kind);
         ushort first = 0, prev = 0, count = 0;
 
+        // todo: @wip if the children id is missing it is more of an error
         if (ch0 != 0)
             AppendPreparedChild(MayBeCloneChildForOwner(ch0, ownerIdx), ref first, ref prev, ref count);
         if (ch1 != 0)
@@ -725,11 +720,11 @@ public struct ExprTree : IEquatable<ExprTree>
         }
 
         var count = (ushort)(pars.Length + 1);
-        ExprNode.SetChildrenInfo(ref lambdaRef, count, firstIdx);
+        Nodes.GetSurePresentRef(lambdaIdx).SetChildrenInfo(count, firstIdx);
 
         foreach (var parIdx in pars)
         {
-            Debug.Assert(parIdx != 0, "The parameter should be defined - otherwise what is the matter");
+            Debug.Assert(parIdx != 0, "The parameter should be defined - otherwise why are you doing this");
             // We do not clone the parameters defined in the Lambda, because this the place where they are defined
             prevRef.NextIdx = parIdx;
             prevRef = ref Nodes.GetSurePresentRef(parIdx);
@@ -959,7 +954,7 @@ public struct ExprTree : IEquatable<ExprTree>
     }
 
     /// <summary>Flattens a System.Linq expression into this tree and sets <see cref="RootIdx"/>.</summary>
-    [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
+    [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
     public ushort FromSysExpr(SysExpr expr)
     {
         _parameterIds = default;
@@ -970,14 +965,14 @@ public struct ExprTree : IEquatable<ExprTree>
 
     // @perf remove Light -> System -> Flat round trip => make it Light -> Flat.
     /// <summary>Flattens a LightExpression into this tree and sets <see cref="RootIdx"/>.</summary>
-    [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
-    public ushort FromLightExpr(FastExpressionCompiler.LightExpression.Expression expr)
+    [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
+    public ushort FromLightExpr(LightExpression.Expression expr)
     {
         // Prefer Sys round-trip for a single From core; Light→Sys preserves identity via ToExpression.
         return FromSysExpr(expr.ToExpression());
     }
 
-    [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
+    [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
     private ushort AddSysExpression(SysExpr expr)
     {
         switch (expr.NodeType)
@@ -1220,7 +1215,7 @@ public struct ExprTree : IEquatable<ExprTree>
         return LabelTargetWithId(target.Type, target.Name, id);
     }
 
-    [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
+    [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
     private ushort AddSysMemberBinding(SysMemberBinding binding)
     {
         switch (binding.BindingType)
@@ -1248,7 +1243,7 @@ public struct ExprTree : IEquatable<ExprTree>
         }
     }
 
-    [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
+    [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
     private ushort AddSysElementInit(SysElementInit init)
     {
         var args = new ushort[init.Arguments.Count];
@@ -1271,7 +1266,7 @@ public struct ExprTree : IEquatable<ExprTree>
         if (children.Count == 0)
             return;
 
-        SmallList<ushort, Stack8<ushort>, NoArrayPool<ushort>> lambdaParameterIds = default;
+        ChildIdxs lambdaParameterIds = default;
         for (var i = 1; i < children.Count; ++i)
             lambdaParameterIds.Add(ToStoredUShortIdx(Nodes[children[i]].ChildIdx));
 
@@ -1286,7 +1281,7 @@ public struct ExprTree : IEquatable<ExprTree>
     private void CollectClosureParameterUsages(
         ushort idx,
         ushort lambdaIdx,
-        ref SmallList<ushort, Stack8<ushort>, NoArrayPool<ushort>> lambdaParameterIds,
+        ref ChildIdxs lambdaParameterIds,
         ref SmallList<ushort, Stack16<ushort>, NoArrayPool<ushort>> localParameterIds,
         ref SmallList<LambdaClosureParameterUsage, Stack8<LambdaClosureParameterUsage>, NoArrayPool<LambdaClosureParameterUsage>> captures)
     {
@@ -1384,7 +1379,7 @@ public struct ExprTree : IEquatable<ExprTree>
         ushort idx,
         ref ExprNode node,
         ushort lambdaIdx,
-        ref SmallList<ushort, Stack8<ushort>, NoArrayPool<ushort>> lambdaParameterIds,
+        ref ChildIdxs lambdaParameterIds,
         ref SmallList<ushort, Stack16<ushort>, NoArrayPool<ushort>> localParameterIds,
         ref SmallList<LambdaClosureParameterUsage, Stack8<LambdaClosureParameterUsage>, NoArrayPool<LambdaClosureParameterUsage>> captures)
     {
@@ -1405,7 +1400,7 @@ public struct ExprTree : IEquatable<ExprTree>
     private void CollectCatchBlockClosureParameterUsages(
         ushort idx,
         ushort lambdaIdx,
-        ref SmallList<ushort, Stack8<ushort>, NoArrayPool<ushort>> lambdaParameterIds,
+        ref ChildIdxs lambdaParameterIds,
         ref SmallList<ushort, Stack16<ushort>, NoArrayPool<ushort>> localParameterIds,
         ref SmallList<LambdaClosureParameterUsage, Stack8<LambdaClosureParameterUsage>, NoArrayPool<LambdaClosureParameterUsage>> captures)
     {
@@ -1431,7 +1426,7 @@ public struct ExprTree : IEquatable<ExprTree>
     private void PropagateNestedLambdaClosureParameterUsages(
         ushort nestedLambdaIdx,
         ushort lambdaIdx,
-        ref SmallList<ushort, Stack8<ushort>, NoArrayPool<ushort>> lambdaParameterIds,
+        ref ChildIdxs lambdaParameterIds,
         ref SmallList<ushort, Stack16<ushort>, NoArrayPool<ushort>> localParameterIds,
         ref SmallList<LambdaClosureParameterUsage, Stack8<LambdaClosureParameterUsage>, NoArrayPool<LambdaClosureParameterUsage>> captures)
     {
@@ -1477,7 +1472,7 @@ public struct ExprTree : IEquatable<ExprTree>
         return children;
     }
     /// <summary>Reconstructs the flat tree as a System.Linq expression tree.</summary>
-    [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
+    [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
     [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2077",
         Justification = "Flat expression round-trip stores the runtime type metadata explicitly for reconstruction.")]
     public SysExpr ToExpression() =>
@@ -1486,9 +1481,9 @@ public struct ExprTree : IEquatable<ExprTree>
             : throw new InvalidOperationException("Flat expression tree is empty.");
 
     /// <summary>Reconstructs the flat tree as a LightExpression tree.</summary>
-    [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
-    public FastExpressionCompiler.LightExpression.Expression ToLightExpression() =>
-        FastExpressionCompiler.LightExpression.FromSysExpressionConverter.ToLightExpression(ToExpression());
+    [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
+    public LightExpression.Expression ToLightExpression() =>
+        LightExpression.FromSysExpressionConverter.ToLightExpression(ToExpression());
 
     /// <summary>Structurally compares two flat expression trees.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1586,7 +1581,7 @@ public struct ExprTree : IEquatable<ExprTree>
     private struct StructuralComparer
     {
         private ChildIdxs _xParameterIds, _yParameterIds;
-        private SmallList<ushort, Stack8<ushort>, NoArrayPool<ushort>> _xLabelIds, _yLabelIds;
+        private ChildIdxs _xLabelIds, _yLabelIds;
         private SmallList<TraversalFrame, Stack16<TraversalFrame>, NoArrayPool<TraversalFrame>> _eqFrames;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -2013,7 +2008,7 @@ public struct ExprTree : IEquatable<ExprTree>
             _labelsById = default;
         }
 
-        [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
+        [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
         public SysExpr ReadExpression(int idx)
         {
             ref var node = ref _tree.Nodes[idx];
@@ -2248,7 +2243,7 @@ public struct ExprTree : IEquatable<ExprTree>
             }
         }
 
-        [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
+        [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
         private SysSwitchCase ReadSwitchCase(int idx)
         {
             ref var node = ref _tree.Nodes[idx];
@@ -2260,7 +2255,7 @@ public struct ExprTree : IEquatable<ExprTree>
             return SysExpr.SwitchCase(ReadExpression(children[children.Count - 1]), testValues);
         }
 
-        [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
+        [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
         private SysCatchBlock ReadCatchBlock(int idx)
         {
             ref var node = ref _tree.Nodes[idx];
@@ -2299,7 +2294,7 @@ public struct ExprTree : IEquatable<ExprTree>
             second = node.ChildCount;
         }
 
-        [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
+        [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
         private SysMemberBinding ReadMemberBinding(int idx)
         {
             ref var node = ref _tree.Nodes[idx];
@@ -2329,7 +2324,7 @@ public struct ExprTree : IEquatable<ExprTree>
             }
         }
 
-        [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
+        [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
         private SysElementInit ReadElementInit(int idx)
         {
             ref var node = ref _tree.Nodes[idx];
@@ -2385,7 +2380,7 @@ public struct ExprTree : IEquatable<ExprTree>
             };
         }
 
-        [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
+        [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
         private SysExpr[] ReadExpressions(in ChildIdxs childIdxs)
         {
             var expressions = new SysExpr[childIdxs.Count];
@@ -2394,7 +2389,7 @@ public struct ExprTree : IEquatable<ExprTree>
             return expressions;
         }
 
-        [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
+        [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
         [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2077",
             Justification = "Flat expression round-trip stores the runtime type metadata explicitly for reconstruction.")]
         private static NewExpression CreateValueTypeNewExpression(Type type) => SysExpr.New(type);
@@ -2435,7 +2430,7 @@ internal static class FlatExpressionThrow
 public static class FlatExpressionExtensions
 {
     /// <summary>Flattens a System.Linq expression tree into a new <see cref="ExprTree"/>.</summary>
-    [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
+    [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
     public static ExprTree ToFlatExpression(this SysExpr expression)
     {
         ExprTree tree = default;
@@ -2444,7 +2439,7 @@ public static class FlatExpressionExtensions
     }
 
     /// <summary>Flattens a System.Linq expression tree into the supplied <see cref="ExprTree"/>.</summary>
-    [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
+    [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
     public static ref ExprTree ToFlatExpression(this SysExpr expression, ref ExprTree exprTree)
     {
         exprTree.FromSysExpr(expression);
@@ -2452,8 +2447,8 @@ public static class FlatExpressionExtensions
     }
 
     /// <summary>Flattens a LightExpression tree into a new <see cref="ExprTree"/>.</summary>
-    [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
-    public static ExprTree ToFlatExpression(this FastExpressionCompiler.LightExpression.Expression expression)
+    [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
+    public static ExprTree ToFlatExpression(this LightExpression.Expression expression)
     {
         ExprTree tree = default;
         tree.FromLightExpr(expression);
@@ -2461,8 +2456,8 @@ public static class FlatExpressionExtensions
     }
 
     /// <summary>Flattens a LightExpression tree into the supplied <see cref="ExprTree"/>.</summary>
-    [RequiresUnreferencedCode(FastExpressionCompiler.LightExpression.Trimming.Message)]
-    public static ref ExprTree ToFlatExpression(this FastExpressionCompiler.LightExpression.Expression expression, ref ExprTree exprTree)
+    [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
+    public static ref ExprTree ToFlatExpression(this LightExpression.Expression expression, ref ExprTree exprTree)
     {
         exprTree.FromLightExpr(expression);
         return ref exprTree;
