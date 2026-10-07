@@ -1,11 +1,16 @@
 
 using System;
 using System.Reflection;
+using System.Reflection.Emit;
+using System.Linq;
+
 
 #if LIGHT_EXPRESSION
+using Expression = FastExpressionCompiler.LightExpression.Expression;
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.UnitTests;
 #else
+using Expression = System.Linq.Expressions.Expression;
 using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests;
 #endif
@@ -51,7 +56,14 @@ public class ConstructorCallTests : ITest
         Constructor_nested_in_block_member_access();
         Constructor_conversions_and_boxing();
 
-        return 32;
+        NewArrayBounds_ignored_result();
+        NewArrayInit_ignored_result();
+        NewArrayInit_in_different_parent_contexts();
+        NewArrayInit_with_call_and_nested_init_in_different_parent_contexts();
+        NewArrayBounds_with_call_argument_in_different_parent_contexts();
+        Multidimensional_NewArrayBounds_in_different_parent_contexts();
+
+        return 38;
     }
 
     public void Constructor_conversions_and_boxing()
@@ -429,6 +441,174 @@ public class ConstructorCallTests : ITest
         public int InstanceAdd(int value) => A + value;
 
         public static int StaticAdd(TestClass c, int value) => c.A + value;
+    }
+
+
+    public void NewArrayBounds_ignored_result()
+    {
+        var array = NewArrayBounds(typeof(int), Constant(1));
+        var lambda = Lambda<Action>(array);
+
+        lambda.CompileSys()();
+        var fast = lambda.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo | CompilerFlags.ThrowOnNotSupportedExpression);
+        fast();
+        fast.AssertOpCodes(
+            OpCodes.Ldc_I4_1,
+            OpCodes.Newarr,
+            OpCodes.Pop,
+            OpCodes.Ret);
+    }
+
+    public void NewArrayInit_ignored_result()
+    {
+        var array = NewArrayInit(typeof(int), Constant(1), Constant(2));
+        var lambda = Lambda<Action>(array);
+
+        lambda.CompileSys()();
+        var fast = lambda.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo | CompilerFlags.ThrowOnNotSupportedExpression);
+        fast();
+        fast.AssertOpCodes(
+            OpCodes.Ldc_I4_2,
+            OpCodes.Newarr,
+            OpCodes.Dup,
+            OpCodes.Ldc_I4_0,
+            OpCodes.Ldelema,
+            OpCodes.Ldc_I4_1,
+            OpCodes.Stobj,
+            OpCodes.Dup,
+            OpCodes.Ldc_I4_1,
+            OpCodes.Ldelema,
+            OpCodes.Ldc_I4_2,
+            OpCodes.Stobj,
+            OpCodes.Pop,
+            OpCodes.Ret);
+    }
+
+
+    private static readonly MethodInfo ArrayFingerprintMethod =
+        typeof(ConstructorCallTests).GetMethod(nameof(ArrayFingerprint), BindingFlags.Static | BindingFlags.NonPublic);
+
+    private static readonly MethodInfo CreateArrayMethod =
+        typeof(ConstructorCallTests).GetMethod(nameof(CreateArray), BindingFlags.Static | BindingFlags.NonPublic);
+
+    private static readonly MethodInfo PositiveLengthMethod =
+        typeof(ConstructorCallTests).GetMethod(nameof(PositiveLength), BindingFlags.Static | BindingFlags.NonPublic);
+
+    private static readonly ConstructorInfo ArrayConsumerConstructor =
+        typeof(ArrayConsumer).GetConstructor([ typeof(Array) ]);
+
+    public void NewArrayInit_in_different_parent_contexts() =>
+        AssertNewArrayInDifferentParentContexts<int[]>(value =>
+            NewArrayInit(typeof(int), value, Add(value, Constant(1))));
+
+    public void NewArrayInit_with_call_and_nested_init_in_different_parent_contexts() =>
+        AssertNewArrayInDifferentParentContexts<int[][]>(value =>
+            NewArrayInit(typeof(int[]),
+                NewArrayInit(typeof(int), value, Add(value, Constant(1))),
+                Call(CreateArrayMethod, value)));
+
+    public void NewArrayBounds_with_call_argument_in_different_parent_contexts() =>
+        AssertNewArrayInDifferentParentContexts<int[]>(value =>
+            NewArrayBounds(typeof(int), Call(PositiveLengthMethod, value)));
+
+    public void Multidimensional_NewArrayBounds_in_different_parent_contexts() =>
+        AssertNewArrayInDifferentParentContexts<int[,]>(value =>
+            NewArrayBounds(typeof(int), value, Call(PositiveLengthMethod, value)));
+
+    private static void AssertNewArrayInDifferentParentContexts<TArray>(
+        Func<Expression, Expression> newArray) where TArray : class
+    {
+        // Lambda result and block result.
+        AssertArrayResult<TArray>(value => newArray(value));
+        AssertArrayResult<TArray>(value => Block(Constant(0), newArray(value)));
+        // ignored result
+        AssertArrayResult<TArray>(value => Block(newArray(value), newArray(value)));
+
+        // Assignment RHS, method argument, constructor argument, and coalesce operand.
+        AssertScalarResult(value =>
+        {
+            var array = Variable(typeof(TArray), "array");
+            return Block([ array ],
+                Assign(array, newArray(value)),
+                Call(ArrayFingerprintMethod, array));
+        });
+        AssertScalarResult(value => Call(ArrayFingerprintMethod, newArray(value)));
+        AssertScalarResult(value => Field(
+            New(ArrayConsumerConstructor, newArray(value)), nameof(ArrayConsumer.Value)));
+        AssertScalarResult(value => Call(ArrayFingerprintMethod,
+            Coalesce(newArray(value), Default(typeof(TArray)))));
+
+        // Array length, member access, instance call, index read, and index assignment target.
+        if (typeof(TArray).GetArrayRank() == 1)
+            AssertScalarResult(value => ArrayLength(newArray(value)));
+        AssertScalarResult(value => Property(newArray(value), nameof(Array.Length)));
+        AssertScalarResult(value => Call(newArray(value),
+            typeof(Array).GetMethod(nameof(Array.GetLength)), Constant(0)));
+        AssertScalarResult(value => ReadFirstArrayItem(newArray(value)));
+        AssertScalarResult(value => AssignFirstArrayItem(newArray(value)));
+    }
+
+    private static void AssertArrayResult<TArray>(Func<Expression, Expression> body) where TArray : class
+    {
+        var value = Parameter(typeof(int), "value");
+        var lambda = Lambda<Func<int, TArray>>(body(value), value);
+
+        var expected = lambda.CompileSys()(2);
+        var fast = lambda.CompileFast(true);
+        Asserts.IsNotNull(fast);
+        var actual = fast(2);
+
+        Asserts.AreEqual(
+            ArrayFingerprint((Array)(object)expected),
+            ArrayFingerprint((Array)(object)actual));
+    }
+
+    private static void AssertScalarResult(Func<Expression, Expression> body)
+    {
+        var value = Parameter(typeof(int), "value");
+        var lambda = Lambda<Func<int, int>>(body(value), value);
+
+        var expected = lambda.CompileSys()(2);
+        var fast = lambda.CompileFast(true);
+        Asserts.IsNotNull(fast);
+        Asserts.AreEqual(expected, fast(2));
+    }
+
+    private static Expression ReadFirstArrayItem(Expression array)
+    {
+        var item = ArrayAccess(array, Enumerable.Repeat(Constant(0), array.Type.GetArrayRank()));
+        return item.Type.IsArray ? Call(ArrayFingerprintMethod, item) : item;
+    }
+
+    private static Expression AssignFirstArrayItem(Expression array)
+    {
+        var item = ArrayAccess(array, Enumerable.Repeat(Constant(0), array.Type.GetArrayRank()));
+        var itemType = item.Type;
+        Expression value = itemType.IsArray
+            ? NewArrayInit(itemType.GetElementType(), Constant(42))
+            : Constant(42, itemType);
+        var assignment = Assign(item, value);
+        return itemType.IsArray ? Call(ArrayFingerprintMethod, assignment) : assignment;
+    }
+
+    private static int ArrayFingerprint(Array array)
+    {
+        var result = array.Rank;
+        for (var dimension = 0; dimension < array.Rank; dimension++)
+            result = unchecked(result * 31 + array.GetLength(dimension));
+        foreach (var item in array)
+            result = unchecked(result * 31 +
+                (item is Array nested ? ArrayFingerprint(nested) : item?.GetHashCode() ?? 0));
+        return result;
+    }
+
+    private static int[] CreateArray(int value) => [ value, value + 1 ];
+
+    private static int PositiveLength(int value) => Math.Abs(value) + 1;
+
+    private sealed class ArrayConsumer(Array array)
+    {
+        public readonly int Value = ArrayFingerprint(array);
     }
 
 }
