@@ -236,7 +236,7 @@ var expr = Expression.Lambda(
         Expression.Constant(a, typeof(A)), bParamExpr),
     bParamExpr);
 
-var f = expr.CompileFast();
+var f = expr.CompileFast<Func<B, X>>();
 var x = f(new B());
 ```
 
@@ -253,7 +253,7 @@ var expr = Lambda(
     New(_ctorX, Constant(a, typeof(A)), bParamExpr),
     bParamExpr);
 
-var f = expr.CompileFast();
+var f = expr.CompileFast<Func<B, X>>();
 var x = f(new B());
 ```
 
