@@ -3606,7 +3606,7 @@ public sealed class OpAssignMethodConversionBinaryExpression : OpAssignBinaryExp
 
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
         SysExpr.MakeBinary(NodeType, Left.ToExpression(ref exprsConverted), Right.ToExpression(ref exprsConverted),
-            LiftToNull, Method, Conversion.ToLambdaExpression());
+            LiftToNull, Method, Conversion?.ToLambdaExpression());
 }
 
 public class ElementInit : IArgumentProvider

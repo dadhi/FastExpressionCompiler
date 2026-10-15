@@ -15,6 +15,8 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
     {
         public int Run()
         {
+            Can_roundtrip_compound_assignment_without_conversion();
+            Can_roundtrip_compound_assignment_with_conversion();
             Can_compile_lambda_without_converting_to_expression();
             Can_compile_lambda_with_property();
             Can_compile_lambda_with_call_and_property();
@@ -60,7 +62,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Flat_standalone_parameters_use_name_in_structural_equality();
             Flat_structural_hash_supports_dictionary_lookup();
 
-            return 42;
+            return 44;
         }
 
         public void Can_compile_lambda_without_converting_to_expression()
