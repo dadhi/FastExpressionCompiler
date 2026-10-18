@@ -77,6 +77,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new DirectLogicalFactoryRegressionTests());
             st.Run(new UnaryIncrementValueRegressionTests());
             st.Run(new MethodBasedNotRegressionTests());
+            st.Run(new LiftedComplementMethodRegressionTests());
             st.Run(new ExplicitIncrementOperatorRegressionTests());
 
             st.Run(new Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
