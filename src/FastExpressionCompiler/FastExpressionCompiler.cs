@@ -630,8 +630,7 @@ namespace FastExpressionCompiler
             public short ReturnVariableIndexPlusOneAndIsDefined;
             public Label Label;
             public Label ReturnLabel;
-            /// <summary>Loop break label has no default value, so `Break` with a value may keep the value on the stack and jump to it</summary>
-            public bool IsLoopBreakLabel;
+            internal bool IsMarked;
         }
 
         /// <summary>Track the info required to build a closure object + some context information not directly related to closure.</summary>
@@ -887,6 +886,14 @@ namespace FastExpressionCompiler
             }
             found = false;
             return ref RefTools<LabelInfo>.GetNullRef();
+        }
+
+        private static void MarkLabel(ref this LabelInfo label, ILGenerator il)
+        {
+            if (label.IsMarked)
+                throw new InvalidOperationException($"Label target `{label.Target}` is already defined.");
+            label.IsMarked = true;
+            il.DmarkLabel(label.GetOrDefineLabel(il));
         }
 
         [MethodImpl((MethodImplOptions)256)]
@@ -2602,8 +2609,7 @@ namespace FastExpressionCompiler
                     ref var continueLabelInfo = ref context.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(loopExpr.ContinueLabel, out var foundLabel);
                     if (!foundLabel)
                         return false;
-                    var continueLabel = continueLabelInfo.GetOrDefineLabel(il);
-                    il.DmarkLabel(continueLabel);
+                    continueLabelInfo.MarkLabel(il);
                 }
 
                 if (!TryEmit(loopExpr.Body, il, ref context, parent))
@@ -2617,8 +2623,7 @@ namespace FastExpressionCompiler
                     ref var breakLabelInfo = ref context.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(loopExpr.BreakLabel, out var foundLabel);
                     if (!foundLabel)
                         return false;
-                    var breakLabel = breakLabelInfo.GetOrDefineLabel(il);
-                    il.DmarkLabel(breakLabel);
+                    breakLabelInfo.MarkLabel(il);
                 }
 
                 return true;
@@ -2713,8 +2718,7 @@ namespace FastExpressionCompiler
                 if (!foundLabel)
                     return false;
 
-                var label = labelInfo.GetOrDefineLabel(il);
-                il.DmarkLabel(label);
+                labelInfo.MarkLabel(il);
 
                 // Reserve the value label before emitting a backward jump to this target.
                 if (expr.Target.Type != typeof(void) && (labelInfo.ReturnVariableIndexPlusOneAndIsDefined >>> 1) == 0)
