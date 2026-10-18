@@ -33,3 +33,26 @@ is claimed: this changes compilation bookkeeping only. Allocation is effectively
 Validation: standard and Light non-vector/multirank receiver regressions, 20 executions,
 zero failures. Existing tests cover lower bounds, vectors, element mutation, by-ref
 arguments, covariance, ignored reads and exception-region receivers.
+
+Code commit: `7b6863bc`. Both libraries build across all four targets with zero warnings/errors.
+
+## Optimization 2: named-field lookup without enumerating every field
+
+Use TypeInfo.GetDeclaredField and recurse to the base type only when necessary. This
+avoids allocating/enumerating a declared-field array on the common path. Keep the existing
+first-declared-match rule for unusual CLR metadata with duplicate names via an ambiguity
+fallback. Keep null-name handling and private/inherited/hidden/static lookup behavior.
+
+Evidence: `02-named-field.csv` versus `01-vector-array.csv`, same benchmark source.
+Light construction means (ns): arithmetic 176.4 -> 105.6, array 404.5 -> 189.7,
+switch 223.4 -> 134.8, captured constant 242.4 -> 105.5. Allocation drops by exactly
+40 bytes per named-field lookup: 360 -> 320, 672 -> 552, 824 -> 784, 272 -> 192 bytes.
+These are tree-construction improvements; existing-tree compilation and delegate runtime
+are measured as controls, with no speedup attributed to this lookup change.
+
+Validation includes new named-field identity/behavior tests for private, inherited,
+hidden and static fields, plus Reflection.Emit same-name/different-type metadata.
+One initial native run failed the existing generated FlatExpression roundtrip property
+test (reported case seed 864021005, replay seed 6H3IIevvWaa1). Replays with both baseline
+and current libraries passed, including the explicit reported seed and default settings;
+the failure remains unreproduced. Preserve the failing log rather than masking it.

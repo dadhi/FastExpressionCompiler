@@ -36,6 +36,7 @@ namespace FastExpressionCompiler.UnitTests
                 var t = (LightExpression.TestRun)state;
                 t.Run(new LightExpression.UnitTests.NumericConversionRegressionTests());
                 t.Run(new LightExpression.UnitTests.IntrinsicConstructorExceptionRegressionTests());
+                t.Run(new LightExpression.UnitTests.NamedFieldLookupRegressionTests());
                 t.Run(new LightExpression.UnitTests.FormalByRefArgumentRegressionTests());
                 t.Run(new LightExpression.UnitTests.WritableReceiverAddressRegressionTests());
                 t.Run(new LightExpression.UnitTests.NestedMemberBindingLayoutBehaviorRegressionTests());

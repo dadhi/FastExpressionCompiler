@@ -2995,12 +2995,25 @@ internal static class TypeTools
     [RequiresUnreferencedCode(Trimming.Message)]
     internal static FieldInfo FindField(this Type type, string fieldName)
     {
-        var fields = type.GetTypeInfo().DeclaredFields.AsArray();
-        for (var i = 0; i < fields.Length; i++)
-            if (fields[i].Name == fieldName)
-                return fields[i];
+        var info = type.GetTypeInfo();
+        if (fieldName == null)
+            return null;
+        try
+        {
+            var field = info.GetDeclaredField(fieldName);
+            if (field != null)
+                return field;
+        }
+        catch (AmbiguousMatchException)
+        {
+            // CLR metadata can contain same-name fields with different types. Preserve
+            // the existing first-declared-match behavior for such non-C# types.
+            foreach (var field in info.DeclaredFields)
+                if (field.Name == fieldName)
+                    return field;
+        }
 
-        return type.GetTypeInfo().BaseType?.FindField(fieldName);
+        return info.BaseType?.FindField(fieldName);
     }
 
     internal const BindingFlags InstanceMethods = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;

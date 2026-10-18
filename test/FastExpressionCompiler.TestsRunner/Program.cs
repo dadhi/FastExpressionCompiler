@@ -148,6 +148,7 @@ namespace FastExpressionCompiler.UnitTests
 
             lt.Run(new LightExpression.UnitTests.NumericConversionRegressionTests());
             lt.Run(new LightExpression.UnitTests.IntrinsicConstructorExceptionRegressionTests());
+            lt.Run(new LightExpression.UnitTests.NamedFieldLookupRegressionTests());
             lt.Run(new LightExpression.UnitTests.FormalByRefArgumentRegressionTests());
             lt.Run(new LightExpression.UnitTests.WritableReceiverAddressRegressionTests());
             lt.Run(new LightExpression.UnitTests.NestedMemberBindingLayoutBehaviorRegressionTests());
