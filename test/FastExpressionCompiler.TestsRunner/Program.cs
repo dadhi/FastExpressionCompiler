@@ -66,6 +66,8 @@ namespace FastExpressionCompiler.UnitTests
 #if NET8_0_OR_GREATER
                 lt.Run(new LightExpression.UnitTests.NumericConversionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.IntrinsicConstructorExceptionRegressionTests());
+                lt.Run(new LightExpression.UnitTests.NestedMemberBindingLayoutBehaviorRegressionTests());
+                lt.Run(new LightExpression.UnitTests.QuoteIdentityRegressionTests());
                 lt.Run(new LightExpression.UnitTests.AbstractConstructorRegressionTests());
                 lt.Run(new LightExpression.UnitTests.RuntimeSwitchRegressionTests());
                 lt.Run(new LightExpression.UnitTests.IndexQuoteArgumentRegressionTests());
@@ -155,6 +157,8 @@ namespace FastExpressionCompiler.UnitTests
             var stStopwatch = Stopwatch.StartNew();
             st.Run(new NumericConversionRegressionTests());
             st.Run(new IntrinsicConstructorExceptionRegressionTests());
+            st.Run(new NestedMemberBindingLayoutBehaviorRegressionTests());
+            st.Run(new QuoteIdentityRegressionTests());
             st.Run(new AbstractConstructorRegressionTests());
             st.Run(new RuntimeSwitchRegressionTests());
             st.Run(new IndexQuoteArgumentRegressionTests());

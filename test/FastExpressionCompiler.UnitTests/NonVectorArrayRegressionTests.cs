@@ -28,7 +28,11 @@ public struct NonVectorArrayRegressionTests : ITestX
     var a=S.Parameter(typeof(Array));var i=S.Parameter(typeof(int));var converted=S.Convert(a,array.GetType());
     var access=binary?(System.Linq.Expressions.Expression)S.ArrayIndex(converted,i):S.ArrayAccess(converted,i);
     var e=S.Lambda<Func<Array,int,T>>(access,a,i);var f=e.FromSysExpression().CompileFast(true);
-    if(!t.IsNotNull(f))return;t.AreEqual(value,f(array,lower));t.AreEqual(e.Compile()(array,lower),f(array,lower));
+    if(!t.IsNotNull(f))return;t.AreEqual(value,f(array,lower));
+#if !NETFRAMEWORK
+    // Framework's System compiler emits unverifiable IL for these non-vector array reads.
+    t.AreEqual(e.Compile()(array,lower),f(array,lower));
+#endif
    }
   }
  }
