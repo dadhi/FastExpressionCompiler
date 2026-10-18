@@ -122,7 +122,7 @@ namespace FastExpressionCompiler.IssueTests
 
             actual.Method.AssertOpCodes(
                 OpCodes.Ldarg_1,
-                OpCodes.Call,   // get_Value getter
+                OpCodes.Callvirt, // Reference getter checks null
                 OpCodes.Stloc_0,
                 OpCodes.Ldloca_S,
                 OpCodes.Ldfld,  // GetValueOrDefault
@@ -319,7 +319,7 @@ namespace FastExpressionCompiler.IssueTests
 
             compiledFast.AssertOpCodes(
                 OpCodes.Ldarg_1,
-                OpCodes.Call,
+                OpCodes.Callvirt, // Reference getter checks null
                 OpCodes.Ldsfld,
                 OpCodes.Call,
                 OpCodes.Clt_Un,
@@ -351,7 +351,7 @@ namespace FastExpressionCompiler.IssueTests
 
             compiledFast.AssertOpCodes(
                 OpCodes.Ldarg_1,
-                OpCodes.Call,
+                OpCodes.Callvirt, // Reference getter checks null
                 OpCodes.Ldsfld,
                 OpCodes.Call,
                 OpCodes.Clt_Un,
@@ -359,7 +359,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ceq,
                 OpCodes.Brfalse,
                 OpCodes.Ldarg_1,
-                OpCodes.Call,
+                OpCodes.Callvirt, // Reference getter checks null
                 OpCodes.Ldsfld,
                 OpCodes.Call,
                 OpCodes.Cgt_Un,
@@ -638,12 +638,12 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Stloc_0, // todo: can be replaced with dup #
                 OpCodes.Ldloc_0, // 
                 OpCodes.Ldarg_1,
-                OpCodes.Call, // ValueHolder<int?>.get_Value
+                OpCodes.Callvirt, // ValueHolder<int?>.get_Value
                 OpCodes.Stloc_1,
                 OpCodes.Ldloca_S,
                 OpCodes.Call, // int?.get_Value
                 OpCodes.Conv_R8,
-                OpCodes.Call, // ValueHolder<double>.set_Value
+                OpCodes.Callvirt, // ValueHolder<double>.set_Value
                 OpCodes.Ldloc_0,
                 OpCodes.Ret);
 
@@ -669,12 +669,12 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Newobj,
                 OpCodes.Dup,
                 OpCodes.Ldarg_1,
-                OpCodes.Call, // ValueHolder<int?>.get_Value
+                OpCodes.Callvirt, // ValueHolder<int?>.get_Value
                 OpCodes.Stloc_0,
                 OpCodes.Ldloca_S,
                 OpCodes.Call, // int?.get_Value
                 OpCodes.Conv_R8,
-                OpCodes.Call, // ValueHolder<double>.set_Value 
+                OpCodes.Call, // Newly constructed receiver is non-null
                 OpCodes.Ret);
 
             var result = adapt(new ValueHolder<int?> { Value = 321 });
@@ -708,12 +708,12 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Stloc_0, // todo: can be simplified with dup #173
                 OpCodes.Ldloc_0,
                 OpCodes.Ldarg_1,
-                OpCodes.Call, // ValueHolder<decimal?>.get_Value
+                OpCodes.Callvirt, // ValueHolder<decimal?>.get_Value
                 OpCodes.Stloc_1,
                 OpCodes.Ldloca_S,
                 OpCodes.Call, // decimal?.get_Value
                 OpCodes.Call, // double Decimal.op_Explicit() 
-                OpCodes.Call, // ValueHolder<double>.set_Value
+                OpCodes.Callvirt, // ValueHolder<double>.set_Value
                 OpCodes.Ldloc_0,
                 OpCodes.Ret);
 
@@ -748,10 +748,10 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Stloc_0, // todo: can be simplified with dup #173
                 OpCodes.Ldloc_0,
                 OpCodes.Ldarg_1,
-                OpCodes.Call,    // ValueHolder<decimal>.get_Value
+                OpCodes.Callvirt,    // ValueHolder<decimal>.get_Value
                 OpCodes.Call,    // double Decimal.op_Explicit() 
                 OpCodes.Newobj,  // new Nullable<double>()
-                OpCodes.Call,    // ValueHolder<double?>.set_Value
+                OpCodes.Callvirt,    // ValueHolder<double?>.set_Value
                 OpCodes.Ldloc_0,
                 OpCodes.Ret);
 
