@@ -3078,14 +3078,7 @@ namespace FastExpressionCompiler
                 if (nodeType == ExpressionType.OnesComplement)
                 {
                     if (expr.Method != null)
-                    {
-                        if (expr.Operand.Type.IsNullable() || !TryEmit(expr.Operand, il, ref context,
-                            (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall | ParentFlags.MemberAccess)) | ParentFlags.Arithmetic))
-                            return false;
-                        EmitMethodCall(il, expr.Method);
-                        context.LastEmitIsAddress = false;
-                        return il.EmitPopIfIgnoreResult(parent);
-                    }
+                        return TryEmitNot(expr, il, ref context, parent);
                     if (exprType.IsPrimitive || exprType.IsNullable())
                         return TryEmitNot(expr, il, ref context, parent);
                     return false;
@@ -3164,12 +3157,28 @@ namespace FastExpressionCompiler
                 var op = expr.Operand;
                 if (expr.Method != null)
                 {
-                    if (op.Type.IsNullable() && expr.Method.GetParameters()[0].ParameterType != op.Type)
-                        return false;
                     if (!TryEmit(op, il, ref context,
                         (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue))
                         return false;
-                    EmitMethodCall(il, expr.Method);
+                    var underlyingOperandType = Nullable.GetUnderlyingType(op.Type);
+                    if (underlyingOperandType != null && expr.Method.GetParameters()[0].ParameterType == underlyingOperandType)
+                    {
+                        var operand = EmitStoreAndLoadLocalVariableAddress(il, op.Type);
+                        EmitMethodCall(il, op.Type.GetNullableHasValueGetterMethod());
+                        var nullValue = il.DefineLabel();
+                        var done = il.DefineLabel();
+                        il.Demit(OpCodes.Brfalse, nullValue);
+                        EmitLoadLocalVariableAddress(il, operand);
+                        il.Demit(OpCodes.Ldfld, op.Type.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                        EmitMethodCall(il, expr.Method);
+                        il.Demit(OpCodes.Newobj, expr.Type.GetNullableConstructor());
+                        il.Demit(OpCodes.Br, done);
+                        il.DmarkLabel(nullValue);
+                        EmitDefault(il, expr.Type);
+                        il.DmarkLabel(done);
+                    }
+                    else
+                        EmitMethodCall(il, expr.Method);
                     context.LastEmitIsAddress = false;
                     return il.EmitPopIfIgnoreResult(parent);
                 }
