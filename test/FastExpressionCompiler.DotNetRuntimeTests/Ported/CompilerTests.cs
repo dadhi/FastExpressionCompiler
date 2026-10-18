@@ -145,7 +145,7 @@ namespace System.Linq.Expressions.Tests
             );
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("RuntimeCompilerLayoutBehaviorRegressionTests.VerifyIL_Simple_behavior")]
         [ActiveIssue("https://github.com/mono/mono/issues/14919", TestRuntimes.Mono)]
         public static void VerifyIL_Simple()
         {
@@ -162,7 +162,7 @@ namespace System.Linq.Expressions.Tests
                   }");
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("RuntimeCompilerLayoutBehaviorRegressionTests.VerifyIL_Exceptions_behavior")]
         [ActiveIssue("https://github.com/mono/mono/issues/14919", TestRuntimes.Mono)]
         public static void VerifyIL_Exceptions()
         {
@@ -223,7 +223,7 @@ namespace System.Linq.Expressions.Tests
                   }");
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("RuntimeCompilerLayoutBehaviorRegressionTests.VerifyIL_Closure1_behavior")]
         [ActiveIssue("https://github.com/mono/mono/issues/14919", TestRuntimes.Mono)]
         public static void VerifyIL_Closure1()
         {
@@ -258,7 +258,7 @@ namespace System.Linq.Expressions.Tests
                 appendInnerLambdas: true);
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("RuntimeCompilerLayoutBehaviorRegressionTests.VerifyIL_Closure2_behavior")]
         [ActiveIssue("https://github.com/mono/mono/issues/14919", TestRuntimes.Mono)]
         public static void VerifyIL_Closure2()
         {
@@ -316,7 +316,7 @@ namespace System.Linq.Expressions.Tests
                 appendInnerLambdas: true);
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("RuntimeCompilerLayoutBehaviorRegressionTests.VerifyIL_Closure3_behavior")]
         [ActiveIssue("https://github.com/mono/mono/issues/14919", TestRuntimes.Mono)]
         public static void VerifyIL_Closure3()
         {
