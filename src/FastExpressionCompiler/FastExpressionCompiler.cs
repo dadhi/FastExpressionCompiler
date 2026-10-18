@@ -4775,13 +4775,154 @@ namespace FastExpressionCompiler
                         EmitLoadLocalVariableAddress(il, valueVarIndex);
                     else
                         EmitLoadLocalVariable(il, valueVarIndex);
-                    if (!EmitBinding(binding, il, ref context, valueFlags))
+                    if (!EmitBinding(binding, il, ref context, valueFlags, expr.NewExpression != null))
                         return false;
                 }
                 if (valueVarIndex != -1)
                     EmitLoadLocalVariable(il, valueVarIndex);
                 context.LastEmitIsAddress = false;
                 return il.EmitPopIfIgnoreResult(parent);
+            }
+
+            private static bool TryEmitNestedMemberInit(MemberInitExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            {
+                var flags = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
+                    ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue;
+#if LIGHT_EXPRESSION
+                if (expr.NewExpression == null)
+                {
+                    if (!TryEmit(expr.Expression, il, ref context, flags))
+                        return false;
+                }
+                else
+#endif
+                if (!TryEmitNew(expr.NewExpression, il, ref context, flags))
+                    return false;
+                var owner = EmitStoreLocalVariable(il, expr.Type);
+                var bindings = expr.GetBindings();
+                for (var i = 0; i < bindings.GetBindingCount(); ++i)
+                    if (!TryEmitNestedMemberBinding(bindings.GetArgument(i), expr.Type, owner, false, il, ref context, flags))
+                        return false;
+                EmitLoadLocalVariable(il, owner);
+                context.LastEmitIsAddress = false;
+                return il.EmitPopIfIgnoreResult(parent);
+            }
+
+            private static void EmitBindingOwner(ILGenerator il, Type type, int owner, bool isAddress)
+            {
+                if (type.IsValueType && !isAddress)
+                    EmitLoadLocalVariableAddress(il, owner);
+                else
+                    EmitLoadLocalVariable(il, owner);
+            }
+
+            private static bool TryEmitNestedMemberBinding(MemberBinding binding, Type ownerType, int owner,
+                bool ownerIsAddress, ILGenerator il, ref CompilerContext context, ParentFlags flags)
+            {
+                var member = binding.Member;
+                if (binding is MemberAssignment assignment)
+                {
+                    if (!TryEmit(assignment.Expression, il, ref context, flags))
+                        return false;
+                    var value = EmitStoreLocalVariable(il, assignment.Expression.Type);
+                    if (member is FieldInfo field)
+                    {
+                        if (!field.IsStatic)
+                            EmitBindingOwner(il, ownerType, owner, ownerIsAddress);
+                        EmitLoadLocalVariable(il, value);
+                        return EmitFieldSet(il, field);
+                    }
+                    if (member is PropertyInfo property && property.SetMethod != null)
+                    {
+                        var setter = property.SetMethod;
+                        if (!setter.IsStatic)
+                            EmitBindingOwner(il, ownerType, owner, ownerIsAddress);
+                        EmitLoadLocalVariable(il, value);
+                        return EmitInstanceMethodCall(il, setter, setter.IsStatic ? null : ownerType);
+                    }
+                    return false;
+                }
+
+                if (!TryEmitBindingMemberReceiver(member, ownerType, owner, ownerIsAddress, il,
+                    out var memberType, out var memberOwner, out var memberIsAddress))
+                    return false;
+                if (binding is MemberMemberBinding memberBinding)
+                {
+                    var children = memberBinding.Bindings;
+                    for (var i = 0; i < children.Count; ++i)
+                        if (!TryEmitNestedMemberBinding(children[i], memberType, memberOwner, memberIsAddress, il, ref context, flags))
+                            return false;
+                    return true;
+                }
+                if (binding is MemberListBinding listBinding)
+                {
+                    var initializers = listBinding.Initializers;
+                    var argFlags = (flags & ~(ParentFlags.AssignmentRightValue | ParentFlags.Arithmetic)) | ParentFlags.Call;
+                    for (var i = 0; i < initializers.Count; ++i)
+                    {
+                        var initializer = initializers[i];
+                        var method = initializer.AddMethod;
+                        var parameters = method.GetParameters();
+                        var args = initializer.GetArgExprs();
+                        SmallList<int, Stack8<int>, NoArrayPool<int>> values = default;
+                        for (var a = 0; a < args.GetArgCount(); ++a)
+                        {
+                            var parameterType = parameters[a].ParameterType;
+                            if (!TryEmit(args.GetArgument(a), il, ref context, argFlags, parameterType.IsByRef ? a : -1))
+                                return false;
+                            values.Add(EmitStoreLocalVariable(il, parameterType));
+                        }
+                        EmitBindingOwner(il, memberType, memberOwner, memberIsAddress);
+                        for (var a = 0; a < values.Count; ++a)
+                            EmitLoadLocalVariable(il, values[a]);
+                        if (!EmitInstanceMethodCall(il, method, memberType))
+                            return false;
+                        if (method.ReturnType != typeof(void))
+                            il.Demit(OpCodes.Pop);
+                    }
+                    return true;
+                }
+                return false;
+            }
+
+            private static bool TryEmitBindingMemberReceiver(MemberInfo member, Type ownerType, int owner,
+                bool ownerIsAddress, ILGenerator il, out Type memberType, out int memberOwner, out bool memberIsAddress)
+            {
+                if (member is FieldInfo field)
+                {
+                    memberType = field.FieldType;
+                    memberIsAddress = memberType.IsValueType && !field.IsInitOnly;
+                    if (!field.IsStatic)
+                        EmitBindingOwner(il, ownerType, owner, ownerIsAddress);
+                    il.Demit(memberIsAddress ? field.IsStatic ? OpCodes.Ldsflda : OpCodes.Ldflda
+                        : field.IsStatic ? OpCodes.Ldsfld : OpCodes.Ldfld, field);
+                }
+                else if (member is PropertyInfo property && property.GetMethod != null)
+                {
+                    memberType = property.PropertyType;
+                    if (memberType.IsValueType)
+                        throw new InvalidOperationException("Cannot initialize members of a value type through a property.");
+                    var getter = property.GetMethod;
+                    memberIsAddress = memberType.IsByRef;
+                    if (memberIsAddress)
+                        memberType = memberType.GetElementType();
+                    if (!getter.IsStatic)
+                        EmitBindingOwner(il, ownerType, owner, ownerIsAddress);
+                    if (!EmitInstanceMethodCall(il, getter, getter.IsStatic ? null : ownerType))
+                    {
+                        memberOwner = -1;
+                        return false;
+                    }
+                }
+                else
+                {
+                    memberType = null;
+                    memberOwner = -1;
+                    memberIsAddress = false;
+                    return false;
+                }
+                memberOwner = EmitStoreLocalVariable(il, memberIsAddress ? memberType.MakeByRefType() : memberType);
+                return true;
             }
 
             [MethodImpl((MethodImplOptions)256)]
@@ -4875,7 +5016,7 @@ namespace FastExpressionCompiler
 
                 bool ok;
                 if (!ownerType.IsValueType)
-                    ok = EmitMethodCallOrVirtualCall(il, method);
+                    ok = EmitInstanceMethodCall(il, method, ownerType);
                 else if (!method.IsVirtual // #251 - no need for constrained or virtual call because it is already by-ref
                     || method.DeclaringType == ownerType)
                     ok = EmitMethodCall(il, method);
@@ -4890,12 +5031,13 @@ namespace FastExpressionCompiler
             }
 
             // The owner (the reference or the address of the value type) is on the stack and is consumed
-            private static bool EmitBinding(MemberBinding binding, ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            private static bool EmitBinding(MemberBinding binding, ILGenerator il, ref CompilerContext context, ParentFlags parent, bool ownerKnownNotNull = false)
             {
                 var member = binding.Member;
+                var ownerType = member.DeclaringType;
                 var isStatic = member is FieldInfo sf ? sf.IsStatic : (((PropertyInfo)member).GetMethod ?? ((PropertyInfo)member).SetMethod).IsStatic;
                 if (isStatic)
-                    il.Demit(OpCodes.Pop); // the static member does not need the owner
+                    il.Demit(OpCodes.Pop);
 
                 if (binding.BindingType == MemberBindingType.Assignment)
                 {
@@ -4956,7 +5098,8 @@ namespace FastExpressionCompiler
                     var subs = ((MemberMemberBinding)binding).Bindings;
                     for (var i = 0; i < subs.Count; ++i)
                     {
-                        il.Demit(OpCodes.Dup);
+                        if (receiver == -1) il.Demit(OpCodes.Dup);
+                        else EmitLoadLocalVariable(il, receiver);
                         if (!EmitBinding(subs[i], il, ref context, parent))
                             return false;
                     }
@@ -4966,14 +5109,18 @@ namespace FastExpressionCompiler
                     var inits = ((MemberListBinding)binding).Initializers;
                     for (var i = 0; i < inits.Count; ++i)
                     {
-                        il.Demit(OpCodes.Dup);
+                        if (receiver == -1) il.Demit(OpCodes.Dup);
+                        else EmitLoadLocalVariable(il, receiver);
                         if (!EmitElementInit(inits[i], memberType, il, ref context, parent))
                             return false;
                     }
                 }
-                il.Demit(OpCodes.Pop);
+                if (receiver == -1)
+                    il.Demit(OpCodes.Pop);
                 if (copyVar == -1)
                     return true;
+                if (copyOwner != -1)
+                    EmitLoadLocalVariable(il, copyOwner);
                 EmitLoadLocalVariable(il, copyVar);
                 return EmitMethodCallOrVirtualCall(il, ((PropertyInfo)member).SetMethod);
             }
