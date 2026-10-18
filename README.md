@@ -276,12 +276,15 @@ Dynamic expressions use ordinary DLR call sites: each emitted occurrence has its
 reuses binding rules, and reads the current mutable `Target` for every invocation.
 Runtime binder rule compilation is intrinsic DLR behavior; the outer lambda still compiles directly with FEC.
 
+Quoted lambdas and `RuntimeVariables` share live typed cells with compiled outer and sibling lambdas.
+Mutations remain visible after the creating method returns; independent activations keep separate storage.
+Capture-free quoted trees retain their original identity. The closure arrays and direct IL emitter remain in use.
+
 ### What's not supported yet
 
 **FEC does not support yet:** 
 
-- `Quote` with captured variables (capture-free quoted trees and directly invoked quoted lambdas are supported)
-- `RuntimeVariables` with one or more variables (empty lists are supported)
+- Captures of by-ref parameters, pointer types, or byref-like values that cannot be stored in a heap cell
 - Reused physical method-tail labels reached with pending operand values or from protected exception regions (strict null / `NotSupported_MethodReturn_Context`)
 - `DebugInfo`
 - `NewArrayInit` multi-dimensional array initializer is not supported yet
