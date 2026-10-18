@@ -73,6 +73,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new VoidLabelValueRegressionTests());
             st.Run(new TypedLabelControlFlowRegressionTests());
             st.Run(new ReferenceEqualityRegressionTests());
+            st.Run(new TypeEqualRegressionTests());
             st.Run(new BoxedConstantIdentityRegressionTests());
             st.Run(new UserDefinedLogicalRegressionTests());
             st.Run(new ExplicitBinaryMethodRegressionTests());
@@ -115,6 +116,7 @@ namespace FastExpressionCompiler.UnitTests
             lt.Run(new LightExpression.UnitTests.VoidLabelValueRegressionTests());
             lt.Run(new LightExpression.UnitTests.TypedLabelControlFlowRegressionTests());
             lt.Run(new LightExpression.UnitTests.ReferenceEqualityRegressionTests());
+            lt.Run(new LightExpression.UnitTests.TypeEqualRegressionTests());
             lt.Run(new LightExpression.UnitTests.BoxedConstantIdentityRegressionTests());
             lt.Run(new LightExpression.UnitTests.UserDefinedLogicalRegressionTests());
             lt.Run(new LightExpression.UnitTests.ExplicitBinaryMethodRegressionTests());
