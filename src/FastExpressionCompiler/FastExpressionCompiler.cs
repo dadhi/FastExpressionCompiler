@@ -6988,7 +6988,7 @@ namespace FastExpressionCompiler
                     ExpressionType.SubtractChecked => exprType.IsUnsigned() ? OpCodes.Sub_Ovf_Un : OpCodes.Sub_Ovf,
                     ExpressionType.Multiply => OpCodes.Mul,
                     ExpressionType.MultiplyChecked => exprType.IsUnsigned() ? OpCodes.Mul_Ovf_Un : OpCodes.Mul_Ovf,
-                    ExpressionType.Divide => OpCodes.Div,
+                    ExpressionType.Divide => exprType.IsUnsigned() ? OpCodes.Div_Un : OpCodes.Div,
                     ExpressionType.Modulo => exprType.IsUnsigned() ? OpCodes.Rem_Un : OpCodes.Rem,
                     ExpressionType.And => OpCodes.And,
                     ExpressionType.Or => OpCodes.Or,
