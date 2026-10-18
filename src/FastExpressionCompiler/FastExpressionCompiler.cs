@@ -1549,7 +1549,7 @@ namespace FastExpressionCompiler
                             var invokedExpr = invokeExpr.Expression;
                             if (invokedExpr is UnaryExpression quote && quote.NodeType == ExpressionType.Quote)
                                 invokedExpr = quote.Operand;
-                            if ((context.CompilerFlags & CompilerFlags.NoInvocationLambdaInlining) == 0 && invokedExpr is LambdaExpression lambdaExpr)
+                            if ((context.CompilerFlags & CompilerFlags.NoInvocationLambdaInlining) == 0 && invokedExpr is LambdaExpression lambdaExpr && !HasByRefParameters(lambdaExpr))
                             {
                                 ref var inlinedExpr = ref context.InlinedLambdaInvocation.Map.AddOrGetValueRef(invokeExpr, out var found);
                                 if (!found)
@@ -1842,15 +1842,6 @@ namespace FastExpressionCompiler
             internal SmallMap4<Expression, Expression, RefEq<Expression>> Reductions;
         }
 
-        private static bool HasByRefParameters(LambdaExpression lambda)
-        {
-            var parameters = lambda.GetParamExprs();
-            for (var i = 0; i < parameters.GetParamCount(); ++i)
-                if (parameters.GetParameter(i).IsByRef)
-                    return true;
-            return false;
-        }
-
         // Collection and emission must use the same reduced tree: Reduce may create fresh locals,
         // constants, labels, or nested lambdas. Allocate the cache only when reducing a node.
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -1879,6 +1870,15 @@ namespace FastExpressionCompiler
                 context.ReducedExpressions = cache = new ExpressionReductionCache();
             cache.Reductions.Map.AddOrGetValueRef(expression, out _) = reduced;
             return reduced;
+        }
+
+        private static bool HasByRefParameters(LambdaExpression lambda)
+        {
+            var parameters = lambda.GetParamExprs();
+            for (var i = 0; i < parameters.GetParamCount(); ++i)
+                if (parameters.GetParameter(i).IsByRef)
+                    return true;
+            return false;
         }
 
         private static Expression CreateInlinedLambdaInvocationExpression(Args invokeArgs, LambdaExpression lambdaExpr)
@@ -2894,6 +2894,10 @@ namespace FastExpressionCompiler
                 if (argCount != 0)
                 {
                     var pars = ctor.GetParameters();
+                    for (var i = 0; i < argCount; ++i)
+                        if (pars[i].ParameterType.IsByRef && NeedsByRefWriteback(argExprs.GetArgument(i)))
+                            return TryEmitCallWithWritebacks(null, argExprs, null, ctor, il, ref context, parent, -1);
+
 
                     // If we have complex arguments then it is better to store them in the variables, then load them before calling ctor.
                     // Otherwise the stack may be broken by the long emit chain, and the previous argument result on stack
@@ -5989,6 +5993,199 @@ namespace FastExpressionCompiler
                 return true;
             }
 
+            private struct ByRefWriteback
+            {
+                public PropertyInfo Property;
+                public int Receiver;
+                public Type ReceiverType;
+                public int Value;
+                public SmallList<int, Stack8<int>, NoArrayPool<int>> Indexes;
+            }
+
+            private static bool NeedsByRefWriteback(Expression expression)
+            {
+                if (expression is MemberExpression member)
+                    return member.Member is PropertyInfo property && !property.GetMethod.ReturnType.IsByRef ||
+                        member.Expression != null && member.Expression.Type.IsValueType && NeedsByRefWriteback(member.Expression);
+                return expression is IndexExpression index && index.Indexer != null && !index.Indexer.GetMethod.ReturnType.IsByRef;
+            }
+
+            private static bool TryEmitByRefArgument(Expression expression, int argument, ILGenerator il,
+                ref CompilerContext context, ref SmallList<ByRefWriteback, Stack2<ByRefWriteback>, NoArrayPool<ByRefWriteback>> writebacks, bool copyback = true)
+            {
+                PropertyInfo property = null;
+                Expression receiver = null;
+                ArgExprs indexes = default;
+                var indexCount = 0;
+                if (expression is MemberExpression member)
+                {
+                    if (member.Member is FieldInfo field && member.Expression != null &&
+                        member.Expression.Type.IsValueType && NeedsByRefWriteback(member.Expression))
+                    {
+                        if (!TryEmitByRefArgument(member.Expression, argument, il, ref context, ref writebacks, false))
+                            return false;
+                        il.Demit(OpCodes.Ldflda, field);
+                        return true;
+                    }
+                    property = member.Member as PropertyInfo;
+                    receiver = member.Expression;
+                }
+                else if (expression is IndexExpression index && index.Indexer != null)
+                {
+                    property = index.Indexer;
+                    receiver = index.Object;
+                    indexes = index.GetArgExprs();
+                    indexCount = indexes.GetArgCount();
+                }
+                if (property == null || property.GetMethod.ReturnType.IsByRef)
+                {
+                    if (expression is MemberExpression fieldExpression && fieldExpression.Member is FieldInfo field)
+                    {
+                        if (field.IsStatic && !field.IsInitOnly && !field.IsLiteral)
+                        {
+                            il.Demit(OpCodes.Ldsflda, field);
+                            return true;
+                        }
+                        if (field.IsInitOnly || field.IsLiteral)
+                        {
+                            if (!TryEmit(expression, il, ref context, ParentFlags.Call))
+                                return false;
+                            EmitStoreAndLoadLocalVariableAddress(il, expression.Type);
+                            return true;
+                        }
+                    }
+                    switch (expression.NodeType)
+                    {
+                        case ExpressionType.Parameter:
+                        case ExpressionType.MemberAccess:
+                        case ExpressionType.Index:
+                        case ExpressionType.ArrayIndex:
+                        case ExpressionType.Unbox:
+                        case ExpressionType.Call:
+                        case ExpressionType.Invoke:
+                        case ExpressionType.Constant:
+                            return TryEmit(expression, il, ref context, ParentFlags.Call | ParentFlags.AssignmentByRef, argument);
+                        default:
+                            if (!TryEmit(expression, il, ref context, ParentFlags.Call))
+                                return false;
+                            EmitStoreAndLoadLocalVariableAddress(il, expression.Type);
+                            return true;
+                    }
+                }
+
+                var record = new ByRefWriteback { Property = property, Receiver = -1 };
+                if (receiver != null)
+                {
+                    record.ReceiverType = receiver.Type;
+                    if (receiver.Type.IsValueType)
+                    {
+                        if (!TryEmitByRefArgument(receiver, argument, il, ref context, ref writebacks, false))
+                            return false;
+                        record.Receiver = EmitStoreLocalVariable(il, receiver.Type.MakeByRefType());
+                    }
+                    else
+                    {
+                        if (!TryEmit(receiver, il, ref context, ParentFlags.Call))
+                            return false;
+                        record.Receiver = EmitStoreLocalVariable(il, receiver.Type);
+                    }
+                }
+                var getterParameters = property.GetMethod.GetParameters();
+                for (var i = 0; i < indexCount; ++i)
+                {
+                    if (!TryEmit(indexes.GetArgument(i), il, ref context, ParentFlags.Call, getterParameters[i].ParameterType.IsByRef ? i : -1))
+                        return false;
+                    record.Indexes.Add(EmitStoreLocalVariable(il, getterParameters[i].ParameterType));
+                }
+                if (record.Receiver != -1)
+                    EmitLoadLocalVariable(il, record.Receiver);
+                for (var i = 0; i < indexCount; ++i)
+                    EmitLoadLocalVariable(il, record.Indexes[i]);
+                if (!EmitInstanceMethodCall(il, property.GetMethod, record.ReceiverType))
+                    return false;
+                record.Value = EmitStoreLocalVariable(il, expression.Type);
+                // A getter-only property supplies a temporary without a setter copyback.
+                if (copyback && property.SetMethod != null)
+                    writebacks.Add(record);
+                EmitLoadLocalVariableAddress(il, record.Value);
+                return true;
+            }
+
+            private static bool TryEmitCallWithWritebacks(Expression receiver, ArgExprs expressions, MethodInfo method,
+                ConstructorInfo constructor, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex)
+            {
+                var receiverVar = -1;
+                if (receiver != null)
+                {
+                    if (!TryEmit(receiver, il, ref context, ParentFlags.Call | ParentFlags.InstanceAccess))
+                        return false;
+                    if (receiver.Type.IsValueType && !context.LastEmitIsAddress && !(receiver is PE pe && pe.IsByRef))
+                        EmitStoreAndLoadLocalVariableAddress(il, receiver.Type);
+                    receiverVar = EmitStoreLocalVariable(il, receiver.Type.IsValueType ? receiver.Type.MakeByRefType() : receiver.Type);
+                }
+                SmallList<ByRefWriteback, Stack2<ByRefWriteback>, NoArrayPool<ByRefWriteback>> writebacks = default;
+                SmallList<int, Stack8<int>, NoArrayPool<int>> arguments = default;
+                var parameters = method != null ? method.GetParameters() : constructor.GetParameters();
+                for (var i = 0; i < parameters.Length; ++i)
+                {
+                    var argument = expressions.GetArgument(i);
+                    if (parameters[i].ParameterType.IsByRef)
+                    {
+                        if (parameters[i].ParameterType.GetElementType() != argument.Type)
+                            return false;
+                        if (!TryEmitByRefArgument(argument, i, il, ref context, ref writebacks))
+                            return false;
+                    }
+                    else if (!TryEmit(argument, il, ref context, ParentFlags.Call))
+                        return false;
+                    arguments.Add(EmitStoreLocalVariable(il, parameters[i].ParameterType));
+                }
+                if (receiverVar != -1)
+                    EmitLoadLocalVariable(il, receiverVar);
+                for (var i = 0; i < arguments.Count; ++i)
+                    EmitLoadLocalVariable(il, arguments[i]);
+                if (constructor != null)
+                    il.Demit(OpCodes.Newobj, constructor);
+                else if (!EmitInstanceMethodCall(il, method, receiver?.Type))
+                    return false;
+                var returnType = constructor != null ? constructor.DeclaringType : method.ReturnType;
+                var result = returnType == typeof(void) ? -1 : EmitStoreLocalVariable(il, returnType);
+                // Copy back direct properties in argument order after normal completion.
+                // A throwing call skips copyback; a throwing setter prevents subsequent setters.
+                // Property-valued struct receivers remain defensive copies, as with ordinary member calls.
+                for (var i = 0; i < writebacks.Count; ++i)
+                {
+                    var record = writebacks[i];
+                    if (record.Receiver != -1)
+                        EmitLoadLocalVariable(il, record.Receiver);
+                    for (var index = 0; index < record.Indexes.Count; ++index)
+                        EmitLoadLocalVariable(il, record.Indexes[index]);
+                    EmitLoadLocalVariable(il, record.Value);
+                    if (!EmitInstanceMethodCall(il, record.Property.SetMethod, record.ReceiverType))
+                        return false;
+                }
+                context.LastEmitIsAddress = false;
+                if (result != -1 && !parent.IgnoresResult())
+                {
+                    if (returnType.IsValueType && (parent & ParentFlags.InstanceAccess) != 0)
+                    {
+                        EmitLoadLocalVariableAddress(il, result);
+                        context.LastEmitIsAddress = true;
+                    }
+                    else
+                    {
+                        EmitLoadLocalVariable(il, result);
+                        context.LastEmitIsAddress = returnType.IsByRef;
+                    }
+                    if (byRefIndex != -1 && !returnType.IsByRef)
+                    {
+                        EmitStoreAndLoadLocalVariableAddress(il, returnType);
+                        context.LastEmitIsAddress = true;
+                    }
+                }
+                return true;
+            }
+
             private static bool TryEmitMethodCall(Expression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex = -1)
             {
                 var flags = ParentFlags.Call;
@@ -6006,6 +6203,11 @@ namespace FastExpressionCompiler
                         return false;
                 }
                 var methodParams = method.GetParameters(); // todo: @perf @mem find how to avoid the call, look at `NewNoByRefArgs` expressions as example
+
+                var callArguments = callExpr.GetArgExprs();
+                for (var i = 0; i < methodParams.Length; ++i)
+                    if (methodParams[i].ParameterType.IsByRef && NeedsByRefWriteback(callArguments.GetArgument(i)))
+                        return TryEmitCallWithWritebacks(objExpr, callArguments, method, null, il, ref context, parent, byRefIndex);
 
                 var objIsValueType = false;
                 var loadObjByAddress = false;
@@ -6349,7 +6551,7 @@ namespace FastExpressionCompiler
                 var invokedExpr = expr.Expression;
                 if (invokedExpr is UnaryExpression quote && quote.NodeType == ExpressionType.Quote)
                     invokedExpr = quote.Operand;
-                if ((context.CompilerFlags & CompilerFlags.NoInvocationLambdaInlining) == 0 && invokedExpr is LambdaExpression)
+                if ((context.CompilerFlags & CompilerFlags.NoInvocationLambdaInlining) == 0 && invokedExpr is LambdaExpression lambdaExpr && !HasByRefParameters(lambdaExpr))
                 {
                     ref var inlinedExpr = ref context.InlinedLambdaInvocation.Map.AddOrGetValueRef(expr, out var found);
                     Debug.Assert(found, "The invocation expression should be collected in TryCollectInfo but it is not");
@@ -6386,6 +6588,12 @@ namespace FastExpressionCompiler
                     }
                 }
 
+                var delegateInvokeMethod = invokedExpr.Type.FindDelegateInvokeMethod();
+                var invokeParameters = delegateInvokeMethod.GetParameters();
+                for (var i = 0; i < invokeParameters.Length; ++i)
+                    if (invokeParameters[i].ParameterType.IsByRef && NeedsByRefWriteback(argExprs.GetArgument(i)))
+                        return TryEmitCallWithWritebacks(invokedExpr, argExprs, delegateInvokeMethod, null, il, ref context, parent, byRefIndex);
+
                 // The invocation receiver is a value, including incoming ref delegates.
                 var receiverFlags = (parent & ~InvocationReceiverFlagsToClear) |
                     ParentFlags.Call | ParentFlags.AssignmentRightValue;
@@ -6401,7 +6609,7 @@ namespace FastExpressionCompiler
                 //if (lambda is ConstantExpression lambdaConst) // todo: @perf opportunity to optimize
                 //    delegateInvokeMethod = ((Delegate)lambdaConst.Value).GetMethodInfo();
                 //else
-                var delegateInvokeMethod = invokedExpr.Type.FindDelegateInvokeMethod(); // todo: @perf slow thingy
+                // The Invoke signature was obtained before argument preparation above.
                 if (expr.GetArgCount() != 0)
                 {
                     var useResult = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
@@ -8043,7 +8251,6 @@ namespace FastExpressionCompiler
                 // So for now the varargs methods are not supported yet.
                 return (method.CallingConvention & CallingConventions.VarArgs) == 0;
             }
-
 
             [MethodImpl((MethodImplOptions)256)]
             public static bool EmitVirtualMethodCall(ILGenerator il, MethodInfo method)
