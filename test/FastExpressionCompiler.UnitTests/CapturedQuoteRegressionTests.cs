@@ -247,7 +247,14 @@ public struct CapturedQuoteRegressionTests : ITestX
             var fast = Fast(expression, flags); if (!t.IsNotNull(fast)) return;
             foreach (var outer in new[] { system, fast })
             {
-                var tree = outer(41); t.AreEqual(typeof(void), tree.Body.Type);
+                var tree = outer(41);
+#if NETFRAMEWORK
+                // Framework's System quote rewriter loses the explicit block type.
+                // Check its delegate contract and effects; FEC must preserve the block type.
+                if (ReferenceEquals(outer, system)) t.AreEqual(typeof(void), tree.ReturnType);
+                else
+#endif
+                    t.AreEqual(typeof(void), tree.Body.Type);
                 t.AreEqual(typeof(int), ((System.Linq.Expressions.BlockExpression)tree.Body).Variables[0].Type);
                 Trace = ""; tree.Compile()(); t.AreEqual("42;", Trace);
                 var quotedFast = Fast(tree, flags); if (!t.IsNotNull(quotedFast)) return;
