@@ -75,11 +75,14 @@ public struct IndexerExceptionSpillRegressionTests : ITestX
         var fast = expression.FromSysExpression().CompileFast(true);
         if (!t.IsNotNull(fast)) return;
         var actual = new ValueBox();
-        var expected = new ValueBox();
         t.AreEqual(123, fast(ref actual));
+        t.AreEqual(123, actual.Value);
+#if !NETFRAMEWORK
+        // Framework's system compiler rejects EH combined with by-ref receivers; FEC writeback is asserted above.
+        var expected = new ValueBox();
         t.AreEqual(123, expression.Compile()(ref expected));
         t.AreEqual(expected.Value, actual.Value);
-        t.AreEqual(123, actual.Value);
+#endif
     }
 
     public void Try_indices_preserve_array_assignment_and_read(TestContext t)
