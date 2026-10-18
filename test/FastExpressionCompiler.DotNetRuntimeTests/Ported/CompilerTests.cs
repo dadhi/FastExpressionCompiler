@@ -31,7 +31,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Equal(n, f());
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("VerifiedCompilerRepresentationBehaviorTests.NonNullableConstants", "private closure layout")]
         public static void EmitConstantsToIL_NonNullableValueTypes()
         {
             VerifyEmitConstantsToIL((bool)true);
@@ -52,7 +52,7 @@ namespace System.Linq.Expressions.Tests
             VerifyEmitConstantsToIL((decimal)49.95m);
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("VerifiedCompilerRepresentationBehaviorTests.NullableConstants", "private closure layout")]
         public static void EmitConstantsToIL_NullableValueTypes()
         {
             VerifyEmitConstantsToIL((bool?)null);
@@ -88,14 +88,14 @@ namespace System.Linq.Expressions.Tests
             VerifyEmitConstantsToIL((DateTime?)null);
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("VerifiedCompilerRepresentationBehaviorTests.ReferenceConstants", "private closure layout")]
         public static void EmitConstantsToIL_ReferenceTypes()
         {
             VerifyEmitConstantsToIL((string)null);
             VerifyEmitConstantsToIL((string)"bar");
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("VerifiedCompilerRepresentationBehaviorTests.EnumConstants", "private closure layout")]
         public static void EmitConstantsToIL_Enums()
         {
             VerifyEmitConstantsToIL(ConstantsEnum.A);
@@ -103,14 +103,14 @@ namespace System.Linq.Expressions.Tests
             VerifyEmitConstantsToIL((ConstantsEnum?)ConstantsEnum.A);
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("VerifiedCompilerRepresentationBehaviorTests.SharedConstantReferences", "private closure layout")]
         public static void EmitConstantsToIL_ShareReferences()
         {
             var o = new object();
             VerifyEmitConstantsToIL(Expression.Equal(Expression.Constant(o), Expression.Constant(o)), 1, true);
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("VerifiedCompilerRepresentationBehaviorTests.CapturedConstants", "private closure layout")]
         public static void EmitConstantsToIL_LiftedToClosure()
         {
             VerifyEmitConstantsToIL(DateTime.Now, 1);
