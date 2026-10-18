@@ -281,7 +281,7 @@ namespace System.Linq.Expressions.Tests
             AssertExtensions.Throws<ArgumentException>("right", () => Expression.Assign(Expression.Variable(typeof(object)), right));
         }
 
-        [Theory]
+        [SystemAssignmentDisagreementTheory("VerifiedCompilerCompatibilityBehaviorTests.ConstantValueTypeAssignmentsFollowSystemCompiled")]
         [ClassData(typeof(CompilationTypes))]
         [ActiveIssue("https://github.com/dotnet/runtime/issues/19094")]
         public static void Left_ValueTypeContainsChildTryExpression(bool useInterpreter)
@@ -302,7 +302,7 @@ namespace System.Linq.Expressions.Tests
             Assert.True(func.CompileForFec(useInterpreter)());
         }
 
-        [Theory]
+        [SystemAssignmentDisagreementTheory("VerifiedCompilerCompatibilityBehaviorTests.ConstantValueTypeAssignmentsFollowSystemCompiled")]
         [ClassData(typeof(CompilationTypes))]
         [ActiveIssue("https://github.com/dotnet/runtime/issues/19094")]
         public static void ValueTypeIndexAssign(bool useInterpreter)
