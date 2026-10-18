@@ -2547,7 +2547,8 @@ namespace FastExpressionCompiler
                 var right = expr.Right;
 
                 // we won't OpCodes.Pop inside the Coalesce as it may leave the Il in invalid state - instead we will pop at the end here (#284)
-                var flags = (parent & ~ParentFlags.IgnoreResult) | ParentFlags.Coalesce;
+                var flags = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
+                    ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.Coalesce | ParentFlags.AssignmentRightValue;
 
                 if (!TryEmit(left, il, ref context, flags))
                     return false;
@@ -2563,19 +2564,22 @@ namespace FastExpressionCompiler
 
                     il.Demit(OpCodes.Brfalse, labelFalse);
 
-                    if (exprType == Nullable.GetUnderlyingType(leftType))
+                    if (exprType == leftType)
+                        EmitLoadLocalVariable(il, varIndex);
+                    else
                     {
-                        // if the target expression type is of underlying nullable, and the left operand is not null,
-                        // then extract its underlying value
+                        var underlyingLeft = Nullable.GetUnderlyingType(leftType);
                         EmitLoadLocalVariableAddress(il, varIndex);
                         il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                        if (!TryEmitCoalesceValueConvert(underlyingLeft, exprType, il))
+                            return false;
                     }
-                    else
-                        EmitLoadLocalVariable(il, varIndex); // loading the value (not address) to return it
 
                     il.Demit(OpCodes.Br, labelDone);
                     il.DmarkLabel(labelFalse);
                     if (!TryEmit(right, il, ref context, flags))
+                        return false;
+                    if (!TryEmitCoalesceValueConvert(right.Type, exprType, il))
                         return false;
 
                     il.DmarkLabel(labelDone);
@@ -2602,7 +2606,50 @@ namespace FastExpressionCompiler
                         il.DmarkLabel(labelDone);
                     }
                 }
+                context.LastEmitIsAddress = false;
                 return il.EmitPopIfIgnoreResult(parent);
+            }
+
+            private static bool TryEmitCoalesceValueConvert(Type source, Type target, ILGenerator il)
+            {
+                if (source == target)
+                    return true;
+                if (!target.IsValueType)
+                    return il.TryEmitBoxOf(source);
+                var nullableSource = Nullable.GetUnderlyingType(source);
+                var nullableTarget = Nullable.GetUnderlyingType(target);
+                if (nullableSource != null)
+                {
+                    var local = EmitStoreAndLoadLocalVariableAddress(il, source);
+                    if (nullableTarget == null)
+                    {
+                        EmitMethodCall(il, source.GetNullableValueGetterMethod());
+                        return TryEmitCoalesceValueConvert(nullableSource, target, il);
+                    }
+                    EmitMethodCall(il, source.GetNullableHasValueGetterMethod());
+                    var nullValue = il.DefineLabel();
+                    var done = il.DefineLabel();
+                    il.Demit(OpCodes.Brfalse, nullValue);
+                    EmitLoadLocalVariableAddress(il, local);
+                    il.Demit(OpCodes.Ldfld, source.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                    if (!TryEmitCoalesceValueConvert(nullableSource, target, il))
+                        return false;
+                    il.Demit(OpCodes.Br, done);
+                    il.DmarkLabel(nullValue);
+                    EmitDefault(il, target);
+                    il.DmarkLabel(done);
+                    return true;
+                }
+                var underlyingTarget = nullableTarget ?? target;
+                if (source != underlyingTarget && !TryEmitPrimitiveValueConvert(source, underlyingTarget, il, isChecked: false))
+                {
+                    var method = underlyingTarget.GetMethod("op_Implicit", new[] { source == typeof(char) ? typeof(int) : source });
+                    if (!EmitMethodCallCheckForNull(il, method))
+                        return false;
+                }
+                if (nullableTarget != null)
+                    il.Demit(OpCodes.Newobj, target.GetNullableConstructor());
+                return true;
             }
 
             /// <summary>Emit default op code for the type</summary>
