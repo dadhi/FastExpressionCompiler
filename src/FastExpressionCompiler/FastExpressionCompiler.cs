@@ -660,6 +660,7 @@ namespace FastExpressionCompiler
             internal bool HasComplexExpression;
             internal bool InExceptionFilter;
             internal int TryExpressionCount;
+            internal bool HasExceptionBlock;
 
             /// Set if the same label target is defined by the several Label expressions, so each definition needs its own IL label
             internal bool HasLabelDefinedTwice;
@@ -1639,6 +1640,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.Try:
                         {
                             ++context.TryExpressionCount;
+                            context.HasExceptionBlock = true;
                             context.HasComplexExpression = false;
                             r = TryCollectTryExprInfo(ref context, (TryExpression)expr, nestedLambda, ref rootNestedLambdas, scopeIdx);
                             context.HasComplexExpression = true;
@@ -2842,8 +2844,8 @@ namespace FastExpressionCompiler
                     {
                         if (!context.HasComplexArguments(newExpr)
 #if LIGHT_EXPRESSION
-                            // Intrinsic construction collects operands without marking this owner.
-                            && !(newExpr.IsIntrinsic && context.TryExpressionCount != 0)
+                            // Intrinsic constructors collect their arguments without recording this node in the map.
+                            && !(newExpr.IsIntrinsic && context.HasExceptionBlock)
 #endif
                             )
                         {
@@ -5242,6 +5244,37 @@ namespace FastExpressionCompiler
                         if (leftIsByAddress = context.LastEmitIsAddress)
                             EmitLoadIndirectlyByRef(il, leftType); // if the field is loaded by ref, it need to be loaded from the ref in order to do arithmetic operation on it
 
+                        var cachedRight = -1;
+                        if (right != null && (context.HasExceptionBlock || right.IsComplexExpression()))
+                        {
+                            // Keep the evaluation stack empty across a possible exception block in the RHS.
+                            // The target/getter has already run; save its operands rather than evaluating it again.
+                            var readValue = EmitStoreLocalVariable(il, leftType);
+                            var indexes = orLeftIndexExpr != null ? new int[indexArgCount] : null;
+                            if (indexes != null)
+                                for (var i = indexArgCount - 1; i >= 0; --i)
+                                    indexes[i] = EmitStoreLocalVariable(il, indexArgs.GetArgument(i).Type);
+                            var target = -1;
+                            if (leftIsByAddress || objExpr != null)
+                            {
+                                var targetType = leftIsByAddress ? leftType.MakeByRefType()
+                                    : objExpr.Type.IsValueType ? objExpr.Type.MakeByRefType() : objExpr.Type;
+                                target = EmitStoreLocalVariable(il, targetType);
+                            }
+                            if (!TryEmit(right, il, ref context, rightOnlyFlags))
+                                return false;
+                            if (context.LastEmitIsAddress)
+                                EmitLoadIndirectlyByRef(il, right.Type);
+                            cachedRight = EmitStoreLocalVariable(il, right.Type);
+                            if (target != -1)
+                                EmitLoadLocalVariable(il, target);
+                            if (indexes != null)
+                                for (var i = 0; i < indexArgCount; ++i)
+                                    EmitLoadLocalVariable(il, indexes[i]);
+                            EmitLoadLocalVariable(il, readValue);
+                            context.LastEmitIsAddress = false;
+                        }
+
                         var leftIsNullable = leftType.IsNullable() &&
                             (operationMethod == null || operationMethod.GetParameters()[0].ParameterType != leftType);
                         if (!leftIsNullable)
@@ -5258,7 +5291,7 @@ namespace FastExpressionCompiler
                             else
                             {
                                 var rightType = right.Type;
-                                if (!TryEmit(right, il, ref context, rightOnlyFlags))
+                                if (!TryEmitCachedArithmeticAssignRight(right, cachedRight, il, ref context, rightOnlyFlags))
                                     return false;
 
                                 var rightIsNullable = rightType.IsNullable() &&
@@ -5303,7 +5336,7 @@ namespace FastExpressionCompiler
                             {
                                 // emit the right expression immediately after the left and then just process their results
                                 var rightType = right.Type;
-                                if (!TryEmit(right, il, ref context, rightOnlyFlags))
+                                if (!TryEmitCachedArithmeticAssignRight(right, cachedRight, il, ref context, rightOnlyFlags))
                                     return false;
                                 if (context.LastEmitIsAddress)
                                     EmitLoadIndirectlyByRef(il, rightType);
@@ -5491,6 +5524,16 @@ namespace FastExpressionCompiler
                 _ => nodeType
             };
 
+            private static bool TryEmitCachedArithmeticAssignRight(Expression right, int cachedRight,
+                ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            {
+                if (cachedRight == -1)
+                    return TryEmit(right, il, ref context, parent);
+                EmitLoadLocalVariable(il, cachedRight);
+                context.LastEmitIsAddress = false;
+                return true;
+            }
+
             private static bool TryEmitAssignmentConversion(LambdaExpression conversion, ILGenerator il, ref CompilerContext context)
             {
                 var invoke = conversion.Type.FindDelegateInvokeMethod();
@@ -5568,7 +5611,8 @@ namespace FastExpressionCompiler
                         ++paramIndex; // shift parameter index by one, because the first one will be closure
 
                     var isLeftByRef = left.IsByRef;
-                    if (isLeftByRef)
+                    var deferRefAddress = isLeftByRef && right != null && (context.HasExceptionBlock || right.IsComplexExpression());
+                    if (isLeftByRef && !deferRefAddress)
                         EmitLoadArg(il, paramIndex);
 
                     if (resultVar != -1 & isPost)
@@ -5584,7 +5628,15 @@ namespace FastExpressionCompiler
                         EmitStoreAndLoadLocalVariable(il, resultVar);
 
                     if (isLeftByRef)
+                    {
+                        if (deferRefAddress)
+                        {
+                            var assignedValue = EmitStoreLocalVariable(il, left.Type);
+                            EmitLoadArg(il, paramIndex);
+                            EmitLoadLocalVariable(il, assignedValue);
+                        }
                         EmitStoreIndirectlyByRef(il, left.Type);
+                    }
                     else
                         il.Demit(OpCodes.Starg_S, paramIndex);
 
@@ -7152,9 +7204,9 @@ namespace FastExpressionCompiler
                 if (leftIsNullable)
                 {
                     noNullableValueLabel = il.DefineLabel();
-                    if (!TryEmit(left, il, ref context, flags | ParentFlags.InstanceCall))
+                    if (!TryEmit(left, il, ref context, flags))
                         return false;
-                    if (context.LastEmitIsAddress || left is ParameterExpression { IsByRef: true }) // see #461, the nullable by-ref parameter does not set the flag
+                    if (context.LastEmitIsAddress)
                         EmitLoadIndirectlyByRef(il, leftType); // the nullable value is needed here and not its address
 
                     leftVar = EmitStoreLocalVariable(il, leftType);
@@ -7191,7 +7243,7 @@ namespace FastExpressionCompiler
                     // it prevents the problems in cases of right being a block, try-catch, etc.
                     // see `Using_try_finally_as_arithmetic_operand_use_void_block_in_finally`
                     var rightType = right.Type;
-                    if (leftValueVar == -1 && (context.TryExpressionCount != 0 || right.IsComplexExpression()))
+                    if (leftValueVar == -1 && (context.HasExceptionBlock || right.IsComplexExpression()))
                         leftValueVar = EmitStoreLocalVariable(il, leftType);
 
                     var rightVar = -1;
