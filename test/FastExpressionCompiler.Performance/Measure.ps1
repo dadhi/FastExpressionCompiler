@@ -29,5 +29,13 @@ try {
         $env:FEC_PERF_OUTPUT = "$run/results"
         dotnet "$run/binaries/FastExpressionCompiler.Performance.dll" --filter $Filter *> "$run/run.log"
         if ($LASTEXITCODE) { throw "Benchmark host failed; see $run/run.log" }
+        $exports = @(Get-ChildItem "$run/results/results/*-report-full.json" -ErrorAction SilentlyContinue)
+        if ($exports.Count -eq 0) { throw "No benchmark results; see $run/run.log" }
+        foreach ($export in $exports) {
+            $benchmarks = (Get-Content -LiteralPath $export.FullName -Raw | ConvertFrom-Json).Benchmarks
+            foreach ($benchmark in $benchmarks) {
+                if ($null -eq $benchmark.Statistics) { throw "Benchmark failed: $($benchmark.FullName)" }
+            }
+        }
     } finally { $env:FEC_PERF_OUTPUT = $oldOutput }
 } finally { Pop-Location }

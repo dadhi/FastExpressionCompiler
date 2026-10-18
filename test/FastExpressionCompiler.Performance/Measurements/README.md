@@ -36,6 +36,13 @@ arguments, covariance, ignored reads and exception-region receivers.
 
 Code commit: `7b6863bc`. Both libraries build across all four targets with zero warnings/errors.
 
+Focused frozen-binary repeat: `00-array-repeat.csv` versus `01-vector-array-repeat.csv`.
+System compilation moved 44,092 -> 58,548 ns, standard FEC 2,621 -> 3,416 ns, Light
+2,425 -> 2,964 ns. Absolute times worsened with the host conditions. Relative to System,
+standard FEC improved about 1.8% and Light about 8.0%, in the same direction as the first
+run. The small standard-FEC difference remains uncertain; do not advertise the first
+run's absolute percentages as an established universal gain.
+
 ## Optimization 2: named-field lookup without enumerating every field
 
 Use TypeInfo.GetDeclaredField and recurse to the base type only when necessary. This
@@ -56,3 +63,51 @@ One initial native run failed the existing generated FlatExpression roundtrip pr
 test (reported case seed 864021005, replay seed 6H3IIevvWaa1). Replays with both baseline
 and current libraries passed, including the explicit reported seed and default settings;
 the failure remains unreproduced. Preserve the failing log rather than masking it.
+
+Code commit: `a9b98445`. Comparing the original baseline directly with this final production
+code gives Light construction improvements of 40.7%, 52.7%, 35.7% and 55.6%, respectively.
+The more useful per-change comparison above uses its immediate parent as requested.
+
+## Rejected runtime candidate: direct conditional comparison branches
+
+Baseline benchmark commit: `37d445aa`; production baseline remains `a9b98445`.
+Candidate: replace equality/inequality materialization followed by Brfalse with Bne_Un/Beq
+for simple non-lifted, non-overloaded operands. Keep complex/EH cases on the existing path.
+The candidate passes the six standard/Light regression methods, including primitive and
+reference input matrices, NaN, nullable and overloaded exclusions, side effects and EH.
+
+Evidence: `03-conditional-before.csv` / `03-conditional-rejected.csv` and their repeat files.
+Standard compilation: 2,642 -> 1,937 ns initially, but 2,293 -> 2,943 ns on repeat.
+Light compilation: 2,314 -> 2,002 ns initially, 2,475 -> 2,036 ns on repeat. System controls
+also moved considerably. Standard invocation was 1.196 -> 1.096 ns initially and
+1.103 -> 1.093 ns on repeat; these tiny loop-inclusive timings do not establish a runtime win.
+Construction was measured in both runs as well. The inconsistent compilation results
+do not justify retaining this production change. It is removed from the branch.
+Retain the added workload and regression oracles for future investigations. The candidate
+patch and its exact frozen binaries/hashes remain in the local measurement archive.
+
+## Final validation and runtime interpretation
+
+The two kept changes emit exactly the same IL as the original baseline for all five
+benchmark workloads, in both standard and Light modes (ten delegate bodies compared).
+No delegate runtime speedup is claimed. Original/final timings for the first four
+workloads are in `00-baseline.csv` and `02-named-field.csv`; the conditional workload's
+final production timing is `03-conditional-before.csv`. Candidate timing files are not
+final production results. No compiler layout changes or System fallbacks were introduced.
+
+All library targets (`net472`, `netstandard2.1`, `net8.0`, `net10.0`) build with zero warnings
+and errors. Native .NET 10 and .NET 8 suites pass (1,712 / 1,711 legacy tests plus registered
+regressions). Framework passes 712 TestX executions and 1,595 legacy tests, using the
+existing external en-US runner. One initial unreproduced property-test failure is recorded above.
+
+The full imported compatibility suite was rerun against frozen final compiler binaries:
+34,945 pass, 152 fail, 36 normalized skips, zero observed crashes/timeouts. All outcome
+groups match the fixes baseline exactly: zero newly failing or unmatched groups. The
+152 pre-existing failures remain open. Skips include two compilation-mode cases of the
+one known deep-tree crash, which remains deferred; its explicit Skip discovery was
+verified without executing the tree body. See `validation.json` for counts and hashes.
+
+144 benchmark measurements were collected across nine serial runs. Each kept optimization
+has a separate code commit with measurements of construction, compilation and runtime.
+These local commits and evidence are ready for a later stacked performance PR; nothing
+has been pushed and the previous pull requests are unchanged.
