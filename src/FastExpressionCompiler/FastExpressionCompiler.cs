@@ -658,6 +658,8 @@ namespace FastExpressionCompiler
 
             internal bool HasComplexExpression;
             internal bool HasExceptionBlock;
+            // Unlike operand flags, this state survives helper calls that start a new parent context.
+            internal bool IsEmittingExceptionFilter;
 
             /// Set if the same label target is defined by the several Label expressions, so each definition needs its own IL label
             internal bool HasLabelDefinedTwice;
@@ -2539,7 +2541,7 @@ namespace FastExpressionCompiler
                                             var (gotos, labels) = context.TargetToGotosAndLabels.Map.TryGetValueRef(label.Target, out var found);
                                             if (found & gotos <= labels)
                                             {
-                                                if ((parent & ParentFlags.TryCatch) != 0)
+                                                if (context.IsEmittingExceptionFilter || (parent & ParentFlags.TryCatch) != 0)
                                                 {
                                                     if ((context.CompilerFlags & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
                                                         throw new NotSupportedExpressionException(Result.NotSupported_Try_GotoReturnToTheFollowupLabel);
@@ -2611,6 +2613,8 @@ namespace FastExpressionCompiler
                             {
                                 var ok = true;
                                 var throwOperand = ((UnaryExpression)expr).Operand;
+                                if (throwOperand == null && context.IsEmittingExceptionFilter)
+                                    return false;
                                 if (throwOperand != null)
                                     ok = TryEmit(throwOperand, il, ref context, parent & ~ParentFlags.IgnoreResult);
                                 il.Demit(throwOperand != null ? OpCodes.Throw : OpCodes.Rethrow);
@@ -2855,6 +2859,8 @@ namespace FastExpressionCompiler
 
             private static bool TryEmitGoto(GotoExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
+                if (context.IsEmittingExceptionFilter)
+                    return false;
                 ref var labelInfo = ref context.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(expr.Target, out var labelFound);
                 if (!labelFound)
                 {
@@ -3095,6 +3101,8 @@ namespace FastExpressionCompiler
 
             private static bool TryEmitTryCatchFinallyBlock(TryExpression tryExpr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
+                if (context.IsEmittingExceptionFilter)
+                    return false;
 #if DEMIT
                 Debug.WriteLine("try {");
 #endif
@@ -3114,30 +3122,52 @@ namespace FastExpressionCompiler
                 for (var i = 0; i < catchBlocks.Count; i++)
                 {
                     var catchBlock = catchBlocks[i];
-                    if (catchBlock.Filter != null)
-                    {
-                        if ((context.CompilerFlags & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
-                            throw new NotSupportedExpressionException(Result.NotSupported_ExceptionCatchFilter);
-                        return false;
-                    }
-
-                    il.BeginCatchBlock(catchBlock.Test);
-
-                    // at the beginning of catch the Exception value is on the stack,
-                    // we will store into local variable.
                     var exVarExpr = catchBlock.Variable;
-#if DEMIT
-                    Debug.WriteLine($"}} catch {{");
-#endif
+                    var exVarIndex = -1;
                     if (exVarExpr != null)
                     {
-                        // first, check if the exception variable was used before and supposed to be reused in the new catch
-                        // (this is decided by creator of expression)
-                        var exVarIndex = context.GetDefinedLocalVarOrDefault(exVarExpr);
+                        exVarIndex = context.GetDefinedLocalVarOrDefault(exVarExpr);
                         if (exVarIndex == -1)
                             exVarIndex = il.GetNextLocalVarIndex(exVarExpr.Type);
                         context.PushBlockWithVars(exVarExpr, exVarIndex);
+                    }
+
+                    if (catchBlock.Filter != null)
+                    {
+                        il.BeginExceptFilterBlock();
+                        il.Demit(OpCodes.Isinst, catchBlock.Test);
+                        il.Demit(OpCodes.Dup);
+                        var matches = il.DefineLabel();
+                        var endFilter = il.DefineLabel();
+                        il.Demit(OpCodes.Brtrue, matches);
+                        il.Demit(OpCodes.Pop);
+                        il.Demit(OpCodes.Ldc_I4_0);
+                        il.Demit(OpCodes.Br, endFilter);
+                        il.DmarkLabel(matches);
+                        if (exVarExpr != null)
                         EmitStoreLocalVariable(il, exVarIndex);
+                        else
+                            il.Demit(OpCodes.Pop);
+                        var wasEmittingFilter = context.IsEmittingExceptionFilter;
+                        context.IsEmittingExceptionFilter = true;
+                        var emittedFilter = TryEmit(catchBlock.Filter, il, ref context,
+                            ParentFlags.TryCatch | ParentFlags.AssignmentRightValue);
+                        context.IsEmittingExceptionFilter = wasEmittingFilter;
+                        if (!emittedFilter)
+                            return false;
+                        il.DmarkLabel(endFilter);
+                        il.BeginCatchBlock(null);
+                        // Keep changes to the scoped variable made by the filter; the CLR supplies the original exception separately.
+                        il.Demit(OpCodes.Pop);
+                        context.LastEmitIsAddress = false;
+                    }
+                    else
+                    {
+                        il.BeginCatchBlock(catchBlock.Test);
+                        if (exVarExpr != null)
+                            EmitStoreLocalVariable(il, exVarIndex);
+                        else
+                            il.Demit(OpCodes.Pop);
                     }
 
                     if (!TryEmit(catchBlock.Body, il, ref context, parent))
