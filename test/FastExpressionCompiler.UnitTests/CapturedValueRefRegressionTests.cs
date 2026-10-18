@@ -14,7 +14,7 @@ public struct CapturedValueRefRegressionTests : ITestX
         Curried_ref_calls_preserve_reads_and_mutations(t);
         Repeated_invocations_observe_mutated_capture(t);
         Separate_closures_keep_ref_mutations_isolated(t);
-        Captures_without_writable_box_storage_remain_unsupported(t);
+        Nullable_and_reference_captures_expose_writable_cells(t);
         Hoisted_local_ref_calls_update_the_shared_box(t);
     }
     public static int Add(ref int value, int increment) => value += increment;
@@ -64,12 +64,26 @@ public struct CapturedValueRefRegressionTests : ITestX
         t.AreEqual(5, first());
     }
 
-    public void Captures_without_writable_box_storage_remain_unsupported(TestContext t)
+    public void Nullable_and_reference_captures_expose_writable_cells(TestContext t)
     {
         System.Linq.Expressions.Expression<Func<int?, Func<int?>>> nullable = x => () => AddNullable(ref x, 1);
         System.Linq.Expressions.Expression<Func<string, Func<string>>> reference = x => () => Replace(ref x);
-        t.AreEqual(null, nullable.FromSysExpression().CompileFast(true));
-        t.AreEqual(null, reference.FromSysExpression().CompileFast(true));
+        foreach (var flags in new[] { CompilerFlags.Default, CompilerFlags.NoInvocationLambdaInlining,
+            CompilerFlags.EnableDelegateDebugInfo | CompilerFlags.ThrowOnNotSupportedExpression })
+        {
+            var numbers = nullable.FromSysExpression().CompileFast(true, flags);
+            var strings = reference.FromSysExpression().CompileFast(true, flags);
+            if (!t.IsNotNull(numbers) || !t.IsNotNull(strings)) return;
+            var expected = nullable.Compile()(3);
+            var first = numbers(3);
+            var second = numbers(30);
+            t.AreEqual(expected(), first()); t.AreEqual(expected(), first());
+            t.AreEqual((int?)31, second()); t.AreEqual((int?)6, first());
+            t.AreEqual(null, (object)numbers(null)());
+            var text = strings("original");
+            t.AreEqual(reference.Compile()("original")(), text());
+            t.AreEqual("changed", text());
+        }
     }
 
     public void Hoisted_local_ref_calls_update_the_shared_box(TestContext t)

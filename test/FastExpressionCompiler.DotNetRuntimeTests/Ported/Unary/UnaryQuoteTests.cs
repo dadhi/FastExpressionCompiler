@@ -514,7 +514,9 @@ namespace System.Linq.Expressions.Tests
 
         private void AssertIsBox<T>(Expression expression, T value, bool isInterpreted)
         {
-            if (isInterpreted)
+            // FEC compiles both flag modes to IL. Retain the interpreter's object-box
+            // assertions for System controls and verify typed live cells for FEC.
+            if (isInterpreted && Environment.GetEnvironmentVariable("FEC_TEST_COMPILER") == "system")
             {
                 // See https://github.com/dotnet/runtime/issues/18278 for the difference between
                 // runtime expression quoting in the compiler and the interpreter.
