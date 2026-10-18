@@ -2026,7 +2026,7 @@ namespace System.Linq.Expressions.Tests
             );
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("InvocationExceptionSpillRegressionTests.Try_arguments_preserve_delegate_invocation_behavior")]
         public static void Spill_Optimizations_NoSpillBeyondSpillSite1()
         {
             ParameterExpression f = Expression.Parameter(typeof(Func<int, int, int, int>));
