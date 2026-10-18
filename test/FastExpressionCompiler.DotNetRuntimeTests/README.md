@@ -1,5 +1,7 @@
 # dotnet/runtime expression tests
 
+Current compiler fixes, verified backend-specific exclusions, and measured results are documented in the [fixes report](results/fixes/README.md). Four irreducible-node cases assert FEC's strict rejection contract directly; narrowly classified compiled/interpreter differences have dedicated behavior proofs. The original import snapshot remains available below.
+
 This compatibility project ports every C# file beneath `src/libraries/System.Linq.Expressions/tests` at dotnet/runtime revision `ec0059c08c077e839c6eb8827c846530a891d7e2`. `UPSTREAM-LICENSE.TXT` preserves the upstream MIT license; `upstream-manifest.json` records every original file and adaptation.
 
 Every upstream expression `.Compile(...)` call becomes `.CompileForFec(...)`. The default adapter calls `CompileFast(ifFastFailedReturnNull: true)` and throws if FEC returns null. System compilation cannot silently satisfy a FEC test. Both upstream interpreter flags are retained and routed to FEC, preserving branches and data; they are repeated FEC executions, not FEC interpreter support. Set `FEC_TEST_COMPILER=system` to execute the original compiler/interpreter modes as a control.

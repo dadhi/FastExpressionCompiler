@@ -1,50 +1,53 @@
 {
-  "testedCompilerCommit": "3cf56a5c",
+  "testedCompilerCommit": "d01d4c2e",
   "exitCodes": {
     "light-targets": 0,
     "standard-targets": 0,
+    "framework-build": 0,
+    "framework-run": 0,
     "imported-build": 0,
     "added-regressions": 0,
     "native-net10.0": 0,
     "native-net8.0": 0,
-    "framework-build": 0,
-    "framework-run": 0,
     "representation-proofs": 0,
     "runtime-layout-system-controls": 0,
     "runtime-layout-fec-controls": 0,
+    "compatibility-proofs-fec": 0,
+    "invalid-node-contracts-fec": 0,
+    "compatibility-proofs-system": 0,
+    "invalid-node-contracts-system": 0,
+    "original-interpreter-filters-system": 0,
+    "original-assignments-system-expected-disagreement-verified": 0,
+    "original-compatibility-skips-fec": 0,
     "full-suite": 0
   },
-  "addedRegressionExecutions": 829,
+  "addedRegressionExecutions": 851,
+  "compatibilityProofCasesPerMode": 5,
+  "invalidNodeContractCasesPerMode": 4,
   "representationProofMethods": 19,
   "layoutControlsSystemPassed": 2,
   "newBehaviorVerifiedLayoutSkips": 2,
-  "proofTrxDirectory": "proofs-3cf56a5c",
-  "addedRegressionGroups": 102,
-  "fullSuiteDirectory": "full-suite-3cf56a5c",
+  "proofTrxDirectory": "proofs-d01d4c2e",
+  "addedRegressionGroups": 105,
+  "fullSuiteDirectory": "full-suite-d01d4c2e",
   "nativeLegacyTests": {
     "net10": 1712,
     "net8": 1711,
     "net472": 1595
   },
-  "frameworkTestXExecutions": 904,
+  "frameworkTestXExecutions": 926,
   "libraryTargets": [
     "net472",
     "netstandard2.1",
     "net8.0",
     "net10.0"
   ],
-  "frozenImportedAssemblySHA256": "15423d203c8332e1b6b6d4f565e147a37a4bcd5794088e0dfafc5b0e2e56c282",
-  "frozenCompilerSHA256": "4c63e5cca712104b418f24d4fe32ba2765d91a22d072c79bdc0d54bebd3129fe",
-  "lightCompilerNet10SHA256": "c8a9a4b823289da77e5815be8da38cc5c0f88dc1b0c0f76ea4b41eb71f4d207b",
+  "frozenImportedAssemblySHA256": "067b9afb8ca20990ff6c864c655ab6cd93a466ce6c6d3ff80dc733b3a765fd88",
+  "frozenCompilerSHA256": "80adbf64aa71f5345db8ea2d4b30a42a583afdb1d5ad915a3f1b92f89775b59a",
+  "lightCompilerNet10SHA256": "db740e3c1307af94d6296028ee38ea4584dfc4db2a35ae75571d3c0aba23bbf9",
   "knownDeferredCrash": {
     "method": "CompilerTests.CompileDeepTree_NoStackOverflow",
     "baselineCases": 2,
     "reason": "User requested temporary skip and no broad traversal refactoring; issue remains open."
-  },
-  "regressionTestCommit": "3cf56a5c",
-  "iterationEvidence": [
-    "native-first-attempt.log",
-    "framework-first-attempt.log",
-    "framework-block-type-failure.log"
-  ]
+  }
 }

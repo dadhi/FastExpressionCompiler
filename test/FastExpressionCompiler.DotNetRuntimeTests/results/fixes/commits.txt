@@ -1,12 +1,5 @@
-76e6500a	fix: restore the declaring variable scope when leaving nested blocks
-13d5cdaa	fix: duplicate only the final assignment field address
-cdb0b13b	feat: bind captured quotes and runtime variables to shared typed cells
-0e59bb2c	test: verify shared struct-cell IL after executing its behavior
-69bfb732	test: retain Framework filter rejection while checking catch quote cells
-a057bef4	fix: preserve explicit block types when binding quoted captures
-6631f514	Revert "fix: preserve explicit block types when binding quoted captures"
-e9b97427	fix: keep struct operator operands separate from receiver addresses
-de486914	test: account for Framework System quote block typing
-0c07d7b2	fix: validate lexical scope of label jumps
-aca7dc1d	Verify runtime-variable spill behavior before excluding IL snapshots
-3cf56a5c	Keep unary and conversion operands in value contexts
+931fa0fc	Test FEC rejection contracts for irreducible expression nodes
+6774772f	Classify interpreter-specific runtime assertions with compiled behavior proofs
+63fa42d4	Fix non-Exception catch policy for generated methods
+2043b6f7	Preserve original string constant reference identity
+d01d4c2e	Keep Framework boxed receivers verifiable during argument spills
