@@ -4250,7 +4250,7 @@ namespace FastExpressionCompiler
                     ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue;
                 var valueVarIndex = -1;
                 var exprType = expr.Type;
-                if (exprType.IsValueType)
+                if (exprType.IsValueType || context.HasExceptionBlock)
                     valueVarIndex = il.GetNextLocalVarIndex(exprType);
 
                 var newExpr = expr.NewExpression;
@@ -4264,6 +4264,13 @@ namespace FastExpressionCompiler
                 }
                 else
 #endif
+                if (context.HasExceptionBlock)
+                {
+                    if (!TryEmitNew(newExpr, il, ref context, valueFlags))
+                        return false;
+                    EmitStoreLocalVariable(il, valueVarIndex);
+                }
+                else
                 {
                     var argExprs = newExpr.GetArgExprs();
                     var argCount = argExprs.GetArgCount();
@@ -4297,16 +4304,28 @@ namespace FastExpressionCompiler
 
                     var isStatic = binding.Member is FieldInfo field && field.IsStatic ||
                         binding.Member is PropertyInfo property && property.SetMethod?.IsStatic == true;
+                    var value = ((MemberAssignment)binding).Expression;
+                    var valueLocal = -1;
+                    if (context.HasExceptionBlock)
+                    {
+                        if (!TryEmit(value, il, ref context, valueFlags))
+                            return false;
+                        valueLocal = EmitStoreLocalVariable(il, value.Type);
+                    }
                     if (!isStatic)
                     {
-                        if (valueVarIndex != -1) // load local value address, to set its members
+                        if (valueVarIndex == -1)
+                            il.Demit(OpCodes.Dup); // duplicate member owner on stack
+                        else if (exprType.IsValueType)
                             EmitLoadLocalVariableAddress(il, valueVarIndex);
                         else
-                            il.Demit(OpCodes.Dup); // duplicate member owner on stack
+                            EmitLoadLocalVariable(il, valueVarIndex);
                     }
-
-                    if (!TryEmit(((MemberAssignment)binding).Expression, il, ref context, valueFlags) ||
-                        !EmitMemberSet(il, binding.Member))
+                    if (valueLocal != -1)
+                        EmitLoadLocalVariable(il, valueLocal);
+                    else if (!TryEmit(value, il, ref context, valueFlags))
+                        return false;
+                    if (!EmitMemberSet(il, binding.Member))
                         return false;
                 }
 
