@@ -39,6 +39,11 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.ExcessiveArityRegressionTests());
                 t.Run(new LightExpression.UnitTests.ByRefCharacterWidthRegressionTests());
                 t.Run(new LightExpression.UnitTests.LabelDefinitionValidationRegressionTests());
+                t.Run(new LightExpression.UnitTests.IncomingRefInvocationReceiverRegressionTests());
+                t.Run(new LightExpression.UnitTests.RuntimeExpressionInvocationRegressionTests());
+                t.Run(new LightExpression.UnitTests.ExceptionJumpValidationRegressionTests());
+                t.Run(new LightExpression.UnitTests.ExceptionRegionValidationRegressionTests());
+                t.Run(new LightExpression.UnitTests.ContinueValueRegressionTests());
                 t.Run(new LightExpression.UnitTests.FormalByRefArgumentRegressionTests());
                 t.Run(new LightExpression.UnitTests.WritableReceiverAddressRegressionTests());
                 t.Run(new LightExpression.UnitTests.NestedMemberBindingLayoutBehaviorRegressionTests());
@@ -136,6 +141,11 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new ExcessiveArityRegressionTests());
             fecTests.Run(new ByRefCharacterWidthRegressionTests());
             fecTests.Run(new LabelDefinitionValidationRegressionTests());
+            fecTests.Run(new IncomingRefInvocationReceiverRegressionTests());
+            fecTests.Run(new RuntimeExpressionInvocationRegressionTests());
+            fecTests.Run(new ExceptionJumpValidationRegressionTests());
+            fecTests.Run(new ExceptionRegionValidationRegressionTests());
+            fecTests.Run(new ContinueValueRegressionTests());
             fecTests.Run(new FormalByRefArgumentRegressionTests());
             fecTests.Run(new WritableReceiverAddressRegressionTests());
             fecTests.Run(new NestedMemberBindingLayoutBehaviorRegressionTests());
