@@ -4093,7 +4093,8 @@ namespace FastExpressionCompiler
                         if (resultVar != -1 & isPost)
                             EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value for the later further use
 
-                        EmitIncOrDec(il, nodeType == ExpressionType.Add);
+                        if (!EmitIncOrDec(il, exprType, nodeType == ExpressionType.Add))
+                            return false;
 
                         if (resultVar != -1 & !isPost)
                             EmitStoreAndLoadLocalVariable(il, resultVar);
@@ -4315,7 +4316,8 @@ namespace FastExpressionCompiler
                             {
                                 if (resultVar != -1 & isPost)
                                     EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value before doing any operation on it
-                                EmitIncOrDec(il, nodeType == ExpressionType.Add);
+                                if (!EmitIncOrDec(il, leftType, nodeType == ExpressionType.Add))
+                                    return false;
                                 if (resultVar != -1 & !isPost)
                                     EmitStoreAndLoadLocalVariable(il, resultVar);
                             }
@@ -4360,7 +4362,8 @@ namespace FastExpressionCompiler
                                 EmitLoadLocalVariableAddress(il, leftNullableVar);
                                 il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
 
-                                EmitIncOrDec(il, nodeType == ExpressionType.Add);
+                                if (!EmitIncOrDec(il, Nullable.GetUnderlyingType(leftType), nodeType == ExpressionType.Add))
+                                    return false;
                             }
                             else
                             {
@@ -6031,7 +6034,10 @@ namespace FastExpressionCompiler
                 var rightIsNullable = false;
                 if (right == null) // indicates the increment/decrement operation
                 {
-                    EmitIncOrDec(il, nodeType == ExpressionType.Add);
+                    if (leftValueVar != -1)
+                        EmitLoadLocalVariable(il, leftValueVar);
+                    if (!EmitIncOrDec(il, Nullable.GetUnderlyingType(exprType) ?? exprType, nodeType == ExpressionType.Add))
+                        return false;
                 }
                 else
                 {
@@ -6643,10 +6649,34 @@ namespace FastExpressionCompiler
             }
 
             [MethodImpl((MethodImplOptions)256)]
-            private static bool EmitIncOrDec(ILGenerator il, bool isInc = false)
+            private static bool EmitIncOrDec(ILGenerator il, Type type, bool isInc = false)
             {
-                il.Demit(OpCodes.Ldc_I4_1);
+                var underlying = Nullable.GetUnderlyingType(type);
+                if (underlying != null)
+                {
+                    var local = EmitStoreAndLoadLocalVariableAddress(il, type);
+                    EmitMethodCall(il, type.GetNullableHasValueGetterMethod());
+                    var nullValue = il.DefineLabel();
+                    var done = il.DefineLabel();
+                    il.Demit(OpCodes.Brfalse, nullValue);
+                    EmitLoadLocalVariableAddress(il, local);
+                    il.Demit(OpCodes.Ldfld, type.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                    if (!EmitIncOrDec(il, underlying, isInc))
+                        return false;
+                    il.Demit(OpCodes.Newobj, type.GetNullableConstructor());
+                    il.Demit(OpCodes.Br, done);
+                    il.DmarkLabel(nullValue);
+                    EmitLoadLocalVariable(il, local);
+                    il.DmarkLabel(done);
+                    return true;
+                }
+                if (!type.IsPrimitive)
+                    return EmitMethodCallCheckForNull(il, type.GetMethod(isInc ? "op_Increment" : "op_Decrement", new[] { type }));
+                if (!TryEmitNumberOne(il, type))
+                    return false;
                 il.Demit(isInc ? OpCodes.Add : OpCodes.Sub);
+                if (type == typeof(byte) || type == typeof(sbyte) || type == typeof(short) || type == typeof(ushort) || type == typeof(char))
+                    return TryEmitPrimitiveValueConvert(type, type, il, isChecked: false);
                 return true;
             }
 
