@@ -2184,7 +2184,7 @@ namespace FastExpressionCompiler
                                             continue;
 
                                         // This is basically the return pattern (see #237), so we don't care for the rest of expressions
-                                        if (stExpr is GotoExpression gt && gt.Kind == GotoExpressionKind.Return && gt.Target.Type != typeof(void) &&
+                                        if (i == statementCount - 2 && stExpr is GotoExpression gt && gt.Kind == GotoExpressionKind.Return && gt.Target.Type != typeof(void) &&
                                             statementExprs[i + 1] is LabelExpression label && label.Target == gt.Target)
                                         {
                                             // But we cannot use the return pattern and eliminate the target label if we have more gotos referencing it, see #430
@@ -2448,6 +2448,13 @@ namespace FastExpressionCompiler
                 var label = labelInfo.GetOrDefineLabel(il);
                 il.DmarkLabel(label);
 
+                // Reserve the value label before emitting a backward jump to this target.
+                if (expr.Target.Type != typeof(void) && (labelInfo.ReturnVariableIndexPlusOneAndIsDefined >>> 1) == 0)
+                {
+                    labelInfo.ReturnVariableIndexPlusOneAndIsDefined = (short)((il.GetNextLocalVarIndex(expr.Target.Type) + 1) << 1);
+                    labelInfo.ReturnLabel = il.DefineLabel();
+                }
+
                 var defaultValue = expr.DefaultValue;
                 if (defaultValue != null && !TryEmit(defaultValue, il, ref context, parent))
                     return false;
@@ -2507,7 +2514,11 @@ namespace FastExpressionCompiler
                 {
                     case GotoExpressionKind.Break:
                     case GotoExpressionKind.Continue:
-                        il.Demit(OpCodes.Br, labelInfo.GetOrDefineLabel(il));
+                        var targetInfo = context.TargetToGotosAndLabels.Map.TryGetValueRef(expr.Target, out var hasTargetInfo);
+                        if (gotoValue != null && hasTargetInfo && targetInfo.Item2 != 0)
+                            EmitGotoToReturnLabel(ref labelInfo, il, gotoValue, OpCodes.Br);
+                        else
+                            il.Demit(OpCodes.Br, labelInfo.GetOrDefineLabel(il));
                         return true;
 
                     case GotoExpressionKind.Goto:
@@ -2519,25 +2530,11 @@ namespace FastExpressionCompiler
                         return true;
 
                     case GotoExpressionKind.Return:
-                        if ((parent & ParentFlags.TryCatch) != 0)
-                        {
-                            if (gotoValue != null)
-                                EmitGotoToReturnLabel(ref labelInfo, il, gotoValue, OpCodes.Leave);
-                            else
-                                il.Demit(OpCodes.Leave, labelInfo.GetOrDefineLabel(il)); // if there is no return value just leave to the original label
-                        }
-                        else if ((parent & ParentFlags.InlinedLambdaInvoke) != 0)
-                        {
-                            if (gotoValue != null)
-                            {
-                                var invokeIndex = labelInfo.InlinedLambdaInvokeIndex;
-                                if (invokeIndex == -1)
-                                    return false;
-                                EmitGotoToReturnLabel(ref context.LambdaInvokeStackLabels.GetSurePresentRef(invokeIndex), il, gotoValue, OpCodes.Br);
-                            }
-                        }
+                        var returnOpCode = (parent & ParentFlags.TryCatch) != 0 ? OpCodes.Leave : OpCodes.Br;
+                        if (gotoValue != null)
+                            EmitGotoToReturnLabel(ref labelInfo, il, gotoValue, returnOpCode);
                         else
-                            il.Demit(OpCodes.Ret);
+                            il.Demit(returnOpCode, labelInfo.GetOrDefineLabel(il));
                         return true;
 
                     default:
