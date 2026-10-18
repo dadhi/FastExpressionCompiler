@@ -12,6 +12,9 @@ public struct CatchFilterRegressionTests : ITestX
 {
     public void Run(TestRun t)
     {
+#if NETFRAMEWORK
+        Framework_dynamic_method_filters_are_rejected_cleanly(t);
+#else
         Type_guards_and_false_filters_preserve_selection_order(t);
         Filter_variable_mutation_is_scoped_to_its_handler(t);
         Throwing_filter_preserves_original_exception(t);
@@ -19,7 +22,22 @@ public struct CatchFilterRegressionTests : ITestX
         Nullable_and_user_logical_filters_evaluate_once(t);
         Rethrow_preserves_original_after_filter_variable_mutation(t);
         Unsupported_filter_control_flow_is_rejected(t);
+#endif
     }
+
+#if NETFRAMEWORK
+    public void Framework_dynamic_method_filters_are_rejected_cleanly(TestContext t)
+    {
+        var expression = SysExpr.Lambda<Func<int>>(SysExpr.TryCatch(
+            SysExpr.Throw(SysExpr.New(typeof(InvalidOperationException)), typeof(int)),
+            SysExpr.Catch(typeof(Exception), SysExpr.Constant(7), SysExpr.Constant(true))));
+        t.AreEqual(null, expression.FromSysExpression().CompileFast(true));
+        var error = t.Throws<NotSupportedExpressionException>(() =>
+            expression.FromSysExpression().CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression));
+        if (error != null)
+            t.AreEqual(ExpressionCompiler.Result.NotSupported_ExceptionCatchFilter, error.Reason);
+    }
+#endif
 
     public void Type_guards_and_false_filters_preserve_selection_order(TestContext t)
     {
