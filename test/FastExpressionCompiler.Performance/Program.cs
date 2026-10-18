@@ -21,7 +21,7 @@ Console.WriteLine($"Host: {System.Runtime.InteropServices.RuntimeInformation.Fra
     $"{System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture}; CPU count {Environment.ProcessorCount}");
 BenchmarkSwitcher.FromAssembly(typeof(Compilation).Assembly).Run(args, config);
 
-public enum Workload { Arithmetic, Array, Switch, CapturedConstant }
+public enum Workload { Arithmetic, Array, Switch, CapturedConstant, Conditional }
 
 public sealed class Input
 {
@@ -40,6 +40,7 @@ public static class Trees
         S body = workload switch
         {
             Workload.Arithmetic => S.Add(S.Multiply(value, S.Constant(7)), S.Constant(3)),
+            Workload.Conditional => S.Condition(S.Equal(S.And(value, S.Constant(1)), S.Constant(1)), S.Constant(7), S.Constant(19)),
             Workload.Array => S.Add(S.ArrayAccess(S.Field(p, nameof(Input.Values)), S.And(value, S.Constant(63))),
                 S.ArrayAccess(S.Field(p, nameof(Input.Values)), S.And(S.Add(value, S.Constant(1)), S.Constant(63)))),
             Workload.Switch => S.Switch(S.And(value, S.Constant(3)), S.Constant(-1),
@@ -57,6 +58,7 @@ public static class Trees
         L body = workload switch
         {
             Workload.Arithmetic => L.Add(L.Multiply(value, L.Constant(7)), L.Constant(3)),
+            Workload.Conditional => L.Condition(L.Equal(L.And(value, L.Constant(1)), L.Constant(1)), L.Constant(7), L.Constant(19)),
             Workload.Array => L.Add(L.ArrayAccess(L.Field(p, nameof(Input.Values)), L.And(value, L.Constant(63))),
                 L.ArrayAccess(L.Field(p, nameof(Input.Values)), L.And(L.Add(value, L.Constant(1)), L.Constant(63)))),
             Workload.Switch => L.Switch(L.And(value, L.Constant(3)), L.Constant(-1),
