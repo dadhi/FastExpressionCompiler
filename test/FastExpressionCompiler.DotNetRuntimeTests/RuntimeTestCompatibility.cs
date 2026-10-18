@@ -60,6 +60,15 @@ namespace Xunit
                 Skip = "Asserts the system compiler's exact IL layout; strict FEC behavior verified by " + behaviorCoverage;
         }
     }
+    // Temporary known-issue exclusion; this does not establish correct FEC behavior.
+    public sealed class KnownFecCrashTheoryAttribute : TheoryAttribute
+    {
+        public KnownFecCrashTheoryAttribute(string reason)
+        {
+            if (Environment.GetEnvironmentVariable("FEC_TEST_COMPILER") != "system")
+                Skip = "Known FEC crash temporarily deferred by user: " + reason;
+        }
+    }
     public sealed class ConditionalTheoryAttribute : TheoryAttribute
     { public ConditionalTheoryAttribute() { } public ConditionalTheoryAttribute(Type type, params string[] names) { Skip = RuntimeConditions.SkipReason(type, names); } }
     // Metadata applicable to other runtimes/platforms; preserved for provenance.
