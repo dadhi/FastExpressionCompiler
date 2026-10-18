@@ -58,6 +58,7 @@ public class Issue422_InvalidProgramException_when_having_TryCatch_Default_in_Ca
             OpCodes.Callvirt, // Reference getter checks null
             OpCodes.Stloc_0,
             OpCodes.Leave,
+            OpCodes.Pop, // Discard the catch exception when no variable is declared
             OpCodes.Ldnull,
             OpCodes.Stloc_0,
             OpCodes.Leave,

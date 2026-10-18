@@ -54,7 +54,13 @@ public struct RefConversionMethodRegressionTests : ITestX
             var expectedArgs = new[] { value };
             var actualArgs = new[] { value };
             OperandCalls = 0;
+#if NETFRAMEWORK
+            // The Framework expression compiler rejects conversion methods with ref parameters.
+            // Execute the same conversion directly to retain the value, mutation and operand-effect oracle.
+            var expected = EvaluateExpectedConversion(value, nullable, shape, methodName, expectedArgs);
+#else
             var expected = Invoke(expression.Compile(), expectedArgs);
+#endif
             var expectedCalls = OperandCalls;
             OperandCalls = 0;
             var actual = Invoke(fast, actualArgs);
@@ -69,6 +75,20 @@ public struct RefConversionMethodRegressionTests : ITestX
             t.AreEqual(expectedCalls, OperandCalls);
         }
     }
+#if NETFRAMEWORK
+    private static object EvaluateExpectedConversion(object value, bool nullable, int shape, string methodName, object[] arguments)
+    {
+        var operand = shape == 4 ? 5 : shape == 5 ? nullable ? (object)ReadNullableOperand() : ReadOperand() : value;
+        if (operand == null)
+            return methodName == nameof(ConvertStructRef) ? (object)new object[] { null, value } : typeof(InvalidOperationException);
+        var temporary = (int)operand;
+        object converted = methodName == nameof(ConvertValue) ? (object)ConvertValue(temporary)
+            : methodName == nameof(ConvertStructRef) ? ConvertStructRef(ref temporary) : (object)ConvertRef(ref temporary);
+        var writesBack = !nullable && methodName != nameof(ConvertValue) && shape < 4;
+        if (writesBack && shape == 0) arguments[0] = temporary;
+        return new object[] { converted, writesBack ? temporary : value };
+    }
+#endif
     private static object Invoke(Delegate function, object[] arguments)
     { try { return function.DynamicInvoke(arguments); } catch (TargetInvocationException e) { return e.InnerException.GetType(); } }
     public delegate object[] Read<T>(ref T value);

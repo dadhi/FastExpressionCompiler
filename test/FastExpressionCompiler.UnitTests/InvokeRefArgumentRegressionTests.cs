@@ -13,7 +13,10 @@ public struct InvokeRefArgumentRegressionTests : ITestX
     {
         Delegate_invoke_value_can_be_ref_call_argument(t);
         Inlined_lambda_invoke_value_can_be_ref_call_argument(t);
+#if !NETFRAMEWORK
+        // Framework DynamicMethod does not permit a by-ref return type.
         Ref_return_delegate_invoke_preserves_reference(t);
+#endif
         Ignored_invocation_results_keep_effects(t);
 #if !LIGHT_EXPRESSION
         Delegate_invoke_value_can_be_ref_conversion_operand(t);

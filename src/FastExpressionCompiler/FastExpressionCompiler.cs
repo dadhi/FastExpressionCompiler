@@ -656,6 +656,8 @@ namespace FastExpressionCompiler
 
             internal bool HasComplexExpression;
             internal bool HasExceptionBlock;
+            // Unlike operand flags, this state survives helper calls that start a new parent context.
+            internal bool IsEmittingExceptionFilter;
 
             /// Set if the same label target is defined by the several Label expressions, so each definition needs its own IL label
             internal bool HasLabelDefinedTwice;
@@ -2588,7 +2590,7 @@ namespace FastExpressionCompiler
                                             var (gotos, labels) = context.TargetToGotosAndLabels.Map.TryGetValueRef(label.Target, out var found);
                                             if (found & gotos <= labels)
                                             {
-                                                if ((parent & ParentFlags.TryCatch) != 0)
+                                                if (context.IsEmittingExceptionFilter || (parent & ParentFlags.TryCatch) != 0)
                                                 {
                                                     if ((context.CompilerFlags & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
                                                         throw new NotSupportedExpressionException(Result.NotSupported_Try_GotoReturnToTheFollowupLabel);
@@ -2660,6 +2662,8 @@ namespace FastExpressionCompiler
                             {
                                 var ok = true;
                                 var throwOperand = ((UnaryExpression)expr).Operand;
+                                if (throwOperand == null && context.IsEmittingExceptionFilter)
+                                    return false;
                                 if (throwOperand != null)
                                     ok = TryEmit(throwOperand, il, ref context, parent & ~ParentFlags.IgnoreResult);
                                 il.Demit(throwOperand != null ? OpCodes.Throw : OpCodes.Rethrow);
@@ -2824,14 +2828,6 @@ namespace FastExpressionCompiler
                 var p = parent & ~ParentFlags.IgnoreResult | ParentFlags.IndexAccess;
 
                 var objExpr = indexExpr.Object;
-                if (objExpr != null)
-                {
-                    if (!TryEmit(objExpr, il, ref context, ParentFlags.InstanceCall))
-                    return false;
-                    if (objExpr.Type.IsValueType && !context.LastEmitIsAddress && !(objExpr is PE pe && pe.IsByRef))
-                        EmitStoreAndLoadLocalVariableAddress(il, objExpr.Type);
-                }
-
                 var indexArgs = indexExpr.GetArgExprs();
                 var indexArgCount = indexArgs.GetArgCount();
                 // Strip InstanceAccess when emitting arguments: they are parameters to the indexer
@@ -2840,8 +2836,7 @@ namespace FastExpressionCompiler
                 // emission, causing value-type args (e.g. int) to be loaded by address (ldloca)
                 // instead of by value (ldloc), producing invalid IL. See #499.
                 var argParent = p & ~ParentFlags.InstanceAccess;
-                for (var i = 0; i < indexArgCount; i++)
-                    if (!TryEmit(indexArgs.GetArgument(i), il, ref context, argParent, -1))
+                if (!TryEmitIndexOperands(objExpr, indexArgs, ParentFlags.InstanceCall, argParent, il, ref context))
                         return false;
 
                 var indexerProp = indexExpr.Indexer;
@@ -2858,6 +2853,40 @@ namespace FastExpressionCompiler
                 var ok = EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod(byAddress ? "Address" : "Get"));
                 context.LastEmitIsAddress = byAddress && !parent.IgnoresResult();
                 return ok && il.EmitPopIfIgnoreResult(parent);
+            }
+
+            private static bool TryEmitIndexOperands(Expression objExpr, ArgExprs indexArgs, ParentFlags objFlags,
+                ParentFlags argFlags, ILGenerator il, ref CompilerContext context)
+            {
+                var objVar = -1;
+                if (objExpr != null)
+                {
+                    if (!TryEmit(objExpr, il, ref context, objFlags))
+                        return false;
+                    if (objExpr.Type.IsValueType && !context.LastEmitIsAddress && !(objExpr is PE pe && pe.IsByRef))
+                        EmitStoreAndLoadLocalVariableAddress(il, objExpr.Type);
+                    if (context.HasExceptionBlock)
+                        objVar = EmitStoreLocalVariable(il, objExpr.Type.IsValueType ? objExpr.Type.MakeByRefType() : objExpr.Type);
+                }
+
+                SmallList<int, Stack8<int>, NoArrayPool<int>> argVars = default;
+                var count = indexArgs.GetArgCount();
+                for (var i = 0; i < count; ++i)
+                {
+                    var argument = indexArgs.GetArgument(i);
+                    if (!TryEmit(argument, il, ref context, argFlags, -1))
+                        return false;
+                    if (context.HasExceptionBlock)
+                        argVars.Add(EmitStoreLocalVariable(il, argument.Type));
+                }
+                if (context.HasExceptionBlock)
+                {
+                    if (objVar != -1)
+                        EmitLoadLocalVariable(il, objVar);
+                    for (var i = 0; i < count; ++i)
+                        EmitLoadLocalVariable(il, argVars[i]);
+                }
+                return true;
             }
 
             private static bool TryEmitLabel(LabelExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
@@ -2912,6 +2941,8 @@ namespace FastExpressionCompiler
 
             private static bool TryEmitGoto(GotoExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
+                if (context.IsEmittingExceptionFilter)
+                    return false;
                 ref var labelInfo = ref context.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(expr.Target, out var labelFound);
                 if (!labelFound)
                 {
@@ -3152,6 +3183,8 @@ namespace FastExpressionCompiler
 
             private static bool TryEmitTryCatchFinallyBlock(TryExpression tryExpr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
+                if (context.IsEmittingExceptionFilter)
+                    return false;
 #if DEMIT
                 Debug.WriteLine("try {");
 #endif
@@ -3171,6 +3204,15 @@ namespace FastExpressionCompiler
                 for (var i = 0; i < catchBlocks.Count; i++)
                 {
                     var catchBlock = catchBlocks[i];
+#if NETFRAMEWORK
+                    // The .NET Framework DynamicILGenerator does not support exception filters.
+                    if (catchBlock.Filter != null)
+                    {
+                        if ((context.CompilerFlags & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
+                            throw new NotSupportedExpressionException(Result.NotSupported_ExceptionCatchFilter);
+                        return false;
+                    }
+#endif
                     var exVarExpr = catchBlock.Variable;
                     var exVarIndex = -1;
                     if (exVarExpr != null)
@@ -3215,8 +3257,15 @@ namespace FastExpressionCompiler
                         il.Demit(OpCodes.Brfalse, filterFalseLabel);
                         if (catchFilter == null)
                             il.Demit(OpCodes.Ldc_I4_1);
-                        else if (!TryEmit(catchFilter, il, ref context, ParentFlags.Empty))
-                            return false;
+                        else
+                        {
+                            var wasEmittingFilter = context.IsEmittingExceptionFilter;
+                            context.IsEmittingExceptionFilter = true;
+                            var emittedFilter = TryEmit(catchFilter, il, ref context, ParentFlags.TryCatch | ParentFlags.AssignmentRightValue);
+                            context.IsEmittingExceptionFilter = wasEmittingFilter;
+                            if (!emittedFilter)
+                                return false;
+                        }
                         il.Demit(OpCodes.Br, filterEndLabel);
                         il.DmarkLabel(filterFalseLabel);
                         il.Demit(OpCodes.Ldc_I4_0);
@@ -3231,6 +3280,8 @@ namespace FastExpressionCompiler
                         // at the beginning of catch the Exception value is on the stack, so store it into the variable
                         if (exVarIndex != -1)
                             EmitStoreLocalVariable(il, exVarIndex);
+                        else
+                            il.Demit(OpCodes.Pop);
                     }
 #if DEMIT
                     Debug.WriteLine($"}} catch {{");
@@ -4875,17 +4926,9 @@ namespace FastExpressionCompiler
                             else
                             {
                                 Debug.Assert(orLeftIndexExpr != null);
-                                if (objExpr != null)
-                                {
-                                    var isIndexerAMethodCall = indexArgCount > 1 | orLeftIndexExpr.Indexer != null || IsNonVectorArray(objExpr.Type);
+                                    var isIndexerAMethodCall = indexArgCount > 1 | orLeftIndexExpr.Indexer != null || objExpr != null && IsNonVectorArray(objExpr.Type);
                                     var objFlags = isIndexerAMethodCall ? ParentFlags.InstanceCall : ParentFlags.InstanceAccess | ParentFlags.IndexAccess;
-                                    if (!TryEmit(objExpr, il, ref context, objFlags | ParentFlags.AssignmentLeftValue))
-                                        return false;
-                                    if (objExpr.Type.IsValueType && !context.LastEmitIsAddress && !(objExpr is PE pe && pe.IsByRef))
-                                        EmitStoreAndLoadLocalVariableAddress(il, objExpr.Type);
-                                }
-                                for (var i = 0; i < indexArgCount; i++)
-                                    if (!TryEmit(indexArgs.GetArgument(i), il, ref context, baseFlags, -1))
+                                if (!TryEmitIndexOperands(objExpr, indexArgs, objFlags | ParentFlags.AssignmentLeftValue, baseFlags, il, ref context))
                                         return false;
                             }
 
@@ -6002,11 +6045,23 @@ namespace FastExpressionCompiler
                 {
                     var useResult = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
                     var args = delegateInvokeMethod.GetParameters(); // todo: @perf avoid this if possible
+                    // A try argument requires an empty evaluation stack. Preserve the receiver and
+                    // preceding arguments with the same local storage used for ordinary calls.
+                    var receiverVar = context.HasExceptionBlock ? EmitStoreLocalVariable(il, invokedExpr.Type) : -1;
+                    SmallList<int, Stack8<int>, NoArrayPool<int>> argVars = default;
                     for (var i = 0; i < args.Length; ++i)
                     {
                         var argExpr = argExprs.GetArgument(i);
                         if (!TryEmit(argExpr, il, ref context, useResult, args[i].ParameterType.IsByRef ? i : -1))
                             return false;
+                        if (receiverVar != -1)
+                            argVars.Add(EmitStoreLocalVariable(il, args[i].ParameterType));
+                    }
+                    if (receiverVar != -1)
+                    {
+                        EmitLoadLocalVariable(il, receiverVar);
+                        for (var i = 0; i < args.Length; ++i)
+                            EmitLoadLocalVariable(il, argVars[i]);
                     }
                 }
 

@@ -13,8 +13,11 @@ public struct PrivateDelegateInvocationRegressionTests : ITestX
 {
     public void Run(TestRun t)
     {
+#if !NETFRAMEWORK
+        // Framework's public expression factories cannot represent delegates whose Invoke method is private.
         Private_invoke_method_can_be_called(t);
         Private_delegate_with_parameters_can_be_called(t);
+#endif
     }
 
     private static Type CreateDelegateType(Type[] parameters)

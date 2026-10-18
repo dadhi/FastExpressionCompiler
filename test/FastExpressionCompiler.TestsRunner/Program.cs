@@ -65,6 +65,7 @@ namespace FastExpressionCompiler.UnitTests
                 var ltStopwatch = Stopwatch.StartNew();
 #if NET8_0_OR_GREATER
                 lt.Run(new LightExpression.UnitTests.NumericConversionRegressionTests());
+                lt.Run(new LightExpression.UnitTests.NonVoidListInitializerRegressionTests());
                 lt.Run(new LightExpression.UnitTests.DecimalConstantBitsRegressionTests());
                 lt.Run(new LightExpression.UnitTests.SmallCheckedArithmeticRegressionTests());
                 lt.Run(new LightExpression.UnitTests.NullableBooleanRegressionTests());
@@ -108,6 +109,10 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.UnitTests.NullableCompoundWritebackRegressionTests());
                 lt.Run(new LightExpression.UnitTests.CompoundAssignmentExceptionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.NestedCompoundExceptionRegressionTests());
+                lt.Run(new LightExpression.UnitTests.IndexerExceptionSpillRegressionTests());
+                lt.Run(new LightExpression.UnitTests.InvocationExceptionSpillRegressionTests());
+                lt.Run(new LightExpression.UnitTests.CatchFilterRegressionTests());
+                lt.Run(new LightExpression.UnitTests.CatchFilterSafetyRegressionTests());
                 lt.Run(new LightExpression.UnitTests.DirectLogicalFactoryRegressionTests());
                 lt.Run(new LightExpression.IssueTests.Issue480_CLR_detected_an_invalid_program_exception());
                 lt.Run(new LightExpression.IssueTests.Issue490_Regression_in_compiling_lambdas_with_ref_struct_parameters());
@@ -132,6 +137,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var stStopwatch = Stopwatch.StartNew();
             st.Run(new NumericConversionRegressionTests());
+            st.Run(new NonVoidListInitializerRegressionTests());
             st.Run(new DecimalConstantBitsRegressionTests());
             st.Run(new SmallCheckedArithmeticRegressionTests());
             st.Run(new NullableBooleanRegressionTests());
@@ -176,6 +182,10 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new NullableCompoundWritebackRegressionTests());
             st.Run(new CompoundAssignmentExceptionRegressionTests());
             st.Run(new NestedCompoundExceptionRegressionTests());
+            st.Run(new IndexerExceptionSpillRegressionTests());
+            st.Run(new InvocationExceptionSpillRegressionTests());
+            st.Run(new CatchFilterRegressionTests());
+            st.Run(new CatchFilterSafetyRegressionTests());
             st.Run(new DirectLogicalFactoryRegressionTests());
             st.Run(new UnaryIncrementValueRegressionTests());
             st.Run(new LiftedComplementMethodRegressionTests());

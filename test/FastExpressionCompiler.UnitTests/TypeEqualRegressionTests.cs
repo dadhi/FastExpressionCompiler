@@ -29,13 +29,23 @@ public struct TypeEqualRegressionTests : ITestX
         {
             var parameter = SysExpr.Parameter(source);
             var lambda = SysExpr.Lambda(SysExpr.TypeEqual(parameter, target), parameter);
+#if !NETFRAMEWORK
             var expected = lambda.Compile();
+#endif
             var fast = lambda.FromSysExpression().CompileFast(true);
             if (!t.IsNotNull(fast)) return;
             object value = source == typeof(DayOfWeek) || source == typeof(DayOfWeek?) ? (object)DayOfWeek.Friday : 42;
+#if NETFRAMEWORK
+            // Framework's expression compiler rejects some nullable TypeEqual trees.
+            // Nullable operands box as their underlying type; compare that exact runtime type.
+            t.AreEqual(ExpectedExactType(value, target), fast.DynamicInvoke(value));
+            if (!source.IsValueType || Nullable.GetUnderlyingType(source) != null)
+                t.AreEqual(false, fast.DynamicInvoke(new object[] { null }));
+#else
             t.AreEqual(expected.DynamicInvoke(value), fast.DynamicInvoke(value));
             if (!source.IsValueType || Nullable.GetUnderlyingType(source) != null)
                 t.AreEqual(expected.DynamicInvoke(new object[] { null }), fast.DynamicInvoke(new object[] { null }));
+#endif
         }
     }
 
@@ -66,12 +76,23 @@ public struct TypeEqualRegressionTests : ITestX
             var ignored = SysExpr.Lambda<Action<Action>>(SysExpr.Block(body, SysExpr.Empty()), counter).FromSysExpression().CompileFast(true);
             if (!t.IsNotNull(fast) || !t.IsNotNull(ignored)) return;
             var calls = 0;
+#if NETFRAMEWORK
+            var defaultValue = source != typeof(void) && source.IsValueType && Nullable.GetUnderlyingType(source) == null ? Activator.CreateInstance(source) : null;
+            var expected = source == typeof(void) ? target == typeof(void) : ExpectedExactType(defaultValue, target);
+            t.AreEqual(expected, fast(() => ++calls));
+#else
             t.AreEqual(lambda.Compile()(() => { }), fast(() => ++calls));
+#endif
             t.AreEqual(1, calls);
             ignored(() => ++calls);
             t.AreEqual(2, calls);
         }
     }
+
+#if NETFRAMEWORK
+    private static bool ExpectedExactType(object value, Type target) =>
+        value != null && value.GetType() == (Nullable.GetUnderlyingType(target) ?? target);
+#endif
 
     public delegate bool RefInt(ref int value);
     public delegate bool RefNullable(ref int? value);
