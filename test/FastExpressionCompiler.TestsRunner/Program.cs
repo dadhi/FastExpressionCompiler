@@ -79,6 +79,8 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.UnitTests.ValueTypeReceiverRegressionTests());
                 lt.Run(new LightExpression.UnitTests.NumericComparisonRegressionTests());
                 lt.Run(new LightExpression.UnitTests.CoalesceValueConversionRegressionTests());
+                lt.Run(new LightExpression.UnitTests.VoidLabelValueRegressionTests());
+                lt.Run(new LightExpression.UnitTests.TypedLabelControlFlowRegressionTests());
                 lt.Run(new LightExpression.IssueTests.Issue480_CLR_detected_an_invalid_program_exception());
                 lt.Run(new LightExpression.IssueTests.Issue490_Regression_in_compiling_lambdas_with_ref_struct_parameters());
 #endif
@@ -116,6 +118,9 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new ValueTypeReceiverRegressionTests());
             st.Run(new NumericComparisonRegressionTests());
             st.Run(new CoalesceValueConversionRegressionTests());
+            st.Run(new VoidLabelValueRegressionTests());
+            st.Run(new TypedLabelControlFlowRegressionTests());
+            st.Run(new UnaryIncrementValueRegressionTests());
             st.Run(new ExplicitIncrementOperatorRegressionTests());
             st.Run(new Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
             st.Run(new Issue561_NonBooleanEqualityOperator());
