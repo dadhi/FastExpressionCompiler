@@ -40,6 +40,8 @@ Moreover the compiled delegate may be slower than the manually created delegate 
 _TL;DR;_
 > Expression.Compile creates a DynamicMethod and associates it with an anonymous assembly to run it in a sand-boxed environment. This makes it safe for a dynamic method to be emitted and executed by partially trusted code but adds some run-time overhead.
 
+FEC keeps owned DynamicMethods for ordinary lambdas. Methods containing exception regions use anonymous hosting to match System's non-Exception throw and catch policy. The APIs that skip collection also use anonymous hosting, because their exception regions are unknown before emission. Anonymous hosting adds eager JIT work when creating the delegate. `CompileFastToIL` inherits the host policy of the caller's method.
+
 See also [a deep dive to Delegate internals](https://mattwarren.org/2017/01/25/How-do-.NET-delegates-work/#different-types-of-delegates).
 
 
