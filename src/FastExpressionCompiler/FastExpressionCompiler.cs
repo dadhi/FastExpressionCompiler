@@ -663,6 +663,8 @@ namespace FastExpressionCompiler
             internal bool HasExceptionBlock;
             // Unlike operand flags, this state survives helper calls that start a new parent context.
             internal bool IsEmittingExceptionFilter;
+            internal bool CanRethrow;
+            internal bool IsCollectingExceptionFilter;
 
             /// Set if the same label target is defined by the several Label expressions, so each definition needs its own IL label
             internal bool HasLabelDefinedTwice;
@@ -1480,7 +1482,11 @@ namespace FastExpressionCompiler
                             if (p == -1 && !context.IsLocalVar(parExpr))
                             {
                                 if (nestedLambda == null) // means that we are in the root lambda
+                                {
+                                    if (context.IsCollectingExceptionFilter)
+                                        throw new InvalidOperationException("A variable referenced from an exception filter is not defined in its scope.");
                                     return Result.ParameterIsNotVariableNorInPassedParameters;
+                                }
                                 context.Status |= ClosureStatus.HasClosure;
                                 _ = nestedLambda.NonPassedParameters.GetIndexOrAdd(parExpr, default(RefEq<ParameterExpression>));
                             }
@@ -1755,8 +1761,21 @@ namespace FastExpressionCompiler
                         expr = indexExpr.Object;
                         continue;
 
+                    case ExpressionType.Throw:
+                        var throwExpression = (UnaryExpression)expr;
+                        if (throwExpression.Operand == null)
+                        {
+                            if (!context.CanRethrow && !context.IsCollectingExceptionFilter)
+                                throw new InvalidOperationException("Rethrow is only valid within the body of a catch handler.");
+                            return Result.OK;
+                        }
+                        expr = throwExpression.Operand;
+                        continue;
+
                     case ExpressionType.Try:
                         {
+                            if (context.IsCollectingExceptionFilter)
+                                throw new InvalidOperationException("A try expression cannot occur inside an exception filter.");
                             context.HasExceptionBlock = true;
                             context.HasComplexExpression = false;
                             r = TryCollectTryExprInfo(ref context, (TryExpression)expr, nestedLambda, ref rootNestedLambdas);
@@ -2198,6 +2217,7 @@ namespace FastExpressionCompiler
             NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
         {
             var r = Result.OK;
+            var canRethrow = context.CanRethrow;
             if ((r = TryCollectInfo(ref context, tryExpr.Body, nestedLambda, ref rootNestedLambdas)) != Result.OK)
                 return r;
 
@@ -2213,22 +2233,32 @@ namespace FastExpressionCompiler
                         return r;
                 }
 
-                if (catchBlock.Filter != null &&
-                    (r = TryCollectInfo(ref context, catchBlock.Filter, nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                if (catchBlock.Filter != null)
+                {
+                    context.CanRethrow = false;
+                    context.IsCollectingExceptionFilter = true;
+                    r = TryCollectInfo(ref context, catchBlock.Filter, nestedLambda, ref rootNestedLambdas);
+                    context.IsCollectingExceptionFilter = false;
+                    if (r != Result.OK)
                     return r;
+                }
 
-                if ((r = TryCollectInfo(ref context, catchBlock.Body, nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                context.CanRethrow = true;
+                r = TryCollectInfo(ref context, catchBlock.Body, nestedLambda, ref rootNestedLambdas);
+                context.CanRethrow = canRethrow;
+                if (r != Result.OK)
                     return r;
-
                 if (catchExVar != null)
                     context.PopBlock();
             }
 
             var faultOrFinally = tryExpr.Fault ?? tryExpr.Finally;
-            if (faultOrFinally != null &&
-                (r = TryCollectInfo(ref context, faultOrFinally, nestedLambda, ref rootNestedLambdas)) != Result.OK)
-                return r;
-
+            if (faultOrFinally != null)
+            {
+                context.CanRethrow = false;
+                r = TryCollectInfo(ref context, faultOrFinally, nestedLambda, ref rootNestedLambdas);
+                context.CanRethrow = canRethrow;
+            }
             return r;
         }
 
