@@ -171,7 +171,7 @@ namespace System.Linq.Expressions.Tests
             AssertExtensions.Throws<ArgumentException>("member", () => Expression.ListBind(member, Enumerable.Empty<ElementInit>()));
         }
 
-        [Theory, ClassData(typeof(CompilationTypes))]
+        [VerifiedCompilerLayoutTheory("VerifiedCompilerRepresentationBehaviorTests.StaticListPropertyBinding"), ClassData(typeof(CompilationTypes))]
         public void StaticListProperty(bool useInterpreter)
         {
             PropertyInfo property = typeof(ListWrapper<int>).GetProperty(nameof(ListWrapper<int>.StaticListProperty));
@@ -191,7 +191,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Throws<InvalidProgramException>(() => exp.CompileForFec(useInterpreter));
         }
 
-        [Theory, ClassData(typeof(CompilationTypes))]
+        [VerifiedCompilerLayoutTheory("VerifiedCompilerRepresentationBehaviorTests.StaticListFieldBinding"), ClassData(typeof(CompilationTypes))]
         public void StaticListField(bool useInterpreter)
         {
             FieldInfo field = typeof(ListWrapper<int>).GetField(nameof(ListWrapper<int>.StaticListField));
