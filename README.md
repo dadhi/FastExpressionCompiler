@@ -282,6 +282,7 @@ Runtime binder rule compilation is intrinsic DLR behavior; the outer lambda stil
 
 - `Quote` with captured variables (capture-free quoted trees and directly invoked quoted lambdas are supported)
 - `RuntimeVariables` with one or more variables (empty lists are supported)
+- Reused physical method-tail labels reached with pending operand values or from protected exception regions (strict null / `NotSupported_MethodReturn_Context`)
 - `DebugInfo`
 - `NewArrayInit` multi-dimensional array initializer is not supported yet
 

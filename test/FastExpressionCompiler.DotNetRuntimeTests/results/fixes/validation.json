@@ -1,5 +1,11 @@
 {
-  "testedCompilerCommit": "cbb68ede",
+  "testedCompilerCommit": "22b6fe16",
+  "regressionTestCommit": "6d87ca5c",
+  "testOnlyFollowupChanges": [
+    "test/FastExpressionCompiler.UnitTests/ExceptionJumpValidationRegressionTests.cs",
+    "test/FastExpressionCompiler.UnitTests/ExceptionRegionValidationRegressionTests.cs",
+    "test/FastExpressionCompiler.UnitTests/NestedJumpArgumentRegressionTests.cs"
+  ],
   "exitCodes": {
     "standard-targets": 0,
     "light-targets": 0,
@@ -8,33 +14,48 @@
     "native-net10.0": 0,
     "native-net8.0": 0,
     "framework-build": 0,
+    "final-regressions-net10.0": 0,
+    "final-regressions-net8.0": 0,
     "framework-run": 0,
-    "full-suite": 0
+    "representation-proofs": 0
   },
-  "addedRegressionExecutions": 627,
-  "addedRegressionGroups": 81,
+  "initialFrameworkOracleAttempt": {
+    "standard-targets": 0,
+    "light-targets": 0,
+    "imported-build": 0,
+    "added-regressions": 0,
+    "native-net10.0": 0,
+    "native-net8.0": 0,
+    "framework-build": 0,
+    "framework-run": 1
+  },
+  "initialFrameworkFailureLog": "framework-first-attempt.log",
+  "fullSuiteCompletedBatches": 21,
+  "fullSuiteDirectory": "full-suite-22b6fe16",
+  "addedRegressionExecutions": 775,
+  "addedRegressionGroups": 97,
+  "finalRegressionExecutionsByRuntime": {
+    "net10.0": 775,
+    "net8.0": 775
+  },
   "nativeLegacyTests": {
     "net10": 1712,
     "net8": 1711,
     "net472": 1595
   },
-  "frameworkTestXExecutions": 704,
+  "frameworkTestXExecutions": 850,
   "libraryTargets": [
     "net472",
     "netstandard2.1",
     "net8.0",
     "net10.0"
   ],
-  "frozenImportedAssemblySHA256": "974d9a6f614cc796bc942ff5951e2f8d548286153927b01d7a5732356342e26a",
+  "frozenImportedAssemblySHA256": "1c2dc4e9d450dd080e8ec71d4073d5c3e6175c0d4977789bc939740304a96eac",
+  "frozenCompilerSHA256": "43efb6b8468ee48a8eb4c952d28c233c49d8719b1659e89beed0456fb89cd0c5",
+  "lightCompilerNet10SHA256": "0e6db69bff9a5e4006f6f97757ade15da62c4f86792ef4d84b267219c69b6909",
   "knownDeferredCrash": {
     "method": "CompilerTests.CompileDeepTree_NoStackOverflow",
     "baselineCases": 2,
     "reason": "User requested temporary skip and no broad traversal refactoring; issue remains open."
-  },
-  "frozenCompilerSHA256": "5e521c6eea61467d7350a1225efe1c1d33a466bff4ccdb01eb838bd6b54437d9",
-  "earlierFrameworkOracleFailure": {
-    "snapshot": "f41d0443",
-    "exitCode": 1,
-    "resolution": "Test-only oracle corrections; final Framework full runner passes with FEC execution assertions retained."
   }
 }
