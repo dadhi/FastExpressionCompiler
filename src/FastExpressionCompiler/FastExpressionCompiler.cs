@@ -4056,7 +4056,7 @@ namespace FastExpressionCompiler
                 {
                     if (exprType.IsNullable())
                         il.Demit(OpCodes.Newobj, exprType.GetNullableConstructor());
-                    else if (exprType == typeof(object))
+                    else if (!exprType.IsValueType)
                         il.Demit(OpCodes.Box, constType); // using normal type for Enum instead of underlying type
                 }
                 return true;
