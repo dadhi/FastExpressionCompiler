@@ -423,6 +423,7 @@ namespace FastExpressionCompiler
             var collectResult = TryCollectInfo(ref context, bodyExpr, null, ref context.NestedLambdas);
             if (collectResult == Result.OK)
             {
+                context.ValidateExceptionJumps();
                 var constantsAndNestedLambdas = (context.Status & ClosureStatus.HasClosure) != 0
                     ? context.GetArrayOfConstantsAndNestedLambdas()
                     : null;
@@ -629,6 +630,17 @@ namespace FastExpressionCompiler
             internal bool IsMarked;
         }
 
+        internal sealed class ExceptionRegionInfo
+        {
+            internal readonly ExceptionRegionInfo Parent;
+            internal readonly bool CannotLeave;
+            internal ExceptionRegionInfo(ExceptionRegionInfo parent, bool cannotLeave)
+            {
+                Parent = parent;
+                CannotLeave = cannotLeave;
+            }
+        }
+
         /// <summary>Track the info required to build a closure object + some context information not directly related to closure.</summary>
         public struct CompilerContext
         {
@@ -655,6 +667,39 @@ namespace FastExpressionCompiler
             internal bool IsEmittingExceptionFilter;
             internal bool CanRethrow;
             internal bool IsCollectingExceptionFilter;
+            internal ExceptionRegionInfo CurrentExceptionRegion;
+            internal SmallList<(object Target, ExceptionRegionInfo Region), Stack4<(object Target, ExceptionRegionInfo Region)>, NoArrayPool<(object Target, ExceptionRegionInfo Region)>> ExceptionLabels;
+            internal SmallList<(object Target, ExceptionRegionInfo Region), Stack4<(object Target, ExceptionRegionInfo Region)>, NoArrayPool<(object Target, ExceptionRegionInfo Region)>> ExceptionGotos;
+
+            internal void ValidateExceptionJumps()
+            {
+                if (!HasExceptionBlock)
+                    return;
+                for (var i = 0; i < ExceptionGotos.Count; ++i)
+                {
+                    var jump = ExceptionGotos[i];
+                    ExceptionRegionInfo targetRegion = null;
+                    var definitionCount = 0;
+                    for (var j = 0; j < ExceptionLabels.Count; ++j)
+                        if (ReferenceEquals(ExceptionLabels[j].Target, jump.Target))
+                        {
+                            targetRegion = ExceptionLabels[j].Region;
+                            ++definitionCount;
+                        }
+                    // Undefined and multiply-defined targets need lexical label binding diagnostics.
+                    if (definitionCount != 1)
+                        continue;
+                    var region = jump.Region;
+                    while (!ReferenceEquals(region, targetRegion))
+                    {
+                        if (region == null)
+                            throw new InvalidOperationException("Cannot jump into an exception region.");
+                        if (region.CannotLeave)
+                            throw new InvalidOperationException("Cannot jump out of a finally, fault, or exception filter.");
+                        region = region.Parent;
+                    }
+                }
+            }
 
             /// The stack for the lambda invocation and the labels bound to them
             internal SmallList<LabelInfo, Stack4<LabelInfo>, NoArrayPool<LabelInfo>> LambdaInvokeStackLabels;
@@ -1222,6 +1267,8 @@ namespace FastExpressionCompiler
             NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
         {
             var r = TryCollectInfo(ref context, expr, nestedLambda, ref rootNestedLambdas);
+            if (r == Result.OK)
+                context.ValidateExceptionJumps();
             return r == Result.OK || (context.CompilerFlags & CompilerFlags.ThrowOnNotSupportedExpression) != 0 && NotSupportedCase<bool>(r);
         }
 
@@ -1417,6 +1464,8 @@ namespace FastExpressionCompiler
                         context.QuoteConversions = nestedLambdaContext.QuoteConversions;
 #endif
 
+                        nestedLambdaContext.ValidateExceptionJumps();
+
                         if (newNestedLambda.NonPassedParameters.Count != 0 &&
                             !PropagateNonPassedParamsToOuterLambda(ref context,
                                 nestedLambda, nestedParamExprs, ref newNestedLambda.NonPassedParameters))
@@ -1530,6 +1579,10 @@ namespace FastExpressionCompiler
                         var loopExpr = (LoopExpression)expr;
                         context.AddLabel(loopExpr.BreakLabel);
                         context.AddLabel(loopExpr.ContinueLabel);
+                        if (loopExpr.BreakLabel != null)
+                            context.ExceptionLabels.AddAndGetRef((loopExpr.BreakLabel, context.CurrentExceptionRegion));
+                        if (loopExpr.ContinueLabel != null)
+                            context.ExceptionLabels.AddAndGetRef((loopExpr.ContinueLabel, context.CurrentExceptionRegion));
                         expr = loopExpr.Body;
                         continue;
 
@@ -1569,6 +1622,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.Label:
                         var labelExpr = (LabelExpression)expr;
                         context.AddLabel(labelExpr.Target, context.CurrentInlinedLambdaInvokeIndex);
+                        context.ExceptionLabels.AddAndGetRef((labelExpr.Target, context.CurrentExceptionRegion));
                         if (labelExpr.Target != null)
                             context.TargetToGotosAndLabels.Map.AddOrGetValueRef(labelExpr.Target, out _).Item2++;
                         if (labelExpr.DefaultValue == null)
@@ -1578,6 +1632,7 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Goto:
                         var gotoExpr = (GotoExpression)expr;
+                        context.ExceptionGotos.AddAndGetRef((gotoExpr.Target, context.CurrentExceptionRegion));
                         if (gotoExpr.Target != null)
                             context.TargetToGotosAndLabels.Map.AddOrGetValueRef(gotoExpr.Target, out _).Item1++;
                         if (gotoExpr.Value == null)
@@ -1989,12 +2044,22 @@ namespace FastExpressionCompiler
             return r;
         }
 
+        private static Result TryCollectExceptionRegionInfo(ref CompilerContext context, Expression expression,
+            bool cannotLeave, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+        {
+            var parent = context.CurrentExceptionRegion;
+            context.CurrentExceptionRegion = new ExceptionRegionInfo(parent, cannotLeave);
+            var result = TryCollectInfo(ref context, expression, nestedLambda, ref rootNestedLambdas);
+            context.CurrentExceptionRegion = parent;
+            return result;
+        }
+
         private static Result TryCollectTryExprInfo(ref CompilerContext context, TryExpression tryExpr,
             NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
         {
             var r = Result.OK;
             var canRethrow = context.CanRethrow;
-            if ((r = TryCollectInfo(ref context, tryExpr.Body, nestedLambda, ref rootNestedLambdas)) != Result.OK)
+            if ((r = TryCollectExceptionRegionInfo(ref context, tryExpr.Body, false, nestedLambda, ref rootNestedLambdas)) != Result.OK)
                 return r;
 
             var catchBlocks = tryExpr.Handlers;
@@ -2013,14 +2078,14 @@ namespace FastExpressionCompiler
                 {
                     context.CanRethrow = false;
                     context.IsCollectingExceptionFilter = true;
-                    r = TryCollectInfo(ref context, catchBlock.Filter, nestedLambda, ref rootNestedLambdas);
+                    r = TryCollectExceptionRegionInfo(ref context, catchBlock.Filter, true, nestedLambda, ref rootNestedLambdas);
                     context.IsCollectingExceptionFilter = false;
                     if (r != Result.OK)
                         return r;
                 }
 
                 context.CanRethrow = true;
-                r = TryCollectInfo(ref context, catchBlock.Body, nestedLambda, ref rootNestedLambdas);
+                r = TryCollectExceptionRegionInfo(ref context, catchBlock.Body, false, nestedLambda, ref rootNestedLambdas);
                 context.CanRethrow = canRethrow;
                 if (r != Result.OK)
                     return r;
@@ -2032,7 +2097,7 @@ namespace FastExpressionCompiler
             if (faultOrFinally != null)
             {
                 context.CanRethrow = false;
-                r = TryCollectInfo(ref context, faultOrFinally, nestedLambda, ref rootNestedLambdas);
+                r = TryCollectExceptionRegionInfo(ref context, faultOrFinally, true, nestedLambda, ref rootNestedLambdas);
                 context.CanRethrow = canRethrow;
             }
             return r;
@@ -11344,7 +11409,7 @@ namespace FastExpressionCompiler
     }
 
     /// <summary>Provides structural equality comparison for expression trees (both LightExpression and System.Linq.Expressions).
-    /// Use the static <see cref="EqualsTo"/> method as the primary entry point — it creates a temporary struct on the stack with no heap allocation.
+    /// Use the static <see cref="EqualsTo"/> method as the primary entry point â€” it creates a temporary struct on the stack with no heap allocation.
     /// Parameters are matched by their position within their enclosing lambda or block, and label targets by identity pairing.
     /// Up to 8 lambda parameters and label targets are stored on the stack; larger numbers spill to a heap array.</summary>
     public struct ExpressionEqualityComparer : IEqualityComparer<Expression>, IEqualityComparer
@@ -11354,7 +11419,7 @@ namespace FastExpressionCompiler
         private SmallList<ParameterExpression, Stack8<ParameterExpression>, NoArrayPool<ParameterExpression>> _xps, _yps;
         private SmallList<LabelTarget, Stack8<LabelTarget>, NoArrayPool<LabelTarget>> _xls, _yls;
 
-        /// <summary>Structurally compares two expressions. Primary entry point — no heap allocation for the comparer.</summary>
+        /// <summary>Structurally compares two expressions. Primary entry point â€” no heap allocation for the comparer.</summary>
         [MethodImpl((MethodImplOptions)256)]
         public static bool EqualsTo(Expression x, Expression y) =>
             new ExpressionEqualityComparer().Eq(x, y);
@@ -11546,19 +11611,19 @@ namespace FastExpressionCompiler
             }
         }
 
-        /// <summary>IEqualityComparer&lt;Expression&gt; implementation — delegates to the static <see cref="EqualsTo"/> for a fresh context per call.</summary>
+        /// <summary>IEqualityComparer&lt;Expression&gt; implementation â€” delegates to the static <see cref="EqualsTo"/> for a fresh context per call.</summary>
         [MethodImpl((MethodImplOptions)256)]
         bool IEqualityComparer<Expression>.Equals(Expression x, Expression y) => EqualsTo(x, y);
 
-        /// <summary>IEqualityComparer&lt;Expression&gt; implementation — delegates to the static <see cref="GetHashCode(Expression)"/>.</summary>
+        /// <summary>IEqualityComparer&lt;Expression&gt; implementation â€” delegates to the static <see cref="GetHashCode(Expression)"/>.</summary>
         [MethodImpl((MethodImplOptions)256)]
         int IEqualityComparer<Expression>.GetHashCode(Expression obj) => GetHashCode(obj);
 
-        /// <summary>Non-generic IEqualityComparer implementation — delegates to the static methods for use with legacy BCL APIs.</summary>
+        /// <summary>Non-generic IEqualityComparer implementation â€” delegates to the static methods for use with legacy BCL APIs.</summary>
         [MethodImpl((MethodImplOptions)256)]
         bool IEqualityComparer.Equals(object x, object y) => EqualsTo(x as Expression, y as Expression);
 
-        /// <summary>Non-generic IEqualityComparer implementation — delegates to the static <see cref="GetHashCode(Expression)"/>.</summary>
+        /// <summary>Non-generic IEqualityComparer implementation â€” delegates to the static <see cref="GetHashCode(Expression)"/>.</summary>
         [MethodImpl((MethodImplOptions)256)]
         int IEqualityComparer.GetHashCode(object obj) => GetHashCode(obj as Expression);
 
