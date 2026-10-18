@@ -79,6 +79,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new ExceptionRegionValidationRegressionTests());
             st.Run(new TryResultValueRegressionTests());
             st.Run(new ContinueValueRegressionTests());
+            st.Run(new ConditionalBranchRegressionTests());
             st.Run(new FormalByRefArgumentRegressionTests());
             st.Run(new WritableReceiverAddressRegressionTests());
             st.Run(new NestedMemberBindingLayoutBehaviorRegressionTests());
@@ -199,6 +200,7 @@ namespace FastExpressionCompiler.UnitTests
             lt.Run(new LightExpression.UnitTests.ExceptionRegionValidationRegressionTests());
             lt.Run(new LightExpression.UnitTests.TryResultValueRegressionTests());
             lt.Run(new LightExpression.UnitTests.ContinueValueRegressionTests());
+            lt.Run(new LightExpression.UnitTests.ConditionalBranchRegressionTests());
             lt.Run(new LightExpression.UnitTests.NamedFieldLookupRegressionTests());
             lt.Run(new LightExpression.UnitTests.FormalByRefArgumentRegressionTests());
             lt.Run(new LightExpression.UnitTests.WritableReceiverAddressRegressionTests());
