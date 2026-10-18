@@ -4495,6 +4495,8 @@ namespace FastExpressionCompiler
 
             private static bool EmitMemberInit(MemberInitExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
+                var valueFlags = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
+                    ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue;
                 var valueVarIndex = -1;
                 var exprType = expr.Type;
                 if (exprType.IsValueType)
@@ -4504,7 +4506,7 @@ namespace FastExpressionCompiler
 #if LIGHT_EXPRESSION
                 if (newExpr == null)
                 {
-                    if (!TryEmit(expr.Expression, il, ref context, parent))
+                    if (!TryEmit(expr.Expression, il, ref context, valueFlags))
                         return false;
                     if (valueVarIndex != -1)
                         EmitStoreLocalVariable(il, valueVarIndex);
@@ -4518,7 +4520,7 @@ namespace FastExpressionCompiler
                     {
                         var args = newExpr.Constructor.GetParameters();
                         for (var i = 0; i < argCount; i++)
-                            if (!TryEmit(argExprs.GetArgument(i), il, ref context, parent, args[i].ParameterType.IsByRef ? i : -1))
+                            if (!TryEmit(argExprs.GetArgument(i), il, ref context, ParentFlags.CtorCall, args[i].ParameterType.IsByRef ? i : -1))
                                 return false;
                     }
 
@@ -4542,19 +4544,25 @@ namespace FastExpressionCompiler
                     if (binding.BindingType != MemberBindingType.Assignment) // todo: @feature is not supported yet
                         return false;
 
+                    var isStatic = binding.Member is FieldInfo field && field.IsStatic ||
+                        binding.Member is PropertyInfo property && property.SetMethod?.IsStatic == true;
+                    if (!isStatic)
+                    {
                     if (valueVarIndex != -1) // load local value address, to set its members
                         EmitLoadLocalVariableAddress(il, valueVarIndex);
                     else
                         il.Demit(OpCodes.Dup); // duplicate member owner on stack
+                    }
 
-                    if (!TryEmit(((MemberAssignment)binding).Expression, il, ref context, parent) ||
+                    if (!TryEmit(((MemberAssignment)binding).Expression, il, ref context, valueFlags) ||
                         !EmitMemberSet(il, binding.Member))
                         return false;
                 }
 
                 if (valueVarIndex != -1)
                     EmitLoadLocalVariable(il, valueVarIndex);
-                return true;
+                context.LastEmitIsAddress = false;
+                return il.EmitPopIfIgnoreResult(parent);
             }
 
             [MethodImpl((MethodImplOptions)256)]
