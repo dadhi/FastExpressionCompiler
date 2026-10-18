@@ -6280,13 +6280,15 @@ namespace FastExpressionCompiler
                     // it prevents the problems in cases of right being a block, try-catch, etc.
                     // see `Using_try_finally_as_arithmetic_operand_use_void_block_in_finally`
                     var rightType = right.Type;
-                    if (leftValueVar == -1 && (context.HasExceptionBlock || right.IsComplexExpression()))
+                    rightIsNullable = rightType.IsNullable() &&
+                        (operationMethod == null || operationMethod.GetParameters()[1].ParameterType != rightType);
+                    if (leftValueVar == -1 && (rightIsNullable || context.HasExceptionBlock || right.IsComplexExpression()))
                         leftValueVar = EmitStoreLocalVariable(il, leftType);
+                    if (rightIsNullable && !leftIsNullable)
+                        noNullableValueLabel = il.DefineLabel();
 
                     var rightVar = -1;
                     var rightValueVar = -1;
-                    rightIsNullable = rightType.IsNullable() &&
-                        (operationMethod == null || operationMethod.GetParameters()[1].ParameterType != rightType);
                     if (rightIsNullable)
                     {
                         if (!TryEmitCachedArithmeticAssignRight(right, cachedRight, il, ref context, flags))
