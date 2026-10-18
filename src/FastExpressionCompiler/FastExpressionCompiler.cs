@@ -2302,7 +2302,7 @@ namespace FastExpressionCompiler
                                         il.Demit(boolResult ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
                                     return true;
                                 }
-                                return TryEmitComparison(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, exprType, nodeType, il, ref context, parent);
+                                return TryEmitComparison(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, exprType, nodeType, il, ref context, parent, IsReferenceComparison((BinaryExpression)expr));
                             }
                         case ExpressionType.Add:
                         case ExpressionType.Subtract:
@@ -6208,24 +6208,11 @@ namespace FastExpressionCompiler
                 return null;
             }
 
+            private static bool IsReferenceComparison(BinaryExpression expr) =>
 #if LIGHT_EXPRESSION
-            // `ReferenceEqual` and `ReferenceNotEqual` compare the references even when the type defines the `==` operator, e.g. string
-            private static bool TryEmitReferenceComparison(BinaryExpression expr, bool isNotEqual, ILGenerator il,
-                ref CompilerContext context, ParentFlags parent)
-            {
-                var flags = parent
-                    & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
-                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef);
-
-                if (!TryEmit(expr.Left, il, ref context, flags) ||
-                    !TryEmit(expr.Right, il, ref context, flags))
-                    return false;
-
-                il.Demit(OpCodes.Ceq);
-                if (isNotEqual)
-                    EmitEqualToZeroOrNull(il);
-                return il.EmitPopIfIgnoreResult(parent);
-            }
+                expr is LogicalBinaryExpression { IsReferenceComparison: true };
+#else
+                expr.Method == null && !expr.Left.Type.IsValueType && !expr.Right.Type.IsValueType;
 #endif
 
             private static bool TryEmitComparisonMethod(Expression left, Expression right, MethodInfo method, ILGenerator il, ref CompilerContext context, ParentFlags parent)
@@ -6264,9 +6251,28 @@ namespace FastExpressionCompiler
                 return il.EmitPopIfIgnoreResult(parent);
             }
 
+#if LIGHT_EXPRESSION
+            private static bool TryEmitReferenceComparison(BinaryExpression expr, bool isNotEqual, ILGenerator il,
+                ref CompilerContext context, ParentFlags parent)
+            {
+                var flags = parent
+                    & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
+                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef);
+
+                if (!TryEmit(expr.Left, il, ref context, flags) ||
+                    !TryEmit(expr.Right, il, ref context, flags))
+                    return false;
+
+                il.Demit(OpCodes.Ceq);
+                if (isNotEqual)
+                    EmitEqualToZeroOrNull(il);
+                return il.EmitPopIfIgnoreResult(parent);
+            }
+#endif
+
             private static bool TryEmitComparison(
                 Expression left, Expression right, Type exprType, ExpressionType nodeType,
-                ILGenerator il, ref CompilerContext context, ParentFlags parent)
+                ILGenerator il, ref CompilerContext context, ParentFlags parent, bool isReferenceComparison = false)
             {
                 var leftType = left.Type;
                 var leftIsNullable = leftType.IsNullable();
@@ -6357,7 +6363,7 @@ namespace FastExpressionCompiler
                 else if (!TryEmit(right, il, ref context, operandParent))
                     return false;
 
-                if (comparingToLeftNull | comparingToRightNull ||
+                if (isReferenceComparison || comparingToLeftNull | comparingToRightNull ||
                     (leftType != rightType && leftType.IsClass && rightType.IsClass &&
                     (leftType == typeof(object) | rightType == typeof(object))))
                 {
