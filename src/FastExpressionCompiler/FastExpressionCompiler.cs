@@ -3055,6 +3055,16 @@ namespace FastExpressionCompiler
                     if (!TryEmit(exprOper, il, ref context, parent & ~ParentFlags.IgnoreResult))
                         return false;
 
+                if (nodeType == ExpressionType.Increment || nodeType == ExpressionType.Decrement)
+                {
+                    if (!TryEmit(expr.Operand, il, ref context,
+                        (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue)
+                        || !EmitIncOrDec(il, expr.Operand.Type, nodeType == ExpressionType.Increment, expr.Method))
+                        return false;
+                    context.LastEmitIsAddress = false;
+                    return il.EmitPopIfIgnoreResult(parent);
+                }
+
                 if (nodeType == ExpressionType.OnesComplement)
                 {
                     if (expr.Method != null)
@@ -3091,28 +3101,6 @@ namespace FastExpressionCompiler
                     il.DmarkLabel(falseLabel);
                     il.Demit(OpCodes.Ldc_I4_1);
                     il.DmarkLabel(continueLabel);
-                }
-                else if (nodeType == ExpressionType.Increment)
-                {
-                    if (exprType.IsPrimitive)
-                    {
-                        if (!TryEmitNumberOne(il, exprType))
-                            return false;
-                        il.Demit(OpCodes.Add);
-                    }
-                    else if (!EmitMethodCallCheckForNull(il, exprType.GetMethod("op_Increment")))
-                        return false;
-                }
-                else if (nodeType == ExpressionType.Decrement)
-                {
-                    if (exprType.IsPrimitive)
-                    {
-                        if (!TryEmitNumberOne(il, exprType))
-                            return false;
-                        il.Demit(OpCodes.Sub);
-                    }
-                    else if (!EmitMethodCallCheckForNull(il, exprType.GetMethod("op_Decrement")))
-                        return false;
                 }
                 else if (nodeType == ExpressionType.Negate | nodeType == ExpressionType.NegateChecked)
                 {
