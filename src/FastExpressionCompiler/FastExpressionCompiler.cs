@@ -331,8 +331,10 @@ namespace FastExpressionCompiler
         {
             var closurePlusParamTypes = RentPooledOrNewClosureTypeToParamTypes(lambdaExpr.GetParamExprs());
 
+            // Without collection, the method's exception regions are not known before emission.
+            // Anonymous hosting preserves System's non-Exception catch policy.
             var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, closurePlusParamTypes,
-                typeof(ExpressionCompiler), skipVisibility: true);
+                restrictedSkipVisibility: true);
 
             var il = method.GetILGenerator();
             EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref context);
@@ -361,8 +363,9 @@ namespace FastExpressionCompiler
 
             var closurePlusParamTypes = RentPooledOrNewClosureTypeToParamTypes(context.ParamExprs);
 
-            var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, closurePlusParamTypes, typeof(ArrayClosure),
-                skipVisibility: true);
+            // This entry point skips collection, so handler policy is not known yet.
+            var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, closurePlusParamTypes,
+                restrictedSkipVisibility: true);
 
             var il = method.GetILGenerator();
 
@@ -444,10 +447,12 @@ namespace FastExpressionCompiler
                     closure = new DebugArrayClosure(null, constantsAndNestedLambdas, debugLambdaExpr);
                 }
 
-                // note: @slow this is what System.Compiles does and which makes the compilation 10x slower, but the invocation become faster by a single branch instruction
-                // var method = new DynamicMethod(string.Empty, returnType, closurePlusParamTypes, true);
-                // this is FEC way, significantly faster compilation, but +1 branch instruction in the invocation
-                var dynMethod = new DynamicMethod(string.Empty, returnType, closureAndParamTypes, typeof(ArrayClosure), true);
+                // The host assembly controls non-Exception wrapping and catch matching.
+                // Keep FEC's faster owned hosting for ordinary lambdas; exception regions
+                // need the anonymous policy used by System's expression compiler.
+                var dynMethod = context.HasExceptionBlock
+                    ? new DynamicMethod(string.Empty, returnType, closureAndParamTypes, restrictedSkipVisibility: true)
+                    : new DynamicMethod(string.Empty, returnType, closureAndParamTypes, typeof(ArrayClosure), true);
 
                 var il = DynamicMethodHacks.RentPooledOrNewILGenerator(dynMethod, returnType, closureAndParamTypes);
 
@@ -2421,7 +2426,9 @@ namespace FastExpressionCompiler
 
             var closurePlusParamTypes = RentPooledOrNewClosureTypeToParamTypes(nestedLambdaParamExprs);
 
-            var method = new DynamicMethod(string.Empty, nestedReturnType, closurePlusParamTypes, typeof(ArrayClosure), true);
+            var method = nestedLambdaContext.HasExceptionBlock
+                ? new DynamicMethod(string.Empty, nestedReturnType, closurePlusParamTypes, restrictedSkipVisibility: true)
+                : new DynamicMethod(string.Empty, nestedReturnType, closurePlusParamTypes, typeof(ArrayClosure), true);
             var il = DynamicMethodHacks.RentPooledOrNewILGenerator(method, nestedReturnType, closurePlusParamTypes);
 
             if (constantsAndNestedLambdas != null)
@@ -4106,11 +4113,19 @@ namespace FastExpressionCompiler
                     return false;
 
                 // Load non-passed argument from Closure - closure object is always a first argument
-                il.Demit(OpCodes.Ldarg_0);
-                il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
+                EmitLoadNonPassedParams(il);
                 EmitLoadConstantInt(il, nonPassedParamIndex);
                 il.Demit(OpCodes.Ldelem_Ref);
                 return TryEmitCapturedParameterValue(il, paramType, isPassedRef, ref context);
+            }
+
+            private static void EmitLoadNonPassedParams(ILGenerator il)
+            {
+                il.Demit(OpCodes.Ldarg_0);
+#if NETFRAMEWORK
+                il.Demit(OpCodes.Castclass, typeof(ArrayClosureWithNonPassedParams));
+#endif
+                il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
             }
 
             internal static bool TryEmitHoistedCell(ParameterExpression parameter, ILGenerator il, ref CompilerContext context)
@@ -4130,8 +4145,7 @@ namespace FastExpressionCompiler
                         var captured = context.NonPassedParameters.TryGetIndex(parameter, default(RefEq<ParameterExpression>));
                         if (captured == -1)
                             return false;
-                        il.Demit(OpCodes.Ldarg_0);
-                        il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
+                        EmitLoadNonPassedParams(il);
                         EmitLoadConstantInt(il, captured);
                         il.Demit(OpCodes.Ldelem_Ref);
                         il.Demit(OpCodes.Castclass, GetHoistedBoxType(parameter.Type));
@@ -4196,8 +4210,7 @@ namespace FastExpressionCompiler
                     return false;
 
                 // Load non-passed argument from Closure - closure object is always a first argument
-                il.Demit(OpCodes.Ldarg_0);
-                il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
+                EmitLoadNonPassedParams(il);
                 EmitLoadConstantInt(il, nonPassedParamIndex);
                 il.Demit(OpCodes.Ldelem_Ref);
                 return true;
@@ -5065,6 +5078,10 @@ namespace FastExpressionCompiler
                         var constType = constValue.GetType();
                         if (constType.IsValueType)
                             il.Demit(OpCodes.Unbox_Any, constType);
+#if NETFRAMEWORK
+                        else
+                            il.Demit(OpCodes.Castclass, constType);
+#endif
 
                         varIndex = (short)il.GetNextLocalVarIndex(constType);
                         constUsage = (short)(varIndex + 1); // to distinguish from the default 1
@@ -5080,6 +5097,9 @@ namespace FastExpressionCompiler
                     {
                         var lambdaInfo = nestedLambdas[i];
                         EmitLoadClosureArrayItem(il, constCount + i);
+#if NETFRAMEWORK
+                        il.Demit(OpCodes.Castclass, lambdaInfo.Lambda.GetType());
+#endif
                         lambdaInfo.LambdaVarIndex = varIndex = (short)il.GetNextLocalVarIndex(lambdaInfo.Lambda.GetType());
                         EmitStoreLocalVariable(il, varIndex);
                     }
@@ -6305,8 +6325,7 @@ namespace FastExpressionCompiler
                     EmitStoreLocalVariable(il, rightVar);
 
                     // load array field and param item index
-                    il.Demit(OpCodes.Ldarg_0); // load closure as it is always an argument zero
-                    il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
+                    EmitLoadNonPassedParams(il);
                     EmitLoadConstantInt(il, nonPassedParamIndex);
 
                     EmitLoadLocalVariable(il, rightVar);
@@ -6326,8 +6345,7 @@ namespace FastExpressionCompiler
 
                 if (resultVar != -1 & isPost)
                 {
-                    il.Demit(OpCodes.Ldarg_0); // load closure as it is always an argument zero
-                    il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
+                    EmitLoadNonPassedParams(il);
                     EmitLoadConstantInt(il, nonPassedParamIndex);
                     il.Demit(OpCodes.Ldelem_Ref); // load the variable from array
                     if (exprType.IsValueType)
@@ -6347,8 +6365,7 @@ namespace FastExpressionCompiler
                 var arithmeticResultVar = resultVar != -1 ? resultVar : il.GetNextLocalVarIndex(exprType);
                 EmitStoreLocalVariable(il, arithmeticResultVar);
 
-                il.Demit(OpCodes.Ldarg_0); // load closure as it is always an argument zero
-                il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
+                EmitLoadNonPassedParams(il);
                 EmitLoadConstantInt(il, nonPassedParamIndex);
 
                 EmitLoadLocalVariable(il, arithmeticResultVar);
@@ -7041,6 +7058,9 @@ namespace FastExpressionCompiler
                 // Load the actual lambda delegate on stack
                 EmitLoadLocalVariable(il, nestedLambdaInfo.LambdaVarIndex);
                 il.Demit(OpCodes.Ldfld, NestedLambdaForNonPassedParams.NestedLambdaField);
+#if NETFRAMEWORK
+                il.Demit(OpCodes.Castclass, ((NestedLambdaForNonPassedParams)nestedLambdaInfo.Lambda).NestedLambda.GetType());
+#endif
 
                 // Load the nonPassedParams as a first argument of closure
                 EmitLoadLocalVariable(il, nonPassedParamsVarIndex);
