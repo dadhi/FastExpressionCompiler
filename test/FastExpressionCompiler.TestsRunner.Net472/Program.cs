@@ -100,6 +100,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new UserDefinedLogicalRegressionTests());
             fecTests.Run(new DirectLogicalFactoryRegressionTests());
             fecTests.Run(new UnaryIncrementValueRegressionTests());
+            fecTests.Run(new MethodBasedNotRegressionTests());
             fecTests.Run(new ExplicitIncrementOperatorRegressionTests());
             fecTests.Run(new Issue183_NullableDecimal());
             fecTests.Run(new Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET());
