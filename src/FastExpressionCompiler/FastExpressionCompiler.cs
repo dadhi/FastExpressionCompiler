@@ -4464,6 +4464,37 @@ namespace FastExpressionCompiler
                         if (leftIsByAddress = context.LastEmitIsAddress)
                             EmitLoadIndirectlyByRef(il, leftType); // if the field is loaded by ref, it need to be loaded from the ref in order to do arithmetic operation on it
 
+                        var cachedRight = -1;
+                        if (right != null && right.IsComplexExpression())
+                        {
+                            // Keep the evaluation stack empty across a possible exception block in the RHS.
+                            // The target/getter has already run; save its operands rather than evaluating it again.
+                            var readValue = EmitStoreLocalVariable(il, leftType);
+                            var indexes = orLeftIndexExpr != null ? new int[indexArgCount] : null;
+                            if (indexes != null)
+                                for (var i = indexArgCount - 1; i >= 0; --i)
+                                    indexes[i] = EmitStoreLocalVariable(il, indexArgs.GetArgument(i).Type);
+                            var target = -1;
+                            if (leftIsByAddress || objExpr != null)
+                            {
+                                var targetType = leftIsByAddress ? leftType.MakeByRefType()
+                                    : objExpr.Type.IsValueType ? objExpr.Type.MakeByRefType() : objExpr.Type;
+                                target = EmitStoreLocalVariable(il, targetType);
+                            }
+                            if (!TryEmit(right, il, ref context, rightOnlyFlags))
+                                return false;
+                            if (context.LastEmitIsAddress)
+                                EmitLoadIndirectlyByRef(il, right.Type);
+                            cachedRight = EmitStoreLocalVariable(il, right.Type);
+                            if (target != -1)
+                                EmitLoadLocalVariable(il, target);
+                            if (indexes != null)
+                                for (var i = 0; i < indexArgCount; ++i)
+                                    EmitLoadLocalVariable(il, indexes[i]);
+                            EmitLoadLocalVariable(il, readValue);
+                            context.LastEmitIsAddress = false;
+                        }
+
                         var leftIsNullable = leftType.IsNullable() &&
                             (operationMethod == null || operationMethod.GetParameters()[0].ParameterType != leftType);
                         if (!leftIsNullable)
@@ -4480,7 +4511,7 @@ namespace FastExpressionCompiler
                             else
                             {
                                 var rightType = right.Type;
-                                if (!TryEmit(right, il, ref context, rightOnlyFlags))
+                                if (!TryEmitCachedArithmeticAssignRight(right, cachedRight, il, ref context, rightOnlyFlags))
                                     return false;
 
                                 var rightIsNullable = rightType.IsNullable() &&
@@ -4527,7 +4558,7 @@ namespace FastExpressionCompiler
                             {
                                 // emit the right expression immediately after the left and then just process their results
                                 var rightType = right.Type;
-                                if (!TryEmit(right, il, ref context, rightOnlyFlags))
+                                if (!TryEmitCachedArithmeticAssignRight(right, cachedRight, il, ref context, rightOnlyFlags))
                                     return false;
                                 if (context.LastEmitIsAddress)
                                     EmitLoadIndirectlyByRef(il, rightType);
@@ -4630,6 +4661,16 @@ namespace FastExpressionCompiler
                 _ => nodeType
             };
 
+            private static bool TryEmitCachedArithmeticAssignRight(Expression right, int cachedRight,
+                ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            {
+                if (cachedRight == -1)
+                    return TryEmit(right, il, ref context, parent);
+                EmitLoadLocalVariable(il, cachedRight);
+                context.LastEmitIsAddress = false;
+                return true;
+            }
+
             private static bool TryEmitAssignmentConversion(LambdaExpression conversion, ILGenerator il, ref CompilerContext context)
             {
                 var invoke = conversion.Type.FindDelegateInvokeMethod();
@@ -4707,7 +4748,8 @@ namespace FastExpressionCompiler
                         ++paramIndex; // shift parameter index by one, because the first one will be closure
 
                     var isLeftByRef = left.IsByRef;
-                    if (isLeftByRef)
+                    var deferRefAddress = isLeftByRef && right != null && right.IsComplexExpression();
+                    if (isLeftByRef && !deferRefAddress)
                         EmitLoadArg(il, paramIndex);
 
                     if (resultVar != -1 & isPost)
@@ -4723,7 +4765,15 @@ namespace FastExpressionCompiler
                         EmitStoreAndLoadLocalVariable(il, resultVar);
 
                     if (isLeftByRef)
+                    {
+                        if (deferRefAddress)
+                        {
+                            var assignedValue = EmitStoreLocalVariable(il, left.Type);
+                            EmitLoadArg(il, paramIndex);
+                            EmitLoadLocalVariable(il, assignedValue);
+                        }
                         EmitStoreIndirectlyByRef(il, left.Type);
+                    }
                     else
                         il.Demit(OpCodes.Starg_S, paramIndex);
 
