@@ -1044,6 +1044,7 @@ namespace FastExpressionCompiler
         // Exception regions and jumps affect invocation spilling even in branches that
         // constant folding removes. Lambda/quote bodies execute separately; opaque
         // extensions remain the normal collector's responsibility.
+        [RequiresUnreferencedCode(Trimming.Message)]
         private sealed class ArgumentSpillScope : ExpressionVisitor
         {
             internal bool RequiresSpill;
