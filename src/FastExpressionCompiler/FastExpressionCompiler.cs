@@ -8177,6 +8177,7 @@ namespace FastExpressionCompiler
             {
                 var flags = (parent
                     & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
+                        ParentFlags.MemberAccess | ParentFlags.AssignmentLeftValue | ParentFlags.DupIt |
                         ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
                     | ParentFlags.Arithmetic;
 
