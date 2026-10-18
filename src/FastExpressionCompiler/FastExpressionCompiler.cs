@@ -2205,7 +2205,7 @@ namespace FastExpressionCompiler
                                             continue;
 
                                         // This is basically the return pattern (see #237), so we don't care for the rest of expressions
-                                        if (stExpr is GotoExpression gt && gt.Kind == GotoExpressionKind.Return &&
+                                        if (stExpr is GotoExpression gt && gt.Kind == GotoExpressionKind.Return && gt.Target.Type != typeof(void) &&
                                             statementExprs[i + 1] is LabelExpression label && label.Target == gt.Target)
                                         {
                                             // But we cannot use the return pattern and eliminate the target label if we have more gotos referencing it, see #430
@@ -2521,6 +2521,13 @@ namespace FastExpressionCompiler
                     throw new InvalidOperationException($"Cannot jump, no labels found for the target `{expr.Target}`");
                 }
                 var gotoValue = expr.Value;
+                if (gotoValue != null && expr.Target.Type == typeof(void))
+                {
+                    if (!TryEmit(gotoValue, il, ref context, parent | ParentFlags.IgnoreResult))
+                        return false;
+                    il.Demit((parent & ParentFlags.TryCatch) != 0 ? OpCodes.Leave : OpCodes.Br, labelInfo.GetOrDefineLabel(il));
+                    return true;
+                }
                 if (gotoValue != null &&
                     !TryEmit(gotoValue, il, ref context, parent & ~ParentFlags.IgnoreResult))
                     return false;
