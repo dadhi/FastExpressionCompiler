@@ -258,6 +258,7 @@ namespace FastExpressionCompiler.IssueTests
             a1 = new Arr { Elem = 9 };
             fs(a1);
             Asserts.AreEqual(-33, a1.Elem);
+            Asserts.Throws<NullReferenceException>(() => fs(null));
 
             var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
@@ -266,12 +267,13 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ldstr,      // "b"
                 OpCodes.Ldc_I4_2,
                 OpCodes.Ldc_I4_S,   // 33
-                OpCodes.Call,       // Arr.set_Item
+                OpCodes.Callvirt,   // Arr.set_Item checks the reference receiver for null
                 OpCodes.Ret
             );
             a1 = new Arr { Elem = 9 };
             ff(a1);
             Asserts.AreEqual(-33, a1.Elem);
+            Asserts.Throws<NullReferenceException>(() => ff(null));
         }
 
 
