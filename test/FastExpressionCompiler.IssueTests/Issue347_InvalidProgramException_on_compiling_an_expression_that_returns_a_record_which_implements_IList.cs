@@ -100,21 +100,20 @@ namespace FastExpressionCompiler.IssueTests
             Asserts.IsNotNull(f);
             f.PrintIL();
 
+            var y = f(m);
+            Asserts.AreEqual(43, y);
+
             var nested = f.EnumerateNestedLambdas().First();
             nested.AssertOpCodes(
                 OpCodes.Ldarg_0,
                 OpCodes.Ldfld,      // ArrayClosureWithNonPassedParams.NonPassedParams
                 OpCodes.Ldc_I4_0,
                 OpCodes.Ldelem_Ref,
-                OpCodes.Unbox_Any,  // NotifyModel
-                OpCodes.Stloc_0,
-                OpCodes.Ldloca_S,   // 0
+                OpCodes.Castclass, // StrongBox<NotifyModel>
+                OpCodes.Ldflda,    // StrongBox<NotifyModel>.Value: live shared storage
                 OpCodes.Call,       // NotifyModel.get_Number1
                 OpCodes.Ret
             );
-
-            var y = f(m);
-            Asserts.AreEqual(43, y);
         }
 
         public void Test_nullable_param_in_closure_of_the_nested_lambda()
