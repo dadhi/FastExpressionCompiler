@@ -9,7 +9,15 @@ public struct CustomReducibleNodeRegressionTests : ITestX
     {
         var expression = Expression.Lambda<Func<int>>(new Reducible(Expression.Constant(3)));
         var fast = expression.CompileFast(true);
-        if (t.IsNotNull(fast)) t.AreEqual(expression.Compile()(), fast());
+        if (t.IsNotNull(fast))
+        {
+#if NETFRAMEWORK
+            // Framework's System compiler rejects reducible custom node types before reduction.
+            t.AreEqual(3, fast());
+#else
+            t.AreEqual(expression.Compile()(), fast());
+#endif
+        }
     }
     public void Reduction_collects_captured_constants_and_chains(TestContext t)
     {
