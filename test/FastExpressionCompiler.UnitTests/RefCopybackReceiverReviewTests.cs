@@ -33,8 +33,15 @@ public struct RefCopybackReceiverReviewTests : ITestX
  public void Struct_constructor_results_as_owners(TestContext t)=>Owners(t,true);
  public void Reference_return_method_preserves_address(TestContext t) {
   var p=E.Parameter(typeof(Owner)); var result=E.Call(M(nameof(ReferenceResult)),E.Property(p,"Value"));
-  var tree=E.Lambda<RefLambda>(result,p); var system=tree.Compile(); var a=new Owner(); ref var expected=ref system(a); expected+=3; t.AreEqual(11,Static); t.AreEqual(4,a.Field);
+  var tree=E.Lambda<RefLambda>(result,p);
+#if NETFRAMEWORK
+  // Framework's DynamicMethod API cannot represent a by-reference return type for either compiler.
+  t.Throws<NotSupportedException>(()=>tree.Compile());
+  t.Throws<NotSupportedException>(()=>tree.FromSysExpression().CompileFast(true));
+#else
+  var system=tree.Compile(); var a=new Owner(); ref var expected=ref system(a); expected+=3; t.AreEqual(11,Static); t.AreEqual(4,a.Field);
   var fast=tree.FromSysExpression().CompileFast(true); if(!t.IsNotNull(fast)) return; var b=new Owner(); ref var actual=ref fast(b); actual+=3; t.AreEqual(11,Static); t.AreEqual(4,b.Field);
+#endif
  }
  public void Boxed_struct_reference_property_keeps_declared_object_storage(TestContext t) {
   var p=E.Parameter(typeof(Owner)); Check(t,E.Lambda<Func<Owner,int>>(E.Call(M(nameof(ReplaceBox)),E.Property(p,"Object")),p));
