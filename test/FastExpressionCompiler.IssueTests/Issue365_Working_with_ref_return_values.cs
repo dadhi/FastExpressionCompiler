@@ -46,7 +46,7 @@ public class Issue365_Working_with_ref_return_values : ITest
         var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
         ff.AssertOpCodes(
             OpCodes.Ldarg_1,
-            OpCodes.Call, // ParamValue& GetParamValueByRef()
+            OpCodes.Callvirt, // Reference receiver checks null; returns ParamValue&
             OpCodes.Stloc_0,
             OpCodes.Ldloc_0,
             OpCodes.Ldc_I4_8,
@@ -89,7 +89,7 @@ public class Issue365_Working_with_ref_return_values : ITest
         var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
         ff.AssertOpCodes(
             OpCodes.Ldarg_1,
-            OpCodes.Call, // ParamValue& GetParamValueByRef()
+            OpCodes.Callvirt, // Reference receiver checks null; returns ParamValue&
             OpCodes.Ldc_I4_7,
             OpCodes.Call, // Void set_Value(Int32)
             OpCodes.Ret
