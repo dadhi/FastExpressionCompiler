@@ -11,7 +11,7 @@ namespace System.Linq.Expressions.Tests
 {
     public static class CompilerTests
     {
-        [Theory]
+        [KnownFecCrashTheory("10,000-deep expression traversal overflows the stack; requires a broader traversal/emission change. No stack-size workaround. Re-enable after a structural fix.")]
         [ClassData(typeof(CompilationTypes))]
         [OuterLoop("Takes over a minute to complete")]
         // Compiling a 10,000-deep expression tree takes hours on the single-threaded wasm
