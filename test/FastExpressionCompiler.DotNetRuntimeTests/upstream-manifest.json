@@ -1,0 +1,1624 @@
+{
+  "repository": "https://github.com/dotnet/runtime",
+  "commit": "ec0059c08c077e839c6eb8827c846530a891d7e2",
+  "directory": "src/libraries/System.Linq.Expressions/tests",
+  "files": [
+    {
+      "path": "Array/ArrayAccessTests.cs",
+      "upstreamNormalizedSha256": "648ccade782c1ab06aa18fcae102864037264a7ada198c43eb03744eea52ce4b",
+      "portedNormalizedSha256": "f615691bb7864c9e3c5707eacc96b90d769d4d3b271279d720edc2657b9b843b",
+      "compileCalls": 6,
+      "adapted": true
+    },
+    {
+      "path": "Array/ArrayArrayIndexTests.cs",
+      "upstreamNormalizedSha256": "5766dfbb1d85362fef1565658bedf1ff7abf3e6d8f475d6bf63446ef92010374",
+      "portedNormalizedSha256": "198c1d53ad5eb10bb7aa8c31e66a769151355e2a7c877c0a9df81549cb5d7db5",
+      "compileCalls": 35,
+      "adapted": true
+    },
+    {
+      "path": "Array/ArrayArrayLengthTests.cs",
+      "upstreamNormalizedSha256": "151a01270dfd00b94ef7e700e8c2d1f2e51d6343f7c7095d7cfeb8ea88637777",
+      "portedNormalizedSha256": "8c3c1a8eaef81ec61711c9d82f340deb82b125c16754b56363bf1ad213e293c0",
+      "compileCalls": 35,
+      "adapted": true
+    },
+    {
+      "path": "Array/ArrayBoundsOneOffTests.cs",
+      "upstreamNormalizedSha256": "d9ce4c7360975670ca63f33aa1949e10d98998c98b4fa7338485aa26930db71a",
+      "portedNormalizedSha256": "a2d9957ca72104f1d8be6bea1aa90367dfee5107e86cc3af101df3ef3a2c238d",
+      "compileCalls": 4,
+      "adapted": true
+    },
+    {
+      "path": "Array/ArrayIndexTests.cs",
+      "upstreamNormalizedSha256": "a260084e7af1da4916615453e96940877d38285f13214429f82b9d4fec0ea4eb",
+      "portedNormalizedSha256": "f633570deed04a4d7db58b41a29c820240fb38314391c64b7082e18325a9e5ec",
+      "compileCalls": 38,
+      "adapted": true
+    },
+    {
+      "path": "Array/ArrayLengthTests.cs",
+      "upstreamNormalizedSha256": "5ad2de145368f4338550062ec9e20f0269b8523323bc347110f78512d2169d2e",
+      "portedNormalizedSha256": "dbaf07f7385d4907a5b407a5d19e75a9a57159a5c04b0a44a693b01895430165",
+      "compileCalls": 37,
+      "adapted": true
+    },
+    {
+      "path": "Array/NewArrayBoundsTests.cs",
+      "upstreamNormalizedSha256": "3ec313e39af561af2d7b0c07fd86a2f8603657deb8272a0a0a4ad16130a1ddfb",
+      "portedNormalizedSha256": "1f4f200a2915597eb6e9a6dd4d338cd1a8d653c99984b8582b38202c17d83eb1",
+      "compileCalls": 3,
+      "adapted": true
+    },
+    {
+      "path": "Array/NewArrayListTests.cs",
+      "upstreamNormalizedSha256": "354039ca362e348fc09079beb5b0d0dcdd09d76d3a39b44f0710b0bfc9becedb",
+      "portedNormalizedSha256": "a5d7c2f477478fcabe48e64534adc0f1ee5e3763029fb2b0d7f869d0acdd1d49",
+      "compileCalls": 38,
+      "adapted": true
+    },
+    {
+      "path": "Array/NullableArrayIndexTests.cs",
+      "upstreamNormalizedSha256": "0168df984355814120c11d622e111a1548f82a082e2b653fdc561e554ffe1924",
+      "portedNormalizedSha256": "ff323523697dec97b8a62e5d107c25302c819ff503580b8d447be6c52c588748",
+      "compileCalls": 21,
+      "adapted": true
+    },
+    {
+      "path": "Array/NullableArrayLengthTests.cs",
+      "upstreamNormalizedSha256": "bf8729008f7f692d67bd6781cb98363b3dc3947894152ad4b4307557a58204fd",
+      "portedNormalizedSha256": "2fe5e5cb7b0a8c6771fbd5494120a73b25e3d0dd62b2011969c56b60cb276fa2",
+      "compileCalls": 21,
+      "adapted": true
+    },
+    {
+      "path": "Array/NullableNewArrayListTests.cs",
+      "upstreamNormalizedSha256": "8eb9da530af9f6f3581760ef2725ae26411d0a17f013c80016f67f638a7814eb",
+      "portedNormalizedSha256": "20c2f95d48d9b386d6c4a46f39a7a1e60bd3b9ac0f01684a7cb50eac0502628c",
+      "compileCalls": 21,
+      "adapted": true
+    },
+    {
+      "path": "AssemblyInfo.cs",
+      "upstreamNormalizedSha256": "53b0e82e3d0c27b30af4b247ed6a3ea44c993694f364d116f8809d0d2e36cfc5",
+      "portedNormalizedSha256": "d75c1598b1fc9292f754e5c3737645ac86257452180d7c49e4ea31b1718b1af7",
+      "compileCalls": 0,
+      "adapted": true
+    },
+    {
+      "path": "BinaryOperators/Arithmetic/BinaryAddTests.cs",
+      "upstreamNormalizedSha256": "2748db11badaffccec77186e750855a69837b34fc4959dd5fd6313d08e355123",
+      "portedNormalizedSha256": "879448c5bdbf29015c0ceb2edfbedf3b24eadec82984c4474a087c11165af625",
+      "compileCalls": 15,
+      "adapted": true
+    },
+    {
+      "path": "BinaryOperators/Arithmetic/BinaryDivideTests.cs",
+      "upstreamNormalizedSha256": "9ae086fa08f6adc89cb3aedf7b577cc6c4701c8f98f6122d222db65d8ad044c3",
+      "portedNormalizedSha256": "8a33f53ac691cde02c964767b53a94e40d0b1111c1f14474b01e4ce2348c4e7b",
+      "compileCalls": 9,
+      "adapted": true
+    },
+    {
+      "path": "BinaryOperators/Arithmetic/BinaryModuloTests.cs",
+      "upstreamNormalizedSha256": "5bfb7a9330f7c63e93a65a5b5459b5dbb5a5f2ceab9b71eefcd220e389b9f93f",
+      "portedNormalizedSha256": "7bbc8eb53a707f6386d0723a5d18be8bb0c76967d2ebbcbfa2b0f7b78f9d4167",
+      "compileCalls": 9,
+      "adapted": true
+    },
+    {
+      "path": "BinaryOperators/Arithmetic/BinaryMultiplyTests.cs",
+      "upstreamNormalizedSha256": "3f48473f4c6f15794f9c17714e6e3e22fcd7fb48d311f9b7af1ef64adef9caa1",
+      "portedNormalizedSha256": "d6e55ec7fc59942b250917fa89c406ad399aa8f532dd2a6dcda11e434892cb0f",
+      "compileCalls": 19,
+      "adapted": true
+    },
+    {
+      "path": "BinaryOperators/Arithmetic/BinaryNullableAddTests.cs",
+      "upstreamNormalizedSha256": "35e78c5a4b9b89c2068b8217a1b9847e165cb7b2f9abe977d172d2793c2c3e54",
+      "portedNormalizedSha256": "312b86c95f4cbfa64cccfed041cb6013f8028035d1616f46670a44db18901922",
+      "compileCalls": 18,
+      "adapted": true
+    },
+    {
+      "path": "BinaryOperators/Arithmetic/BinaryNullableDivideTests.cs",
+      "upstreamNormalizedSha256": "211026c8c790479209e4905ec16f42d66e179ccd3d4a81354f7f8027d5436ded",
+      "portedNormalizedSha256": "31b3eb3671cee5eaf886e3b36a6246bbb63a64f6d0f44c60db14c0a0a61175cf",
+      "compileCalls": 9,
+      "adapted": true
+    },
+    {
+      "path": "BinaryOperators/Arithmetic/BinaryNullableModuloTests.cs",
+      "upstreamNormalizedSha256": "1b89e679cd419e0e68666035199e1803e2680439fe3365766eb7b16fc2806f8b",
+      "portedNormalizedSha256": "8b01390c07d6e6971fc437a7ae84cac6f481f16118072cca56c62b80fa8428f4",
+      "compileCalls": 9,
+      "adapted": true
+    },
+    {
+      "path": "BinaryOperators/Arithmetic/BinaryNullableMultiplyTests.cs",
+      "upstreamNormalizedSha256": "28725505b3005f079e6b36afb47cf275528dbddd214a203da35d74319bca004c",
+      "portedNormalizedSha256": "6ecb711ba704f2bc92a2f933fb09e452e75c4a16c8bd396730185b3e730fdf16",
+      "compileCalls": 18,
+      "adapted": true
+    },
+    {
+      "path": "BinaryOperators/Arithmetic/BinaryNullablePowerTests.cs",
+      "upstreamNormalizedSha256": "b12acb73b549edb02304f6ee1a82df2411bbbe00da8ea7a45c9499a27e4bb33d",
+      "portedNormalizedSha256": "9e69c36516ba6c1118a6238d6b7882bdac72e977cdc56ce39c53c82dbab56183",
+      "compileCalls": 12,
+      "adapted": true
+    },
+    {
+      "path": "BinaryOperators/Arithmetic/BinaryNullableSubtractTests.cs",
+      "upstreamNormalizedSha256": "75ec44c219485f0c8c8890652cf185e372cdb1ce3da2814f826ef4779b484501",
+      "portedNormalizedSha256": "780781e92ba7b72f1deba0abe87c2464247c4c19593a7c7096297ccebc636182",
+      "compileCalls": 18,
+      "adapted": true
+    },
+    {
+      "path": "BinaryOperators/Arithmetic/BinaryPowerTests.cs",
+      "upstreamNormalizedSha256": "f6dde6c5db3727b14f29a9bcb44d48db03701e1a3380c9194919301c2ddba127",
+      "portedNormalizedSha256": "2a9a46cba15c648f439cc9b51e6e35fe47b7e49afb07467cd8818f2d04737ac5",
+      "compileCalls": 12,
+      "adapted": true
+    },
+    {
+      "path": "BinaryOperators/Arithmetic/BinaryShiftTests.cs",
+      "upstreamNormalizedSha256": "9e1f9d5676c993f21048175847ecbc1a7f515bf5bfc1f0d861e423e5e1f4555e",
+      "portedNormalizedSha256": "cd29c3a55d93cee169d1ba4bc82d23ea4c01343cc7ded358201e1e6f6c330664",
+      "compileCalls": 34,
+      "adapted": true
+    },
+    {
+      "path": "BinaryOperators/Arithmetic/BinarySubtractTests.cs",
+      "upstreamNormalizedSha256": "6cb4379c09f5bb21c2c0345c6f09994bb3a5e8c80059369c8e79ac353681a1fc",
+      "portedNormalizedSha256": "79bef17c351b4c6df16ec9b35f985af39814230e04d4272362559605d4cfb51e",
+      "compileCalls": 17,
+      "adapted": true
+    },
+    {
+      "path": "BinaryOperators/Assignment/Assign.cs",
+      "upstreamNormalizedSha256": "a01a7171c76f409d03b336a4148862e8e13831d0b0ab89cb72a34f87514042ec",
+      "portedNormalizedSha256": "57036e7b61123e3c98601c35e6b70e4405f0d2b2b80826ecc6a43fd403d7b114",
+      "compileCalls": 7,
+      "adapted": true
+    },
+    {
+      "path": "BinaryOperators/Assignment/OpAssign.cs",
+      "upstreamNormalizedSha256": "1c068674bc504be738e543b07868078b912acbe0d2924790e158705a2d614812",
+      "portedNormalizedSha256": "18f48e8ccd3438f863f7b460f6c5ebc7221df751489e7c507a1588e0c81e391f",
+      "compileCalls": 15,
+      "adapted": true
+    },
+    {
+      "path": "BinaryOperators/Bitwise/BinaryAndTests.cs",
+      "upstreamNormalizedSha256": "50bc2c1e0ecc401365d42653dbf1aaf917a2c85ddb7c13d083cceb5e81709cc8",
+      "portedNormalizedSha256": "1573cf4f2586188ba78adf6c61df58da58d7d5575868489fcf348712e4ff90a2",
+      "compileCalls": 8,
+      "adapted": true
+    },
+    {
+      "path": "BinaryOperators/Bitwise/BinaryExclusiveOrTests.cs",
+      "upstreamNormalizedSha256": "ce53edc3c3fd2a06e640dc738218f468a51cd9ad3fd222d02bc11acd4c261706",
+      "portedNormalizedSha256": "cbee516d8a24cdcd25870d8dac9748491ea5bee3f67cdf99e8ab2a54207ad186",
+      "compileCalls": 8,
+      "adapted": true
+    },
+    {
+      "path": "BinaryOperators/Bitwise/BinaryNullableAndTests.cs",
+      "upstreamNormalizedSha256": "db09a83ceb775884f4fabb5fb2b1e4f3baf58bb330623f4c8df19df5169855bd",
+      "portedNormalizedSha256": "332ef85dec28ff6f9e0b417fa842232caaf2dd677a473f2cd09cf4cca36837bb",
+      "compileCalls": 8,
+      "adapted": true
+    },
+    {
+      "path": "BinaryOperators/Bitwise/BinaryNullableExclusiveOrTests.cs",
+      "upstreamNormalizedSha256": "f5a7e15cc5f99d79d7187728f4b0b10a8ca2f169cd48f91672aee213ac499cd6",
+      "portedNormalizedSha256": "a0956ddeb485c25a46bd44ec09e8d7300a8241b9ec75f8a05b57b220f32cf4bb",
+      "compileCalls": 8,
+      "adapted": true
+    },
+    {
+      "path": "BinaryOperators/Bitwise/BinaryNullableOrTests.cs",
+      "upstreamNormalizedSha256": "b9bddea37e27d743d7d6dc34f10e30bf1820d841239e572bb3f150c30360cce0",
+      "portedNormalizedSha256": "8fabbb380042b12b7b4dbad02468374da3d980e04a826043934c668218d7b982",
+      "compileCalls": 8,
+      "adapted": true
+    },
+    {
+      "path": "BinaryOperators/Bitwise/BinaryOrTests.cs",
+      "upstreamNormalizedSha256": "bcea5d1eb0ca8fef74ede72de22809e418f2483ddd245b4a2ee6fd80905fe769",
+      "portedNormalizedSha256": "d464587723d31e90c53100efa3246aaad144e8636a67075c4d089f554e3a2682",
+      "compileCalls": 8,
+      "adapted": true
+    },
+    {
+      "path": "BinaryOperators/Coalesce/BinaryCoalesceTests.cs",
+      "upstreamNormalizedSha256": "b3136770dd5c524932e38d0ba44bca3692799cf313bbdc21307d445f3f7fc2e4",
+      "portedNormalizedSha256": "fe63ec4e1e1d2383d057d7f98e4f3c067a707d274ae6594ff8210a8b655a34a8",
+      "compileCalls": 15,
+      "adapted": true
+    },
+    {
+      "path": "BinaryOperators/Comparison/CompareTests.cs",
+      "upstreamNormalizedSha256": "26e6d61130d58a8dfbf97adba822bdb881a7dc601733cdd4287a30e09f5a287f",
+      "portedNormalizedSha256": "26e6d61130d58a8dfbf97adba822bdb881a7dc601733cdd4287a30e09f5a287f",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "BinaryOperators/Comparison/EqualNotEqualTests.cs",
+      "upstreamNormalizedSha256": "98da301423cc488716bb4e09c340d62649e20960f33f9aa01348ad35d99be181",
+      "portedNormalizedSha256": "e8e67a162d60fc7db84ecce9f1401e528e3d7fbefe35909b50dffb3b1bd194fd",
+      "compileCalls": 6,
+      "adapted": true
+    },
+    {
+      "path": "BinaryOperators/GeneralBinaryTests.cs",
+      "upstreamNormalizedSha256": "1b8cb111217eb68c8c69ddb8a48ff55a6daaa2ebb9040e18a74e73778f51e339",
+      "portedNormalizedSha256": "a08c4da15f5f3752f92f24ddc4676f5034102c9e2455b6c887c1c6b360d8080f",
+      "compileCalls": 4,
+      "adapted": true
+    },
+    {
+      "path": "BinaryOperators/Logical/BinaryLogicalTests.cs",
+      "upstreamNormalizedSha256": "bc1e2d78a6908c332a0eafbecd71a1d2010e7678553d8758567366dc899913c1",
+      "portedNormalizedSha256": "d6b71ae28c510a3d2bb3500506e4111c4bd8ed1faff54cb25171dd2ac55de1d3",
+      "compileCalls": 12,
+      "adapted": true
+    },
+    {
+      "path": "BinaryOperators/Logical/BinaryNullableLogicalTests.cs",
+      "upstreamNormalizedSha256": "f9eeda91a553756ad69bcd9e16520ebb3bc01883753dc60da7fcde3dcc303d1a",
+      "portedNormalizedSha256": "f578e3bf451ca3fda94d2baf55672e6f20fa3555d6e4571bf61faa8cfde7e480",
+      "compileCalls": 4,
+      "adapted": true
+    },
+    {
+      "path": "BinaryOperators/ReferenceComparison/ReferenceEqual.cs",
+      "upstreamNormalizedSha256": "dde44dbbad4f89c0a532eb974ed6108e558bec640006b588618c9cca95daf05f",
+      "portedNormalizedSha256": "12f14d87eeb7d47f9f929e47ba1b3f1b0306f2687521e92c8e0a2ea5e5cfde65",
+      "compileCalls": 10,
+      "adapted": true
+    },
+    {
+      "path": "BinaryOperators/ReferenceComparison/ReferenceEqualityTests.cs",
+      "upstreamNormalizedSha256": "d88e61fb78a48ae46dfea5e5598e7dd873458e1d961afc1347b264a3fc1b76c4",
+      "portedNormalizedSha256": "d88e61fb78a48ae46dfea5e5598e7dd873458e1d961afc1347b264a3fc1b76c4",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "BinaryOperators/ReferenceComparison/ReferenceNotEqual.cs",
+      "upstreamNormalizedSha256": "bfc76f3a47ef86a52b9210b944bfa53399b387289474b3ea049b2ee8662e7a1d",
+      "portedNormalizedSha256": "276b9f2413b1e27cf499eff1a40405beace4d3ae5d76b3c2998ee81bbe36aaa2",
+      "compileCalls": 10,
+      "adapted": true
+    },
+    {
+      "path": "Block/BlockFactoryTests.cs",
+      "upstreamNormalizedSha256": "24262aaea66034c5a28b9ff49f83df10ef38cc7b3b47a63bc7f827675e464dd1",
+      "portedNormalizedSha256": "24262aaea66034c5a28b9ff49f83df10ef38cc7b3b47a63bc7f827675e464dd1",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "Block/BlockTests.cs",
+      "upstreamNormalizedSha256": "b3b6f93c3675a477e8409f9f8058647f0c0eb451a91f0fa9d2fdae357281dd67",
+      "portedNormalizedSha256": "c0bf820a6bb4c7c4b6141bc23d9a94dbf915af52ab0340c08a4b868d9fb63205",
+      "compileCalls": 9,
+      "adapted": true
+    },
+    {
+      "path": "Block/NoParameterBlockTests.cs",
+      "upstreamNormalizedSha256": "cfcd0cc05838a8c1143e98cefa2da32df2b90bcec7d9665826f92fa7a4614e94",
+      "portedNormalizedSha256": "6306e4aaa4c96bb7d0061d962e0ed4256495714025e9810a5a22946ee5307d7f",
+      "compileCalls": 7,
+      "adapted": true
+    },
+    {
+      "path": "Block/ParameterBlockTests.cs",
+      "upstreamNormalizedSha256": "0a2e60efc74d6ccaf3812cd543e9aecbe34846ab25b5156e5ac73c89218853ab",
+      "portedNormalizedSha256": "e0dd8d49fffbc623a3703a2b36609de73ed2d5a009fe2a666edc198665c663dd",
+      "compileCalls": 5,
+      "adapted": true
+    },
+    {
+      "path": "Block/SharedBlockTests.cs",
+      "upstreamNormalizedSha256": "61371a4a823052b1907e529b96b4b6020d4516f0193fd0b05f9e165f81b045dd",
+      "portedNormalizedSha256": "61371a4a823052b1907e529b96b4b6020d4516f0193fd0b05f9e165f81b045dd",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "Call/CallFactoryTests.cs",
+      "upstreamNormalizedSha256": "ffca38f7fb657c70101fb4d2d87ebf1ef32a5a5b673193af3b2d9a993bb37b63",
+      "portedNormalizedSha256": "fb5aa7315ca3f2bce32ce21ad10f94b6eb95644cc727568edc7eb746ecf18ba0",
+      "compileCalls": 0,
+      "adapted": true
+    },
+    {
+      "path": "Call/CallTests.cs",
+      "upstreamNormalizedSha256": "cbfa77262346761f27ea4d6fc339584adc54d7702c6129170aa1416f275a3512",
+      "portedNormalizedSha256": "1a9004fc4d425c79988e95be8f4ed99fa6a0d84729d727d09a1bc232df6d0b93",
+      "compileCalls": 22,
+      "adapted": true
+    },
+    {
+      "path": "Cast/AsNullable.cs",
+      "upstreamNormalizedSha256": "d384cc15212eca78dd9a5d7134f1d87f807d2978949c21de7f8ff2a40479ab59",
+      "portedNormalizedSha256": "79f8b44d9e7df4dd76ace1b18934329b2bd1398f213d85bc327e329544971cb1",
+      "compileCalls": 13,
+      "adapted": true
+    },
+    {
+      "path": "Cast/AsTests.cs",
+      "upstreamNormalizedSha256": "00630fbcf768ed8b51bb890c67cc914e53ac2f2336d9e1df44bff5ff1d82ad08",
+      "portedNormalizedSha256": "af922ea79c11cc728a8024ec5fc2a04768a3f729a4a444ba5741b10c0d4d2532",
+      "compileCalls": 80,
+      "adapted": true
+    },
+    {
+      "path": "Cast/CastNullableTests.cs",
+      "upstreamNormalizedSha256": "8c3bebe1ed970a023d5c3bb317b518e9f7b97a2e900b159c5af0a8761c6be009",
+      "portedNormalizedSha256": "76322aca70e73bf95b44292b1c6aa42839ae41a7aa83685564901c2e4cbc19df",
+      "compileCalls": 9,
+      "adapted": true
+    },
+    {
+      "path": "Cast/CastTests.cs",
+      "upstreamNormalizedSha256": "2806d72cdad0e7182fdc66c168986e0c579f10cbed3ce7dcc34bde4e8ea72594",
+      "portedNormalizedSha256": "a86534e75f416f16decf0f536b4fbae59a4cbdfb3e91c13abdc037d5af907a02",
+      "compileCalls": 106,
+      "adapted": true
+    },
+    {
+      "path": "Cast/IsNullableTests.cs",
+      "upstreamNormalizedSha256": "56e118b7bc9b52cb7fe6a820a8abdd67a4c6b1b436e66fe3efca94de56e83751",
+      "portedNormalizedSha256": "30f8955118084d1591393a62faf14be3456322ec125eb92b1fc2376f597cc147",
+      "compileCalls": 9,
+      "adapted": true
+    },
+    {
+      "path": "Cast/IsTests.cs",
+      "upstreamNormalizedSha256": "955d5a1820447b0555b07d5551913b76604e1f1e1f882cbd8c26f8b172163c8d",
+      "portedNormalizedSha256": "36967d80983e15a79864d8a342cddf65c6fa0f78ad300101b0213dccd03a7ee7",
+      "compileCalls": 90,
+      "adapted": true
+    },
+    {
+      "path": "CompilerTests.cs",
+      "upstreamNormalizedSha256": "24e581f80bbfeec944141bc05ecf6327dce0cb6df160c991d9d42279257713d2",
+      "portedNormalizedSha256": "63651fc5769bc3775ca1651259105da56e5d8dbe2400b2399e2761f2b25534a9",
+      "compileCalls": 8,
+      "adapted": true
+    },
+    {
+      "path": "Conditional/ConditionalTests.cs",
+      "upstreamNormalizedSha256": "405a27658cfdc5771f2fae750c9511b1c2b671488f01f9e8e406739af397e22d",
+      "portedNormalizedSha256": "3d69e2500616e16ac4893353db9d9194578b80921d408481167f3fb8968b63ab",
+      "compileCalls": 11,
+      "adapted": true
+    },
+    {
+      "path": "Constant/ConstantArrayTests.cs",
+      "upstreamNormalizedSha256": "101488a8d0c7d77b6d5062b31c51262e0ec8e8e80bcb8188c4fde4a3f813e97b",
+      "portedNormalizedSha256": "d24b43f3be8516de77df49705999ca240b0d3ea662e126e2b7eadf943339d439",
+      "compileCalls": 35,
+      "adapted": true
+    },
+    {
+      "path": "Constant/ConstantNullableTests.cs",
+      "upstreamNormalizedSha256": "e441b089475154bef2be6fcfa61071fc0ed4fb67c0fb4842826c6a30db601184",
+      "portedNormalizedSha256": "3d7924c4afa6f1b4a45011ef02391de7a67ab25cee5329043e9b16f736ae300b",
+      "compileCalls": 21,
+      "adapted": true
+    },
+    {
+      "path": "Constant/ConstantTests.cs",
+      "upstreamNormalizedSha256": "925deca866e7c4fca9e0ee4648b4097b7798d71ee417555e1a1ee8b23c8fc790",
+      "portedNormalizedSha256": "accd3e1f3378de7f4b6b29b58c1bcfd6cebb1a0c123035e32ca84b99c6cdc6f7",
+      "compileCalls": 43,
+      "adapted": true
+    },
+    {
+      "path": "Convert/ConvertCheckedTests.cs",
+      "upstreamNormalizedSha256": "bde1c9cbdc851f826bf711164f75398a46e94e9ec5f0d74e227e3a0e7d1f2418",
+      "portedNormalizedSha256": "6300c70589debbbfd1deca2c27c66ab7bc75af33ec290d0361049751dba4d8ad",
+      "compileCalls": 778,
+      "adapted": true
+    },
+    {
+      "path": "Convert/ConvertTests.cs",
+      "upstreamNormalizedSha256": "e741e607a3513d580f37e93b2a484490a2f0ead8dd17c8be8bb1a9e16f248516",
+      "portedNormalizedSha256": "4d2f0609a61f4fd216610dd090244150b2e1b84762b527a2f064ab0f614996c1",
+      "compileCalls": 800,
+      "adapted": true
+    },
+    {
+      "path": "DebuggerTypeProxy/ExpressionDebuggerTypeProxyTests.cs",
+      "upstreamNormalizedSha256": "6b24e3af5f6b1ad0ce524d6af8d232e6f82785461a11043cbd6f0fb2d01e284d",
+      "portedNormalizedSha256": "6b24e3af5f6b1ad0ce524d6af8d232e6f82785461a11043cbd6f0fb2d01e284d",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "DebugInfo/DebugInfoExpressionTests.cs",
+      "upstreamNormalizedSha256": "853f924d19e0fd5aaafb0ff62b2a9fffd3113e603676ca421980b6407671aa0c",
+      "portedNormalizedSha256": "853f924d19e0fd5aaafb0ff62b2a9fffd3113e603676ca421980b6407671aa0c",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "DebugInfo/SymbolDocumentInfoTests.cs",
+      "upstreamNormalizedSha256": "89dab34a6e11207d4887bdb097ea85f8625b46630dff03725ca3200462ba6709",
+      "portedNormalizedSha256": "89dab34a6e11207d4887bdb097ea85f8625b46630dff03725ca3200462ba6709",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "DebugViewTests.cs",
+      "upstreamNormalizedSha256": "d6bb311869f29bde88c648d54c1ae2d86d8d64b72b7d8d7abee3662c0cc3429c",
+      "portedNormalizedSha256": "d6bb311869f29bde88c648d54c1ae2d86d8d64b72b7d8d7abee3662c0cc3429c",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "Default/DefaultTests.cs",
+      "upstreamNormalizedSha256": "99b9266215737f3bd7a8176c986709a94317ee12a2e208b17f7a3ce7a6bb0d7f",
+      "portedNormalizedSha256": "11d9b24aa65bc42b59e34774b232548194fd7e51bb07b1007f80259ecf74dc93",
+      "compileCalls": 8,
+      "adapted": true
+    },
+    {
+      "path": "DelegateType/ActionTypeTests.cs",
+      "upstreamNormalizedSha256": "3773b46dd766a385c16d1bba537b13d68438245a4c881e307dc3acdb76ed4da7",
+      "portedNormalizedSha256": "3773b46dd766a385c16d1bba537b13d68438245a4c881e307dc3acdb76ed4da7",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "DelegateType/DelegateCreationTests.cs",
+      "upstreamNormalizedSha256": "b433e0fe72171a7c5b9eb1c6f2a0f2f6c2ba3e07e15deda904981e01496c90d6",
+      "portedNormalizedSha256": "b433e0fe72171a7c5b9eb1c6f2a0f2f6c2ba3e07e15deda904981e01496c90d6",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "DelegateType/FuncTypeTests.cs",
+      "upstreamNormalizedSha256": "1be357086ba6d8eb5a0995ff4e572520e3b3f2a357dbfff6fc6bcc890aff3db9",
+      "portedNormalizedSha256": "1be357086ba6d8eb5a0995ff4e572520e3b3f2a357dbfff6fc6bcc890aff3db9",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "DelegateType/GetDelegateTypeTests.cs",
+      "upstreamNormalizedSha256": "47659dde190b058d65fdd84c740db8dcfc710ae94f49a774ffee8598131334e4",
+      "portedNormalizedSha256": "47659dde190b058d65fdd84c740db8dcfc710ae94f49a774ffee8598131334e4",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "Dynamic/BinaryOperationTests.cs",
+      "upstreamNormalizedSha256": "3aaaa55264feb905c9eaf11afa87c9e084bca93e23c7d535d0addf0594bc9b25",
+      "portedNormalizedSha256": "289cbc82a696bb12a3c4cf333b4bb699b22bd55e08e2303da5220efdf93cecf1",
+      "compileCalls": 1,
+      "adapted": true
+    },
+    {
+      "path": "Dynamic/BindingRestrictionsProxyTests.cs",
+      "upstreamNormalizedSha256": "082d76f82e977339eadfd1ba53af1db7f455e6f8c9a101a8d16812b03b0dbc63",
+      "portedNormalizedSha256": "082d76f82e977339eadfd1ba53af1db7f455e6f8c9a101a8d16812b03b0dbc63",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "Dynamic/BindingRestrictionsTests.cs",
+      "upstreamNormalizedSha256": "f07eef3122aef0bba36473d7931785f375117b036ea6d1e5c7e58e63850efa08",
+      "portedNormalizedSha256": "c5bf5979ff5d543db63b88457b3712b76e0141b30d7c7d36d87be7dfb9c779a4",
+      "compileCalls": 11,
+      "adapted": true
+    },
+    {
+      "path": "Dynamic/CallInfoTests.cs",
+      "upstreamNormalizedSha256": "1819105217fe73e37e91e36f514ce09bc7c43eda34519005b794b010e4f5ce87",
+      "portedNormalizedSha256": "1819105217fe73e37e91e36f514ce09bc7c43eda34519005b794b010e4f5ce87",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "Dynamic/CallSiteBinderDefaultBehaviourTests.cs",
+      "upstreamNormalizedSha256": "8113a1b916ca3e8120b70df5541f3a39e9d1b73038e1ec66f4ac414ffe4c8ef9",
+      "portedNormalizedSha256": "8113a1b916ca3e8120b70df5541f3a39e9d1b73038e1ec66f4ac414ffe4c8ef9",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "Dynamic/CallSiteCachingTests.cs",
+      "upstreamNormalizedSha256": "5180e6c63549bed26ef335e6f1ad3c70b29ca1f964bd3d2a663bec102ca4f378",
+      "portedNormalizedSha256": "b45e6cf164800b8ba3b0bbc172935faddff0f94fb840285aeb971dac88c2e582",
+      "compileCalls": 0,
+      "adapted": true
+    },
+    {
+      "path": "Dynamic/CallSiteTests.cs",
+      "upstreamNormalizedSha256": "0b7cbcf741be96c64155f4fdd608bdc95040c42e165afa83da61a73c8e4a3376",
+      "portedNormalizedSha256": "0b7cbcf741be96c64155f4fdd608bdc95040c42e165afa83da61a73c8e4a3376",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "Dynamic/ConvertBinderTests.cs",
+      "upstreamNormalizedSha256": "1aafedd8d5fc73327f56322430cdd7d8d561d3fe14d45f7b81e3844a8b0632ff",
+      "portedNormalizedSha256": "1aafedd8d5fc73327f56322430cdd7d8d561d3fe14d45f7b81e3844a8b0632ff",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "Dynamic/DynamicAttributeTests.cs",
+      "upstreamNormalizedSha256": "47d75b0102ee8a8da048183a66e88373165e218029d9457bac0b01b52e18cede",
+      "portedNormalizedSha256": "47d75b0102ee8a8da048183a66e88373165e218029d9457bac0b01b52e18cede",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "Dynamic/DynamicObjectDefaultBehaviorTests.cs",
+      "upstreamNormalizedSha256": "3b78b041365c6042bbf08753a2b4ae47350d393d4b9bc4519682b36d12ab6f4b",
+      "portedNormalizedSha256": "3b78b041365c6042bbf08753a2b4ae47350d393d4b9bc4519682b36d12ab6f4b",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "Dynamic/DynamicObjectTests.cs",
+      "upstreamNormalizedSha256": "9c77663c2e05f1912def9d7423920cc8cf3707cc8e3ec401eafb78f20b63b082",
+      "portedNormalizedSha256": "9c77663c2e05f1912def9d7423920cc8cf3707cc8e3ec401eafb78f20b63b082",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "Dynamic/ExpandoObjectProxyTests.cs",
+      "upstreamNormalizedSha256": "19ab8b3e4529891b6abcb2a6d73b5d200a7d3de399776c95bcd0a25a82a72ed6",
+      "portedNormalizedSha256": "19ab8b3e4529891b6abcb2a6d73b5d200a7d3de399776c95bcd0a25a82a72ed6",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "Dynamic/ExpandoObjectTests.cs",
+      "upstreamNormalizedSha256": "a3cec448b510b57a049d3add79183f9d8e90e3ba5dc3c3e88258136f9028196d",
+      "portedNormalizedSha256": "a3cec448b510b57a049d3add79183f9d8e90e3ba5dc3c3e88258136f9028196d",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "Dynamic/GetIndexBinderTests.cs",
+      "upstreamNormalizedSha256": "4c0003b408d342c1342bf6806eac419f3542a03a4dffd9e7b2c4e1676628c49c",
+      "portedNormalizedSha256": "4c0003b408d342c1342bf6806eac419f3542a03a4dffd9e7b2c4e1676628c49c",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "Dynamic/GetMemberBinderTests.cs",
+      "upstreamNormalizedSha256": "0a1b05c08e0ef7eeff0be0bc3a32a7b161d22ec9b53d2c46b12c7fe74e62bbc5",
+      "portedNormalizedSha256": "0a1b05c08e0ef7eeff0be0bc3a32a7b161d22ec9b53d2c46b12c7fe74e62bbc5",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "Dynamic/InvokeBinderTests.cs",
+      "upstreamNormalizedSha256": "a931401109b9133c94c28008974acf2d45a95ea215b8ed97d46becb38e15b944",
+      "portedNormalizedSha256": "a931401109b9133c94c28008974acf2d45a95ea215b8ed97d46becb38e15b944",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "Dynamic/InvokeMemberBindingTests.cs",
+      "upstreamNormalizedSha256": "58ea8e2162f827395fe4d34cf0b76daadb7d6baf38b2255c3bf6f1067961894e",
+      "portedNormalizedSha256": "58ea8e2162f827395fe4d34cf0b76daadb7d6baf38b2255c3bf6f1067961894e",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "Dynamic/SetIndexBinderTests.cs",
+      "upstreamNormalizedSha256": "a9ffb8f9f28be7a52412583b282925c4cc129152135f733f1015a63aed00023a",
+      "portedNormalizedSha256": "a9ffb8f9f28be7a52412583b282925c4cc129152135f733f1015a63aed00023a",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "Dynamic/SetMemberBinderTests.cs",
+      "upstreamNormalizedSha256": "a622573d171634c01d4c52baefff7ee2803a5c056ec1c450744173694b62d2d7",
+      "portedNormalizedSha256": "a622573d171634c01d4c52baefff7ee2803a5c056ec1c450744173694b62d2d7",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "Dynamic/UnaryOperationTests.cs",
+      "upstreamNormalizedSha256": "d66cd2eeb57c0b5abdedaab1af27e7839db1148469185f98f6f5a8a1a64c5220",
+      "portedNormalizedSha256": "d66cd2eeb57c0b5abdedaab1af27e7839db1148469185f98f6f5a8a1a64c5220",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "DynamicExpression/DynamicExpressionTests.cs",
+      "upstreamNormalizedSha256": "6c3b6dfcc284a9908f8d4c4472416084859568c40ff5c96a00354babf7e68721",
+      "portedNormalizedSha256": "27fd236aece933703dda95f20850d4335cd50a64b7d11c24cd683693c0c4bcb4",
+      "compileCalls": 0,
+      "adapted": true
+    },
+    {
+      "path": "ExceptionHandling/ExceptionHandlingExpressions.cs",
+      "upstreamNormalizedSha256": "81925d29e1c551f71f1cf18a2d4bfaeca84e931cf6da9d72d5aa8576c06545c2",
+      "portedNormalizedSha256": "403bc17514f11555f5a549e56d99c87750fa0db29b1e1c3205902e0f18d49266",
+      "compileCalls": 64,
+      "adapted": true
+    },
+    {
+      "path": "ExpressionTests.cs",
+      "upstreamNormalizedSha256": "66da62f7d90aaf37d037c6e9151434694e246427323bec87b7486baca614ec11",
+      "portedNormalizedSha256": "7f56bd2a98523ad8c7883825549ebb1aae77a4a4a792cd8a2ef489f72d0c7b7f",
+      "compileCalls": 3,
+      "adapted": true
+    },
+    {
+      "path": "Goto/Break.cs",
+      "upstreamNormalizedSha256": "d1f17778914c6d59e72e565458d3bb031798b2dd7bf9e90b3a6f1ed2b84742d8",
+      "portedNormalizedSha256": "44b9c51442c49f6744376deaf5c56579820ad29daa383180eefa9ed6e6db4932",
+      "compileCalls": 12,
+      "adapted": true
+    },
+    {
+      "path": "Goto/Continue.cs",
+      "upstreamNormalizedSha256": "d328e8a10b75b6b8b17a52facefe07ae053e3d3ea314454fccfa6b3b3cc9df96",
+      "portedNormalizedSha256": "d3399c49d84a650fb32c81d58ef7d4c2e06f00472057be42d4ed39541c7ba73a",
+      "compileCalls": 6,
+      "adapted": true
+    },
+    {
+      "path": "Goto/Goto.cs",
+      "upstreamNormalizedSha256": "45c1d41e248f63ba1516bef5d51043a59d32e4d7e3d645dccb6db3bf91c70a95",
+      "portedNormalizedSha256": "71e1cb940cb193b2bfd955ba2ab75cd79de6c5a4304c65ba6e89ff387eb0a8dc",
+      "compileCalls": 14,
+      "adapted": true
+    },
+    {
+      "path": "Goto/GotoExpressionTests.cs",
+      "upstreamNormalizedSha256": "8af764567c875f0655777b9929a77ffbcf3a398b2c3676c6515e3e3711a2aee3",
+      "portedNormalizedSha256": "8af764567c875f0655777b9929a77ffbcf3a398b2c3676c6515e3e3711a2aee3",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "Goto/MakeGoto.cs",
+      "upstreamNormalizedSha256": "f3351a435dd47deae57da1380fa25a38685143b2cb79cc53054c46cd53681831",
+      "portedNormalizedSha256": "f3351a435dd47deae57da1380fa25a38685143b2cb79cc53054c46cd53681831",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "Goto/Return.cs",
+      "upstreamNormalizedSha256": "3e3252d9aaaf0714d35e663fcdb4d0b14ae0058a038be5e07904eb280f03d5da",
+      "portedNormalizedSha256": "4d810983dd7a35930748498c4b1aa6f26431ad3fe5283a70ac8dc313548a82ab",
+      "compileCalls": 13,
+      "adapted": true
+    },
+    {
+      "path": "HelperTypes.cs",
+      "upstreamNormalizedSha256": "9db7d1ec1f325c2d1a57fbf8807973a78d8a46c5b413c5f5813baa3607e591a3",
+      "portedNormalizedSha256": "fe516b7355a49735384e28f14985a17b0d43013366da7402500bc6e13614934f",
+      "compileCalls": 0,
+      "adapted": true
+    },
+    {
+      "path": "ILReader/DynamicMethodILProvider.cs",
+      "upstreamNormalizedSha256": "25c44c9313df79a8a13fe17e75014abbaeadf7ef04728d493a127ef2f3df14f7",
+      "portedNormalizedSha256": "25c44c9313df79a8a13fe17e75014abbaeadf7ef04728d493a127ef2f3df14f7",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "ILReader/DynamicScopeTokenResolver.cs",
+      "upstreamNormalizedSha256": "6c8d59c23753019eeda89a1c320131828f501d178b983ad781057f28072028eb",
+      "portedNormalizedSha256": "6c8d59c23753019eeda89a1c320131828f501d178b983ad781057f28072028eb",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "ILReader/FormatProvider.cs",
+      "upstreamNormalizedSha256": "d020e2e4ad9c5e10349a7c9e626fecb6fe76ef1c6ea3554fc5f8f1125f17e938",
+      "portedNormalizedSha256": "d020e2e4ad9c5e10349a7c9e626fecb6fe76ef1c6ea3554fc5f8f1125f17e938",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "ILReader/ILInstruction.cs",
+      "upstreamNormalizedSha256": "a3189520453e822162acff0eb47787f5b3af0b0fce8298e6ebc86850536f2116",
+      "portedNormalizedSha256": "a3189520453e822162acff0eb47787f5b3af0b0fce8298e6ebc86850536f2116",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "ILReader/ILPrinter.cs",
+      "upstreamNormalizedSha256": "52f7f2c9d362c0dcb1e5305e4622b136f844839e5c840e5710f04258a2b3e958",
+      "portedNormalizedSha256": "ddf1950209be1834cb848f88a7299f14371898cb3003da93975cb53166b52e54",
+      "compileCalls": 1,
+      "adapted": true
+    },
+    {
+      "path": "ILReader/ILProvider.cs",
+      "upstreamNormalizedSha256": "fec05d722959c12659e8e17fd73b1c7dd2176c885ca1d7fccbbad94d9d16e71b",
+      "portedNormalizedSha256": "fec05d722959c12659e8e17fd73b1c7dd2176c885ca1d7fccbbad94d9d16e71b",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "ILReader/ILReader.cs",
+      "upstreamNormalizedSha256": "3ecbf35f09d02bb50c8430b63093a720f89feb6fd0b58dd5d462176a2bf118e8",
+      "portedNormalizedSha256": "3ecbf35f09d02bb50c8430b63093a720f89feb6fd0b58dd5d462176a2bf118e8",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "ILReader/ILReaderFactory.cs",
+      "upstreamNormalizedSha256": "43a09e91e530f461b76662d8c669544c904739b446e5e3abf40538b477cd822f",
+      "portedNormalizedSha256": "43a09e91e530f461b76662d8c669544c904739b446e5e3abf40538b477cd822f",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "ILReader/ITypeFactory.cs",
+      "upstreamNormalizedSha256": "11f77504988c2af48b73560095f800c86bb8a146f2191ad93636f1d0be953d2c",
+      "portedNormalizedSha256": "11f77504988c2af48b73560095f800c86bb8a146f2191ad93636f1d0be953d2c",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "ILReader/LocalsSignatureParser.cs",
+      "upstreamNormalizedSha256": "3c9a3f278e97db6d6339c586d5e9a12419db2d488b91b164a13dfb58a9d233e9",
+      "portedNormalizedSha256": "3c9a3f278e97db6d6339c586d5e9a12419db2d488b91b164a13dfb58a9d233e9",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "ILReader/PrivateReflectionHelpers.cs",
+      "upstreamNormalizedSha256": "d7aecfd8c368826d2602368715259391324f8041d03cdd3b91b9cc88d9abb719",
+      "portedNormalizedSha256": "d7aecfd8c368826d2602368715259391324f8041d03cdd3b91b9cc88d9abb719",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "ILReader/ReadableILStringVisitor.cs",
+      "upstreamNormalizedSha256": "22ccdfe12a29106d15f99ecf690fc80afab5f434530924f1f8209b28094c2b1c",
+      "portedNormalizedSha256": "22ccdfe12a29106d15f99ecf690fc80afab5f434530924f1f8209b28094c2b1c",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "ILReader/SigParser.cs",
+      "upstreamNormalizedSha256": "a37b61ae27135061e6da80e7aebf99f9834a2a75a85285b1b697bdb3071fa5ab",
+      "portedNormalizedSha256": "a37b61ae27135061e6da80e7aebf99f9834a2a75a85285b1b697bdb3071fa5ab",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "ILReader/TokenResolver.cs",
+      "upstreamNormalizedSha256": "2ab16db20740f553c907330eb6d8b4b860b22d9202960e332a62b70b902decec",
+      "portedNormalizedSha256": "2ab16db20740f553c907330eb6d8b4b860b22d9202960e332a62b70b902decec",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "IndexExpression/IndexExpressionHelpers.cs",
+      "upstreamNormalizedSha256": "b538d26bb076d1f4ef76ca73207ba20de97373d51a2ca956310aafe5c8628307",
+      "portedNormalizedSha256": "d45d14f1c0416d8a818b0fab9919d6f50f2dfe60706a3777fc98c30c62811e49",
+      "compileCalls": 2,
+      "adapted": true
+    },
+    {
+      "path": "IndexExpression/IndexExpressionTests.cs",
+      "upstreamNormalizedSha256": "b3eef847ff888ae7da1542bf5871cc7265690dbcbc2b610f1ee7447c7af0ee38",
+      "portedNormalizedSha256": "7f969cd4da5cef2e5cf92e7d7c5f75179595e08128ae1ae17f0447f0dbdfe93d",
+      "compileCalls": 5,
+      "adapted": true
+    },
+    {
+      "path": "IndexExpression/IndexExpressionVisitorTests.cs",
+      "upstreamNormalizedSha256": "b02481c6af828e409f34a81116d4de0a8a0953902429c75af3058b3865dafe2b",
+      "portedNormalizedSha256": "b02481c6af828e409f34a81116d4de0a8a0953902429c75af3058b3865dafe2b",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "IndexExpression/SampleClassWithProperties.cs",
+      "upstreamNormalizedSha256": "5582096be39d9b81b5c1e4b593589ccee9b598195426c2e1f883f1abacec424b",
+      "portedNormalizedSha256": "5582096be39d9b81b5c1e4b593589ccee9b598195426c2e1f883f1abacec424b",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "InterpreterTests.cs",
+      "upstreamNormalizedSha256": "177b07edf4fdf53b576bad32e2cb6d43a358353f063b9bfb5f6a6231055a7bca",
+      "portedNormalizedSha256": "419d7e7d71d12d4fc738531c1c471f12f2b72ff05f808b4421ffa2180bc418dc",
+      "compileCalls": 7,
+      "adapted": true
+    },
+    {
+      "path": "Invoke/InvocationTests.cs",
+      "upstreamNormalizedSha256": "e9e75329fd540503237b083fb3a40ecd090b4a164fa55f1d70589c8b7ff3b0bd",
+      "portedNormalizedSha256": "72029173a2998a6fcccab954c8ec5aef26bddb0cd33aacb3dbc5e31f9175f189",
+      "compileCalls": 8,
+      "adapted": true
+    },
+    {
+      "path": "Invoke/InvokeFactoryTests.cs",
+      "upstreamNormalizedSha256": "c3d344120a9a22566f023e73460923a5013562bcd0ac4e3f71d3838b9f1964df",
+      "portedNormalizedSha256": "09c7b6d160c91cd5322df7b122dc81d17691a022e07d8688ec8e12af19939045",
+      "compileCalls": 0,
+      "adapted": true
+    },
+    {
+      "path": "Label/LabelTargetTests.cs",
+      "upstreamNormalizedSha256": "49328693144058b5f801d1df209a8e0bbb57036bdf13173fa749735d29fc0806",
+      "portedNormalizedSha256": "1230e874b45a87eb6f15349fb2bc89947efcdbb6264b65e4488dcb5e52e399e7",
+      "compileCalls": 2,
+      "adapted": true
+    },
+    {
+      "path": "Label/LabelTests.cs",
+      "upstreamNormalizedSha256": "341e41906decc1d6303ff4bec3b2e4521dafe0bf3648facd6417bfab75503beb",
+      "portedNormalizedSha256": "341e41906decc1d6303ff4bec3b2e4521dafe0bf3648facd6417bfab75503beb",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "Lambda/LambdaAddNullableTests.cs",
+      "upstreamNormalizedSha256": "cc9e89ec8c7494c856bbdec3b88b77aa65392438c1b60330d3d360eb030c1062",
+      "portedNormalizedSha256": "f77e4966cfd676999997f801dce5f3d7c19f4c3150b8b69a3d59d66a31c0b128",
+      "compileCalls": 54,
+      "adapted": true
+    },
+    {
+      "path": "Lambda/LambdaAddTests.cs",
+      "upstreamNormalizedSha256": "67e4922a3c5ea5ee4d0f9e2a16011d08adf22e988ac8f8f19223a73329229410",
+      "portedNormalizedSha256": "d8995885f077e36e1dcde5d5ca4ab3499d99121c6b9ebdc876263187dc38d438",
+      "compileCalls": 60,
+      "adapted": true
+    },
+    {
+      "path": "Lambda/LambdaDivideNullableTests.cs",
+      "upstreamNormalizedSha256": "70f90f4af60c557db1a27f6405f2b3c2c34b1eca4e6561daa7a7f8e79f987bf9",
+      "portedNormalizedSha256": "a31a74b87839ba3cdeecf9b3068c9374925085b946c0cc07bc31efef597a52e2",
+      "compileCalls": 54,
+      "adapted": true
+    },
+    {
+      "path": "Lambda/LambdaDivideTests.cs",
+      "upstreamNormalizedSha256": "6bf9b426045a05d295492b294290f02201458fb2baf8dcc741396f7912797af2",
+      "portedNormalizedSha256": "28dc4351b4440a8f8f00c49053aa367e10d9032cde1f0d2bb434f2d5055f84d6",
+      "compileCalls": 54,
+      "adapted": true
+    },
+    {
+      "path": "Lambda/LambdaIdentityNullableTests.cs",
+      "upstreamNormalizedSha256": "90879790c73a18d195c8d4bc762990f913b826e80f01d9e691d3d1c82572139c",
+      "portedNormalizedSha256": "ea46560ada8758a9bfd9cb4f8956ff4de767a0a2677f28d61ac2491dc873fa5b",
+      "compileCalls": 84,
+      "adapted": true
+    },
+    {
+      "path": "Lambda/LambdaIdentityTests.cs",
+      "upstreamNormalizedSha256": "811caa383dd04660728e52ca41acb0fe7723e142b5cf53099fdf5226c50773f9",
+      "portedNormalizedSha256": "6166f05590247714ebd09a27be13be02b79a22efb6b29136bf105be2b53ae349",
+      "compileCalls": 140,
+      "adapted": true
+    },
+    {
+      "path": "Lambda/LambdaModuloNullableTests.cs",
+      "upstreamNormalizedSha256": "7acd06e39357b535dbdf02d8989c1f9e604e5a2e16a65d371235944e1f942297",
+      "portedNormalizedSha256": "714bae35cce01149fdc7770ad09b358021a147c9e93911a3b26df484beabefee",
+      "compileCalls": 54,
+      "adapted": true
+    },
+    {
+      "path": "Lambda/LambdaModuloTests.cs",
+      "upstreamNormalizedSha256": "17670f72b64c77ff79f951f45d5075a9261b806c3fb8edd7aaba19dd780c3898",
+      "portedNormalizedSha256": "4a766c1bffaa6e145c0df51461014b42e75fac46460de11af9bf3fc10cd76f77",
+      "compileCalls": 54,
+      "adapted": true
+    },
+    {
+      "path": "Lambda/LambdaMultiplyNullableTests.cs",
+      "upstreamNormalizedSha256": "5be049a7dc3fa81a3b208abf29943b140824a07a614a817553f70352d7f7af47",
+      "portedNormalizedSha256": "4a0d1a1efb2d0fe89250e7f0636a67834cd52e7c83b3fbd6949bdce8fa0f4535",
+      "compileCalls": 54,
+      "adapted": true
+    },
+    {
+      "path": "Lambda/LambdaMultiplyTests.cs",
+      "upstreamNormalizedSha256": "7e70f3a0145dc4ac255919a96bc0efe2cf864ce83eb9e48175216630f846bbe8",
+      "portedNormalizedSha256": "832e34482d8aea1cd11652ff5c242dc5e6200baf36c0828c9be91ebc8a00379d",
+      "compileCalls": 54,
+      "adapted": true
+    },
+    {
+      "path": "Lambda/LambdaSubtractNullableTests.cs",
+      "upstreamNormalizedSha256": "e01a989d38fb86538b598ad9ea18cde7e66a9bace170efa2723eaf6da758a987",
+      "portedNormalizedSha256": "3bcdcaecc146de7739c7757584c09011abfe335ff649a9446b03029b7312bcee",
+      "compileCalls": 54,
+      "adapted": true
+    },
+    {
+      "path": "Lambda/LambdaSubtractTests.cs",
+      "upstreamNormalizedSha256": "787587d20953014dc6b0c9e8ca66e13c39a751ded0318483cb65a25fe6a7415b",
+      "portedNormalizedSha256": "2cd89cb60abece6f3f15e3f8f122690d7eac1383f32c0ad27b88e153b03b8e8f",
+      "compileCalls": 54,
+      "adapted": true
+    },
+    {
+      "path": "Lambda/LambdaTests.cs",
+      "upstreamNormalizedSha256": "3410cad2dfdcc9a3b27f648a69a7dde7468b821016932a8b4890423f66b9c2f3",
+      "portedNormalizedSha256": "625eff6e30fd0823eb69ef62fa3367f3f1a34e551dbd97e8a4754d6e7fc6cf48",
+      "compileCalls": 34,
+      "adapted": true
+    },
+    {
+      "path": "Lambda/LambdaUnaryNotNullableTests.cs",
+      "upstreamNormalizedSha256": "0fd832ef626b2bb03b7a31192822eb02d9fa8bbf4f8101b358742ef6e0d93caf",
+      "portedNormalizedSha256": "266d39f4ec0edf499f913e0d87b249a76ea702f00d8755a2cdc20083c1a8cfbc",
+      "compileCalls": 32,
+      "adapted": true
+    },
+    {
+      "path": "Lambda/LambdaUnaryNotTests.cs",
+      "upstreamNormalizedSha256": "d8cd6f00948ca83726199031169d4b8b4110b1e7f7649c1245acd4b74b834711",
+      "portedNormalizedSha256": "749466d5bb5ee76bac80263631296754983f422c6396dc8e7d48a9befbe5c5af",
+      "compileCalls": 32,
+      "adapted": true
+    },
+    {
+      "path": "Lifted/LiftedAddCheckedNullableTests.cs",
+      "upstreamNormalizedSha256": "d16447000bafd02d9d334f4a4cfdf1e969c3e82c5c1777d360e8cccdb413c75d",
+      "portedNormalizedSha256": "0d2a343824262c76aae65a9830fb50f022f0bae9a85c79ab8fa630e0d17d0b3a",
+      "compileCalls": 13,
+      "adapted": true
+    },
+    {
+      "path": "Lifted/LiftedAddNullableTests.cs",
+      "upstreamNormalizedSha256": "1708ab8658ebe04e9a12f525a1cb16216d7a7afd1766c2b382028bf435d25e43",
+      "portedNormalizedSha256": "78ed474c3d068cd37dd242aef8851a771c343a26992dcc371c09333e47cf6b23",
+      "compileCalls": 13,
+      "adapted": true
+    },
+    {
+      "path": "Lifted/LiftedBitwiseAndNullableTests.cs",
+      "upstreamNormalizedSha256": "8e67a6f77c11a545f8c39e9f6c51745baf9ee3f35efaf769ffc1554685eb1c92",
+      "portedNormalizedSha256": "67e42ae3f27ab87fc84884cf72edd0966c8cd82c1479e1367632bef313bef21e",
+      "compileCalls": 9,
+      "adapted": true
+    },
+    {
+      "path": "Lifted/LiftedBitwiseExclusiveOrNullableTests.cs",
+      "upstreamNormalizedSha256": "2d7f531ecff1360e0b11ae64f543dd661ed7665e0b02d1fb9c293ba97124e597",
+      "portedNormalizedSha256": "49af9b9b4b49e174c9190b398c2a88e8a843eba772429cedbd6ef33279d182a0",
+      "compileCalls": 9,
+      "adapted": true
+    },
+    {
+      "path": "Lifted/LiftedBitwiseOrNullableTests.cs",
+      "upstreamNormalizedSha256": "ee45369eaeaed655495e851aace3bd25d87d75ecc76e8052edd7172047def7e2",
+      "portedNormalizedSha256": "ecc92985c7aa6800121adce004d13f1974fb2257a6cfe93604155a7df6b75f2d",
+      "compileCalls": 9,
+      "adapted": true
+    },
+    {
+      "path": "Lifted/LiftedComparisonEqualNullableTests.cs",
+      "upstreamNormalizedSha256": "c90ae66d19073f0a4f4980857a43d994e432123491bb75865133ca691bd538a5",
+      "portedNormalizedSha256": "3fd6e917d581eb281f6288b3db8f9daf0e7cc9707b632a62e394d8575824eaae",
+      "compileCalls": 13,
+      "adapted": true
+    },
+    {
+      "path": "Lifted/LiftedComparisonGreaterThanNullableTests.cs",
+      "upstreamNormalizedSha256": "df361698224c9f729556d54c988c9d4582e3ba6c8fd7095ee3faf25de32f8ed5",
+      "portedNormalizedSha256": "2f4cf955df2c7c891cb63652bf7aa29e22bc803a4394747d6afd1c9fe499d244",
+      "compileCalls": 12,
+      "adapted": true
+    },
+    {
+      "path": "Lifted/LiftedComparisonGreaterThanOrEqualNullableTests.cs",
+      "upstreamNormalizedSha256": "460631258878ef7ca810b6754d3506ba0ec9bbd742fd4b6376b288902e0df231",
+      "portedNormalizedSha256": "fc14998fce1e2d108cef6d2edec7526dabe8b249590f19671c54526a2f05c447",
+      "compileCalls": 12,
+      "adapted": true
+    },
+    {
+      "path": "Lifted/LiftedComparisonLessThanNullableTests.cs",
+      "upstreamNormalizedSha256": "aeab774df9273f7b3d38cce128b7822366ce823ec745d58c71b9f31eba0a5408",
+      "portedNormalizedSha256": "d3a2a337207a448b8b029ce5d395146df787c5b3b23d90327dc93697be46f141",
+      "compileCalls": 12,
+      "adapted": true
+    },
+    {
+      "path": "Lifted/LiftedComparisonLessThanOrEqualNullableTests.cs",
+      "upstreamNormalizedSha256": "42266a519b4fa0273cdefe10d106b04738d0b3fb3d9beaa2ab4b4f9295f9a01a",
+      "portedNormalizedSha256": "084613b737ce2c696766db85ff0169e3d6e8c675a81d037e7a54cfd782974b3e",
+      "compileCalls": 12,
+      "adapted": true
+    },
+    {
+      "path": "Lifted/LiftedComparisonNotEqualNullableTests.cs",
+      "upstreamNormalizedSha256": "abd716cd92e5ebf9e6e107761b3b075ce0cefc235ffa3a8f34b2fdf408a09c49",
+      "portedNormalizedSha256": "bdc2870bb3370cadd32923db1f273a1f87d28f3e3ac3cc72aa33b0c71e420ee0",
+      "compileCalls": 13,
+      "adapted": true
+    },
+    {
+      "path": "Lifted/LiftedDivideNullableTests.cs",
+      "upstreamNormalizedSha256": "a07a46208b19fbc00f5a449eeb5c4b6443d1ee0b1a65bd1ed38757cc4057a828",
+      "portedNormalizedSha256": "d675a1eefe92c16474883c8cf1abd4e7edecc473ccff7fbfb3e303b2f024d042",
+      "compileCalls": 13,
+      "adapted": true
+    },
+    {
+      "path": "Lifted/LiftedModuloNullableTests.cs",
+      "upstreamNormalizedSha256": "34601d1a1a4ea42ca8179dcd520da687941933acb22a0513fa6db2e7299e43d5",
+      "portedNormalizedSha256": "35fd8afbec2356b0f3a2ca226eeacfac4c0fd5ed75c34ed5493f7cbb3720c238",
+      "compileCalls": 13,
+      "adapted": true
+    },
+    {
+      "path": "Lifted/LiftedMultiplyCheckedNullableTests.cs",
+      "upstreamNormalizedSha256": "51b8a47251ce78300699be5bfc84ec10793ee5eaff77310d94887c3782f60e4a",
+      "portedNormalizedSha256": "daada409aa0d93bb4dbd596d97e33045254487cdfcdb4e35b28b18ef55240c1e",
+      "compileCalls": 13,
+      "adapted": true
+    },
+    {
+      "path": "Lifted/LiftedMultiplyNullableTests.cs",
+      "upstreamNormalizedSha256": "cc73f3569fb545fcba3717450ace0cc8e980f9cf40be3e33057f2750a3d2745f",
+      "portedNormalizedSha256": "599ccf3a0d4f6fdd57bf13e4d18dfecd038dc19cf962b0e3788c9511e634dcf6",
+      "compileCalls": 13,
+      "adapted": true
+    },
+    {
+      "path": "Lifted/LiftedNullableTests.cs",
+      "upstreamNormalizedSha256": "95b51822cd97c85692c8ecb38a68656cb688820c69cc1a799545b37f06183b81",
+      "portedNormalizedSha256": "d68b6bd886b6a055bf59af449f35c2eea7dfec23b66cbfcf25ca5fd33c03a890",
+      "compileCalls": 8,
+      "adapted": true
+    },
+    {
+      "path": "Lifted/LiftedSubtractCheckedNullableTests.cs",
+      "upstreamNormalizedSha256": "eb290e5df096a7221c54e5cd0a25152784a900e4dddf7ecf29d6b70f70a67355",
+      "portedNormalizedSha256": "2b96e5e4b73335bfb4d9d165b6491a6378b2c783e0ff2385d0398d8bce3f257e",
+      "compileCalls": 13,
+      "adapted": true
+    },
+    {
+      "path": "Lifted/LiftedSubtractNullableTests.cs",
+      "upstreamNormalizedSha256": "9d91b9930df39943e31920c8ec8208625f4c91ef9e49d8162c1c708cb928e46a",
+      "portedNormalizedSha256": "0e2138f0e7b3880c37d3d0090762e755802fce3b8d533fe96b854b0cc608c44d",
+      "compileCalls": 13,
+      "adapted": true
+    },
+    {
+      "path": "Lifted/NonLiftedComparisonEqualNullableTests.cs",
+      "upstreamNormalizedSha256": "8dfa345a22d3611295bc881607f40379383364a352314018e2865cca99d1e191",
+      "portedNormalizedSha256": "12790dac670df10c1afefe9abd535ec84be90fa7149d78a830f92a5573ebd1bb",
+      "compileCalls": 13,
+      "adapted": true
+    },
+    {
+      "path": "Lifted/NonLiftedComparisonGreaterThanNullableTests.cs",
+      "upstreamNormalizedSha256": "b7981cdb56164e9bb351f45e70817ba702f0d0674a0afbfa9808ba2fed1bd194",
+      "portedNormalizedSha256": "08723a0c99e7606e2a116d25a4c069dc606e1aad11c1d4d2f2ba3cc5a0496cfd",
+      "compileCalls": 12,
+      "adapted": true
+    },
+    {
+      "path": "Lifted/NonLiftedComparisonGreaterThanOrEqualNullableTests.cs",
+      "upstreamNormalizedSha256": "361d24aff584f08c27534f71a603f78a002d0fad36fe024091777e264110e6e1",
+      "portedNormalizedSha256": "a477913f97328ffdf4fe1e7b6711a24458989b0c48290a53788f177c5c888bdc",
+      "compileCalls": 12,
+      "adapted": true
+    },
+    {
+      "path": "Lifted/NonLiftedComparisonLessThanNullableTests.cs",
+      "upstreamNormalizedSha256": "e9279b0c18e78488346b6a8c06b4ba5ff7257fc1dc708ab3a8762f7bff39b725",
+      "portedNormalizedSha256": "181c37bda6784253d9aab038e49d1d3336c9f5189482b2e9179e3f4b05021320",
+      "compileCalls": 12,
+      "adapted": true
+    },
+    {
+      "path": "Lifted/NonLiftedComparisonLessThanOrEqualNullableTests.cs",
+      "upstreamNormalizedSha256": "94dffd1067930ee136d45fdc650fc5ecb0c1e4e0a31dafdeb176e1974c89e7aa",
+      "portedNormalizedSha256": "b858c5896fedb98a0d6da294bad11f87f1d8132f7bd67d79c4f77980c392f746",
+      "compileCalls": 12,
+      "adapted": true
+    },
+    {
+      "path": "Lifted/NonLiftedComparisonNotEqualNullableTests.cs",
+      "upstreamNormalizedSha256": "5e285ed8d0c6025a4ccf0cc4b3dda0bc59e530af5b6b4678a4e0e2540dedbbb0",
+      "portedNormalizedSha256": "6556ee78f4e161a6a4d42a9e992eb9640d5e089cf4c8b0e15dbeb2407e3475ab",
+      "compileCalls": 13,
+      "adapted": true
+    },
+    {
+      "path": "ListInit/ElementInitTests.cs",
+      "upstreamNormalizedSha256": "0913176e06e91058940620a576e03810e3d2f136164e5f04ebb43145829d0e89",
+      "portedNormalizedSha256": "31ba1973c33ed546462b86fed5e742fda9c1a23f85b7d1385d858210cd8854d9",
+      "compileCalls": 0,
+      "adapted": true
+    },
+    {
+      "path": "ListInit/ListInitExpressionTests.cs",
+      "upstreamNormalizedSha256": "af297dec6d29f7516b9c022f721b2cdfe23b62e872f1b0061866578a5a6e0c88",
+      "portedNormalizedSha256": "70bfda62b73efc8407baf4d8884caddf9bf34b88dfa01c599d0e9ce95d10bb45",
+      "compileCalls": 7,
+      "adapted": true
+    },
+    {
+      "path": "Loop/LoopTests.cs",
+      "upstreamNormalizedSha256": "129aa3e38f5bf5084c582724e0d9676d897526e6977d1e8981907f5dceec0008",
+      "portedNormalizedSha256": "dbda995818fe6d89857fa11d664897faa2051f4d24d51d50a8caa74b05485200",
+      "compileCalls": 10,
+      "adapted": true
+    },
+    {
+      "path": "Member/MemberAccessTests.cs",
+      "upstreamNormalizedSha256": "2d59b859d4494e0f9d6d3b45f66d0652d584815126a98448e2ab7c56cd053722",
+      "portedNormalizedSha256": "93d48e25705ca1801f17633281f9319072c56ed761ac4648e47e454d3b409364",
+      "compileCalls": 18,
+      "adapted": true
+    },
+    {
+      "path": "MemberInit/BindTests.cs",
+      "upstreamNormalizedSha256": "9518d9059c91504bf4c58822ae9a0bc276bd60310f9e5184d99900a56ba03271",
+      "portedNormalizedSha256": "37db7c008e72296a5fb0974f00c0db0dc0ec3e281a9c15dc031c0465f85a7540",
+      "compileCalls": 6,
+      "adapted": true
+    },
+    {
+      "path": "MemberInit/ListBindTests.cs",
+      "upstreamNormalizedSha256": "13b61779c08eff8846870b9cb3516144ac8853dd360e48883104a4bd360134a8",
+      "portedNormalizedSha256": "844f52cbb4eff3cfa0d5efa50138bbdd67ecc202be3a0248369f954654cde258",
+      "compileCalls": 6,
+      "adapted": true
+    },
+    {
+      "path": "MemberInit/MemberBindTests.cs",
+      "upstreamNormalizedSha256": "761b78c4c34155b3642b31224fdf93042d0d94f5ba11acc1716ec7cdfc52f27d",
+      "portedNormalizedSha256": "e53a7eaa8a4b9e7fba2dbec127c9cb5d72e56b8de556d0733d989ee436e55a5b",
+      "compileCalls": 8,
+      "adapted": true
+    },
+    {
+      "path": "MemberInit/MemberInitTests.cs",
+      "upstreamNormalizedSha256": "4e486e5e7cfbd9f52e7ac7ac7a177c6f212dbddb1bbdaab6fd8e0899019da101",
+      "portedNormalizedSha256": "eace3fd17822414f46e87549d82eb1d39170176152bc28aa292972d5be9b1094",
+      "compileCalls": 1,
+      "adapted": true
+    },
+    {
+      "path": "New/NewTests.cs",
+      "upstreamNormalizedSha256": "4585338e02fb3c1a26f6548bbd7673924ec972c94bbe48c89e4916fb28d22536",
+      "portedNormalizedSha256": "da8233c2c8a705c548bd87a38d1eb49477f5eeda885f98257a330db83dc359dd",
+      "compileCalls": 19,
+      "adapted": true
+    },
+    {
+      "path": "New/NewWithByRefParameterTests.cs",
+      "upstreamNormalizedSha256": "fca7a176c22332468cf06a08bf28822b13c566eea3385ca0ea63f442054ce64f",
+      "portedNormalizedSha256": "e83ab55b330cb98063052a285e3302850572cfb639232fdc2f4328a03cc72b39",
+      "compileCalls": 6,
+      "adapted": true
+    },
+    {
+      "path": "New/NewWithParameterTests.cs",
+      "upstreamNormalizedSha256": "5145f33038bd6e44d3ef6d6da9fb4f28a1c7f7ee78586bd6f8df3179aeda62f3",
+      "portedNormalizedSha256": "eb727c391f16bed7561d2604fb6c5e66bf45ada1cf48508a14bfb024116f5250",
+      "compileCalls": 8,
+      "adapted": true
+    },
+    {
+      "path": "New/NewWithTwoParametersTests.cs",
+      "upstreamNormalizedSha256": "17c62cf558448b6ab8b97403c13f2f36b116c8582adddb9a5223a3979a165153",
+      "portedNormalizedSha256": "53dfb5b4c86a75daeec6c957fe814ddf9812b98dc232c691ff7700af44302546",
+      "compileCalls": 3,
+      "adapted": true
+    },
+    {
+      "path": "ReadOnlyCollectionBuilderTests.cs",
+      "upstreamNormalizedSha256": "20e72ec392550f145f7f446daa4995f9eca630975d2873505f8f884de5a59e04",
+      "portedNormalizedSha256": "20e72ec392550f145f7f446daa4995f9eca630975d2873505f8f884de5a59e04",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "SequenceTests/SequenceTests.cs",
+      "upstreamNormalizedSha256": "91da3b9ff623d94cf0a9079ff7d31f31fa342084a75c75abc81f966c6bb348b2",
+      "portedNormalizedSha256": "89390f201f40783c5ea347431a1fb3c0b4a3941f004e51da4001f8792d6fdc78",
+      "compileCalls": 132,
+      "adapted": true
+    },
+    {
+      "path": "StackSpillerTests.cs",
+      "upstreamNormalizedSha256": "75a80c387c268f408e90c984da3828880af1e131e17fcbcd3fdc80046a1623e0",
+      "portedNormalizedSha256": "d19d72ab337edacef1968d446e14f9d0efa29037007e4d685e756ef12cc00e57",
+      "compileCalls": 14,
+      "adapted": true
+    },
+    {
+      "path": "Switch/SwitchTests.cs",
+      "upstreamNormalizedSha256": "224c2da2eedb747980f5e75a36cad1f49391003b905fe7eda015773c9c5c902d",
+      "portedNormalizedSha256": "077fc39c0df98f9eefbb174b4b475b6d4cc5369d84143e7647be76feef728e9f",
+      "compileCalls": 31,
+      "adapted": true
+    },
+    {
+      "path": "Ternary/TernaryArrayNullableTests.cs",
+      "upstreamNormalizedSha256": "ca47e9adefad3f1f74f63d8533f2f2a4294464e7f92a3d60836c56c614e99f0f",
+      "portedNormalizedSha256": "43d5e3485d9937285561bac8f485e60365faae65a33c5c239b9e365e64957b05",
+      "compileCalls": 19,
+      "adapted": true
+    },
+    {
+      "path": "Ternary/TernaryArrayTests.cs",
+      "upstreamNormalizedSha256": "842265e56f15e11c1fcdbf0c1dda3d649e6add3bc4d23992262d9d591e42790e",
+      "portedNormalizedSha256": "93f39411d793d1bd6c0fa52410b888ffcac50e7a2cd2a9a27f3af384b23e778a",
+      "compileCalls": 35,
+      "adapted": true
+    },
+    {
+      "path": "Ternary/TernaryNullableTests.cs",
+      "upstreamNormalizedSha256": "66c1b99dcb2e8c4041c23da8cde18c56fa644b5f06f79795e334e63ed60c8f3a",
+      "portedNormalizedSha256": "55b93025e4ba895caa7c328d28ebe34c73c254de865d881f96469b44b4c51282",
+      "compileCalls": 21,
+      "adapted": true
+    },
+    {
+      "path": "Ternary/TernaryTests.cs",
+      "upstreamNormalizedSha256": "8f22de5f6c22ed60831abae708bf01b74baa742de98e9ed4fa781b60036ab3dc",
+      "portedNormalizedSha256": "0ec178961dd536e1eb6ecdb7fd27f50073b73f9c9518aed84790f416114d0288",
+      "compileCalls": 35,
+      "adapted": true
+    },
+    {
+      "path": "TestExtensions/InlinePerCompilationTypeAttribute.cs",
+      "upstreamNormalizedSha256": "15eca82c37b620a63a23c4cb0ce2e0256dfb6688f495e06fe806fc4ba17c51ee",
+      "portedNormalizedSha256": "15eca82c37b620a63a23c4cb0ce2e0256dfb6688f495e06fe806fc4ba17c51ee",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "TestExtensions/PerCompilationTypeAttribute.cs",
+      "upstreamNormalizedSha256": "dd5eb20f681a27e2f007ad6a3ed22cd83660d6f7166bec73782061fd9b24415b",
+      "portedNormalizedSha256": "dd5eb20f681a27e2f007ad6a3ed22cd83660d6f7166bec73782061fd9b24415b",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "TestExtensions/TestOrderAttribute.cs",
+      "upstreamNormalizedSha256": "ec07d7cb7ca23de80751915840e7185be35caf8552600734769feed4d0b93737",
+      "portedNormalizedSha256": "ec07d7cb7ca23de80751915840e7185be35caf8552600734769feed4d0b93737",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "TestExtensions/TestOrderer.cs",
+      "upstreamNormalizedSha256": "012158d28b20f6f04249f928655007117ef187bf549fb6b480d2a9ce16c9dc1d",
+      "portedNormalizedSha256": "012158d28b20f6f04249f928655007117ef187bf549fb6b480d2a9ce16c9dc1d",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "TrimCompatibilityTests.cs",
+      "upstreamNormalizedSha256": "04ba051010de0efcd922f305ff0b7fe8f51a2ce344c08a66c536793663199014",
+      "portedNormalizedSha256": "04ba051010de0efcd922f305ff0b7fe8f51a2ce344c08a66c536793663199014",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "TrimmingTests/BinaryOperatorTests.cs",
+      "upstreamNormalizedSha256": "20d48d629713d342b89274062290720bfb32da8a3088a15ed5b1b5d1b3b647b3",
+      "portedNormalizedSha256": "75e931f183c9aca6f7cce32c3b554c33365c26fd5a15aa497d19bafc32c84acc",
+      "compileCalls": 1,
+      "adapted": true
+    },
+    {
+      "path": "TrimmingTests/ConvertOperatorTests.cs",
+      "upstreamNormalizedSha256": "9500607606ce907bb47d38a60263d9f9dbf5044a393958ba782381fe490dcbfd",
+      "portedNormalizedSha256": "3c90d90b6fdbba4246325ad0f7730a4ee829e6962b3a911d56a542931b734ef7",
+      "compileCalls": 1,
+      "adapted": true
+    },
+    {
+      "path": "TrimmingTests/EqualOperatorTests.cs",
+      "upstreamNormalizedSha256": "f1a781237404b95b02164758ecae0027f8a1ba95857cd808d369ddc58d88d037",
+      "portedNormalizedSha256": "2ab16f31b9c8923002ae0146b1168424eb3c47be09199ae127d8895bf720477e",
+      "compileCalls": 1,
+      "adapted": true
+    },
+    {
+      "path": "TrimmingTests/ExpressionPropertyTests.cs",
+      "upstreamNormalizedSha256": "51c66c1162c5127be5b49ac26696d627c6bcc907868e896d830e0fc71fdf8757",
+      "portedNormalizedSha256": "c9def7ba23e9b930e3c4d872f90c051531d22970b8d2ddbad1472f2491f3a5ee",
+      "compileCalls": 0,
+      "adapted": true
+    },
+    {
+      "path": "TrimmingTests/GetHelperTypeTests.cs",
+      "upstreamNormalizedSha256": "db29bec6b4a2b5e3ae27a4076a73f1d2159e2a1ce842c47c95c298dcd2dd4d78",
+      "portedNormalizedSha256": "16021b632b9d344423a1354ac17080df4853a3b25fcaf7fc156e9acc5c3efb9c",
+      "compileCalls": 1,
+      "adapted": true
+    },
+    {
+      "path": "TypeBinary/TypeBinaryTests.cs",
+      "upstreamNormalizedSha256": "25e4bcb374921c4f895955e3bff569ee266cfce77dc0c7134fbeba360308d68b",
+      "portedNormalizedSha256": "25e4bcb374921c4f895955e3bff569ee266cfce77dc0c7134fbeba360308d68b",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "TypeBinary/TypeEqual.cs",
+      "upstreamNormalizedSha256": "ada8944a9f1f6ea6a85524ed0e3c3e92cb1c227e743602091d5bca9515f3b35c",
+      "portedNormalizedSha256": "666541fc0b3dfa9be2840d9bfa0c5ce75c1d80102cefedab9ccee0a6078314ab",
+      "compileCalls": 8,
+      "adapted": true
+    },
+    {
+      "path": "TypeBinary/TypeIs.cs",
+      "upstreamNormalizedSha256": "4a3bf975b39f6487dcd45d56b1be9445ce6cbde419376b0a91b8f934d9198a26",
+      "portedNormalizedSha256": "7b992d26a5aab0d601914fb0ebb68205939cafa64ac3cabe77156dce15fb0949",
+      "compileCalls": 5,
+      "adapted": true
+    },
+    {
+      "path": "Unary/IncDecAssign/IncDecAssignTests.cs",
+      "upstreamNormalizedSha256": "a0270b24e2148c2cfde0b1b1b5c260ec403878a7653ee5b329c609a9b23bb2bb",
+      "portedNormalizedSha256": "a0270b24e2148c2cfde0b1b1b5c260ec403878a7653ee5b329c609a9b23bb2bb",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "Unary/IncDecAssign/PostDecrementAssignTests.cs",
+      "upstreamNormalizedSha256": "087f1ae67b8dc6dde6603ddf23b9092fd0e23f03dbd98aac426b130bf922c8b4",
+      "portedNormalizedSha256": "af258e83ebc0c179116b00ba617e170dc50087d10170771569d86dcdfa9dfb93",
+      "compileCalls": 10,
+      "adapted": true
+    },
+    {
+      "path": "Unary/IncDecAssign/PostIncrementAssignTests.cs",
+      "upstreamNormalizedSha256": "016fedf6d75df62e13a8628516840e23afb31ff0cb08aed0b750519db1ef40fd",
+      "portedNormalizedSha256": "99d3a724cf49bc6266a5b2aa7d221be827831625b5af5a0ca24d143082e20bb1",
+      "compileCalls": 10,
+      "adapted": true
+    },
+    {
+      "path": "Unary/IncDecAssign/PreDecrementAssignTests.cs",
+      "upstreamNormalizedSha256": "1d167bd2745ae17e8b00a1da5e4a307d7997a4809b82ca37211b9e68a387b7eb",
+      "portedNormalizedSha256": "ded038c083f7ce5f50b568b16481732c04c6ad7f14c1742116ceae2c70cbb239",
+      "compileCalls": 10,
+      "adapted": true
+    },
+    {
+      "path": "Unary/IncDecAssign/PreIncrementAssignTests.cs",
+      "upstreamNormalizedSha256": "65efee5142b8ad5a842b6dc905611891a47dd09eedb78f630d638d9f07fdd719",
+      "portedNormalizedSha256": "46c350546952fde7eca2ac38b90e480749fedf7d87a3ceb93d08f0a54ca66e18",
+      "compileCalls": 10,
+      "adapted": true
+    },
+    {
+      "path": "Unary/IncrementDecrementTests.cs",
+      "upstreamNormalizedSha256": "a8eedad208cd1d93f5c41428de9f04507e6f7f9aaf7711ad834ba1b32f26d5aa",
+      "portedNormalizedSha256": "a8eedad208cd1d93f5c41428de9f04507e6f7f9aaf7711ad834ba1b32f26d5aa",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "Unary/MakeUnaryTests.cs",
+      "upstreamNormalizedSha256": "76ef3f177b10720a466a19d04fe61423d694048b5177712001f8f5021093f501",
+      "portedNormalizedSha256": "76ef3f177b10720a466a19d04fe61423d694048b5177712001f8f5021093f501",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "Unary/UnaryArithmeticNegateCheckedNullableTests.cs",
+      "upstreamNormalizedSha256": "9d41a38239957978fb277dc40e41e7e0465decd8ec00c66ba49504b070d1ac40",
+      "portedNormalizedSha256": "862092f819d9a854fb65476b92e67a88204c6ea86e4ff539e81bed3b47e2be5e",
+      "compileCalls": 6,
+      "adapted": true
+    },
+    {
+      "path": "Unary/UnaryArithmeticNegateCheckedTests.cs",
+      "upstreamNormalizedSha256": "f8984b41fb6c909cc97117bb6b8efb26daa436f3de54ef3a993898ac17975e01",
+      "portedNormalizedSha256": "f723b8f41ac1c4826ddb0c8b093a4293369a3e71d77bd6492b96fda24d8a35a9",
+      "compileCalls": 6,
+      "adapted": true
+    },
+    {
+      "path": "Unary/UnaryArithmeticNegateNullableOneOffTests.cs",
+      "upstreamNormalizedSha256": "2f777a6a34c1c5209d3f8e0937ce2594d8e1aea01ed30b58dbee9654579ec76d",
+      "portedNormalizedSha256": "d8860943fb66a3d109ab57ce1604d8ac8545b3e5101df13af878fa3b765e98a1",
+      "compileCalls": 1,
+      "adapted": true
+    },
+    {
+      "path": "Unary/UnaryArithmeticNegateNullableTests.cs",
+      "upstreamNormalizedSha256": "125fc4a42052feee03aa428a47dd1597cb5dc5ef8f7745b28ca179691dd71a05",
+      "portedNormalizedSha256": "deddbc5f96ee173cfb8d00ae46db8ce963ec0f9a03444f204d9dce2930a7d3f3",
+      "compileCalls": 6,
+      "adapted": true
+    },
+    {
+      "path": "Unary/UnaryArithmeticNegateTests.cs",
+      "upstreamNormalizedSha256": "b89c9bbb1a53c5261e9c2d5036ae3807a7e530d811ec4ce368854af49939a353",
+      "portedNormalizedSha256": "04ee1c01f898b99cd6456bd30b05a98f6fa743dbc897de00b62b45de18dd990c",
+      "compileCalls": 6,
+      "adapted": true
+    },
+    {
+      "path": "Unary/UnaryBitwiseNotNullableTests.cs",
+      "upstreamNormalizedSha256": "0f849f5fb2a6cfc883085b55a2f15af7bcaca9866ea4513b7033813eeb6d9b94",
+      "portedNormalizedSha256": "15cd05001d8c49d8e071bbfeb95ade9cb5043610a53846fb2d7f59ec802bcff6",
+      "compileCalls": 9,
+      "adapted": true
+    },
+    {
+      "path": "Unary/UnaryBitwiseNotTests.cs",
+      "upstreamNormalizedSha256": "8facfbbb03fa921018a9d6aa7319bcd7c4ab9731dabb4092d5ebf9809b57df91",
+      "portedNormalizedSha256": "7a52ebf72bf02fa3141a18f89e3b4894d76f841e9673f95f200220bbf62cf8b5",
+      "compileCalls": 9,
+      "adapted": true
+    },
+    {
+      "path": "Unary/UnaryConvertTests.cs",
+      "upstreamNormalizedSha256": "17103075a84a7179100a8a33416aec77b757882375618c2ee89b4f0b354a9f43",
+      "portedNormalizedSha256": "69604d13fb41736590d8fe94bb79f198038191c22b2836ef7446852f40380154",
+      "compileCalls": 3,
+      "adapted": true
+    },
+    {
+      "path": "Unary/UnaryDecrementNullableTests.cs",
+      "upstreamNormalizedSha256": "4504e4bb1b340642430f147752f4aad5c68da5f49fbbf6bb4206f581fb102c35",
+      "portedNormalizedSha256": "21a5d2816822026820a2710c9945d75498e31a8dae8d99a2d4b5b950c0fc824c",
+      "compileCalls": 12,
+      "adapted": true
+    },
+    {
+      "path": "Unary/UnaryDecrementTests.cs",
+      "upstreamNormalizedSha256": "4b0e976f5b13e474e6f1115e3f2b81900fc368881ac48af130e05a2cc2049e81",
+      "portedNormalizedSha256": "c3c883c553f2a0a67f69382e8ecfd72c022f62be421892d8fcb0790c26d92dd6",
+      "compileCalls": 12,
+      "adapted": true
+    },
+    {
+      "path": "Unary/UnaryIncrementNullableTests.cs",
+      "upstreamNormalizedSha256": "aebeac736f4d4fec19edcf016082fbce2429c70356cbee30ccd36cb03158888f",
+      "portedNormalizedSha256": "3e9129c0d7501bc031d543a48e77cc8ecb77add616a4e86669707dc49437489c",
+      "compileCalls": 12,
+      "adapted": true
+    },
+    {
+      "path": "Unary/UnaryIncrementTests.cs",
+      "upstreamNormalizedSha256": "5de75fc60f4e37d3ccabb1f3440d9c81b4675460108637abb16b9375cd0e66a2",
+      "portedNormalizedSha256": "b6a74ee7f9136d7e3790fcb089ee5affd4c9ac13a5fb3d7ed9d16893077c6e1b",
+      "compileCalls": 12,
+      "adapted": true
+    },
+    {
+      "path": "Unary/UnaryIsFalseNullableTests.cs",
+      "upstreamNormalizedSha256": "5dc0d819e71e68692043359a04d8cfbd41c06be0462be36cea108eb000b168e0",
+      "portedNormalizedSha256": "a38cdeca0d4ab9afcfe19a88a2ab2ceb1eeb2dac08b2dd5b3b3e27d3066bf129",
+      "compileCalls": 1,
+      "adapted": true
+    },
+    {
+      "path": "Unary/UnaryIsFalseTests.cs",
+      "upstreamNormalizedSha256": "569f8a8b872349d3c906108f0d2b90a48fac27957758dc35cb56a479d5e1346d",
+      "portedNormalizedSha256": "3a4c85aa0d972dcdfc1e91faaa565021419953621f99cb3e011ca434ce833c04",
+      "compileCalls": 3,
+      "adapted": true
+    },
+    {
+      "path": "Unary/UnaryIsTrueNullableTests.cs",
+      "upstreamNormalizedSha256": "6a32caebf8ddb787b246594d00941b2da68f0e679d5c4f99a01ec245694e50d8",
+      "portedNormalizedSha256": "3ba9732a90ad4609e057e405322e9372b7bbc37d2dd68e414992ab566d9bc016",
+      "compileCalls": 1,
+      "adapted": true
+    },
+    {
+      "path": "Unary/UnaryIsTrueTests.cs",
+      "upstreamNormalizedSha256": "f05b19c536bd814e7db55d3a312de9b6a84c2cd1209db154a0b2be3caccbca4f",
+      "portedNormalizedSha256": "f41a02551d8786ff4496c3e21f53cfc6a2fab4f339065e6140b31ed23c0f3837",
+      "compileCalls": 3,
+      "adapted": true
+    },
+    {
+      "path": "Unary/UnaryOnesComplementNullableTests.cs",
+      "upstreamNormalizedSha256": "ddb0156ea8d848070044c79a293bcc2ed89e208a8e911f59bd0051840adca890",
+      "portedNormalizedSha256": "5b94ab96281f2fb41a9a10497a0c889250e511db96f2dbfae5e0e20e93661350",
+      "compileCalls": 8,
+      "adapted": true
+    },
+    {
+      "path": "Unary/UnaryOnesComplementTests.cs",
+      "upstreamNormalizedSha256": "1430e0b89b71cc9227a998872ad463155881e0170b39621ae823ed4aba6a0a16",
+      "portedNormalizedSha256": "dfb99abab3611c7dd662fd3301c6bae3c120a986c51c74cf88292869e10806b5",
+      "compileCalls": 11,
+      "adapted": true
+    },
+    {
+      "path": "Unary/UnaryQuoteTests.cs",
+      "upstreamNormalizedSha256": "956bf59672e8f54331153ee0d8bfdce568868f11c2a7955bcbc135162c1f6e6d",
+      "portedNormalizedSha256": "bc22b65b8c08e99b8b974024661a4bebaff587bda91910f98037bd8fc84eb795",
+      "compileCalls": 23,
+      "adapted": true
+    },
+    {
+      "path": "Unary/UnaryUnaryPlusNullableTests.cs",
+      "upstreamNormalizedSha256": "e4ad2e52adb631b769f0c30c209ce29aff9f51aa3dd942d5a6fd8bf23c4948c2",
+      "portedNormalizedSha256": "16474ece452aa62e3e7d4af212d15089931484fa24338a87542322c7d9014666",
+      "compileCalls": 9,
+      "adapted": true
+    },
+    {
+      "path": "Unary/UnaryUnaryPlusTests.cs",
+      "upstreamNormalizedSha256": "f93dafb61b4b8ad90937b7a42130b3bec338bba18422c7f80e912f776c3cf6ad",
+      "portedNormalizedSha256": "6f56eb4b2d05c380bd9de6c25551f3e84a5cac0fb422055de2f112d9d46acf5d",
+      "compileCalls": 10,
+      "adapted": true
+    },
+    {
+      "path": "Unary/UnaryUnboxTests.cs",
+      "upstreamNormalizedSha256": "a4cdcae26db9684c6a8665f8b1351a9c5118a487feca4af9ef16b401e43e50a9",
+      "portedNormalizedSha256": "1a9448449885210d71528ea0b799992a8966c12b30e91ce50d8aaf9bd914731a",
+      "compileCalls": 1,
+      "adapted": true
+    },
+    {
+      "path": "Unary/UnboxTests.cs",
+      "upstreamNormalizedSha256": "8ad3da0311c756ef1ec4528b1a0848cb900ed1d66afcfa18033e2005c5913a3b",
+      "portedNormalizedSha256": "20c7b7a31e49284aa776974cfa46d8f67dc8d1a52801ff7a63d637e6c2c256b2",
+      "compileCalls": 4,
+      "adapted": true
+    },
+    {
+      "path": "Variables/ParameterExpressionTests.cs",
+      "upstreamNormalizedSha256": "fc36b208572d2abc8f8bc7dc62d9082504552c7ad14e4f7be78fda32d553181e",
+      "portedNormalizedSha256": "fc36b208572d2abc8f8bc7dc62d9082504552c7ad14e4f7be78fda32d553181e",
+      "compileCalls": 0,
+      "adapted": false
+    },
+    {
+      "path": "Variables/ParameterTests.cs",
+      "upstreamNormalizedSha256": "f25a4a0b5010ab47990a0003b26c37367fbabb0e0d1b03e2010131d48dd203cd",
+      "portedNormalizedSha256": "3e45e216caa545949b7851ccbb52316afeb27fd92854921f73df2c39aa17ce01",
+      "compileCalls": 9,
+      "adapted": true
+    },
+    {
+      "path": "Variables/RuntimeVariablesTests.cs",
+      "upstreamNormalizedSha256": "508f1aa8863454279bc88d4ade909c67440787669a5872601db2164c682a7b0e",
+      "portedNormalizedSha256": "533910e1b18d01aef24da3418fdbbc995f1cfcbf0526f3437c32b78032125edc",
+      "compileCalls": 6,
+      "adapted": true
+    },
+    {
+      "path": "Variables/VariableTests.cs",
+      "upstreamNormalizedSha256": "bd070c2e1c9a5a83847aed8de08bb1db8ab3c9aa42ad1bdf1829c6f878406276",
+      "portedNormalizedSha256": "fcf7598b806882969dd05a159118e1027df4d08435eb0854804bc9ee7b87b60b",
+      "compileCalls": 2,
+      "adapted": true
+    },
+    {
+      "path": "Visitor/VisitorTests.cs",
+      "upstreamNormalizedSha256": "b8e4843974dd9b8af6aee5c26f7d5cd36e7e78c6653044770ff7a02d46d73130",
+      "portedNormalizedSha256": "b8e4843974dd9b8af6aee5c26f7d5cd36e7e78c6653044770ff7a02d46d73130",
+      "compileCalls": 0,
+      "adapted": false
+    }
+  ]
+}
