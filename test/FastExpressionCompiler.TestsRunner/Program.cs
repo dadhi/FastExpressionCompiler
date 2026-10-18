@@ -137,6 +137,7 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.UnitTests.CoalesceValueConversionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.NegationBehaviorRegressionTests());
                 lt.Run(new LightExpression.UnitTests.RuntimeCompilerLayoutBehaviorRegressionTests());
+                lt.Run(new LightExpression.UnitTests.AdditionalCompilerLayoutBehaviorRegressionTests());
                 lt.Run(new LightExpression.UnitTests.CompilerLayoutBehaviorRegressionTests());
                 lt.Run(new LightExpression.UnitTests.InvocationExceptionSpillRegressionTests());
                 lt.Run(new LightExpression.UnitTests.CatchFilterRegressionTests());
@@ -242,6 +243,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new CoalesceValueConversionRegressionTests());
             st.Run(new NegationBehaviorRegressionTests());
             st.Run(new RuntimeCompilerLayoutBehaviorRegressionTests());
+            st.Run(new AdditionalCompilerLayoutBehaviorRegressionTests());
             st.Run(new CompilerLayoutBehaviorRegressionTests());
             st.Run(new InvocationExceptionSpillRegressionTests());
             st.Run(new CatchFilterRegressionTests());
