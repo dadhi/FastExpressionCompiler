@@ -52,6 +52,8 @@ namespace FastExpressionCompiler.UnitTests
 
             var st = new TestRun(TestFlags.RethrowException);
 
+            st.Run(new NumericConversionRegressionTests());
+
             st.Run(new Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
             st.Run(new Issue561_NonBooleanEqualityOperator());
             st.Run(new Issue498_InvalidProgramException_when_using_loop());
@@ -64,6 +66,8 @@ namespace FastExpressionCompiler.UnitTests
 #endif
 
             var lt = new LightExpression.TestRun(LightExpression.TestFlags.RethrowException);
+
+            lt.Run(new LightExpression.UnitTests.NumericConversionRegressionTests());
 
 #if NET8_0_OR_GREATER
             lt.Run(new LightExpression.IssueTests.Issue490_Regression_in_compiling_lambdas_with_ref_struct_parameters());
@@ -79,6 +83,9 @@ namespace FastExpressionCompiler.UnitTests
             lt.Run(new LightExpression.IssueTests.Issue561_NonBooleanEqualityOperator());
 
             RunAllTests();
+
+            if (st.FailedTestCount != 0 || lt.FailedTestCount != 0)
+                Environment.ExitCode = 1;
         }
 
         public static void RunAllTests()
