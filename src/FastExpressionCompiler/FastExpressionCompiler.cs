@@ -2692,7 +2692,7 @@ namespace FastExpressionCompiler
                                             continue;
 
                                         // This is basically the return pattern (see #237), so we don't care for the rest of expressions
-                                        if (stExpr is GotoExpression gt && gt.Kind == GotoExpressionKind.Return && i + 2 == statementCount &&
+                                        if (stExpr is GotoExpression gt && gt.Kind == GotoExpressionKind.Return && i + 2 == statementCount && gt.Target.Type != typeof(void) &&
                                             statementExprs[i + 1] is LabelExpression label && label.Target == gt.Target)
                                         {
                                             // But we cannot use the return pattern and eliminate the target label if we have more gotos referencing it, see #430
@@ -2914,14 +2914,6 @@ namespace FastExpressionCompiler
                     il.DmarkLabel(continueLabel);
                 }
 
-                var breakLabelInfoBeforeBody = loopExpr.BreakLabel;
-                if (breakLabelInfoBeforeBody != null)
-                {
-                    ref var loopBreakInfo = ref context.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(breakLabelInfoBeforeBody, out var loopBreakFound);
-                    if (loopBreakFound)
-                        loopBreakInfo.IsLoopBreakLabel = true;
-                }
-
                 if (!TryEmit(loopExpr.Body, il, ref context, parent))
                     return false;
 
@@ -3093,11 +3085,10 @@ namespace FastExpressionCompiler
                 {
                     case GotoExpressionKind.Break:
                     case GotoExpressionKind.Continue:
-                        if (gotoValue != null && !labelInfo.IsLoopBreakLabel)
-                        {
-                            EmitGotoToReturnLabel(ref labelInfo, il, gotoValue, (parent & ParentFlags.TryCatch) != 0 ? OpCodes.Leave : OpCodes.Br);
-                            return true;
-                        }
+                        var targetInfo = context.TargetToGotosAndLabels.Map.TryGetValueRef(expr.Target, out var hasTargetInfo);
+                        if (gotoValue != null && hasTargetInfo && targetInfo.Item2 != 0)
+                            EmitGotoToReturnLabel(ref labelInfo, il, gotoValue, OpCodes.Br);
+                        else
                         il.Demit(OpCodes.Br, labelInfo.GetOrDefineLabel(il));
                         return true;
 
@@ -3116,27 +3107,11 @@ namespace FastExpressionCompiler
                         return true;
 
                     case GotoExpressionKind.Return:
-                        if ((parent & ParentFlags.TryCatch) != 0)
-                        {
+                        var returnOpCode = (parent & ParentFlags.TryCatch) != 0 ? OpCodes.Leave : OpCodes.Br;
                             if (gotoValue != null)
-                                EmitGotoToReturnLabel(ref labelInfo, il, gotoValue, OpCodes.Leave);
+                            EmitGotoToReturnLabel(ref labelInfo, il, gotoValue, returnOpCode);
                             else
-                                il.Demit(OpCodes.Leave, labelInfo.GetOrDefineLabel(il)); // if there is no return value just leave to the original label
-                        }
-                        else if ((parent & ParentFlags.InlinedLambdaInvoke) != 0)
-                        {
-                            if (gotoValue != null)
-                            {
-                                var invokeIndex = labelInfo.InlinedLambdaInvokeIndex;
-                                if (invokeIndex == -1)
-                                    return false;
-                                EmitGotoToReturnLabel(ref context.LambdaInvokeStackLabels.GetSurePresentRef(invokeIndex), il, gotoValue, OpCodes.Br);
-                            }
-                        }
-                        else if (gotoValue != null)
-                            EmitGotoToReturnLabel(ref labelInfo, il, gotoValue, OpCodes.Br); // the label may be in the middle of the lambda
-                        else
-                            il.Demit(OpCodes.Ret);
+                            il.Demit(returnOpCode, labelInfo.GetOrDefineLabel(il));
                         return true;
 
                     default:
