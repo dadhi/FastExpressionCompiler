@@ -124,6 +124,10 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.UnitTests.CompilerLayoutBehaviorRegressionTests());
                 lt.Run(new LightExpression.UnitTests.CompoundAssignmentExceptionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.NestedCompoundExceptionRegressionTests());
+                lt.Run(new LightExpression.UnitTests.IndexerExceptionSpillRegressionTests());
+                lt.Run(new LightExpression.UnitTests.InvocationExceptionSpillRegressionTests());
+                lt.Run(new LightExpression.UnitTests.CatchFilterRegressionTests());
+                lt.Run(new LightExpression.UnitTests.CatchFilterSafetyRegressionTests());
                 lt.Run(new LightExpression.IssueTests.Issue490_Regression_in_compiling_lambdas_with_ref_struct_parameters());
 #endif
 
@@ -210,6 +214,10 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new CompilerLayoutBehaviorRegressionTests());
             st.Run(new CompoundAssignmentExceptionRegressionTests());
             st.Run(new NestedCompoundExceptionRegressionTests());
+            st.Run(new IndexerExceptionSpillRegressionTests());
+            st.Run(new InvocationExceptionSpillRegressionTests());
+            st.Run(new CatchFilterRegressionTests());
+            st.Run(new CatchFilterSafetyRegressionTests());
             st.Run(new Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
             st.Run(new Issue561_NonBooleanEqualityOperator());
             st.Run(new ReductionProgressRegressionTests());
