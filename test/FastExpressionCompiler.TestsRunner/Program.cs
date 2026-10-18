@@ -59,6 +59,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new ReferenceTypedConstantRegressionTests());
             st.Run(new ReferenceUnboxingRegressionTests());
             st.Run(new NullableArithmeticOperandRegressionTests());
+            st.Run(new NullableArithmeticEvaluationRegressionTests());
             st.Run(new NullableBoxingRegressionTests());
             st.Run(new ArrayBoundConversionRegressionTests());
             st.Run(new LiftedArithmeticOperatorRegressionTests());
@@ -108,6 +109,7 @@ namespace FastExpressionCompiler.UnitTests
             lt.Run(new LightExpression.UnitTests.ReferenceTypedConstantRegressionTests());
             lt.Run(new LightExpression.UnitTests.ReferenceUnboxingRegressionTests());
             lt.Run(new LightExpression.UnitTests.NullableArithmeticOperandRegressionTests());
+            lt.Run(new LightExpression.UnitTests.NullableArithmeticEvaluationRegressionTests());
             lt.Run(new LightExpression.UnitTests.NullableBoxingRegressionTests());
             lt.Run(new LightExpression.UnitTests.ArrayBoundConversionRegressionTests());
             lt.Run(new LightExpression.UnitTests.LiftedArithmeticOperatorRegressionTests());

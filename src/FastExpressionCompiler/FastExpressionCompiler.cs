@@ -6687,6 +6687,7 @@ namespace FastExpressionCompiler
                     (operationMethod == null || operationMethod.GetParameters()[0].ParameterType != leftType);
                 var leftVar = -1;
                 var leftValueVar = -1;
+                var cachedRight = -1;
                 if (leftIsNullable)
                 {
                     noNullableValueLabel = il.DefineLabel();
@@ -6695,7 +6696,18 @@ namespace FastExpressionCompiler
                     if (context.LastEmitIsAddress)
                         EmitLoadIndirectlyByRef(il, leftType); // the nullable value is needed here and not its address
 
-                    leftVar = EmitNullableVarAddressAndHasValue(il, leftType);
+                    leftVar = EmitStoreLocalVariable(il, leftType);
+                    // Lifted arithmetic evaluates both operands even when the left is null.
+                    if (right != null)
+                    {
+                        if (!TryEmit(right, il, ref context, flags))
+                            return false;
+                        if (context.LastEmitIsAddress)
+                            EmitLoadIndirectlyByRef(il, right.Type);
+                        cachedRight = EmitStoreLocalVariable(il, right.Type);
+                    }
+                    EmitLoadLocalVariableAddress(il, leftVar);
+                    EmitMethodCall(il, leftType.GetNullableHasValueGetterMethod());
                     il.Demit(OpCodes.Brfalse, noNullableValueLabel);
                     EmitLoadLocalVariableAddress(il, leftVar);
                     il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
@@ -6727,7 +6739,7 @@ namespace FastExpressionCompiler
                         (operationMethod == null || operationMethod.GetParameters()[1].ParameterType != rightType);
                     if (rightIsNullable)
                     {
-                        if (!TryEmit(right, il, ref context, flags))
+                        if (!TryEmitCachedArithmeticAssignRight(right, cachedRight, il, ref context, flags))
                             return false;
                         if (context.LastEmitIsAddress)
                             EmitLoadIndirectlyByRef(il, rightType);
@@ -6738,7 +6750,7 @@ namespace FastExpressionCompiler
                         il.Demit(OpCodes.Ldfld, rightType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
                         rightValueVar = EmitStoreLocalVariable(il, Nullable.GetUnderlyingType(rightType));
                     }
-                    else if (!TryEmit(right, il, ref context, flags))
+                    else if (!TryEmitCachedArithmeticAssignRight(right, cachedRight, il, ref context, flags))
                         return false;
 
                     // Means that it was complex right and the result of the left operation was stored
