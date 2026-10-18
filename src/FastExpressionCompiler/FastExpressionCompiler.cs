@@ -3800,16 +3800,18 @@ namespace FastExpressionCompiler
                         return il.EmitPopIfIgnoreResult(parent);
                     }
 
-                    if (targetType == typeof(object) && sourceType.IsValueType)
+                    if (sourceType.IsValueType && (targetType == typeof(object) ||
+                        underlyingNullableSourceType != null && !targetType.IsValueType &&
+                        (targetType.IsInterface || targetType.IsAssignableFrom(underlyingNullableSourceType))))
                     {
                         il.Demit(OpCodes.Box, sourceType);
+                        if (targetType.IsInterface && !targetType.IsAssignableFrom(underlyingNullableSourceType ?? sourceType))
+                            il.Demit(OpCodes.Castclass, targetType);
                         return il.EmitPopIfIgnoreResult(parent);
                     }
 
-                    if (sourceType == typeof(object) && targetType.IsValueType ||
-                        sourceType.IsInterface && targetType.IsValueType && sourceType.IsAssignableFrom(targetType) ||
-                        sourceType == typeof(Enum) && targetType.IsEnum // a special case, see the AutoMapper test `StringToEnumConverter.Should_work`
-                    )
+                    if (!sourceType.IsValueType && targetType.IsValueType &&
+                        (sourceType.IsInterface || sourceType.IsAssignableFrom(underlyingNullableTargetType ?? targetType)))
                     {
                         il.Demit(OpCodes.Unbox_Any, targetType);
                         return il.EmitPopIfIgnoreResult(parent);
@@ -6796,9 +6798,9 @@ namespace FastExpressionCompiler
                 if (leftIsNullable)
                 {
                     noNullableValueLabel = il.DefineLabel();
-                    if (!TryEmit(left, il, ref context, flags | ParentFlags.InstanceCall))
+                    if (!TryEmit(left, il, ref context, flags))
                         return false;
-                    if (context.LastEmitIsAddress || left is ParameterExpression { IsByRef: true }) // see #461, the nullable by-ref parameter does not set the flag
+                    if (context.LastEmitIsAddress)
                         EmitLoadIndirectlyByRef(il, leftType); // the nullable value is needed here and not its address
 
                     leftVar = EmitNullableVarAddressAndHasValue(il, leftType);
@@ -6832,16 +6834,9 @@ namespace FastExpressionCompiler
                     rightIsNullable = rightType.IsNullable();
                     if (rightIsNullable)
                     {
-                        if (!leftIsNullable)
-                        {
-                            noNullableValueLabel = il.DefineLabel();
-                            if (leftValueVar == -1)
-                                leftValueVar = EmitStoreLocalVariable(il, leftType);
-                        }
-
-                        if (!TryEmit(right, il, ref context, flags | ParentFlags.InstanceCall))
+                        if (!TryEmit(right, il, ref context, flags))
                             return false;
-                        if (context.LastEmitIsAddress || right is ParameterExpression { IsByRef: true })
+                        if (context.LastEmitIsAddress)
                             EmitLoadIndirectlyByRef(il, rightType);
 
                         rightVar = EmitNullableVarAddressAndHasValue(il, rightType);
