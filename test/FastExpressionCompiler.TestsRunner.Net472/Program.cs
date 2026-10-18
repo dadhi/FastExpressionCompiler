@@ -35,6 +35,7 @@ namespace FastExpressionCompiler.UnitTests
 
                 var t = (LightExpression.TestRun)state;
                 t.Run(new LightExpression.UnitTests.NumericConversionRegressionTests());
+                t.Run(new LightExpression.UnitTests.NonVoidListInitializerRegressionTests());
                 t.Run(new LightExpression.UnitTests.DecimalConstantBitsRegressionTests());
                 t.Run(new LightExpression.UnitTests.SmallCheckedArithmeticRegressionTests());
                 t.Run(new LightExpression.UnitTests.NullableBooleanRegressionTests());
@@ -106,6 +107,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var fecTests = new TestRun();
             fecTests.Run(new NumericConversionRegressionTests());
+            fecTests.Run(new NonVoidListInitializerRegressionTests());
             fecTests.Run(new DecimalConstantBitsRegressionTests());
             fecTests.Run(new SmallCheckedArithmeticRegressionTests());
             fecTests.Run(new NullableBooleanRegressionTests());
