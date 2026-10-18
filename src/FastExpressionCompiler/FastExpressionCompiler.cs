@@ -2225,7 +2225,9 @@ namespace FastExpressionCompiler
                     context.LastEmitIsAddress = false;
 #if LIGHT_EXPRESSION
                     if (expr.IsIntrinsic)
-                        return expr.TryEmit(ref context, il, parent, byRefIndex);
+                        return context.HasExceptionBlock && expr is NewExpression
+                            ? TryEmitNew(expr, il, ref context, parent)
+                            : expr.TryEmit(ref context, il, parent, byRefIndex);
 #endif
                     var nodeType = expr.NodeType;
                     switch (nodeType)
@@ -2735,7 +2737,7 @@ namespace FastExpressionCompiler
                     }
                     else
                     {
-                        if (!context.ArgsContainingComplexExpression.Set.ContainsKey(newExpr))
+                        if (!context.HasExceptionBlock && !context.ArgsContainingComplexExpression.Set.ContainsKey(newExpr))
                         {
                             for (var i = 0; i < argCount; ++i)
                                 if (!TryEmit(argExprs.GetArgument(i), il, ref context, flags, pars[i].ParameterType.IsByRef ? i : -1))
@@ -4506,6 +4508,8 @@ namespace FastExpressionCompiler
                 var bounds = expr.GetArgExprs();
                 var boundCount = bounds.GetArgCount();
                 var flags = ParentFlags.CtorCall;
+                SmallList<int, Stack8<int>, NoArrayPool<int>> boundVars = default;
+                var spillBounds = context.HasExceptionBlock && boundCount > 1;
                 for (var i = 0; i < boundCount; i++)
                 {
                     var bound = bounds.GetArgument(i);
@@ -4521,7 +4525,12 @@ namespace FastExpressionCompiler
                     }
                     if (boundType != typeof(int) && !TryEmitPrimitiveValueConvert(boundType, typeof(int), il, isChecked: true))
                         return false;
+                    if (spillBounds)
+                        boundVars.Add(EmitStoreLocalVariable(il, typeof(int)));
                 }
+                if (spillBounds)
+                    for (var i = 0; i < boundCount; ++i)
+                        EmitLoadLocalVariable(il, boundVars[i]);
                 if (boundCount == 1)
                 {
                     var elemType = expr.Type.GetElementType();
@@ -4554,6 +4563,29 @@ namespace FastExpressionCompiler
                 il.Demit(OpCodes.Newarr, elemType);
 
                 var isElemOfValueType = elemType.IsValueType;
+                if (context.HasExceptionBlock)
+                {
+                    var array = EmitStoreLocalVariable(il, arrayType);
+                    var value = il.GetNextLocalVarIndex(elemType);
+                    for (var i = 0; i < elemCount; ++i)
+                    {
+                        if (!TryEmit(elems.GetArgument(i), il, ref context, ParentFlags.AssignmentRightValue))
+                            return false;
+                        EmitStoreLocalVariable(il, value);
+                        EmitLoadLocalVariable(il, array);
+                        EmitLoadConstantInt(il, i);
+                        if (isElemOfValueType)
+                            il.Demit(OpCodes.Ldelema, elemType);
+                        EmitLoadLocalVariable(il, value);
+                        if (isElemOfValueType)
+                            il.Demit(OpCodes.Stobj, elemType);
+                        else
+                            il.Demit(OpCodes.Stelem_Ref);
+                    }
+                    EmitLoadLocalVariable(il, array);
+                    context.LastEmitIsAddress = false;
+                    return il.EmitPopIfIgnoreResult(parent);
+                }
                 for (var i = 0; i < elemCount; i++)
                 {
                     il.Demit(OpCodes.Dup);
@@ -4578,22 +4610,31 @@ namespace FastExpressionCompiler
 
             private static bool EmitMemberInit(MemberInitExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
+                var valueFlags = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
+                    ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue;
                 var valueVarIndex = -1;
                 var exprType = expr.Type;
-                if (exprType.IsValueType)
+                if (exprType.IsValueType || context.HasExceptionBlock)
                     valueVarIndex = il.GetNextLocalVarIndex(exprType);
 
                 var newExpr = expr.NewExpression;
 #if LIGHT_EXPRESSION
                 if (newExpr == null)
                 {
-                    if (!TryEmit(expr.Expression, il, ref context, parent))
+                    if (!TryEmit(expr.Expression, il, ref context, valueFlags))
                         return false;
                     if (valueVarIndex != -1)
                         EmitStoreLocalVariable(il, valueVarIndex);
                 }
                 else
 #endif
+                if (context.HasExceptionBlock)
+                {
+                    if (!TryEmitNew(newExpr, il, ref context, valueFlags))
+                        return false;
+                    EmitStoreLocalVariable(il, valueVarIndex);
+                }
+                else
                 {
                     var argExprs = newExpr.GetArgExprs();
                     var argCount = argExprs.GetArgCount();
@@ -4601,7 +4642,7 @@ namespace FastExpressionCompiler
                     {
                         var args = newExpr.Constructor.GetParameters();
                         for (var i = 0; i < argCount; i++)
-                            if (!TryEmit(argExprs.GetArgument(i), il, ref context, parent, args[i].ParameterType.IsByRef ? i : -1))
+                            if (!TryEmit(argExprs.GetArgument(i), il, ref context, ParentFlags.CtorCall, args[i].ParameterType.IsByRef ? i : -1))
                                 return false;
                     }
 
@@ -4622,17 +4663,19 @@ namespace FastExpressionCompiler
                 for (var i = 0; i < bindCount; i++)
                 {
                     var binding = bindings.GetArgument(i);
-                    if (valueVarIndex != -1) // load local value address, to set its members
+                    if (valueVarIndex == -1)
+                        il.Demit(OpCodes.Dup);
+                    else if (exprType.IsValueType)
                         EmitLoadLocalVariableAddress(il, valueVarIndex);
                     else
-                        il.Demit(OpCodes.Dup); // duplicate member owner on stack
-
-                    if (!EmitBinding(binding, il, ref context, parent))
+                        EmitLoadLocalVariable(il, valueVarIndex);
+                    if (!EmitBinding(binding, il, ref context, valueFlags))
                         return false;
                 }
                 if (valueVarIndex != -1)
                     EmitLoadLocalVariable(il, valueVarIndex);
-                return true;
+                context.LastEmitIsAddress = false;
+                return il.EmitPopIfIgnoreResult(parent);
             }
 
             [MethodImpl((MethodImplOptions)256)]
@@ -4657,41 +4700,22 @@ namespace FastExpressionCompiler
 
             private static bool TryEmitListInit(ListInitExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
-                var valueVarIndex = -1;
                 var exprType = expr.Type;
-                if (exprType.IsValueType)
-                    valueVarIndex = il.GetNextLocalVarIndex(exprType);
-
-                var newExpr = expr.NewExpression;
-                var argExprs = newExpr.GetArgExprs();
-                var argCount = argExprs.GetArgCount();
-                if (argCount > 0)
-                {
-                    var args = newExpr.Constructor.GetParameters();
-                    for (var i = 0; i < argCount; i++)
-                        if (!TryEmit(argExprs.GetArgument(i), il, ref context, parent, args[i].ParameterType.IsByRef ? i : -1))
-                            return false;
-                }
-
-                if (newExpr.Constructor != null)
-                {
-                    il.Demit(OpCodes.Newobj, newExpr.Constructor);
-                    if (valueVarIndex != -1)
-                        EmitStoreLocalVariable(il, valueVarIndex);
-                }
-                else if (valueVarIndex != -1)
-                    InitValueTypeVariable(il, exprType, valueVarIndex);
-                else
-                    return false; // null constructor and not a value type, better to fallback
-
+                var valueVarIndex = exprType.IsValueType || context.HasExceptionBlock ? il.GetNextLocalVarIndex(exprType) : -1;
+                if (!TryEmitNew(expr.NewExpression, il, ref context, ParentFlags.CtorCall))
+                    return false;
+                if (valueVarIndex != -1)
+                    EmitStoreLocalVariable(il, valueVarIndex);
                 var inits = expr.Initializers;
                 var initCount = inits.Count;
                 MethodInfo lastAddMethod = null;
                 ParameterInfo[] methodParams = null;
                 for (var i = 0; i < initCount; ++i)
                 {
-                    if (valueVarIndex != -1) // load local value address, to set its members
+                    if (exprType.IsValueType)
                         EmitLoadLocalVariableAddress(il, valueVarIndex);
+                    else if (valueVarIndex != -1)
+                        EmitLoadLocalVariable(il, valueVarIndex);
                     else
                         il.Demit(OpCodes.Dup); // duplicate member owner on stack
 
@@ -4705,7 +4729,6 @@ namespace FastExpressionCompiler
                     if (!EmitElementInit(elemInit, exprType, il, ref context, parent, methodParams))
                         return false;
                 }
-
                 if (valueVarIndex != -1)
                     EmitLoadLocalVariable(il, valueVarIndex);
                 context.LastEmitIsAddress = false;
@@ -4719,16 +4742,30 @@ namespace FastExpressionCompiler
                 var callFlags = (parent
                     & ~(ParentFlags.IgnoreResult | ParentFlags.MemberAccess | ParentFlags.InstanceAccess |
                         ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
-                    | ParentFlags.Call;
+                    | ParentFlags.Call | ParentFlags.AssignmentRightValue;
                 var method = elemInit.AddMethod;
                 if (methodParams == null)
                     methodParams = method.GetParameters();
                 var addArgs = elemInit.GetArgExprs();
                 var addArgCount = addArgs.GetArgCount();
 
+                var spillArguments = context.HasExceptionBlock;
+                var receiverVar = spillArguments ? EmitStoreLocalVariable(il, ownerType.IsValueType ? ownerType.MakeByRefType() : ownerType) : -1;
+                SmallList<int, Stack8<int>, NoArrayPool<int>> argVars = default;
                 for (var a = 0; a < addArgCount; ++a)
-                    if (!TryEmit(addArgs.GetArgument(a), il, ref context, callFlags, methodParams[a].ParameterType.IsByRef ? a : -1))
+                {
+                    var parType = methodParams[a].ParameterType;
+                    if (!TryEmit(addArgs.GetArgument(a), il, ref context, callFlags, parType.IsByRef ? a : -1))
                         return false;
+                    if (spillArguments)
+                        argVars.Add(EmitStoreLocalVariable(il, parType));
+                }
+                if (spillArguments)
+                {
+                    EmitLoadLocalVariable(il, receiverVar);
+                    for (var a = 0; a < addArgCount; ++a)
+                        EmitLoadLocalVariable(il, argVars[a]);
+                }
 
                 bool ok;
                 if (!ownerType.IsValueType)
@@ -4755,31 +4792,59 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Pop); // the static member does not need the owner
 
                 if (binding.BindingType == MemberBindingType.Assignment)
-                    return TryEmit(((MemberAssignment)binding).Expression, il, ref context, parent) &&
-                        EmitMemberSet(il, member);
+                {
+                    var value = ((MemberAssignment)binding).Expression;
+                    if (!context.HasExceptionBlock || isStatic)
+                        return TryEmit(value, il, ref context, parent) && (!ownerKnownNotNull && member is PropertyInfo property ? EmitInstanceMethodCall(il, property.SetMethod, isStatic ? null : ownerType) : EmitMemberSet(il, member));
+                    var ownerVar = EmitStoreLocalVariable(il, ownerType.IsValueType ? ownerType.MakeByRefType() : ownerType);
+                    if (!TryEmit(value, il, ref context, parent))
+                        return false;
+                    var valueVar = EmitStoreLocalVariable(il, value.Type);
+                    EmitLoadLocalVariable(il, ownerVar);
+                    EmitLoadLocalVariable(il, valueVar);
+                    return (!ownerKnownNotNull && member is PropertyInfo setProperty ? EmitInstanceMethodCall(il, setProperty.SetMethod, isStatic ? null : ownerType) : EmitMemberSet(il, member));
+                }
 
-                // load the member value, or the address for the value type, as the owner of the nested bindings
                 var memberType = member is FieldInfo f ? f.FieldType : ((PropertyInfo)member).PropertyType;
                 var copyVar = -1;
+                var copyOwner = -1;
                 if (member is FieldInfo field)
-                    il.Demit(isStatic ? (memberType.IsValueType ? OpCodes.Ldsflda : OpCodes.Ldsfld) : memberType.IsValueType ? OpCodes.Ldflda : OpCodes.Ldfld, field);
+                {
+                    // Readonly structs are initialized through a copy, as in System.
+                    var address = memberType.IsValueType && !field.IsInitOnly;
+                    il.Demit(isStatic ? (address ? OpCodes.Ldsflda : OpCodes.Ldsfld) : address ? OpCodes.Ldflda : OpCodes.Ldfld, field);
+                    if (memberType.IsValueType && !address)
+                        EmitStoreAndLoadLocalVariableAddress(il, memberType);
+                }
                 else if (memberType.IsValueType)
                 {
-                    // the getter returns a copy, so change the local copy and write it back by the setter
+                    // Preserve master's writable struct-property extension: initialize
+                    // the getter's copy and write it back through the setter.
                     var vp = (PropertyInfo)member;
                     if (vp.GetMethod == null || vp.SetMethod == null)
-                        return false;
+                        throw new InvalidOperationException("Cannot initialize members of a value type through a property without a setter.");
                     if (!isStatic)
+                    {
                         il.Demit(OpCodes.Dup);
-                    if (!EmitMethodCallOrVirtualCall(il, vp.GetMethod))
+                        if (context.HasExceptionBlock)
+                        {
+                            copyOwner = EmitStoreLocalVariable(il, ownerType.IsValueType ? ownerType.MakeByRefType() : ownerType);
+                            il.Demit(OpCodes.Pop);
+                            EmitLoadLocalVariable(il, copyOwner);
+                        }
+                    }
+                    if (!EmitInstanceMethodCall(il, vp.GetMethod, isStatic ? null : ownerType))
                         return false;
-                    copyVar = il.GetNextLocalVarIndex(memberType);
-                    EmitStoreLocalVariable(il, copyVar);
+                    copyVar = EmitStoreLocalVariable(il, memberType);
                     EmitLoadLocalVariableAddress(il, copyVar);
                 }
-                else if (((PropertyInfo)member).GetMethod == null || !EmitMethodCallOrVirtualCall(il, ((PropertyInfo)member).GetMethod))
+                else if (((PropertyInfo)member).GetMethod == null || !EmitInstanceMethodCall(il, ((PropertyInfo)member).GetMethod, isStatic ? null : ownerType))
                     return false;
 
+                var receiverType = memberType.IsValueType ? memberType.MakeByRefType() : memberType;
+                if (memberType.IsByRef)
+                    memberType = memberType.GetElementType();
+                var receiver = context.HasExceptionBlock ? EmitStoreLocalVariable(il, receiverType) : -1;
                 if (binding.BindingType == MemberBindingType.MemberBinding)
                 {
                     var subs = ((MemberMemberBinding)binding).Bindings;

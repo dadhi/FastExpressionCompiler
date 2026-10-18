@@ -65,7 +65,11 @@ namespace FastExpressionCompiler.UnitTests
                 var ltStopwatch = Stopwatch.StartNew();
 #if NET8_0_OR_GREATER
                 lt.Run(new LightExpression.UnitTests.NumericConversionRegressionTests());
+                lt.Run(new LightExpression.UnitTests.IntrinsicConstructorExceptionRegressionTests());
+                lt.Run(new LightExpression.UnitTests.StaticMemberInitializerRegressionTests());
+                lt.Run(new LightExpression.UnitTests.MemberInitializerSpillRegressionTests());
                 lt.Run(new LightExpression.UnitTests.NonVoidListInitializerRegressionTests());
+                lt.Run(new LightExpression.UnitTests.ListConstructionExceptionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.DecimalConstantBitsRegressionTests());
                 lt.Run(new LightExpression.UnitTests.SmallCheckedArithmeticRegressionTests());
                 lt.Run(new LightExpression.UnitTests.NullableBooleanRegressionTests());
@@ -77,6 +81,7 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.UnitTests.MixedNullableShiftRegressionTests());
                 lt.Run(new LightExpression.UnitTests.NullableBoxingRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ArrayBoundConversionRegressionTests());
+                lt.Run(new LightExpression.UnitTests.ArrayConstructionExceptionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.LiftedArithmeticOperatorRegressionTests());
                 lt.Run(new LightExpression.UnitTests.UnsignedDivisionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.OnesComplementRegressionTests());
@@ -138,7 +143,11 @@ namespace FastExpressionCompiler.UnitTests
 
             var stStopwatch = Stopwatch.StartNew();
             st.Run(new NumericConversionRegressionTests());
+            st.Run(new IntrinsicConstructorExceptionRegressionTests());
+            st.Run(new StaticMemberInitializerRegressionTests());
+            st.Run(new MemberInitializerSpillRegressionTests());
             st.Run(new NonVoidListInitializerRegressionTests());
+            st.Run(new ListConstructionExceptionRegressionTests());
             st.Run(new DecimalConstantBitsRegressionTests());
             st.Run(new SmallCheckedArithmeticRegressionTests());
             st.Run(new NullableBooleanRegressionTests());
@@ -150,6 +159,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new MixedNullableShiftRegressionTests());
             st.Run(new NullableBoxingRegressionTests());
             st.Run(new ArrayBoundConversionRegressionTests());
+            st.Run(new ArrayConstructionExceptionRegressionTests());
             st.Run(new LiftedArithmeticOperatorRegressionTests());
             st.Run(new UnsignedDivisionRegressionTests());
             st.Run(new OnesComplementRegressionTests());

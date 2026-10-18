@@ -35,7 +35,11 @@ namespace FastExpressionCompiler.UnitTests
 
                 var t = (LightExpression.TestRun)state;
                 t.Run(new LightExpression.UnitTests.NumericConversionRegressionTests());
+                t.Run(new LightExpression.UnitTests.IntrinsicConstructorExceptionRegressionTests());
+                t.Run(new LightExpression.UnitTests.StaticMemberInitializerRegressionTests());
+                t.Run(new LightExpression.UnitTests.MemberInitializerSpillRegressionTests());
                 t.Run(new LightExpression.UnitTests.NonVoidListInitializerRegressionTests());
+                t.Run(new LightExpression.UnitTests.ListConstructionExceptionRegressionTests());
                 t.Run(new LightExpression.UnitTests.DecimalConstantBitsRegressionTests());
                 t.Run(new LightExpression.UnitTests.SmallCheckedArithmeticRegressionTests());
                 t.Run(new LightExpression.UnitTests.NullableBooleanRegressionTests());
@@ -47,6 +51,7 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.MixedNullableShiftRegressionTests());
                 t.Run(new LightExpression.UnitTests.NullableBoxingRegressionTests());
                 t.Run(new LightExpression.UnitTests.ArrayBoundConversionRegressionTests());
+                t.Run(new LightExpression.UnitTests.ArrayConstructionExceptionRegressionTests());
                 t.Run(new LightExpression.UnitTests.LiftedArithmeticOperatorRegressionTests());
                 t.Run(new LightExpression.UnitTests.UnsignedDivisionRegressionTests());
                 t.Run(new LightExpression.UnitTests.OnesComplementRegressionTests());
@@ -112,7 +117,11 @@ namespace FastExpressionCompiler.UnitTests
 
             var fecTests = new TestRun();
             fecTests.Run(new NumericConversionRegressionTests());
+            fecTests.Run(new IntrinsicConstructorExceptionRegressionTests());
+            fecTests.Run(new StaticMemberInitializerRegressionTests());
+            fecTests.Run(new MemberInitializerSpillRegressionTests());
             fecTests.Run(new NonVoidListInitializerRegressionTests());
+            fecTests.Run(new ListConstructionExceptionRegressionTests());
             fecTests.Run(new DecimalConstantBitsRegressionTests());
             fecTests.Run(new SmallCheckedArithmeticRegressionTests());
             fecTests.Run(new NullableBooleanRegressionTests());
@@ -124,6 +133,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new MixedNullableShiftRegressionTests());
             fecTests.Run(new NullableBoxingRegressionTests());
             fecTests.Run(new ArrayBoundConversionRegressionTests());
+            fecTests.Run(new ArrayConstructionExceptionRegressionTests());
             fecTests.Run(new LiftedArithmeticOperatorRegressionTests());
             fecTests.Run(new UnsignedDivisionRegressionTests());
             fecTests.Run(new OnesComplementRegressionTests());
