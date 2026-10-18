@@ -1544,6 +1544,9 @@ namespace FastExpressionCompiler
 
                         if ((r = TryCollectInfo(ref nestedLambdaContext, nestedLambdaExpr.Body, newNestedLambda, ref rootNestedLambdas, 0, true)) != Result.OK)
                             return r;
+#if LIGHT_EXPRESSION
+                        context.QuoteConversions = nestedLambdaContext.QuoteConversions;
+#endif
 
                         context.Quotes = nestedLambdaContext.Quotes;
 

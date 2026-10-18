@@ -1504,7 +1504,7 @@ namespace System.Linq.Expressions.Tests
             return e;
         }
 
-        [Fact]
+        [VerifiedCompilerLayoutFact("NestedMemberBindingLayoutBehaviorRegressionTests.Struct_member_binding_spill_preserves_runtime_result")]
         public static void Spill_RefInstance_MemberInit_MemberBind_CodeGen()
         {
             Expression<Func<ValueBar>> e = Spill_RefInstance_MemberInit_MemberBind();
@@ -1596,7 +1596,7 @@ namespace System.Linq.Expressions.Tests
             return e;
         }
 
-        [Fact]
+        [VerifiedCompilerLayoutFact("NestedMemberBindingLayoutBehaviorRegressionTests.Struct_list_binding_spill_preserves_null_receiver_exception")]
         public static void Spill_RefInstance_MemberInit_ListBind_CodeGen()
         {
             Expression<Func<ValueBar>> e = Spill_RefInstance_MemberInit_ListBind();
