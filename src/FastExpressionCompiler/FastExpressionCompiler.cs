@@ -2031,6 +2031,12 @@ namespace FastExpressionCompiler
                         case ExpressionType.Equal:
                         case ExpressionType.NotEqual:
                             {
+                                var comparison = (BinaryExpression)expr;
+                                // A supplied non-lifted method determines both the operation and return type.
+                                // Lifted comparisons retain their existing equality/null handling below.
+                                if (comparison.Method != null && !comparison.IsLifted)
+                                    return TryEmitArithmetic(comparison.Left, comparison.Right, nodeType, exprType,
+                                        il, ref context, parent, comparison.Method);
                                 if (exprType.IsPrimitive && Interpreter.TryInterpretBool(out var boolResult, expr, context.CompilerFlags))
                                 {
                                     if ((parent & ParentFlags.IgnoreResult) == 0)
@@ -3327,7 +3333,8 @@ namespace FastExpressionCompiler
                 }
                 if (parent.IgnoresResult())
                     return TryEmit(op, il, ref context, parent);
-                if (op.NodeType == ExpressionType.Equal)
+                if (op.NodeType == ExpressionType.Equal && ((BinaryExpression)op).Method == null &&
+                    (IsReferenceComparison((BinaryExpression)op) || Tools.IsPrimitiveOrEnumEquality((BinaryExpression)op)))
                     return TryEmitComparison(((BinaryExpression)op).Left, ((BinaryExpression)op).Right,
                         expr.Type, ExpressionType.NotEqual, il, ref context, parent, IsReferenceComparison((BinaryExpression)op));
 
@@ -7890,6 +7897,8 @@ namespace FastExpressionCompiler
             /// <summary>Tries to interpret the expression of the Primitive type of Constant, Convert, Logical, Comparison, Arithmetic.</summary>
             internal static bool TryInterpretBool(ref bool resultBool, Expression expr, ExpressionType nodeType)
             {
+                if (expr is BinaryExpression binary && binary.Method != null)
+                    return false;
                 // what operations are supported, to get the boolean result?
                 // yes: not, logical, comparison, default
                 // not: negate, arithmetic, convert to bool
@@ -8877,6 +8886,15 @@ namespace FastExpressionCompiler
 
         public static T GetFirst<T>(this T[] source) => source.Length == 0 ? default : source[0];
 
+        internal static bool IsPrimitiveOrEnumEquality(BinaryExpression expr)
+        {
+            if (expr.Method != null)
+                return false;
+            var left = Nullable.GetUnderlyingType(expr.Left.Type) ?? expr.Left.Type;
+            var right = Nullable.GetUnderlyingType(expr.Right.Type) ?? expr.Right.Type;
+            return (left.IsPrimitive || left.IsEnum) && (right.IsPrimitive || right.IsEnum);
+        }
+
         public static Expression TryReduceConditionalTest(Expression testExpr)
         {
             // removing Not by turning Equal -> NotEqual, NotEqual -> Equal
@@ -8885,15 +8903,11 @@ namespace FastExpressionCompiler
                 // simplify the not `==` -> `!=`, `!=` -> `==`
                 var op = TryReduceConditionalTest(((UnaryExpression)testExpr).Operand);
                 var nodeType = op.NodeType;
-                if (nodeType == ExpressionType.Equal) // ensures that it is a BinaryExpression
+                if ((nodeType == ExpressionType.Equal || nodeType == ExpressionType.NotEqual) &&
+                    IsPrimitiveOrEnumEquality((BinaryExpression)op))
                 {
                     var binOp = (BinaryExpression)op;
-                    return NotEqual(binOp.Left, binOp.Right);
-                }
-                else if (nodeType == ExpressionType.NotEqual) // ensures that it is a BinaryExpression
-                {
-                    var binOp = (BinaryExpression)op;
-                    return Equal(binOp.Left, binOp.Right);
+                    return nodeType == ExpressionType.Equal ? NotEqual(binOp.Left, binOp.Right) : Equal(binOp.Left, binOp.Right);
                 }
             }
             else if (testExpr is BinaryExpression b)
