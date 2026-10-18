@@ -127,7 +127,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ldloca_S,
                 OpCodes.Ldfld,  // GetValueOrDefault
                 OpCodes.Ldc_I4, // load `int.MaxValue`
-                OpCodes.Conv_U8,// convert it to `ulong?`  
+                OpCodes.Conv_I8,// sign-extend the signed source before wrapping it as `ulong?`
                 OpCodes.Newobj,
                 OpCodes.Stloc_1,
                 OpCodes.Ldloca_S,
