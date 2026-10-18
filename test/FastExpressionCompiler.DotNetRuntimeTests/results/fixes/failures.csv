@@ -24,24 +24,13 @@ Actual:   typeof(System.ArgumentException)
 System.Linq.Expressions.Tests.ListBindTests.NonAddableListType,"System.Linq.Expressions.Tests.ListBindTests.NonAddableListType(listBinding: EnumerableProperty = {}, useInterpreter: False)",4,4,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: MemberInit
 System.Linq.Expressions.Tests.NewTests.Compile_AbstractCtor_ThrowsInvalidOperationException,System.Linq.Expressions.Tests.NewTests.Compile_AbstractCtor_ThrowsInvalidOperationException(useInterpretation: True),1,1,"Assert.Throws() Failure: No exception was thrown
 Expected: typeof(System.InvalidOperationException)"
-System.Linq.Expressions.Tests.StackSpillerTests.Spill_NewArrayInit,System.Linq.Expressions.Tests.StackSpillerTests.Spill_NewArrayInit,1,1,System.InvalidProgramException : Common Language Runtime detected an invalid program.
 System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Lambda_Action,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Lambda_Action(useInterpreter: True),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Call
 System.Dynamic.Tests.BinaryOperationTests.BinaryCallSiteBinder_DynamicExpression,System.Dynamic.Tests.BinaryOperationTests.BinaryCallSiteBinder_DynamicExpression(useInterpreter: False),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Dynamic
-System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefArgs_Invoke_CodeGen,System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefArgs_Invoke_CodeGen,1,1,"Assert.Equal() Failure: Strings differ
-                           ↓ (pos 16)
-Expected: "".method int32 ::lambda_method(class [Syst""···
-Actual:   "".method int32 ::(class [FastExpressionCom""···
-                           ↑ (pos 16)"
 System.Linq.Expressions.Tests.RuntimeVariablesTests.ReadAndReturnVars,System.Linq.Expressions.Tests.RuntimeVariablesTests.ReadAndReturnVars(useInterpreter: False),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Block
 System.Linq.Expressions.Tests.Goto.JumpInWithValue,System.Linq.Expressions.Tests.Goto.JumpInWithValue(useInterpreter: True),1,1,"Assert.Throws() Failure: No exception was thrown
 Expected: typeof(System.InvalidOperationException)"
 System.Linq.Expressions.Tests.IndexExpressionTests.CallWithLambdaIndex,System.Linq.Expressions.Tests.IndexExpressionTests.CallWithLambdaIndex(useInterpreter: False),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Index
 System.Linq.Expressions.Tests.ListBindTests.ZeroInitializersIsValid,"System.Linq.Expressions.Tests.ListBindTests.ZeroInitializersIsValid(binding: ListProperty = {}, useInterpreter: True)",4,4,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: MemberInit
-System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefArgs_Call_CodeGen,System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefArgs_Call_CodeGen,1,1,"Assert.Equal() Failure: Strings differ
-                           ↓ (pos 16)
-Expected: "".method int32 ::lambda_method(class [Syst""···
-Actual:   "".method int32 ::(class [FastExpressionCom""···
-                           ↑ (pos 16)"
 System.Linq.Expressions.Tests.Break.JumpIntoExpression,System.Linq.Expressions.Tests.Break.JumpIntoExpression(useInterpreter: True),1,1,"Assert.Throws() Failure: No exception was thrown
 Expected: typeof(System.InvalidOperationException)"
 System.Linq.Expressions.Tests.StackSpillerTests.Spill_MemberInit_ListBind,System.Linq.Expressions.Tests.StackSpillerTests.Spill_MemberInit_ListBind,1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Convert
@@ -62,7 +51,6 @@ Actual:   typeof(System.ArgumentException)
 System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Block_Action,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Block_Action(useInterpreter: True),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Call
 System.Linq.Expressions.Tests.ListBindTests.NonAddableListType,"System.Linq.Expressions.Tests.ListBindTests.NonAddableListType(listBinding: EnumerableProperty = {}, useInterpreter: True)",4,4,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: MemberInit
 System.Linq.Expressions.Tests.SwitchTests.StringSwitchNotConstant,System.Linq.Expressions.Tests.SwitchTests.StringSwitchNotConstant(useInterpreter: False),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Switch
-System.Linq.Expressions.Tests.StackSpillerTests.Spill_MemberInit_Bind,System.Linq.Expressions.Tests.StackSpillerTests.Spill_MemberInit_Bind,1,1,System.InvalidProgramException : Common Language Runtime detected an invalid program.
 System.Linq.Expressions.Tests.InterpreterTests.VerifyInstructions_Exceptions,System.Linq.Expressions.Tests.InterpreterTests.VerifyInstructions_Exceptions,1,1,"System.InvalidCastException : Unable to cast object of type 'ArrayClosure' to type 'System.Func`2[System.Object[],System.Object]'."
 System.Linq.Expressions.Tests.Compiler_Tests.NewClassWithMemberListOfStructInitializer,System.Linq.Expressions.Tests.Compiler_Tests.NewClassWithMemberListOfStructInitializer(useInterpreter: False),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: MemberInit
 System.Linq.Expressions.Tests.CallTests.CallByRefMutableStructIndexWriteBack,System.Linq.Expressions.Tests.CallTests.CallByRefMutableStructIndexWriteBack(useInterpreter: True),1,1,System.InvalidProgramException : Common Language Runtime detected an invalid program.
@@ -75,11 +63,6 @@ System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Block_Action,System.Linq.Exp
 System.Linq.Expressions.Tests.NewWithByRefParameterTests.CreateByRefReferencingReadonly,System.Linq.Expressions.Tests.NewWithByRefParameterTests.CreateByRefReferencingReadonly(useInterpreter: False),1,1,"Assert.Equal() Failure: Values differ
 Expected: 2
 Actual:   3"
-System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_ListInit_CodeGen,System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_ListInit_CodeGen,1,1,"Assert.Equal() Failure: Strings differ
-                                  ↓ (pos 121)
-Expected: ···""erTests+ValueList ::lambda_method(class [""···
-Actual:   ···""erTests+ValueList ::(class [FastExpressio""···
-                                  ↑ (pos 121)"
 System.Linq.Expressions.Tests.MemberBindTests.StaticInnerProperty,System.Linq.Expressions.Tests.MemberBindTests.StaticInnerProperty(useInterpreter: False),1,1,"Assert.Throws() Failure: Exception type was not an exact match
 Expected: typeof(System.InvalidProgramException)
 Actual:   typeof(System.NotSupportedException)
@@ -90,17 +73,11 @@ System.Linq.Expressions.Tests.Continue.JumpIntoExpression,System.Linq.Expression
 Expected: typeof(System.InvalidOperationException)"
 System.Linq.Expressions.Tests.NewTests.Compile_AbstractCtor_ThrowsInvalidOperationException,System.Linq.Expressions.Tests.NewTests.Compile_AbstractCtor_ThrowsInvalidOperationException(useInterpretation: False),1,1,"Assert.Throws() Failure: No exception was thrown
 Expected: typeof(System.InvalidOperationException)"
-System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_MemberInit_Assign_Property_Eval,System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_MemberInit_Assign_Property_Eval(useInterpreter: True),1,1,System.InvalidProgramException : Common Language Runtime detected an invalid program.
 System.Linq.Expressions.Tests.ListBindTests.StaticListField,System.Linq.Expressions.Tests.ListBindTests.StaticListField(useInterpreter: True),1,1,"Assert.Throws() Failure: Exception type was not an exact match
 Expected: typeof(System.InvalidProgramException)
 Actual:   typeof(System.NotSupportedException)
 ---- System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: MemberInit"
 System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Lambda_Closure2,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Lambda_Closure2(useInterpreter: True),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Lambda
-System.Linq.Expressions.Tests.BlockTests.InsignificantBlock,System.Linq.Expressions.Tests.BlockTests.InsignificantBlock,1,1,"Assert.Equal() Failure: Strings differ
-                          ↓ (pos 15)
-Expected: "".method void ::lambda_method(class [Syste""···
-Actual:   "".method void ::(class [FastExpressionComp""···
-                          ↑ (pos 15)"
 System.Linq.Expressions.Tests.CallTests.MultiRankArrayWriteBack,System.Linq.Expressions.Tests.CallTests.MultiRankArrayWriteBack(useInterpreter: False),1,1,"Assert.Equal() Failure: Values differ
 Expected: 1
 Actual:   0"
@@ -119,7 +96,6 @@ Actual:   typeof(System.ArgumentException)
 ---- System.ArgumentException : Label defined multiple times."
 System.Linq.Expressions.Tests.Compiler_Tests.NewStructWithMemberListInitializer,System.Linq.Expressions.Tests.Compiler_Tests.NewStructWithMemberListInitializer(useInterpreter: False),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: MemberInit
 System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_CatchBlock_Variable_Closure2,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_CatchBlock_Variable_Closure2(useInterpreter: True),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Call
-System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_ListInit_Eval,System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_ListInit_Eval(useInterpreter: False),1,1,System.InvalidProgramException : Common Language Runtime detected an invalid program.
 System.Linq.Expressions.Tests.ExceptionHandlingExpressions.CannotRethrowWithinFaultWithinCatch,System.Linq.Expressions.Tests.ExceptionHandlingExpressions.CannotRethrowWithinFaultWithinCatch(useInterpreter: False),1,1,"Assert.Throws() Failure: No exception was thrown
 Expected: typeof(System.InvalidOperationException)"
 System.Linq.Expressions.Tests.Return.AmbiguousJump,System.Linq.Expressions.Tests.Return.AmbiguousJump(useInterpreter: False),1,1,"Assert.Throws() Failure: Exception type was not an exact match
@@ -128,22 +104,15 @@ Actual:   typeof(System.ArgumentException)
 ---- System.ArgumentException : Label defined multiple times."
 System.Linq.Expressions.Tests.LambdaTests.ExcessiveArity,System.Linq.Expressions.Tests.LambdaTests.ExcessiveArity(useInterpreter: True),1,1,"Assert.Throws() Failure: No exception was thrown
 Expected: typeof(System.InvalidProgramException)"
-System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_Call_CodeGen,System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_Call_CodeGen,1,1,"Assert.Equal() Failure: Strings differ
-                           ↓ (pos 16)
-Expected: "".method int32 ::lambda_method(class [Syst""···
-Actual:   "".method int32 ::(class [FastExpressionCom""···
-                           ↑ (pos 16)"
 System.Linq.Expressions.Tests.ListBindTests.InitializeNonVoidAdd,System.Linq.Expressions.Tests.ListBindTests.InitializeNonVoidAdd(useInterpreter: True),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: MemberInit
 System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefArgs_Invoke_Inline_Eval,System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefArgs_Invoke_Inline_Eval(useInterpreter: True),1,1,System.ArgumentException : Variable 'ref Param_0' uses unsupported type 'System.Int32'. Reference types are not supported for variables. (Parameter 'variables[0]')
 System.Linq.Expressions.Tests.ExceptionHandlingExpressions.TryFinallyWithinFilter,System.Linq.Expressions.Tests.ExceptionHandlingExpressions.TryFinallyWithinFilter(useInterpreter: True),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Try
 System.Linq.Expressions.Tests.Goto.MultipleDefinitionsInSeparateBlocks,System.Linq.Expressions.Tests.Goto.MultipleDefinitionsInSeparateBlocks(useInterpreter: False),1,1,System.ArgumentException : Label defined multiple times.
 System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_RuntimeVariables_Local,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_RuntimeVariables_Local(useInterpreter: True),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Call
 System.Linq.Expressions.Tests.RuntimeVariablesTests.IRuntimeVariablesListChecksBounds,System.Linq.Expressions.Tests.RuntimeVariablesTests.IRuntimeVariablesListChecksBounds(useInterpreter: True),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Block
-System.Linq.Expressions.Tests.StackSpillerTests.Spill_NewArrayBounds,System.Linq.Expressions.Tests.StackSpillerTests.Spill_NewArrayBounds,1,1,System.InvalidProgramException : Common Language Runtime detected an invalid program.
 System.Linq.Expressions.Tests.Assign.Left_ValueTypeContainsChildTryExpression,System.Linq.Expressions.Tests.Assign.Left_ValueTypeContainsChildTryExpression(useInterpreter: False),1,1,"Assert.True() Failure
 Expected: True
 Actual:   False"
-System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_ListInit_Eval,System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_ListInit_Eval(useInterpreter: True),1,1,System.InvalidProgramException : Common Language Runtime detected an invalid program.
 System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Block_LocalAndClosure,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Block_LocalAndClosure(useInterpreter: True),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Call
 System.Linq.Expressions.Tests.CallTests.UnboxReturnsReference,System.Linq.Expressions.Tests.CallTests.UnboxReturnsReference(useInterpreter: True),1,1,"Assert.Equal() Failure: Values differ
 Expected: 1
@@ -151,11 +120,6 @@ Actual:   0"
 System.Linq.Expressions.Tests.Assign.Left_ValueTypeContainsChildTryExpression,System.Linq.Expressions.Tests.Assign.Left_ValueTypeContainsChildTryExpression(useInterpreter: True),1,1,"Assert.True() Failure
 Expected: True
 Actual:   False"
-System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefArgs_New_CodeGen,System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefArgs_New_CodeGen,1,1,"Assert.Equal() Failure: Strings differ
-                           ↓ (pos 16)
-Expected: "".method int32 ::lambda_method(class [Syst""···
-Actual:   "".method int32 ::(class [FastExpressionCom""···
-                           ↑ (pos 16)"
 System.Linq.Expressions.Tests.Goto.JumpInWithValue,System.Linq.Expressions.Tests.Goto.JumpInWithValue(useInterpreter: False),1,1,"Assert.Throws() Failure: No exception was thrown
 Expected: typeof(System.InvalidOperationException)"
 System.Linq.Expressions.Tests.ConstantTests.CheckTypeConstantTest,System.Linq.Expressions.Tests.ConstantTests.CheckTypeConstantTest(useInterpreter: True),1,1,System.ArgumentException : Type must be a runtime Type object.
@@ -236,7 +200,6 @@ System.Linq.Expressions.Tests.Goto.AmbiguousJumpSplit,System.Linq.Expressions.Te
 Expected: typeof(System.InvalidOperationException)
 Actual:   typeof(System.ArgumentException)
 ---- System.ArgumentException : Label defined multiple times."
-System.Linq.Expressions.Tests.LambdaTests.CurriedFunctionsUsingRef,System.Linq.Expressions.Tests.LambdaTests.CurriedFunctionsUsingRef(useInterpreter: False),1,1,System.InvalidProgramException : Common Language Runtime detected an invalid program.
 System.Linq.Expressions.Tests.Return.JumpIntoExpression,System.Linq.Expressions.Tests.Return.JumpIntoExpression(useInterpreter: False),1,1,"Assert.Throws() Failure: No exception was thrown
 Expected: typeof(System.InvalidOperationException)"
 System.Linq.Expressions.Tests.MemberBindTests.InnerField,System.Linq.Expressions.Tests.MemberBindTests.InnerField(useInterpreter: False),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: MemberInit
@@ -257,12 +220,10 @@ System.Linq.Expressions.Tests.LambdaTests.AutoQuote,System.Linq.Expressions.Test
 System.Linq.Expressions.Tests.Compiler_Tests.InvokeQuotedLambda,System.Linq.Expressions.Tests.Compiler_Tests.InvokeQuotedLambda(useInterpreter: True),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Invoke
 System.Linq.Expressions.Tests.ListBindTests.InitializeVoidAdd,System.Linq.Expressions.Tests.ListBindTests.InitializeVoidAdd(useInterperter: True),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: MemberInit
 System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_RuntimeVariables_ClosureAndLocal,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_RuntimeVariables_ClosureAndLocal(useInterpreter: True),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Call
-System.Linq.Expressions.Tests.ListInitExpressionTests.ValueTypeList,System.Linq.Expressions.Tests.ListInitExpressionTests.ValueTypeList(useInterpreter: True),1,1,System.InvalidProgramException : Common Language Runtime detected an invalid program.
 System.Linq.Expressions.Tests.MemberBindTests.StaticInnerField,System.Linq.Expressions.Tests.MemberBindTests.StaticInnerField(useInterpreter: False),1,1,"Assert.Throws() Failure: Exception type was not an exact match
 Expected: typeof(System.InvalidProgramException)
 Actual:   typeof(System.NotSupportedException)
 ---- System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: MemberInit"
-System.Linq.Expressions.Tests.ListInitExpressionTests.InitializeNonVoidAdd,System.Linq.Expressions.Tests.ListInitExpressionTests.InitializeNonVoidAdd(useInterpreter: True),1,1,System.InvalidProgramException : Common Language Runtime detected an invalid program.
 System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_CatchBlock_Local,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_CatchBlock_Local(useInterpreter: False),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Call
 System.Linq.Expressions.Tests.NewArrayListTests.AutoQuote,System.Linq.Expressions.Tests.NewArrayListTests.AutoQuote(useInterpreter: True),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: NewArrayInit
 System.Linq.Expressions.Tests.SwitchTests.StringSwitchNotConstant,System.Linq.Expressions.Tests.SwitchTests.StringSwitchNotConstant(useInterpreter: True),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Switch
@@ -280,27 +241,12 @@ System.Linq.Expressions.Tests.LoopTests.ContinueTheSameAsBreak,System.Linq.Expre
 Expected: typeof(System.InvalidOperationException)
 Actual:   typeof(System.ArgumentException)
 ---- System.ArgumentException : Label defined multiple times."
-System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_MemberInit_Assign_Field_CodeGen,System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_MemberInit_Assign_Field_CodeGen,1,1,"Assert.Equal() Failure: Strings differ
-                                  ↓ (pos 120)
-Expected: ···""lerTests+ValueBar ::lambda_method(class [""···
-Actual:   ···""lerTests+ValueBar ::(class [FastExpressio""···
-                                  ↑ (pos 120)"
 System.Linq.Expressions.Tests.BindTests.StaticProperty,System.Linq.Expressions.Tests.BindTests.StaticProperty(useInterpreter: True),1,1,"Assert.Throws() Failure: No exception was thrown
 Expected: typeof(System.InvalidProgramException)"
 System.Linq.Expressions.Tests.RuntimeVariablesTests.AliasingAllowed,System.Linq.Expressions.Tests.RuntimeVariablesTests.AliasingAllowed(useInterpreter: True),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Block
 System.Linq.Expressions.Tests.ConstantTests.CheckTypeConstantTest,System.Linq.Expressions.Tests.ConstantTests.CheckTypeConstantTest(useInterpreter: False),1,1,System.ArgumentException : Type must be a runtime Type object.
-System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_IndexAssignment_CodeGen,System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_IndexAssignment_CodeGen,1,1,"Assert.Equal() Failure: Strings differ
-                           ↓ (pos 16)
-Expected: "".method int32 ::lambda_method(class [Syst""···
-Actual:   "".method int32 ::(class [FastExpressionCom""···
-                           ↑ (pos 16)"
 System.Linq.Expressions.Tests.ArrayAccessTests.NonZeroBasedOneDimensionalArrayAccess,System.Linq.Expressions.Tests.ArrayAccessTests.NonZeroBasedOneDimensionalArrayAccess(useInterpreter: True),1,1,System.IndexOutOfRangeException : Index was outside the bounds of the array.
 System.Linq.Expressions.Tests.InvocationTests.InvokeByRefLambda,System.Linq.Expressions.Tests.InvocationTests.InvokeByRefLambda(useInterpreter: True),1,1,System.ArgumentException : Variable 'ref Param_0' uses unsupported type 'System.Int32'. Reference types are not supported for variables. (Parameter 'variables[0]')
-System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_Index_CodeGen,System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_Index_CodeGen,1,1,"Assert.Equal() Failure: Strings differ
-                           ↓ (pos 16)
-Expected: "".method int32 ::lambda_method(class [Syst""···
-Actual:   "".method int32 ::(class [FastExpressionCom""···
-                           ↑ (pos 16)"
 System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_MemberInit_MemberBind_CodeGen,System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_MemberInit_MemberBind_CodeGen,1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Block
 System.Linq.Expressions.Tests.ExceptionHandlingExpressions.JumpOutOfExceptionFilter,System.Linq.Expressions.Tests.ExceptionHandlingExpressions.JumpOutOfExceptionFilter(useInterpreter: True),1,1,"Assert.Throws() Failure: Exception type was not an exact match
 Expected: typeof(System.InvalidOperationException)
@@ -331,11 +277,6 @@ Actual:   typeof(System.ArgumentException)
 System.Linq.Expressions.Tests.LambdaTests.ValidateThatInterpreterWithSimpleTypeUsesNonDynamicThunk,System.Linq.Expressions.Tests.LambdaTests.ValidateThatInterpreterWithSimpleTypeUsesNonDynamicThunk,1,1,"Assert.True() Failure
 Expected: True
 Actual:   False"
-System.Linq.Expressions.Tests.Return.TailCallThenReturn,System.Linq.Expressions.Tests.Return.TailCallThenReturn(useInterpreter: True),1,1,"Assert.Equal() Failure: Strings differ
-                          ↓ (pos 15)
-Expected: "".method void ::lambda_method(class [Syste""···
-Actual:   "".method void ::(class [FastExpressionComp""···
-                          ↑ (pos 15)"
 System.Linq.Expressions.Tests.Return.MultipleDefinitionsInSeparateBlocks,System.Linq.Expressions.Tests.Return.MultipleDefinitionsInSeparateBlocks(useInterpreter: True),1,1,System.ArgumentException : Label defined multiple times.
 System.Linq.Expressions.Tests.LambdaTests.ExcessiveArity,System.Linq.Expressions.Tests.LambdaTests.ExcessiveArity(useInterpreter: False),1,1,"Assert.Throws() Failure: No exception was thrown
 Expected: typeof(System.InvalidProgramException)"
@@ -363,22 +304,15 @@ Actual:   typeof(System.NotSupportedException)
 System.Linq.Expressions.Tests.UnaryQuoteTests.QuotePreservesTypingOfBlock,System.Linq.Expressions.Tests.UnaryQuoteTests.QuotePreservesTypingOfBlock(useInterpreter: True),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Call
 System.Linq.Expressions.Tests.SwitchTests.MismatchingAllowedIfExplicitlyVoidDateTimeValueType,System.Linq.Expressions.Tests.SwitchTests.MismatchingAllowedIfExplicitlyVoidDateTimeValueType(useInterpreter: False),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Switch
 System.Linq.Expressions.Tests.LambdaTests.AutoQuote,System.Linq.Expressions.Tests.LambdaTests.AutoQuote(useInterpreter: True),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Quote
-System.Linq.Expressions.Tests.Return.TailCallThenReturn,System.Linq.Expressions.Tests.Return.TailCallThenReturn(useInterpreter: False),1,1,"Assert.Equal() Failure: Strings differ
-                          ↓ (pos 15)
-Expected: "".method void ::lambda_method(class [Syste""···
-Actual:   "".method void ::(class [FastExpressionComp""···
-                          ↑ (pos 15)"
 System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Block_Closure,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Block_Closure(useInterpreter: True),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Call
 System.Linq.Expressions.Tests.Compiler_Tests.NewClassWithMemberListInitializer,System.Linq.Expressions.Tests.Compiler_Tests.NewClassWithMemberListInitializer(useInterpreter: True),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: MemberInit
 System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_CatchBlock_Variable_Closure2,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_CatchBlock_Variable_Closure2(useInterpreter: False),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Call
-System.Linq.Expressions.Tests.LambdaTests.CurriedFunctionsUsingRef,System.Linq.Expressions.Tests.LambdaTests.CurriedFunctionsUsingRef(useInterpreter: True),1,1,System.InvalidProgramException : Common Language Runtime detected an invalid program.
 System.Linq.Expressions.Tests.CallTests.CallByRefAttemptTailCall,System.Linq.Expressions.Tests.CallTests.CallByRefAttemptTailCall(useInterpreter: False),1,1,System.InvalidProgramException : Common Language Runtime detected an invalid program.
 System.Linq.Expressions.Tests.Goto.MultipleDefinitionsInSeparateBlocks,System.Linq.Expressions.Tests.Goto.MultipleDefinitionsInSeparateBlocks(useInterpreter: True),1,1,System.ArgumentException : Label defined multiple times.
 System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Lambda_Action,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Lambda_Action(useInterpreter: False),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Call
 System.Linq.Expressions.Tests.RuntimeVariablesTests.MixedScope,System.Linq.Expressions.Tests.RuntimeVariablesTests.MixedScope(useInterpreter: True),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Block
 System.Linq.Expressions.Tests.LambdaTests.InvokeComputedLambda,System.Linq.Expressions.Tests.LambdaTests.InvokeComputedLambda(useInterpreter: True),1,1,System.NullReferenceException : Object reference not set to an instance of an object.
 System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Lambda_Closure1,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Lambda_Closure1(useInterpreter: False),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Call
-System.Linq.Expressions.Tests.ListInitExpressionTests.ValueTypeList,System.Linq.Expressions.Tests.ListInitExpressionTests.ValueTypeList(useInterpreter: False),1,1,System.InvalidProgramException : Common Language Runtime detected an invalid program.
 System.Linq.Expressions.Tests.MemberBindTests.StaticReadonlyInnerField,System.Linq.Expressions.Tests.MemberBindTests.StaticReadonlyInnerField(useInterpreter: False),1,1,"Assert.Throws() Failure: Exception type was not an exact match
 Expected: typeof(System.InvalidProgramException)
 Actual:   typeof(System.NotSupportedException)
@@ -399,7 +333,6 @@ System.Linq.Expressions.Tests.ListBindTests.StaticListProperty,System.Linq.Expre
 Expected: typeof(System.InvalidProgramException)
 Actual:   typeof(System.NotSupportedException)
 ---- System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: MemberInit"
-System.Linq.Expressions.Tests.StackSpillerTests.Spill_ListInit,System.Linq.Expressions.Tests.StackSpillerTests.Spill_ListInit,1,1,System.InvalidProgramException : Common Language Runtime detected an invalid program.
 System.Linq.Expressions.Tests.Assign.ValueTypeIndexAssign,System.Linq.Expressions.Tests.Assign.ValueTypeIndexAssign(useInterpreter: True),1,1,"Assert.True() Failure
 Expected: True
 Actual:   False"
@@ -435,7 +368,6 @@ System.Linq.Expressions.Tests.RuntimeVariablesTests.IRuntimeVariablesListChecksB
 System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Block_LocalAndClosure,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Block_LocalAndClosure(useInterpreter: False),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Call
 System.Linq.Expressions.Tests.RuntimeVariablesTests.ZeroVariables,System.Linq.Expressions.Tests.RuntimeVariablesTests.ZeroVariables(useInterpreter: False),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: RuntimeVariables
 System.Linq.Expressions.Tests.Compiler_Tests.NewClassWithMemberMemberInitializer,System.Linq.Expressions.Tests.Compiler_Tests.NewClassWithMemberMemberInitializer(useInterpreter: False),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: MemberInit
-System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_MemberInit_Assign_Field_Eval,System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_MemberInit_Assign_Field_Eval(useInterpreter: False),1,1,System.InvalidProgramException : Common Language Runtime detected an invalid program.
 System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Block_Local,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Block_Local(useInterpreter: True),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Call
 System.Linq.Expressions.Tests.CallTests.CallByRefMutableStructIndexWriteBack,System.Linq.Expressions.Tests.CallTests.CallByRefMutableStructIndexWriteBack(useInterpreter: False),1,1,System.InvalidProgramException : Common Language Runtime detected an invalid program.
 System.Linq.Expressions.Tests.ExceptionHandlingExpressions.ThrownNonExceptionPassesThroughNonMatchingHandlers,System.Linq.Expressions.Tests.ExceptionHandlingExpressions.ThrownNonExceptionPassesThroughNonMatchingHandlers(useInterpreter: True),1,1,"Assert.Equal() Failure: Values differ
@@ -449,7 +381,6 @@ System.Linq.Expressions.Tests.ExceptionHandlingExpressions.CatchFromExternallyTh
 System.Linq.Expressions.Tests.NewWithByRefParameterTests.CreateByRefReferencingOnlyReadonly,System.Linq.Expressions.Tests.NewWithByRefParameterTests.CreateByRefReferencingOnlyReadonly(useInterpreter: False),1,1,"Assert.Equal() Failure: Values differ
 Expected: 2
 Actual:   9"
-System.Linq.Expressions.Tests.BindTests.StaticField,System.Linq.Expressions.Tests.BindTests.StaticField(useInterpreter: False),1,1,System.InvalidProgramException : Common Language Runtime detected an invalid program.
 System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Lambda_IdentityFunc,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Lambda_IdentityFunc(useInterpreter: True),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Call
 System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_CatchBlock_NoVariable_Closure1,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_CatchBlock_NoVariable_Closure1(useInterpreter: False),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Call
 System.Linq.Expressions.Tests.CompilerTests.EmitConstantsToIL_LiftedToClosure,System.Linq.Expressions.Tests.CompilerTests.EmitConstantsToIL_LiftedToClosure,1,1,Assert.NotNull() Failure: Value is null
@@ -475,7 +406,6 @@ System.Linq.Expressions.Tests.ExceptionHandlingExpressions.TryCatchWithinFilter,
 System.Linq.Expressions.Tests.Break.JumpInWithValue,System.Linq.Expressions.Tests.Break.JumpInWithValue(useInterpreter: False),1,1,"Assert.Throws() Failure: No exception was thrown
 Expected: typeof(System.InvalidOperationException)"
 System.Linq.Expressions.Tests.ArrayAccessTests.ArrayAccess_MultiDimensionalOf1,System.Linq.Expressions.Tests.ArrayAccessTests.ArrayAccess_MultiDimensionalOf1(useInterpreter: False),1,1,System.IndexOutOfRangeException : Index was outside the bounds of the array.
-System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_MemberInit_Assign_Field_Eval,System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_MemberInit_Assign_Field_Eval(useInterpreter: True),1,1,System.InvalidProgramException : Common Language Runtime detected an invalid program.
 System.Linq.Expressions.Tests.CallTests.CallByRefAttemptTailCall,System.Linq.Expressions.Tests.CallTests.CallByRefAttemptTailCall(useInterpreter: True),1,1,System.InvalidProgramException : Common Language Runtime detected an invalid program.
 System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_MemberInit_ListBind_CodeGen,System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_MemberInit_ListBind_CodeGen,1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Block
 System.Linq.Expressions.Tests.RuntimeVariablesTests.ReadAndWriteVars,System.Linq.Expressions.Tests.RuntimeVariablesTests.ReadAndWriteVars(useInterpreter: True),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Block
@@ -486,13 +416,7 @@ Actual:   typeof(System.NotSupportedException)
 System.Linq.Expressions.Tests.ExceptionHandlingExpressions.CannotRethrowWithinFinallyWithinCatch,System.Linq.Expressions.Tests.ExceptionHandlingExpressions.CannotRethrowWithinFinallyWithinCatch(useInterpreter: False),1,1,"Assert.Throws() Failure: No exception was thrown
 Expected: typeof(System.InvalidOperationException)"
 System.Linq.Expressions.Tests.Compiler_Tests.NestedQuotedLambdas,System.Linq.Expressions.Tests.Compiler_Tests.NestedQuotedLambdas(useInterpreter: False),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Quote
-System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_MemberAssignment_CodeGen,System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_MemberAssignment_CodeGen,1,1,"Assert.Equal() Failure: Strings differ
-                           ↓ (pos 16)
-Expected: "".method int32 ::lambda_method(class [Syst""···
-Actual:   "".method int32 ::(class [FastExpressionCom""···
-                           ↑ (pos 16)"
 System.Linq.Expressions.Tests.StackSpillerTests.Spill_Optimizations_RuntimeVariables1,System.Linq.Expressions.Tests.StackSpillerTests.Spill_Optimizations_RuntimeVariables1,1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Invoke
-System.Linq.Expressions.Tests.BindTests.StaticField,System.Linq.Expressions.Tests.BindTests.StaticField(useInterpreter: True),1,1,System.InvalidProgramException : Common Language Runtime detected an invalid program.
 System.Linq.Expressions.Tests.Return.AmbiguousJump,System.Linq.Expressions.Tests.Return.AmbiguousJump(useInterpreter: True),1,1,"Assert.Throws() Failure: Exception type was not an exact match
 Expected: typeof(System.InvalidOperationException)
 Actual:   typeof(System.ArgumentException)
@@ -504,7 +428,6 @@ System.Linq.Expressions.Tests.MemberBindTests.StaticInnerProperty,System.Linq.Ex
 Expected: typeof(System.InvalidProgramException)
 Actual:   typeof(System.NotSupportedException)
 ---- System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: MemberInit"
-System.Linq.Expressions.Tests.ListInitExpressionTests.InitializeNonVoidAdd,System.Linq.Expressions.Tests.ListInitExpressionTests.InitializeNonVoidAdd(useInterpreter: False),1,1,System.InvalidProgramException : Common Language Runtime detected an invalid program.
 System.Linq.Expressions.Tests.MemberBindTests.StaticReadonlyInnerField,System.Linq.Expressions.Tests.MemberBindTests.StaticReadonlyInnerField(useInterpreter: True),1,1,"Assert.Throws() Failure: Exception type was not an exact match
 Expected: typeof(System.InvalidProgramException)
 Actual:   typeof(System.NotSupportedException)
@@ -519,11 +442,6 @@ System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_CatchBlock_Variable_Closure1
 System.Linq.Expressions.Tests.Compiler_Tests.InvokeQuotedLambda,System.Linq.Expressions.Tests.Compiler_Tests.InvokeQuotedLambda(useInterpreter: False),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Invoke
 System.Linq.Expressions.Tests.ExceptionHandlingExpressions.JumpOutOfFinally,System.Linq.Expressions.Tests.ExceptionHandlingExpressions.JumpOutOfFinally(useInterpreter: True),1,1,"Assert.Throws() Failure: No exception was thrown
 Expected: typeof(System.InvalidOperationException)"
-System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_MemberInit_Assign_Property_CodeGen,System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_MemberInit_Assign_Property_CodeGen,1,1,"Assert.Equal() Failure: Strings differ
-                                  ↓ (pos 120)
-Expected: ···""lerTests+ValueBar ::lambda_method(class [""···
-Actual:   ···""lerTests+ValueBar ::(class [FastExpressio""···
-                                  ↑ (pos 120)"
 System.Linq.Expressions.Tests.NewArrayListTests.AutoQuote,System.Linq.Expressions.Tests.NewArrayListTests.AutoQuote(useInterpreter: False),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: NewArrayInit
 System.Linq.Expressions.Tests.Break.AmbiguousJump,System.Linq.Expressions.Tests.Break.AmbiguousJump(useInterpreter: True),1,1,"Assert.Throws() Failure: Exception type was not an exact match
 Expected: typeof(System.InvalidOperationException)
@@ -548,4 +466,3 @@ Actual:   typeof(System.ArgumentException)
 System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Lambda_Closure2,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Lambda_Closure2(useInterpreter: False),1,1,System.NotSupportedException : FEC strict compilation returned null (fallback disabled). Node: Lambda
 System.Linq.Expressions.Tests.ExceptionHandlingExpressions.CannotRethrowOutsideCatch,System.Linq.Expressions.Tests.ExceptionHandlingExpressions.CannotRethrowOutsideCatch(useInterpreter: False),1,1,"Assert.Throws() Failure: No exception was thrown
 Expected: typeof(System.InvalidOperationException)"
-System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_MemberInit_Assign_Property_Eval,System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_MemberInit_Assign_Property_Eval(useInterpreter: False),1,1,System.InvalidProgramException : Common Language Runtime detected an invalid program.
