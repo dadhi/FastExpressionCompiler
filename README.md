@@ -267,12 +267,13 @@ and fallback to the system `Expression.Compile()` for the not supported types:
 
 **FEC does not support yet:** 
 
-- `Quote`
+- `Quote` with captured variables (capture-free quoted trees and directly invoked quoted lambdas are supported)
 - `Dynamic`
-- `RuntimeVariables`
+- `RuntimeVariables` with one or more variables (empty lists are supported)
 - `DebugInfo`
-- `MemberInit` with the `MemberMemberBinding` and the `ListMemberBinding` binding types
 - `NewArrayInit` multi-dimensional array initializer is not supported yet
+
+Nested `MemberInit` member and list bindings are supported. Very deep expression trees still have a known recursive traversal limit; see the [runtime compatibility results](test/FastExpressionCompiler.DotNetRuntimeTests/results/fixes/README.md).
 
 To find what nodes are not supported in your expression you may use the technic described below in the [Diagnostics](#diagnostics) section. 
 
