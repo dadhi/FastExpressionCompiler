@@ -1038,26 +1038,36 @@ namespace FastExpressionCompiler
             }
         }
 
-        // Dynamic emission loads Target after arguments when an argument contains an
-        // exception region or jump. Inspect even branches that constant folding will remove;
-        // nested lambda/quote bodies execute separately and must not affect this order.
-        private sealed class DynamicArgumentSpillScope : System.Linq.Expressions.ExpressionVisitor
+        // Exception regions and jumps affect invocation spilling even in branches that
+        // constant folding removes. Lambda/quote bodies execute separately; opaque
+        // extensions remain the normal collector's responsibility.
+        private sealed class ArgumentSpillScope : ExpressionVisitor
         {
-            internal bool HasExceptionBlock;
-            protected override System.Linq.Expressions.Expression VisitTry(System.Linq.Expressions.TryExpression node)
+            internal bool RequiresSpill;
+            public override Expression Visit(Expression node)
             {
-                HasExceptionBlock = true;
-                return node;
+                if (node == null || RequiresSpill) return node;
+                switch (node.NodeType)
+                {
+                    case ExpressionType.Try:
+                    case ExpressionType.Goto:
+                        RequiresSpill = true;
+                        return node;
+                    case ExpressionType.Lambda:
+                    case ExpressionType.Quote:
+                        return node;
+                    case ExpressionType.Dynamic:
+                        foreach (var argument in ((DynamicExpression)node).Arguments) Visit(argument);
+                        return node;
+                    default:
+                        return base.Visit(node);
+                }
             }
-            protected override System.Linq.Expressions.Expression VisitGoto(System.Linq.Expressions.GotoExpression node)
-            {
-                HasExceptionBlock = true;
-                return node;
-            }
-            protected override System.Linq.Expressions.Expression VisitLambda<T>(System.Linq.Expressions.Expression<T> node) => node;
-            protected override System.Linq.Expressions.Expression VisitUnary(System.Linq.Expressions.UnaryExpression node) =>
-                node.NodeType == System.Linq.Expressions.ExpressionType.Quote ? node : base.VisitUnary(node);
-            protected override System.Linq.Expressions.Expression VisitExtension(System.Linq.Expressions.Expression node) => node;
+#if LIGHT_EXPRESSION
+            protected internal override Expression VisitExtension(Expression node) => node;
+#else
+            protected override Expression VisitExtension(Expression node) => node;
+#endif
         }
 
         internal sealed class DynamicExpressionCache
@@ -1588,13 +1598,16 @@ namespace FastExpressionCompiler
                                 // before the intrinsic Compile call, matching System's stack spiller.
                                 if ((r = TryCollectInfo(ref context, invokedExpr, nestedLambda, ref rootNestedLambdas)) != Result.OK)
                                     return r;
+                                var argumentScope = new ArgumentSpillScope();
+                                for (var i = 0; i < invokeArgCount; ++i)
+                                    argumentScope.Visit(invokeArgs.GetArgument(i));
                                 var outerHasExceptionBlock = context.HasExceptionBlock;
                                 var argumentJumpCount = context.ExceptionGotos.Count;
                                 context.HasExceptionBlock = false;
                                 for (var i = 0; i < invokeArgCount; ++i)
                                     if ((r = TryCollectInfo(ref context, invokeArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas)) != Result.OK)
                                         return r;
-                                if (context.HasExceptionBlock)
+                                if (argumentScope.RequiresSpill || context.HasExceptionBlock)
                                     context.ArgsContainingComplexExpression.Map.AddOrGetEntryRef(invokeExpr, out _);
                                 context.HasExceptionBlock |= outerHasExceptionBlock;
                                 if (context.ExceptionGotos.Count != argumentJumpCount)
@@ -1845,12 +1858,14 @@ namespace FastExpressionCompiler
 #else
                             var reducedDynamic = reducedSystemDynamic;
 #endif
-                            var argumentScope = new DynamicArgumentSpillScope();
-                            foreach (var argument in systemDynamic.Arguments) argumentScope.Visit(argument);
+                            var argumentScope = new ArgumentSpillScope();
+                            var reducedArguments = ((InvocationExpression)reducedDynamic).GetArgExprs();
+                            for (var i = 0; i < reducedArguments.GetArgCount(); ++i)
+                                argumentScope.Visit(reducedArguments.GetArgument(i));
                             var outerHasExceptionBlock = context.HasExceptionBlock;
                             context.HasExceptionBlock = false;
                             r = TryCollectInfo(ref context, reducedDynamic, nestedLambda, ref rootNestedLambdas);
-                            occurrences.Reduced.Add((reducedDynamic, argumentScope.HasExceptionBlock || context.HasExceptionBlock));
+                            occurrences.Reduced.Add((reducedDynamic, argumentScope.RequiresSpill || context.HasExceptionBlock));
                             context.HasExceptionBlock |= outerHasExceptionBlock;
                             return r;
                         }
