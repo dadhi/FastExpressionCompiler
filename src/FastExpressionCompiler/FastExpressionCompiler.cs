@@ -2977,8 +2977,7 @@ namespace FastExpressionCompiler
                                     // Load the variable from the NonPassedParams array
                                     EmitLoadConstantInt(il, varIndexInNonPassedParams);
                                     il.Demit(OpCodes.Ldelem_Ref);
-                                    il.TryEmitUnboxOf(paramType);
-                                    return true;
+                                    return TryEmitCapturedParameterValue(il, paramType, isPassedRef, ref context);
                                 }
                             }
                         }
@@ -3116,7 +3115,21 @@ namespace FastExpressionCompiler
                 il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
                 EmitLoadConstantInt(il, nonPassedParamIndex);
                 il.Demit(OpCodes.Ldelem_Ref);
-                return il.TryEmitUnboxOf(paramType);
+                return TryEmitCapturedParameterValue(il, paramType, isPassedRef, ref context);
+            }
+
+            private static bool TryEmitCapturedParameterValue(ILGenerator il, Type type, bool byRef, ref CompilerContext context)
+            {
+                if (byRef)
+                {
+                    // Nullable boxes and reference slots do not expose writable storage of this type.
+                    if (!type.IsValueType || type.IsNullable())
+                        return false;
+                    il.Demit(OpCodes.Unbox, type);
+                    context.LastEmitIsAddress = true;
+                    return true;
+                }
+                return il.TryEmitUnboxOf(type);
             }
 
 #if LIGHT_EXPRESSION
