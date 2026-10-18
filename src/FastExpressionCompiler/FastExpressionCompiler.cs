@@ -1059,14 +1059,7 @@ namespace FastExpressionCompiler
             {
                 var count = Bound.Count;
                 Bound.AddRange(node.Variables);
-                try
-                {
-                    var expressions = Visit(node.Expressions);
-                    // Older ExpressionVisitor.Update implementations infer the last
-                    // expression's type and lose an explicitly typed quoted block.
-                    return ReferenceEquals(expressions, node.Expressions) ? node :
-                        System.Linq.Expressions.Expression.Block(node.Type, node.Variables, expressions);
-                }
+                try { return base.VisitBlock(node); }
                 finally { Bound.RemoveRange(count, Bound.Count - count); }
             }
             protected override System.Linq.Expressions.CatchBlock VisitCatchBlock(System.Linq.Expressions.CatchBlock node)
