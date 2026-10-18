@@ -2084,7 +2084,7 @@ namespace FastExpressionCompiler
                             }
                         case ExpressionType.Not:
                             {
-                                if (exprType == typeof(bool?))
+                                if (exprType.IsNullable())
                                     return TryEmitNot((UnaryExpression)expr, il, ref context, parent);
                                 if (!exprType.IsPrimitive)
                                     return false;
@@ -3014,33 +3014,23 @@ namespace FastExpressionCompiler
                     if (!TryEmit(exprOper, il, ref context, parent & ~ParentFlags.IgnoreResult))
                         return false;
 
-                    var valueVar = EmitStoreLocalVariable(il, typeof(bool?));
-                    var nullLabel = il.DefineLabel();
-                    var endLabel = il.DefineLabel();
-
-                    EmitLoadLocalVariableAddress(il, valueVar);
-                    il.Demit(OpCodes.Call, Tools.NullableReflected<bool>.HasValueGetterMethod);
-                    il.Demit(OpCodes.Brfalse, nullLabel);
-
-                    EmitLoadLocalVariableAddress(il, valueVar);
-                    il.Demit(OpCodes.Ldfld, Tools.NullableReflected<bool>.ValueField);
-                    if (nodeType == ExpressionType.IsFalse)
+                if (nodeType == ExpressionType.OnesComplement)
+                {
+                    if (expr.Method != null)
                     {
-                        il.Demit(OpCodes.Ldc_I4_0);
-                        il.Demit(OpCodes.Ceq);
+                        if (expr.Operand.Type.IsNullable() || !TryEmit(expr.Operand, il, ref context,
+                            (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall | ParentFlags.MemberAccess)) | ParentFlags.Arithmetic))
+                            return false;
+                        EmitMethodCall(il, expr.Method);
+                        context.LastEmitIsAddress = false;
+                        return il.EmitPopIfIgnoreResult(parent);
                     }
-                    il.Demit(OpCodes.Newobj, Tools.NullableReflected<bool>.Constructor);
-                    il.Demit(OpCodes.Br, endLabel);
-
-                    il.DmarkLabel(nullLabel);
-                    InitValueTypeVariable(il, typeof(bool?), valueVar);
-                    EmitLoadLocalVariable(il, valueVar);
-                    il.DmarkLabel(endLabel);
-
-                    return il.EmitPopIfIgnoreResult(parent);
+                    if (exprType.IsPrimitive || exprType.IsNullable())
+                        return TryEmitNot(expr, il, ref context, parent);
+                    return false;
                 }
 
-                if (!TryEmit(exprOper, il, ref context, parent))
+                if (!TryEmit(expr.Operand, il, ref context, parent))
                     return false;
 
                 if (nodeType == ExpressionType.TypeAs)
@@ -3133,10 +3123,10 @@ namespace FastExpressionCompiler
             private static bool TryEmitNot(UnaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var op = expr.Operand;
-                if (expr.Type == typeof(bool?))
+                if (expr.Type.IsNullable())
                 {
-                    if (expr.Method != null || !TryEmit(op, il, ref context,
-                        (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall | ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.Arithmetic))
+                    if (expr.Method != null || !Nullable.GetUnderlyingType(expr.Type).IsPrimitive || !TryEmit(op, il, ref context,
+                        (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall | ParentFlags.MemberAccess | ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.Arithmetic))
                         return false;
                     var operand = EmitStoreAndLoadLocalVariableAddress(il, expr.Type);
                     EmitMethodCall(il, expr.Type.GetNullableHasValueGetterMethod());
@@ -3145,7 +3135,10 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Brfalse, nullValue);
                     EmitLoadLocalVariableAddress(il, operand);
                     il.Demit(OpCodes.Ldfld, expr.Type.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
-                    EmitEqualToZeroOrNull(il);
+                    if (expr.Type == typeof(bool?))
+                        EmitEqualToZeroOrNull(il);
+                    else
+                        il.Demit(OpCodes.Not);
                     il.Demit(OpCodes.Newobj, expr.Type.GetNullableConstructor());
                     il.Demit(OpCodes.Br, done);
                     il.DmarkLabel(nullValue);
@@ -3154,6 +3147,8 @@ namespace FastExpressionCompiler
                     context.LastEmitIsAddress = false;
                     return il.EmitPopIfIgnoreResult(parent);
                 }
+                if (parent.IgnoresResult())
+                    return TryEmit(op, il, ref context, parent);
                 if (op.NodeType == ExpressionType.Equal)
                     return TryEmitComparison(((BinaryExpression)op).Left, ((BinaryExpression)op).Right,
                         expr.Type, ExpressionType.NotEqual, il, ref context, parent);
@@ -3161,9 +3156,7 @@ namespace FastExpressionCompiler
                 if (!TryEmit(op, il, ref context, parent))
                     return false;
 
-                if ((parent & ParentFlags.IgnoreResult) != 0)
-                    il.Demit(OpCodes.Pop);
-                else if (expr.Type == typeof(bool))
+                if (expr.Type == typeof(bool))
                     EmitEqualToZeroOrNull(il);
                 else
                     il.Demit(OpCodes.Not);
