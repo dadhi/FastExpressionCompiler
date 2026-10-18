@@ -57,6 +57,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new ExcessiveArityRegressionTests());
             st.Run(new ByRefCharacterWidthRegressionTests());
             st.Run(new LabelDefinitionValidationRegressionTests());
+            st.Run(new UnboxReceiverSpillRegressionTests());
             st.Run(new StringConstantIdentityRegressionTests());
             st.Run(new NonExceptionThrowPolicyRegressionTests());
             st.Run(new CapturedStructArithmeticRegressionTests());
@@ -174,6 +175,7 @@ namespace FastExpressionCompiler.UnitTests
             lt.Run(new LightExpression.UnitTests.ExcessiveArityRegressionTests());
             lt.Run(new LightExpression.UnitTests.ByRefCharacterWidthRegressionTests());
             lt.Run(new LightExpression.UnitTests.LabelDefinitionValidationRegressionTests());
+            lt.Run(new LightExpression.UnitTests.UnboxReceiverSpillRegressionTests());
             lt.Run(new LightExpression.UnitTests.StringConstantIdentityRegressionTests());
             lt.Run(new LightExpression.UnitTests.NonExceptionThrowPolicyRegressionTests());
             lt.Run(new LightExpression.UnitTests.CapturedStructArithmeticRegressionTests());
