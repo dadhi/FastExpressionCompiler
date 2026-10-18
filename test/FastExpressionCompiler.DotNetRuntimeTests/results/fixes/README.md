@@ -1,101 +1,82 @@
-# Runtime-expression compatibility fixes
+# Strict FEC compatibility results
 
-Improve imported runtime-expression compatibility in the existing FEC emitter
+## Stack
 
+Depends on https://github.com/dadhi/FastExpressionCompiler/pull/557. Parent head remains `e4c232da108d98790f0ca73f23ec90756da0cad7`; #557 is unchanged.
 
+This draft is hosted in **dadhi/FastExpressionCompiler**. Its base is temporarily `master`: the parent head branch exists only in the contributor fork and this account cannot create an upstream base branch. Rebase this layer after #557 merges, or retarget if the maintainer creates that upstream branch.
 
-Depends on draft parent PR https://github.com/dadhi/FastExpressionCompiler/pull/557
+**Review this layer:** [fixes-only comparison](https://github.com/jogibear9988/FastExpressionCompiler/compare/e4c232da108d98790f0ca73f23ec90756da0cad7...fix-runtime-expression-compatibility).
 
-Base branch: port-dotnet-runtime-expression-tests (e4c232da)
+## Problem and changes
 
-Local stacked branch: fix-runtime-expression-compatibility
+The imported runtime expression suite exposed wrong results, invalid IL and unsupported cases under strict FEC compilation. Fix these in the existing direct emitter and LightExpression layout, with logical, validated commits. No System compiler fallback, AST rewrite pipeline, global capture cache, stack-size workaround or test-specific production behavior.
 
-Validated code snapshot: 6232b047
+- Preserve numeric/nullable/operator semantics, exact TypeEqual behavior, value/reference identities, control flow and exception cleanup.
+- Fix array rank-one/non-zero lower bounds and typed element addresses; property/indexer ref argument copyback for methods, constructors and Invoke; readonly defensive copies and writable static field addresses.
+- Preserve writable Unbox/array.Get receiver addresses across exception arguments. Use formal-typed temporaries without copyback for reference-compatible ref arguments, retaining exact typed aliases and runtime covariance checks.
+- Emit nested member/list bindings, including struct field mutation, cached property getters, side effects and nonvoid Add cleanup.
+- Support capture-free quotation, immediate quoted-lambda invocation and empty RuntimeVariables. Preserve quote identities across nested Light compilation; mutable captured quotation and nonempty RuntimeVariables remain unsupported.
+- Collect runtime switch test expressions, retain ordered evaluation and void results, preserve TypeDelegator/TypeBuilder identity and reduce custom expression node types through their standard contract.
+- Reject abstract constructor calls before returning an invalid delegate; preserve the valid constructor fast paths.
+- Add **81 regression groups / 627 standard-Light .NET 10 executions**, registered in modern and Framework runners.
 
-No push or second remote pull request has been created.
+## Measured results
 
+Full strict-FEC run against frozen compiler/test snapshot `cbb68ede`: **35,133 baseline imported cases**, Windows ARM64, .NET 10 Release.
 
+| Outcome | Cases |
+| --- | ---: |
+| Passed | **34,945** |
+| Failed assertions / unsupported or compatibility cases | **152** |
+| Skipped | **36** |
+| Unfinished after an observed crash | **0** |
+| Observed inconsistent results | **0** |
+| Timeouts | **0** |
 
-RESULTS — 2026-10-18, Windows ARM64, .NET 10, Release
+Compared with the preceding complete snapshot (`6232b047`): **115 more passes**, **118 fewer failures**. The two previously unfinished deep-tree cases are now explicitly deferred, not repaired.
 
-35,133 imported cases: 34,830 pass; 270 fail; 2 unfinished after 1 crashing method; 31 skipped; 0 inconsistent; 0 timeouts.
+**Known crash remains open:** `CompilerTests.CompileDeepTree_NoStackOverflow` is temporarily skipped at the user's request to avoid a broad traversal refactor. Thus this run observes zero crashes; it does **not** establish that the compiler's deep-tree crash is fixed. System control remains enabled. xUnit v2 emits one skipped-theory record; the report accounts for its two original mode rows on the fixed baseline.
 
-Both original upstream compilation-mode rows exercise strict FEC, with fallback disabled.
+The **36 skips** comprise 4 original skips, **30 behavior-verified System-specific IL facts**, and **2 known deep-tree cases**. Two TailCallThenReturn rows still execute behavior and omit only System-specific layout comparisons. Every IL exclusion names strict-FEC behavior coverage. No relative IL speed claim is made.
 
-The verified system-control snapshot from the same machine/runtime is reused (35,116 pass, 13 fail, 4 skip).
+## What works and what remains open
 
-The previous full run (7c50c51b) had 34,810 passes, 301 failures, 2 unfinished and 20 skips. Improvements must distinguish passing behavior from explained skips.
+All **627 added regression executions pass**. The latest isolated full CallTests and SwitchTests classes pass **115/115** and **87/87**; the eight non-zero-bound/rank-one array cases and ten ref-call target rows pass. Earlier coverage includes all 5,933 TypeEqual, 430 reference-comparison, 208 unary increment/decrement and 119 binary logical cases.
 
+Remaining failures include captured quotation/nonempty RuntimeVariables/Dynamic features; nested EH or jumps in filters; legal repeated labels in separate lexical scopes; invalid-tree validation/API differences; and System-specific debugger/interpreter/runtime expectations. The CSV lists every actual remaining assertion and error rather than treating all 152 rows as distinct compiler bugs.
 
+| Remaining category | Cases |
+| --- | ---: |
+| Validation / exception contract differences | 57 |
+| Captured quotation / computed expression invocation unsupported | 30 |
+| System expected-invalid-IL static binding assertions | 14 |
+| Non-Exception wrapping / runtime policy differences | 12 |
+| Nonempty RuntimeVariables unsupported | 12 |
+| Valid label scope support gap (deferred) | 8 |
+| System private closure / debugger layout expectations | 6 |
+| System interpreter / stack trace expectations | 4 |
+| Upstream compiled / interpreted disagreement (runtime#19094) | 4 |
+| Nested exception-filter features unsupported | 3 |
+| Dynamic nodes unsupported | 2 |
 
-WORKING
+Some expected failures describe System behavior that FEC should not reproduce. Static nested-binding tests expect InvalidProgramException even though the new FEC initializer behavior executes correctly. Two boxed-struct assignment tests also fail with the System IL compiler and pass with its interpreter (upstream runtime#19094); a proposed box-mutation change was rejected because it broke compiled semantics. These remain visible compatibility differences, not silently skipped successes.
 
-All 5,933 TypeEqual, 430 reference comparison, 208 unary increment/decrement, and 119 binary logical cases passed focused reruns. Current per-class results are below and in methods.csv.
+## Validation
 
-489 added regression methods passed at this snapshot in the standard/Light .NET 10 focused runner.
+- Both libraries build net472, netstandard2.1, net8.0 and net10.0 without warnings/errors. Imported tests retain their 16 existing xUnit analyzer warnings.
+- Native .NET 10: all **1,712** legacy tests and registered TestX groups pass.
+- Native .NET 8: all **1,711** legacy tests and registered TestX groups pass.
+- Framework 4.7.2: **704 TestX executions + 1,595 legacy tests** pass using the external en-US culture wrapper.
+- Framework's invalid System oracles use explicit FEC value/mutation/effect assertions; unsupported DynamicMethod ref-return signatures explicitly assert rejection from both compilers. No FEC exception is suppressed.
+- Full imported suite completes all 21 recoverable batches; the deferred stress theory records its explicit skip reason. No observed inconsistent outcomes or timeouts.
+- The reused verified System control on the same machine/runtime has 35,116 passes, 13 failures and 4 skips. This is the established control, not a claim of a new full System run.
 
-Native .NET 10 passes all 1,712 legacy tests and registered TestX groups. Native .NET 8 passes all 1,711 legacy tests and registered groups. Framework 4.7.2 passes 566 TestX executions and all 1,595 legacy tests using the external en-US culture wrapper. Target-specific unsupported runtime APIs are documented; applicable strict FEC behavior checks remain active. Both libraries build net472/netstandard2.1/net8/net10 without warnings or errors. An earlier 7c50c51b native net8 process stalled and was terminated; the final snapshot passes a fresh complete run.
+[Detailed report](https://github.com/jogibear9988/FastExpressionCompiler/blob/fix-runtime-expression-compatibility/test/FastExpressionCompiler.DotNetRuntimeTests/results/fixes/README.md) · [Failures and actual errors](https://github.com/jogibear9988/FastExpressionCompiler/blob/fix-runtime-expression-compatibility/test/FastExpressionCompiler.DotNetRuntimeTests/results/fixes/failures.csv) · [Summary](https://github.com/jogibear9988/FastExpressionCompiler/blob/fix-runtime-expression-compatibility/test/FastExpressionCompiler.DotNetRuntimeTests/results/fixes/summary.json) · [Validation](https://github.com/jogibear9988/FastExpressionCompiler/blob/fix-runtime-expression-compatibility/test/FastExpressionCompiler.DotNetRuntimeTests/results/fixes/validation.json) · [IL exclusion proofs](https://github.com/jogibear9988/FastExpressionCompiler/blob/fix-runtime-expression-compatibility/test/FastExpressionCompiler.DotNetRuntimeTests/results/fixes/layout-exclusions.csv) · [Deferred crash](https://github.com/jogibear9988/FastExpressionCompiler/blob/fix-runtime-expression-compatibility/test/FastExpressionCompiler.DotNetRuntimeTests/results/fixes/known-deferred-issues.csv)
 
+## Logical commits
 
-
-CHANGES
-
-- Correct signed/unsigned and checked conversions, nullable arithmetic/Boolean logic, boxing/unboxing and boxed constant identity.
-
-- Honor explicit unary/binary operators, lifted custom logical operators, increment/decrement methods and coalesce/compound-assignment conversion callbacks.
-
-- Preserve decimal constant sign/scale, including signed zero and scaled integral values.
-
-- Address nonnullable boxed value captures correctly for ref calls; reject capture storage that cannot provide a correctly typed writable address.
-
-- Correct nonvoid Add cleanup, static member bindings, and ignored initializer results.
-
-- Spill array, list, member-initializer and intrinsic constructor operands around exception regions while preserving effects, struct identity and exception order.
-
-- Emit guarded exception filters with correct type selection, variable mutation, throwing-filter behavior and cleanup order; reject unsupported nested EH/jumps inside filters.
-
-- Spill invocation and index operands around exception regions, preserving evaluation order, managed references and struct writeback.
-
-- Correct value-type receivers, readonly defensive copies, null receiver checks, private delegate invocation, ref operands/results, multidimensional element addresses, nullable writeback and array bounds.
-
-- Preserve nullable RHS effects across exception regions; fix truth/unary-plus methods, checked small-integer narrowing, mixed nullable shifts, and integer switch dispatch.
-
-- Preserve typed/void label values and control flow, including backward labels and finally blocks.
-
-- Add TypeEqual directly to the existing shared emitter, including Light conversion, null/nullable and exact runtime type behavior.
-
-- Reject nonprogressing extension reductions and preserve TypeIs operand effects.
-
-- Keep strict compilation: no system fallback, AST preprocessing pipeline, or test-specific production behavior.
-
-
-
-STILL OPEN
-
-The remaining failures include unsupported Quote/RuntimeVariables/Dynamic nodes and nested bindings, nested exception handling or jumps inside filters, validation/API differences, and genuine emission defects such as property/indexer ref writeback. These are case counts, not counts of distinct compiler bugs. See failures.csv for individual cases, including their actual error. A failure is not automatically classified as an incorrect result.
-
-The sole known process crash is CompilerTests.CompileDeepTree_NoStackOverflow (two mode rows). Fixing it requires addressing recursive traversal/emission; no stack-size/thread workaround was added.
-
-
-
-EXPLAINED SKIPS
-
-31 total skips include the original 4 and 27 system-compiler IL-layout facts. Each added skip names strict FEC behavior coverage. The system-control mode retains the layout assertions. Unverified or behaviorally broken layout cases remain failures. Two TailCallThenReturn theory rows still execute their behavior and omit only System-specific IL/interpreter layout comparisons. Every exclusion and its proof is listed in layout-exclusions.csv. No relative IL speed claim is made.
-
-Nine obsolete native issue #352 opcode assertions are documented as disabled; their strict FEC execution assertions remain active, with additional null/writeback/setter coverage.
-
-
-
-VALIDATION LIMITS
-
-The outcome totals belong to 6232b047. The final report records the validated source snapshot; a later documentation-only commit may follow.
-
-Process markers identify a crashing method, not an independently reproduced crashing data row. Unfinished cases are reported separately from failures.
-
-
-
-LOCAL LOGICAL COMMITS
-
+```text
 9952f0df fix: preserve numeric conversion signedness and overflow checks
 c747288e fix: emit nullable Boolean operators with three-valued logic
 6acf6a99 fix: reject extension reductions that make no progress
@@ -164,37 +145,25 @@ e01e364d fix: spill array bounds and initializer values around exception regions
 08d3461c fix: spill member initializer receivers and binding values around exception regions
 2c9c4b98 fix: share constructor argument spilling for intrinsic expression nodes
 6232b047 test: exclude proven system compiler layout assertions with reasons
-
-
-
-CLASSES WITH OPEN FAILURES/CRASHES
-System.Linq.Expressions.Tests.UnaryQuoteTests: 4 pass, 38 fail, 0 unfinished
-System.Linq.Expressions.Tests.ExceptionHandlingExpressions: 141 pass, 28 fail, 0 unfinished
-System.Linq.Expressions.Tests.ListBindTests: 15 pass, 28 fail, 0 unfinished
-System.Linq.Expressions.Tests.Compiler_Tests: 157 pass, 22 fail, 0 unfinished
-System.Linq.Expressions.Tests.MemberBindTests: 12 pass, 16 fail, 0 unfinished
-System.Linq.Expressions.Tests.Goto: 83 pass, 12 fail, 0 unfinished
-System.Linq.Expressions.Tests.RuntimeVariablesTests: 8 pass, 12 fail, 0 unfinished
-System.Linq.Expressions.Tests.CallTests: 105 pass, 10 fail, 0 unfinished
-System.Linq.Expressions.Tests.LoopTests: 19 pass, 10 fail, 0 unfinished
-System.Linq.Expressions.Tests.StackSpillerTests: 42 pass, 10 fail, 0 unfinished
-System.Linq.Expressions.Tests.Break: 83 pass, 8 fail, 0 unfinished
-System.Linq.Expressions.Tests.CompilerTests: 1 pass, 8 fail, 2 unfinished
-System.Linq.Expressions.Tests.Return: 85 pass, 8 fail, 0 unfinished
-System.Linq.Expressions.Tests.LambdaTests: 70 pass, 7 fail, 0 unfinished
-System.Linq.Expressions.Tests.ArrayAccessTests: 14 pass, 6 fail, 0 unfinished
-System.Linq.Expressions.Tests.Continue: 31 pass, 6 fail, 0 unfinished
-System.Linq.Expressions.Tests.ExpressionTests: 127 pass, 6 fail, 0 unfinished
-System.Linq.Expressions.Tests.Assign: 71 pass, 4 fail, 0 unfinished
-System.Linq.Expressions.Tests.IndexExpressionTests: 36 pass, 4 fail, 0 unfinished
-System.Linq.Expressions.Tests.NewWithByRefParameterTests: 8 pass, 4 fail, 0 unfinished
-System.Linq.Expressions.Tests.SwitchTests: 83 pass, 4 fail, 0 unfinished
-System.Linq.Expressions.Tests.InterpreterTests: 5 pass, 3 fail, 0 unfinished
-System.Dynamic.Tests.BinaryOperationTests: 2266 pass, 2 fail, 0 unfinished
-System.Linq.Expressions.Tests.ArrayIndexTests: 176 pass, 2 fail, 0 unfinished
-System.Linq.Expressions.Tests.BindTests: 31 pass, 2 fail, 0 unfinished
-System.Linq.Expressions.Tests.ConstantTests: 108 pass, 2 fail, 0 unfinished
-System.Linq.Expressions.Tests.InvocationTests: 32 pass, 2 fail, 0 unfinished
-System.Linq.Expressions.Tests.MemberInitTests: 6 pass, 2 fail, 0 unfinished
-System.Linq.Expressions.Tests.NewArrayListTests: 103 pass, 2 fail, 0 unfinished
-System.Linq.Expressions.Tests.NewTests: 79 pass, 2 fail, 0 unfinished
+b4d9fc2b docs: report validated compatibility results at 6232b047
+684f1296 fix: emit actual array accessors for rank-one non-vector arrays
+baf75516 feat: emit capture-free quotes and empty runtime-variable views
+946e9c22 fix: compile direct quoted lambda invocations through existing emitters
+0d6cba40 feat: emit nested member and list initializer bindings
+6a39519c fix: preserve typed ref arguments and property copyback across calls
+16fe2ebc fix: preserve readonly copies and typed static field addresses
+46a54c14 fix: preserve non-runtime Type constant identities
+d15b6b83 fix: reduce custom expression node types through the standard contract
+7a0bcc3e test: cover quoted lambda indexer arguments
+6dc2d46a fix: preserve runtime switch test evaluation and void results
+1158c932 test: temporarily defer the known deep-expression stack crash
+7ce406f2 test: exclude the now-verified inline-ref IL layout oracle
+ec6da89a fix: reject abstract constructor calls before returning a delegate
+f41d0443 fix: preserve quotation identity across nested Light compilation
+3fecc464 test: retain Framework FEC behavior checks when its system oracle is invalid
+e86133f3 test: verify Framework ref-call semantics without invalid system oracles
+c8171b51 test: verify nested initializer behavior before excluding system IL oracles
+4a23fd27 fix: preserve writable Unbox and runtime array receiver storage
+ac403d05 docs: describe partial quotation and runtime-variable support
+cbb68ede fix: prepare ref arguments using their formal storage types
+```

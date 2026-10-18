@@ -1,29 +1,40 @@
 {
-  "testedCompilerCommit": "6232b047",
-  "modernExitCodes": {
-    "native8": 0,
-    "native10": 0
+  "testedCompilerCommit": "cbb68ede",
+  "exitCodes": {
+    "standard-targets": 0,
+    "light-targets": 0,
+    "imported-build": 0,
+    "added-regressions": 0,
+    "native-net10.0": 0,
+    "native-net8.0": 0,
+    "framework-build": 0,
+    "framework-run": 0,
+    "full-suite": 0
   },
-  "frameworkExitCodes": {
-    "frameworkRun": 0,
-    "frameworkBuild": 0
-  },
-  "netstandardBuildExitCodes": {
-    "light": 0,
-    "standard": 0
-  },
-  "addedRegressionExecutions": 489,
+  "addedRegressionExecutions": 627,
+  "addedRegressionGroups": 81,
   "nativeLegacyTests": {
     "net10": 1712,
     "net8": 1711,
     "net472": 1595
   },
-  "frameworkTestXExecutions": 566,
+  "frameworkTestXExecutions": 704,
   "libraryTargets": [
     "net472",
     "netstandard2.1",
     "net8.0",
     "net10.0"
   ],
-  "frozenImportedAssemblySHA256": "857c95aa988d8e2256b87f47e951fbe9d334ad7471a6704890f01a93e86d86ec"
+  "frozenImportedAssemblySHA256": "974d9a6f614cc796bc942ff5951e2f8d548286153927b01d7a5732356342e26a",
+  "knownDeferredCrash": {
+    "method": "CompilerTests.CompileDeepTree_NoStackOverflow",
+    "baselineCases": 2,
+    "reason": "User requested temporary skip and no broad traversal refactoring; issue remains open."
+  },
+  "frozenCompilerSHA256": "5e521c6eea61467d7350a1225efe1c1d33a466bff4ccdb01eb838bd6b54437d9",
+  "earlierFrameworkOracleFailure": {
+    "snapshot": "f41d0443",
+    "exitCode": 1,
+    "resolution": "Test-only oracle corrections; final Framework full runner passes with FEC execution assertions retained."
+  }
 }
