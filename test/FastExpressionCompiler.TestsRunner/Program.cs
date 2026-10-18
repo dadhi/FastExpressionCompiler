@@ -100,6 +100,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new NullableCompoundWritebackRegressionTests());
             st.Run(new CompoundAssignmentExceptionRegressionTests());
             st.Run(new NestedCompoundExceptionRegressionTests());
+            st.Run(new InvocationExceptionSpillRegressionTests());
             st.Run(new CatchFilterRegressionTests());
             st.Run(new CatchFilterSafetyRegressionTests());
             st.Run(new DirectLogicalFactoryRegressionTests());
@@ -167,6 +168,7 @@ namespace FastExpressionCompiler.UnitTests
             lt.Run(new LightExpression.UnitTests.NullableCompoundWritebackRegressionTests());
             lt.Run(new LightExpression.UnitTests.CompoundAssignmentExceptionRegressionTests());
             lt.Run(new LightExpression.UnitTests.NestedCompoundExceptionRegressionTests());
+            lt.Run(new LightExpression.UnitTests.InvocationExceptionSpillRegressionTests());
             lt.Run(new LightExpression.UnitTests.CatchFilterRegressionTests());
             lt.Run(new LightExpression.UnitTests.CatchFilterSafetyRegressionTests());
             lt.Run(new LightExpression.UnitTests.DirectLogicalFactoryRegressionTests());

@@ -5856,11 +5856,23 @@ namespace FastExpressionCompiler
                 {
                     var useResult = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
                     var args = delegateInvokeMethod.GetParameters(); // todo: @perf avoid this if possible
+                    // A try argument requires an empty evaluation stack. Preserve the receiver and
+                    // preceding arguments with the same local storage used for ordinary calls.
+                    var receiverVar = context.HasExceptionBlock ? EmitStoreLocalVariable(il, invokedExpr.Type) : -1;
+                    SmallList<int, Stack8<int>, NoArrayPool<int>> argVars = default;
                     for (var i = 0; i < args.Length; ++i)
                     {
                         var argExpr = argExprs.GetArgument(i);
                         if (!TryEmit(argExpr, il, ref context, useResult, args[i].ParameterType.IsByRef ? i : -1))
                             return false;
+                        if (receiverVar != -1)
+                            argVars.Add(EmitStoreLocalVariable(il, args[i].ParameterType));
+                    }
+                    if (receiverVar != -1)
+                    {
+                        EmitLoadLocalVariable(il, receiverVar);
+                        for (var i = 0; i < args.Length; ++i)
+                            EmitLoadLocalVariable(il, argVars[i]);
                     }
                 }
 
