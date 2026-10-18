@@ -1087,7 +1087,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Equal(42, f());
         }
 
-        [Fact]
+        [VerifiedCompilerLayoutFact("System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefArgs_Invoke_Inline_Eval")]
         public static void Spill_RefArgs_Invoke_Inline_CodeGen()
         {
             Expression<Func<int>> e = Spill_RefArgs_Invoke_Inline();
