@@ -681,6 +681,9 @@ namespace FastExpressionCompiler
             public SmallList<object> Constants;
 
             internal SmallMap4<Expression, System.Linq.Expressions.Expression, RefEq<Expression>> QuotedExpressions;
+#if LIGHT_EXPRESSION
+            internal QuoteConversionCache QuoteConversions;
+#endif
 
             /// Constant usage count and variable index.
             /// It is a separate collection from the Constants because we directly convert later into the closure array
@@ -904,6 +907,12 @@ namespace FastExpressionCompiler
 
         // A quote is executable data. Its locally bound variables must not be confused with
         // variables captured from the surrounding compiled lambda.
+#if LIGHT_EXPRESSION
+        internal sealed class QuoteConversionCache
+        {
+            internal SmallList<LightAndSysExpr> Converted;
+        }
+#endif
         private sealed class QuoteVariableScope : System.Linq.Expressions.ExpressionVisitor
         {
             private readonly System.Collections.Generic.List<System.Linq.Expressions.ParameterExpression> _bound = new();
@@ -1591,6 +1600,9 @@ namespace FastExpressionCompiler
                         }
 
                         var nestedLambdaContext = new CompilerContext(ClosureStatus.ToBeCollected, nestedParamExprs, context.CompilerFlags);
+#if LIGHT_EXPRESSION
+                        nestedLambdaContext.QuoteConversions = context.QuoteConversions;
+#endif
                         var newNestedLambda = new NestedLambdaInfo(nestedLambdaExpr);
 
                         if (nestedLambda != null)
@@ -1600,6 +1612,9 @@ namespace FastExpressionCompiler
 
                         if ((r = TryCollectInfo(ref nestedLambdaContext, nestedLambdaExpr.Body, newNestedLambda, ref rootNestedLambdas)) != Result.OK)
                             return r;
+#if LIGHT_EXPRESSION
+                        context.QuoteConversions = nestedLambdaContext.QuoteConversions;
+#endif
 
                         if (newNestedLambda.NonPassedParameters.Count != 0 &&
                             !PropagateNonPassedParamsToOuterLambda(ref context,
@@ -1822,16 +1837,21 @@ namespace FastExpressionCompiler
                         continue;
 
                     case ExpressionType.Quote:
+                        var operand = ((UnaryExpression)expr).Operand;
+                        ref var quoted = ref context.QuotedExpressions.Map.AddOrGetValueRef(operand, out var foundQuote);
+                        if (!foundQuote)
+                        {
 #if LIGHT_EXPRESSION
-                        var quoted = ((UnaryExpression)expr).Operand.ToExpression();
+                            context.QuoteConversions ??= new QuoteConversionCache();
+                            quoted = operand.ToExpression(ref context.QuoteConversions.Converted);
 #else
-                        var quoted = ((UnaryExpression)expr).Operand;
+                            quoted = operand;
 #endif
                         var quoteVariables = new QuoteVariableScope();
                         quoteVariables.Visit(quoted);
                         if (quoteVariables.HasFreeVariables)
                         return Result.NotSupported_Quote;
-                        context.QuotedExpressions.Map.AddOrGetValueRef(expr, out _) = quoted;
+                        }
                         context.AddConstantOrIncrementUsageCount(quoted);
                         return Result.OK;
                     case ExpressionType.Dynamic:          // todo: @feature - is not supported yet
@@ -2780,7 +2800,7 @@ namespace FastExpressionCompiler
                             return true;               // todo: @unclear - just ignoring the info for now
 
                         case ExpressionType.Quote:
-                            var quoted = context.QuotedExpressions.Map.TryGetValueRef(expr, out var foundQuote);
+                            var quoted = context.QuotedExpressions.Map.TryGetValueRef(((UnaryExpression)expr).Operand, out var foundQuote);
                             return foundQuote && TryEmitConstant(true, exprType, quoted.GetType(), quoted, il, ref context) &&
                                 il.EmitPopIfIgnoreResult(parent);
 
