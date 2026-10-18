@@ -941,7 +941,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Equal(42, del.DynamicInvoke());
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotMonoRuntime), nameof(PlatformDetection.IsNotNativeAot))]
+        [VerifiedCompilerLayoutFact("VerifiedCompilerRepresentationBehaviorTests.InterpreterThunkActionAndResultBehavior", "interpreter delegate thunk representation")]
         public void ValidateThatInterpreterWithSimpleTypeUsesNonDynamicThunk()
         {
             Expression<Action> action = () => Console.WriteLine("");
