@@ -75,10 +75,13 @@ public struct InvocationExceptionSpillRegressionTests : ITestX
         if (!t.IsNotNull(fast)) return;
         RefAdder add = (ref int item, int increment) => item += increment;
         var actualValue = 40;
-        var expectedValue = 40;
         t.AreEqual(42, fast(ref actualValue, add));
         t.AreEqual(42, actualValue);
+#if !NETFRAMEWORK
+        // Framework's system compiler rejects EH combined with by-ref arguments; FEC behavior is asserted above.
+        var expectedValue = 40;
         t.AreEqual(42, expression.Compile()(ref expectedValue, add));
         t.AreEqual(expectedValue, actualValue);
+#endif
     }
 }
