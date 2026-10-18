@@ -1934,6 +1934,7 @@ namespace FastExpressionCompiler
             /// <summary>Get a type from handle</summary>
             public static readonly MethodInfo GetTypeFromHandleMethod =
                 ((Func<RuntimeTypeHandle, Type>)Type.GetTypeFromHandle).Method;
+            private static readonly MethodInfo _objectGetTypeMethod = typeof(object).GetMethod(nameof(object.GetType));
             private static readonly MethodInfo _objectEqualsMethod =
                 ((Func<object, object, bool>)object.Equals).Method;
 
@@ -3125,6 +3126,8 @@ namespace FastExpressionCompiler
 
             private static bool TryEmitTypeIsOrEqual(TypeBinaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
+                if (expr.NodeType == ExpressionType.TypeEqual)
+                    return TryEmitTypeEqual(expr, il, ref context, parent);
                 if (!TryEmit(expr.Expression, il, ref context, parent))
                     return false;
                 if ((parent & ParentFlags.IgnoreResult) != 0)
@@ -3148,9 +3151,47 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Cgt_Un);
                     return true;
                 }
-                if ((context.CompilerFlags & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
-                    throw new NotSupportedExpressionException(Result.NotSupported_TypeEqual);
                 return false;
+            }
+
+            private static bool TryEmitTypeEqual(TypeBinaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            {
+                var operand = expr.Expression;
+                var sourceType = operand.Type;
+                var targetType = Nullable.GetUnderlyingType(expr.TypeOperand) ?? expr.TypeOperand;
+                if (parent.IgnoresResult())
+                    return TryEmit(operand, il, ref context, parent);
+
+                // These results are statically known, but evaluating the operand may have effects.
+                if (sourceType == typeof(void) || targetType == typeof(void) || targetType.IsPointer ||
+                    sourceType.IsValueType && !sourceType.IsNullable())
+                {
+                    if (!TryEmit(operand, il, ref context, parent | ParentFlags.IgnoreResult))
+                        return false;
+                    il.Demit(sourceType == targetType ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
+                    context.LastEmitIsAddress = false;
+                    return true;
+                }
+
+                var flags = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess)) | ParentFlags.AssignmentRightValue;
+                if (!TryEmit(operand, il, ref context, flags))
+                    return false;
+                il.TryEmitBoxOf(sourceType);
+                il.Demit(OpCodes.Dup);
+                var nonNull = il.DefineLabel();
+                var done = il.DefineLabel();
+                il.Demit(OpCodes.Brtrue, nonNull);
+                il.Demit(OpCodes.Pop);
+                il.Demit(OpCodes.Ldc_I4_0);
+                il.Demit(OpCodes.Br, done);
+                il.DmarkLabel(nonNull);
+                il.Demit(OpCodes.Call, _objectGetTypeMethod);
+                il.Demit(OpCodes.Ldtoken, targetType);
+                EmitMethodCall(il, GetTypeFromHandleMethod);
+                il.Demit(OpCodes.Ceq);
+                il.DmarkLabel(done);
+                context.LastEmitIsAddress = false;
+                return true;
             }
 
             private static bool TryEmitNot(UnaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
