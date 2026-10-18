@@ -105,6 +105,9 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.ExcessiveArityRegressionTests());
                 t.Run(new LightExpression.UnitTests.NestedStructFieldAddressRegressionTests());
                 t.Run(new LightExpression.UnitTests.CoalesceValueConversionRegressionTests());
+                t.Run(new LightExpression.UnitTests.NegationBehaviorRegressionTests());
+                t.Run(new LightExpression.UnitTests.RuntimeCompilerLayoutBehaviorRegressionTests());
+                t.Run(new LightExpression.UnitTests.CompilerLayoutBehaviorRegressionTests());
                 t.Run(new LightExpression.IssueTests.Issue183_NullableDecimal());
                 t.Run(new LightExpression.IssueTests.Issue398_Optimize_Switch_with_OpCodes_Switch());
                 t.Run(new LightExpression.IssueTests.Issue431_Add_structural_equality_comparison_to_LightExpression());
@@ -208,6 +211,9 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new ExcessiveArityRegressionTests());
             fecTests.Run(new NestedStructFieldAddressRegressionTests());
             fecTests.Run(new CoalesceValueConversionRegressionTests());
+            fecTests.Run(new NegationBehaviorRegressionTests());
+            fecTests.Run(new RuntimeCompilerLayoutBehaviorRegressionTests());
+            fecTests.Run(new CompilerLayoutBehaviorRegressionTests());
             fecTests.Run(new Issue183_NullableDecimal());
             fecTests.Run(new Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET());
             fecTests.Run(new Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_expressions_during_the_compilation());

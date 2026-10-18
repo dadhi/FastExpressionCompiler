@@ -661,6 +661,7 @@ namespace FastExpressionCompiler
             internal bool HasComplexExpression;
             internal bool InExceptionFilter;
             internal int TryExpressionCount;
+            internal bool HasExceptionBlock;
 
             /// Set if the same label target is defined by the several Label expressions, so each definition needs its own IL label
             internal bool HasLabelDefinedTwice;
@@ -1711,6 +1712,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.Try:
                         {
                             ++context.TryExpressionCount;
+                            context.HasExceptionBlock = true;
                             context.HasComplexExpression = false;
                             r = TryCollectTryExprInfo(ref context, (TryExpression)expr, nestedLambda, ref rootNestedLambdas, scopeIdx);
                             context.HasComplexExpression = true;
@@ -3010,8 +3012,8 @@ namespace FastExpressionCompiler
                     {
                         if (!context.HasComplexArguments(newExpr)
 #if LIGHT_EXPRESSION
-                            // Intrinsic construction collects operands without marking this owner.
-                            && !(newExpr.IsIntrinsic && context.TryExpressionCount != 0)
+                            // Intrinsic constructors collect their arguments without recording this node in the map.
+                            && !(newExpr.IsIntrinsic && context.HasExceptionBlock)
 #endif
                             )
                         {
@@ -7677,9 +7679,9 @@ namespace FastExpressionCompiler
                 if (leftIsNullable)
                 {
                     noNullableValueLabel = il.DefineLabel();
-                    if (!TryEmit(left, il, ref context, flags | ParentFlags.InstanceCall))
+                    if (!TryEmit(left, il, ref context, flags))
                         return false;
-                    if (context.LastEmitIsAddress || left is ParameterExpression { IsByRef: true }) // see #461, the nullable by-ref parameter does not set the flag
+                    if (context.LastEmitIsAddress)
                         EmitLoadIndirectlyByRef(il, leftType); // the nullable value is needed here and not its address
 
                     leftVar = EmitStoreLocalVariable(il, leftType);
