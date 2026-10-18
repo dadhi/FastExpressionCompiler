@@ -3099,6 +3099,16 @@ namespace FastExpressionCompiler
             {
                 var exprType = expr.Type;
 
+                if (nodeType == ExpressionType.UnaryPlus)
+                {
+                    var type = Nullable.GetUnderlyingType(expr.Operand.Type) ?? expr.Operand.Type;
+                    var method = expr.Method ?? (!type.IsPrimitive ? type.GetMethod("op_UnaryPlus", new[] { type }) : null);
+                    if (method != null)
+                        return TryEmitUnaryOperatorMethod(expr, il, ref context, parent, method);
+                    return TryEmit(expr.Operand, il, ref context,
+                        (parent & ~(ParentFlags.InstanceAccess | ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue);
+                }
+
                 if (nodeType == ExpressionType.IsTrue || nodeType == ExpressionType.IsFalse)
                     return TryEmitTruthOperator(expr, nodeType == ExpressionType.IsFalse, il, ref context, parent);
 
