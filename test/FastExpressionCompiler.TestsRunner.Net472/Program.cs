@@ -91,6 +91,7 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.NullableArithmeticEvaluationRegressionTests());
                 t.Run(new LightExpression.UnitTests.NegationBehaviorRegressionTests());
                 t.Run(new LightExpression.UnitTests.RuntimeCompilerLayoutBehaviorRegressionTests());
+                t.Run(new LightExpression.UnitTests.AdditionalCompilerLayoutBehaviorRegressionTests());
                 t.Run(new LightExpression.UnitTests.CompilerLayoutBehaviorRegressionTests());
                 t.Run(new LightExpression.UnitTests.CapturedValueRefRegressionTests());
                 t.Run(new LightExpression.UnitTests.CompoundAssignmentExceptionRegressionTests());
@@ -186,6 +187,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new NullableArithmeticEvaluationRegressionTests());
             fecTests.Run(new NegationBehaviorRegressionTests());
             fecTests.Run(new RuntimeCompilerLayoutBehaviorRegressionTests());
+            fecTests.Run(new AdditionalCompilerLayoutBehaviorRegressionTests());
             fecTests.Run(new CompilerLayoutBehaviorRegressionTests());
             fecTests.Run(new CapturedValueRefRegressionTests());
             fecTests.Run(new CompoundAssignmentExceptionRegressionTests());
