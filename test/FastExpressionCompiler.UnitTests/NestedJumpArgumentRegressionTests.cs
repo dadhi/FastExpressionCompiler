@@ -64,7 +64,7 @@ public struct NestedJumpArgumentRegressionTests : ITestX
         var leave = S.Parameter(typeof(bool)); var target = S.Label(typeof(int)); var value = S.Variable(typeof(int));
         var tree = S.Lambda<Func<bool, int>>(S.Block(new[] { value }, S.Assign(value, S.Constant(5)),
             Call(nameof(Write), value, InvokeArgument(leave, target)), S.Label(target, value)), leave);
-        Verify(t, tree);
+        VerifyByref(t, tree, false);
     }
     public void Exception_argument_order_and_writeback_remain_valid(TestContext t)
     {
@@ -72,7 +72,7 @@ public struct NestedJumpArgumentRegressionTests : ITestX
         var argument = S.TryFinally(InvokeArgument(leave, target), Call(nameof(Finally)));
         var tree = S.Lambda<Func<bool, int>>(S.Block(new[] { value }, S.Assign(value, S.Constant(5)),
             Call(nameof(Write), value, argument), S.Label(target, value)), leave);
-        Verify(t, tree);
+        VerifyByref(t, tree, true);
     }
     public void Earlier_jump_in_argument_block_survives_later_call_collection(TestContext t)
     {
@@ -81,6 +81,27 @@ public struct NestedJumpArgumentRegressionTests : ITestX
         Verify(t, Tree(leave, target, Call(nameof(Combine), Call(nameof(First)), argument)));
         Verify(t, Tree(leave, target, S.New(typeof(Pair).GetConstructor(new[] { typeof(int), typeof(int) }),
             Call(nameof(First)), argument)));
+    }
+    private static void VerifyByref(TestContext t, System.Linq.Expressions.Expression<Func<bool, int>> tree, bool hasFinally)
+    {
+#if NETFRAMEWORK
+        // Framework's stack spiller rejects by-ref calls with jump/EH arguments.
+        // Keep the FEC value, alias write and evaluation-order assertions active.
+        t.Throws<NotSupportedException>(() => tree.Compile());
+#else
+        Verify(t, tree);
+#endif
+        foreach (var leave in new[] { true, false })
+            foreach (var flags in new[] { CompilerFlags.Default, CompilerFlags.NoInvocationLambdaInlining,
+                CompilerFlags.EnableDelegateDebugInfo | CompilerFlags.ThrowOnNotSupportedExpression })
+            {
+                var fast = tree.FromSysExpression().CompileFast(true, flags);
+                if (!t.IsNotNull(fast)) return;
+                Trace = "";
+                t.AreEqual(leave ? 7 : 8, fast(leave));
+                t.AreEqual(leave ? (hasFinally ? "receiver;finally;" : "receiver;") :
+                    (hasFinally ? "receiver;pass;finally;write;" : "receiver;pass;write;"), Trace);
+            }
     }
     private static void Verify(TestContext t, System.Linq.Expressions.Expression<Func<bool, int>> tree)
     {

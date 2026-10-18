@@ -16,8 +16,14 @@ public struct ExceptionJumpValidationRegressionTests : ITestX
         Jump_out_of_try_executes_finally(t);
         Jump_out_of_catch_executes_finally(t);
     }
-    private static void Invalid(TestContext t, System.Linq.Expressions.Expression<Action> expression)
+    private static void Invalid(TestContext t, System.Linq.Expressions.Expression<Action> expression, bool frameworkDynamicMethodUnsupported = false)
     {
+#if NETFRAMEWORK
+        // Framework DynamicMethod rejects fault/filter IL before System's semantic validation.
+        if (frameworkDynamicMethodUnsupported)
+            t.Throws<NotSupportedException>(() => expression.Compile());
+        else
+#endif
         t.Throws<InvalidOperationException>(() => expression.Compile());
         foreach (var flags in new[] { CompilerFlags.Default, CompilerFlags.ThrowOnNotSupportedExpression })
             t.Throws<InvalidOperationException>(() => expression.FromSysExpression().CompileFast(true, flags));
@@ -41,7 +47,7 @@ public struct ExceptionJumpValidationRegressionTests : ITestX
         foreach (var fault in new[] { false, true })
         {
             var body = fault ? S.TryFault(S.Empty(), S.Goto(target)) : S.TryFinally(S.Empty(), S.Goto(target));
-            Invalid(t, S.Lambda<Action>(S.Block(body, S.Label(target))));
+            Invalid(t, S.Lambda<Action>(S.Block(body, S.Label(target))), frameworkDynamicMethodUnsupported: fault);
         }
     }
     public void Jumps_cannot_leave_filters(TestContext t)
@@ -49,7 +55,7 @@ public struct ExceptionJumpValidationRegressionTests : ITestX
         var target = S.Label();
         var filter = S.Block(S.Goto(target), S.Constant(true));
         Invalid(t, S.Lambda<Action>(S.TryCatch(S.Throw(S.New(typeof(Exception))),
-            S.Catch(typeof(Exception), S.Label(target), filter))));
+            S.Catch(typeof(Exception), S.Label(target), filter))), frameworkDynamicMethodUnsupported: true);
     }
     public static int Finalized;
     public static void Finally() => ++Finalized;
