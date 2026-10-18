@@ -2005,6 +2005,10 @@ public abstract class Expression
                     return new BreakValueGotoExpression(target, value);
                 return new BreakTypedValueGotoExpression(target, value, type);
             case GotoExpressionKind.Continue:
+                if (value != null)
+                    return type == null
+                        ? new ContinueValueGotoExpression(target, value)
+                        : new ContinueTypedValueGotoExpression(target, value, type);
                 return type == null
                     ? new ContinueGotoExpression(target)
                     : new ContinueTypedGotoExpression(target, type);
@@ -5461,6 +5465,18 @@ public sealed class BreakTypedValueGotoExpression : TypedValueGotoExpression
 {
     public override GotoExpressionKind Kind => GotoExpressionKind.Break;
     internal BreakTypedValueGotoExpression(LabelTarget target, Expression value, Type type) : base(target, value, type) { }
+}
+
+public sealed class ContinueValueGotoExpression : ValueGotoExpression
+{
+    public override GotoExpressionKind Kind => GotoExpressionKind.Continue;
+    internal ContinueValueGotoExpression(LabelTarget target, Expression value) : base(target, value) { }
+}
+
+public sealed class ContinueTypedValueGotoExpression : TypedValueGotoExpression
+{
+    public override GotoExpressionKind Kind => GotoExpressionKind.Continue;
+    internal ContinueTypedValueGotoExpression(LabelTarget target, Expression value, Type type) : base(target, value, type) { }
 }
 
 public sealed class ContinueGotoExpression : GotoExpression
