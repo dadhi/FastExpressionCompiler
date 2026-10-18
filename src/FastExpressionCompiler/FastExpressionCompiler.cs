@@ -5829,7 +5829,7 @@ namespace FastExpressionCompiler
                 switch (Type.GetTypeCode(type))
                 {
                     case TypeCode.Boolean: il.Demit(OpCodes.Ldind_U1); break;
-                    case TypeCode.Char: il.Demit(OpCodes.Ldind_U1); break;
+                    case TypeCode.Char: il.Demit(OpCodes.Ldind_U2); break;
                     case TypeCode.Byte: il.Demit(OpCodes.Ldind_U1); break;
                     case TypeCode.SByte: il.Demit(OpCodes.Ldind_I1); break;
                     case TypeCode.Int16: il.Demit(OpCodes.Ldind_I2); break;
@@ -5859,7 +5859,7 @@ namespace FastExpressionCompiler
                 switch (Type.GetTypeCode(type))
                 {
                     case TypeCode.Boolean: il.Demit(OpCodes.Stind_I1); break;
-                    case TypeCode.Char: il.Demit(OpCodes.Stind_I1); break;
+                    case TypeCode.Char: il.Demit(OpCodes.Stind_I2); break;
                     case TypeCode.Byte: il.Demit(OpCodes.Stind_I1); break;
                     case TypeCode.SByte: il.Demit(OpCodes.Stind_I1); break;
                     case TypeCode.Int16: il.Demit(OpCodes.Stind_I2); break;
