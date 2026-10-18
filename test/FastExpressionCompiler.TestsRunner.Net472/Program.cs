@@ -56,6 +56,7 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.ReferenceEqualityRegressionTests());
                 t.Run(new LightExpression.UnitTests.BoxedConstantIdentityRegressionTests());
                 t.Run(new LightExpression.UnitTests.UserDefinedLogicalRegressionTests());
+                t.Run(new LightExpression.UnitTests.ExplicitBinaryMethodRegressionTests());
                 t.Run(new LightExpression.UnitTests.DirectLogicalFactoryRegressionTests());
                 t.Run(new LightExpression.IssueTests.Issue480_CLR_detected_an_invalid_program_exception());
                 t.Run(new LightExpression.IssueTests.Issue183_NullableDecimal());
@@ -100,6 +101,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new ReferenceEqualityRegressionTests());
             fecTests.Run(new BoxedConstantIdentityRegressionTests());
             fecTests.Run(new UserDefinedLogicalRegressionTests());
+            fecTests.Run(new ExplicitBinaryMethodRegressionTests());
             fecTests.Run(new DirectLogicalFactoryRegressionTests());
             fecTests.Run(new UnaryIncrementValueRegressionTests());
             fecTests.Run(new MethodBasedNotRegressionTests());
