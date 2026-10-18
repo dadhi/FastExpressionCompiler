@@ -6690,8 +6690,11 @@ namespace FastExpressionCompiler
 
             private static bool EmitInstanceMethodCall(ILGenerator il, MethodInfo method, Type instanceType)
             {
-                if (instanceType == null || !instanceType.IsValueType)
+                if (instanceType == null)
                     return EmitMethodCallOrVirtualCall(il, method);
+                // callvirt checks a reference receiver even when the method itself is non-virtual.
+                if (!instanceType.IsValueType)
+                    return EmitVirtualMethodCall(il, method);
                 if (method.DeclaringType == instanceType)
                     return EmitMethodCall(il, method);
                 il.Demit(OpCodes.Constrained, instanceType);
