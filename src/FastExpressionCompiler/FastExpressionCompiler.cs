@@ -6532,11 +6532,11 @@ namespace FastExpressionCompiler
                 if (!comparingToRightNull && comparingToLeftNull & leftType == typeof(object))
                     leftType = rightType;
 
-                var operandParent = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
+                var operandParent = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess)) | ParentFlags.AssignmentRightValue;
 
                 // short-circuit the comparison with null on the right
                 var isEqualityOp = nodeType == ExpressionType.Equal | nodeType == ExpressionType.NotEqual;
-                if (isEqualityOp)
+                if (isEqualityOp && exprType != typeof(bool?))
                 {
                     if (leftIsNullable & rightIsNull)
                     {
@@ -6575,6 +6575,9 @@ namespace FastExpressionCompiler
                         return il.EmitPopIfIgnoreResult(parent);
                     }
                 }
+
+                leftIsNull &= !leftIsNullable;
+                rightIsNull &= !rightType.IsNullable();
 
                 var lVarIndex = -1;
                 var rightIsComplexExpression = false;
@@ -6803,6 +6806,7 @@ namespace FastExpressionCompiler
                     }
                 }
 
+                context.LastEmitIsAddress = false;
                 return il.EmitPopIfIgnoreResult(parent);
             }
 
