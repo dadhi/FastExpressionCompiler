@@ -1774,6 +1774,10 @@ namespace FastExpressionCompiler
                             return r;
 
                         var switchCases = switchExpr.Cases;
+                        for (var i = 0; i < switchCases.Count; ++i)
+                            foreach (var testValue in switchCases[i].TestValues)
+                                if ((r = TryCollectInfo(ref context, testValue, nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                                    return r;
                         if (switchCases.Count != 0)
                         {
                             // The test values may be the non-primitive constants or the Invoke, so collect them too
@@ -6543,6 +6547,8 @@ namespace FastExpressionCompiler
                 var cases = expr.Cases;
                 var caseCount = cases.Count;
                 var defaultBody = expr.DefaultBody;
+                if (expr.Type == typeof(void))
+                    parent |= ParentFlags.IgnoreResult;
 
                 // The void switch may have the bodies of any type, so ignore their results
                 if (expr.Type == typeof(void))
@@ -6602,8 +6608,7 @@ namespace FastExpressionCompiler
                             var testValExpr = testValues[v];
                             if (testValExpr is not ConstantExpression && testValExpr is not DefaultExpression)
                             {
-                                Debug.Assert(false, $"Not supported non-constant,non-default switch case value expression: `{testValExpr}`");
-                                return false;
+                                goto OrderedDispatch;
                             }
                             var testValueLong = testValExpr is ConstantExpression constExpr ? ConvertValueObjectToLong(constExpr.Value) : 0L;
 
@@ -6853,6 +6858,7 @@ namespace FastExpressionCompiler
                     }
                 }
 
+            OrderedDispatch:
                 var switchValueIsNullable = switchValueType.IsNullable();
                 Type switchNullableUnderlyingValueType = null;
                 MethodInfo switchNullableHasValueMethod = null;
@@ -6917,10 +6923,20 @@ namespace FastExpressionCompiler
 
                     foreach (var caseTestValue in cs.TestValues)
                     {
+                        var cachedTestValue = -1;
+                        if (context.HasExceptionBlock)
+                        {
+                            if (!TryEmit(caseTestValue, il, ref context, switchValueParent, param1ByRefIndex))
+                                return false;
+                            var testType = param1ByRefIndex == -1 ? caseTestValue.Type : caseTestValue.Type.MakeByRefType();
+                            cachedTestValue = EmitStoreLocalVariable(il, testType);
+                        }
                         if (!switchValueIsNullable)
                         {
                             EmitLoadLocalVariable(il, switchValueVar);
-                            if (!TryEmit(caseTestValue, il, ref context, switchValueParent, param1ByRefIndex))
+                            if (cachedTestValue != -1)
+                                EmitLoadLocalVariable(il, cachedTestValue);
+                            else if (!TryEmit(caseTestValue, il, ref context, switchValueParent, param1ByRefIndex))
                                 return false;
                             if (equalityMethod == null)
                             {
@@ -6937,8 +6953,11 @@ namespace FastExpressionCompiler
                         if (equalityMethod != null & !isEqualityMethodForUnderlyingNullable)
                         {
                             EmitLoadLocalVariable(il, switchValueVar);
-                            if (!TryEmit(caseTestValue, il, ref context, switchValueParent, param1ByRefIndex) ||
-                                !EmitMethodCall(il, equalityMethod))
+                            if (cachedTestValue != -1)
+                                EmitLoadLocalVariable(il, cachedTestValue);
+                            else if (!TryEmit(caseTestValue, il, ref context, switchValueParent, param1ByRefIndex))
+                                return false;
+                            if (!EmitMethodCall(il, equalityMethod))
                                 return false;
                             il.Demit(OpCodes.Brtrue, caseBodyLabel);
                             continue;
@@ -6959,7 +6978,9 @@ namespace FastExpressionCompiler
                         // Compare the switch value with the case value via Ceq or comparison method and then compare the HasValue of both
                         EmitLoadLocalVariableAddress(il, switchValueVar);
                         il.Demit(OpCodes.Ldfld, switchNullableUnsafeValueField);
-                        if (!TryEmit(caseTestValue, il, ref context, switchValueParent, param1ByRefIndex))
+                        if (cachedTestValue != -1)
+                            EmitLoadLocalVariable(il, cachedTestValue);
+                        else if (!TryEmit(caseTestValue, il, ref context, switchValueParent, param1ByRefIndex))
                             return false;
                         var caseValueVar = EmitStoreAndLoadLocalVariableAddress(il, switchValueType);
                         il.Demit(OpCodes.Ldfld, switchNullableUnsafeValueField);
@@ -9274,7 +9295,8 @@ namespace FastExpressionCompiler
                         var testValues = cases[i].TestValues;
                         for (var j = 0; j < testValues.Count; j++)
                         {
-                            if (testValues[j] is not ConstantExpression testConst || testConst.Value == null) continue;
+                            if (testValues[j] is not ConstantExpression testConst) return false;
+                            if (testConst.Value == null) continue;
                             if (switchValLong == ConvertValueObjectToLong(testConst.Value)) { matchedBody = cases[i].Body; return true; }
                         }
                     }
