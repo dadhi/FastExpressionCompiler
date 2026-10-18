@@ -4323,30 +4323,15 @@ namespace FastExpressionCompiler
             {
                 var valueVarIndex = -1;
                 var exprType = expr.Type;
-                if (exprType.IsValueType)
+                var spillArguments = context.HasExceptionBlock;
+                if (exprType.IsValueType || spillArguments)
                     valueVarIndex = il.GetNextLocalVarIndex(exprType);
 
                 var newExpr = expr.NewExpression;
-                var argExprs = newExpr.GetArgExprs();
-                var argCount = argExprs.GetArgCount();
-                if (argCount > 0)
-                {
-                    var args = newExpr.Constructor.GetParameters();
-                    for (var i = 0; i < argCount; i++)
-                        if (!TryEmit(argExprs.GetArgument(i), il, ref context, parent, args[i].ParameterType.IsByRef ? i : -1))
-                            return false;
-                }
-
-                if (newExpr.Constructor != null)
-                {
-                    il.Demit(OpCodes.Newobj, newExpr.Constructor);
-                    if (valueVarIndex != -1)
-                        EmitStoreLocalVariable(il, valueVarIndex);
-                }
-                else if (valueVarIndex != -1)
-                    InitValueTypeVariable(il, exprType, valueVarIndex);
-                else
-                    return false; // null constructor and not a value type, better to fallback
+                if (!TryEmitNew(newExpr, il, ref context, ParentFlags.CtorCall))
+                    return false;
+                if (valueVarIndex != -1)
+                    EmitStoreLocalVariable(il, valueVarIndex);
 
                 var inits = expr.Initializers;
                 var initCount = inits.Count;
@@ -4356,13 +4341,16 @@ namespace FastExpressionCompiler
                 var callFlags = (parent
                     & ~(ParentFlags.IgnoreResult | ParentFlags.MemberAccess | ParentFlags.InstanceAccess |
                         ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
-                    | ParentFlags.Call;
+                    | ParentFlags.Call | ParentFlags.AssignmentRightValue;
                 for (var i = 0; i < initCount; ++i)
                 {
-                    if (valueVarIndex != -1) // load local value address, to set its members
-                        EmitLoadLocalVariableAddress(il, valueVarIndex);
-                    else
-                        il.Demit(OpCodes.Dup); // duplicate member owner on stack
+                    if (!spillArguments)
+                    {
+                        if (valueVarIndex != -1) // load local value address, to set its members
+                            EmitLoadLocalVariableAddress(il, valueVarIndex);
+                        else
+                            il.Demit(OpCodes.Dup); // duplicate member owner on stack
+                    }
 
                     var elemInit = inits.GetArgument(i);
                     var method = elemInit.AddMethod;
@@ -4370,8 +4358,25 @@ namespace FastExpressionCompiler
                     var addArgs = elemInit.GetArgExprs();
                     var addArgCount = addArgs.GetArgCount();
 
+                    SmallList<int, Stack8<int>, NoArrayPool<int>> argVars = default;
                     for (var a = 0; ok && a < addArgCount; ++a)
-                        ok = TryEmit(addArgs.GetArgument(a), il, ref context, callFlags, methodParams[a].ParameterType.IsByRef ? a : -1);
+                    {
+                        var parType = methodParams[a].ParameterType;
+                        ok = TryEmit(addArgs.GetArgument(a), il, ref context, callFlags, parType.IsByRef ? a : -1);
+                        if (ok && spillArguments)
+                            argVars.Add(EmitStoreLocalVariable(il, parType));
+                    }
+                    if (!ok)
+                        return false;
+                    if (spillArguments)
+                    {
+                        if (exprType.IsValueType)
+                            EmitLoadLocalVariableAddress(il, valueVarIndex);
+                        else
+                            EmitLoadLocalVariable(il, valueVarIndex);
+                        for (var a = 0; a < addArgCount; ++a)
+                            EmitLoadLocalVariable(il, argVars[a]);
+                    }
 
                     if (!exprType.IsValueType)
                         ok = EmitMethodCallOrVirtualCall(il, method);
