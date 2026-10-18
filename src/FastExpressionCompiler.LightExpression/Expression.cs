@@ -1513,9 +1513,9 @@ public abstract class Expression
 
     /// <summary>Creates a BinaryExpression that represents a conditional AND operation that evaluates the second operand only if the first operand evaluates to true.</summary>
     public static BinaryExpression AndAlso(Expression left, Expression right) =>
-        left.Type == typeof(bool?)
-            ? new LeftTypedBinaryExpression(ExpressionType.AndAlso, left, right)
-            : new LogicalBinaryExpression(ExpressionType.AndAlso, left, right);
+        left.Type == typeof(bool)
+            ? new LogicalBinaryExpression(ExpressionType.AndAlso, left, right)
+            : new LeftTypedBinaryExpression(ExpressionType.AndAlso, left, right);
 
     [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression AndAlso(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.AndAlso, left, right, method);
@@ -1536,9 +1536,9 @@ public abstract class Expression
 
     /// <summary>Creates a BinaryExpression that represents a conditional OR operation that evaluates the second operand only if the first operand evaluates to false.</summary>
     public static BinaryExpression OrElse(Expression left, Expression right) =>
-        left.Type == typeof(bool?)
-            ? new LeftTypedBinaryExpression(ExpressionType.OrElse, left, right)
-            : new LogicalBinaryExpression(ExpressionType.OrElse, left, right);
+        left.Type == typeof(bool)
+            ? new LogicalBinaryExpression(ExpressionType.OrElse, left, right)
+            : new LeftTypedBinaryExpression(ExpressionType.OrElse, left, right);
 
     [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression OrElse(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.OrElse, left, right, method);

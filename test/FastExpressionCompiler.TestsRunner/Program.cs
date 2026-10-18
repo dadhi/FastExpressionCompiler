@@ -72,6 +72,8 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new VoidLabelValueRegressionTests());
             st.Run(new TypedLabelControlFlowRegressionTests());
             st.Run(new ReferenceEqualityRegressionTests());
+            st.Run(new UserDefinedLogicalRegressionTests());
+            st.Run(new DirectLogicalFactoryRegressionTests());
             st.Run(new UnaryIncrementValueRegressionTests());
             st.Run(new ExplicitIncrementOperatorRegressionTests());
 
@@ -106,6 +108,8 @@ namespace FastExpressionCompiler.UnitTests
             lt.Run(new LightExpression.UnitTests.VoidLabelValueRegressionTests());
             lt.Run(new LightExpression.UnitTests.TypedLabelControlFlowRegressionTests());
             lt.Run(new LightExpression.UnitTests.ReferenceEqualityRegressionTests());
+            lt.Run(new LightExpression.UnitTests.UserDefinedLogicalRegressionTests());
+            lt.Run(new LightExpression.UnitTests.DirectLogicalFactoryRegressionTests());
             lt.Run(new LightExpression.IssueTests.Issue480_CLR_detected_an_invalid_program_exception());
 
 #if NET8_0_OR_GREATER
