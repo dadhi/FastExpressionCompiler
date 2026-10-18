@@ -3987,7 +3987,11 @@ namespace FastExpressionCompiler
 
             private static void EmitDecimalConstant(decimal value, ILGenerator il)
             {
-                if (value == 0 | value == 1)
+                var parts = decimal.GetBits(value);
+                var sign = (parts[3] & 0x80000000) != 0;
+                var scale = (byte)((parts[3] >> 16) & 0x7F);
+
+                if (scale == 0 && !sign && (value == 0 | value == 1))
                 {
                     // emit Decimal.Zero or Decimal.One instead of new Decimal(0) or new Decimal(1)
                     var field = value == 0 ?
@@ -3997,8 +4001,8 @@ namespace FastExpressionCompiler
                     return;
                 }
 
-                //check if decimal has decimal places, if not use shorter IL code (constructor from int or long)
-                if (value % 1 == 0)
+                // Integral constructors preserve the representation only for unscaled, nonzero values.
+                if (scale == 0 && value != 0)
                 {
                     if (value >= int.MinValue && value <= int.MaxValue)
                     {
@@ -4026,10 +4030,6 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Ldsfld, typeof(decimal).GetField(nameof(decimal.MaxValue)));
                     return;
                 }
-
-                var parts = decimal.GetBits(value);
-                var sign = (parts[3] & 0x80000000) != 0;
-                var scale = (byte)((parts[3] >> 16) & 0x7F);
 
                 EmitLoadConstantInt(il, parts[0]);
                 EmitLoadConstantInt(il, parts[1]);
