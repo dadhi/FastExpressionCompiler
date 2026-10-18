@@ -5604,6 +5604,13 @@ namespace FastExpressionCompiler
                         }
                         else
                         {
+                            if (field.IsInitOnly && byRefIndex == -1 && (parent & ParentFlags.AssignmentLeftValue) == 0)
+                            {
+                                // Calling a struct member on a readonly field mutates a defensive copy.
+                                il.Demit(OpCodes.Ldfld, field);
+                                EmitStoreAndLoadLocalVariableAddress(il, field.FieldType);
+                            }
+                            else
                             il.Demit(OpCodes.Ldflda, field);
                             if ((parent & ParentFlags.AssignmentLeftValue) != 0)
                                 il.Demit(OpCodes.Dup);
