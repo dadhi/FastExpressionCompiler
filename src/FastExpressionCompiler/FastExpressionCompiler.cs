@@ -670,6 +670,7 @@ namespace FastExpressionCompiler
 
             /// New or Call expressions containing the complex expression, e.g. inlined Lambda Invoke or Try with Finally
             internal SmallSet4<Expression, RefEq<Expression>> ArgsContainingComplexExpression;
+            internal SmallSet4<Expression, RefEq<Expression>> InvocationArgumentsWithJumps;
 
             internal bool HasComplexExpression;
             internal bool HasExceptionBlock;
@@ -1725,6 +1726,7 @@ namespace FastExpressionCompiler
                                 if ((r = TryCollectInfo(ref context, invokedExpr, nestedLambda, ref rootNestedLambdas)) != Result.OK)
                                     return r;
                                 var outerHasExceptionBlock = context.HasExceptionBlock;
+                                var argumentJumpCount = context.ExceptionGotos.Count;
                                 context.HasExceptionBlock = false;
                                 for (var i = 0; i < invokeArgCount; ++i)
                                     if ((r = TryCollectInfo(ref context, invokeArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas)) != Result.OK)
@@ -1732,6 +1734,8 @@ namespace FastExpressionCompiler
                                 if (context.HasExceptionBlock)
                                     context.ArgsContainingComplexExpression.Map.AddOrGetEntryRef(invokeExpr, out _);
                                 context.HasExceptionBlock |= outerHasExceptionBlock;
+                                if (context.ExceptionGotos.Count != argumentJumpCount)
+                                    context.InvocationArgumentsWithJumps.Set.AddOrGetEntryRef(invokeExpr, out _);
                                 return r;
                             }
 
@@ -1745,12 +1749,13 @@ namespace FastExpressionCompiler
                             if ((r = TryCollectInfo(ref context, invokedExpr, nestedLambda, ref rootNestedLambdas)) != Result.OK)
                                 return r;
 
-                            var lastArgIndex = invokeArgCount - 1;
-                            for (var i = 0; i < lastArgIndex; i++)
+                            var jumpCount = context.ExceptionGotos.Count;
+                            for (var i = 0; i < invokeArgCount; i++)
                                 if ((r = TryCollectInfo(ref context, invokeArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas)) != Result.OK)
                                     return r;
-                            expr = invokeArgs.GetArgument(lastArgIndex);
-                            continue;
+                            if (context.ExceptionGotos.Count != jumpCount)
+                                context.InvocationArgumentsWithJumps.Set.AddOrGetEntryRef(invokeExpr, out _);
+                            return r;
                         }
                     case ExpressionType.Conditional:
                         var condExpr = (ConditionalExpression)expr;
@@ -6704,7 +6709,8 @@ namespace FastExpressionCompiler
                 // Invoking runtime Expression<TDelegate> data intrinsically compiles that value.
                 // This is part of Invoke semantics, not a fallback from outer FEC compilation.
                 var compileMethod = invokedExpr.Type.FindExpressionCompileMethod();
-                var deferCompile = compileMethod != null && context.ArgsContainingComplexExpression.Map.ContainsKey(expr);
+                var deferCompile = compileMethod != null && (context.ArgsContainingComplexExpression.Map.ContainsKey(expr) ||
+                    context.InvocationArgumentsWithJumps.Set.ContainsKey(expr));
                 var delegateType = compileMethod?.ReturnType ?? invokedExpr.Type;
                 var delegateInvokeMethod = delegateType.FindDelegateInvokeMethod();
                 if (delegateInvokeMethod == null)
@@ -6734,7 +6740,8 @@ namespace FastExpressionCompiler
                     var args = delegateInvokeMethod.GetParameters(); // todo: @perf avoid this if possible
                     // A try argument requires an empty evaluation stack. Preserve the receiver and
                     // preceding arguments with the same local storage used for ordinary calls.
-                    var receiverVar = context.HasExceptionBlock ? EmitStoreLocalVariable(il, deferCompile ? invokedExpr.Type : delegateType) : -1;
+                    var spillArguments = context.HasExceptionBlock || context.InvocationArgumentsWithJumps.Set.ContainsKey(expr);
+                    var receiverVar = spillArguments ? EmitStoreLocalVariable(il, deferCompile ? invokedExpr.Type : delegateType) : -1;
                     SmallList<int, Stack8<int>, NoArrayPool<int>> argVars = default;
                     for (var i = 0; i < args.Length; ++i)
                     {
