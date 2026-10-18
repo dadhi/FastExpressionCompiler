@@ -1827,7 +1827,7 @@ namespace FastExpressionCompiler
             var nestedLambdaParamExprs = nestedLambdaExpr.GetParamExprs();
 
 #if LIGHT_EXPRESSION
-            if (nestedLambdaBody is NoArgsNewClassIntrinsicExpression newExpr)
+            if (nestedLambdaBody is NoArgsNewClassIntrinsicExpression newExpr && !newExpr.Type.IsAbstract)
             {
                 var paramTypes = RentPooledOrNewClosureTypeToParamTypes(nestedLambdaParamExprs);
                 nestedLambdaInfo.Lambda = CompileNoArgsNew(newExpr, nestedLambdaExpr.Type, paramTypes, nestedReturnType, nestedLambdaContext.CompilerFlags);
