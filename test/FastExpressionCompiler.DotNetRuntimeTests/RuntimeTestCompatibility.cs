@@ -59,6 +59,11 @@ namespace Xunit
             if (Environment.GetEnvironmentVariable("FEC_TEST_COMPILER") != "system")
                 Skip = "Asserts the system compiler's " + representation + "; strict FEC behavior verified by " + behaviorCoverage;
         }
+        public VerifiedCompilerLayoutFactAttribute(string behaviorCoverage, Type conditionType, params string[] conditionNames)
+            : this(behaviorCoverage)
+        {
+            if (Skip == null) Skip = RuntimeConditions.SkipReason(conditionType, conditionNames);
+        }
     }
     public sealed class VerifiedCompilerLayoutTheoryAttribute : TheoryAttribute
     {
