@@ -6546,14 +6546,16 @@ namespace FastExpressionCompiler
                 ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var type = expr.Left.Type;
+                var underlying = Nullable.GetUnderlyingType(type);
+                var operandType = underlying ?? type;
                 var method = expr.Method ?? FindBinaryOperandMethod(
-                    nodeType == ExpressionType.AndAlso ? "op_BitwiseAnd" : "op_BitwiseOr", type, type, expr.Right.Type, expr.Type);
-                // Lifted user-defined conditional operators need nullable short-circuit rules.
-                if (type.IsNullable() || method == null || method.ContainsGenericParameters)
+                    nodeType == ExpressionType.AndAlso ? "op_BitwiseAnd" : "op_BitwiseOr", operandType, operandType,
+                    Nullable.GetUnderlyingType(expr.Right.Type) ?? expr.Right.Type, Nullable.GetUnderlyingType(expr.Type) ?? expr.Type);
+                if (method == null || method.ContainsGenericParameters)
                     return false;
                 var test = method.DeclaringType.GetMethod(nodeType == ExpressionType.AndAlso ? "op_False" : "op_True",
                     BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy,
-                    null, new[] { type }, null);
+                    null, new[] { operandType }, null);
                 if (test == null || test.ReturnType != typeof(bool))
                     return false;
 
@@ -6563,9 +6565,18 @@ namespace FastExpressionCompiler
                     return false;
                 var left = il.GetNextLocalVarIndex(type);
                 EmitStoreLocalVariable(il, left);
-                EmitLoadLocalVariable(il, left);
-                EmitMethodCall(il, test);
                 var skipRight = il.DefineLabel();
+                if (underlying != null)
+                {
+                    EmitLoadLocalVariableAddress(il, left);
+                    EmitMethodCall(il, type.GetNullableHasValueGetterMethod());
+                    il.Demit(OpCodes.Brfalse, skipRight);
+                    EmitLoadLocalVariableAddress(il, left);
+                    il.Demit(OpCodes.Ldfld, type.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                }
+                else
+                    EmitLoadLocalVariable(il, left);
+                EmitMethodCall(il, test);
                 il.Demit(OpCodes.Brtrue, skipRight);
 
                 // Evaluate the right with an empty stack: it may contain a try/catch.
@@ -6573,13 +6584,35 @@ namespace FastExpressionCompiler
                     return false;
                 var right = il.GetNextLocalVarIndex(expr.Right.Type);
                 EmitStoreLocalVariable(il, right);
-                EmitLoadLocalVariable(il, left);
-                EmitLoadLocalVariable(il, right);
+                var rightIsNull = il.DefineLabel();
+                if (underlying != null)
+                {
+                    EmitLoadLocalVariableAddress(il, right);
+                    EmitMethodCall(il, type.GetNullableHasValueGetterMethod());
+                    il.Demit(OpCodes.Brfalse, rightIsNull);
+                    EmitLoadLocalVariableAddress(il, left);
+                    il.Demit(OpCodes.Ldfld, type.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                    EmitLoadLocalVariableAddress(il, right);
+                    il.Demit(OpCodes.Ldfld, type.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                }
+                else
+                {
+                    EmitLoadLocalVariable(il, left);
+                    EmitLoadLocalVariable(il, right);
+                }
                 EmitMethodCall(il, method);
+                if (underlying != null)
+                    il.Demit(OpCodes.Newobj, type.GetNullableConstructor());
                 var done = il.DefineLabel();
                 il.Demit(OpCodes.Br, done);
                 il.DmarkLabel(skipRight);
                 EmitLoadLocalVariable(il, left);
+                if (underlying != null)
+                {
+                    il.Demit(OpCodes.Br, done);
+                    il.DmarkLabel(rightIsNull);
+                    EmitDefault(il, type);
+                }
                 il.DmarkLabel(done);
                 context.LastEmitIsAddress = false;
                 return il.EmitPopIfIgnoreResult(parent);
