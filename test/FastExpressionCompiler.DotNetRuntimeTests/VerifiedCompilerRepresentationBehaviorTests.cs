@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Linq.Expressions;
 using System.Reflection;
 using FastExpressionCompiler;
@@ -9,6 +11,10 @@ namespace System.Linq.Expressions.Tests;
 
 // These test executable behavior separately from assertions about System's private
 // closure representation and its known invalid-IL static-initializer implementation.
+[CollectionDefinition("Verified compiler representation", DisableParallelization = true)]
+public sealed class CompilerRepresentationCollection { }
+
+[Collection("Verified compiler representation")]
 public class VerifiedCompilerRepresentationBehaviorTests
 {
     private static Delegate Strict(LambdaExpression expression)
@@ -134,5 +140,78 @@ public class VerifiedCompilerRepresentationBehaviorTests
             Assert.Equal(new[] { 0 }, list); Assert.Same(list, property.GetValue(null));
         }
         finally { property.SetValue(null, previous); }
+    }
+
+    [Fact]
+    public void InterpreterInstructionSimpleBehavior()
+    {
+        Expression<Func<string, bool>> tree = s => s != null && unchecked(s.Substring(1).Length * 2) > 0;
+        var fast = (Func<string, bool>)Strict(tree);
+        var system = tree.Compile(true);
+        foreach (var value in new[] { null, "a", "ab", "abc" }) Assert.Equal(system(value), fast(value));
+        Assert.Throws<ArgumentOutOfRangeException>(() => fast(""));
+        Assert.Throws<ArgumentOutOfRangeException>(() => system(""));
+    }
+
+    [Fact]
+    public void InterpreterInstructionExceptionBehavior()
+    {
+        var x = Expression.Parameter(typeof(int));
+        var tree = Expression.Lambda<Func<int, int>>(Expression.TryCatchFinally(
+            Expression.Call(typeof(Math).GetMethod(nameof(Math.Abs), new[] { typeof(int) }),
+                Expression.Divide(Expression.Constant(42), x)), Expression.Empty(),
+            Expression.Catch(typeof(DivideByZeroException), Expression.Constant(-1))), x);
+        var fast = (Func<int, int>)Strict(tree);
+        var system = tree.Compile(true);
+        foreach (var value in new[] { int.MinValue, -2, -1, 0, 1, 2, 100, int.MaxValue }) Assert.Equal(system(value), fast(value));
+    }
+
+    [Fact]
+    public void InlinedThrowingConstructorBehavior()
+    {
+        var type = typeof(InterpreterTests).GetNestedType("Thrower", BindingFlags.NonPublic);
+        var constructor = type.GetConstructor(new[] { typeof(bool) });
+        foreach (var fail in new[] { false, true })
+        {
+            var tree = Expression.Lambda(Expression.New(constructor, Expression.Constant(fail)));
+            var fast = Strict(tree);
+            var system = tree.Compile(true);
+            if (fail)
+            {
+                Assert.IsType<Exception>(Assert.Throws<TargetInvocationException>(() => fast.DynamicInvoke()).InnerException);
+                Assert.IsType<Exception>(Assert.Throws<TargetInvocationException>(() => system.DynamicInvoke()).InnerException);
+            }
+            else
+            {
+                Assert.Equal(type, fast.DynamicInvoke().GetType());
+                Assert.Equal(type, system.DynamicInvoke().GetType());
+            }
+        }
+    }
+
+    [Fact]
+    public void InterpreterThunkActionAndResultBehavior()
+    {
+        // The collection disables parallelization because Console.Out is process-wide.
+        var previous = Console.Out;
+        using var output = new StringWriter(CultureInfo.InvariantCulture);
+        try
+        {
+            Console.SetOut(output);
+            Expression<Action> action = () => Console.WriteLine("");
+            Expression<Action<int>> action1 = x => Console.WriteLine(x.ToString());
+            Expression<Action<int, object>> action2 = (x, y) => Console.WriteLine(y);
+            ((Action)Strict(action))();
+            ((Action<int>)Strict(action1))(42);
+            ((Action<int, object>)Strict(action2))(7, "payload");
+            Assert.Equal(Environment.NewLine + "42" + Environment.NewLine + "payload" + Environment.NewLine, output.ToString());
+        }
+        finally { Console.SetOut(previous); }
+        Expression<Func<object>> func = () => null;
+        Expression<Func<object, object>> func1 = x => null;
+        Expression<Func<object, object, object>> func2 = (x, y) => null;
+        Assert.Null(((Func<object>)Strict(func))());
+        Assert.Null(((Func<object, object>)Strict(func1))(new object()));
+        Assert.Null(((Func<object, object, object>)Strict(func2))(new object(), new object()));
     }
 }
