@@ -3064,7 +3064,8 @@ namespace FastExpressionCompiler
                 var labelDone = il.DefineLabel();
 
                 // we won't OpCodes.Pop inside the Coalesce as it may leave the Il in invalid state - instead we will pop at the end here (#284)
-                var flags = (parent & ~ParentFlags.IgnoreResult) | ParentFlags.Coalesce;
+                var flags = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
+                    ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.Coalesce | ParentFlags.AssignmentRightValue;
 
                 if (!TryEmit(left, il, ref context, flags))
                     return false;
@@ -3126,6 +3127,7 @@ namespace FastExpressionCompiler
                         il.DmarkLabel(labelDone);
                     }
                 }
+                context.LastEmitIsAddress = false;
                 return il.EmitPopIfIgnoreResult(parent);
             }
 
