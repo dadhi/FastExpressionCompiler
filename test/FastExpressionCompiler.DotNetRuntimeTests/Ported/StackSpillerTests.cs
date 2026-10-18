@@ -1676,7 +1676,7 @@ namespace System.Linq.Expressions.Tests
                     }");
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("CompilerLayoutBehaviorRegressionTests.Constant_index_assignment_spill_preserves_behavior")]
         public static void Spill_Optimizations_Constant()
         {
             ParameterExpression xs = Expression.Parameter(typeof(int[]));
@@ -1734,7 +1734,7 @@ namespace System.Linq.Expressions.Tests
             );
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("CompilerLayoutBehaviorRegressionTests.Default_index_assignment_spill_preserves_behavior")]
         public static void Spill_Optimizations_Default()
         {
             ParameterExpression xs = Expression.Parameter(typeof(int[]));
@@ -1792,7 +1792,7 @@ namespace System.Linq.Expressions.Tests
             );
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("CompilerLayoutBehaviorRegressionTests.Literal_field_spill_preserves_behavior")]
         public static void Spill_Optimizations_LiteralField_NotNetFramework()
         {
             Expression<Func<double>> e =
@@ -1840,7 +1840,7 @@ namespace System.Linq.Expressions.Tests
             );
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("CompilerLayoutBehaviorRegressionTests.Static_readonly_field_spill_preserves_behavior")]
         public static void Spill_Optimizations_StaticReadOnlyField()
         {
             Expression<Func<string>> e =
@@ -2099,7 +2099,7 @@ namespace System.Linq.Expressions.Tests
                 }");
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("CompilerLayoutBehaviorRegressionTests.Arithmetic_operands_after_spill_preserve_behavior")]
         public static void Spill_Optimizations_NoSpillBeyondSpillSite2()
         {
             ParameterExpression f = Expression.Parameter(typeof(Func<int, int, int, int>));

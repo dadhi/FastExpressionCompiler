@@ -35,11 +35,13 @@ namespace FastExpressionCompiler.UnitTests
 
                 var t = (LightExpression.TestRun)state;
                 t.Run(new LightExpression.UnitTests.NumericConversionRegressionTests());
+                t.Run(new LightExpression.UnitTests.SmallCheckedArithmeticRegressionTests());
                 t.Run(new LightExpression.UnitTests.NullableBooleanRegressionTests());
                 t.Run(new LightExpression.UnitTests.TypeIsRegressionTests());
                 t.Run(new LightExpression.UnitTests.ReferenceTypedConstantRegressionTests());
                 t.Run(new LightExpression.UnitTests.ReferenceUnboxingRegressionTests());
                 t.Run(new LightExpression.UnitTests.NullableArithmeticOperandRegressionTests());
+                t.Run(new LightExpression.UnitTests.NullableArithmeticEvaluationRegressionTests());
                 t.Run(new LightExpression.UnitTests.NullableBoxingRegressionTests());
                 t.Run(new LightExpression.UnitTests.ArrayBoundConversionRegressionTests());
                 t.Run(new LightExpression.UnitTests.LiftedArithmeticOperatorRegressionTests());
@@ -52,13 +54,19 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.CoalesceCallbackRegressionTests());
                 t.Run(new LightExpression.UnitTests.VoidLabelValueRegressionTests());
                 t.Run(new LightExpression.UnitTests.TypedLabelControlFlowRegressionTests());
+                t.Run(new LightExpression.UnitTests.NegationBehaviorRegressionTests());
+                t.Run(new LightExpression.UnitTests.TruthUnaryRegressionTests());
                 t.Run(new LightExpression.UnitTests.ReferenceEqualityRegressionTests());
                 t.Run(new LightExpression.UnitTests.TypeEqualRegressionTests());
+                t.Run(new LightExpression.UnitTests.RuntimeCompilerLayoutBehaviorRegressionTests());
+                t.Run(new LightExpression.UnitTests.CompilerLayoutBehaviorRegressionTests());
                 t.Run(new LightExpression.UnitTests.BoxedConstantIdentityRegressionTests());
                 t.Run(new LightExpression.UnitTests.UserDefinedLogicalRegressionTests());
                 t.Run(new LightExpression.UnitTests.ExplicitBinaryMethodRegressionTests());
                 t.Run(new LightExpression.UnitTests.AssignmentConversionRegressionTests());
                 t.Run(new LightExpression.UnitTests.NullableCompoundWritebackRegressionTests());
+                t.Run(new LightExpression.UnitTests.CompoundAssignmentExceptionRegressionTests());
+                t.Run(new LightExpression.UnitTests.NestedCompoundExceptionRegressionTests());
                 t.Run(new LightExpression.UnitTests.DirectLogicalFactoryRegressionTests());
                 t.Run(new LightExpression.IssueTests.Issue480_CLR_detected_an_invalid_program_exception());
                 t.Run(new LightExpression.IssueTests.Issue183_NullableDecimal());
@@ -87,11 +95,13 @@ namespace FastExpressionCompiler.UnitTests
 
             var fecTests = new TestRun();
             fecTests.Run(new NumericConversionRegressionTests());
+            fecTests.Run(new SmallCheckedArithmeticRegressionTests());
             fecTests.Run(new NullableBooleanRegressionTests());
             fecTests.Run(new TypeIsRegressionTests());
             fecTests.Run(new ReferenceTypedConstantRegressionTests());
             fecTests.Run(new ReferenceUnboxingRegressionTests());
             fecTests.Run(new NullableArithmeticOperandRegressionTests());
+            fecTests.Run(new NullableArithmeticEvaluationRegressionTests());
             fecTests.Run(new NullableBoxingRegressionTests());
             fecTests.Run(new ArrayBoundConversionRegressionTests());
             fecTests.Run(new LiftedArithmeticOperatorRegressionTests());
@@ -104,13 +114,19 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new CoalesceCallbackRegressionTests());
             fecTests.Run(new VoidLabelValueRegressionTests());
             fecTests.Run(new TypedLabelControlFlowRegressionTests());
+            fecTests.Run(new NegationBehaviorRegressionTests());
+            fecTests.Run(new TruthUnaryRegressionTests());
             fecTests.Run(new ReferenceEqualityRegressionTests());
             fecTests.Run(new TypeEqualRegressionTests());
+            fecTests.Run(new RuntimeCompilerLayoutBehaviorRegressionTests());
+            fecTests.Run(new CompilerLayoutBehaviorRegressionTests());
             fecTests.Run(new BoxedConstantIdentityRegressionTests());
             fecTests.Run(new UserDefinedLogicalRegressionTests());
             fecTests.Run(new ExplicitBinaryMethodRegressionTests());
             fecTests.Run(new AssignmentConversionRegressionTests());
             fecTests.Run(new NullableCompoundWritebackRegressionTests());
+            fecTests.Run(new CompoundAssignmentExceptionRegressionTests());
+            fecTests.Run(new NestedCompoundExceptionRegressionTests());
             fecTests.Run(new DirectLogicalFactoryRegressionTests());
             fecTests.Run(new UnaryIncrementValueRegressionTests());
             fecTests.Run(new LiftedComplementMethodRegressionTests());
