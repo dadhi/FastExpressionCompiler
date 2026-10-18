@@ -627,11 +627,11 @@ public abstract class Expression
 
     /// <summary>Returns whether the expression evaluates to false.</summary>
     public static UnaryExpression IsFalse(Expression expression) =>
-        new TypedUnaryExpression<bool>(ExpressionType.IsFalse, expression);
+        Nullable.GetUnderlyingType(expression.Type) != null ? new TypedUnaryExpression<bool?>(ExpressionType.IsFalse, expression) : new TypedUnaryExpression<bool>(ExpressionType.IsFalse, expression);
 
     /// <summary>Returns whether the expression evaluates to true.</summary>
     public static UnaryExpression IsTrue(Expression expression) =>
-        new TypedUnaryExpression<bool>(ExpressionType.IsTrue, expression);
+        Nullable.GetUnderlyingType(expression.Type) != null ? new TypedUnaryExpression<bool?>(ExpressionType.IsTrue, expression) : new TypedUnaryExpression<bool>(ExpressionType.IsTrue, expression);
 
     /// <summary>Creates a UnaryExpression, given an operand and its type</summary>
     public static UnaryExpression MakeUnary(ExpressionType unaryType, Expression operand, Type type = null) =>
