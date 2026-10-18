@@ -6702,8 +6702,21 @@ namespace FastExpressionCompiler
             {
                 var receiverVar = -1;
                 var receiverType = receiverCompileMethod?.ReturnType ?? receiver?.Type;
+#if NETFRAMEWORK
+                var unboxReceiver = false;
+#endif
                 if (receiver != null && !argumentsBeforeReceiver)
                 {
+#if NETFRAMEWORK
+                    unboxReceiver = receiver.NodeType == ExpressionType.Unbox && receiver.Type.IsValueType && !receiver.Type.IsNullable();
+                    if (unboxReceiver)
+                    {
+                        if (!TryCacheUnboxReceiver((UnaryExpression)receiver, il, ref context, out receiverVar))
+                            return false;
+                    }
+                    else
+#endif
+                    {
                     if (!TryEmit(receiver, il, ref context, ParentFlags.Call | ParentFlags.InstanceAccess))
                         return false;
                     if (receiverCompileMethod != null && !deferReceiverCompile && !EmitInstanceMethodCall(il, receiverCompileMethod, receiver.Type))
@@ -6712,6 +6725,7 @@ namespace FastExpressionCompiler
                         EmitStoreAndLoadLocalVariableAddress(il, receiver.Type);
                     var storedType = deferReceiverCompile ? receiver.Type : receiverType;
                     receiverVar = EmitStoreLocalVariable(il, storedType.IsValueType ? storedType.MakeByRefType() : storedType);
+                }
                 }
                 SmallList<ByRefWriteback, Stack2<ByRefWriteback>, NoArrayPool<ByRefWriteback>> writebacks = default;
                 SmallList<int, Stack8<int>, NoArrayPool<int>> arguments = default;
@@ -6736,6 +6750,10 @@ namespace FastExpressionCompiler
                 else if (receiverVar != -1)
                 {
                     EmitLoadLocalVariable(il, receiverVar);
+#if NETFRAMEWORK
+                    if (unboxReceiver)
+                        il.Demit(OpCodes.Unbox, receiver.Type);
+#endif
                     if (deferReceiverCompile && !EmitInstanceMethodCall(il, receiverCompileMethod, receiver.Type))
                         return false;
                 }
@@ -6783,6 +6801,23 @@ namespace FastExpressionCompiler
                 return true;
             }
 
+#if NETFRAMEWORK
+            private static bool TryCacheUnboxReceiver(UnaryExpression receiver, ILGenerator il, ref CompilerContext context, out int variable)
+            {
+                variable = -1;
+                if (!TryEmit(receiver.Operand, il, ref context, ParentFlags.Call | ParentFlags.AssignmentRightValue))
+                    return false;
+                variable = EmitStoreLocalVariable(il, receiver.Operand.Type);
+                // Anonymous Framework verification rejects storing this unbox pointer in a local.
+                // Validate eagerly, then recreate the address from the same object after arguments.
+                EmitLoadLocalVariable(il, variable);
+                il.Demit(OpCodes.Unbox, receiver.Type);
+                il.Demit(OpCodes.Pop);
+                context.LastEmitIsAddress = false;
+                return true;
+            }
+#endif
+
             private static bool TryEmitMethodCall(Expression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex = -1)
             {
                 var flags = ParentFlags.Call;
@@ -6805,6 +6840,12 @@ namespace FastExpressionCompiler
                 for (var i = 0; i < methodParams.Length; ++i)
                     if (methodParams[i].ParameterType.IsByRef && NeedsByRefWriteback(callArguments.GetArgument(i)))
                         return TryEmitCallWithWritebacks(objExpr, callArguments, method, null, il, ref context, parent, byRefIndex);
+
+#if NETFRAMEWORK
+                if (objExpr?.NodeType == ExpressionType.Unbox && objExpr.Type.IsValueType && !objExpr.Type.IsNullable() &&
+                    context.ArgsContainingComplexExpression.Map.ContainsKey(callExpr))
+                    return TryEmitCallWithWritebacks(objExpr, callArguments, method, null, il, ref context, parent, byRefIndex);
+#endif
 
                 var objIsValueType = false;
                 var loadObjByAddress = false;
