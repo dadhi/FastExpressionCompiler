@@ -231,7 +231,7 @@ Manually composed lambda expression:
 ```cs
 var a = new A();
 var bParamExpr = Expression.Parameter(typeof(B), "b");
-var expr = Expression.Lambda(
+var expr = Expression.Lambda<Func<B, X>>(
     Expression.New(_ctorX,
         Expression.Constant(a, typeof(A)), bParamExpr),
     bParamExpr);
@@ -249,7 +249,7 @@ using static System.Linq.Expressions.Expression;
 
 var a = new A();
 var bParamExpr = Parameter(typeof(B), "b");
-var expr = Lambda(
+var expr = Lambda<Func<B, X>>(
     New(_ctorX, Constant(a, typeof(A)), bParamExpr),
     bParamExpr);
 
