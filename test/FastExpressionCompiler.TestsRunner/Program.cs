@@ -65,6 +65,7 @@ namespace FastExpressionCompiler.UnitTests
                 var ltStopwatch = Stopwatch.StartNew();
 #if NET8_0_OR_GREATER
                 lt.Run(new LightExpression.UnitTests.NumericConversionRegressionTests());
+                lt.Run(new LightExpression.UnitTests.DecimalConstantBitsRegressionTests());
                 lt.Run(new LightExpression.UnitTests.SmallCheckedArithmeticRegressionTests());
                 lt.Run(new LightExpression.UnitTests.NullableBooleanRegressionTests());
                 lt.Run(new LightExpression.UnitTests.TypeIsRegressionTests());
@@ -130,6 +131,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var stStopwatch = Stopwatch.StartNew();
             st.Run(new NumericConversionRegressionTests());
+            st.Run(new DecimalConstantBitsRegressionTests());
             st.Run(new SmallCheckedArithmeticRegressionTests());
             st.Run(new NullableBooleanRegressionTests());
             st.Run(new TypeIsRegressionTests());
