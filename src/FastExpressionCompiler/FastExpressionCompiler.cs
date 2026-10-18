@@ -8510,6 +8510,8 @@ namespace FastExpressionCompiler
                 // not: negate, arithmetic, convert to bool
                 if (nodeType == ExpressionType.Not)
                 {
+                    if (((UnaryExpression)expr).Method != null)
+                        return false;
                     var operandExpr = ((UnaryExpression)expr).Operand;
                     if (operandExpr.NodeType == ExpressionType.Conditional)
                         operandExpr = Tools.TryReduceConditional((ConditionalExpression)operandExpr);
@@ -9531,7 +9533,7 @@ namespace FastExpressionCompiler
         public static Expression TryReduceConditionalTest(Expression testExpr)
         {
             // removing Not by turning Equal -> NotEqual, NotEqual -> Equal
-            if (testExpr.NodeType == ExpressionType.Not)
+            if (testExpr.NodeType == ExpressionType.Not && ((UnaryExpression)testExpr).Method == null)
             {
                 // simplify the not `==` -> `!=`, `!=` -> `==`
                 var op = TryReduceConditionalTest(((UnaryExpression)testExpr).Operand);
