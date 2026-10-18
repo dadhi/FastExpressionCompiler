@@ -3096,6 +3096,9 @@ namespace FastExpressionCompiler
             {
                 var exprType = expr.Type;
 
+                if (nodeType == ExpressionType.IsTrue || nodeType == ExpressionType.IsFalse)
+                    return TryEmitTruthOperator(expr, nodeType == ExpressionType.IsFalse, il, ref context, parent);
+
                 if (nodeType == ExpressionType.Negate || nodeType == ExpressionType.NegateChecked)
                     return TryEmitNegate(expr, nodeType == ExpressionType.NegateChecked, il, ref context, parent);
 
@@ -3127,17 +3130,6 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Isinst, exprType);
                     if (exprType.IsValueType)
                         il.Demit(OpCodes.Unbox_Any, exprType);
-                }
-                else if (nodeType == ExpressionType.IsFalse)
-                {
-                    var falseLabel = il.DefineLabel();
-                    var continueLabel = il.DefineLabel();
-                    il.Demit(OpCodes.Brfalse_S, falseLabel); // safe: jumps over Ldc_I4_0 (1 byte) + Br_S (2 bytes) = 3 bytes
-                    il.Demit(OpCodes.Ldc_I4_0);
-                    il.Demit(OpCodes.Br_S, continueLabel);   // safe: jumps over Ldc_I4_1 (1 byte) = 1 byte
-                    il.DmarkLabel(falseLabel);
-                    il.Demit(OpCodes.Ldc_I4_1);
-                    il.DmarkLabel(continueLabel);
                 }
                 else if (nodeType == ExpressionType.OnesComplement)
                     il.Demit(OpCodes.Not);
@@ -3219,14 +3211,37 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitUnaryOperatorMethod(UnaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            private static bool TryEmitTruthOperator(UnaryExpression expr, bool isFalse, ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            {
+                var operandType = expr.Operand.Type;
+                if (expr.Method != null)
+                    return TryEmitUnaryOperatorMethod(expr, il, ref context, parent);
+                if (operandType != typeof(bool) && operandType != typeof(bool?))
+                {
+                    var type = Nullable.GetUnderlyingType(operandType) ?? operandType;
+                    var method = type.GetMethod(isFalse ? "op_False" : "op_True", new[] { type });
+                    return method != null && TryEmitUnaryOperatorMethod(expr, il, ref context, parent, method);
+                }
+                if (isFalse && operandType == typeof(bool?))
+                    return TryEmitNot(expr, il, ref context, parent);
+                if (!TryEmit(expr.Operand, il, ref context,
+                    (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue))
+                    return false;
+                if (isFalse)
+                    EmitEqualToZeroOrNull(il);
+                context.LastEmitIsAddress = false;
+                return il.EmitPopIfIgnoreResult(parent);
+            }
+
+            private static bool TryEmitUnaryOperatorMethod(UnaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent, MethodInfo method = null)
             {
                 var op = expr.Operand;
+                method ??= expr.Method;
                 if (!TryEmit(op, il, ref context,
                     (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue))
                     return false;
                 var underlyingOperandType = Nullable.GetUnderlyingType(op.Type);
-                if (underlyingOperandType != null && expr.Method.GetParameters()[0].ParameterType == underlyingOperandType)
+                if (underlyingOperandType != null && method.GetParameters()[0].ParameterType == underlyingOperandType)
                 {
                     var operand = EmitStoreAndLoadLocalVariableAddress(il, op.Type);
                     EmitMethodCall(il, op.Type.GetNullableHasValueGetterMethod());
@@ -3235,7 +3250,7 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Brfalse, nullValue);
                     EmitLoadLocalVariableAddress(il, operand);
                     il.Demit(OpCodes.Ldfld, op.Type.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
-                    EmitMethodCall(il, expr.Method);
+                    EmitMethodCall(il, method);
                     il.Demit(OpCodes.Newobj, expr.Type.GetNullableConstructor());
                     il.Demit(OpCodes.Br, done);
                     il.DmarkLabel(nullValue);
@@ -3243,7 +3258,7 @@ namespace FastExpressionCompiler
                     il.DmarkLabel(done);
                 }
                 else
-                    EmitMethodCall(il, expr.Method);
+                    EmitMethodCall(il, method);
                 context.LastEmitIsAddress = false;
                 return il.EmitPopIfIgnoreResult(parent);
             }
