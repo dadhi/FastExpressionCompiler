@@ -1889,7 +1889,7 @@ namespace System.Linq.Expressions.Tests
             );
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("VerifiedCompilerRepresentationBehaviorTests.EmptyRuntimeVariablesSpillBehavior", typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
         public static void Spill_Optimizations_RuntimeVariables1()
         {
             ParameterExpression f = Expression.Parameter(typeof(Action<IRuntimeVariables, int>));
@@ -1948,7 +1948,7 @@ namespace System.Linq.Expressions.Tests
             );
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("VerifiedCompilerRepresentationBehaviorTests.CapturedRuntimeVariablesSpillBehavior", typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
         public static void Spill_Optimizations_RuntimeVariables2()
         {
             ParameterExpression f = Expression.Parameter(typeof(Action<IRuntimeVariables, int>));

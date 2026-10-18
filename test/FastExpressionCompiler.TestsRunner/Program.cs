@@ -80,6 +80,7 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.UnitTests.InlinedRethrowBoundaryRegressionTests());
                 lt.Run(new LightExpression.UnitTests.DynamicCallSiteRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ScopedLabelBindingRegressionTests());
+                lt.Run(new LightExpression.UnitTests.LexicalJumpScopeRegressionTests());
                 lt.Run(new LightExpression.UnitTests.InvocationJumpArgumentRegressionTests());
                 lt.Run(new LightExpression.UnitTests.IncomingRefInvocationReceiverRegressionTests());
                 lt.Run(new LightExpression.UnitTests.RuntimeExpressionInvocationRegressionTests());
@@ -193,6 +194,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new InlinedRethrowBoundaryRegressionTests());
             st.Run(new DynamicCallSiteRegressionTests());
             st.Run(new ScopedLabelBindingRegressionTests());
+            st.Run(new LexicalJumpScopeRegressionTests());
             st.Run(new InvocationJumpArgumentRegressionTests());
             st.Run(new IncomingRefInvocationReceiverRegressionTests());
             st.Run(new RuntimeExpressionInvocationRegressionTests());
