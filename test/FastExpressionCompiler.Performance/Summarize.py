@@ -17,7 +17,7 @@ for path in sorted(args.results.glob("*-report-full.json")):
         rows.append(dict(phase=benchmark["Type"], method=benchmark["Method"],
             workload=benchmark["Parameters"].removeprefix("Workload="),
             mean_ns=statistics["Mean"], standard_error_ns=statistics["StandardError"],
-            confidence99_halfwidth_ns=statistics["ConfidenceInterval"]["Margin"],
+            confidence999_halfwidth_ns=statistics["ConfidenceInterval"]["Margin"],
             samples=statistics["N"], allocated_bytes=benchmark["Memory"]["BytesAllocatedPerOperation"]))
 if not rows:
     raise SystemExit("No results found")

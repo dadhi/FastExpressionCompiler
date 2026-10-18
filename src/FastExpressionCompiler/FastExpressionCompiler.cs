@@ -2635,7 +2635,11 @@ namespace FastExpressionCompiler
             {
                 if (type.IsByRef)
                     type = type.GetElementType();
+#if NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+                return type.IsSZArray;
+#else
                 return type.IsArray && type == type.GetElementType().MakeArrayType();
+#endif
             }
 
             private static bool TryEmitArrayElementGet(ILGenerator il, Type arrayType, Type elementType,
