@@ -2529,7 +2529,7 @@ namespace FastExpressionCompiler
                                             continue;
 
                                         // This is basically the return pattern (see #237), so we don't care for the rest of expressions
-                                        if (stExpr is GotoExpression gt && gt.Kind == GotoExpressionKind.Return && i + 2 == statementCount &&
+                                        if (stExpr is GotoExpression gt && gt.Kind == GotoExpressionKind.Return && i + 2 == statementCount && gt.Target.Type != typeof(void) &&
                                             statementExprs[i + 1] is LabelExpression label && label.Target == gt.Target)
                                         {
                                             // But we cannot use the return pattern and eliminate the target label if we have more gotos referencing it, see #430
@@ -2857,14 +2857,16 @@ namespace FastExpressionCompiler
                     throw new InvalidOperationException($"Cannot jump, no labels found for the target `{expr.Target}`");
                 }
                 var gotoValue = expr.Value;
-                if (gotoValue != null)
+                if (gotoValue != null && expr.Target.Type == typeof(void))
                 {
-                    var isVoidTarget = expr.Target.Type == typeof(void); // the value is evaluated and dropped, so no value is left on the stack
-                    if (!TryEmit(gotoValue, il, ref context, isVoidTarget ? parent | ParentFlags.IgnoreResult : parent & ~ParentFlags.IgnoreResult))
+                    if (!TryEmit(gotoValue, il, ref context, parent | ParentFlags.IgnoreResult))
                         return false;
-                    if (isVoidTarget)
-                        gotoValue = null;
+                    il.Demit((parent & ParentFlags.TryCatch) != 0 ? OpCodes.Leave : OpCodes.Br, labelInfo.GetOrDefineLabel(il));
+                    return true;
                 }
+                if (gotoValue != null &&
+                    !TryEmit(gotoValue, il, ref context, parent & ~ParentFlags.IgnoreResult))
+                    return false;
 
                 switch (expr.Kind)
                 {
