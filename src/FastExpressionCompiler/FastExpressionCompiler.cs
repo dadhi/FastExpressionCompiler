@@ -6742,6 +6742,8 @@ namespace FastExpressionCompiler
             {
                 if (instanceType == null)
                     return EmitMethodCallOrVirtualCall(il, method);
+                if (instanceType.IsByRef)
+                    instanceType = instanceType.GetElementType();
                 // callvirt checks a reference receiver even when the method itself is non-virtual.
                 if (!instanceType.IsValueType)
                     return EmitVirtualMethodCall(il, method);
