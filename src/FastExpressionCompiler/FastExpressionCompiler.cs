@@ -2038,12 +2038,11 @@ namespace FastExpressionCompiler
                         case ExpressionType.NotEqual:
                             {
                                 var comparison = (BinaryExpression)expr;
+                                // A supplied non-lifted method determines both the operation and return type.
+                                // Lifted comparisons retain their existing equality/null handling below.
                                 if (comparison.Method != null && !comparison.IsLifted)
-                                    return TryEmitComparisonMethod(comparison, il, ref context, parent);
-#if LIGHT_EXPRESSION
-                                if (comparison is LogicalBinaryExpression { IsReferenceComparison: true })
-                                    return TryEmitReferenceComparison(comparison, nodeType == ExpressionType.NotEqual, il, ref context, parent);
-#endif
+                                    return TryEmitArithmetic(comparison.Left, comparison.Right, nodeType, exprType,
+                                        il, ref context, parent, comparison.Method);
                                 if (exprType.IsPrimitive && Interpreter.TryInterpretBool(out var boolResult, expr, context.CompilerFlags))
                                 {
                                     if ((parent & ParentFlags.IgnoreResult) == 0)
@@ -3351,7 +3350,8 @@ namespace FastExpressionCompiler
                 }
                 if (parent.IgnoresResult())
                     return TryEmit(op, il, ref context, parent);
-                if (op.NodeType == ExpressionType.Equal)
+                if (op.NodeType == ExpressionType.Equal && ((BinaryExpression)op).Method == null &&
+                    (IsReferenceComparison((BinaryExpression)op) || Tools.IsPrimitiveOrEnumEquality((BinaryExpression)op)))
                     return TryEmitComparison(((BinaryExpression)op).Left, ((BinaryExpression)op).Right,
                         expr.Type, ExpressionType.NotEqual, il, ref context, parent, IsReferenceComparison((BinaryExpression)op));
 
@@ -5932,64 +5932,6 @@ namespace FastExpressionCompiler
                 expr is LogicalBinaryExpression { IsReferenceComparison: true };
 #else
                 expr.Method == null && !expr.Left.Type.IsValueType && !expr.Right.Type.IsValueType;
-#endif
-
-            private static bool TryEmitComparisonMethod(BinaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
-            {
-                var method = expr.Method;
-                var pars = method.GetParameters();
-                var leftParamType = pars[0].ParameterType;
-                if (!TryEmit(expr.Left, il, ref context, ParentFlags.Call, leftParamType.IsByRef ? 0 : -1))
-                    return false;
-
-                var right = expr.Right;
-
-                // Keep the evaluation stack empty while a nontrivial right operand may emit exception regions or jumps, just as for call arguments.
-#if LIGHT_EXPRESSION
-                var rightMayBeComplex = false;
-                var rightOper = right;
-                while (!(rightMayBeComplex = rightOper.IsIntrinsic) && rightOper is UnaryExpression unExpr && unExpr.NodeType == ExpressionType.Convert)
-                    rightOper = unExpr.Operand;
-                if (!rightMayBeComplex)
-                    rightMayBeComplex = !rightOper.NodeType.IsParamOrConstantOrDefault();
-#else
-                var rightMayBeComplex = !right.IsParamOrConstantOrDefault();
-#endif
-                // Storing left here for the complex right so that we restore left and right later after emitting the right (otherwise left may be lost on the evaluation stack)
-                var leftVar = rightMayBeComplex ? EmitStoreLocalVariable(il, leftParamType) : -1;
-
-                var rightParamType = pars[1].ParameterType;
-                if (!TryEmit(right, il, ref context, ParentFlags.Call, rightParamType.IsByRef ? 1 : -1))
-                    return false;
-                if (leftVar != -1)
-                {
-                    var rightVar = EmitStoreLocalVariable(il, rightParamType);
-                    EmitLoadLocalVariable(il, leftVar);
-                    EmitLoadLocalVariable(il, rightVar);
-                }
-                if (!EmitMethodCall(il, method))
-                    return false;
-                context.LastEmitIsAddress = false;
-                return il.EmitPopIfIgnoreResult(parent);
-            }
-
-#if LIGHT_EXPRESSION
-            private static bool TryEmitReferenceComparison(BinaryExpression expr, bool isNotEqual, ILGenerator il,
-                ref CompilerContext context, ParentFlags parent)
-            {
-                var flags = parent
-                    & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
-                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef);
-
-                if (!TryEmit(expr.Left, il, ref context, flags) ||
-                    !TryEmit(expr.Right, il, ref context, flags))
-                    return false;
-
-                il.Demit(OpCodes.Ceq);
-                if (isNotEqual)
-                    EmitEqualToZeroOrNull(il);
-                return il.EmitPopIfIgnoreResult(parent);
-            }
 #endif
 
             private static bool TryEmitComparison(
@@ -9118,6 +9060,15 @@ namespace FastExpressionCompiler
 
         public static T GetFirst<T>(this T[] source) => source.Length == 0 ? default : source[0];
 
+        internal static bool IsPrimitiveOrEnumEquality(BinaryExpression expr)
+        {
+            if (expr.Method != null)
+                return false;
+            var left = Nullable.GetUnderlyingType(expr.Left.Type) ?? expr.Left.Type;
+            var right = Nullable.GetUnderlyingType(expr.Right.Type) ?? expr.Right.Type;
+            return (left.IsPrimitive || left.IsEnum) && (right.IsPrimitive || right.IsEnum);
+        }
+
         public static Expression TryReduceConditionalTest(Expression testExpr)
         {
             // removing Not by turning Equal -> NotEqual, NotEqual -> Equal
@@ -9126,15 +9077,11 @@ namespace FastExpressionCompiler
                 // simplify the not `==` -> `!=`, `!=` -> `==`
                 var op = TryReduceConditionalTest(((UnaryExpression)testExpr).Operand);
                 var nodeType = op.NodeType;
-                if (nodeType == ExpressionType.Equal) // ensures that it is a BinaryExpression
+                if ((nodeType == ExpressionType.Equal || nodeType == ExpressionType.NotEqual) &&
+                    IsPrimitiveOrEnumEquality((BinaryExpression)op))
                 {
                     var binOp = (BinaryExpression)op;
-                    return NotEqual(binOp.Left, binOp.Right);
-                }
-                else if (nodeType == ExpressionType.NotEqual) // ensures that it is a BinaryExpression
-                {
-                    var binOp = (BinaryExpression)op;
-                    return Equal(binOp.Left, binOp.Right);
+                    return nodeType == ExpressionType.Equal ? NotEqual(binOp.Left, binOp.Right) : Equal(binOp.Left, binOp.Right);
                 }
             }
             else if (testExpr is BinaryExpression b)
