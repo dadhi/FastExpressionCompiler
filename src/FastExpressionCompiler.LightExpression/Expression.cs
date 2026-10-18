@@ -2091,11 +2091,11 @@ public abstract class Expression
 
     /// <summary>Creates a BinaryExpression that represents a reference equality comparison.</summary>
     public static BinaryExpression ReferenceEqual(Expression left, Expression right) =>
-        new LogicalBinaryExpression(ExpressionType.Equal, left, right);
+        new LogicalBinaryExpression(ExpressionType.Equal, left, right, referenceComparison: true);
 
     /// <summary>Creates a BinaryExpression that represents a reference inequality comparison.</summary>
     public static BinaryExpression ReferenceNotEqual(Expression left, Expression right) =>
-        new LogicalBinaryExpression(ExpressionType.NotEqual, left, right);
+        new LogicalBinaryExpression(ExpressionType.NotEqual, left, right, referenceComparison: true);
 
     /// <summary>Creates a BinaryExpression that represents a coalescing operation.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
@@ -2866,6 +2866,13 @@ public static class FromSysExpressionConverter
                     var left = be.Left.ToLightExpression(ref exprsConverted);
                     var raft = be.Right.ToLightExpression(ref exprsConverted);
                     var conv = be.Conversion?.ToLightExpression(ref exprsConverted) as LambdaExpression;
+                    if (be.Method == null && !be.Left.Type.IsValueType && !be.Right.Type.IsValueType)
+                    {
+                        if (nodeType == ExpressionType.Equal)
+                            return Expression.ReferenceEqual(left, raft);
+                        if (nodeType == ExpressionType.NotEqual)
+                            return Expression.ReferenceNotEqual(left, raft);
+                    }
                     return Expression.MakeBinary(nodeType, left, raft, be.IsLiftedToNull, be.Method, conv);
                 }
 
@@ -3502,8 +3509,12 @@ internal sealed class LogicalBinaryExpression : BinaryExpression
 {
     public override ExpressionType NodeType { get; }
     public override Type Type => typeof(bool);
-    internal LogicalBinaryExpression(ExpressionType nodeType, Expression left, Expression right) : base(left, right) =>
+    internal readonly bool IsReferenceComparison;
+    internal LogicalBinaryExpression(ExpressionType nodeType, Expression left, Expression right, bool referenceComparison = false) : base(left, right)
+    {
         NodeType = nodeType;
+        IsReferenceComparison = referenceComparison;
+    }
 
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted)
     {
@@ -3512,6 +3523,8 @@ internal sealed class LogicalBinaryExpression : BinaryExpression
         {
             var left = Left.ToExpression(ref exprsConverted);
             var right = Right.ToExpression(ref exprsConverted);
+            if (IsReferenceComparison)
+                return NodeType == ExpressionType.Equal ? SysExpr.ReferenceEqual(left, right) : SysExpr.ReferenceNotEqual(left, right);
             if (left.Type.IsPrimitive)
             {
                 left = TryConvertSysExprToInt(left);
