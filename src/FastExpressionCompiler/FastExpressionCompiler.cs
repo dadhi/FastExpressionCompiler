@@ -2356,12 +2356,10 @@ namespace FastExpressionCompiler
                                 if (exprType == typeof(bool?) && logical.Method == null &&
                                     logical.Left.Type == typeof(bool?) && logical.Right.Type == typeof(bool?))
                                     return TryEmitNullableBooleanShortCircuit(logical.Left, logical.Right, nodeType == ExpressionType.AndAlso, il, ref context, parent);
-
+                                if (exprType == typeof(bool?))
+                                    return TryEmitNullableLogicalOperator((BinaryExpression)expr, nodeType, il, ref context, parent);
                                 if (!exprType.IsPrimitive)
-                                {
-                                    Debug.WriteLine("Unsupported: non-primitive result in || or && (other than `bool?` operands without a method), see #480: " + expr);
                                     return false;
-                                }
                                 if (Interpreter.TryInterpretBool(out var resultBool, expr, context.CompilerFlags))
                                 {
                                     if ((parent & ParentFlags.IgnoreResult) == 0)
@@ -6986,6 +6984,68 @@ namespace FastExpressionCompiler
                 else
                     il.Demit(opCode);
                 return true;
+            }
+
+            private static bool TryEmitNullableLogicalOperator(BinaryExpression expr, ExpressionType nodeType,
+                ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            {
+                if (expr.Method != null)
+                    return false;
+                var flags = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
+                    ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.Arithmetic;
+                if (!TryEmit(expr.Left, il, ref context, flags))
+                    return false;
+                var left = EmitStoreLocalVariable(il, expr.Type);
+                var isAnd = nodeType == ExpressionType.AndAlso || nodeType == ExpressionType.And;
+                var shortCircuit = nodeType == ExpressionType.AndAlso || nodeType == ExpressionType.OrElse;
+                var decisiveValue = isAnd ? OpCodes.Brfalse : OpCodes.Brtrue;
+                var evaluateRight = il.DefineLabel();
+                var leftIsNull = il.DefineLabel();
+                var returnLeft = il.DefineLabel();
+                var returnRight = il.DefineLabel();
+                var done = il.DefineLabel();
+                var hasValue = expr.Type.GetNullableHasValueGetterMethod();
+                var value = expr.Type.GetNullableValueUnsafeAkaGetValueOrDefaultMethod();
+
+                // Only a non-null decisive left operand may skip the right operand.
+                if (shortCircuit)
+                {
+                    EmitLoadLocalVariableAddress(il, left);
+                    EmitMethodCall(il, hasValue);
+                    il.Demit(OpCodes.Brfalse, evaluateRight);
+                    EmitLoadLocalVariableAddress(il, left);
+                    il.Demit(OpCodes.Ldfld, value);
+                    il.Demit(decisiveValue, returnLeft);
+                }
+                il.DmarkLabel(evaluateRight);
+                if (!TryEmit(expr.Right, il, ref context, flags))
+                    return false;
+                var right = EmitStoreLocalVariable(il, expr.Type);
+
+                EmitLoadLocalVariableAddress(il, left);
+                EmitMethodCall(il, hasValue);
+                il.Demit(OpCodes.Brfalse, leftIsNull);
+                if (!shortCircuit)
+                {
+                    EmitLoadLocalVariableAddress(il, left);
+                    il.Demit(OpCodes.Ldfld, value);
+                    il.Demit(decisiveValue, returnLeft);
+                }
+                il.Demit(OpCodes.Br, returnRight);
+
+                // With a null left operand, false wins for AND and true wins for OR.
+                il.DmarkLabel(leftIsNull);
+                EmitLoadLocalVariableAddress(il, right);
+                il.Demit(OpCodes.Ldfld, value);
+                il.Demit(decisiveValue, returnRight);
+                il.DmarkLabel(returnLeft);
+                EmitLoadLocalVariable(il, left);
+                il.Demit(OpCodes.Br, done);
+                il.DmarkLabel(returnRight);
+                EmitLoadLocalVariable(il, right);
+                il.DmarkLabel(done);
+                context.LastEmitIsAddress = false;
+                return il.EmitPopIfIgnoreResult(parent);
             }
 
             private static bool TryEmitLogicalOperator(BinaryExpression expr, ExpressionType nodeType,
