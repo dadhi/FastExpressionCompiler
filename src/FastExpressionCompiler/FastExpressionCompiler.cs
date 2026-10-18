@@ -478,6 +478,10 @@ namespace FastExpressionCompiler
         internal static Type[] RentPooledOrNewClosureTypeToParamTypes(ParamExprs paramExprs)
         {
             var count = paramExprs.GetParamCount();
+            // The hidden closure argument also counts toward the CLI signature limit.
+            // Reject before returning a delegate that fails only when it is invoked.
+            if (count >= ushort.MaxValue)
+                throw new InvalidProgramException("The lambda and its closure exceed the maximum method parameter count.");
             if (count == 0)
                 return _closureAsASingleParamType;
 
