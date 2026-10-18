@@ -5993,6 +5993,8 @@ namespace FastExpressionCompiler
                         MethodInfo method = null;
                         if (exprType != typeof(string))
                         {
+                            leftType = Nullable.GetUnderlyingType(leftType) ?? leftType;
+                            rightType = Nullable.GetUnderlyingType(rightType) ?? rightType;
                             // Note, that the result operation Type may be different from the operand Type,
                             // e.g. `TimeSpan op_Subtraction(DateTime, DateTime)`, that mean we should look
                             // for the specific method in the operand types, then in the result (expr) type.
