@@ -629,6 +629,7 @@ namespace FastExpressionCompiler
             public Label ReturnLabel;
             internal bool IsMarked;
             internal bool IsBlockScoped;
+            internal bool IsEmittingDefault;
         }
 
         internal sealed class ExceptionRegionInfo
@@ -822,7 +823,7 @@ namespace FastExpressionCompiler
                     for (var i = 0; i < LambdaInvokeStackLabels.Count; ++i)
                     {
                         ref var prior = ref LambdaInvokeStackLabels.GetSurePresentRef(i);
-                        if (prior.Target == target && prior.IsBlockScoped &&
+                        if (prior.Target == target && (prior.IsBlockScoped || prior.IsEmittingDefault) &&
                             prior.InlinedLambdaInvokeIndex == CurrentInlinedLambdaInvokeIndex)
                             throw new InvalidOperationException($"Cannot redefine label `{target}` in the same or an inner block.");
                     }
@@ -2906,11 +2907,14 @@ namespace FastExpressionCompiler
                 }
 
                 var defaultValue = expr.DefaultValue;
-                if (defaultValue != null && !TryEmit(defaultValue, il, ref context, parent))
-                    return false;
-
                 if (defaultValue != null)
+                {
+                    labelInfo.IsEmittingDefault = true;
+                    if (!TryEmit(defaultValue, il, ref context, parent))
+                        return false;
                     labelInfo = ref context.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(expr.Target, out _);
+                    labelInfo.IsEmittingDefault = false;
+                }
                 var returnVariableIndexPlusOne = labelInfo.ReturnVariableIndexPlusOneAndIsDefined >>> 1;
                 if (returnVariableIndexPlusOne != 0)
                 {
