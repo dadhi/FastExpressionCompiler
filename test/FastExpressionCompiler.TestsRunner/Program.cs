@@ -81,6 +81,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new ExplicitBinaryMethodRegressionTests());
             st.Run(new AssignmentConversionRegressionTests());
             st.Run(new NullableCompoundWritebackRegressionTests());
+            st.Run(new CompoundAssignmentExceptionRegressionTests());
             st.Run(new DirectLogicalFactoryRegressionTests());
             st.Run(new UnaryIncrementValueRegressionTests());
             st.Run(new MethodBasedNotRegressionTests());
@@ -127,6 +128,7 @@ namespace FastExpressionCompiler.UnitTests
             lt.Run(new LightExpression.UnitTests.ExplicitBinaryMethodRegressionTests());
             lt.Run(new LightExpression.UnitTests.AssignmentConversionRegressionTests());
             lt.Run(new LightExpression.UnitTests.NullableCompoundWritebackRegressionTests());
+            lt.Run(new LightExpression.UnitTests.CompoundAssignmentExceptionRegressionTests());
             lt.Run(new LightExpression.UnitTests.DirectLogicalFactoryRegressionTests());
             lt.Run(new LightExpression.IssueTests.Issue480_CLR_detected_an_invalid_program_exception());
 
