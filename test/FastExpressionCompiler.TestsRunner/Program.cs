@@ -54,6 +54,7 @@ namespace FastExpressionCompiler.UnitTests
 
             st.Run(new NumericConversionRegressionTests());
             st.Run(new IntrinsicConstructorExceptionRegressionTests());
+            st.Run(new CustomReducibleNodeRegressionTests());
             st.Run(new RuntimeTypeConstantRegressionTests());
             st.Run(new ReadonlyRefFieldRegressionTests());
             st.Run(new RefCopybackReceiverReviewTests());
