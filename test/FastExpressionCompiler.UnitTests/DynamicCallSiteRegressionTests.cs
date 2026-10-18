@@ -22,6 +22,7 @@ public struct DynamicCallSiteRegressionTests : ITestX
         Dynamic_binding_rebinds_for_runtime_argument_types(t);
         Typed_and_void_dynamic_results_preserve_their_types(t);
         Reused_dynamic_nodes_keep_distinct_occurrence_sites(t);
+        Repeated_nested_dynamic_lambdas_have_separate_sites(t);
         Mutable_targets_are_loaded_for_each_invocation(t);
         Exception_operands_preserve_target_and_argument_order(t);
         Ref_arguments_preserve_original_storage(t);
@@ -105,9 +106,39 @@ public struct DynamicCallSiteRegressionTests : ITestX
             var inline = E.Lambda<Func<int>>(E.Add(invocation, invocation)).CompileFast(true, flags);
             if (t.IsNotNull(inline))
             {
-                var inlined = (flags & CompilerFlags.NoInvocationLambdaInlining) == 0;
-                t.AreEqual(inlined ? 3 : 2, inline()); t.AreEqual(inlined ? 2 : 1, inlineBinder.Sites.Count);
+                t.AreEqual(3, inline()); t.AreEqual(2, inlineBinder.Sites.Count);
             }
+        }
+    }
+    public void Repeated_nested_dynamic_lambdas_have_separate_sites(TestContext t)
+    {
+        var systemBinder = new IdentityBinder();
+        var systemBody = S.MakeDynamic(typeof(Func<CallSite, int, int>), systemBinder, S.Constant(0));
+        var systemInvoke = S.Invoke(S.Lambda<Func<int>>(systemBody));
+        var system = S.Lambda<Func<int>>(S.Add(systemInvoke, systemInvoke)).Compile();
+        t.AreEqual(3, system()); t.AreEqual(3, system()); t.AreEqual(2, systemBinder.Sites.Count);
+        foreach (var flags in Flags)
+        {
+            var binder = new IdentityBinder(); var n = E.Parameter(typeof(int));
+            var body = E.Add(Dynamic(typeof(Func<CallSite, int, int>), binder, E.Constant(0)), n);
+            var leaf = E.Lambda<Func<int>>(body);
+            var middle = E.Lambda<Func<Func<int>>>(leaf);
+            var expression = E.Lambda<Func<int, Func<Func<int>>[]>>(E.NewArrayInit(typeof(Func<Func<int>>), middle, middle), n);
+            var fast = expression.CompileFast(true, flags); if (!t.IsNotNull(fast)) return;
+            var array = fast(10); var first = array[0](); var second = array[1]();
+            t.AreEqual(11, first()); t.AreEqual(12, second()); t.AreEqual(11, first());
+            var other = fast(20); t.AreEqual(21, other[0]()()); t.AreEqual(22, other[1]()());
+            t.AreEqual(2, binder.Sites.Count);
+            // Different signatures sharing a body keep distinct entries even when
+            // conditional collection/emission visit branches in opposite orders.
+            var arityBinder = new IdentityBinder(); var x = E.Parameter(typeof(int)); var y = E.Parameter(typeof(int));
+            var shared = Dynamic(typeof(Func<CallSite, int, int>), arityBinder, x);
+            var one = E.Lambda<Func<int, int>>(shared, x);
+            var two = E.Lambda<Func<int, int, int>>(shared, x, y);
+            var condition = E.Parameter(typeof(bool));
+            var choice = E.Lambda<Func<bool, int>>(E.Condition(condition, E.Invoke(one, E.Constant(1)), E.Invoke(two, E.Constant(1), E.Constant(2))), condition).CompileFast(true, flags);
+            if (!t.IsNotNull(choice)) return;
+            t.AreEqual(1, choice(true)); t.AreEqual(2, choice(false)); t.AreEqual(1, choice(true)); t.AreEqual(2, arityBinder.Sites.Count);
         }
     }
     public void Mutable_targets_are_loaded_for_each_invocation(TestContext t)

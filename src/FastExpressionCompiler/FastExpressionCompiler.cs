@@ -590,6 +590,8 @@ namespace FastExpressionCompiler
             /// <summary>The lambda expression</summary>
             public LambdaExpression LambdaExpression;
 
+            internal bool HasDynamicExpressions;
+
             /// <summary>Parameters not passed through lambda parameter list But used inside lambda body.
             /// The top expression should Not contain not passed parameters.</summary>
             public SmallList<ParameterExpression> NonPassedParameters;
@@ -732,6 +734,7 @@ namespace FastExpressionCompiler
 
             internal SmallMap4<Expression, System.Linq.Expressions.Expression, RefEq<Expression>> QuotedExpressions;
             internal DynamicExpressionCache DynamicExpressions;
+            internal SmallMap4<Expression, int, RefEq<Expression>> DynamicLambdaEmissionIndexes;
 #if LIGHT_EXPRESSION
             internal QuoteConversionCache QuoteConversions;
 #endif
@@ -1732,7 +1735,8 @@ namespace FastExpressionCompiler
 
                         // Look for the already collected lambdas starting from the root
                         if (rootNestedLambdas.Count != 0 &&
-                            FindAlreadyCompiledNestedLambdaInfoInLambdas(ref rootNestedLambdas, nestedLambdaExpr, out var compiledNestedLambda))
+                            FindAlreadyCompiledNestedLambdaInfoInLambdas(ref rootNestedLambdas, nestedLambdaExpr, out var compiledNestedLambda) &&
+                            !compiledNestedLambda.HasDynamicExpressions)
                         {
                             if (nestedLambda != null)
                                 nestedLambda.NestedLambdas.Add(compiledNestedLambda);
@@ -1760,6 +1764,8 @@ namespace FastExpressionCompiler
 
                         if ((r = TryCollectInfo(ref nestedLambdaContext, nestedLambdaExpr.Body, newNestedLambda, ref rootNestedLambdas)) != Result.OK)
                             return r;
+                        if (nestedLambda != null && newNestedLambda.HasDynamicExpressions)
+                            nestedLambda.HasDynamicExpressions = true;
 #if LIGHT_EXPRESSION
                         context.QuoteConversions = nestedLambdaContext.QuoteConversions;
 #endif
@@ -2054,6 +2060,7 @@ namespace FastExpressionCompiler
                         return Result.OK;
                     case ExpressionType.Dynamic:
                         {
+                            if (nestedLambda != null) nestedLambda.HasDynamicExpressions = true;
                             context.DynamicExpressions ??= new DynamicExpressionCache();
                             ref var occurrences = ref context.DynamicExpressions.Expressions.Map.AddOrGetValueRef(expr, out _);
                             occurrences ??= new DynamicExpressionOccurrences();
@@ -6749,6 +6756,18 @@ namespace FastExpressionCompiler
                 while (i != -1 && !outerNestedLambdas[i].HasTheSameLambdaExpression(lambdaExpr)) --i;
                 if (i == -1)
                     return false;
+
+                // Stateful sites belong to each emitted lambda occurrence. Ordinary lambdas
+                // retain deduplication; stateful entries match exact lambda identity so bodies
+                // shared by different delegate signatures cannot select each other's entries.
+                if (outerNestedLambdas[i].HasDynamicExpressions)
+                {
+                    ref var nextIndex = ref context.DynamicLambdaEmissionIndexes.Map.AddOrGetValueRef(lambdaExpr, out _);
+                    i = nextIndex;
+                    while (i < outerNestedLambdasCount && !ReferenceEquals(outerNestedLambdas[i].LambdaExpression, lambdaExpr)) ++i;
+                    if (i == outerNestedLambdasCount) return false;
+                    nextIndex = i + 1;
+                }
 
                 ref var nestedLambdaInfo = ref outerNestedLambdas[i];
                 EmitLoadLocalVariable(il, nestedLambdaInfo.LambdaVarIndex);
