@@ -1959,7 +1959,9 @@ namespace FastExpressionCompiler
                     context.LastEmitIsAddress = false;
 #if LIGHT_EXPRESSION
                     if (expr.IsIntrinsic)
-                        return expr.TryEmit(ref context, il, parent, byRefIndex);
+                        return context.HasExceptionBlock && expr is NewExpression
+                            ? TryEmitNew(expr, il, ref context, parent)
+                            : expr.TryEmit(ref context, il, parent, byRefIndex);
 #endif
                     var nodeType = expr.NodeType;
                     switch (nodeType)
@@ -2360,7 +2362,7 @@ namespace FastExpressionCompiler
                     }
                     else
                     {
-                        if (!context.ArgsContainingComplexExpression.Set.ContainsKey(newExpr))
+                        if (!context.HasExceptionBlock && !context.ArgsContainingComplexExpression.Set.ContainsKey(newExpr))
                         {
                             for (var i = 0; i < argCount; ++i)
                                 if (!TryEmit(argExprs.GetArgument(i), il, ref context, flags, pars[i].ParameterType.IsByRef ? i : -1))
