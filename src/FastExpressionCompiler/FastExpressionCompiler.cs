@@ -6554,9 +6554,9 @@ namespace FastExpressionCompiler
                 if (leftIsNullable)
                 {
                     noNullableValueLabel = il.DefineLabel();
-                    if (!TryEmit(left, il, ref context, flags | ParentFlags.InstanceCall))
+                    if (!TryEmit(left, il, ref context, flags))
                         return false;
-                    if (context.LastEmitIsAddress || left is ParameterExpression { IsByRef: true }) // see #461, the nullable by-ref parameter does not set the flag
+                    if (context.LastEmitIsAddress)
                         EmitLoadIndirectlyByRef(il, leftType); // the nullable value is needed here and not its address
 
                     leftVar = EmitNullableVarAddressAndHasValue(il, leftType);
@@ -6590,16 +6590,9 @@ namespace FastExpressionCompiler
                     rightIsNullable = rightType.IsNullable();
                     if (rightIsNullable)
                     {
-                        if (!leftIsNullable)
-                        {
-                            noNullableValueLabel = il.DefineLabel();
-                            if (leftValueVar == -1)
-                                leftValueVar = EmitStoreLocalVariable(il, leftType);
-                        }
-
-                        if (!TryEmit(right, il, ref context, flags | ParentFlags.InstanceCall))
+                        if (!TryEmit(right, il, ref context, flags))
                             return false;
-                        if (context.LastEmitIsAddress || right is ParameterExpression { IsByRef: true })
+                        if (context.LastEmitIsAddress)
                             EmitLoadIndirectlyByRef(il, rightType);
 
                         rightVar = EmitNullableVarAddressAndHasValue(il, rightType);
