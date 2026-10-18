@@ -171,7 +171,22 @@ public struct CapturedQuoteRegressionTests : ITestX
             S.Constant("filter"))), S.Call(Method(nameof(CaptureFilter)), read, write));
         var body = S.TryCatch(S.Throw(S.New(typeof(InvalidOperationException).GetConstructor(new[] { typeof(string) }),
             S.Constant("body")), typeof(System.Linq.Expressions.Expression<Func<Exception>>)), S.Catch(exception, read, filter));
-        var expression = S.Lambda<Func<System.Linq.Expressions.Expression<Func<Exception>>>>(body); var system = expression.Compile();
+        var expression = S.Lambda<Func<System.Linq.Expressions.Expression<Func<Exception>>>>(body);
+#if NETFRAMEWORK
+        // Framework DynamicMethod filters are unsupported by both compilers.
+        // Check that contract, then exercise the same live catch cells without a filter.
+        t.Throws<NotSupportedException>(() => expression.Compile());
+        t.AreEqual(true, expression.FromSysExpression().CompileFast(true) == null);
+        var unsupported = t.Throws<NotSupportedExpressionException>(() =>
+            expression.FromSysExpression().CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression));
+        if (t.IsNotNull(unsupported))
+            t.AreEqual(ExpressionCompiler.Result.NotSupported_ExceptionCatchFilter, unsupported.Reason);
+        expression = S.Lambda<Func<System.Linq.Expressions.Expression<Func<Exception>>>>(S.TryCatch(
+            ((System.Linq.Expressions.TryExpression)body).Body, S.Catch(exception, S.Block(
+                S.Assign(exception, S.New(typeof(ApplicationException).GetConstructor(new[] { typeof(string) }), S.Constant("filter"))),
+                S.Call(Method(nameof(CaptureFilter)), read, write), read))));
+#endif
+        var system = expression.Compile();
         foreach (var flags in Flags)
         {
             var fast = Fast(expression, flags); if (!t.IsNotNull(fast)) return;
