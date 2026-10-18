@@ -67,6 +67,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new MixedNullableShiftRegressionTests());
             st.Run(new NullableBoxingRegressionTests());
             st.Run(new ArrayBoundConversionRegressionTests());
+            st.Run(new ArrayConstructionExceptionRegressionTests());
             st.Run(new LiftedArithmeticOperatorRegressionTests());
             st.Run(new UnsignedDivisionRegressionTests());
             st.Run(new OnesComplementRegressionTests());
@@ -139,6 +140,7 @@ namespace FastExpressionCompiler.UnitTests
             lt.Run(new LightExpression.UnitTests.MixedNullableShiftRegressionTests());
             lt.Run(new LightExpression.UnitTests.NullableBoxingRegressionTests());
             lt.Run(new LightExpression.UnitTests.ArrayBoundConversionRegressionTests());
+            lt.Run(new LightExpression.UnitTests.ArrayConstructionExceptionRegressionTests());
             lt.Run(new LightExpression.UnitTests.LiftedArithmeticOperatorRegressionTests());
             lt.Run(new LightExpression.UnitTests.UnsignedDivisionRegressionTests());
             lt.Run(new LightExpression.UnitTests.OnesComplementRegressionTests());
