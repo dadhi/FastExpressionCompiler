@@ -48,6 +48,7 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.ByRefConversionRegressionTests());
                 t.Run(new LightExpression.UnitTests.IncrementDecrementRegressionTests());
                 t.Run(new LightExpression.UnitTests.ValueTypeReceiverRegressionTests());
+                t.Run(new LightExpression.UnitTests.NumericComparisonRegressionTests());
                 t.Run(new LightExpression.IssueTests.Issue480_CLR_detected_an_invalid_program_exception());
                 t.Run(new LightExpression.IssueTests.Issue183_NullableDecimal());
                 t.Run(new LightExpression.IssueTests.Issue398_Optimize_Switch_with_OpCodes_Switch());
@@ -83,6 +84,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new ByRefConversionRegressionTests());
             fecTests.Run(new IncrementDecrementRegressionTests());
             fecTests.Run(new ValueTypeReceiverRegressionTests());
+            fecTests.Run(new NumericComparisonRegressionTests());
             fecTests.Run(new ExplicitIncrementOperatorRegressionTests());
             fecTests.Run(new Issue183_NullableDecimal());
             fecTests.Run(new Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET());

@@ -67,6 +67,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new ByRefConversionRegressionTests());
             st.Run(new IncrementDecrementRegressionTests());
             st.Run(new ValueTypeReceiverRegressionTests());
+            st.Run(new NumericComparisonRegressionTests());
             st.Run(new ExplicitIncrementOperatorRegressionTests());
 
             st.Run(new Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
@@ -95,6 +96,7 @@ namespace FastExpressionCompiler.UnitTests
             lt.Run(new LightExpression.UnitTests.ByRefConversionRegressionTests());
             lt.Run(new LightExpression.UnitTests.IncrementDecrementRegressionTests());
             lt.Run(new LightExpression.UnitTests.ValueTypeReceiverRegressionTests());
+            lt.Run(new LightExpression.UnitTests.NumericComparisonRegressionTests());
             lt.Run(new LightExpression.IssueTests.Issue480_CLR_detected_an_invalid_program_exception());
 
 #if NET8_0_OR_GREATER

@@ -5626,11 +5626,11 @@ namespace FastExpressionCompiler
                 if (!comparingToRightNull && comparingToLeftNull & leftType == typeof(object))
                     leftType = rightType;
 
-                var operandParent = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
+                var operandParent = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess)) | ParentFlags.AssignmentRightValue;
 
                 // short-circuit the comparison with null on the right
                 var isEqualityOp = nodeType == ExpressionType.Equal | nodeType == ExpressionType.NotEqual;
-                if (isEqualityOp)
+                if (isEqualityOp && exprType != typeof(bool?))
                 {
                     if (leftIsNullable & rightIsNull)
                     {
@@ -5669,6 +5669,9 @@ namespace FastExpressionCompiler
                         return il.EmitPopIfIgnoreResult(parent);
                     }
                 }
+
+                leftIsNull &= !leftIsNullable;
+                rightIsNull &= !rightType.IsNullable();
 
                 var lVarIndex = -1;
                 var rightIsComplexExpression = false;
@@ -5799,10 +5802,10 @@ namespace FastExpressionCompiler
                         EmitEqualToZeroOrNull(il);
                         break;
                     case ExpressionType.LessThan:
-                        il.Demit(OpCodes.Clt);
+                        il.Demit(leftType.IsUnsigned() && rightType.IsUnsigned() ? OpCodes.Clt_Un : OpCodes.Clt);
                         break;
                     case ExpressionType.GreaterThan:
-                        il.Demit(OpCodes.Cgt);
+                        il.Demit(leftType.IsUnsigned() && rightType.IsUnsigned() ? OpCodes.Cgt_Un : OpCodes.Cgt);
                         break;
                     case ExpressionType.GreaterThanOrEqual:
                         // simplifying by using the LessThen (Clt) and comparing with negative outcome (Ceq 0)
@@ -5879,17 +5882,22 @@ namespace FastExpressionCompiler
                     {
                         var resultLabel = il.DefineLabel();
                         var isNullLabel = il.DefineLabel();
+                        var done = il.DefineLabel();
                         EmitLoadLocalVariable(il, leftHasValueVar);
-                        il.Demit(OpCodes.Brfalse_S, isNullLabel); // safe: jumps over EmitLoadLocalVariable (1-4 bytes) + Brtrue_S (2 bytes) = 3-6 bytes
+                        il.Demit(OpCodes.Brfalse, isNullLabel);
                         EmitLoadLocalVariable(il, rightHasValueVar);
-                        il.Demit(OpCodes.Brtrue_S, resultLabel);  // safe: jumps over Pop (1 byte) + Ldnull (1 byte) = 2 bytes
+                        il.Demit(OpCodes.Brtrue, resultLabel);
                         il.DmarkLabel(isNullLabel);
                         il.Demit(OpCodes.Pop);
-                        il.Demit(OpCodes.Ldnull);
+                        EmitLoadLocalVariable(il, InitValueTypeVariable(il, exprType));
+                        il.Demit(OpCodes.Br, done);
                         il.DmarkLabel(resultLabel);
+                        il.Demit(OpCodes.Newobj, exprType.GetNullableConstructor());
+                        il.DmarkLabel(done);
                     }
                 }
 
+                context.LastEmitIsAddress = false;
                 return il.EmitPopIfIgnoreResult(parent);
             }
 
