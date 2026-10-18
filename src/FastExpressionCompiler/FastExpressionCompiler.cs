@@ -1641,6 +1641,13 @@ namespace FastExpressionCompiler
                             continue;
                         }
 
+#if !LIGHT_EXPRESSION
+                        if (expr.CanReduce)
+                        {
+                            expr = expr.ReduceAndCheck();
+                            continue;
+                        }
+#endif
                         return Result.NotSupported_UnknownExpression;
                 }
             }
@@ -2461,6 +2468,13 @@ namespace FastExpressionCompiler
                                 il.EmitPopIfIgnoreResult(parent);
 
                         default:
+#if !LIGHT_EXPRESSION
+                            if (expr.CanReduce)
+                            {
+                                expr = expr.ReduceAndCheck();
+                                continue;
+                            }
+#endif
                             return false;
 
                     }
