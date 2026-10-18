@@ -23,6 +23,7 @@ public struct ScopedLabelBindingRegressionTests : ITestX
  {
   var target=S.Label("nested-overlap");var source=S.Lambda<Action>(S.Block(S.Label(target),S.Block(S.Label(target))));
   t.Throws<InvalidOperationException>(()=>source.Compile());t.Throws<InvalidOperationException>(()=>source.FromSysExpression().CompileFast(true, CompilerFlags.ValidateLabels));
+  var valueTarget=S.Label(typeof(int),"nested-default");var valueSource=S.Lambda<Func<int>>(S.Label(valueTarget,S.Block(S.Label(valueTarget,S.Constant(3)))));t.Throws<InvalidOperationException>(()=>valueSource.Compile());t.Throws<InvalidOperationException>(()=>valueSource.FromSysExpression().CompileFast(true, CompilerFlags.ValidateLabels));
  }
  public void Unique_void_child_entry_remains_valid(TestContext t)
  {
