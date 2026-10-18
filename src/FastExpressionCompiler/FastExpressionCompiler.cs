@@ -4423,6 +4423,8 @@ namespace FastExpressionCompiler
                 var bounds = expr.GetArgExprs();
                 var boundCount = bounds.GetArgCount();
                 var flags = ParentFlags.CtorCall;
+                SmallList<int, Stack8<int>, NoArrayPool<int>> boundVars = default;
+                var spillBounds = context.HasExceptionBlock && boundCount > 1;
                 for (var i = 0; i < boundCount; i++)
                 {
                     var bound = bounds.GetArgument(i);
@@ -4438,7 +4440,12 @@ namespace FastExpressionCompiler
                     }
                     if (boundType != typeof(int) && !TryEmitPrimitiveValueConvert(boundType, typeof(int), il, isChecked: true))
                         return false;
+                    if (spillBounds)
+                        boundVars.Add(EmitStoreLocalVariable(il, typeof(int)));
                 }
+                if (spillBounds)
+                    for (var i = 0; i < boundCount; ++i)
+                        EmitLoadLocalVariable(il, boundVars[i]);
                 if (boundCount == 1)
                 {
                     var elemType = expr.Type.GetElementType();
@@ -4471,6 +4478,29 @@ namespace FastExpressionCompiler
                 il.Demit(OpCodes.Newarr, elemType);
 
                 var isElemOfValueType = elemType.IsValueType;
+                if (context.HasExceptionBlock)
+                {
+                    var array = EmitStoreLocalVariable(il, arrayType);
+                    var value = il.GetNextLocalVarIndex(elemType);
+                    for (var i = 0; i < elemCount; ++i)
+                    {
+                        if (!TryEmit(elems.GetArgument(i), il, ref context, ParentFlags.AssignmentRightValue))
+                            return false;
+                        EmitStoreLocalVariable(il, value);
+                        EmitLoadLocalVariable(il, array);
+                        EmitLoadConstantInt(il, i);
+                        if (isElemOfValueType)
+                            il.Demit(OpCodes.Ldelema, elemType);
+                        EmitLoadLocalVariable(il, value);
+                        if (isElemOfValueType)
+                            il.Demit(OpCodes.Stobj, elemType);
+                        else
+                            il.Demit(OpCodes.Stelem_Ref);
+                    }
+                    EmitLoadLocalVariable(il, array);
+                    context.LastEmitIsAddress = false;
+                    return il.EmitPopIfIgnoreResult(parent);
+                }
                 for (var i = 0; i < elemCount; i++)
                 {
                     il.Demit(OpCodes.Dup);
