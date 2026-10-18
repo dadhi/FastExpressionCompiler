@@ -4160,7 +4160,8 @@ namespace FastExpressionCompiler
                 var op = expr.Operand;
                 method ??= expr.Method;
                 if (!TryEmit(op, il, ref context,
-                    (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue))
+                    (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
+                        ParentFlags.AssignmentLeftValue | ParentFlags.DupIt | ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue))
                     return false;
                 var underlyingOperandType = Nullable.GetUnderlyingType(op.Type);
                 if (underlyingOperandType != null && method.GetParameters()[0].ParameterType == underlyingOperandType)
@@ -7790,6 +7791,7 @@ namespace FastExpressionCompiler
             {
                 var flags = (parent
                     & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
+                        ParentFlags.MemberAccess | ParentFlags.AssignmentLeftValue | ParentFlags.DupIt |
                         ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
                     | ParentFlags.Arithmetic;
 
