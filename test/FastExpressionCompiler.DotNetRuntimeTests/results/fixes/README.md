@@ -1,6 +1,6 @@
 # Captured quotations, runtime variables and lexical scope
 
-Branch `fix-runtime-expression-compatibility`, draft [PR #558](https://github.com/dadhi/FastExpressionCompiler/pull/558). These commits are local and have not been pushed. Performance PR #559 is unchanged. The preceding local snapshot `05110348` recorded 34,996 passed / 77 failed / 60 skipped.
+Branch `fix-runtime-expression-compatibility`, draft [PR #558](https://github.com/dadhi/FastExpressionCompiler/pull/558). This report describes the compatibility fixes included in the draft pull request. Performance PR #559 is unchanged. The preceding snapshot `05110348` recorded 34,996 passed / 77 failed / 60 skipped.
 
 ## Results
 
