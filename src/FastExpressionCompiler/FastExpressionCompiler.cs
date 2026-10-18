@@ -162,7 +162,7 @@ namespace FastExpressionCompiler
 
             var returnType = lambdaExpr.ReturnType;
             var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
-            if (!EmittingVisitor.TryEmit(bodyExpr, il, ref context, parent))
+            if (!EmittingVisitor.TryEmitLambdaBody(bodyExpr, returnType, il, ref context, parent))
                 return false;
 
             if (bodyExpr.Type.IsByRef && !returnType.IsByRef) // don't forget to de-ref the reference if the lambda should return de-ref value of the body and not itself by-ref return, see #414
@@ -340,7 +340,7 @@ namespace FastExpressionCompiler
             var bodyExpr = lambdaExpr.Body;
             var returnType = lambdaExpr.ReturnType;
             var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
-            if (!EmittingVisitor.TryEmit(bodyExpr, il, ref context, parent))
+            if (!EmittingVisitor.TryEmitLambdaBody(bodyExpr, returnType, il, ref context, parent))
                 return null;
 
             if (bodyExpr.Type.IsByRef && !returnType.IsByRef) // don't forget to de-ref the reference if the lambda should return de-ref value of the body and not itself by-ref return, see #414
@@ -369,7 +369,7 @@ namespace FastExpressionCompiler
             var bodyExpr = lambdaExpr.Body;
             var returnType = lambdaExpr.ReturnType;
             var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
-            if (!EmittingVisitor.TryEmit(bodyExpr, il, ref context, parent))
+            if (!EmittingVisitor.TryEmitLambdaBody(bodyExpr, returnType, il, ref context, parent))
                 return null;
 
             if (bodyExpr.Type.IsByRef && !returnType.IsByRef) // don't forget to de-ref the reference if the lambda should return de-ref value of the body and not itself by-ref return, see #414
@@ -461,7 +461,7 @@ namespace FastExpressionCompiler
                 if (returnType.IsByRef)
                     parent |= ParentFlags.ReturnByRef;
 
-                if (EmittingVisitor.TryEmit(bodyExpr, il, ref context, parent))
+                if (EmittingVisitor.TryEmitLambdaBody(bodyExpr, returnType, il, ref context, parent))
                 {
                     if (bodyExpr.Type.IsByRef && !returnType.IsByRef) // don't forget to de-ref the reference if the lambda should return de-ref value of the body and not itself by-ref return, see #414
                         EmittingVisitor.EmitLoadIndirectlyByRef(il, bodyExpr.Type);
@@ -726,6 +726,9 @@ namespace FastExpressionCompiler
             /// This is required because we have the return from the nested lambda expression,
             /// and when inlined in the parent lambda it is no longer the return but just a jump to the label.
             internal short CurrentInlinedLambdaInvokeIndex;
+
+            // A trailing label may return directly only from the method that owns it.
+            internal object MethodReturnTarget;
 
             public ClosureStatus Status;
 
@@ -1341,7 +1344,9 @@ namespace FastExpressionCompiler
             /// <summary>TypeEqual is not supported </summary>
             NotSupported_TypeEqual = 1009,
             /// <summary>`when` in catch is not supported yet</summary>
-            NotSupported_ExceptionCatchFilter = 1010
+            NotSupported_ExceptionCatchFilter = 1010,
+            /// <summary>A reused method-return target needs operand spilling before it can return from this context.</summary>
+            NotSupported_MethodReturn_Context = 1011
         }
 
         /// <summary>Return value is ignored</summary>
@@ -2361,7 +2366,7 @@ namespace FastExpressionCompiler
             if (nestedReturnType.IsByRef)
                 parent |= ParentFlags.ReturnByRef;
 
-            var emitOk = EmittingVisitor.TryEmit(nestedLambdaBody, il, ref nestedLambdaContext, parent);
+            var emitOk = EmittingVisitor.TryEmitLambdaBody(nestedLambdaBody, nestedReturnType, il, ref nestedLambdaContext, parent);
             if (emitOk)
             {
                 il.Demit(OpCodes.Ret);
@@ -2613,6 +2618,39 @@ namespace FastExpressionCompiler
                 ((Func<RuntimeTypeHandle, Type>)Type.GetTypeFromHandle).Method;
             private static readonly MethodInfo _objectEqualsMethod =
                 ((Func<object, object, bool>)object.Equals).Method;
+
+            internal static bool TryEmitLambdaBody(Expression body, Type returnType, ILGenerator il,
+                ref CompilerContext context, ParentFlags parent)
+            {
+                context.MethodReturnTarget = GetMethodReturnTarget(body, returnType);
+                return TryEmit(body, il, ref context, parent);
+            }
+
+            private static object GetMethodReturnTarget(Expression expression, Type returnType)
+            {
+                while (true)
+                {
+                    if (expression is LabelExpression label)
+                    {
+                        var type = label.Target.Type;
+                        return returnType == type || !returnType.IsValueType && !type.IsValueType && returnType.IsAssignableFrom(type)
+                            ? label.Target : null;
+                    }
+                    if (expression is not BlockExpression block)
+                        return null;
+                    var statements = block.Expressions;
+                    var i = statements.Count - 1;
+                    for (; i >= 0; --i)
+                    {
+                        expression = statements[i];
+                        if (expression.NodeType != ExpressionType.DebugInfo &&
+                            (expression.NodeType != ExpressionType.Default || expression.Type != typeof(void)))
+                            break;
+                    }
+                    if (i < 0)
+                        return null;
+                }
+            }
 
             public static bool TryEmit(Expression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex = -1)
             {
@@ -2998,8 +3036,9 @@ namespace FastExpressionCompiler
                                         {
                                             // But we cannot use the return pattern and eliminate the target label if we have more gotos referencing it, see #430
                                             var (gotos, labels) = context.TargetToGotosAndLabels.Map.TryGetValueRef(label.Target, out var found);
-                                            // Repeated targets have block-local bindings, not a method return.
-                                            if (found && labels == 1 && gotos <= labels)
+                                            // Only eliminate a single value label; method returns are handled by TryEmitGoto.
+                                            if (found && labels == 1 && gotos <= labels &&
+                                                (parent & (ParentFlags.IgnoreResult | ParentFlags.InlinedLambdaInvoke)) == 0)
                                             {
                                                 if (context.IsEmittingExceptionFilter || (parent & ParentFlags.TryCatch) != 0)
                                                 {
@@ -3012,30 +3051,13 @@ namespace FastExpressionCompiler
                                                 var gtOrLabelValue = gt.Value ?? label.DefaultValue;
                                                 if (gtOrLabelValue != null)
                                                 {
-                                                    var isVoidTarget = gt.Target.Type == typeof(void); // the value is evaluated and dropped
-                                                    if (!TryEmit(gtOrLabelValue, il, ref context, isVoidTarget ? parent | ParentFlags.IgnoreResult : parent & ~ParentFlags.IgnoreResult))
+                                                    if (!TryEmit(gtOrLabelValue, il, ref context, parent & ~ParentFlags.IgnoreResult))
                                                         return false;
 
-                                                    if ((parent & ParentFlags.InlinedLambdaInvoke) != 0)
-                                                    {
-                                                        if (!isVoidTarget) // nothing to store for the void
-                                                        {
-                                                            ref var foundLabel = ref context.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(gt.Target, out var labelFound);
-                                                            if (!labelFound || foundLabel.InlinedLambdaInvokeIndex == -1)
-                                                                return false;
-                                                            EmitGotoToReturnLabel(ref context.LambdaInvokeStackLabels.GetSurePresentRef(foundLabel.InlinedLambdaInvokeIndex), il, gtOrLabelValue, OpCodes.Br);
-                                                        }
-                                                    }
-                                                    else
-                                                    {
-                                                        // @hack (related to #237) if `IgnoreResult` set, that means the external/calling code won't planning on returning and
-                                                        // emitting the double `OpCodes.Ret` (usually for not the last statement in block), so we can safely emit our own `Ret` here.
-                                                        // And vice-versa, if `IgnoreResult` not set then the external code planning to emit `Ret` (the last block statement),
-                                                        // so we should avoid it on our side.
-                                                        if ((parent & ParentFlags.IgnoreResult) != 0)
-                                                            il.Demit(OpCodes.Ret);
-                                                    }
                                                 }
+                                                if (blockVarCount != 0)
+                                                    context.PopBlock();
+                                                context.PopScopedBlockLabels(labelScopeStart);
                                                 return true;
                                             }
                                         }
@@ -3403,12 +3425,26 @@ namespace FastExpressionCompiler
                 if ((context.CompilerFlags & CompilerFlags.ValidateLabels) != 0 &&
                     !labelInfo.IsBlockScoped && hasTargetCounts && targetCounts.Item2 > 1)
                     throw new InvalidOperationException($"Cannot jump to ambiguous label target `{expr.Target}`.");
+                var isMethodReturnTarget = context.CurrentInlinedLambdaInvokeIndex == -1 &&
+                    ReferenceEquals(context.MethodReturnTarget, expr.Target);
+                // A statement context has no enclosing operand stack to discard before returning.
+                var returnFromMethod = isMethodReturnTarget &&
+                    (parent & ~(ParentFlags.IgnoreResult | ParentFlags.LambdaCall | ParentFlags.BlockResult)) == 0;
+                if (isMethodReturnTarget && !returnFromMethod && hasTargetCounts && targetCounts.Item2 > 1)
+                {
+                    if ((context.CompilerFlags & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
+                        throw new NotSupportedExpressionException(Result.NotSupported_MethodReturn_Context);
+                    return false;
+                }
                 var gotoValue = expr.Value;
                 if (gotoValue != null && expr.Target.Type == typeof(void))
                 {
                     if (!TryEmit(gotoValue, il, ref context, parent | ParentFlags.IgnoreResult))
                         return false;
                     labelInfo = ref context.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(expr.Target, out _);
+                    if (returnFromMethod)
+                        il.Demit(OpCodes.Ret);
+                    else
                     il.Demit((parent & ParentFlags.TryCatch) != 0 ? OpCodes.Leave : OpCodes.Br, labelInfo.GetOrDefineLabel(il));
                     return true;
                 }
@@ -3418,6 +3454,12 @@ namespace FastExpressionCompiler
 
                 if (gotoValue != null)
                     labelInfo = ref context.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(expr.Target, out _);
+
+                if (returnFromMethod)
+                {
+                    il.Demit(OpCodes.Ret);
+                    return true;
+                }
 
                 switch (expr.Kind)
                 {
@@ -6895,9 +6937,12 @@ namespace FastExpressionCompiler
                 bool emitted;
                 if (ReferenceEquals(last, body))
                 {
+                    var methodReturnTarget = context.MethodReturnTarget;
+                    context.MethodReturnTarget = null;
                     context.CurrentInlinedLambdaInvokeIndex = invokeIndex;
                     emitted = TryEmit(last, il, ref context, parent | ParentFlags.BlockResult);
                     context.CurrentInlinedLambdaInvokeIndex = callerIndex;
+                    context.MethodReturnTarget = methodReturnTarget;
                 }
                 else
                     emitted = TryEmitInlinedWrapper((BlockExpression)last, body, invokeIndex, il, ref context, parent);
@@ -6925,9 +6970,13 @@ namespace FastExpressionCompiler
                         return false;
 
                     var previousInvokeIndex = context.CurrentInlinedLambdaInvokeIndex;
+                    var previousMethodReturnTarget = context.MethodReturnTarget;
                     var invokeIndex = context.AddInlinedLambdaInvoke(expr);
                     if (argCount == 0)
+                    {
                         context.CurrentInlinedLambdaInvokeIndex = invokeIndex;
+                        context.MethodReturnTarget = null;
+                    }
                     bool emitted;
                     try
                     {
@@ -6939,6 +6988,7 @@ namespace FastExpressionCompiler
                     finally
                     {
                         context.CurrentInlinedLambdaInvokeIndex = previousInvokeIndex;
+                        context.MethodReturnTarget = previousMethodReturnTarget;
                     }
                     if (!emitted)
                         return false;
