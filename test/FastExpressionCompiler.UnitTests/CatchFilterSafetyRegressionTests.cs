@@ -12,9 +12,13 @@ public struct CatchFilterSafetyRegressionTests : ITestX
 {
     public void Run(TestRun t)
     {
+#if !NETFRAMEWORK
         Filter_guard_survives_child_context_changes(t);
         Filtered_handler_without_variable_has_empty_entry_stack(t);
         Separately_compiled_filter_lambda_has_its_own_exception_scope(t);
+#else
+        // DynamicILGenerator filters are unsupported on .NET Framework; rejection is covered by CatchFilterRegressionTests.
+#endif
     }
 
     public sealed class BoolIndexer
