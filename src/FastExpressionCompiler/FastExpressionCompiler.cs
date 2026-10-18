@@ -6750,7 +6750,8 @@ namespace FastExpressionCompiler
                             }
                             else
                             il.Demit(OpCodes.Ldflda, field);
-                            if ((parent & ParentFlags.AssignmentLeftValue) != 0)
+                            if ((parent & (ParentFlags.AssignmentLeftValue | ParentFlags.DupIt)) ==
+                                (ParentFlags.AssignmentLeftValue | ParentFlags.DupIt))
                                 il.Demit(OpCodes.Dup);
                         }
                     }
