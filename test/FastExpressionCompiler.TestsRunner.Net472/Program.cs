@@ -123,6 +123,7 @@ namespace FastExpressionCompiler.UnitTests
             var fecTests = new TestRun();
             fecTests.Run(new NumericConversionRegressionTests());
             fecTests.Run(new IntrinsicConstructorExceptionRegressionTests());
+            fecTests.Run(new CustomReducibleNodeRegressionTests());
             fecTests.Run(new RuntimeTypeConstantRegressionTests());
             fecTests.Run(new ReadonlyRefFieldRegressionTests());
             fecTests.Run(new RefCopybackReceiverReviewTests());
