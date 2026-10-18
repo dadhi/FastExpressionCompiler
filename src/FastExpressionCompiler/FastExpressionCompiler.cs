@@ -2096,7 +2096,10 @@ namespace FastExpressionCompiler
                             }
                         case ExpressionType.Not:
                             {
-                                if (exprType.IsNullable())
+                                var notExpr = (UnaryExpression)expr;
+                                if (exprType == typeof(bool?) && notExpr.Method == null && notExpr.Operand.Type == typeof(bool?))
+                                    return TryEmitNullableBooleanNot(notExpr.Operand, il, ref context, parent);
+                                if (((UnaryExpression)expr).Method != null || exprType.IsNullable())
                                     return TryEmitNot((UnaryExpression)expr, il, ref context, parent);
                                 if (!exprType.IsPrimitive)
                                     return false;
@@ -3189,6 +3192,17 @@ namespace FastExpressionCompiler
             private static bool TryEmitNot(UnaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var op = expr.Operand;
+                if (expr.Method != null)
+                {
+                    if (op.Type.IsNullable() && expr.Method.GetParameters()[0].ParameterType != op.Type)
+                        return false;
+                    if (!TryEmit(op, il, ref context,
+                        (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue))
+                        return false;
+                    EmitMethodCall(il, expr.Method);
+                    context.LastEmitIsAddress = false;
+                    return il.EmitPopIfIgnoreResult(parent);
+                }
                 if (expr.Type.IsNullable())
                 {
                     if (expr.Method != null || !Nullable.GetUnderlyingType(expr.Type).IsPrimitive || !TryEmit(op, il, ref context,
@@ -7927,6 +7941,8 @@ namespace FastExpressionCompiler
                 // not: negate, arithmetic, convert to bool
                 if (nodeType == ExpressionType.Not)
                 {
+                    if (((UnaryExpression)expr).Method != null)
+                        return false;
                     var operandExpr = ((UnaryExpression)expr).Operand;
                     if (operandExpr.NodeType == ExpressionType.Conditional) 
                         operandExpr = Tools.TryReduceConditional((ConditionalExpression)operandExpr);
@@ -8914,7 +8930,7 @@ namespace FastExpressionCompiler
         public static Expression TryReduceConditionalTest(Expression testExpr)
         {
             // removing Not by turning Equal -> NotEqual, NotEqual -> Equal
-            if (testExpr.NodeType == ExpressionType.Not)
+            if (testExpr.NodeType == ExpressionType.Not && ((UnaryExpression)testExpr).Method == null)
             {
                 // simplify the not `==` -> `!=`, `!=` -> `==`
                 var op = TryReduceConditionalTest(((UnaryExpression)testExpr).Operand);
