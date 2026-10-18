@@ -53,6 +53,7 @@ namespace FastExpressionCompiler.UnitTests
             var st = new TestRun(TestFlags.RethrowException);
 
             st.Run(new NumericConversionRegressionTests());
+            st.Run(new NullableBooleanRegressionTests());
 
             st.Run(new Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
             st.Run(new Issue561_NonBooleanEqualityOperator());
@@ -68,6 +69,8 @@ namespace FastExpressionCompiler.UnitTests
             var lt = new LightExpression.TestRun(LightExpression.TestFlags.RethrowException);
 
             lt.Run(new LightExpression.UnitTests.NumericConversionRegressionTests());
+            lt.Run(new LightExpression.UnitTests.NullableBooleanRegressionTests());
+            lt.Run(new LightExpression.IssueTests.Issue480_CLR_detected_an_invalid_program_exception());
 
 #if NET8_0_OR_GREATER
             lt.Run(new LightExpression.IssueTests.Issue490_Regression_in_compiling_lambdas_with_ref_struct_parameters());
