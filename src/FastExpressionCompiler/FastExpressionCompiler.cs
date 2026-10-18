@@ -3596,21 +3596,18 @@ namespace FastExpressionCompiler
 
             private static bool TryEmitNot(UnaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
-                var op = expr.Operand;
-                if (op.NodeType == ExpressionType.Equal)
-                    return TryEmitComparison(((BinaryExpression)op).Left, ((BinaryExpression)op).Right,
-                        expr.Type, ExpressionType.NotEqual, il, ref context, parent);
-
-                if (!TryEmit(op, il, ref context, parent & ~ParentFlags.IgnoreResult))
+                // Methods and lifted operands use the shared unary emitter in the dispatch above.
+                var operandFlags = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
+                    ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef | ParentFlags.DupIt |
+                    ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue;
+                if (!TryEmit(expr.Operand, il, ref context, operandFlags))
                     return false;
-
-                if ((parent & ParentFlags.IgnoreResult) != 0)
-                    il.Demit(OpCodes.Pop);
-                else if (expr.Type == typeof(bool))
+                if (expr.Type == typeof(bool))
                     EmitEqualToZeroOrNull(il);
                 else
                     il.Demit(OpCodes.Not);
-                return true;
+                context.LastEmitIsAddress = false;
+                return il.EmitPopIfIgnoreResult(parent);
             }
 
             private static bool TryEmitConvert(UnaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
