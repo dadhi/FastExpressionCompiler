@@ -5875,7 +5875,10 @@ namespace FastExpressionCompiler
                 // Check the pre-requisite conditions and emit OpCodes.Switch if possible, see #398
                 const int minSwitchTableSize = 3;
                 Debug.Assert(minSwitchTableSize >= 3); // The later code will assume at least so few of the cases count
-                if (customEqualMethod == null && caseCount >= minSwitchTableSize && switchValueType.IsIntegerOrUnderlyingInteger())
+                // The IL switch index and the normalization arithmetic must use 32-bit values.
+                // Wider operands retain the ordered comparison dispatch below.
+                if (customEqualMethod == null && caseCount >= minSwitchTableSize && switchValueType.IsIntegerOrUnderlyingInteger() &&
+                    Type.GetTypeCode(switchValueType) is not (TypeCode.Int64 or TypeCode.UInt64))
                 {
                     var multipleTestValuesLabelsId = 0;
                     var hasDuplicateTestValue = false;
@@ -6080,7 +6083,7 @@ namespace FastExpressionCompiler
                         {
                             // store and use the switch value over in case of the outlier, otherwise just use whatever is on stack from the prev TryEmit
                             EmitStoreAndLoadLocalVariable(il, switchValVar = il.GetNextLocalVarIndex(switchValueType));
-                            EmitLoadConstantLong(il, switchValues.GetSurePresentRef(0).Value); // Load the min outlier
+                            EmitLoadConstantInt(il, unchecked((int)switchValues.GetSurePresentRef(0).Value)); // Load the min outlier
                             il.Demit(OpCodes.Beq, minOutlierLabel);
                             EmitLoadLocalVariable(il, switchValVar); // Load the switch var on stack for the next operation
                         }
@@ -6092,8 +6095,8 @@ namespace FastExpressionCompiler
                         // Before emitting switch we need to normalize the switch value to start from zero
                         if (firstTestValue != 0)
                         {
-                            EmitLoadConstantLong(il, firstTestValue);
-                            il.Demit(firstTestValue > 0 ? OpCodes.Sub : OpCodes.Add);
+                            EmitLoadConstantInt(il, unchecked((int)firstTestValue));
+                            il.Demit(OpCodes.Sub);
                         }
 
                         // Emit the switch instruction
@@ -6104,7 +6107,7 @@ namespace FastExpressionCompiler
                         {
                             Debug.Assert(switchValVar != -1);
                             EmitLoadLocalVariable(il, switchValVar);
-                            EmitLoadConstantLong(il, switchValues.GetSurePresentRef(switchValuesCount - 1).Value); // Load the max outlier
+                            EmitLoadConstantInt(il, unchecked((int)switchValues.GetSurePresentRef(switchValuesCount - 1).Value)); // Load the max outlier
                             il.Demit(OpCodes.Beq, maxOutlierLabel); // If switch value matches the outlier break to its label
                         }
 
