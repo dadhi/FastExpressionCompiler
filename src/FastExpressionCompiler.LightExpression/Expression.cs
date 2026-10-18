@@ -1245,6 +1245,12 @@ public abstract class Expression
     public static ElementInit ElementInit(MethodInfo addMethod, IEnumerable<Expression> arguments) =>
         ElementInit(addMethod, arguments.AsReadOnlyList());
 
+    [RequiresUnreferencedCode(Trimming.Message)]
+    private static Type GetInvocationReturnType(Expression expression) =>
+        expression is UnaryExpression quote && quote.NodeType == ExpressionType.Quote && quote.Operand is LambdaExpression lambda
+            ? lambda.ReturnType
+            : expression.Type.FindDelegateInvokeMethod().ReturnType;
+
     public static InvocationExpression Invoke(LambdaExpression expression) =>
         new NotNullExpressionInvocationExpression(expression);
 
@@ -1255,7 +1261,7 @@ public abstract class Expression
     public static InvocationExpression Invoke(Expression expression, Expression a0) =>
         expression is LambdaExpression
             ? new OneArgumentInvocationExpression(expression, a0)
-            : new TypedOneArgumentInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0);
+            : new TypedOneArgumentInvocationExpression(expression, GetInvocationReturnType(expression), a0);
 
     public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0) =>
         expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
@@ -1269,7 +1275,7 @@ public abstract class Expression
     public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1) =>
         expression is LambdaExpression
             ? new TwoArgumentsInvocationExpression(expression, a0, a1)
-            : new TypedTwoArgumentsInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0, a1);
+            : new TypedTwoArgumentsInvocationExpression(expression, GetInvocationReturnType(expression), a0, a1);
 
     public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0, Expression a1) =>
         expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
@@ -1283,7 +1289,7 @@ public abstract class Expression
     public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1, Expression a2) =>
         expression is LambdaExpression
             ? new ThreeArgumentsInvocationExpression(expression, a0, a1, a2)
-            : new TypedThreeArgumentsInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0, a1, a2);
+            : new TypedThreeArgumentsInvocationExpression(expression, GetInvocationReturnType(expression), a0, a1, a2);
 
     public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0, Expression a1, Expression a2) =>
         expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
@@ -1297,7 +1303,7 @@ public abstract class Expression
     public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1, Expression a2, Expression a3) =>
         expression is LambdaExpression
             ? new FourArgumentsInvocationExpression(expression, a0, a1, a2, a3)
-            : new TypedFourArgumentsInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0, a1, a2, a3);
+            : new TypedFourArgumentsInvocationExpression(expression, GetInvocationReturnType(expression), a0, a1, a2, a3);
 
     public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0, Expression a1, Expression a2, Expression a3) =>
         expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
@@ -1311,7 +1317,7 @@ public abstract class Expression
     public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4) =>
         expression is LambdaExpression
             ? new FiveArgumentsInvocationExpression(expression, a0, a1, a2, a3, a4)
-            : new TypedFiveArgumentsInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0, a1, a2, a3, a4);
+            : new TypedFiveArgumentsInvocationExpression(expression, GetInvocationReturnType(expression), a0, a1, a2, a3, a4);
 
     public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4) =>
         expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
@@ -1325,7 +1331,7 @@ public abstract class Expression
     public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4, Expression a5) =>
         expression is LambdaExpression
             ? new SixArgumentsInvocationExpression(expression, a0, a1, a2, a3, a4, a5)
-            : new TypedSixArgumentsInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0, a1, a2, a3, a4, a5);
+            : new TypedSixArgumentsInvocationExpression(expression, GetInvocationReturnType(expression), a0, a1, a2, a3, a4, a5);
 
     public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4, Expression a5) =>
         expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
@@ -1336,7 +1342,7 @@ public abstract class Expression
     public static InvocationExpression Invoke(Expression expression, IReadOnlyList<Expression> args) =>
         expression is LambdaExpression
             ? new ManyArgumentsInvocationExpression(expression, args)
-            : new TypedManyArgumentsInvocationExpression(expression, args, expression.Type.FindDelegateInvokeMethod().ReturnType);
+            : new TypedManyArgumentsInvocationExpression(expression, args, GetInvocationReturnType(expression));
 
     [RequiresUnreferencedCode(Trimming.Message)]
     public static InvocationExpression Invoke(Expression expression, params Expression[] args) =>
