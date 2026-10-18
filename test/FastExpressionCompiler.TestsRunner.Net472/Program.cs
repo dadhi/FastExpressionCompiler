@@ -86,6 +86,8 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.CompoundIndexExceptionRegressionTests());
                 t.Run(new LightExpression.UnitTests.ExcessiveArityRegressionTests());
                 t.Run(new LightExpression.UnitTests.NestedStructFieldAddressRegressionTests());
+                t.Run(new LightExpression.UnitTests.CaptureFreeQuoteRegressionTests());
+                t.Run(new LightExpression.UnitTests.NullableArithmeticEvaluationRegressionTests());
                 t.Run(new LightExpression.UnitTests.CoalesceValueConversionRegressionTests());
                 t.Run(new LightExpression.UnitTests.TypedLabelControlFlowRegressionTests());
                 t.Run(new LightExpression.UnitTests.NullableArithmeticEvaluationRegressionTests());
@@ -182,6 +184,8 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new CompoundIndexExceptionRegressionTests());
             fecTests.Run(new ExcessiveArityRegressionTests());
             fecTests.Run(new NestedStructFieldAddressRegressionTests());
+            fecTests.Run(new CaptureFreeQuoteRegressionTests());
+            fecTests.Run(new NullableArithmeticEvaluationRegressionTests());
             fecTests.Run(new CoalesceValueConversionRegressionTests());
             fecTests.Run(new TypedLabelControlFlowRegressionTests());
             fecTests.Run(new NullableArithmeticEvaluationRegressionTests());
