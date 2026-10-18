@@ -421,8 +421,6 @@ namespace FastExpressionCompiler
             var collectResult = TryCollectInfo(ref context, bodyExpr, null, ref context.NestedLambdas, 0, true);
             if (collectResult == Result.OK)
             {
-                ValidateLabels(ref context);
-
                 context.ValidateExceptionJumps();
                 var constantsAndNestedLambdas = (context.Status & ClosureStatus.HasClosure) != 0
                     ? context.GetArrayOfConstantsAndNestedLambdas()
@@ -633,6 +631,27 @@ namespace FastExpressionCompiler
             internal bool IsEmittingDefault;
         }
 
+        internal enum LabelScopeKind : byte { Lambda, Block, Statement, Expression, Switch }
+
+        internal sealed class LabelScope
+        {
+            internal readonly LabelScope Parent;
+            internal readonly LabelScopeKind Kind;
+            internal readonly LabelScope Root;
+            internal LabelScope(LabelScope parent, LabelScopeKind kind)
+            {
+                Parent = parent;
+                Kind = kind;
+                Root = parent == null ? this : parent.Root;
+            }
+        }
+
+        internal struct LabelScopeFrame
+        {
+            internal LabelScopeKind Kind;
+            internal LabelScope Scope;
+        }
+
         internal sealed class ExceptionRegionInfo
         {
             internal readonly ExceptionRegionInfo Parent;
@@ -688,8 +707,76 @@ namespace FastExpressionCompiler
             internal SmallList<(object Target, ExceptionRegionInfo Region), Stack4<(object Target, ExceptionRegionInfo Region)>, NoArrayPool<(object Target, ExceptionRegionInfo Region)>> ExceptionLabels;
             internal SmallList<(object Target, ExceptionRegionInfo Region), Stack4<(object Target, ExceptionRegionInfo Region)>, NoArrayPool<(object Target, ExceptionRegionInfo Region)>> ExceptionGotos;
 
+            // Frames follow the existing collector traversal; persistent ancestry is allocated
+            // only for expressions that actually contain a label or a jump.
+            internal SmallList<LabelScopeFrame, Stack4<LabelScopeFrame>, NoArrayPool<LabelScopeFrame>> LabelScopes;
+            internal SmallList<(LabelTarget Target, LabelScope Scope), Stack4<(LabelTarget Target, LabelScope Scope)>, NoArrayPool<(LabelTarget Target, LabelScope Scope)>> ScopedLabels;
+            internal SmallList<(LabelTarget Target, LabelScope Scope), Stack4<(LabelTarget Target, LabelScope Scope)>, NoArrayPool<(LabelTarget Target, LabelScope Scope)>> ScopedGotos;
+
+            internal void PushLabelScope(LabelScopeKind kind) =>
+                LabelScopes.AddAndGetRef(new LabelScopeFrame { Kind = kind });
+
+            internal LabelScope CaptureLabelScope()
+            {
+                var start = LabelScopes.Count - 1;
+                while (start > 0 && LabelScopes[start].Scope == null && LabelScopes[start].Kind != LabelScopeKind.Lambda)
+                    --start;
+                LabelScope parent = null;
+                if (LabelScopes[start].Kind != LabelScopeKind.Lambda)
+                    parent = LabelScopes[start].Scope;
+                for (var i = start; i < LabelScopes.Count; ++i)
+                {
+                    ref var frame = ref LabelScopes.GetSurePresentRef(i);
+                    if (frame.Scope == null)
+                        frame.Scope = new LabelScope(parent, frame.Kind);
+                    parent = frame.Scope;
+                }
+                return parent;
+            }
+
+            internal void ValidateLexicalJumps()
+            {
+                for (var i = 0; i < ScopedGotos.Count; ++i)
+                {
+                    var jump = ScopedGotos[i];
+                    LabelScope definition = null;
+                    var count = 0;
+                    var local = false;
+                    for (var j = 0; j < ScopedLabels.Count; ++j)
+                    {
+                        var label = ScopedLabels[j];
+                        if (!ReferenceEquals(label.Target, jump.Target) || !ReferenceEquals(label.Scope.Root, jump.Scope.Root))
+                            continue;
+                        definition = label.Scope;
+                        ++count;
+                        for (var scope = jump.Scope; scope != null; scope = scope.Parent)
+                            if (ReferenceEquals(scope, definition))
+                            {
+                                local = true;
+                                break;
+                            }
+                        if (local) break;
+                    }
+                    // Undefined/ambiguous targets retain the existing binding diagnostics.
+                    if (local || count != 1)
+                        continue;
+                    if (jump.Target.Type != typeof(void))
+                        throw new InvalidOperationException("Cannot jump to a label with a value from outside its scope: " + jump.Target.Name);
+                    for (var destination = definition; destination != null; destination = destination.Parent)
+                    {
+                        var common = false;
+                        for (var source = jump.Scope; source != null; source = source.Parent)
+                            if (ReferenceEquals(source, destination)) { common = true; break; }
+                        if (common) break;
+                        if (destination.Kind == LabelScopeKind.Expression)
+                            throw new InvalidOperationException("Cannot jump into an expression: " + jump.Target.Name);
+                    }
+                }
+            }
+
             internal void ValidateExceptionJumps()
             {
+                ValidateLexicalJumps();
                 if (!HasExceptionBlock)
                     return;
                 for (var i = 0; i < ExceptionGotos.Count; ++i)
@@ -718,15 +805,6 @@ namespace FastExpressionCompiler
                 }
             }
 
-            /// Set if the same label target is defined by the several Label expressions, so each definition needs its own IL label
-            internal bool HasLabelDefinedTwice;
-            internal SmallList<LabelScope, Stack8<LabelScope>, NoArrayPool<LabelScope>> Scopes;
-            // The label definitions and gotos are stored as the separate arrays (SoA), because the validation scans the targets way more often than the positions
-            internal SmallList<LabelTarget, Stack2<LabelTarget>, NoArrayPool<LabelTarget>> DefTargets;
-            internal SmallList<ScopeIdx, Stack2<ScopeIdx>, NoArrayPool<ScopeIdx>> DefPositions;
-            internal SmallList<LabelTarget, Stack2<LabelTarget>, NoArrayPool<LabelTarget>> GotoTargets;
-            internal SmallList<short, Stack2<short>, NoArrayPool<short>> GotoScopes;
-            internal SmallList<short, Stack2<short>, NoArrayPool<short>> Rethrows; // the scopes of the rethrows
 
             /// The stack for the lambda invocation and the labels bound to them
             internal SmallList<LabelInfo, Stack4<LabelInfo>, NoArrayPool<LabelInfo>> LambdaInvokeStackLabels;
@@ -800,7 +878,6 @@ namespace FastExpressionCompiler
                 CurrentInlinedLambdaInvokeIndex = -1;
                 ParamExprs = paramExprs;
                 CompilerFlags = compilerFlags;
-                _ = Scopes.Add(new LabelScope { Parent = new ScopeIdx(-1, true) }); // the root
             }
 
             /// <summary>Populates info directly with provided closure object and constants.</summary>
@@ -817,7 +894,6 @@ namespace FastExpressionCompiler
 
                 ParamExprs = paramExprs;
                 CompilerFlags = compilerFlags;
-                _ = Scopes.Add(new LabelScope { Parent = new ScopeIdx(-1, true) }); // the root
             }
 
             [MethodImpl((MethodImplOptions)256)]
@@ -1511,133 +1587,6 @@ namespace FastExpressionCompiler
             throw new NotSupportedExpressionException(reason);
         }
 
-        internal enum ExceptionRegion : byte
-        {
-            None = 0,
-            Catch = 1,
-            FinallyOrFault = 2
-        }
-
-        /// <summary>The scope index (-1 for the root) with the `Enterable` flag: can the jump from the outside get into the thing,
-        /// e.g. a block in the statement position, but not in the expression or try</summary>
-        internal readonly struct ScopeIdx
-        {
-            public readonly short Index;
-            public readonly bool Enterable;
-            public ScopeIdx(int index, bool enterable) { Index = (short)index; Enterable = enterable; }
-        }
-
-        /// <summary>The label scope stored in the list; Parent.Index is its parent scope, Parent.Enterable tells if this scope is enterable</summary>
-        internal struct LabelScope
-        {
-            public ScopeIdx Parent;
-            public ExceptionRegion ExceptionRegion;
-        }
-
-        /// <summary>Checks the rules of System.Linq.Expressions for the labels: no redefinition in the nested scope, no ambiguous jump,
-        /// no jump into the expression or into the block with the value, no jump out of the finally block, no rethrow outside of the catch body.
-        /// Throws the InvalidOperationException if violated.</summary>
-        private static void ValidateLabels(ref CompilerContext context)
-        {
-            if (context.Rethrows.Count == 0 & context.GotoTargets.Count == 0 & context.DefTargets.Count < 2)
-                return; // nothing to check, the most common case
-
-            ref var scopes = ref context.Scopes;
-            ref var rethrows = ref context.Rethrows;
-            var rethrowCount = rethrows.Count;
-            for (var i = 0; i < rethrowCount; ++i)
-            {
-                int s = rethrows.GetSurePresentRef(i);
-                while (s != -1 && scopes.GetSurePresentRef(s).ExceptionRegion == ExceptionRegion.None)
-                    s = scopes.GetSurePresentRef(s).Parent.Index;
-                if (s == -1 || scopes.GetSurePresentRef(s).ExceptionRegion != ExceptionRegion.Catch)
-                    throw new InvalidOperationException("Rethrow statement is valid only inside a catch block");
-            }
-
-            // The redefinition of the label on the same scope path - both labels share the enclosing scope, i.e., a label is defined in the scope where it is already visible.
-            // Lets iterate over all pairs of the label definitions.
-            ref var defTargets = ref context.DefTargets;
-            ref var defPositions = ref context.DefPositions;
-            var defCount = defTargets.Count;
-            for (var i = 0; i < defCount; ++i)
-            {
-                var aTarget = defTargets.GetSurePresentRef(i);
-                for (var j = i + 1; j < defCount; ++j)
-                {
-                    if (aTarget != defTargets.GetSurePresentRef(j))
-                        continue;
-                    var aScopeIdx = defPositions.GetSurePresentRef(i).Index;
-                    var bScopeIdx = defPositions.GetSurePresentRef(j).Index;
-                    // search from a upwards for the b
-                    for (var aScope = aScopeIdx; aScope != -1; aScope = scopes.GetSurePresentRef(aScope).Parent.Index)
-                        if (aScope == bScopeIdx)
-                            throw new InvalidOperationException($"Label '{aTarget.Name}' is defined multiple times in the scope where it is visible");
-                    // search from b upwards for the a
-                    for (var bScope = bScopeIdx; bScope != -1; bScope = scopes.GetSurePresentRef(bScope).Parent.Index)
-                        if (bScope == aScopeIdx)
-                            throw new InvalidOperationException($"Label '{aTarget.Name}' is defined multiple times in the scope where it is visible");
-                }
-            }
-
-            // Lets iterate over all labels for all gotos
-            ref var gotoTargets = ref context.GotoTargets;
-            ref var gotoScopes = ref context.GotoScopes;
-            var gotoCount = gotoTargets.Count;
-            for (var i = 0; i < gotoCount; ++i)
-            {
-                var gotoTarget = gotoTargets.GetSurePresentRef(i);
-                var gotoScopeIdx = gotoScopes.GetSurePresentRef(i);
-                var gotoHasAtLeastOneLabel = false;
-                var labelVisible = false;
-                var jumpInCount = 0;
-                for (var j = 0; j < defCount; ++j)
-                {
-                    if (defTargets.GetSurePresentRef(j) != gotoTarget)
-                        continue;
-                    var def = defPositions.GetSurePresentRef(j);
-                    gotoHasAtLeastOneLabel = true;
-
-                    int commonAncestorScopeIdx = gotoScopeIdx;
-                    while (true)
-                    {
-                        var defOrItsOuterScopeIdx = def.Index;
-                        while (defOrItsOuterScopeIdx != -1 && defOrItsOuterScopeIdx != commonAncestorScopeIdx)
-                            defOrItsOuterScopeIdx = scopes.GetSurePresentRef(defOrItsOuterScopeIdx).Parent.Index;
-
-                        if (defOrItsOuterScopeIdx == commonAncestorScopeIdx)
-                            break;
-
-                        commonAncestorScopeIdx = scopes.GetSurePresentRef(commonAncestorScopeIdx).Parent.Index;
-                    }
-
-                    // check if the goto jump passes through any finally or fault blocks when moving from the goto scope to the common ancestor scope,
-                    // excluding the ancestor itself (because it is fine to jump inside the same scope)
-                    for (int s = gotoScopeIdx; s != commonAncestorScopeIdx; s = scopes.GetSurePresentRef(s).Parent.Index)
-                        if (scopes.GetSurePresentRef(s).ExceptionRegion == ExceptionRegion.FinallyOrFault)
-                            throw new InvalidOperationException($"Control cannot leave the finally or fault block by the jump to the label '{gotoTarget.Name}'");
-
-                    // if the label scope is the jump scope or its ancestor
-                    if (def.Index == commonAncestorScopeIdx)
-                    {
-                        labelVisible |= def.Enterable;
-                        continue;
-                    }
-
-                    // if the ancestor scope is enclosing the label scope, check if the label is enterable in the whole pass to the ancestor scope
-                    var labelEnterable = def.Enterable;
-                    for (var s = def.Index; s != commonAncestorScopeIdx; s = scopes.GetSurePresentRef(s).Parent.Index)
-                        labelEnterable &= scopes.GetSurePresentRef(s).Parent.Enterable;
-                    if (labelEnterable)
-                        ++jumpInCount;
-                }
-
-                if (gotoHasAtLeastOneLabel & !labelVisible && (jumpInCount != 1 || gotoTarget.Type != typeof(void)))
-                    throw new InvalidOperationException(jumpInCount > 1
-                        ? $"Ambiguous jump to the label '{gotoTarget.Name}'"
-                        : $"Control cannot enter the label '{gotoTarget.Name}': it is in the expression or the block with the value");
-            }
-        }
-
         /// <summary>Wraps the call to `TryCollectInfo` for the compatibility and provide the root place to check the returned error code.
         /// Important: The method collects the info from the nested lambdas up-front and de-duplicates the lambdas as well.</summary>
         [MethodImpl((MethodImplOptions)256)]
@@ -1653,19 +1602,39 @@ namespace FastExpressionCompiler
         /// <summary>Collects the information about closure constants, nested lambdas, non-passed parameters, goto labels and variables in blocks.
         /// Returns `OK` result if everything is fine and other result for error.</summary>
         public static Result TryCollectInfo(ref CompilerContext context, Expression expr,
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) =>
+            TryCollectInfo(ref context, expr, nestedLambda, ref rootNestedLambdas, false, false);
+
+        private static Result TryCollectInfo(ref CompilerContext context, Expression expr,
             NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas,
-            short scopeIdx, bool enterable = false)
+            bool directBlockChild = false, bool switchBody = false)
+        {
+            var scopeDepth = context.LabelScopes.Count;
+            if (scopeDepth == 0)
+                context.PushLabelScope(LabelScopeKind.Lambda);
+            try
         {
             var r = Result.OK;
             while (true)
             {
                 if (expr == null)
                     return Result.ExpressionIsNull;
+                var nodeType = expr.NodeType;
+                var scopeKind = nodeType == ExpressionType.Block ? LabelScopeKind.Block :
+                    nodeType == ExpressionType.Switch ? LabelScopeKind.Switch :
+                    nodeType == ExpressionType.Conditional || nodeType == ExpressionType.Loop || nodeType == ExpressionType.Goto ||
+                    nodeType == ExpressionType.Label || nodeType == ExpressionType.Convert && expr.Type == typeof(void)
+                        ? LabelScopeKind.Statement : LabelScopeKind.Expression;
+                if (!(nodeType == ExpressionType.Label && directBlockChild) &&
+                    !(nodeType == ExpressionType.Block && switchBody) &&
+                    !(scopeKind == LabelScopeKind.Expression && context.LabelScopes[context.LabelScopes.Count - 1].Kind == scopeKind))
+                    context.PushLabelScope(scopeKind);
+                directBlockChild = switchBody = false;
 #if LIGHT_EXPRESSION
                 if (expr.IsIntrinsic)
                     return expr.TryCollectInfo(ref context, nestedLambda, ref rootNestedLambdas, scopeIdx);
 #endif
-                switch (expr.NodeType)
+                switch (nodeType)
                 {
                     case ExpressionType.Constant:
 #if LIGHT_EXPRESSION
@@ -1715,7 +1684,6 @@ namespace FastExpressionCompiler
                                 if (callObjectExpr != null)
                                 {
                                     expr = callObjectExpr;
-                                    enterable = false;
                                     continue;
                                 }
                                 return Result.OK;
@@ -1884,7 +1852,6 @@ namespace FastExpressionCompiler
                             }
 
                             // No inlining, collect the normal way
-                            enterable = false;
                             if (invokeArgCount == 0)
                             {
                                 expr = invokedExpr;
@@ -1954,15 +1921,15 @@ namespace FastExpressionCompiler
                             context.PushBlockWithVars(varExprs);
 
                         for (var i = 0; i < blockExprCount - 1; i++)
-                            if ((r = TryCollectInfo(ref context, blockExprs[i], nestedLambda, ref rootNestedLambdas, scopeIdx, true)) != Result.OK)
+                            if ((r = TryCollectInfo(ref context, blockExprs[i], nestedLambda, ref rootNestedLambdas, directBlockChild: true)) != Result.OK)
                                 return r;
 
                         expr = blockExprs[blockExprCount - 1];
-                        enterable = true;
+                        directBlockChild = true;
                         if (varExprCount == 0)
                             continue; // in case of no variables we can collect the last expr without recursion
 
-                        if ((r = TryCollectInfo(ref context, expr, nestedLambda, ref rootNestedLambdas, scopeIdx, true)) != Result.OK)
+                        if ((r = TryCollectInfo(ref context, expr, nestedLambda, ref rootNestedLambdas, directBlockChild: true)) != Result.OK)
                             return r;
                         context.PopBlock();
                         return r;
@@ -1971,17 +1938,10 @@ namespace FastExpressionCompiler
                         var loopExpr = (LoopExpression)expr;
                         context.AddLabel(loopExpr.BreakLabel);
                         context.AddLabel(loopExpr.ContinueLabel);
-                        scopeIdx = (short)context.Scopes.Add(new LabelScope { Parent = new ScopeIdx(scopeIdx, enterable) });
                         if (loopExpr.BreakLabel != null)
-                        {
-                            _ = context.DefTargets.Add(loopExpr.BreakLabel);
-                            _ = context.DefPositions.Add(new ScopeIdx(scopeIdx, true));
-                        }
+                            context.ScopedLabels.AddAndGetRef((loopExpr.BreakLabel, context.CaptureLabelScope()));
                         if (loopExpr.ContinueLabel != null)
-                        {
-                            _ = context.DefTargets.Add(loopExpr.ContinueLabel);
-                            _ = context.DefPositions.Add(new ScopeIdx(scopeIdx, true));
-                        }
+                            context.ScopedLabels.AddAndGetRef((loopExpr.ContinueLabel, context.CaptureLabelScope()));
                         if (loopExpr.BreakLabel != null)
                             context.ExceptionLabels.AddAndGetRef((loopExpr.BreakLabel, context.CurrentExceptionRegion));
                         if (loopExpr.ContinueLabel != null)
@@ -2028,6 +1988,7 @@ namespace FastExpressionCompiler
                         }
                     case ExpressionType.Label:
                         var labelExpr = (LabelExpression)expr;
+                        context.ScopedLabels.AddAndGetRef((labelExpr.Target, context.CaptureLabelScope()));
                         context.AddLabel(labelExpr.Target, context.CurrentInlinedLambdaInvokeIndex);
                         _ = context.DefTargets.Add(labelExpr.Target);
                         _ = context.DefPositions.Add(new ScopeIdx(scopeIdx, enterable));
@@ -2043,10 +2004,8 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Goto:
                         var gotoExpr = (GotoExpression)expr;
-                        _ = context.GotoTargets.Add(gotoExpr.Target);
-                        _ = context.GotoScopes.Add(scopeIdx);
-
                         context.HasComplexExpression = true;
+                        context.ScopedGotos.AddAndGetRef((gotoExpr.Target, context.CaptureLabelScope()));
                         context.ExceptionGotos.AddAndGetRef((gotoExpr.Target, context.CurrentExceptionRegion));
                         if (gotoExpr.Target != null)
                             context.TargetToGotosAndLabels.Map.AddOrGetValueRef(gotoExpr.Target, out _).Item1++;
@@ -2070,7 +2029,7 @@ namespace FastExpressionCompiler
                         }
                         if ((r = TryCollectInfo(ref context, switchExpr.SwitchValue, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK ||
                             switchExpr.DefaultBody != null && // todo: @check is the order of collection affects the result?
-                            (r = TryCollectInfo(ref context, switchExpr.DefaultBody, nestedLambda, ref rootNestedLambdas, scopeIdx, enterable)) != Result.OK)
+                            (r = TryCollectInfo(ref context, switchExpr.DefaultBody, nestedLambda, ref rootNestedLambdas, switchBody: true)) != Result.OK)
                             return r;
 
                         var switchCases = switchExpr.Cases;
@@ -2085,9 +2044,10 @@ namespace FastExpressionCompiler
                                         return r;
                             }
                             for (var i = 0; i < switchCases.Count - 1; i++)
-                                if ((r = TryCollectInfo(ref context, switchCases[i].Body, nestedLambda, ref rootNestedLambdas, scopeIdx, enterable)) != Result.OK)
+                                if ((r = TryCollectInfo(ref context, switchCases[i].Body, nestedLambda, ref rootNestedLambdas, switchBody: true)) != Result.OK)
                                     return r;
                             expr = switchCases[switchCases.Count - 1].Body;
+                            switchBody = true;
                             continue;
                         }
                         return r;
@@ -2106,7 +2066,6 @@ namespace FastExpressionCompiler
                     case ExpressionType.TypeIs:
                     case ExpressionType.TypeEqual:
                         expr = ((TypeBinaryExpression)expr).Expression;
-                        enterable = false;
                         continue;
 
                     case ExpressionType.Quote:
@@ -2242,6 +2201,11 @@ namespace FastExpressionCompiler
                 }
             }
         }
+            finally
+            {
+                context.LabelScopes.Count = scopeDepth;
+            }
+        }
 
         internal sealed class ExpressionReductionCache
         {
@@ -2294,12 +2258,15 @@ namespace FastExpressionCompiler
             var callerCanRethrow = context.CanRethrow;
             context.CurrentInlinedLambdaInvokeIndex = invokeIndex;
             context.CanRethrow = false;
+            var callerScopeDepth = context.LabelScopes.Count;
+            context.PushLabelScope(LabelScopeKind.Lambda);
             try
             {
                 return TryCollectInfo(ref context, body, nestedLambda, ref rootNestedLambdas);
             }
             finally
             {
+                context.LabelScopes.Count = callerScopeDepth;
                 context.CanRethrow = callerCanRethrow;
                 context.CurrentInlinedLambdaInvokeIndex = callerIndex;
             }
@@ -2539,7 +2506,7 @@ namespace FastExpressionCompiler
             where TDelegate : Delegate => d?.Target as IDelegateDebugInfo;
 
         private static Result TryCollectMemberInitExprConstants(ref CompilerContext context, MemberInitExpression expr,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
         {
             var newExpr = expr.NewExpression;
             var binds = expr.GetBindings();
@@ -2656,7 +2623,7 @@ namespace FastExpressionCompiler
         }
 
         private static Result TryCollectTryExprInfo(ref CompilerContext context, TryExpression tryExpr,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
         {
             var r = Result.OK;
             var canRethrow = context.CanRethrow;
@@ -3587,7 +3554,7 @@ namespace FastExpressionCompiler
                 labelInfo.MarkLabel(il);
 
                 // A backward jump must use the same result local and label as a forward jump.
-                if (context.GotoTargets.Count != 0 && expr.Target.Type != typeof(void) && (labelInfo.ReturnVariableIndexPlusOneAndIsDefined >>> 1) == 0)
+                if (context.ExceptionGotos.Count != 0 && expr.Target.Type != typeof(void) && (labelInfo.ReturnVariableIndexPlusOneAndIsDefined >>> 1) == 0)
                 {
                     var result = il.GetNextLocalVarIndex(expr.Target.Type);
                     labelInfo.ReturnVariableIndexPlusOneAndIsDefined = (short)((result + 1) << 1);

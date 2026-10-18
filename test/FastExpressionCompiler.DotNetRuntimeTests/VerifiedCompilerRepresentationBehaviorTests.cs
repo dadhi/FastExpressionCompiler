@@ -214,4 +214,159 @@ public class VerifiedCompilerRepresentationBehaviorTests
         Assert.Null(((Func<object, object>)Strict(func1))(new object()));
         Assert.Null(((Func<object, object, object>)Strict(func2))(new object(), new object()));
     }
+
+    [Fact]
+    public void EmptyRuntimeVariablesSpillBehavior() => CheckRuntimeVariablesSpillBehavior(false,
+        (tree, flags) => tree.CompileFast(true, flags));
+
+    [Fact]
+    public void CapturedRuntimeVariablesSpillBehavior() => CheckRuntimeVariablesSpillBehavior(true,
+        (tree, flags) => tree.CompileFast(true, flags));
+
+    // These are the exact trees in StackSpillerTests.Spill_Optimizations_RuntimeVariables1/2.
+    // Additional controls expose ordering, shared storage and lifetime; they do not assert IL shape.
+    private static void CheckRuntimeVariablesSpillBehavior(bool captured,
+        Func<LambdaExpression, CompilerFlags, Delegate> compile)
+    {
+        var consumer = Expression.Parameter(typeof(Action<System.Runtime.CompilerServices.IRuntimeVariables, int>), "f");
+        var value = Expression.Parameter(typeof(int), "x");
+        var variables = captured ? Expression.RuntimeVariables(value) : Expression.RuntimeVariables();
+        var body = Expression.Invoke(consumer, variables,
+            Expression.TryFinally(Expression.Constant(2), Expression.Empty()));
+        LambdaExpression exact = captured
+            ? Expression.Lambda<Action<Action<System.Runtime.CompilerServices.IRuntimeVariables, int>, int>>(body, consumer, value)
+            : Expression.Lambda<Action<Action<System.Runtime.CompilerServices.IRuntimeVariables, int>>>(body, consumer);
+        var system = exact.Compile();
+        var flagsToCheck = new[] { CompilerFlags.Default, CompilerFlags.NoInvocationLambdaInlining,
+            CompilerFlags.EnableDelegateDebugInfo | CompilerFlags.ThrowOnNotSupportedExpression };
+        foreach (var flags in flagsToCheck)
+        {
+            var fast = compile(exact, flags); Assert.NotNull(fast);
+            if (captured)
+            {
+                CheckCapturedRuntimeVariablesSpill(system); CheckCapturedRuntimeVariablesSpill(fast);
+                // Reuse the original body, then return a sibling reading the owner's x.
+                var owner = Expression.Lambda<Func<Action<System.Runtime.CompilerServices.IRuntimeVariables, int>, int, Func<int>>>(
+                    Expression.Block(body, Expression.Lambda<Func<int>>(value)), consumer, value);
+                var systemOwner = owner.Compile();
+                var fastOwner = (Func<Action<System.Runtime.CompilerServices.IRuntimeVariables, int>, int, Func<int>>)compile(owner, flags);
+                Assert.NotNull(fastOwner);
+                CheckRuntimeVariablesOwnerAlias(systemOwner); CheckRuntimeVariablesOwnerAlias(fastOwner);
+            }
+            else
+            {
+                CheckEmptyRuntimeVariablesSpill(system); CheckEmptyRuntimeVariablesSpill(fast);
+            }
+            for (var mode = 0; mode < 5; ++mode)
+                Assert.Equal(ObserveRuntimeVariablesSpillEffects(captured, mode, (tree, _) => tree.Compile(), flags),
+                    ObserveRuntimeVariablesSpillEffects(captured, mode, compile, flags));
+        }
+    }
+
+    private static void CheckEmptyRuntimeVariablesSpill(Delegate compiled)
+    {
+        var invoke = (Action<Action<System.Runtime.CompilerServices.IRuntimeVariables, int>>)compiled;
+        var calls = 0;
+        Action<System.Runtime.CompilerServices.IRuntimeVariables, int> consumer = (variables, value) =>
+        {
+            ++calls; Assert.Equal(2, value); Assert.Equal(0, variables.Count);
+            Assert.Throws<IndexOutOfRangeException>(() => { var unused = variables[0]; });
+            Assert.Throws<IndexOutOfRangeException>(() => variables[0] = 1);
+        };
+        invoke(consumer); invoke(consumer); Assert.Equal(2, calls);
+        var failure = new InvalidOperationException("consumer");
+        Assert.Same(failure, Assert.Throws<InvalidOperationException>(() => invoke((_, __) => throw failure)));
+        Assert.Throws<NullReferenceException>(() => invoke(null));
+    }
+
+    private static void CheckCapturedRuntimeVariablesSpill(Delegate compiled)
+    {
+        var invoke = (Action<Action<System.Runtime.CompilerServices.IRuntimeVariables, int>, int>)compiled;
+        var retained = new List<System.Runtime.CompilerServices.IRuntimeVariables>();
+        var inputs = new[] { int.MinValue, -3, 0, 41, int.MaxValue };
+        foreach (var input in inputs)
+        {
+            var calls = 0;
+            invoke((variables, value) =>
+            {
+                ++calls; Assert.Equal(2, value); Assert.Equal(1, variables.Count);
+                Assert.Equal(input, Assert.IsType<int>(variables[0])); variables[0] = input ^ value;
+                retained.Add(variables);
+            }, input);
+            Assert.Equal(1, calls); Assert.Equal(input ^ 2, retained[retained.Count - 1][0]);
+        }
+        retained[0][0] = 314;
+        for (var i = 1; i < retained.Count; ++i) Assert.Equal(inputs[i] ^ 2, retained[i][0]);
+        Assert.Throws<IndexOutOfRangeException>(() => { var unused = retained[0][-1]; });
+        Assert.Throws<IndexOutOfRangeException>(() => retained[0][1] = 0);
+        Assert.Throws<InvalidCastException>(() => retained[0][0] = "wrong type");
+        Assert.Equal(314, retained[0][0]);
+        System.Runtime.CompilerServices.IRuntimeVariables afterThrow = null;
+        var failure = new InvalidOperationException("consumer");
+        Assert.Same(failure, Assert.Throws<InvalidOperationException>(() => invoke((variables, _) =>
+        { afterThrow = variables; variables[0] = 99; throw failure; }, 7)));
+        Assert.Equal(99, afterThrow[0]); Assert.Throws<NullReferenceException>(() => invoke(null, 7));
+    }
+
+    private static void CheckRuntimeVariablesOwnerAlias(
+        Func<Action<System.Runtime.CompilerServices.IRuntimeVariables, int>, int, Func<int>> invoke)
+    {
+        System.Runtime.CompilerServices.IRuntimeVariables first = null, second = null;
+        var readFirst = invoke((variables, amount) => { first = variables; variables[0] = (int)variables[0] + amount; }, 10);
+        var readSecond = invoke((variables, amount) => { second = variables; variables[0] = (int)variables[0] + amount; }, 20);
+        Assert.Equal(12, readFirst()); Assert.Equal(22, readSecond());
+        first[0] = 100; Assert.Equal(100, readFirst()); Assert.Equal(22, readSecond());
+        second[0] = 200; Assert.Equal(200, readSecond()); Assert.Equal(100, readFirst());
+    }
+
+    private static string ObserveRuntimeVariablesSpillEffects(bool captured, int mode,
+        Func<LambdaExpression, CompilerFlags, Delegate> compile, CompilerFlags flags)
+    {
+        var state = new RuntimeVariablesSpillEffects(mode);
+        var value = Expression.Parameter(typeof(int), "x"); var instance = Expression.Constant(state);
+        var variables = captured ? Expression.RuntimeVariables(value) : Expression.RuntimeVariables();
+        var body = Expression.Invoke(Expression.Call(instance, typeof(RuntimeVariablesSpillEffects).GetMethod(nameof(RuntimeVariablesSpillEffects.Receiver))),
+            Expression.Call(instance, typeof(RuntimeVariablesSpillEffects).GetMethod(nameof(RuntimeVariablesSpillEffects.Variables)), variables),
+            Expression.TryFinally(Expression.Block(Expression.Assign(value, Expression.Add(value, Expression.Constant(1))),
+                Expression.Call(instance, typeof(RuntimeVariablesSpillEffects).GetMethod(nameof(RuntimeVariablesSpillEffects.Argument)))),
+                Expression.Call(instance, typeof(RuntimeVariablesSpillEffects).GetMethod(nameof(RuntimeVariablesSpillEffects.Finally)))));
+        var tree = Expression.Lambda<Func<int, int>>(Expression.Block(body, value), value);
+        var invoke = (Func<int, int>)compile(tree, flags); Assert.NotNull(invoke);
+        int? result = null; Exception error = null;
+        try { result = invoke(40); } catch (Exception failure) { error = failure; }
+        var expectedError = mode == 1 ? typeof(ApplicationException) : mode == 2 ? typeof(FormatException)
+            : mode == 3 ? typeof(NullReferenceException) : mode == 4 ? typeof(InvalidOperationException) : null;
+        Assert.Equal(expectedError, error?.GetType());
+        Assert.Equal(mode == 1 ? "receiver;" : mode == 2 || mode == 3 ? "receiver;variables;argument;finally;"
+            : "receiver;variables;argument;finally;consumer;", state.Trace);
+        if (state.Retained != null) Assert.Equal(captured ? 1 : 0, state.Retained.Count);
+        if (state.Calls != 0) Assert.Equal(2, state.Number);
+        return result + "|" + error?.GetType().FullName + "|" + state.Trace + "|" + state.Calls + "|"
+            + (captured && state.Retained != null ? state.Retained[0] : null);
+    }
+
+    private sealed class RuntimeVariablesSpillEffects
+    {
+        private readonly int _mode;
+        public string Trace = ""; public int Calls, Number;
+        public System.Runtime.CompilerServices.IRuntimeVariables Retained;
+        internal RuntimeVariablesSpillEffects(int mode) => _mode = mode;
+        public Action<System.Runtime.CompilerServices.IRuntimeVariables, int> Receiver()
+        {
+            Trace += "receiver;";
+            if (_mode == 1) throw new ApplicationException("receiver");
+            return _mode == 3 ? null : Consumer;
+        }
+        public System.Runtime.CompilerServices.IRuntimeVariables Variables(System.Runtime.CompilerServices.IRuntimeVariables variables)
+        { Trace += "variables;"; Retained = variables; return variables; }
+        public int Argument() { Trace += "argument;"; if (_mode == 2) throw new FormatException("argument"); return 2; }
+        public void Finally() => Trace += "finally;";
+        private void Consumer(System.Runtime.CompilerServices.IRuntimeVariables variables, int amount)
+        {
+            Trace += "consumer;"; ++Calls; Number = amount; Retained = variables;
+            if (variables.Count != 0) variables[0] = (int)variables[0] + amount;
+            if (_mode == 4) throw new InvalidOperationException("consumer");
+        }
+    }
+
 }
