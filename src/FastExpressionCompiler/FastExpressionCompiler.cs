@@ -2476,9 +2476,13 @@ namespace FastExpressionCompiler
                     context.LastEmitIsAddress = false;
                     return getter != null && EmitInstanceMethodCall(il, getter, objExpr?.Type) && il.EmitPopIfIgnoreResult(parent);
                 }
-                return indexArgCount == 1
-                    ? TryEmitArrayIndexGet(il, indexExpr.Type, ref context, parent) // one-dimensional array
-                    : EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod("Get")); // multi-dimensional array
+                if (indexArgCount == 1)
+                    return TryEmitArrayIndexGet(il, indexExpr.Type, ref context, parent); // one-dimensional array
+                var byAddress = indexExpr.Type.IsValueType &&
+                    (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess | ParentFlags.AssignmentByRef)) != 0;
+                var ok = EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod(byAddress ? "Address" : "Get"));
+                context.LastEmitIsAddress = byAddress && !parent.IgnoresResult();
+                return ok && il.EmitPopIfIgnoreResult(parent);
             }
 
             private static bool TryEmitLabel(LabelExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
