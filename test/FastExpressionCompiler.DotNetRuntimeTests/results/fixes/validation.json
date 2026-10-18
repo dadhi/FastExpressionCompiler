@@ -1,0 +1,29 @@
+{
+  "testedCompilerCommit": "6232b047",
+  "modernExitCodes": {
+    "native8": 0,
+    "native10": 0
+  },
+  "frameworkExitCodes": {
+    "frameworkRun": 0,
+    "frameworkBuild": 0
+  },
+  "netstandardBuildExitCodes": {
+    "light": 0,
+    "standard": 0
+  },
+  "addedRegressionExecutions": 489,
+  "nativeLegacyTests": {
+    "net10": 1712,
+    "net8": 1711,
+    "net472": 1595
+  },
+  "frameworkTestXExecutions": 566,
+  "libraryTargets": [
+    "net472",
+    "netstandard2.1",
+    "net8.0",
+    "net10.0"
+  ],
+  "frozenImportedAssemblySHA256": "857c95aa988d8e2256b87f47e951fbe9d334ad7471a6704890f01a93e86d86ec"
+}
