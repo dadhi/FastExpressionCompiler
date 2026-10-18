@@ -1161,7 +1161,8 @@ namespace FastExpressionCompiler
         /// Helps to identify constants as the one to be put into the Closure
         public static bool IsClosureBoundConstant(object value, Type type) =>
             value is Delegate || type.IsArray ||
-            !type.IsPrimitive && !type.IsEnum && value is string == false && value is Type == false && value is decimal == false;
+            !type.IsPrimitive && !type.IsEnum && value is string == false && value is decimal == false &&
+            (value is Type == false || type != typeof(object).GetType());
 
         public enum Result
         {
