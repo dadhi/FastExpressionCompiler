@@ -2030,6 +2030,8 @@ namespace FastExpressionCompiler
                         case ExpressionType.LeftShift:
                         case ExpressionType.RightShift:
                             {
+                                if (exprType == typeof(bool?) && (nodeType == ExpressionType.And || nodeType == ExpressionType.Or))
+                                    return TryEmitNullableLogicalOperator((BinaryExpression)expr, nodeType, il, ref context, parent);
                                 return exprType.IsPrimitive
                                     && TryInterpretAndEmitResult(expr, il, parent, context.CompilerFlags)
                                     || TryEmitArithmetic(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, nodeType, exprType, il, ref context, parent);
@@ -2044,11 +2046,10 @@ namespace FastExpressionCompiler
                         case ExpressionType.AndAlso:
                         case ExpressionType.OrElse:
                             {
-                                if (!exprType.IsPrimitive) // todo: @feat #496
-                                {
-                                    Debug.WriteLine("Unsupported: Nullable<bool> in || or && (is invalid C# but valid expression) is not supported yet, see #480: " + expr);
+                                if (exprType == typeof(bool?))
+                                    return TryEmitNullableLogicalOperator((BinaryExpression)expr, nodeType, il, ref context, parent);
+                                if (!exprType.IsPrimitive)
                                     return false;
-                                }
                                 if (Interpreter.TryInterpretBool(out var resultBool, expr, context.CompilerFlags))
                                 {
                                     if ((parent & ParentFlags.IgnoreResult) == 0)
@@ -2059,11 +2060,10 @@ namespace FastExpressionCompiler
                             }
                         case ExpressionType.Not:
                             {
-                                if (!exprType.IsPrimitive) // todo: @feat #496
-                                {
-                                    Debug.WriteLine("Unsupported: Nullable<bool> in !x (is invalid C# but valid expression) is not supported yet, see #480: " + expr);
+                                if (exprType == typeof(bool?))
+                                    return TryEmitNot((UnaryExpression)expr, il, ref context, parent);
+                                if (!exprType.IsPrimitive)
                                     return false;
-                                }
 
                                 if (Interpreter.TryInterpretBool(out var resultBool, expr, context.CompilerFlags))
                                 {
@@ -3028,6 +3028,27 @@ namespace FastExpressionCompiler
             private static bool TryEmitNot(UnaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var op = expr.Operand;
+                if (expr.Type == typeof(bool?))
+                {
+                    if (expr.Method != null || !TryEmit(op, il, ref context,
+                        (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall | ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.Arithmetic))
+                        return false;
+                    var operand = EmitStoreAndLoadLocalVariableAddress(il, expr.Type);
+                    EmitMethodCall(il, expr.Type.GetNullableHasValueGetterMethod());
+                    var nullValue = il.DefineLabel();
+                    var done = il.DefineLabel();
+                    il.Demit(OpCodes.Brfalse, nullValue);
+                    EmitLoadLocalVariableAddress(il, operand);
+                    il.Demit(OpCodes.Ldfld, expr.Type.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                    EmitEqualToZeroOrNull(il);
+                    il.Demit(OpCodes.Newobj, expr.Type.GetNullableConstructor());
+                    il.Demit(OpCodes.Br, done);
+                    il.DmarkLabel(nullValue);
+                    EmitLoadLocalVariable(il, operand);
+                    il.DmarkLabel(done);
+                    context.LastEmitIsAddress = false;
+                    return il.EmitPopIfIgnoreResult(parent);
+                }
                 if (op.NodeType == ExpressionType.Equal)
                     return TryEmitComparison(((BinaryExpression)op).Left, ((BinaryExpression)op).Right,
                         expr.Type, ExpressionType.NotEqual, il, ref context, parent);
@@ -5983,6 +6004,68 @@ namespace FastExpressionCompiler
                 else
                     il.Demit(opCode);
                 return true;
+            }
+
+            private static bool TryEmitNullableLogicalOperator(BinaryExpression expr, ExpressionType nodeType,
+                ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            {
+                if (expr.Method != null)
+                    return false;
+                var flags = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
+                    ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.Arithmetic;
+                if (!TryEmit(expr.Left, il, ref context, flags))
+                    return false;
+                var left = EmitStoreLocalVariable(il, expr.Type);
+                var isAnd = nodeType == ExpressionType.AndAlso || nodeType == ExpressionType.And;
+                var shortCircuit = nodeType == ExpressionType.AndAlso || nodeType == ExpressionType.OrElse;
+                var decisiveValue = isAnd ? OpCodes.Brfalse : OpCodes.Brtrue;
+                var evaluateRight = il.DefineLabel();
+                var leftIsNull = il.DefineLabel();
+                var returnLeft = il.DefineLabel();
+                var returnRight = il.DefineLabel();
+                var done = il.DefineLabel();
+                var hasValue = expr.Type.GetNullableHasValueGetterMethod();
+                var value = expr.Type.GetNullableValueUnsafeAkaGetValueOrDefaultMethod();
+
+                // Only a non-null decisive left operand may skip the right operand.
+                if (shortCircuit)
+                {
+                    EmitLoadLocalVariableAddress(il, left);
+                    EmitMethodCall(il, hasValue);
+                    il.Demit(OpCodes.Brfalse, evaluateRight);
+                    EmitLoadLocalVariableAddress(il, left);
+                    il.Demit(OpCodes.Ldfld, value);
+                    il.Demit(decisiveValue, returnLeft);
+                }
+                il.DmarkLabel(evaluateRight);
+                if (!TryEmit(expr.Right, il, ref context, flags))
+                    return false;
+                var right = EmitStoreLocalVariable(il, expr.Type);
+
+                EmitLoadLocalVariableAddress(il, left);
+                EmitMethodCall(il, hasValue);
+                il.Demit(OpCodes.Brfalse, leftIsNull);
+                if (!shortCircuit)
+                {
+                    EmitLoadLocalVariableAddress(il, left);
+                    il.Demit(OpCodes.Ldfld, value);
+                    il.Demit(decisiveValue, returnLeft);
+                }
+                il.Demit(OpCodes.Br, returnRight);
+
+                // With a null left operand, false wins for AND and true wins for OR.
+                il.DmarkLabel(leftIsNull);
+                EmitLoadLocalVariableAddress(il, right);
+                il.Demit(OpCodes.Ldfld, value);
+                il.Demit(decisiveValue, returnRight);
+                il.DmarkLabel(returnLeft);
+                EmitLoadLocalVariable(il, left);
+                il.Demit(OpCodes.Br, done);
+                il.DmarkLabel(returnRight);
+                EmitLoadLocalVariable(il, right);
+                il.DmarkLabel(done);
+                context.LastEmitIsAddress = false;
+                return il.EmitPopIfIgnoreResult(parent);
             }
 
             private static bool TryEmitLogicalOperator(BinaryExpression expr, ExpressionType nodeType,
