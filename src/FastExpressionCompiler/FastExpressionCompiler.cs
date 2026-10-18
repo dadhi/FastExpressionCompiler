@@ -651,6 +651,7 @@ namespace FastExpressionCompiler
             internal SmallSet4<Expression, RefEq<Expression>> ArgsContainingComplexExpression;
 
             internal bool HasComplexExpression;
+            internal bool HasExceptionBlock;
 
             /// The stack for the lambda invocation and the labels bound to them
             internal SmallList<LabelInfo, Stack4<LabelInfo>, NoArrayPool<LabelInfo>> LambdaInvokeStackLabels;
@@ -1457,6 +1458,7 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Try:
                         {
+                            context.HasExceptionBlock = true;
                             context.HasComplexExpression = false;
                             r = TryCollectTryExprInfo(ref context, (TryExpression)expr, nestedLambda, ref rootNestedLambdas);
                             context.HasComplexExpression = true;
@@ -4516,7 +4518,7 @@ namespace FastExpressionCompiler
                             EmitLoadIndirectlyByRef(il, leftType); // if the field is loaded by ref, it need to be loaded from the ref in order to do arithmetic operation on it
 
                         var cachedRight = -1;
-                        if (right != null && right.IsComplexExpression())
+                        if (right != null && (context.HasExceptionBlock || right.IsComplexExpression()))
                         {
                             // Keep the evaluation stack empty across a possible exception block in the RHS.
                             // The target/getter has already run; save its operands rather than evaluating it again.
@@ -4799,7 +4801,7 @@ namespace FastExpressionCompiler
                         ++paramIndex; // shift parameter index by one, because the first one will be closure
 
                     var isLeftByRef = left.IsByRef;
-                    var deferRefAddress = isLeftByRef && right != null && right.IsComplexExpression();
+                    var deferRefAddress = isLeftByRef && right != null && (context.HasExceptionBlock || right.IsComplexExpression());
                     if (isLeftByRef && !deferRefAddress)
                         EmitLoadArg(il, paramIndex);
 
@@ -6331,7 +6333,7 @@ namespace FastExpressionCompiler
                     // it prevents the problems in cases of right being a block, try-catch, etc.
                     // see `Using_try_finally_as_arithmetic_operand_use_void_block_in_finally`
                     var rightType = right.Type;
-                    if (leftValueVar == -1 && right.IsComplexExpression())
+                    if (leftValueVar == -1 && (context.HasExceptionBlock || right.IsComplexExpression()))
                         leftValueVar = EmitStoreLocalVariable(il, leftType);
 
                     var rightVar = -1;
