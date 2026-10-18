@@ -54,6 +54,7 @@ namespace FastExpressionCompiler.UnitTests
 
             st.Run(new NumericConversionRegressionTests());
             st.Run(new NullableBooleanRegressionTests());
+            st.Run(new ExtensionReductionRegressionTests());
 
             st.Run(new Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
             st.Run(new Issue498_InvalidProgramException_when_using_loop());
