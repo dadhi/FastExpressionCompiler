@@ -70,6 +70,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new IncrementDecrementRegressionTests());
             st.Run(new ValueTypeReceiverRegressionTests());
             st.Run(new NumericComparisonRegressionTests());
+            st.Run(new IntegerSwitchDispatchRegressionTests());
             st.Run(new CoalesceValueConversionRegressionTests());
             st.Run(new CoalesceCallbackRegressionTests());
             st.Run(new VoidLabelValueRegressionTests());
@@ -122,6 +123,7 @@ namespace FastExpressionCompiler.UnitTests
             lt.Run(new LightExpression.UnitTests.IncrementDecrementRegressionTests());
             lt.Run(new LightExpression.UnitTests.ValueTypeReceiverRegressionTests());
             lt.Run(new LightExpression.UnitTests.NumericComparisonRegressionTests());
+            lt.Run(new LightExpression.UnitTests.IntegerSwitchDispatchRegressionTests());
             lt.Run(new LightExpression.UnitTests.CoalesceValueConversionRegressionTests());
             lt.Run(new LightExpression.UnitTests.CoalesceCallbackRegressionTests());
             lt.Run(new LightExpression.UnitTests.VoidLabelValueRegressionTests());
