@@ -1549,6 +1549,9 @@ namespace FastExpressionCompiler
 
                         if (expr is BinaryExpression binaryExpr)
                         {
+                            if (binaryExpr.Conversion != null &&
+                                (r = TryCollectInfo(ref context, binaryExpr.Conversion, nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                                return r;
                             if ((r = TryCollectInfo(ref context, binaryExpr.Left, nestedLambda, ref rootNestedLambdas)) != Result.OK)
                                 return r;
                             expr = binaryExpr.Right;
@@ -2139,7 +2142,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.Assign:
                             var ba = (BinaryExpression)expr;
                             return TryEmitArithmeticAndOrAssign(ba.Left, ba.Right, exprType,
-                                AssignToArithmeticOrSelf(nodeType), false, il, ref context, parent, ba.Method);
+                                AssignToArithmeticOrSelf(nodeType), false, il, ref context, parent, ba.Method, ba.Conversion);
 
                         case ExpressionType.Block:
                             {
@@ -4167,8 +4170,12 @@ namespace FastExpressionCompiler
             // the `right = null` argument indicates the increment/decrement operation
             private static bool TryEmitArithmeticAndOrAssign(
                 Expression left, Expression right, Type exprType, ExpressionType nodeType, bool isPost,
-                ILGenerator il, ref CompilerContext context, ParentFlags parent, MethodInfo operationMethod = null)
+                ILGenerator il, ref CompilerContext context, ParentFlags parent, MethodInfo operationMethod = null, LambdaExpression conversion = null)
             {
+                // A lifted operator produces Nullable<T>, which cannot be passed to a conversion taking T.
+                if (conversion != null && left.Type.IsNullable() && operationMethod != null &&
+                    operationMethod.GetParameters()[0].ParameterType != left.Type)
+                    return false;
                 // we need the result variable and the time of Post/Pre when to store it only if the result is not ignored, otherwise don't bother
                 var resultVar = -1;
                 if (!parent.IgnoresResult())
@@ -4179,7 +4186,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.Parameter:
                         if (!isPost)
                             return TryEmitAssignToParameterOrVariable((ParameterExpression)left, right,
-                                nodeType, isPost, exprType, il, ref context, parent, resultVar, operationMethod);
+                                nodeType, isPost, exprType, il, ref context, parent, resultVar, operationMethod, conversion);
 
                         // todo: @better split for now between the Increment/Decrement and the rest
                         var p = (ParameterExpression)left;
@@ -4446,7 +4453,8 @@ namespace FastExpressionCompiler
                                 if (!TryEmit(right, il, ref context, rightOnlyFlags))
                                     return false;
 
-                                var rightIsNullable = rightType.IsNullable();
+                                var rightIsNullable = rightType.IsNullable() &&
+                                    (operationMethod == null || operationMethod.GetParameters()[1].ParameterType != rightType);
                                 if (rightIsNullable) // todo: @perf @clarify is it even possible to have left non-nullable and right nullable
                                 {
                                     var rightVar = EmitStoreAndLoadLocalVariableAddress(il, rightType);
@@ -4458,7 +4466,8 @@ namespace FastExpressionCompiler
                                     il.Demit(OpCodes.Ldfld, rightType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod()); // unwrap right operand
                                 }
 
-                                if (!TryEmitArithmeticOperation(leftType, rightType, nodeType, exprType, il, operationMethod))
+                                if (!TryEmitArithmeticOperation(leftType, rightType, nodeType, exprType, il, operationMethod) ||
+                                    conversion != null && !TryEmitAssignmentConversion(conversion, il, ref context))
                                     return false;
                                 if (resultVar != -1)
                                     EmitStoreAndLoadLocalVariable(il, resultVar);
@@ -4495,7 +4504,8 @@ namespace FastExpressionCompiler
 
                                 var rightVar = EmitStoreLocalVariable(il, rightType);
 
-                                var rightIsNullable = rightType.IsNullable();
+                                var rightIsNullable = rightType.IsNullable() &&
+                                    (operationMethod == null || operationMethod.GetParameters()[1].ParameterType != rightType);
                                 if (!rightIsNullable) // todo: @perf @clarify if it is possible to have left nullable and right non-nullable
                                 {
                                     EmitLoadLocalVariableAddress(il, leftNullableVar);
@@ -4530,6 +4540,13 @@ namespace FastExpressionCompiler
                             }
 
                             il.Demit(OpCodes.Newobj, leftType.GetNullableConstructor()); // wrap the result back into the nullable
+                            var nullableResult = il.DefineLabel();
+                            il.Demit(OpCodes.Br, nullableResult);
+                            il.DmarkLabel(leftOrRightNullableAreNullLabel);
+                            EmitLoadLocalVariable(il, InitValueTypeVariable(il, leftType));
+                            il.DmarkLabel(nullableResult);
+                            if (conversion != null && !TryEmitAssignmentConversion(conversion, il, ref context))
+                                return false;
                             if (resultVar != -1 & !isPost)
                                 EmitStoreAndLoadLocalVariable(il, resultVar);
                         }
@@ -4554,39 +4571,6 @@ namespace FastExpressionCompiler
                                 return false;
                         }
 
-                        if (leftIsNullable)
-                        {
-                            // todo: @perf @simplify avoid the Dup and the Pop for this case via storing and loading local var same as in `TryEmitArithmetic`
-                            if (leftIsByAddress | objExpr != null)
-                            {
-                                var skipPopLeftDuppedInstance = il.DefineLabel();
-                                il.Demit(OpCodes.Br_S, skipPopLeftDuppedInstance);
-                                il.DmarkLabel(leftOrRightNullableAreNullLabel); // jump here if nullables are null after checking them with `!HasValue`
-
-                                il.Demit(OpCodes.Pop); // pop the dupped instance address or the field address, or the array instance address
-
-                                if (orLeftIndexExpr != null)
-                                {
-                                    il.Demit(OpCodes.Pop); // pop the first index argument which is always present
-                                    if (indexArgCount > 1)
-                                    {
-                                        il.Demit(OpCodes.Pop);
-                                        if (indexArgCount > 2)
-                                        {
-                                            il.Demit(OpCodes.Pop);
-                                            if (indexArgCount > 3)
-                                                il.Demit(OpCodes.Pop); // pop the 4th last supported index argument
-                                        }
-                                    }
-                                }
-
-                                il.DmarkLabel(skipPopLeftDuppedInstance);
-                            }
-                            else
-                            {
-                                il.DmarkLabel(leftOrRightNullableAreNullLabel); // jump here if nullables are null after checking them with `!HasValue`
-                            }
-                        }
                         break;
                     default:
                         return false;
@@ -4616,10 +4600,22 @@ namespace FastExpressionCompiler
                 _ => nodeType
             };
 
+            private static bool TryEmitAssignmentConversion(LambdaExpression conversion, ILGenerator il, ref CompilerContext context)
+            {
+                var invoke = conversion.Type.FindDelegateInvokeMethod();
+                var value = EmitStoreLocalVariable(il, invoke.GetParameters()[0].ParameterType);
+                if (!TryEmitNestedLambda(conversion, il, ref context))
+                    return false;
+                EmitLoadLocalVariable(il, value);
+                EmitMethodCall(il, invoke);
+                context.LastEmitIsAddress = false;
+                return true;
+            }
+
             // the null `right` means the increment/decrement operation
             private static bool TryEmitAssignToParameterOrVariable(
                 ParameterExpression left, Expression right, ExpressionType nodeType, bool isPost, Type exprType,
-                ILGenerator il, ref CompilerContext context, ParentFlags parent, int resultVar = -1, MethodInfo operationMethod = null)
+                ILGenerator il, ref CompilerContext context, ParentFlags parent, int resultVar = -1, MethodInfo operationMethod = null, LambdaExpression conversion = null)
             {
                 var paramExprs = context.ParamExprs;
                 var paramExprCount = paramExprs.GetParamCount();
@@ -4652,6 +4648,8 @@ namespace FastExpressionCompiler
                     else
                     {
                         ok = TryEmitArithmetic(left, right, nodeType, exprType, il, ref context, flags | ParentFlags.AssignmentLeftValue, operationMethod);
+                        if (ok && conversion != null)
+                            ok = TryEmitAssignmentConversion(conversion, il, ref context);
                         if (resultVar != -1 & !isPost)
                             EmitStoreAndLoadLocalVariable(il, resultVar);
                         if (isLeftByRef)
@@ -4688,6 +4686,8 @@ namespace FastExpressionCompiler
                     ok = nodeType == ExpressionType.Assign
                         ? TryEmit(right, il, ref context, flags)
                         : TryEmitArithmetic(left, right, nodeType, exprType, il, ref context, flags, operationMethod);
+                    if (ok && conversion != null)
+                        ok = TryEmitAssignmentConversion(conversion, il, ref context);
 
                     if (resultVar != -1 & !isPost)
                         EmitStoreAndLoadLocalVariable(il, resultVar);
@@ -4753,7 +4753,8 @@ namespace FastExpressionCompiler
                 }
 
                 // todo: @perf optimize for the increment/decrement case
-                if (!TryEmitArithmetic(left, right, nodeType, exprType, il, ref context, flags, operationMethod))
+                if (!TryEmitArithmetic(left, right, nodeType, exprType, il, ref context, flags, operationMethod) ||
+                    conversion != null && !TryEmitAssignmentConversion(conversion, il, ref context))
                     return false;
 
                 var arithmeticResultVar = resultVar != -1 ? resultVar : il.GetNextLocalVarIndex(exprType);
