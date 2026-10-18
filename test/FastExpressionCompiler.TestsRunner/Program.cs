@@ -66,6 +66,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new OnesComplementRegressionTests());
             st.Run(new ByRefConversionRegressionTests());
             st.Run(new IncrementDecrementRegressionTests());
+            st.Run(new ExplicitIncrementOperatorRegressionTests());
 
             st.Run(new Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
             st.Run(new Issue498_InvalidProgramException_when_using_loop());
