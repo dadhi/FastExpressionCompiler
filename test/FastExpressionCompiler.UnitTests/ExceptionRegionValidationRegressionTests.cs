@@ -17,8 +17,14 @@ public struct ExceptionRegionValidationRegressionTests : ITestX
         Nested_catch_inside_finally_has_its_own_rethrow_scope(t);
         Separately_compiled_lambda_does_not_inherit_outer_catch(t);
     }
-    private static void Invalid(TestContext t, System.Linq.Expressions.Expression<Action> expression)
+    private static void Invalid(TestContext t, System.Linq.Expressions.Expression<Action> expression, bool frameworkDynamicMethodUnsupported = false)
     {
+#if NETFRAMEWORK
+        // Framework DynamicMethod rejects fault/filter IL before System's semantic validation.
+        if (frameworkDynamicMethodUnsupported)
+            t.Throws<NotSupportedException>(() => expression.Compile());
+        else
+#endif
         t.Throws<InvalidOperationException>(() => expression.Compile());
         foreach (var flags in new[] { CompilerFlags.Default, CompilerFlags.ThrowOnNotSupportedExpression })
             t.Throws<InvalidOperationException>(() => expression.FromSysExpression().CompileFast(true, flags));
@@ -33,7 +39,7 @@ public struct ExceptionRegionValidationRegressionTests : ITestX
         foreach (var fault in new[] { false, true })
         {
             var nested = fault ? S.TryFault(S.Empty(), S.Rethrow()) : S.TryFinally(S.Empty(), S.Rethrow());
-            Invalid(t, S.Lambda<Action>(S.TryCatch(S.Empty(), S.Catch(typeof(Exception), nested))));
+            Invalid(t, S.Lambda<Action>(S.TryCatch(S.Empty(), S.Catch(typeof(Exception), nested))), frameworkDynamicMethodUnsupported: fault);
         }
     }
     public void Catch_filters_reject_nested_exception_blocks(TestContext t)
@@ -41,7 +47,7 @@ public struct ExceptionRegionValidationRegressionTests : ITestX
         foreach (var filter in new System.Linq.Expressions.Expression[] {
             S.TryFinally(S.Constant(true), S.Empty()),
             S.TryFault(S.Constant(true), S.Empty()), S.TryCatch(S.Constant(true), S.Catch(typeof(Exception), S.Constant(false))) })
-            Invalid(t, S.Lambda<Action>(S.TryCatch(S.Throw(S.New(typeof(Exception))), S.Catch(typeof(Exception), S.Empty(), filter))));
+            Invalid(t, S.Lambda<Action>(S.TryCatch(S.Throw(S.New(typeof(Exception))), S.Catch(typeof(Exception), S.Empty(), filter))), frameworkDynamicMethodUnsupported: true);
     }
     public void Catch_filters_reject_undefined_variables(TestContext t)
     {
@@ -49,7 +55,7 @@ public struct ExceptionRegionValidationRegressionTests : ITestX
         {
             var filter = S.Parameter(typeof(bool), "undefined");
             var handler = variable ? S.Catch(S.Parameter(typeof(Exception), "caught"), S.Empty(), filter) : S.Catch(typeof(Exception), S.Empty(), filter);
-            Invalid(t, S.Lambda<Action>(S.TryCatch(S.Empty(), handler)));
+            Invalid(t, S.Lambda<Action>(S.TryCatch(S.Empty(), handler)), frameworkDynamicMethodUnsupported: true);
         }
     }
     public static int Finalized;
