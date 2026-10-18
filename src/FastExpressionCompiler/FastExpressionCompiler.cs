@@ -729,7 +729,7 @@ namespace FastExpressionCompiler
             /// Constant expressions to find an index (by reference) of constant expression from compiled expression.
             public SmallList<object> Constants;
 
-            internal SmallMap4<Expression, System.Linq.Expressions.Expression, RefEq<Expression>> QuotedExpressions;
+            internal SmallMap4<Expression, QuotedExpressionInfo, RefEq<Expression>> QuotedExpressions;
             internal DynamicExpressionCache DynamicExpressions;
             internal SmallMap4<Expression, int, RefEq<Expression>> DynamicLambdaEmissionIndexes;
 #if LIGHT_EXPRESSION
@@ -746,6 +746,26 @@ namespace FastExpressionCompiler
 
             /// <summary>The nested lambdas and their info</summary>
             public SmallList<NestedLambdaInfo> NestedLambdas;
+
+            internal SmallList<ParameterExpression> HoistedVariables;
+            internal SmallMap4<ParameterExpression, int, RefEq<ParameterExpression>> HoistedParameterLocals;
+
+            internal bool IsHoistedVariable(ParameterExpression variable) =>
+                HoistedVariables.TryGetIndex(variable, default(RefEq<ParameterExpression>)) != -1;
+
+            internal bool TryHoistVariable(ParameterExpression variable)
+            {
+                if (IsHoistedVariable(variable))
+                    return true;
+                var type = variable.Type;
+                if (variable.IsByRef || type.IsByRef || type.IsPointer)
+                    return false;
+                foreach (var attribute in type.GetCustomAttributesData())
+                    if (attribute.AttributeType.FullName == "System.Runtime.CompilerServices.IsByRefLikeAttribute")
+                        return false;
+                HoistedVariables.GetIndexOrAdd(variable, default(RefEq<ParameterExpression>));
+                return true;
+            }
 
             /// <summary>Track compiled lambda parameters</summary>
             public ParamExprs ParamExprs;
@@ -919,6 +939,15 @@ namespace FastExpressionCompiler
                 {
                     var varExpr = blockVarExprs[i];
                     var varType = varExpr.Type;
+                    if (IsHoistedVariable(varExpr))
+                    {
+                        var boxType = GetHoistedBoxType(varType);
+                        var boxIndex = il.GetNextLocalVarIndex(boxType);
+                        il.Demit(OpCodes.Newobj, boxType.GetConstructor(Type.EmptyTypes));
+                        EmittingVisitor.EmitStoreLocalVariable(il, boxIndex);
+                        PushVarInBlockMap(varExpr, _blockCount, (ushort)boxIndex);
+                        continue;
+                    }
                     if (varExpr.IsByRef && !varType.IsByRef)
                         varType = varType.MakeByRefType();
                     PushVarInBlockMap(varExpr, _blockCount, (ushort)il.GetNextLocalVarIndex(varType));
@@ -1007,46 +1036,122 @@ namespace FastExpressionCompiler
             internal SmallList<LightAndSysExpr> Converted;
         }
 #endif
-        private sealed class QuoteVariableScope : System.Linq.Expressions.ExpressionVisitor
+        private class QuoteVariableScope : System.Linq.Expressions.ExpressionVisitor
         {
-            private readonly System.Collections.Generic.List<System.Linq.Expressions.ParameterExpression> _bound = new();
-            public bool HasFreeVariables;
+            protected readonly List<System.Linq.Expressions.ParameterExpression> Bound = new();
+            internal readonly List<System.Linq.Expressions.ParameterExpression> FreeVariables = new();
+            internal bool HasOpaqueExtension;
             protected override System.Linq.Expressions.Expression VisitExtension(System.Linq.Expressions.Expression node)
             {
                 // An opaque extension may refer to variables that cannot be inspected safely.
-                HasFreeVariables = true;
+                HasOpaqueExtension = true;
                 return node;
             }
             protected override System.Linq.Expressions.Expression VisitParameter(System.Linq.Expressions.ParameterExpression node)
             {
-                if (!_bound.Contains(node)) HasFreeVariables = true;
+                if (!Bound.Contains(node) && !FreeVariables.Contains(node)) FreeVariables.Add(node);
                 return node;
             }
             protected override System.Linq.Expressions.Expression VisitLambda<T>(System.Linq.Expressions.Expression<T> node)
             {
-                var count = _bound.Count;
-                _bound.AddRange(node.Parameters);
-                Visit(node.Body);
-                _bound.RemoveRange(count, _bound.Count - count);
-                return node;
+                var count = Bound.Count;
+                Bound.AddRange(node.Parameters);
+                try { return base.VisitLambda(node); }
+                finally { Bound.RemoveRange(count, Bound.Count - count); }
             }
             protected override System.Linq.Expressions.Expression VisitBlock(System.Linq.Expressions.BlockExpression node)
             {
-                var count = _bound.Count;
-                _bound.AddRange(node.Variables);
-                foreach (var expression in node.Expressions) Visit(expression);
-                _bound.RemoveRange(count, _bound.Count - count);
-                return node;
+                var count = Bound.Count;
+                Bound.AddRange(node.Variables);
+                try { return base.VisitBlock(node); }
+                finally { Bound.RemoveRange(count, Bound.Count - count); }
             }
             protected override System.Linq.Expressions.CatchBlock VisitCatchBlock(System.Linq.Expressions.CatchBlock node)
             {
-                if (node.Variable != null) _bound.Add(node.Variable);
-                Visit(node.Filter);
-                Visit(node.Body);
-                if (node.Variable != null) _bound.RemoveAt(_bound.Count - 1);
-                return node;
+                var count = Bound.Count;
+                if (node.Variable != null) Bound.Add(node.Variable);
+                try { return base.VisitCatchBlock(node); }
+                finally { Bound.RemoveRange(count, Bound.Count - count); }
             }
         }
+
+        internal sealed class QuotedExpressionInfo
+        {
+            internal System.Linq.Expressions.Expression Template;
+            internal System.Linq.Expressions.ParameterExpression[] Parameters;
+            internal ParameterExpression[] Variables;
+        }
+
+        // Quotes bind cells at execution time, so every activation keeps its own
+        // live storage. Closed quotes retain the existing constant identity path.
+        [RequiresUnreferencedCode(Trimming.Message)]
+        private sealed class QuoteBinder : QuoteVariableScope
+        {
+            private readonly QuotedExpressionInfo _quote;
+            private readonly object[] _cells;
+            internal QuoteBinder(QuotedExpressionInfo quote, object[] cells) { _quote = quote; _cells = cells; }
+            protected override System.Linq.Expressions.Expression VisitParameter(System.Linq.Expressions.ParameterExpression node)
+            {
+                if (Bound.Contains(node)) return node;
+                var index = Array.IndexOf(_quote.Parameters, node);
+                return index < 0 ? node : System.Linq.Expressions.Expression.Field(
+                    System.Linq.Expressions.Expression.Constant(_cells[index], GetHoistedBoxType(node.Type)),
+                    GetHoistedValueField(node.Type));
+            }
+            protected override System.Linq.Expressions.Expression VisitRuntimeVariables(System.Linq.Expressions.RuntimeVariablesExpression node)
+            {
+                var locals = new List<System.Linq.Expressions.ParameterExpression>();
+                var indexes = new int[node.Variables.Count];
+                var hasCapture = false;
+                for (var i = 0; i < indexes.Length; ++i)
+                {
+                    var variable = node.Variables[i];
+                    var capture = Bound.Contains(variable) ? -1 : Array.IndexOf(_quote.Parameters, variable);
+                    if (capture >= 0) { indexes[i] = -1 - capture; hasCapture = true; }
+                    else { indexes[i] = locals.Count; locals.Add(variable); }
+                }
+                if (!hasCapture) return node;
+                return System.Linq.Expressions.Expression.Call(MergeQuotedVariablesMethod,
+                    System.Linq.Expressions.Expression.RuntimeVariables(locals),
+                    System.Linq.Expressions.Expression.Constant(new CellRuntimeVariables(_cells), typeof(System.Runtime.CompilerServices.IRuntimeVariables)),
+                    System.Linq.Expressions.Expression.Constant(indexes));
+            }
+        }
+
+        private static System.Linq.Expressions.Expression BindQuote(QuotedExpressionInfo quote, object[] cells) =>
+            new QuoteBinder(quote, cells).Visit(quote.Template);
+        private static readonly MethodInfo BindQuoteMethod = typeof(ExpressionCompiler).GetMethod(nameof(BindQuote), BindingFlags.Static | BindingFlags.NonPublic);
+
+        private sealed class CellRuntimeVariables : System.Runtime.CompilerServices.IRuntimeVariables
+        {
+            private readonly object[] _cells;
+            internal CellRuntimeVariables(object[] cells) => _cells = cells;
+            public int Count => _cells.Length;
+            public object this[int index]
+            {
+                get => ((System.Runtime.CompilerServices.IStrongBox)_cells[index]).Value;
+                set => ((System.Runtime.CompilerServices.IStrongBox)_cells[index]).Value = value;
+            }
+        }
+        private sealed class MergedRuntimeVariables : System.Runtime.CompilerServices.IRuntimeVariables
+        {
+            private readonly System.Runtime.CompilerServices.IRuntimeVariables _locals, _captures;
+            private readonly int[] _indexes;
+            internal MergedRuntimeVariables(System.Runtime.CompilerServices.IRuntimeVariables locals,
+                System.Runtime.CompilerServices.IRuntimeVariables captures, int[] indexes)
+            { _locals = locals; _captures = captures; _indexes = indexes; }
+            public int Count => _indexes.Length;
+            public object this[int index]
+            {
+                get { var slot = _indexes[index]; return slot >= 0 ? _locals[slot] : _captures[-1 - slot]; }
+                set { var slot = _indexes[index]; if (slot >= 0) _locals[slot] = value; else _captures[-1 - slot] = value; }
+            }
+        }
+        private static System.Runtime.CompilerServices.IRuntimeVariables CreateCellRuntimeVariables(object[] cells) => new CellRuntimeVariables(cells);
+        private static System.Runtime.CompilerServices.IRuntimeVariables MergeQuotedVariables(System.Runtime.CompilerServices.IRuntimeVariables locals,
+            System.Runtime.CompilerServices.IRuntimeVariables captures, int[] indexes) => new MergedRuntimeVariables(locals, captures, indexes);
+        private static readonly MethodInfo CreateCellRuntimeVariablesMethod = typeof(ExpressionCompiler).GetMethod(nameof(CreateCellRuntimeVariables), BindingFlags.Static | BindingFlags.NonPublic);
+        private static readonly MethodInfo MergeQuotedVariablesMethod = typeof(ExpressionCompiler).GetMethod(nameof(MergeQuotedVariables), BindingFlags.Static | BindingFlags.NonPublic);
 
         // Exception regions and jumps affect invocation spilling even in branches that
         // constant folding removes. Lambda/quote bodies execute separately; opaque
@@ -1091,6 +1196,12 @@ namespace FastExpressionCompiler
             internal SmallList<(Expression Expression, bool SpillArguments)> Reduced;
             internal int Emitted;
         }
+
+        internal static Type GetHoistedBoxType(Type type) =>
+            typeof(System.Runtime.CompilerServices.StrongBox<>).MakeGenericType(type);
+
+        internal static FieldInfo GetHoistedValueField(Type type) =>
+            GetHoistedBoxType(type).GetField("Value");
 
         private sealed class EmptyRuntimeVariables : System.Runtime.CompilerServices.IRuntimeVariables
         {
@@ -1339,7 +1450,9 @@ namespace FastExpressionCompiler
             /// <summary>`when` in catch is not supported yet</summary>
             NotSupported_ExceptionCatchFilter = 1010,
             /// <summary>A reused method-return target needs operand spilling before it can return from this context.</summary>
-            NotSupported_MethodReturn_Context = 1011
+            NotSupported_MethodReturn_Context = 1011,
+            /// <summary>A managed reference or byref-like value cannot escape into a closure cell.</summary>
+            NotSupported_HoistedVariable = 1012
         }
 
         /// <summary>Return value is ignored</summary>
@@ -1414,6 +1527,8 @@ namespace FastExpressionCompiler
                                     return Result.ParameterIsNotVariableNorInPassedParameters;
                                 }
                                 context.Status |= ClosureStatus.HasClosure;
+                                if (!context.TryHoistVariable(parExpr))
+                                    return Result.NotSupported_HoistedVariable;
                                 _ = nestedLambda.NonPassedParameters.GetIndexOrAdd(parExpr, default(RefEq<ParameterExpression>));
                             }
                             return Result.OK;
@@ -1833,18 +1948,39 @@ namespace FastExpressionCompiler
                         ref var quoted = ref context.QuotedExpressions.Map.AddOrGetValueRef(operand, out var foundQuote);
                         if (!foundQuote)
                         {
+                            quoted = new QuotedExpressionInfo();
 #if LIGHT_EXPRESSION
                             context.QuoteConversions ??= new QuoteConversionCache();
-                            quoted = operand.ToExpression(ref context.QuoteConversions.Converted);
+                            quoted.Template = operand.ToExpression(ref context.QuoteConversions.Converted);
 #else
-                            quoted = operand;
+                            quoted.Template = operand;
 #endif
                             var quoteVariables = new QuoteVariableScope();
-                            quoteVariables.Visit(quoted);
-                            if (quoteVariables.HasFreeVariables)
+                            quoteVariables.Visit(quoted.Template);
+                            if (quoteVariables.HasOpaqueExtension)
                                 return Result.NotSupported_Quote;
+                            quoted.Parameters = quoteVariables.FreeVariables.ToArray();
+                            quoted.Variables = new ParameterExpression[quoted.Parameters.Length];
+                            for (var i = 0; i < quoted.Parameters.Length; ++i)
+                            {
+#if LIGHT_EXPRESSION
+                                var converted = context.QuoteConversions.Converted;
+                                for (var j = 0; j < converted.Count; ++j)
+                                    if (ReferenceEquals(converted.Items[j].SysExpr, quoted.Parameters[i]))
+                                    { quoted.Variables[i] = (ParameterExpression)converted.Items[j].LightObj; break; }
+                                if (quoted.Variables[i] == null) return Result.NotSupported_Quote;
+#else
+                                quoted.Variables[i] = quoted.Parameters[i];
+#endif
+                            }
                         }
-                        context.AddConstantOrIncrementUsageCount(quoted);
+                        for (var i = 0; i < quoted.Variables.Length; ++i)
+                        {
+                            var variable = quoted.Variables[i];
+                            if (!context.TryHoistVariable(variable)) return Result.NotSupported_HoistedVariable;
+                            if ((r = TryCollectInfo(ref context, variable, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
+                        }
+                        context.AddConstantOrIncrementUsageCount(quoted.Variables.Length == 0 ? quoted.Template : quoted);
                         return Result.OK;
                     case ExpressionType.Dynamic:
                         {
@@ -1887,9 +2023,15 @@ namespace FastExpressionCompiler
                             return r;
                         }
                     case ExpressionType.RuntimeVariables:
-                        if (((RuntimeVariablesExpression)expr).Variables.Count != 0)
-                            return Result.NotSupported_RuntimeVariables;
-                        context.AddConstantOrIncrementUsageCount(EmptyRuntimeVariables.Instance);
+                        var runtimeVariables = ((RuntimeVariablesExpression)expr).Variables;
+                        if (runtimeVariables.Count == 0)
+                            context.AddConstantOrIncrementUsageCount(EmptyRuntimeVariables.Instance);
+                        for (var i = 0; i < runtimeVariables.Count; ++i)
+                        {
+                            var variable = runtimeVariables[i];
+                            if (!context.TryHoistVariable(variable)) return Result.NotSupported_HoistedVariable;
+                            if ((r = TryCollectInfo(ref context, variable, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
+                        }
                         return Result.OK;
 
                     case ExpressionType.DebugInfo: // todo: @feature - is not supported yet
@@ -2056,6 +2198,8 @@ namespace FastExpressionCompiler
             for (var i = 0; i < nestedNonPassedParams.Count; i++)
             {
                 var nestedNonPassedParam = nestedNonPassedParams.GetSurePresentRef(i);
+                if (!context.TryHoistVariable(nestedNonPassedParam))
+                    return false;
 
                 var isInNestedLambda = false;
                 if (nestedLambdaParamExprCount != 0)
@@ -2405,6 +2549,19 @@ namespace FastExpressionCompiler
             internal static bool TryEmitLambdaBody(Expression body, Type returnType, ILGenerator il,
                 ref CompilerContext context, ParentFlags parent)
             {
+                var parameters = context.ParamExprs;
+                for (var p = 0; p < parameters.GetParamCount(); ++p)
+                {
+                    var parameter = parameters.GetParameter(p);
+                    if (!context.IsHoistedVariable(parameter))
+                        continue;
+                    var boxType = GetHoistedBoxType(parameter.Type);
+                    var boxIndex = il.GetNextLocalVarIndex(boxType);
+                    EmitLoadArg(il, p + ((context.Status & ClosureStatus.ShouldBeStaticMethod) == 0 ? 1 : 0));
+                    il.Demit(OpCodes.Newobj, boxType.GetConstructor(new[] { parameter.Type }));
+                    EmitStoreLocalVariable(il, boxIndex);
+                    context.HoistedParameterLocals.Map.AddOrGetValueRef(parameter, out _) = boxIndex;
+                }
                 context.MethodReturnTarget = GetMethodReturnTarget(body, returnType);
                 return TryEmit(body, il, ref context, parent);
             }
@@ -2822,8 +2979,15 @@ namespace FastExpressionCompiler
 
                         case ExpressionType.Quote:
                             var quoted = context.QuotedExpressions.Map.TryGetValueRef(((UnaryExpression)expr).Operand, out var foundQuote);
-                            return foundQuote && TryEmitConstant(true, exprType, quoted.GetType(), quoted, il, ref context) &&
-                                il.EmitPopIfIgnoreResult(parent);
+                            if (!foundQuote) return false;
+                            if (quoted.Variables.Length == 0)
+                                return TryEmitConstant(true, exprType, quoted.Template.GetType(), quoted.Template, il, ref context) &&
+                                    il.EmitPopIfIgnoreResult(parent);
+                            if (!TryEmitConstant(true, typeof(QuotedExpressionInfo), typeof(QuotedExpressionInfo), quoted, il, ref context) ||
+                                !TryEmitHoistedCells(quoted.Variables, il, ref context)) return false;
+                            il.Demit(OpCodes.Call, BindQuoteMethod);
+                            il.Demit(OpCodes.Castclass, exprType);
+                            return il.EmitPopIfIgnoreResult(parent);
 
                         case ExpressionType.Dynamic:
                             if (context.DynamicExpressions == null)
@@ -2836,9 +3000,13 @@ namespace FastExpressionCompiler
                                 dynamicOccurrence.SpillArguments);
 
                         case ExpressionType.RuntimeVariables:
-                            return ((RuntimeVariablesExpression)expr).Variables.Count == 0 &&
-                                TryEmitConstant(true, exprType, typeof(EmptyRuntimeVariables), EmptyRuntimeVariables.Instance, il, ref context) &&
-                                il.EmitPopIfIgnoreResult(parent);
+                            var runtimeVariables = ((RuntimeVariablesExpression)expr).Variables;
+                            if (runtimeVariables.Count == 0)
+                                return TryEmitConstant(true, exprType, typeof(EmptyRuntimeVariables), EmptyRuntimeVariables.Instance, il, ref context) &&
+                                    il.EmitPopIfIgnoreResult(parent);
+                            if (!TryEmitHoistedCells(runtimeVariables, il, ref context)) return false;
+                            il.Demit(OpCodes.Call, CreateCellRuntimeVariablesMethod);
+                            return il.EmitPopIfIgnoreResult(parent);
 
                         default:
 #if !LIGHT_EXPRESSION
@@ -3417,7 +3585,9 @@ namespace FastExpressionCompiler
                     if (exVarExpr != null)
                     {
                         exVarIndex = context.GetDefinedLocalVarOrDefault(exVarExpr);
-                        if (exVarIndex == -1)
+                        if (context.IsHoistedVariable(exVarExpr))
+                            exVarIndex = il.GetNextLocalVarIndex(GetHoistedBoxType(exVarExpr.Type));
+                        else if (exVarIndex == -1)
                             exVarIndex = il.GetNextLocalVarIndex(exVarExpr.Type);
                         context.PushBlockWithVars(exVarExpr, exVarIndex);
                     }
@@ -3435,7 +3605,11 @@ namespace FastExpressionCompiler
                         il.Demit(OpCodes.Br, endFilter);
                         il.DmarkLabel(matches);
                         if (exVarExpr != null)
+                        {
+                            if (context.IsHoistedVariable(exVarExpr))
+                                il.Demit(OpCodes.Newobj, GetHoistedBoxType(exVarExpr.Type).GetConstructor(new[] { exVarExpr.Type }));
                             EmitStoreLocalVariable(il, exVarIndex);
+                        }
                         else
                             il.Demit(OpCodes.Pop);
                         var wasEmittingFilter = context.IsEmittingExceptionFilter;
@@ -3455,7 +3629,11 @@ namespace FastExpressionCompiler
                     {
                         il.BeginCatchBlock(catchBlock.Test);
                         if (exVarExpr != null)
+                        {
+                            if (context.IsHoistedVariable(exVarExpr))
+                                il.Demit(OpCodes.Newobj, GetHoistedBoxType(exVarExpr.Type).GetConstructor(new[] { exVarExpr.Type }));
                             EmitStoreLocalVariable(il, exVarIndex);
+                        }
                         else
                             il.Demit(OpCodes.Pop);
                     }
@@ -3505,8 +3683,35 @@ namespace FastExpressionCompiler
                 return true;
             }
 
+            private static bool TryEmitHoistedCells(IReadOnlyList<PE> variables, ILGenerator il, ref CompilerContext context)
+            {
+                EmitLoadConstantInt(il, variables.Count);
+                il.Demit(OpCodes.Newarr, typeof(object));
+                for (var i = 0; i < variables.Count; ++i)
+                {
+                    il.Demit(OpCodes.Dup);
+                    EmitLoadConstantInt(il, i);
+                    if (!TryEmitHoistedCell(variables[i], il, ref context)) return false;
+                    il.Demit(OpCodes.Stelem_Ref);
+                }
+                context.LastEmitIsAddress = false;
+                return true;
+            }
+
             public static bool TryEmitParameter(ParameterExpression paramExpr, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex = -1)
             {
+                if (context.IsHoistedVariable(paramExpr))
+                {
+                    if (!TryEmitHoistedCell(paramExpr, il, ref context))
+                        return false;
+                    var address = byRefIndex != -1 || paramExpr.Type.IsValueType &&
+                        (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0 &&
+                        ((parent & ParentFlags.IndexAccess) == 0 ||
+                         (parent & (ParentFlags.Call | ParentFlags.MemberAccess)) == 0);
+                    il.Demit(address ? OpCodes.Ldflda : OpCodes.Ldfld, GetHoistedValueField(paramExpr.Type));
+                    context.LastEmitIsAddress = address;
+                    return true;
+                }
                 var paramExprs = context.ParamExprs;
                 var paramExprCount = paramExprs.GetParamCount();
                 var paramType = paramExpr.Type;
@@ -3687,6 +3892,34 @@ namespace FastExpressionCompiler
                 return TryEmitCapturedParameterValue(il, paramType, isPassedRef, ref context);
             }
 
+            internal static bool TryEmitHoistedCell(ParameterExpression parameter, ILGenerator il, ref CompilerContext context)
+            {
+                if (!context.IsHoistedVariable(parameter))
+                    return false;
+                var local = context.GetDefinedLocalVarOrDefault(parameter);
+                if (local != -1)
+                    EmitLoadLocalVariable(il, local);
+                else
+                {
+                    ref var parameterLocal = ref context.HoistedParameterLocals.Map.TryGetValueRef(parameter, out var found);
+                    if (found)
+                        EmitLoadLocalVariable(il, parameterLocal);
+                    else
+                    {
+                        var captured = context.NonPassedParameters.TryGetIndex(parameter, default(RefEq<ParameterExpression>));
+                        if (captured == -1)
+                            return false;
+                        il.Demit(OpCodes.Ldarg_0);
+                        il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
+                        EmitLoadConstantInt(il, captured);
+                        il.Demit(OpCodes.Ldelem_Ref);
+                        il.Demit(OpCodes.Castclass, GetHoistedBoxType(parameter.Type));
+                    }
+                }
+                context.LastEmitIsAddress = false;
+                return true;
+            }
+
             private static bool TryEmitCapturedParameterValue(ILGenerator il, Type type, bool byRef, ref CompilerContext context)
             {
                 if (byRef)
@@ -3710,6 +3943,15 @@ namespace FastExpressionCompiler
             {
                 var paramExprCount = paramExprs.Count;
 #endif
+                if (closure.IsHoistedVariable(paramExpr))
+                {
+                    var address = closure.LastEmitIsAddress;
+                    if (!TryEmitHoistedCell(paramExpr, il, ref closure))
+                        return false;
+                    il.Demit(address ? OpCodes.Ldflda : OpCodes.Ldfld, GetHoistedValueField(paramExpr.Type));
+                    closure.LastEmitIsAddress = address;
+                    return true;
+                }
                 // if parameter is passed through, then just load it on stack
                 var paramType = paramExpr.Type;
                 var paramIndex = paramExprCount - 1;
@@ -5185,7 +5427,7 @@ namespace FastExpressionCompiler
                 switch (left.NodeType)
                 {
                     case ExpressionType.Parameter:
-                        if (!isPost)
+                        if (!isPost || context.IsHoistedVariable((ParameterExpression)left))
                             return TryEmitAssignToParameterOrVariable((ParameterExpression)left, right,
                                 nodeType, isPost, exprType, il, ref context, parent, resultVar, operationMethod, conversion);
 
@@ -5651,6 +5893,33 @@ namespace FastExpressionCompiler
                 ParameterExpression left, Expression right, ExpressionType nodeType, bool isPost, Type exprType,
                 ILGenerator il, ref CompilerContext context, ParentFlags parent, int resultVar = -1, MethodInfo operationMethod = null, LambdaExpression conversion = null)
             {
+                if (context.IsHoistedVariable(left))
+                {
+                    if (resultVar != -1 && isPost)
+                    {
+                        if (!TryEmitParameter(left, il, ref context, ParentFlags.AssignmentRightValue))
+                            return false;
+                        EmitStoreLocalVariable(il, resultVar);
+                    }
+                    var valueFlags = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.AssignmentLeftValue |
+                        ParentFlags.AssignmentByRef | ParentFlags.ReturnByRef | ParentFlags.InstanceAccess)) |
+                        ParentFlags.AssignmentRightValue;
+                    var emitted = nodeType == ExpressionType.Assign
+                        ? TryEmit(right, il, ref context, valueFlags)
+                        : TryEmitArithmetic(left, right, nodeType, exprType, il, ref context, valueFlags, operationMethod);
+                    if (!emitted || conversion != null && !TryEmitAssignmentConversion(conversion, il, ref context))
+                        return false;
+                    var assigned = il.GetNextLocalVarIndex(exprType);
+                    EmitStoreLocalVariable(il, assigned);
+                    if (!TryEmitHoistedCell(left, il, ref context))
+                        return false;
+                    EmitLoadLocalVariable(il, assigned);
+                    il.Demit(OpCodes.Stfld, GetHoistedValueField(left.Type));
+                    if (resultVar != -1)
+                        EmitLoadLocalVariable(il, isPost ? resultVar : assigned);
+                    context.LastEmitIsAddress = false;
+                    return true;
+                }
                 var paramExprs = context.ParamExprs;
                 var paramExprCount = paramExprs.GetParamCount();
 
@@ -6472,6 +6741,7 @@ namespace FastExpressionCompiler
                 var nonPassedParams = nestedLambdaInfo.NonPassedParameters;
                 if (nonPassedParams.Count == 0)
                     return true;
+                il.Demit(OpCodes.Pop); // The captured delegate wrapper is loaded again after constructing its closure.
 
                 //-------------------------------------------------------------------
                 // For the lambda with non-passed parameters (or variables) in closure
@@ -6480,62 +6750,19 @@ namespace FastExpressionCompiler
                 var nonPassedParamsCount = nonPassedParams.Count;
                 EmitLoadConstantInt(il, nonPassedParamsCount); // load the length of array
                 il.Demit(OpCodes.Newarr, typeof(object));
-                var nonPassedParamsVarIndex = EmitStoreAndLoadLocalVariable(il, typeof(object[]));
+                var nonPassedParamsVarIndex = EmitStoreLocalVariable(il, typeof(object[]));
                 nestedLambdaInfo.NonPassedParamsVarIndex = (short)nonPassedParamsVarIndex;
 
-                // Store the NonPassedParams back into the NestedLambda wrapper for the #437.
-                // Also, it is needed to be able to assign the closed variable after the closure is passed to the lambda,
-                // e.g. `var x = 1; var f = () => x + 1; x = 2; f();` expects 3, not 2
-                il.Demit(OpCodes.Stfld, NestedLambdaForNonPassedParams.NonPassedParamsField);
-
-                // Populate the NonPassedParams array
+                // Each closure forwards the owner's cell, so siblings and later mutations
+                // observe the same storage rather than a copied object[] value.
                 for (var nestedParamIndex = 0; nestedParamIndex < nonPassedParamsCount; ++nestedParamIndex)
                 {
-                    // todo: @wip move this code to where the assignment and by-ref parameter passing
-                    Debug.Assert(nestedParamIndex < 64, "Assume that we don't have more than 64 mutated non-passed parameters");
-                    if (nonPassedParamsCount < 64)
-                        nestedLambdaInfo.NonPassedParamMutatedIndexBits |= 1UL << nestedParamIndex;
-
-                    // Load the array and index where to store the item
                     EmitLoadLocalVariable(il, nonPassedParamsVarIndex);
                     EmitLoadConstantInt(il, nestedParamIndex);
-
-                    var nestedParam = nonPassedParams.GetSurePresentRef(nestedParamIndex);
-                    var outerParamIndex = outerParamExprCount - 1;
-                    while (outerParamIndex != -1 && !ReferenceEquals(outerParamExprs.GetParameter(outerParamIndex), nestedParam))
-                        --outerParamIndex;
-                    if (outerParamIndex != -1) // load parameter from input outer params
-                    {
-                        // Add `+1` to index because the `0` index is for the closure argument
-                        EmitLoadArg(il, outerParamIndex + 1);
-                        il.TryEmitBoxOf(nestedParam.Type);
-                    }
-                    else // load parameter from outer closure or from the local variables
-                    {
-                        var outerLocalVarIndex = context.GetDefinedLocalVarOrDefault(nestedParam);
-                        if (outerLocalVarIndex != -1) // it's a local variable
-                        {
-                            EmitLoadLocalVariable(il, outerLocalVarIndex);
-                            il.TryEmitBoxOf(nestedParam.Type);
-                        }
-                        else // it's a parameter from the outer closure
-                        {
-                            var outerNonPassedParamIndex = context.NonPassedParameters.TryGetIndex(nestedParam, default(RefEq<ParameterExpression>));
-                            if (outerNonPassedParamIndex == -1)
-                                return false; // impossible, return error code 2 the same as in TryCollectInfo
-
-                            // Load the parameter from outer closure `Items` array
-                            il.Demit(OpCodes.Ldarg_0); // closure is always a first argument
-                            il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
-                            EmitLoadConstantInt(il, outerNonPassedParamIndex);
-                            il.Demit(OpCodes.Ldelem_Ref);
-                        }
-                    }
-
-                    // Store the item into nested lambda array
+                    if (!TryEmitHoistedCell(nonPassedParams.GetSurePresentRef(nestedParamIndex), il, ref context))
+                        return false;
                     il.Demit(OpCodes.Stelem_Ref);
                 }
-
                 // Load the actual lambda delegate on stack
                 EmitLoadLocalVariable(il, nestedLambdaInfo.LambdaVarIndex);
                 il.Demit(OpCodes.Ldfld, NestedLambdaForNonPassedParams.NestedLambdaField);
