@@ -1616,6 +1616,8 @@ namespace FastExpressionCompiler
                             var invokeArgs = invokeExpr.GetArgExprs();
                             var invokeArgCount = invokeArgs.GetArgCount();
                             var invokedExpr = invokeExpr.Expression;
+                            if (invokedExpr is UnaryExpression quote && quote.NodeType == ExpressionType.Quote)
+                                invokedExpr = quote.Operand;
                             if ((context.CompilerFlags & CompilerFlags.NoInvocationLambdaInlining) == 0 && invokedExpr is LambdaExpression lambdaExpr)
                             {
                                 var oldIndex = context.CurrentInlinedLambdaInvokeIndex;
@@ -6028,6 +6030,8 @@ namespace FastExpressionCompiler
                 var argExprs = expr.GetArgExprs();
                 var argCount = argExprs.GetArgCount();
                 var invokedExpr = expr.Expression;
+                if (invokedExpr is UnaryExpression quote && quote.NodeType == ExpressionType.Quote)
+                    invokedExpr = quote.Operand;
                 if ((context.CompilerFlags & CompilerFlags.NoInvocationLambdaInlining) == 0 && invokedExpr is LambdaExpression lambdaExpr)
                 {
                     parent |= ParentFlags.InlinedLambdaInvoke;
