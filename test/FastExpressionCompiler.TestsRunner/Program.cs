@@ -53,6 +53,7 @@ namespace FastExpressionCompiler.UnitTests
             var st = new TestRun(TestFlags.RethrowException);
 
             st.Run(new NumericConversionRegressionTests());
+            st.Run(new StaticMemberInitializerRegressionTests());
             st.Run(new NonVoidListInitializerRegressionTests());
             st.Run(new DecimalConstantBitsRegressionTests());
             st.Run(new SmallCheckedArithmeticRegressionTests());
@@ -125,6 +126,7 @@ namespace FastExpressionCompiler.UnitTests
             var lt = new LightExpression.TestRun(LightExpression.TestFlags.RethrowException);
 
             lt.Run(new LightExpression.UnitTests.NumericConversionRegressionTests());
+            lt.Run(new LightExpression.UnitTests.StaticMemberInitializerRegressionTests());
             lt.Run(new LightExpression.UnitTests.NonVoidListInitializerRegressionTests());
             lt.Run(new LightExpression.UnitTests.DecimalConstantBitsRegressionTests());
             lt.Run(new LightExpression.UnitTests.SmallCheckedArithmeticRegressionTests());
