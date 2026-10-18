@@ -6647,8 +6647,8 @@ namespace FastExpressionCompiler
                     // Argument-local returns produce argument values, not enclosing lambda returns.
                     var useResult = parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.InlinedLambdaInvoke);
                     var args = delegateInvokeMethod.GetParameters(); // todo: @perf avoid this if possible
-                    // A try argument requires an empty evaluation stack. Preserve the receiver and
-                    // preceding arguments with the same local storage used for ordinary calls.
+                    // Jumps and exception-region arguments require an empty evaluation stack.
+                    // Preserve evaluated operands in the same locals used for ordinary calls.
                     var spillArguments = context.HasExceptionBlock || deferCompile || argumentsBeforeReceiver ||
                         context.InvocationArgumentsWithJumps.Set.ContainsKey(expr);
                     var receiverVar = spillArguments && !argumentsBeforeReceiver ? EmitStoreLocalVariable(il, deferCompile ? invokedExpr.Type : delegateType) : -1;
