@@ -1475,12 +1475,13 @@ public abstract class Expression
         GetArithmeticBinary(ExpressionType.Modulo, left, right, method);
 
     /// <summary>Creates a BinaryExpression that represents a bitwise right-shift operation.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression RightShift(Expression left, Expression right) =>
-        new LeftTypedBinaryExpression(ExpressionType.RightShift, left, right);
+        GetShiftBinary(ExpressionType.RightShift, left, right);
 
     /// <summary>Creates a BinaryExpression that represents a bitwise right-shift operation.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
-    public static BinaryExpression RightShift(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.RightShift, left, right, method);
+    public static BinaryExpression RightShift(Expression left, Expression right, MethodInfo method) => GetShiftBinary(ExpressionType.RightShift, left, right, method);
 
     /// <summary>Creates a BinaryExpression that represents an arithmetic subtraction operation that does not have overflow checking.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
@@ -3522,7 +3523,8 @@ public abstract class BinaryExpression : Expression
         [RequiresUnreferencedCode(Trimming.Message)]
         get =>
             NodeType != ExpressionType.Coalesce & NodeType != ExpressionType.Assign &&
-            Left.Type.IsNullable() &&
+            (Left.Type.IsNullable() ||
+                (NodeType == ExpressionType.LeftShift || NodeType == ExpressionType.RightShift) && Right.Type.IsNullable()) &&
             (Method == null || !Method.GetParameters()[0].ParameterType.GetNonRef().IsEquivalentTo(Left.Type));
     }
 
