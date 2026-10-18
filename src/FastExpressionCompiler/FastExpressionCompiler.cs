@@ -2022,7 +2022,7 @@ namespace FastExpressionCompiler
                             return TryEmitNestedLambda((LambdaExpression)expr, il, ref context);
 
                         case ExpressionType.Invoke:
-                            return TryEmitInvoke((InvocationExpression)expr, il, ref context, parent);
+                            return TryEmitInvoke((InvocationExpression)expr, il, ref context, parent, byRefIndex);
 
                         case ExpressionType.GreaterThan:
                         case ExpressionType.GreaterThanOrEqual:
@@ -5396,7 +5396,7 @@ namespace FastExpressionCompiler
                 return ok;
             }
 
-            private static bool TryEmitInvoke(InvocationExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            private static bool TryEmitInvoke(InvocationExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex = -1)
             {
                 var paramCount = context.ParamExprs.GetParamCount();
 
@@ -5429,6 +5429,12 @@ namespace FastExpressionCompiler
                             }
                         }
                     }
+                    context.LastEmitIsAddress = expr.Type.IsByRef;
+                    if (byRefIndex != -1 && (parent & ParentFlags.IgnoreResult) == 0 && !expr.Type.IsByRef)
+                    {
+                        EmitStoreAndLoadLocalVariableAddress(il, expr.Type);
+                        context.LastEmitIsAddress = true;
+                    }
                     return true;
                 }
 
@@ -5452,8 +5458,18 @@ namespace FastExpressionCompiler
                 }
 
                 EmitMethodCall(il, delegateInvokeMethod);
-                if ((parent & ParentFlags.IgnoreResult) != 0 && delegateInvokeMethod.ReturnType != typeof(void))
+                var returnType = delegateInvokeMethod.ReturnType;
+                context.LastEmitIsAddress = returnType.IsByRef;
+                if ((parent & ParentFlags.IgnoreResult) != 0 && returnType != typeof(void))
+                {
                     il.Demit(OpCodes.Pop);
+                    context.LastEmitIsAddress = false;
+                }
+                else if (byRefIndex != -1 && !returnType.IsByRef)
+                {
+                    EmitStoreAndLoadLocalVariableAddress(il, returnType);
+                    context.LastEmitIsAddress = true;
+                }
 
                 return true;
             }
