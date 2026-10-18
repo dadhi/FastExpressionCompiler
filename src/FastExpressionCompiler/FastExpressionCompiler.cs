@@ -662,6 +662,7 @@ namespace FastExpressionCompiler
 
             /// New or Call expressions containing the complex expression, e.g. inlined Lambda Invoke or Try with Finally
             internal SmallSet4<Expression, RefEq<Expression>> ArgsContainingComplexExpression;
+            internal SmallSet4<Expression, RefEq<Expression>> InvocationArgumentsWithJumps;
 
             [MethodImpl((MethodImplOptions)256)]
             internal bool HasComplexArguments(Expression expr) => ArgsContainingComplexExpression.Set.ContainsKey(expr);
@@ -1651,6 +1652,26 @@ namespace FastExpressionCompiler
                                 }
                             }
 
+                            if (typeof(System.Linq.Expressions.LambdaExpression).IsAssignableFrom(invokedExpr.Type))
+                            {
+                                // A spilled runtime-expression invocation evaluates its operands
+                                // before the intrinsic Compile call, matching System's stack spiller.
+                                if ((r = TryCollectInfo(ref context, invokedExpr, nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                                    return r;
+                                var outerHasExceptionBlock = context.HasExceptionBlock;
+                                var argumentJumpCount = context.ExceptionGotos.Count;
+                                context.HasExceptionBlock = false;
+                                for (var i = 0; i < invokeArgCount; ++i)
+                                    if ((r = TryCollectInfo(ref context, invokeArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                                        return r;
+                                if (context.HasExceptionBlock)
+                                    context.ArgsContainingComplexExpression.Map.AddOrGetEntryRef(invokeExpr, out _);
+                                context.HasExceptionBlock |= outerHasExceptionBlock;
+                                if (context.ExceptionGotos.Count != argumentJumpCount)
+                                    context.InvocationArgumentsWithJumps.Set.AddOrGetEntryRef(invokeExpr, out _);
+                                return r;
+                            }
+
                             // No inlining, collect the normal way
                             enterable = false;
                             if (invokeArgCount == 0)
@@ -1662,22 +1683,13 @@ namespace FastExpressionCompiler
                             if ((r = TryCollectInfo(ref context, invokedExpr, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                                 return r;
 
-                            if (invokedExpr.Type.FindExpressionCompileMethod() != null)
-                            {
-                                var tries = context.TryExpressionCount;
-                                var jumps = context.GotoTargets.Count;
-                                r = TryCollectArgsAsComplexOwner(ref context, invokeArgs, invokeExpr, nestedLambda, ref rootNestedLambdas, scopeIdx);
-                                if (tries != context.TryExpressionCount || jumps != context.GotoTargets.Count)
-                                    context.MarkComplexArguments(invokeExpr);
-                                return r;
-                            }
-
-                            var lastArgIndex = invokeArgCount - 1;
-                            for (var i = 0; i < lastArgIndex; i++)
+                            var jumpCount = context.ExceptionGotos.Count;
+                            for (var i = 0; i < invokeArgCount; i++)
                                 if ((r = TryCollectInfo(ref context, invokeArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                                     return r;
-                            expr = invokeArgs.GetArgument(lastArgIndex);
-                            continue;
+                            if (context.ExceptionGotos.Count != jumpCount)
+                                context.InvocationArgumentsWithJumps.Set.AddOrGetEntryRef(invokeExpr, out _);
+                            return r;
                         }
                     case ExpressionType.Conditional:
                         var condExpr = (ConditionalExpression)expr;
@@ -6333,18 +6345,22 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitCallWithWritebacks(Expression receiver, Args expressions, MethodInfo method,
-                ConstructorInfo constructor, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex)
+                ConstructorInfo constructor, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex,
+                MethodInfo receiverCompileMethod = null, bool deferReceiverCompile = false)
             {
                 var receiverVar = -1;
-                var receiverType = receiver?.Type;
+                var receiverType = receiverCompileMethod?.ReturnType ?? receiver?.Type;
                 if (receiver != null)
                 {
                     if (!TryEmit(receiver, il, ref context, ParentFlags.Call |
                         (receiverType.IsValueType ? ParentFlags.InstanceAccess : ParentFlags.AssignmentRightValue)))
                         return false;
-                    if (receiverType.IsValueType && !context.LastEmitIsAddress && !(receiver is PE pe && pe.IsByRef))
-                        EmitStoreAndLoadLocalVariableAddress(il, receiverType);
-                    receiverVar = EmitStoreLocalVariable(il, receiverType.IsValueType ? receiverType.MakeByRefType() : receiverType);
+                    if (receiverCompileMethod != null && !deferReceiverCompile && !EmitInstanceMethodCall(il, receiverCompileMethod, receiver.Type))
+                        return false;
+                    if (receiver.Type.IsValueType && !context.LastEmitIsAddress && !(receiver is PE pe && pe.IsByRef))
+                        EmitStoreAndLoadLocalVariableAddress(il, receiver.Type);
+                    var storedType = deferReceiverCompile ? receiver.Type : receiverType;
+                    receiverVar = EmitStoreLocalVariable(il, storedType.IsValueType ? storedType.MakeByRefType() : storedType);
                 }
                 SmallList<ByRefWriteback, Stack2<ByRefWriteback>, NoArrayPool<ByRefWriteback>> writebacks = default;
                 SmallList<int, Stack8<int>, NoArrayPool<int>> arguments = default;
@@ -6367,7 +6383,11 @@ namespace FastExpressionCompiler
                 }
 
                 if (receiverVar != -1)
+                {
                     EmitLoadLocalVariable(il, receiverVar);
+                    if (deferReceiverCompile && !EmitInstanceMethodCall(il, receiverCompileMethod, receiver.Type))
+                        return false;
+                }
                 for (var i = 0; i < arguments.Count; ++i)
                     EmitLoadLocalVariable(il, arguments.GetSurePresentRef(i));
                 if (constructor != null)
@@ -6770,43 +6790,37 @@ namespace FastExpressionCompiler
                     invokedExpr = quote.Operand;
                 if ((context.CompilerFlags & CompilerFlags.NoInvocationLambdaInlining) == 0 && invokedExpr is LambdaExpression)
                 {
+                    parent |= ParentFlags.InlinedLambdaInvoke;
+
                     ref var inlinedExpr = ref context.InlinedLambdaInvocation.Map.AddOrGetValueRef(expr, out var found);
                     Debug.Assert(found, "The invocation expression should be collected in TryCollectInfo but it is not");
                     if (!found)
                         return false;
 
-                    if (inlinedExpr != null)
-                    {
-                        parent |= ParentFlags.InlinedLambdaInvoke;
-                        var methodReturnTarget = context.MethodReturnTarget;
-                        context.MethodReturnTarget = null;
-                        var emitted = TryEmit(inlinedExpr, il, ref context, parent);
-                        context.MethodReturnTarget = methodReturnTarget;
-                        if (!emitted)
-                            return false;
+                    if (!TryEmit(inlinedExpr, il, ref context, parent))
+                        return false;
 
-                        if ((parent & ParentFlags.IgnoreResult) == 0 && inlinedExpr.Type != typeof(void))
+                    if ((parent & ParentFlags.IgnoreResult) == 0 && inlinedExpr.Type != typeof(void))
+                    {
+                        // find if the variable with the result is exist in the label infos
+                        ref var label = ref context.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(expr, out var labelFound);
+                        if (labelFound)
                         {
-                            // find if the variable with the result is exist in the label infos
-                            ref var label = ref context.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(expr, out var labelFound);
-                            if (labelFound)
+                            var returnVariableIndexPlusOne = label.ReturnVariableIndexPlusOneAndIsDefined >>> 1;
+                            if (returnVariableIndexPlusOne != 0)
                             {
-                                var returnVariableIndexPlusOne = label.ReturnVariableIndexPlusOneAndIsDefined >>> 1;
-                                if (returnVariableIndexPlusOne != 0)
-                                {
-                                    il.DmarkLabel(label.ReturnLabel);
-                                    EmitLoadLocalVariable(il, returnVariableIndexPlusOne - 1);
-                                }
+                                il.DmarkLabel(label.ReturnLabel);
+                                EmitLoadLocalVariable(il, returnVariableIndexPlusOne - 1);
                             }
                         }
-                        context.LastEmitIsAddress = expr.Type.IsByRef;
-                        if (byRefIndex != -1 && (parent & ParentFlags.IgnoreResult) == 0 && !expr.Type.IsByRef)
-                        {
-                            EmitStoreAndLoadLocalVariableAddress(il, expr.Type);
-                            context.LastEmitIsAddress = true;
-                        }
-                        return true;
                     }
+                    context.LastEmitIsAddress = expr.Type.IsByRef;
+                    if (byRefIndex != -1 && (parent & ParentFlags.IgnoreResult) == 0 && !expr.Type.IsByRef)
+                    {
+                        EmitStoreAndLoadLocalVariableAddress(il, expr.Type);
+                        context.LastEmitIsAddress = true;
+                    }
+                    return true;
                 }
 
                 var delegateInvokeMethod = invokedExpr.Type.FindDelegateInvokeMethod();
@@ -6820,24 +6834,21 @@ namespace FastExpressionCompiler
                     delegateInvokeMethod = delegateType.FindDelegateInvokeMethod();
                     if (delegateInvokeMethod == null) return false;
                 }
+                var deferCompile = compileMethod != null && (context.HasComplexArguments(expr) || context.InvocationArgumentsWithJumps.Set.ContainsKey(expr));
                 var invokeParameters = delegateInvokeMethod.GetParameters();
                 for (var i = 0; i < invokeParameters.Length; ++i)
                     if (invokeParameters[i].ParameterType.IsByRef)
                     {
-                        // Runtime expression compilation does not yet support ref arguments.
-                        if (compileMethod != null)
-                            return false;
                         if (NeedsByRefWriteback(expr.GetArgument(i)))
-                            return TryEmitCallWithWritebacks(invokedExpr, expr.GetArgs(), delegateInvokeMethod, null, il, ref context, parent, byRefIndex);
+                            return TryEmitCallWithWritebacks(invokedExpr, expr.GetArgs(), delegateInvokeMethod, null, il, ref context, parent, byRefIndex, compileMethod, deferCompile);
                     }
-                var deferCompile = compileMethod != null && context.HasComplexArguments(expr);
 
-                // The invocation receiver is a value, including incoming ref delegates.
+                // A delegate or expression-tree receiver is a value even when the invocation
+                // result is discarded or its caller requests an address.
                 var receiverFlags = (parent & ~InvocationReceiverFlagsToClear) |
                     ParentFlags.Call | ParentFlags.AssignmentRightValue;
-                if (!TryEmit(invokedExpr, il, ref context, receiverFlags)) // removing the IgnoreResult temporary because we need "full" lambda emit and we will re-apply the IgnoreResult later at the end of the method
+                if (!TryEmit(invokedExpr, il, ref context, receiverFlags))
                     return false;
-
                 if (compileMethod != null && !deferCompile && !EmitInstanceMethodCall(il, compileMethod, invokedExpr.Type))
                     return false;
 
@@ -6853,23 +6864,35 @@ namespace FastExpressionCompiler
 
                 if (expr.GetArgCount() != 0)
                 {
-                    var useResult = parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.InlinedLambdaInvoke);
-                    var spillArguments = context.TryExpressionCount != 0 || deferCompile;
-                    var receiver = spillArguments ? EmitStoreLocalVariable(il, deferCompile ? invokedExpr.Type : delegateType) : -1;
+                    var useResult = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
+                    var args = invokeParameters;
+                    // A try argument requires an empty evaluation stack. Preserve the receiver and
+                    // preceding arguments with the same local storage used for ordinary calls.
+                    var spillArguments = context.HasExceptionBlock || context.InvocationArgumentsWithJumps.Set.ContainsKey(expr);
+                    var receiverVar = spillArguments ? EmitStoreLocalVariable(il, deferCompile ? invokedExpr.Type : delegateType) : -1;
+                    SmallList<int, Stack8<int>, NoArrayPool<int>> argVars = default;
                     if (spillArguments)
                     {
-                        if (!TryEmitArguments(expr.GetArgs(), invokeParameters, il, ref context, useResult,
-                            out var argumentVariables)) return false;
-                        EmitLoadLocalVariable(il, receiver);
-                        if (deferCompile && !EmitInstanceMethodCall(il, compileMethod, invokedExpr.Type))
+                        if (!TryEmitArguments(expr.GetArgs(), args, il, ref context, useResult, out argVars))
                             return false;
-                        EmitLoadArguments(il, ref argumentVariables);
                     }
                     else
                         for (var i = 0; i < invokeParameters.Length; ++i)
                             if (!TryEmitCallArgument(expr.GetArgument(i), invokeParameters[i].ParameterType, i, il, ref context, useResult))
                                 return false;
+                    if (receiverVar != -1)
+                            argVars.Add(EmitStoreLocalVariable(il, args[i].ParameterType));
+                    }
+                    if (receiverVar != -1)
+                    {
+                        EmitLoadLocalVariable(il, receiverVar);
+                        if (deferCompile && !EmitInstanceMethodCall(il, compileMethod, invokedExpr.Type))
+                            return false;
+                        EmitLoadArguments(il, ref argVars);
+                    }
                 }
+                else if (deferCompile && !EmitInstanceMethodCall(il, compileMethod, invokedExpr.Type))
+                    return false;
 
                 EmitMethodCall(il, delegateInvokeMethod);
                 var returnType = delegateInvokeMethod.ReturnType;
