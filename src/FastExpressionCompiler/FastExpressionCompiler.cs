@@ -11464,7 +11464,7 @@ namespace FastExpressionCompiler
     }
 
     /// <summary>Provides structural equality comparison for expression trees (both LightExpression and System.Linq.Expressions).
-    /// Use the static <see cref="EqualsTo"/> method as the primary entry point â€” it creates a temporary struct on the stack with no heap allocation.
+    /// Use the static <see cref="EqualsTo"/> method as the primary entry point — it creates a temporary struct on the stack with no heap allocation.
     /// Parameters are matched by their position within their enclosing lambda or block, and label targets by identity pairing.
     /// Up to 8 lambda parameters and label targets are stored on the stack; larger numbers spill to a heap array.</summary>
     public struct ExpressionEqualityComparer : IEqualityComparer<Expression>, IEqualityComparer
@@ -11474,7 +11474,7 @@ namespace FastExpressionCompiler
         private SmallList<ParameterExpression, Stack8<ParameterExpression>, NoArrayPool<ParameterExpression>> _xps, _yps;
         private SmallList<LabelTarget, Stack8<LabelTarget>, NoArrayPool<LabelTarget>> _xls, _yls;
 
-        /// <summary>Structurally compares two expressions. Primary entry point â€” no heap allocation for the comparer.</summary>
+        /// <summary>Structurally compares two expressions. Primary entry point — no heap allocation for the comparer.</summary>
         [MethodImpl((MethodImplOptions)256)]
         public static bool EqualsTo(Expression x, Expression y) =>
             new ExpressionEqualityComparer().Eq(x, y);
@@ -11666,19 +11666,19 @@ namespace FastExpressionCompiler
             }
         }
 
-        /// <summary>IEqualityComparer&lt;Expression&gt; implementation â€” delegates to the static <see cref="EqualsTo"/> for a fresh context per call.</summary>
+        /// <summary>IEqualityComparer&lt;Expression&gt; implementation — delegates to the static <see cref="EqualsTo"/> for a fresh context per call.</summary>
         [MethodImpl((MethodImplOptions)256)]
         bool IEqualityComparer<Expression>.Equals(Expression x, Expression y) => EqualsTo(x, y);
 
-        /// <summary>IEqualityComparer&lt;Expression&gt; implementation â€” delegates to the static <see cref="GetHashCode(Expression)"/>.</summary>
+        /// <summary>IEqualityComparer&lt;Expression&gt; implementation — delegates to the static <see cref="GetHashCode(Expression)"/>.</summary>
         [MethodImpl((MethodImplOptions)256)]
         int IEqualityComparer<Expression>.GetHashCode(Expression obj) => GetHashCode(obj);
 
-        /// <summary>Non-generic IEqualityComparer implementation â€” delegates to the static methods for use with legacy BCL APIs.</summary>
+        /// <summary>Non-generic IEqualityComparer implementation — delegates to the static methods for use with legacy BCL APIs.</summary>
         [MethodImpl((MethodImplOptions)256)]
         bool IEqualityComparer.Equals(object x, object y) => EqualsTo(x as Expression, y as Expression);
 
-        /// <summary>Non-generic IEqualityComparer implementation â€” delegates to the static <see cref="GetHashCode(Expression)"/>.</summary>
+        /// <summary>Non-generic IEqualityComparer implementation — delegates to the static <see cref="GetHashCode(Expression)"/>.</summary>
         [MethodImpl((MethodImplOptions)256)]
         int IEqualityComparer.GetHashCode(object obj) => GetHashCode(obj as Expression);
 
