@@ -5867,7 +5867,7 @@ namespace FastExpressionCompiler
                         }
                         else
                         {
-                            if (field.IsInitOnly && byRefIndex == -1 && (parent & ParentFlags.AssignmentLeftValue) == 0)
+                            if (field.IsInitOnly && (parent & ParentFlags.AssignmentLeftValue) == 0)
                             {
                                 // Calling a struct member on a readonly field mutates a defensive copy.
                                 il.Demit(OpCodes.Ldfld, field);
@@ -5892,7 +5892,17 @@ namespace FastExpressionCompiler
                     {
                         if (parent.IgnoresResult())
                             return true; // do nothing
-                        il.Demit(OpCodes.Ldsfld, field);
+                        var byAddress = byRefIndex != -1 || field.FieldType.IsValueType &&
+                            (parent & ParentFlags.InstanceAccess) != 0;
+                        if (byAddress && !field.IsInitOnly)
+                            il.Demit(OpCodes.Ldsflda, field);
+                        else
+                        {
+                            il.Demit(OpCodes.Ldsfld, field);
+                            if (byAddress)
+                                EmitStoreAndLoadLocalVariableAddress(il, field.FieldType);
+                        }
+                        context.LastEmitIsAddress = byAddress;
                     }
                     return true;
                 }
