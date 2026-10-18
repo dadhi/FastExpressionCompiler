@@ -36,3 +36,5 @@ The .NET 10 ARM64 Release comparison accounts for 35,133 test cases: 23,322 pass
 The corrected system control had 35,116 passes, 13 failures, and 4 skips. Some theory data rows have identical IDs and display names, so the report groups them with explicit outcome counts instead of asserting a one-to-one mapping. Random GUID/date values in names are normalized for run matching only. Raw TRX evidence retains the original results.
 
 Open `Reports/report.html` for the searchable report, `Reports/all-tests.csv` for all result groups, and `Reports/failures.csv` for error details. The build and final compiler smoke test passed. Compiler implementation files were not changed.
+
+The committed [results snapshot](results/README.md) lists all methods/classes and the observed failure areas for review without generated local artifacts.

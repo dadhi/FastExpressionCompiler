@@ -1,0 +1,41 @@
+{
+  "date": "2026-10-18",
+  "upstreamCommit": "ec0059c08c077e839c6eb8827c846530a891d7e2",
+  "fecCommit": "1d2a4bd364bd5271f5594074f76e298f5afa53db",
+  "environment": ".NET SDK 10.0.301; .NET runtime 10.0.9; Windows ARM64; Release",
+  "sourceFiles": 231,
+  "compileSites": 4568,
+  "baselineCases": 35133,
+  "displayGroups": 30375,
+  "baselineOutcomes": {
+    "Passed": 35116,
+    "NotExecuted": 4,
+    "Failed": 13
+  },
+  "fecOutcomes": {
+    "Crash/NotRunAfterCrash": 9228,
+    "Skipped": 4,
+    "Passed": 23322,
+    "Failed": 2571,
+    "Timeout/NotRunAfterTimeout": 2,
+    "Unstable": 6
+  },
+  "groupCategoryCaseCounts": {
+    "Method crashed; these cases did not finish": 9207,
+    "Upstream skipped": 4,
+    "Passed": 23316,
+    "Invalid IL / IL generation error": 444,
+    "Behavior or exception mismatch": 952,
+    "Unsupported / strict compilation rejected": 1103,
+    "Runtime implementation-specific assertion": 41,
+    "Mixed outcomes in indistinguishable TRX rows": 54,
+    "Method timed out; these cases did not finish": 2,
+    "Different result across attempts": 6,
+    "Also fails with system compiler": 4
+  },
+  "crashingMethods": 91,
+  "timedOutMethods": 1,
+  "methodsObservedRequestingCompilation": 4111,
+  "fecGroupsWithoutMatchingBaseline": 0,
+  "completedBatches": 21
+}
