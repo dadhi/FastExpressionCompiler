@@ -3108,6 +3108,18 @@ namespace FastExpressionCompiler
                     return true;
                 if (expr.NodeType == ExpressionType.TypeIs)
                 {
+                    if (expr.Expression.Type == typeof(void))
+                    {
+                        il.Demit(expr.TypeOperand == typeof(void) ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
+                        return true;
+                    }
+                    if (expr.TypeOperand == typeof(void) || expr.TypeOperand.IsPointer)
+                    {
+                        il.Demit(OpCodes.Pop);
+                        il.Demit(OpCodes.Ldc_I4_0);
+                        return true;
+                    }
+                    il.TryEmitBoxOf(expr.Expression.Type);
                     il.Demit(OpCodes.Isinst, expr.TypeOperand);
                     il.Demit(OpCodes.Ldnull);
                     il.Demit(OpCodes.Cgt_Un);
