@@ -5871,24 +5871,6 @@ namespace FastExpressionCompiler
                 Expression left, Expression right, Type exprType, ExpressionType nodeType,
                 ILGenerator il, ref CompilerContext context, ParentFlags parent, bool isReferenceComparison = false)
             {
-                if (isReferenceComparison)
-                {
-                    var flags = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess)) | ParentFlags.AssignmentRightValue;
-                    if (!TryEmit(left, il, ref context, flags))
-                        return false;
-                    // A complex right operand may empty the evaluation stack, e.g. a try expression.
-                    var savedLeft = right.IsComplexExpression() ? EmitStoreLocalVariable(il, left.Type) : -1;
-                    if (!TryEmit(right, il, ref context, flags))
-                        return false;
-                    if (savedLeft != -1)
-                        EmitLoadLocalVariable(il, savedLeft);
-                    il.Demit(OpCodes.Ceq);
-                    if (nodeType == ExpressionType.NotEqual)
-                        EmitEqualToZeroOrNull(il);
-                    context.LastEmitIsAddress = false;
-                    return il.EmitPopIfIgnoreResult(parent);
-                }
-
                 var leftType = left.Type;
                 var leftIsNullable = leftType.IsNullable();
                 var rightType = right.Type;
@@ -5978,7 +5960,7 @@ namespace FastExpressionCompiler
                 else if (!TryEmit(right, il, ref context, operandParent))
                     return false;
 
-                if (comparingToLeftNull | comparingToRightNull ||
+                if (isReferenceComparison || comparingToLeftNull | comparingToRightNull ||
                     (leftType != rightType && leftType.IsClass && rightType.IsClass &&
                     (leftType == typeof(object) | rightType == typeof(object))))
                 {
