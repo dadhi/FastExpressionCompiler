@@ -1738,6 +1738,16 @@ namespace FastExpressionCompiler
                     case ExpressionType.Default:
                         return r;
 
+                    case ExpressionType.Coalesce:
+                        var coalesceExpr = (BinaryExpression)expr;
+                        if (coalesceExpr.Conversion != null &&
+                            (r = TryCollectInfo(ref context, coalesceExpr.Conversion, nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                            return r;
+                        if ((r = TryCollectInfo(ref context, coalesceExpr.Left, nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                            return r;
+                        expr = coalesceExpr.Right;
+                        continue;
+
                     case ExpressionType.TypeIs:
                     case ExpressionType.TypeEqual:
                         expr = ((TypeBinaryExpression)expr).Expression;
@@ -2918,6 +2928,9 @@ namespace FastExpressionCompiler
 
             private static bool TryEmitCoalesceOperator(BinaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
+                if (expr.Conversion != null)
+                    return TryEmitCoalesceWithConversion(expr, il, ref context, parent);
+
                 var left = expr.Left;
                 var right = expr.Right;
                 var exprType = expr.Type;
@@ -2925,20 +2938,14 @@ namespace FastExpressionCompiler
                 var rightType = right.Type;
                 var underlyingLeftType = Nullable.GetUnderlyingType(leftType);
                 var underlyingExprType = Nullable.GetUnderlyingType(exprType) ?? exprType;
-                var conversion = expr.Conversion;
 
-                // The primitive widening (e.g. `int? ?? long`) is emitted below, the rest (the conversion lambda, `int? ?? decimal?`, etc.)
-                // is lowered to `tmp = left; tmp != null ? conversion(tmp) or (T)tmp : (T)right`
-                if (conversion != null || leftType.IsValueType && (leftType != exprType | rightType != exprType) &&
+                // Primitive widening (e.g. `int? ?? long`) is emitted below; other value conversions (e.g. `int? ?? decimal?`)
+                // are lowered to `tmp = left; tmp != null ? (T)tmp : (T)right`.
+                if (leftType.IsValueType && (leftType != exprType | rightType != exprType) &&
                     !(underlyingLeftType.IsPrimitive & underlyingExprType.IsPrimitive & (rightType.IsPrimitive | rightType == exprType)))
                 {
-                    // the conversion parameter of the same type is the temp itself, otherwise (e.g. `int?` to `int`) the unwrapping is done only in the not-null branch
-                    var conversionPar = conversion?.Parameters[0];
-                    var sameTypePar = conversionPar != null && conversionPar.Type == leftType;
-                    var leftVar = sameTypePar ? conversionPar : Expression.Variable(leftType);
-                    var notNullValue = conversion == null ? Expression.Convert(leftVar, exprType)
-                        : sameTypePar ? conversion.Body
-                        : Expression.Block(new[] { conversionPar }, Expression.Assign(conversionPar, Expression.Convert(leftVar, conversionPar.Type)), conversion.Body);
+                    var leftVar = Expression.Variable(leftType);
+                    var notNullValue = Expression.Convert(leftVar, exprType);
 
                     return TryEmit(Expression.Block(new[] { leftVar }, Expression.Assign(leftVar, left),
                         Expression.Condition(Expression.NotEqual(leftVar, Expression.Constant(null, leftType)),
@@ -3011,6 +3018,45 @@ namespace FastExpressionCompiler
                         il.DmarkLabel(labelDone);
                     }
                 }
+                context.LastEmitIsAddress = false;
+                return il.EmitPopIfIgnoreResult(parent);
+            }
+
+            private static bool TryEmitCoalesceWithConversion(BinaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            {
+                var flags = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
+                    ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue;
+                if (!TryEmit(expr.Left, il, ref context, flags))
+                    return false;
+                var leftType = expr.Left.Type;
+                var left = il.GetNextLocalVarIndex(leftType);
+                EmitStoreLocalVariable(il, left);
+                if (leftType.IsNullable())
+                {
+                    EmitLoadLocalVariableAddress(il, left);
+                    EmitMethodCall(il, leftType.GetNullableHasValueGetterMethod());
+                }
+                else
+                    EmitLoadLocalVariable(il, left);
+                var fallback = il.DefineLabel();
+                il.Demit(OpCodes.Brfalse, fallback);
+                if (!TryEmitNestedLambda(expr.Conversion, il, ref context))
+                    return false;
+                var invoke = expr.Conversion.Type.FindDelegateInvokeMethod();
+                if (leftType.IsNullable() && invoke.GetParameters()[0].ParameterType != leftType)
+                {
+                    EmitLoadLocalVariableAddress(il, left);
+                    il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                }
+                else
+                    EmitLoadLocalVariable(il, left);
+                EmitMethodCall(il, invoke);
+                var done = il.DefineLabel();
+                il.Demit(OpCodes.Br, done);
+                il.DmarkLabel(fallback);
+                if (!TryEmit(expr.Right, il, ref context, flags))
+                    return false;
+                il.DmarkLabel(done);
                 context.LastEmitIsAddress = false;
                 return il.EmitPopIfIgnoreResult(parent);
             }
