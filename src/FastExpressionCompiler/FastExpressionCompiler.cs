@@ -1508,8 +1508,9 @@ namespace FastExpressionCompiler
 
         /// Helps to identify constants as the one to be put into the Closure
         public static bool IsClosureBoundConstant(object value, Type type) =>
+            value is string s ? !ReferenceEquals(string.IsInterned(s), s) :
             value is Delegate || type.IsArray ||
-            !type.IsPrimitive && !type.IsEnum && value is string == false && value is decimal == false &&
+            !type.IsPrimitive && !type.IsEnum && value is decimal == false &&
             (value is Type == false || type != typeof(object).GetType());
 
         public enum Result
@@ -4819,6 +4820,9 @@ namespace FastExpressionCompiler
             {
                 if (exprType == null)
                     exprType = constType;
+                // ldstr retains identity only when the constant is already the interned object.
+                if (!considerClosure && constValue is string && IsClosureBoundConstant(constValue, constType))
+                    return false;
                 if (considerClosure && !exprType.IsValueType && constType.IsValueType)
                 {
                     // A reference-typed constant denotes its original boxed object, not a fresh box.
@@ -6835,6 +6839,13 @@ namespace FastExpressionCompiler
                         if (parent.IgnoresResult())
                             return true; // do nothing
                         var fieldValue = field.GetValue(null);
+                        // A metadata literal denotes the string literal, rather than the
+                        // identity of the reflection API's temporary string object.
+                        if (fieldValue is string literal)
+                        {
+                            il.Demit(literal, OpCodes.Ldstr);
+                            return true;
+                        }
                         if (fieldValue != null)
                             return TryEmitConstant(false, null, field.FieldType, fieldValue, il, ref context);
                         il.Demit(OpCodes.Ldnull);

@@ -41,6 +41,9 @@ public struct NonExceptionThrowPolicyRegressionTests : ITestX
 
     public void Raw_and_wrapped_payloads_preserve_type_and_identity(TestContext t)
     {
+        // A prior compile must not determine whether ldstr happens to return
+        // the same noninterned string object on its first use in this process.
+        string.Intern("raw");
         var payload = new object();
         var exception = new InvalidOperationException("inner");
         foreach (var original in new[] { payload, (object)exception, new string(new[] { 'r', 'a', 'w' }) })
