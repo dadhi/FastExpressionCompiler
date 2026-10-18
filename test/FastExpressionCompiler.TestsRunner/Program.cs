@@ -70,6 +70,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new ByRefConversionRegressionTests());
             st.Run(new IncrementDecrementRegressionTests());
             st.Run(new ValueTypeReceiverRegressionTests());
+            st.Run(new PrivateDelegateInvocationRegressionTests());
             st.Run(new NumericComparisonRegressionTests());
             st.Run(new ExplicitComparisonMethodRegressionTests());
             st.Run(new ComparisonReductionRegressionTests());
@@ -126,6 +127,7 @@ namespace FastExpressionCompiler.UnitTests
             lt.Run(new LightExpression.UnitTests.ByRefConversionRegressionTests());
             lt.Run(new LightExpression.UnitTests.IncrementDecrementRegressionTests());
             lt.Run(new LightExpression.UnitTests.ValueTypeReceiverRegressionTests());
+            lt.Run(new LightExpression.UnitTests.PrivateDelegateInvocationRegressionTests());
             lt.Run(new LightExpression.UnitTests.NumericComparisonRegressionTests());
             lt.Run(new LightExpression.UnitTests.ExplicitComparisonMethodRegressionTests());
             lt.Run(new LightExpression.UnitTests.ComparisonReductionRegressionTests());

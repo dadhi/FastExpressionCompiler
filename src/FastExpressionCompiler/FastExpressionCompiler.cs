@@ -8648,8 +8648,8 @@ namespace FastExpressionCompiler
 
         [MethodImpl((MethodImplOptions)256)]
         internal static MethodInfo FindDelegateInvokeMethod(
-            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] this Type type) =>
-            type.GetMethod("Invoke");
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)] this Type type) =>
+            type.GetMethod("Invoke", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
         [RequiresUnreferencedCode(Trimming.Message)]
         internal static class NullableReflected<T> where T : struct
