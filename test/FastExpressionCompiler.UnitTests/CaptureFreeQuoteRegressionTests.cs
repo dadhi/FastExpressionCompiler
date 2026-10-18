@@ -14,7 +14,7 @@ public struct CaptureFreeQuoteRegressionTests : ITestX
  {
   Quote_preserves_tree_and_delegate_type(t);
   Quote_preserves_locally_bound_variables(t);
-  Free_quotes_preserve_identity_and_reject_captures(t);
+  Free_quotes_preserve_identity_and_bind_captures(t);
   Quoted_data_is_not_compiled_or_pruned(t);
 
  }
@@ -44,7 +44,7 @@ public struct CaptureFreeQuoteRegressionTests : ITestX
  public void Quoted_data_is_not_compiled_or_pruned(TestContext t)
  {
   var local = S.Variable(typeof(int));
-  // RuntimeVariables with nonempty storage is unsupported as compiled FEC code, but valid as quoted data.
+  // Keep RuntimeVariables intact as quoted data.
   var operand = S.Lambda<Func<IRuntimeVariables>>(S.Block(new[] { local }, S.RuntimeVariables(local)));
   var compiled = S.Lambda<Func<System.Linq.Expressions.Expression<Func<IRuntimeVariables>>>>(S.Quote(operand)).FromSysExpression().CompileFast(true);
   if (!t.IsNotNull(compiled)) return;
@@ -55,13 +55,15 @@ public struct CaptureFreeQuoteRegressionTests : ITestX
   var body = E.Switch(E.Constant(0), E.Constant(7), E.SwitchCase(free, E.Constant(1)));
   var capture = E.Lambda<Func<int, System.Linq.Expressions.Expression<Func<int>>>>(
    E.Quote(E.Lambda<Func<int>>(body)), free);
-  t.AreEqual(null, capture.CompileFast(true));
+  var switchCapture = capture.CompileFast(true);
+  if (t.IsNotNull(switchCapture)) t.AreEqual(7, switchCapture(42).Compile()());
   var conditional = E.Condition(E.Constant(true), E.Constant(7), free);
   var conditionalCapture = E.Lambda<Func<int, System.Linq.Expressions.Expression<Func<int>>>>(
    E.Quote(E.Lambda<Func<int>>(conditional)), free);
-  t.AreEqual(null, conditionalCapture.CompileFast(true));
+  var boundConditional = conditionalCapture.CompileFast(true);
+  if (t.IsNotNull(boundConditional)) t.AreEqual(7, boundConditional(42).Compile()());
  }
- public void Free_quotes_preserve_identity_and_reject_captures(TestContext t)
+ public void Free_quotes_preserve_identity_and_bind_captures(TestContext t)
  {
   var parameter=E.Parameter(typeof(int));
   var inner=E.Lambda<Func<int,int>>(parameter,parameter);
@@ -74,6 +76,11 @@ public struct CaptureFreeQuoteRegressionTests : ITestX
   t.IsTrue(ReferenceEquals(first[0],second[0]));
   var capture=E.Lambda<Func<int,System.Linq.Expressions.Expression<Func<int>>>>(
    E.Quote(E.Lambda<Func<int>>(parameter)),parameter);
-  t.AreEqual(null,capture.CompileFast(true));
+  var bound = capture.CompileFast(true);
+  if (!t.IsNotNull(bound)) return;
+  var captured = bound(41).Compile();
+  t.AreEqual(41,captured());
+  t.AreEqual(42,bound(42).Compile()());
+  t.AreEqual(41,captured());
  }
 }
