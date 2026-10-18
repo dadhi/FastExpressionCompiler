@@ -638,6 +638,7 @@ namespace FastExpressionCompiler
             public Label Label;
             public Label ReturnLabel;
             internal bool IsMarked;
+            internal bool IsBlockScoped;
         }
 
         internal sealed class ExceptionRegionInfo
@@ -711,9 +712,6 @@ namespace FastExpressionCompiler
                     }
                 }
             }
-
-            /// Set if the same label target is defined by the several Label expressions, so each definition needs its own IL label
-            internal bool HasLabelDefinedTwice;
 
             /// The stack for the lambda invocation and the labels bound to them
             internal SmallList<LabelInfo, Stack4<LabelInfo>, NoArrayPool<LabelInfo>> LambdaInvokeStackLabels;
@@ -812,8 +810,44 @@ namespace FastExpressionCompiler
                 {
                     ref var label = ref LambdaInvokeStackLabels.AddDefaultAndGetRef();
                     label.Target = labelTarget;
-                    label.InlinedLambdaInvokeIndex = inlinedLambdaInvokeIndex;
+                    label.InlinedLambdaInvokeIndex = inlinedLambdaInvokeIndex == -1
+                        ? CurrentInlinedLambdaInvokeIndex : inlinedLambdaInvokeIndex;
                 }
+            }
+
+            [RequiresUnreferencedCode(Trimming.Message)]
+            internal int PushScopedBlockLabels(BlockExpression block)
+            {
+                var start = LambdaInvokeStackLabels.Count;
+                if (TargetToGotosAndLabels.Map.Count == 0)
+                    return start;
+                foreach (var expression in block.Expressions)
+                {
+                    if (expression is not LabelExpression labelExpression)
+                        continue;
+                    var target = labelExpression.Target;
+                    var counts = TargetToGotosAndLabels.Map.TryGetValueRef(target, out var found);
+                    if (!found || counts.Item2 <= 1)
+                        continue;
+                    for (var i = 0; i < LambdaInvokeStackLabels.Count; ++i)
+                    {
+                        ref var prior = ref LambdaInvokeStackLabels.GetSurePresentRef(i);
+                        if (prior.Target == target && prior.IsBlockScoped &&
+                            prior.InlinedLambdaInvokeIndex == CurrentInlinedLambdaInvokeIndex)
+                            throw new InvalidOperationException($"Cannot redefine label `{target}` in the same or an inner block.");
+                    }
+                    ref var binding = ref LambdaInvokeStackLabels.AddDefaultAndGetRef();
+                    binding.Target = target;
+                    binding.InlinedLambdaInvokeIndex = CurrentInlinedLambdaInvokeIndex;
+                    binding.IsBlockScoped = true;
+                }
+                return start;
+            }
+
+            internal void PopScopedBlockLabels(int start)
+            {
+                while (LambdaInvokeStackLabels.Count > start)
+                    LambdaInvokeStackLabels.RemoveLastSurePresent();
             }
 
             public short AddInlinedLambdaInvoke(InvocationExpression e)
@@ -931,8 +965,7 @@ namespace FastExpressionCompiler
         internal static ref LabelInfo GetLabelOrInvokeIndexByTarget<TLabels>(ref this TLabels labels, object labelTarget, out bool found)
             where TLabels : struct, IIndexed<LabelInfo>
         {
-            var count = labels.Count;
-            for (var i = 0; i < count; ++i)
+            for (var i = labels.Count - 1; i >= 0; --i)
             {
                 ref var label = ref labels.GetSurePresentRef(i);
                 if (label.Target == labelTarget)
@@ -1704,14 +1737,20 @@ namespace FastExpressionCompiler
                             if ((context.CompilerFlags & CompilerFlags.NoInvocationLambdaInlining) == 0 && invokedExpr is LambdaExpression lambdaExpr && !HasByRefParameters(lambdaExpr))
                             {
                                 var oldIndex = context.CurrentInlinedLambdaInvokeIndex;
-                                context.CurrentInlinedLambdaInvokeIndex = context.AddInlinedLambdaInvoke(invokeExpr);
+                                var invokeIndex = context.AddInlinedLambdaInvoke(invokeExpr);
                                 context.HasComplexExpression = false; // switch off because we have entered the inlined lambda
 
                                 ref var inlinedExpr = ref context.InlinedLambdaInvocation.Map.AddOrGetValueRef(invokeExpr, out var found);
                                 if (!found)
                                     inlinedExpr = CreateInlinedLambdaInvocationExpression(invokeArgs, lambdaExpr);
 
-                                if ((r = TryCollectInfo(ref context, inlinedExpr, nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                                if (invokeArgCount == 0)
+                                    context.CurrentInlinedLambdaInvokeIndex = invokeIndex;
+                                r = invokeArgCount == 0
+                                    ? TryCollectInfo(ref context, inlinedExpr, nestedLambda, ref rootNestedLambdas)
+                                    : TryCollectInlinedWrapper(ref context, (BlockExpression)inlinedExpr,
+                                        lambdaExpr.Body, invokeIndex, nestedLambda, ref rootNestedLambdas);
+                                if (r != Result.OK)
                                     return r;
 
                                 context.HasComplexExpression = true;
@@ -1862,7 +1901,7 @@ namespace FastExpressionCompiler
                         context.AddLabel(labelExpr.Target, context.CurrentInlinedLambdaInvokeIndex);
                         context.ExceptionLabels.AddAndGetRef((labelExpr.Target, context.CurrentExceptionRegion));
                         if (labelExpr.Target != null)
-                            context.HasLabelDefinedTwice |= ++context.TargetToGotosAndLabels.Map.AddOrGetValueRef(labelExpr.Target, out _).Item2 > 1;
+                            context.TargetToGotosAndLabels.Map.AddOrGetValueRef(labelExpr.Target, out _).Item2++;
                         if (labelExpr.DefaultValue == null)
                             return r;
                         expr = labelExpr.DefaultValue;
@@ -2011,6 +2050,35 @@ namespace FastExpressionCompiler
                 if (parameters.GetParameter(i).IsByRef)
                     return true;
             return false;
+        }
+
+        // The generated wrapper evaluates caller arguments before entering the callee body.
+        private static Result TryCollectInlinedWrapper(ref CompilerContext context, BlockExpression wrapper,
+            Expression body, short invokeIndex, NestedLambdaInfo nestedLambda,
+            ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+        {
+            context.PushBlockWithVars(wrapper.Variables);
+            var statements = wrapper.Expressions;
+            for (var i = 0; i < statements.Count - 1; ++i)
+            {
+                var result = TryCollectInfo(ref context, statements[i], nestedLambda, ref rootNestedLambdas);
+                if (result != Result.OK)
+                    return result;
+            }
+            var last = statements[statements.Count - 1];
+            var callerIndex = context.CurrentInlinedLambdaInvokeIndex;
+            Result collected;
+            if (ReferenceEquals(last, body))
+            {
+                context.CurrentInlinedLambdaInvokeIndex = invokeIndex;
+                collected = TryCollectInfo(ref context, last, nestedLambda, ref rootNestedLambdas);
+                context.CurrentInlinedLambdaInvokeIndex = callerIndex;
+            }
+            else
+                collected = TryCollectInlinedWrapper(ref context, (BlockExpression)last,
+                    body, invokeIndex, nestedLambda, ref rootNestedLambdas);
+            context.PopBlock();
+            return collected;
         }
 
         private static Expression CreateInlinedLambdaInvocationExpression(ArgExprs invokeArgs, LambdaExpression lambdaExpr)
@@ -2775,6 +2843,8 @@ namespace FastExpressionCompiler
                                 if (blockVarCount != 0)
                                     context.PushBlockAndConstructLocalVars(blockVarExprs, il);
 
+                                var labelScopeStart = context.PushScopedBlockLabels(blockExpr);
+
                                 expr = statementExprs[statementCount - 1]; // The last (result) statement in block will provide the result
 
                                 // Try to trim the statements from the end of the Block up to the Throw (if any),
@@ -2818,7 +2888,8 @@ namespace FastExpressionCompiler
                                         {
                                             // But we cannot use the return pattern and eliminate the target label if we have more gotos referencing it, see #430
                                             var (gotos, labels) = context.TargetToGotosAndLabels.Map.TryGetValueRef(label.Target, out var found);
-                                            if (found & gotos <= labels)
+                                            // Repeated targets have block-local bindings, not a method return.
+                                            if (found && labels == 1 && gotos <= labels)
                                             {
                                                 if (context.IsEmittingExceptionFilter || (parent & ParentFlags.TryCatch) != 0)
                                                 {
@@ -2865,7 +2936,7 @@ namespace FastExpressionCompiler
                                 }
 
                                 parent |= ParentFlags.BlockResult;
-                                if (blockVarCount == 0 & !context.HasLabelDefinedTwice)
+                                if (blockVarCount == 0 && labelScopeStart == context.LambdaInvokeStackLabels.Count)
                                     continue; // OMG! no recursion, continue with the last expression
 
                                 if (!TryEmit(expr, il, ref context, parent))
@@ -2873,13 +2944,7 @@ namespace FastExpressionCompiler
 
                                 if (blockVarCount != 0)
                                     context.PopBlock();
-
-                                // The same label may be defined in the several separate blocks, so after the block the label is done and the next definition gets a new IL label
-                                if (context.HasLabelDefinedTwice)
-                                    for (var i = 0; i < statementExprs.Count; ++i)
-                                        if (statementExprs[i] is LabelExpression blockLabel && blockLabel.Target != null &&
-                                            context.TargetToGotosAndLabels.Map.TryGetValueRef(blockLabel.Target, out var labelFound).Item2 > 1 & labelFound)
-                                            context.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(blockLabel.Target, out _).ReturnVariableIndexPlusOneAndIsDefined = 0;
+                                context.PopScopedBlockLabels(labelScopeStart);
                                 return true;
                             }
                         case ExpressionType.Loop:
@@ -3166,6 +3231,8 @@ namespace FastExpressionCompiler
                 if (defaultValue != null && !TryEmit(defaultValue, il, ref context, parent))
                     return false;
 
+                if (defaultValue != null)
+                    labelInfo = ref context.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(expr.Target, out _);
                 var returnVariableIndexPlusOne = labelInfo.ReturnVariableIndexPlusOneAndIsDefined >>> 1;
                 if (returnVariableIndexPlusOne != 0)
                 {
@@ -3207,17 +3274,27 @@ namespace FastExpressionCompiler
                         return false; // if no collection cycle then the labels may be not collected
                     throw new InvalidOperationException($"Cannot jump, no labels found for the target `{expr.Target}`");
                 }
+                if (labelInfo.InlinedLambdaInvokeIndex != context.CurrentInlinedLambdaInvokeIndex)
+                    throw new InvalidOperationException($"Cannot jump to label target `{expr.Target}` in another lambda.");
+                var targetCounts = context.TargetToGotosAndLabels.Map.TryGetValueRef(expr.Target, out var hasTargetCounts);
+                if ((context.CompilerFlags & CompilerFlags.ValidateLabels) != 0 &&
+                    !labelInfo.IsBlockScoped && hasTargetCounts && targetCounts.Item2 > 1)
+                    throw new InvalidOperationException($"Cannot jump to ambiguous label target `{expr.Target}`.");
                 var gotoValue = expr.Value;
                 if (gotoValue != null && expr.Target.Type == typeof(void))
                 {
                     if (!TryEmit(gotoValue, il, ref context, parent | ParentFlags.IgnoreResult))
                         return false;
+                    labelInfo = ref context.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(expr.Target, out _);
                     il.Demit((parent & ParentFlags.TryCatch) != 0 ? OpCodes.Leave : OpCodes.Br, labelInfo.GetOrDefineLabel(il));
                     return true;
                 }
                 if (gotoValue != null &&
                     !TryEmit(gotoValue, il, ref context, parent & ~ParentFlags.IgnoreResult))
                     return false;
+
+                if (gotoValue != null)
+                    labelInfo = ref context.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(expr.Target, out _);
 
                 switch (expr.Kind)
                 {
@@ -6662,6 +6739,31 @@ namespace FastExpressionCompiler
                 return ok;
             }
 
+            private static bool TryEmitInlinedWrapper(BlockExpression wrapper, Expression body,
+                short invokeIndex, ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            {
+                context.PushBlockAndConstructLocalVars(wrapper.Variables, il);
+                var statements = wrapper.Expressions;
+                for (var i = 0; i < statements.Count - 1; ++i)
+                    if (!TryEmit(statements[i], il, ref context, parent | ParentFlags.IgnoreResult))
+                        return false;
+                var last = statements[statements.Count - 1];
+                var callerIndex = context.CurrentInlinedLambdaInvokeIndex;
+                if (wrapper.Type == typeof(void))
+                    parent |= ParentFlags.IgnoreResult;
+                bool emitted;
+                if (ReferenceEquals(last, body))
+                {
+                    context.CurrentInlinedLambdaInvokeIndex = invokeIndex;
+                    emitted = TryEmit(last, il, ref context, parent | ParentFlags.BlockResult);
+                    context.CurrentInlinedLambdaInvokeIndex = callerIndex;
+                }
+                else
+                    emitted = TryEmitInlinedWrapper((BlockExpression)last, body, invokeIndex, il, ref context, parent);
+                context.PopBlock();
+                return emitted;
+            }
+
             private static bool TryEmitInvoke(InvocationExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex = -1)
             {
                 var paramCount = context.ParamExprs.GetParamCount();
@@ -6680,7 +6782,23 @@ namespace FastExpressionCompiler
                     if (!found)
                         return false;
 
-                    if (!TryEmit(inlinedExpr, il, ref context, parent))
+                    var previousInvokeIndex = context.CurrentInlinedLambdaInvokeIndex;
+                    var invokeIndex = context.AddInlinedLambdaInvoke(expr);
+                    if (argCount == 0)
+                        context.CurrentInlinedLambdaInvokeIndex = invokeIndex;
+                    bool emitted;
+                    try
+                    {
+                        emitted = argCount == 0
+                            ? TryEmit(inlinedExpr, il, ref context, parent)
+                            : TryEmitInlinedWrapper((BlockExpression)inlinedExpr, lambdaExpr.Body,
+                                invokeIndex, il, ref context, parent);
+                    }
+                    finally
+                    {
+                        context.CurrentInlinedLambdaInvokeIndex = previousInvokeIndex;
+                    }
+                    if (!emitted)
                         return false;
 
                     if ((parent & ParentFlags.IgnoreResult) == 0 && inlinedExpr.Type != typeof(void))
