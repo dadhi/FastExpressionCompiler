@@ -54,10 +54,18 @@ namespace Xunit
     // Only mark compiler-layout tests after their expressions have semantic coverage under strict FEC.
     public sealed class VerifiedCompilerLayoutFactAttribute : FactAttribute
     {
-        public VerifiedCompilerLayoutFactAttribute(string behaviorCoverage)
+        public VerifiedCompilerLayoutFactAttribute(string behaviorCoverage, string representation = "exact IL layout")
         {
             if (Environment.GetEnvironmentVariable("FEC_TEST_COMPILER") != "system")
-                Skip = "Asserts the system compiler's exact IL layout; strict FEC behavior verified by " + behaviorCoverage;
+                Skip = "Asserts the system compiler's " + representation + "; strict FEC behavior verified by " + behaviorCoverage;
+        }
+    }
+    public sealed class VerifiedCompilerLayoutTheoryAttribute : TheoryAttribute
+    {
+        public VerifiedCompilerLayoutTheoryAttribute(string behaviorCoverage)
+        {
+            if (Environment.GetEnvironmentVariable("FEC_TEST_COMPILER") != "system")
+                Skip = "Requires the system compiler's invalid static-binding IL; strict FEC behavior verified by " + behaviorCoverage;
         }
     }
     // Temporary known-issue exclusion; this does not establish correct FEC behavior.
