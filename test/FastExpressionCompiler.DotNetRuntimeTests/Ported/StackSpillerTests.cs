@@ -404,7 +404,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Equal(42, f());
         }
 
-        [Fact]
+        [VerifiedCompilerLayoutFact("System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_IndexAssignment_Eval")]
         public static void Spill_RefInstance_IndexAssignment_CodeGen()
         {
             Expression<Func<int>> e = Spill_RefInstance_IndexAssignment();
@@ -507,7 +507,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Equal(42, f());
         }
 
-        [Fact]
+        [VerifiedCompilerLayoutFact("System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_Index_Eval")]
         public static void Spill_RefInstance_Index_CodeGen()
         {
             Expression<Func<int>> e = Spill_RefInstance_Index();
@@ -602,7 +602,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Equal(42, f());
         }
 
-        [Fact]
+        [VerifiedCompilerLayoutFact("System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_MemberAssignment_Eval")]
         public static void Spill_RefInstance_MemberAssignment_CodeGen()
         {
             Expression<Func<int>> e = Spill_RefInstance_MemberAssignment();
@@ -707,7 +707,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Equal(42, f());
         }
 
-        [Fact]
+        [VerifiedCompilerLayoutFact("System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_Call_Eval")]
         public static void Spill_RefInstance_Call_CodeGen()
         {
             Expression<Func<int>> e = Spill_RefInstance_Call();
@@ -801,7 +801,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Equal(42, f());
         }
 
-        [Fact]
+        [VerifiedCompilerLayoutFact("System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefArgs_Call_Eval")]
         public static void Spill_RefArgs_Call_CodeGen()
         {
             Expression<Func<int>> e = Spill_RefArgs_Call();
@@ -893,7 +893,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Equal(42, f());
         }
 
-        [Fact]
+        [VerifiedCompilerLayoutFact("System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefArgs_New_Eval")]
         public static void Spill_RefArgs_New_CodeGen()
         {
             Expression<Func<int>> e = Spill_RefArgs_New();
@@ -976,7 +976,7 @@ namespace System.Linq.Expressions.Tests
             return e;
         }
 
-        [Fact]
+        [VerifiedCompilerLayoutFact("System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefArgs_Invoke_Eval")]
         public static void Spill_RefArgs_Invoke_CodeGen()
         {
             Expression<Func<int>> e = Spill_RefArgs_Invoke();
@@ -1193,7 +1193,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Equal(42, f()[0]);
         }
 
-        [Fact]
+        [VerifiedCompilerLayoutFact("System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_ListInit_Eval")]
         public static void Spill_RefInstance_ListInit_CodeGen()
         {
             Expression<Func<ValueList>> e = Spill_RefInstance_ListInit();
@@ -1300,7 +1300,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Equal(42, f().Baz);
         }
 
-        [Fact]
+        [VerifiedCompilerLayoutFact("System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_MemberInit_Assign_Field_Eval")]
         public static void Spill_RefInstance_MemberInit_Assign_Field_CodeGen()
         {
             Expression<Func<ValueBar>> e = Spill_RefInstance_MemberInit_Assign_Field();
@@ -1407,7 +1407,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Equal(42, f().Foo);
         }
 
-        [Fact]
+        [VerifiedCompilerLayoutFact("System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_MemberInit_Assign_Property_Eval")]
         public static void Spill_RefInstance_MemberInit_Assign_Property_CodeGen()
         {
             Expression<Func<ValueBar>> e = Spill_RefInstance_MemberInit_Assign_Property();
