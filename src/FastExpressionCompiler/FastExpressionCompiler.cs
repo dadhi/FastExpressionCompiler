@@ -3154,7 +3154,8 @@ namespace FastExpressionCompiler
                 var paramExprCount = paramExprs.GetParamCount();
                 var paramType = paramExpr.Type;
                 var isValueType = paramType.IsValueType;
-                var isParamOrVarByRef = paramExpr.IsByRef && !paramType.IsNullable(); // for the nullable part check the #461 cases with nullable
+                var isParamOrVarByRef = paramExpr.IsByRef &&
+                    (!paramType.IsNullable() || (parent & (ParentFlags.Arithmetic | ParentFlags.AssignmentRightValue)) != 0); // #461 member access uses the nullable address; value operations dereference it
                 var isPassedRef = byRefIndex != -1;
 
                 // Parameter may represent a variable, so first look if this is the case,
@@ -3626,7 +3627,7 @@ namespace FastExpressionCompiler
                         return TryEmit(opExpr, il, ref context, parent & ~ParentFlags.InstanceAccess);
 
                     // Emit the operand before going to the fast checks below
-                    if (!TryEmit(opExpr, il, ref context, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess))
+                    if (!TryEmit(opExpr, il, ref context, (parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess) | ParentFlags.AssignmentRightValue))
                         return false;
 
                     if (sourceType == targetType)
