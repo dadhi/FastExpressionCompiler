@@ -272,12 +272,15 @@ Ref-property arguments retain FEC's normal setter copyback after successful invo
 The system compiler can lose this copyback when another argument contains an exception
 block; FEC preserves the property mutation instead of reproducing that behavior.
 
+Dynamic expressions use ordinary DLR call sites: each emitted occurrence has its own site,
+reuses binding rules, and reads the current mutable `Target` for every invocation.
+Runtime binder rule compilation is intrinsic DLR behavior; the outer lambda still compiles directly with FEC.
+
 ### What's not supported yet
 
 **FEC does not support yet:** 
 
 - `Quote` with captured variables (capture-free quoted trees and directly invoked quoted lambdas are supported)
-- `Dynamic`
 - `RuntimeVariables` with one or more variables (empty lists are supported)
 - `DebugInfo`
 - `NewArrayInit` multi-dimensional array initializer is not supported yet
