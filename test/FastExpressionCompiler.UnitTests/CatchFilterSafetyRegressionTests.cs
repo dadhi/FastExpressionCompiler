@@ -60,7 +60,10 @@ public struct CatchFilterSafetyRegressionTests : ITestX
                 var guarded = SysExpr.TryCatch(SysExpr.Throw(SysExpr.New(typeof(Exception)), typeof(bool)),
                     SysExpr.Catch(typeof(Exception), SysExpr.Constant(true), wrap(hidden)));
                 var expression = SysExpr.Lambda<Func<bool>>(SysExpr.Block(guarded, SysExpr.Label(outside, SysExpr.Constant(false))));
-                t.AreEqual(null, expression.FromSysExpression().CompileFast(true));
+                if (ReferenceEquals(hidden, nested))
+                    t.Throws<InvalidOperationException>(() => expression.FromSysExpression().CompileFast(true));
+                else
+                    t.AreEqual(null, expression.FromSysExpression().CompileFast(true));
             }
         }
     }
