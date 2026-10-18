@@ -263,6 +263,15 @@ var x = f(new B());
 The idea is to provide the fast compilation for the supported expression types
 and fallback to the system `Expression.Compile()` for the not supported types:
 
+Invoking a runtime `System.Linq.Expressions.Expression<TDelegate>` value compiles that value
+with its `Compile()` method before invoking the resulting delegate, as the system compiler does.
+This runtime operation is distinct from compilation fallback: with
+`CompileFast(ifFastFailedReturnNull: true)`, FEC still compiles the surrounding lambda directly.
+Errors from compiling or executing the runtime expression propagate to its caller.
+Ref-property arguments retain FEC's normal setter copyback after successful invocation.
+The system compiler can lose this copyback when another argument contains an exception
+block; FEC preserves the property mutation instead of reproducing that behavior.
+
 ### What's not supported yet
 
 **FEC does not support yet:** 

@@ -1502,6 +1502,23 @@ namespace FastExpressionCompiler
                                 return r;
                             }
 
+                            if (typeof(System.Linq.Expressions.LambdaExpression).IsAssignableFrom(invokedExpr.Type))
+                            {
+                                // A spilled runtime-expression invocation evaluates its operands
+                                // before the intrinsic Compile call, matching System's stack spiller.
+                                if ((r = TryCollectInfo(ref context, invokedExpr, nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                                    return r;
+                                var outerHasExceptionBlock = context.HasExceptionBlock;
+                                context.HasExceptionBlock = false;
+                                for (var i = 0; i < invokeArgCount; ++i)
+                                    if ((r = TryCollectInfo(ref context, invokeArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                                        return r;
+                                if (context.HasExceptionBlock)
+                                    context.ArgsContainingComplexExpression.Map.AddOrGetEntryRef(invokeExpr, out _);
+                                context.HasExceptionBlock |= outerHasExceptionBlock;
+                                return r;
+                            }
+
                             // No inlining, collect the normal way
                             if (invokeArgCount == 0)
                             {
@@ -5841,16 +5858,21 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitCallWithWritebacks(Expression receiver, ArgExprs expressions, MethodInfo method,
-                ConstructorInfo constructor, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex)
+                ConstructorInfo constructor, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex,
+                MethodInfo receiverCompileMethod = null, bool deferReceiverCompile = false)
             {
                 var receiverVar = -1;
+                var receiverType = receiverCompileMethod?.ReturnType ?? receiver?.Type;
                 if (receiver != null)
                 {
                     if (!TryEmit(receiver, il, ref context, ParentFlags.Call | ParentFlags.InstanceAccess))
                         return false;
+                    if (receiverCompileMethod != null && !deferReceiverCompile && !EmitInstanceMethodCall(il, receiverCompileMethod, receiver.Type))
+                        return false;
                     if (receiver.Type.IsValueType && !context.LastEmitIsAddress && !(receiver is PE pe && pe.IsByRef))
                         EmitStoreAndLoadLocalVariableAddress(il, receiver.Type);
-                    receiverVar = EmitStoreLocalVariable(il, receiver.Type.IsValueType ? receiver.Type.MakeByRefType() : receiver.Type);
+                    var storedType = deferReceiverCompile ? receiver.Type : receiverType;
+                    receiverVar = EmitStoreLocalVariable(il, storedType.IsValueType ? storedType.MakeByRefType() : storedType);
                 }
                 SmallList<ByRefWriteback, Stack2<ByRefWriteback>, NoArrayPool<ByRefWriteback>> writebacks = default;
                 SmallList<int, Stack8<int>, NoArrayPool<int>> arguments = default;
@@ -5868,12 +5890,16 @@ namespace FastExpressionCompiler
                     arguments.Add(EmitStoreLocalVariable(il, parameters[i].ParameterType));
                 }
                 if (receiverVar != -1)
+                {
                     EmitLoadLocalVariable(il, receiverVar);
+                    if (deferReceiverCompile && !EmitInstanceMethodCall(il, receiverCompileMethod, receiver.Type))
+                        return false;
+                }
                 for (var i = 0; i < arguments.Count; ++i)
                     EmitLoadLocalVariable(il, arguments[i]);
                 if (constructor != null)
                     il.Demit(OpCodes.Newobj, constructor);
-                else if (!EmitInstanceMethodCall(il, method, receiver?.Type))
+                else if (!EmitInstanceMethodCall(il, method, receiverType))
                     return false;
                 var returnType = constructor != null ? constructor.DeclaringType : method.ReturnType;
                 var result = returnType == typeof(void) ? -1 : EmitStoreLocalVariable(il, returnType);
@@ -6300,13 +6326,22 @@ namespace FastExpressionCompiler
                     return true;
                 }
 
-                var delegateInvokeMethod = invokedExpr.Type.FindDelegateInvokeMethod();
+                // Invoking runtime Expression<TDelegate> data intrinsically compiles that value.
+                // This is part of Invoke semantics, not a fallback from outer FEC compilation.
+                var compileMethod = invokedExpr.Type.FindExpressionCompileMethod();
+                var deferCompile = compileMethod != null && context.ArgsContainingComplexExpression.Map.ContainsKey(expr);
+                var delegateType = compileMethod?.ReturnType ?? invokedExpr.Type;
+                var delegateInvokeMethod = delegateType.FindDelegateInvokeMethod();
+                if (delegateInvokeMethod == null)
+                    return false;
                 var invokeParameters = delegateInvokeMethod.GetParameters();
                 for (var i = 0; i < invokeParameters.Length; ++i)
                     if (invokeParameters[i].ParameterType.IsByRef && NeedsByRefWriteback(argExprs.GetArgument(i)))
-                        return TryEmitCallWithWritebacks(invokedExpr, argExprs, delegateInvokeMethod, null, il, ref context, parent, byRefIndex);
+                        return TryEmitCallWithWritebacks(invokedExpr, argExprs, delegateInvokeMethod, null, il, ref context, parent, byRefIndex, compileMethod, deferCompile);
 
                 if (!TryEmit(invokedExpr, il, ref context, parent & ~ParentFlags.IgnoreResult)) // removing the IgnoreResult temporary because we need "full" lambda emit and we will re-apply the IgnoreResult later at the end of the method
+                    return false;
+                if (compileMethod != null && !deferCompile && !EmitInstanceMethodCall(il, compileMethod, invokedExpr.Type))
                     return false;
 
                 //if (lambda is ConstantExpression lambdaConst) // todo: @perf opportunity to optimize
@@ -6319,7 +6354,7 @@ namespace FastExpressionCompiler
                     var args = delegateInvokeMethod.GetParameters(); // todo: @perf avoid this if possible
                     // A try argument requires an empty evaluation stack. Preserve the receiver and
                     // preceding arguments with the same local storage used for ordinary calls.
-                    var receiverVar = context.HasExceptionBlock ? EmitStoreLocalVariable(il, invokedExpr.Type) : -1;
+                    var receiverVar = context.HasExceptionBlock ? EmitStoreLocalVariable(il, deferCompile ? invokedExpr.Type : delegateType) : -1;
                     SmallList<int, Stack8<int>, NoArrayPool<int>> argVars = default;
                     for (var i = 0; i < args.Length; ++i)
                     {
@@ -6332,10 +6367,14 @@ namespace FastExpressionCompiler
                     if (receiverVar != -1)
                     {
                         EmitLoadLocalVariable(il, receiverVar);
+                        if (deferCompile && !EmitInstanceMethodCall(il, compileMethod, invokedExpr.Type))
+                            return false;
                         for (var i = 0; i < args.Length; ++i)
                             EmitLoadLocalVariable(il, argVars[i]);
                     }
                 }
+                else if (deferCompile && !EmitInstanceMethodCall(il, compileMethod, invokedExpr.Type))
+                    return false;
 
                 EmitMethodCall(il, delegateInvokeMethod);
                 var returnType = delegateInvokeMethod.ReturnType;
@@ -9636,6 +9675,17 @@ namespace FastExpressionCompiler
         internal static MethodInfo FindDelegateInvokeMethod(
             [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)] this Type type) =>
             type.GetMethod("Invoke", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+
+        [RequiresUnreferencedCode(Trimming.Message)]
+        internal static MethodInfo FindExpressionCompileMethod(this Type type)
+        {
+            if (!typeof(System.Linq.Expressions.LambdaExpression).IsAssignableFrom(type))
+                return null;
+            for (; type != null; type = type.BaseType)
+                if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(System.Linq.Expressions.Expression<>))
+                    return type.GetMethod("Compile", Tools.Empty<Type>());
+            return null;
+        }
 
         [RequiresUnreferencedCode(Trimming.Message)]
         internal static class NullableReflected<T> where T : struct

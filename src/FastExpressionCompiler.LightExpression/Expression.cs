@@ -1249,7 +1249,7 @@ public abstract class Expression
     private static Type GetInvocationReturnType(Expression expression) =>
         expression is UnaryExpression quote && quote.NodeType == ExpressionType.Quote && quote.Operand is LambdaExpression lambda
             ? lambda.ReturnType
-            : expression.Type.FindDelegateInvokeMethod().ReturnType;
+            : (expression.Type.FindExpressionCompileMethod()?.ReturnType ?? expression.Type).FindDelegateInvokeMethod().ReturnType;
 
     public static InvocationExpression Invoke(LambdaExpression expression) =>
         new NotNullExpressionInvocationExpression(expression);
