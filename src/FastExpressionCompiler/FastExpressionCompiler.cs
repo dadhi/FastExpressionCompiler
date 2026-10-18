@@ -4518,7 +4518,7 @@ namespace FastExpressionCompiler
             // the `right = null` argument indicates the increment/decrement operation
             private static bool TryEmitArithmeticAndOrAssign(
                 Expression left, Expression right, Type exprType, ExpressionType nodeType, bool isPost,
-                ILGenerator il, ref CompilerContext context, ParentFlags parent)
+                ILGenerator il, ref CompilerContext context, ParentFlags parent, MethodInfo unaryMethod = null)
             {
                 // we need the result variable and the time of Post/Pre when to store it only if the result is not ignored, otherwise don't bother
                 var resultVar = -1;
@@ -4530,7 +4530,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.Parameter:
                         if (!isPost)
                             return TryEmitAssignToParameterOrVariable((ParameterExpression)left, right,
-                                nodeType, isPost, exprType, il, ref context, parent, resultVar);
+                                nodeType, isPost, exprType, il, ref context, parent, resultVar, unaryMethod);
 
                         // todo: @better split for now between the Increment/Decrement and the rest
                         var p = (ParameterExpression)left;
@@ -4556,7 +4556,7 @@ namespace FastExpressionCompiler
                         if (resultVar != -1 & isPost)
                             EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value for the later further use
 
-                        if (!EmitIncOrDec(il, exprType, nodeType == ExpressionType.Add))
+                        if (!EmitIncOrDec(il, exprType, nodeType == ExpressionType.Add, unaryMethod))
                             return false;
 
                         if (resultVar != -1 & !isPost)
@@ -4772,14 +4772,15 @@ namespace FastExpressionCompiler
                         if (leftIsByAddress = context.LastEmitIsAddress)
                             EmitLoadIndirectlyByRef(il, leftType); // if the field is loaded by ref, it need to be loaded from the ref in order to do arithmetic operation on it
 
-                        var leftIsNullable = leftType.IsNullable();
+                        var leftIsNullable = leftType.IsNullable() &&
+                            (unaryMethod == null || unaryMethod.GetParameters()[0].ParameterType != leftType);
                         if (!leftIsNullable)
                         {
                             if (right == null) // optimization for the common increment/decrement case, indicated by using the null for the right argument
                             {
                                 if (resultVar != -1 & isPost)
                                     EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value before doing any operation on it
-                                if (!EmitIncOrDec(il, leftType, nodeType == ExpressionType.Add))
+                                if (!EmitIncOrDec(il, leftType, nodeType == ExpressionType.Add, unaryMethod))
                                     return false;
                                 if (resultVar != -1 & !isPost)
                                     EmitStoreAndLoadLocalVariable(il, resultVar);
@@ -4823,7 +4824,7 @@ namespace FastExpressionCompiler
                                 EmitLoadLocalVariableAddress(il, leftNullableVar);
                                 il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
 
-                                if (!EmitIncOrDec(il, leftType.GetNonNullableOrSelf(), nodeType == ExpressionType.Add))
+                                if (!EmitIncOrDec(il, leftType.GetNonNullableOrSelf(), nodeType == ExpressionType.Add, unaryMethod))
                                     return false;
                             }
                             else
@@ -5042,7 +5043,7 @@ namespace FastExpressionCompiler
             // the null `right` means the increment/decrement operation
             private static bool TryEmitAssignToParameterOrVariable(
                 ParameterExpression left, Expression right, ExpressionType nodeType, bool isPost, Type exprType,
-                ILGenerator il, ref CompilerContext context, ParentFlags parent, int resultVar = -1)
+                ILGenerator il, ref CompilerContext context, ParentFlags parent, int resultVar = -1, MethodInfo unaryMethod = null)
             {
                 var paramExprs = context.ParamExprs;
                 var paramExprCount = paramExprs.GetParamCount();
@@ -5074,7 +5075,7 @@ namespace FastExpressionCompiler
                     }
                     else
                     {
-                        ok = TryEmitArithmetic(left, right, nodeType, exprType, il, ref context, flags | ParentFlags.AssignmentLeftValue);
+                        ok = TryEmitArithmetic(left, right, nodeType, exprType, il, ref context, flags | ParentFlags.AssignmentLeftValue, unaryMethod);
                         if (resultVar != -1 & !isPost)
                             EmitStoreAndLoadLocalVariable(il, resultVar);
                         if (isLeftByRef)
@@ -5110,7 +5111,7 @@ namespace FastExpressionCompiler
 
                     ok = nodeType == ExpressionType.Assign
                         ? TryEmit(right, il, ref context, flags)
-                        : TryEmitArithmetic(left, right, nodeType, exprType, il, ref context, flags);
+                        : TryEmitArithmetic(left, right, nodeType, exprType, il, ref context, flags, unaryMethod);
 
                     if (resultVar != -1 & !isPost)
                         EmitStoreAndLoadLocalVariable(il, resultVar);
@@ -5176,7 +5177,7 @@ namespace FastExpressionCompiler
                 }
 
                 // todo: @perf optimize for the increment/decrement case
-                if (!TryEmitArithmetic(left, right, nodeType, exprType, il, ref context, flags))
+                if (!TryEmitArithmetic(left, right, nodeType, exprType, il, ref context, flags, unaryMethod))
                     return false;
 
                 var arithmeticResultVar = resultVar != -1 ? resultVar : il.GetNextLocalVarIndex(exprType);
@@ -6554,12 +6555,21 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitArithmetic(Expression left, Expression right, ExpressionType nodeType, Type exprType,
-                ILGenerator il, ref CompilerContext context, ParentFlags parent)
+                ILGenerator il, ref CompilerContext context, ParentFlags parent, MethodInfo unaryMethod = null)
             {
                 var flags = (parent
                     & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
                         ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
                     | ParentFlags.Arithmetic;
+
+                if (right == null && unaryMethod != null && unaryMethod.GetParameters()[0].ParameterType == left.Type)
+                {
+                    if (!TryEmit(left, il, ref context, flags | ParentFlags.AssignmentRightValue))
+                        return false;
+                    EmitMethodCall(il, unaryMethod);
+                    context.LastEmitIsAddress = false;
+                    return il.EmitPopIfIgnoreResult(parent);
+                }
 
                 var noNullableValueLabel = default(Label);
                 var leftType = left.Type;
@@ -6588,7 +6598,7 @@ namespace FastExpressionCompiler
                 {
                     if (leftValueVar != -1) // the nullable operand was unwrapped into the variable, the stack is empty
                         EmitLoadLocalVariable(il, leftValueVar);
-                    if (!EmitIncOrDec(il, leftType.GetNonNullableOrSelf(), nodeType == ExpressionType.Add))
+                    if (!EmitIncOrDec(il, leftType.GetNonNullableOrSelf(), nodeType == ExpressionType.Add, unaryMethod))
                         return false;
                 }
                 else
@@ -7326,12 +7336,14 @@ namespace FastExpressionCompiler
             }
 
             // Increments or decrements the value of the `type` on the stack, the nullable value stays null if it is null
-            private static bool EmitIncOrDec(ILGenerator il, Type type, bool isInc)
+            private static bool EmitIncOrDec(ILGenerator il, Type type, bool isInc, MethodInfo method = null)
             {
                 var nodeType = isInc ? ExpressionType.Increment : ExpressionType.Decrement;
+                if (method != null && method.GetParameters()[0].ParameterType == type)
+                    return EmitMethodCall(il, method);
                 return type.IsNullable()
-                    ? EmitLiftedUnaryOperation(il, nodeType, type, type, null)
-                    : EmitUnaryOperation(il, nodeType, type, null);
+                    ? EmitLiftedUnaryOperation(il, nodeType, type, type, method)
+                    : EmitUnaryOperation(il, nodeType, type, method);
             }
 
             /// <summary>Store the variable location on stack</summary>

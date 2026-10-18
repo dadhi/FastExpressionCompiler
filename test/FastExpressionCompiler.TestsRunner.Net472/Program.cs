@@ -81,6 +81,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new OnesComplementRegressionTests());
             fecTests.Run(new ByRefConversionRegressionTests());
             fecTests.Run(new IncrementDecrementRegressionTests());
+            fecTests.Run(new ExplicitIncrementOperatorRegressionTests());
             fecTests.Run(new Issue183_NullableDecimal());
             fecTests.Run(new Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET());
             fecTests.Run(new Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_expressions_during_the_compilation());
