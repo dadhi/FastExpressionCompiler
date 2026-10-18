@@ -77,6 +77,7 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.ReferenceEqualityRegressionTests());
                 t.Run(new LightExpression.UnitTests.TypeEqualRegressionTests());
                 t.Run(new LightExpression.UnitTests.RuntimeCompilerLayoutBehaviorRegressionTests());
+                t.Run(new LightExpression.UnitTests.AdditionalCompilerLayoutBehaviorRegressionTests());
                 t.Run(new LightExpression.UnitTests.CompilerLayoutBehaviorRegressionTests());
                 t.Run(new LightExpression.UnitTests.BoxedConstantIdentityRegressionTests());
                 t.Run(new LightExpression.UnitTests.CapturedValueRefRegressionTests());
@@ -157,6 +158,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new ReferenceEqualityRegressionTests());
             fecTests.Run(new TypeEqualRegressionTests());
             fecTests.Run(new RuntimeCompilerLayoutBehaviorRegressionTests());
+            fecTests.Run(new AdditionalCompilerLayoutBehaviorRegressionTests());
             fecTests.Run(new CompilerLayoutBehaviorRegressionTests());
             fecTests.Run(new BoxedConstantIdentityRegressionTests());
             fecTests.Run(new CapturedValueRefRegressionTests());
