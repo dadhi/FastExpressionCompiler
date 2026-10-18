@@ -1248,6 +1248,12 @@ public abstract class Expression
     public static ElementInit ElementInit(MethodInfo addMethod, IEnumerable<Expression> arguments) =>
         ElementInit(addMethod, arguments.AsReadOnlyList());
 
+    [RequiresUnreferencedCode(Trimming.Message)]
+    private static Type GetInvocationReturnType(Expression expression) =>
+        expression is UnaryExpression quote && quote.NodeType == ExpressionType.Quote && quote.Operand is LambdaExpression lambda
+            ? lambda.ReturnType
+            : expression.Type.FindDelegateInvokeMethod().ReturnType;
+
     public static InvocationExpression Invoke(LambdaExpression expression) =>
         new NotNullExpressionInvocationExpression(expression);
 
