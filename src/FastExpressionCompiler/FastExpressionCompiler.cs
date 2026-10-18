@@ -2020,7 +2020,7 @@ namespace FastExpressionCompiler
                                         il.Demit(boolResult ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
                                     return true;
                                 }
-                                return TryEmitComparison(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, exprType, nodeType, il, ref context, parent);
+                                return TryEmitComparison(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, exprType, nodeType, il, ref context, parent, IsReferenceComparison((BinaryExpression)expr));
                             }
                         case ExpressionType.Add:
                         case ExpressionType.Subtract:
@@ -3137,7 +3137,7 @@ namespace FastExpressionCompiler
                     return TryEmit(op, il, ref context, parent);
                 if (op.NodeType == ExpressionType.Equal)
                     return TryEmitComparison(((BinaryExpression)op).Left, ((BinaryExpression)op).Right,
-                        expr.Type, ExpressionType.NotEqual, il, ref context, parent);
+                        expr.Type, ExpressionType.NotEqual, il, ref context, parent, IsReferenceComparison((BinaryExpression)op));
 
                 if (!TryEmit(op, il, ref context, parent))
                     return false;
@@ -5644,10 +5644,35 @@ namespace FastExpressionCompiler
                 return null;
             }
 
+            private static bool IsReferenceComparison(BinaryExpression expr) =>
+#if LIGHT_EXPRESSION
+                expr is LogicalBinaryExpression { IsReferenceComparison: true };
+#else
+                expr.Method == null && !expr.Left.Type.IsValueType && !expr.Right.Type.IsValueType;
+#endif
+
             private static bool TryEmitComparison(
                 Expression left, Expression right, Type exprType, ExpressionType nodeType,
-                ILGenerator il, ref CompilerContext context, ParentFlags parent)
+                ILGenerator il, ref CompilerContext context, ParentFlags parent, bool isReferenceComparison = false)
             {
+                if (isReferenceComparison)
+                {
+                    var flags = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess)) | ParentFlags.AssignmentRightValue;
+                    if (!TryEmit(left, il, ref context, flags))
+                        return false;
+                    // A complex right operand may empty the evaluation stack, e.g. a try expression.
+                    var savedLeft = right.IsComplexExpression() ? EmitStoreLocalVariable(il, left.Type) : -1;
+                    if (!TryEmit(right, il, ref context, flags))
+                        return false;
+                    if (savedLeft != -1)
+                        EmitLoadLocalVariable(il, savedLeft);
+                    il.Demit(OpCodes.Ceq);
+                    if (nodeType == ExpressionType.NotEqual)
+                        EmitEqualToZeroOrNull(il);
+                    context.LastEmitIsAddress = false;
+                    return il.EmitPopIfIgnoreResult(parent);
+                }
+
                 var leftType = left.Type;
                 var leftIsNullable = leftType.IsNullable();
                 var rightType = right.Type;
