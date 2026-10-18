@@ -423,6 +423,7 @@ namespace FastExpressionCompiler
             {
                 ValidateLabels(ref context);
 
+                context.ValidateExceptionJumps();
                 var constantsAndNestedLambdas = (context.Status & ClosureStatus.HasClosure) != 0
                     ? context.GetArrayOfConstantsAndNestedLambdas()
                     : null;
@@ -629,6 +630,17 @@ namespace FastExpressionCompiler
             internal bool IsMarked;
         }
 
+        internal sealed class ExceptionRegionInfo
+        {
+            internal readonly ExceptionRegionInfo Parent;
+            internal readonly bool CannotLeave;
+            internal ExceptionRegionInfo(ExceptionRegionInfo parent, bool cannotLeave)
+            {
+                Parent = parent;
+                CannotLeave = cannotLeave;
+            }
+        }
+
         /// <summary>Track the info required to build a closure object + some context information not directly related to closure.</summary>
         public struct CompilerContext
         {
@@ -658,11 +670,49 @@ namespace FastExpressionCompiler
             internal void MarkComplexArguments(Expression expr) => ArgsContainingComplexExpression.Set.AddOrGetEntryRef(expr, out _);
 
             internal bool HasComplexExpression;
-            internal bool InExceptionFilter;
-            internal int TryExpressionCount;
             internal bool HasExceptionBlock;
+            internal int TryExpressionCount;
             // Unlike operand flags, this state survives helper calls that start a new parent context.
+#if NETFRAMEWORK
+            internal bool IsEmittingExceptionFilter => false;
+#else
             internal bool IsEmittingExceptionFilter;
+#endif
+            internal bool CanRethrow;
+            internal bool IsCollectingExceptionFilter;
+            internal ExceptionRegionInfo CurrentExceptionRegion;
+            internal SmallList<(object Target, ExceptionRegionInfo Region), Stack4<(object Target, ExceptionRegionInfo Region)>, NoArrayPool<(object Target, ExceptionRegionInfo Region)>> ExceptionLabels;
+            internal SmallList<(object Target, ExceptionRegionInfo Region), Stack4<(object Target, ExceptionRegionInfo Region)>, NoArrayPool<(object Target, ExceptionRegionInfo Region)>> ExceptionGotos;
+
+            internal void ValidateExceptionJumps()
+            {
+                if (!HasExceptionBlock)
+                    return;
+                for (var i = 0; i < ExceptionGotos.Count; ++i)
+                {
+                    var jump = ExceptionGotos[i];
+                    ExceptionRegionInfo targetRegion = null;
+                    var definitionCount = 0;
+                    for (var j = 0; j < ExceptionLabels.Count; ++j)
+                        if (ReferenceEquals(ExceptionLabels[j].Target, jump.Target))
+                        {
+                            targetRegion = ExceptionLabels[j].Region;
+                            ++definitionCount;
+                        }
+                    // Undefined and multiply-defined targets need lexical label binding diagnostics.
+                    if (definitionCount != 1)
+                        continue;
+                    var region = jump.Region;
+                    while (!ReferenceEquals(region, targetRegion))
+                    {
+                        if (region == null)
+                            throw new InvalidOperationException("Cannot jump into an exception region.");
+                        if (region.CannotLeave)
+                            throw new InvalidOperationException("Cannot jump out of a finally, fault, or exception filter.");
+                        region = region.Parent;
+                    }
+                }
+            }
 
             /// Set if the same label target is defined by the several Label expressions, so each definition needs its own IL label
             internal bool HasLabelDefinedTwice;
@@ -1383,6 +1433,8 @@ namespace FastExpressionCompiler
             NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
         {
             var r = TryCollectInfo(ref context, expr, nestedLambda, ref rootNestedLambdas, 0, true);
+            if (r == Result.OK)
+                context.ValidateExceptionJumps();
             return r == Result.OK || (context.CompilerFlags & CompilerFlags.ThrowOnNotSupportedExpression) != 0 && NotSupportedCase<bool>(r);
         }
 
@@ -1432,7 +1484,11 @@ namespace FastExpressionCompiler
                             if (p == -1 && !context.IsLocalVar(parExpr))
                             {
                                 if (nestedLambda == null) // means that we are in the root lambda
+                                {
+                                    if (context.IsCollectingExceptionFilter)
+                                        throw new InvalidOperationException("A variable referenced from an exception filter is not defined in its scope.");
                                     return Result.ParameterIsNotVariableNorInPassedParameters;
+                                }
                                 context.Status |= ClosureStatus.HasClosure;
                                 _ = nestedLambda.NonPassedParameters.GetIndexOrAdd(parExpr, default(RefEq<ParameterExpression>));
                             }
@@ -1556,6 +1612,7 @@ namespace FastExpressionCompiler
 #endif
 
                         context.Quotes = nestedLambdaContext.Quotes;
+                        nestedLambdaContext.ValidateExceptionJumps();
 
                         if (newNestedLambda.NonPassedParameters.Count != 0 &&
                             !PropagateNonPassedParamsToOuterLambda(ref context,
@@ -1703,6 +1760,10 @@ namespace FastExpressionCompiler
                             _ = context.DefTargets.Add(loopExpr.ContinueLabel);
                             _ = context.DefPositions.Add(new ScopeIdx(scopeIdx, true));
                         }
+                        if (loopExpr.BreakLabel != null)
+                            context.ExceptionLabels.AddAndGetRef((loopExpr.BreakLabel, context.CurrentExceptionRegion));
+                        if (loopExpr.ContinueLabel != null)
+                            context.ExceptionLabels.AddAndGetRef((loopExpr.ContinueLabel, context.CurrentExceptionRegion));
                         expr = loopExpr.Body;
                         enterable = true;
                         continue;
@@ -1721,8 +1782,21 @@ namespace FastExpressionCompiler
                         enterable = false;
                         continue;
 
+                    case ExpressionType.Throw:
+                        var throwExpression = (UnaryExpression)expr;
+                        if (throwExpression.Operand == null)
+                        {
+                            if (!context.CanRethrow && !context.IsCollectingExceptionFilter)
+                                throw new InvalidOperationException("Rethrow is only valid within the body of a catch handler.");
+                            return Result.OK;
+                        }
+                        expr = throwExpression.Operand;
+                        continue;
+
                     case ExpressionType.Try:
                         {
+                            if (context.IsCollectingExceptionFilter)
+                                throw new InvalidOperationException("A try expression cannot occur inside an exception filter.");
                             ++context.TryExpressionCount;
                             context.HasExceptionBlock = true;
                             context.HasComplexExpression = false;
@@ -1736,6 +1810,7 @@ namespace FastExpressionCompiler
                         _ = context.DefTargets.Add(labelExpr.Target);
                         _ = context.DefPositions.Add(new ScopeIdx(scopeIdx, enterable));
 
+                        context.ExceptionLabels.AddAndGetRef((labelExpr.Target, context.CurrentExceptionRegion));
                         if (labelExpr.Target != null)
                             context.HasLabelDefinedTwice |= ++context.TargetToGotosAndLabels.Map.AddOrGetValueRef(labelExpr.Target, out _).Item2 > 1;
                         if (labelExpr.DefaultValue == null)
@@ -1749,6 +1824,7 @@ namespace FastExpressionCompiler
                         _ = context.GotoTargets.Add(gotoExpr.Target);
                         _ = context.GotoScopes.Add(scopeIdx);
 
+                        context.ExceptionGotos.AddAndGetRef((gotoExpr.Target, context.CurrentExceptionRegion));
                         if (gotoExpr.Target != null)
                             context.TargetToGotosAndLabels.Map.AddOrGetValueRef(gotoExpr.Target, out _).Item1++;
                         if (gotoExpr.Value == null)
@@ -2295,6 +2371,16 @@ namespace FastExpressionCompiler
             return r;
         }
 
+        private static Result TryCollectExceptionRegionInfo(ref CompilerContext context, Expression expression,
+            bool cannotLeave, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+        {
+            var parent = context.CurrentExceptionRegion;
+            context.CurrentExceptionRegion = new ExceptionRegionInfo(parent, cannotLeave);
+            var result = TryCollectInfo(ref context, expression, nestedLambda, ref rootNestedLambdas);
+            context.CurrentExceptionRegion = parent;
+            return result;
+        }
+
         private static Result TryCollectTryExprInfo(ref CompilerContext context, TryExpression tryExpr,
             NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
         {
@@ -2302,7 +2388,8 @@ namespace FastExpressionCompiler
                 throw new InvalidOperationException("Exception blocks are not allowed inside an exception filter.");
 
             var r = Result.OK;
-            if ((r = TryCollectInfo(ref context, tryExpr.Body, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
+            var canRethrow = context.CanRethrow;
+            if ((r = TryCollectExceptionRegionInfo(ref context, tryExpr.Body, false, nestedLambda, ref rootNestedLambdas)) != Result.OK)
                 return r;
 
             var catchBlocks = tryExpr.Handlers;
@@ -2319,21 +2406,19 @@ namespace FastExpressionCompiler
 
                 if (catchBlock.Filter != null)
                 {
-                    var labelScope = new LabelScope { Parent = new ScopeIdx(scopeIdx, false), ExceptionRegion = ExceptionRegion.Filter };
-                    var filterScopeIdx = (short)context.Scopes.Add(in labelScope);
-                    context.InExceptionFilter = true;
-                    r = TryCollectInfo(ref context, catchBlock.Filter, nestedLambda, ref rootNestedLambdas, filterScopeIdx);
-                    context.InExceptionFilter = false;
-                    if (r == Result.ParameterIsNotVariableNorInPassedParameters)
-                        throw new InvalidOperationException("An exception filter references an undefined variable.");
+                    context.CanRethrow = false;
+                    context.IsCollectingExceptionFilter = true;
+                    r = TryCollectExceptionRegionInfo(ref context, catchBlock.Filter, true, nestedLambda, ref rootNestedLambdas);
+                    context.IsCollectingExceptionFilter = false;
                     if (r != Result.OK)
-                        return r;
+                    return r;
                 }
 
-                var catchScopeIdx = (short)context.Scopes.Add(new LabelScope { Parent = new ScopeIdx(scopeIdx, false), ExceptionRegion = ExceptionRegion.Catch });
-                if ((r = TryCollectInfo(ref context, catchBlock.Body, nestedLambda, ref rootNestedLambdas, catchScopeIdx)) != Result.OK)
+                context.CanRethrow = true;
+                r = TryCollectExceptionRegionInfo(ref context, catchBlock.Body, false, nestedLambda, ref rootNestedLambdas);
+                context.CanRethrow = canRethrow;
+                if (r != Result.OK)
                     return r;
-
                 if (catchExVar != null)
                     context.PopBlock();
             }
@@ -2341,11 +2426,10 @@ namespace FastExpressionCompiler
             var faultOrFinally = tryExpr.Fault ?? tryExpr.Finally;
             if (faultOrFinally != null)
             {
-                var finallyScopeIdx = (short)context.Scopes.Add(new LabelScope { Parent = new ScopeIdx(scopeIdx, false), ExceptionRegion = ExceptionRegion.FinallyOrFault });
-                if ((r = TryCollectInfo(ref context, faultOrFinally, nestedLambda, ref rootNestedLambdas, finallyScopeIdx)) != Result.OK)
-                    return r;
+                context.CanRethrow = false;
+                r = TryCollectExceptionRegionInfo(ref context, faultOrFinally, true, nestedLambda, ref rootNestedLambdas);
+                context.CanRethrow = canRethrow;
             }
-
             return r;
         }
 
@@ -3182,39 +3266,6 @@ namespace FastExpressionCompiler
                 return ok && il.EmitPopIfIgnoreResult(parent);
             }
 
-            private static bool TryEmitIndexOperands(Expression objExpr, ArgExprs indexArgs, ParentFlags objFlags,
-                ParentFlags argFlags, ILGenerator il, ref CompilerContext context)
-            {
-                var objVar = -1;
-                if (objExpr != null)
-                {
-                    if (!TryEmit(objExpr, il, ref context, objFlags))
-                        return false;
-                    if (objExpr.Type.IsValueType && !context.LastEmitIsAddress && !(objExpr is PE pe && pe.IsByRef))
-                        EmitStoreAndLoadLocalVariableAddress(il, objExpr.Type);
-                    if (context.HasExceptionBlock)
-                        objVar = EmitStoreLocalVariable(il, objExpr.Type.IsValueType ? objExpr.Type.MakeByRefType() : objExpr.Type);
-                }
-
-                SmallList<int, Stack8<int>, NoArrayPool<int>> argVars = default;
-                var count = indexArgs.GetArgCount();
-                for (var i = 0; i < count; ++i)
-                {
-                    var argument = indexArgs.GetArgument(i);
-                    if (!TryEmit(argument, il, ref context, argFlags, -1))
-                        return false;
-                    if (context.HasExceptionBlock)
-                        argVars.Add(EmitStoreLocalVariable(il, argument.Type));
-                }
-                if (context.HasExceptionBlock)
-                {
-                    if (objVar != -1)
-                        EmitLoadLocalVariable(il, objVar);
-                    for (var i = 0; i < count; ++i)
-                        EmitLoadLocalVariable(il, argVars[i]);
-                }
-                return true;
-            }
 
             private static bool TryEmitLabel(LabelExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {

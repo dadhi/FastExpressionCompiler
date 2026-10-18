@@ -13,7 +13,7 @@ namespace System.Linq.Expressions.Tests
 
         // IsNotLinqExpressionsBuiltWithIsInterpretingOnly is not directly required,
         // but this functionality relies on private reflection and that would not work with AOT
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("VerifiedCompilerRepresentationBehaviorTests.InterpreterInstructionSimpleBehavior", "interpreter instruction representation")]
         public static void VerifyInstructions_Simple()
         {
             // Using an unchecked multiplication to ensure that a mul instruction is emitted (and not mul.ovf)
@@ -46,7 +46,7 @@ namespace System.Linq.Expressions.Tests
 
         // IsNotLinqExpressionsBuiltWithIsInterpretingOnly is not directly required,
         // but this functionality relies on private reflection and that would not work with AOT
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("VerifiedCompilerRepresentationBehaviorTests.InterpreterInstructionExceptionBehavior", "interpreter instruction representation")]
         public static void VerifyInstructions_Exceptions()
         {
             ParameterExpression x = Expression.Parameter(typeof(int), "x");
@@ -101,7 +101,7 @@ namespace System.Linq.Expressions.Tests
                   }");
         }
 
-        [Fact]
+        [VerifiedCompilerLayoutFact("VerifiedCompilerRepresentationBehaviorTests.InlinedThrowingConstructorBehavior", "interpreter constructor stack trace representation")]
         [ActiveIssue ("https://github.com/dotnet/runtime/issues/53599", platforms: TestPlatforms.MacCatalyst, runtimes: TestRuntimes.Mono)]
         public static void ConstructorThrows_StackTrace()
         {

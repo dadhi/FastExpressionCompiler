@@ -111,7 +111,7 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.AdditionalCompilerLayoutBehaviorRegressionTests());
                 t.Run(new LightExpression.UnitTests.CompilerLayoutBehaviorRegressionTests());
                 t.Run(new LightExpression.UnitTests.InvocationExceptionSpillRegressionTests());
-                t.Run(new LightExpression.UnitTests.CatchFilterRegressionTests());
+                t.Run(new LightExpression.UnitTests.InvalidFilterControlFlowRegressionTests());
                 t.Run(new LightExpression.UnitTests.CatchFilterSafetyRegressionTests());
                 t.Run(new LightExpression.IssueTests.Issue183_NullableDecimal());
                 t.Run(new LightExpression.IssueTests.Issue398_Optimize_Switch_with_OpCodes_Switch());
@@ -222,7 +222,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new AdditionalCompilerLayoutBehaviorRegressionTests());
             fecTests.Run(new CompilerLayoutBehaviorRegressionTests());
             fecTests.Run(new InvocationExceptionSpillRegressionTests());
-            fecTests.Run(new CatchFilterRegressionTests());
+            fecTests.Run(new InvalidFilterControlFlowRegressionTests());
             fecTests.Run(new CatchFilterSafetyRegressionTests());
             fecTests.Run(new Issue183_NullableDecimal());
             fecTests.Run(new Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET());
