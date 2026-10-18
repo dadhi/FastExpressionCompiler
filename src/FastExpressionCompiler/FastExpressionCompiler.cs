@@ -6643,6 +6643,9 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Call, typeof(Math).FindMethod("Pow"));
                 else
                     il.Demit(opCode);
+                if ((exprType == typeof(short) || exprType == typeof(ushort)) &&
+                    (arithmeticNodeType == ExpressionType.AddChecked || arithmeticNodeType == ExpressionType.SubtractChecked || arithmeticNodeType == ExpressionType.MultiplyChecked))
+                    return TryEmitPrimitiveValueConvert(exprType, exprType, il, isChecked: true);
                 return true;
             }
 
