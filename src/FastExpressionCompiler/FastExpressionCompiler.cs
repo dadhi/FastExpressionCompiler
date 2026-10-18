@@ -3747,8 +3747,21 @@ namespace FastExpressionCompiler
                 var boundCount = bounds.GetArgCount();
                 var flags = ParentFlags.CtorCall;
                 for (var i = 0; i < boundCount; i++)
-                    if (!TryEmit(bounds.GetArgument(i), il, ref context, flags))
+                {
+                    var bound = bounds.GetArgument(i);
+                    if (!TryEmit(bound, il, ref context, flags))
                         return false;
+                    var boundType = bound.Type;
+                    var underlyingType = Nullable.GetUnderlyingType(boundType);
+                    if (underlyingType != null)
+                    {
+                        EmitStoreAndLoadLocalVariableAddress(il, boundType);
+                        EmitMethodCall(il, boundType.GetNullableValueGetterMethod());
+                        boundType = underlyingType;
+                    }
+                    if (boundType != typeof(int) && !TryEmitPrimitiveValueConvert(boundType, typeof(int), il, isChecked: true))
+                        return false;
+                }
                 if (boundCount == 1)
                 {
                     var elemType = expr.Type.GetElementType();
