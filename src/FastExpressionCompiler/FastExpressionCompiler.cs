@@ -6003,7 +6003,7 @@ namespace FastExpressionCompiler
                 if (leftIsNullable)
                 {
                     noNullableValueLabel = il.DefineLabel();
-                    if (!TryEmit(left, il, ref context, flags | ParentFlags.InstanceCall))
+                    if (!TryEmit(left, il, ref context, flags))
                         return false;
 
                     leftVar = EmitStoreAndLoadLocalVariableAddress(il, leftType);
@@ -6036,14 +6036,7 @@ namespace FastExpressionCompiler
                     rightIsNullable = rightType.IsNullable();
                     if (rightIsNullable)
                     {
-                        if (!leftIsNullable)
-                        {
-                            noNullableValueLabel = il.DefineLabel();
-                            if (leftValueVar == -1)
-                                leftValueVar = EmitStoreLocalVariable(il, leftType);
-                        }
-
-                        if (!TryEmit(right, il, ref context, flags | ParentFlags.InstanceCall))
+                        if (!TryEmit(right, il, ref context, flags))
                             return false;
 
                         rightVar = EmitStoreAndLoadLocalVariableAddress(il, rightType);
