@@ -29,6 +29,18 @@ public struct RefCopybackRegressionTests : ITestX
  public static int AssignTwo(ref int a,ref int b) { a=20; b=30; return 40; }
  private static System.Reflection.MethodInfo M(string name) => typeof(RefCopybackRegressionTests).GetMethod(name);
  private static System.Linq.Expressions.Expression Receiver(System.Linq.Expressions.ParameterExpression owner) => E.Call(M(nameof(GetOwner)),owner);
+ private static void CheckCopiedOwner(TestContext t,System.Linq.Expressions.Expression<Func<Owner,int>> tree,int expected,string expectedTrace) {
+#if NETFRAMEWORK
+  // Framework's System compiler emits unverifiable IL for these copied struct property receivers.
+  // Assert the result, discarded mutations, and exact effects directly under strict FEC.
+  var fast=tree.FromSysExpression().CompileFast(true); if(!t.IsNotNull(fast)) return;
+  var owner=new Owner(); Trace.Clear(); t.AreEqual(expected,fast(owner));
+  t.AreEqual(3,owner.Field); t.AreEqual(0,owner.Data.Field.Field); t.AreEqual(7,owner.Readonly.Field);
+  t.AreEqual(expectedTrace,string.Join(",",Trace));
+#else
+  Compare(t,tree,()=>new Owner());
+#endif
+ }
  private static void Compare(TestContext t,System.Linq.Expressions.Expression<Func<Owner,int>> tree,Func<Owner> create)
  {
   var fast=tree.FromSysExpression().CompileFast(true); if(!t.IsNotNull(fast)) return; var system=tree.Compile();
@@ -42,7 +54,7 @@ public struct RefCopybackRegressionTests : ITestX
  }
  public void Nested_struct_owner_copyback(TestContext t) {
   foreach(var field in new[]{false,true}) { var p=E.Parameter(typeof(Owner)); var nested=E.Property(Receiver(p),"Nested"); var inner=E.Property(nested,"Value"); var arg=field?(System.Linq.Expressions.Expression)E.Field(inner,"Field"):E.Property(inner,"Value");
-  Compare(t,E.Lambda<Func<Owner,int>>(E.Call(M(nameof(Add)),arg,E.Constant(5)),p),()=>new Owner()); }
+  CheckCopiedOwner(t,E.Lambda<Func<Owner,int>>(E.Call(M(nameof(Add)),arg,E.Constant(5)),p),5,field?"owner,nested.get,outer.get,call":"owner,nested.get,outer.get,inner.get,call,inner.set"); }
  }
  public void True_addresses_keep_aliases(TestContext t) {
   var p=E.Parameter(typeof(Owner)); var field=E.Field(p,"Field");
@@ -95,7 +107,7 @@ public struct RefCopybackRegressionTests : ITestX
  public void Temporary_and_readonly_struct_owners_stay_temporary(TestContext t) {
   var p=E.Parameter(typeof(Owner));
   foreach(var receiver in new System.Linq.Expressions.Expression[]{E.New(typeof(Inner)),E.Field(p,"Readonly"),E.Default(typeof(Inner)),E.Block(E.New(typeof(Inner)))}) {
-   Compare(t,E.Lambda<Func<Owner,int>>(E.Call(M(nameof(Add)),E.Property(receiver,"Value"),E.Constant(3)),p),()=>new Owner());
+   CheckCopiedOwner(t,E.Lambda<Func<Owner,int>>(E.Call(M(nameof(Add)),E.Property(receiver,"Value"),E.Constant(3)),p),receiver.NodeType==System.Linq.Expressions.ExpressionType.MemberAccess?10:3,"inner.get,call,inner.set");
   }
  }
 }
