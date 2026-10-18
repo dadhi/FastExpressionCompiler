@@ -1,17 +1,17 @@
 {
   "date": "2026-10-18",
-  "testedCompilerCommit": "7bd9d97f",
+  "testedCompilerCommit": "7c50c51b",
   "parentCommit": "e4c232da",
   "baselineCases": 35133,
   "outcomes": {
-    "Crash/NotRunAfterCrash": 9655,
-    "Skipped": 4,
-    "Passed": 23719,
-    "Failed": 1755
+    "Passed": 34810,
+    "Skipped": 20,
+    "Failed": 301,
+    "Crash/NotRunAfterCrash": 2
   },
-  "crashingMethods": 71,
+  "crashingMethods": 1,
   "timedOutMethods": 0,
   "completedBatches": 21,
-  "newRegressionMethods": 37,
+  "newRegressionMethods": 425,
   "baselineSystemControl": "Reused verified parent system-compiler control, same machine/runtime"
 }
