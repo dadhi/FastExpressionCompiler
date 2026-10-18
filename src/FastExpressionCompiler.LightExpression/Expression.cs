@@ -6081,7 +6081,6 @@ public sealed class TypedReturnManyParametersExpression<TDelegate> : ManyParamet
         : base(body, parameters) => ReturnType = returnType;
 }
 
-// todo: @feature is not supported yet
 public sealed class DynamicExpression : Expression
 {
     public override ExpressionType NodeType => ExpressionType.Dynamic;

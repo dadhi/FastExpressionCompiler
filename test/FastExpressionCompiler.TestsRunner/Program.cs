@@ -134,6 +134,9 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.UnitTests.ExcessiveArityRegressionTests());
 #if NET8_0_OR_GREATER
                 lt.Run(new LightExpression.UnitTests.NestedStructFieldAddressRegressionTests());
+                lt.Run(new LightExpression.UnitTests.RuntimeExpressionSpillOrderRegressionTests());
+                lt.Run(new LightExpression.UnitTests.NestedJumpArgumentRegressionTests());
+                lt.Run(new LightExpression.UnitTests.DynamicCallSiteRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ScopedLabelBindingRegressionTests());
                 lt.Run(new LightExpression.UnitTests.InvocationJumpArgumentRegressionTests());
                 lt.Run(new LightExpression.UnitTests.RuntimeExpressionInvocationRegressionTests());
@@ -244,6 +247,9 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new CompoundIndexExceptionRegressionTests());
             st.Run(new ExcessiveArityRegressionTests());
             st.Run(new NestedStructFieldAddressRegressionTests());
+            st.Run(new RuntimeExpressionSpillOrderRegressionTests());
+            st.Run(new NestedJumpArgumentRegressionTests());
+            st.Run(new DynamicCallSiteRegressionTests());
             st.Run(new ScopedLabelBindingRegressionTests());
             st.Run(new InvocationJumpArgumentRegressionTests());
             st.Run(new RuntimeExpressionInvocationRegressionTests());

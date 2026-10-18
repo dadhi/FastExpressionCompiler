@@ -579,6 +579,8 @@ namespace FastExpressionCompiler
             /// <summary>The lambda expression</summary>
             public LambdaExpression LambdaExpression;
 
+            internal bool HasDynamicExpressions;
+
             /// <summary>Parameters not passed through lambda parameter list But used inside lambda body.
             /// The top expression should Not contain not passed parameters.</summary>
             public SmallList<ParameterExpression> NonPassedParameters;
@@ -745,6 +747,8 @@ namespace FastExpressionCompiler
             public SmallList<object> Constants;
 
             internal CaptureFreeQuoteCache Quotes;
+            internal DynamicExpressionCache DynamicExpressions;
+            internal SmallMap4<Expression, int, RefEq<Expression>> DynamicLambdaEmissionIndexes;
 
             /// Constant usage count and variable index.
             /// It is a separate collection from the Constants because we directly convert later into the closure array
@@ -1051,6 +1055,50 @@ namespace FastExpressionCompiler
 #if LIGHT_EXPRESSION
             internal SmallList<LightAndSysExpr> Converted;
 #endif
+        }
+
+        // Exception regions and jumps affect invocation spilling even in branches that
+        // constant folding removes. Lambda/quote bodies execute separately; opaque
+        // extensions remain the normal collector's responsibility.
+        [RequiresUnreferencedCode(Trimming.Message)]
+        private sealed class ArgumentSpillScope : ExpressionVisitor
+        {
+            internal bool RequiresSpill;
+            public override Expression Visit(Expression node)
+            {
+                if (node == null || RequiresSpill) return node;
+                switch (node.NodeType)
+                {
+                    case ExpressionType.Try:
+                    case ExpressionType.Goto:
+                        RequiresSpill = true;
+                return node;
+                    case ExpressionType.Lambda:
+                    case ExpressionType.Quote:
+                return node;
+                    case ExpressionType.Dynamic:
+                        foreach (var argument in ((DynamicExpression)node).Arguments) Visit(argument);
+                        return node;
+                    default:
+                        return base.Visit(node);
+            }
+            }
+#if LIGHT_EXPRESSION
+            protected internal override Expression VisitExtension(Expression node) => node;
+#else
+            protected override Expression VisitExtension(Expression node) => node;
+#endif
+        }
+
+        internal sealed class DynamicExpressionCache
+        {
+            internal SmallMap4<Expression, DynamicExpressionOccurrences, RefEq<Expression>> Expressions;
+        }
+
+        internal sealed class DynamicExpressionOccurrences
+        {
+            internal SmallList<(Expression Expression, bool SpillArguments)> Reduced;
+            internal int Emitted;
         }
 
         private sealed class EmptyRuntimeVariables : System.Runtime.CompilerServices.IRuntimeVariables
@@ -1619,7 +1667,8 @@ namespace FastExpressionCompiler
 
                         // Look for the already collected lambdas starting from the root
                         if (rootNestedLambdas.Count != 0 &&
-                            FindAlreadyCompiledNestedLambdaInfoInLambdas(ref rootNestedLambdas, nestedLambdaExpr, out var compiledNestedLambda))
+                            FindAlreadyCompiledNestedLambdaInfoInLambdas(ref rootNestedLambdas, nestedLambdaExpr, out var compiledNestedLambda) &&
+                            !compiledNestedLambda.HasDynamicExpressions)
                         {
                             if (nestedLambda != null)
                                 nestedLambda.NestedLambdas.Add(compiledNestedLambda);
@@ -1645,6 +1694,8 @@ namespace FastExpressionCompiler
 
                         if ((r = TryCollectInfo(ref nestedLambdaContext, nestedLambdaExpr.Body, newNestedLambda, ref rootNestedLambdas, 0, true)) != Result.OK)
                             return r;
+                        if (nestedLambda != null && newNestedLambda.HasDynamicExpressions)
+                            nestedLambda.HasDynamicExpressions = true;
 #if LIGHT_EXPRESSION
                         context.QuoteConversions = nestedLambdaContext.QuoteConversions;
 #endif
@@ -1680,10 +1731,8 @@ namespace FastExpressionCompiler
                                 if (!found)
                                     inlinedExpr = CreateInlinedLambdaInvocationExpression(invokeArgs, lambdaExpr);
 
-                                if (invokeArgCount == 0)
-                                    context.CurrentInlinedLambdaInvokeIndex = invokeIndex;
                                 r = invokeArgCount == 0
-                                    ? TryCollectInfo(ref context, inlinedExpr, nestedLambda, ref rootNestedLambdas, scopeIdx)
+                                    ? TryCollectInlinedLambdaBody(ref context, inlinedExpr, invokeIndex, nestedLambda, ref rootNestedLambdas)
                                     : TryCollectInlinedWrapper(ref context, (BlockExpression)inlinedExpr,
                                         lambdaExpr.Body, invokeIndex, nestedLambda, ref rootNestedLambdas, scopeIdx);
                                 if (r != Result.OK)
@@ -1700,13 +1749,16 @@ namespace FastExpressionCompiler
                                 // before the intrinsic Compile call, matching System's stack spiller.
                                 if ((r = TryCollectInfo(ref context, invokedExpr, nestedLambda, ref rootNestedLambdas)) != Result.OK)
                                     return r;
+                                var argumentScope = new ArgumentSpillScope();
+                                for (var i = 0; i < invokeArgCount; ++i)
+                                    argumentScope.Visit(invokeArgs.GetArgument(i));
                                 var outerHasExceptionBlock = context.HasExceptionBlock;
                                 var argumentJumpCount = context.ExceptionGotos.Count;
                                 context.HasExceptionBlock = false;
                                 for (var i = 0; i < invokeArgCount; ++i)
                                     if ((r = TryCollectInfo(ref context, invokeArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas)) != Result.OK)
                                         return r;
-                                if (context.HasExceptionBlock)
+                                if (argumentScope.RequiresSpill || context.HasExceptionBlock)
                                     context.ArgsContainingComplexExpression.Set.AddOrGetEntryRef(invokeExpr, out _);
                                 context.HasExceptionBlock |= outerHasExceptionBlock;
                                 if (context.ExceptionGotos.Count != argumentJumpCount)
@@ -1878,6 +1930,7 @@ namespace FastExpressionCompiler
                         _ = context.GotoTargets.Add(gotoExpr.Target);
                         _ = context.GotoScopes.Add(scopeIdx);
 
+                        context.HasComplexExpression = true;
                         context.ExceptionGotos.AddAndGetRef((gotoExpr.Target, context.CurrentExceptionRegion));
                         if (gotoExpr.Target != null)
                             context.TargetToGotosAndLabels.Map.AddOrGetValueRef(gotoExpr.Target, out _).Item1++;
@@ -1967,17 +2020,46 @@ namespace FastExpressionCompiler
                         }
                         context.AddConstantOrIncrementUsageCount(quoted);
                         return Result.OK;
-                    case ExpressionType.Dynamic:          // todo: @feature - is not supported yet
-#if !LIGHT_EXPRESSION
-                        if (quotedData)
+                    case ExpressionType.Dynamic:
                         {
-                            foreach (var argument in ((DynamicExpression)expr).Arguments)
-                                if ((r = TryCollectInfo(ref context, argument, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
-                                    return r;
+                            if (nestedLambda != null) nestedLambda.HasDynamicExpressions = true;
+                            context.DynamicExpressions ??= new DynamicExpressionCache();
+                            ref var occurrences = ref context.DynamicExpressions.Expressions.Map.AddOrGetValueRef(expr, out _);
+                            occurrences ??= new DynamicExpressionOccurrences();
+                            // A reused Dynamic node still denotes a separate call site at every
+                            // emitted occurrence. Never cache one reduced site by node identity.
+#if LIGHT_EXPRESSION
+                            SmallList<LightAndSysExpr> conversions = default;
+                            var systemDynamic = (System.Linq.Expressions.DynamicExpression)expr.ToExpression(ref conversions);
+#else
+                            var systemDynamic = (System.Linq.Expressions.DynamicExpression)expr;
+#endif
+                            // Framework's DynamicExpression.Reduce returns itself. Lower the
+                            // intrinsic call-site operation directly on every supported target.
+                            var site = System.Runtime.CompilerServices.CallSite.Create(systemDynamic.DelegateType, systemDynamic.Binder);
+                            var siteConstant = System.Linq.Expressions.Expression.Constant(site);
+                            var siteArguments = new System.Linq.Expressions.Expression[systemDynamic.Arguments.Count + 1];
+                            siteArguments[0] = siteConstant;
+                            for (var i = 0; i < systemDynamic.Arguments.Count; ++i)
+                                siteArguments[i + 1] = systemDynamic.Arguments[i];
+                            var reducedSystemDynamic = System.Linq.Expressions.Expression.Invoke(
+                                System.Linq.Expressions.Expression.Field(siteConstant, "Target"), siteArguments);
+#if LIGHT_EXPRESSION
+                            var reducedDynamic = reducedSystemDynamic.ToLightExpression(ref conversions);
+#else
+                            var reducedDynamic = reducedSystemDynamic;
+#endif
+                            var argumentScope = new ArgumentSpillScope();
+                            var reducedArguments = ((InvocationExpression)reducedDynamic).GetArgExprs();
+                            for (var i = 0; i < reducedArguments.GetArgCount(); ++i)
+                                argumentScope.Visit(reducedArguments.GetArgument(i));
+                            var outerHasExceptionBlock = context.HasExceptionBlock;
+                            context.HasExceptionBlock = false;
+                            r = TryCollectInfo(ref context, reducedDynamic, nestedLambda, ref rootNestedLambdas);
+                            occurrences.Reduced.Add((reducedDynamic, argumentScope.RequiresSpill || context.HasExceptionBlock));
+                            context.HasExceptionBlock |= outerHasExceptionBlock;
                             return r;
                         }
-#endif
-                        return Result.NotSupported_Dynamic;
                     case ExpressionType.RuntimeVariables:
                         if (quotedData)
                         {
@@ -2112,6 +2194,24 @@ namespace FastExpressionCompiler
             return result;
         }
 
+        private static Result TryCollectInlinedLambdaBody(ref CompilerContext context, Expression body,
+            short invokeIndex, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+        {
+            var callerIndex = context.CurrentInlinedLambdaInvokeIndex;
+            var callerCanRethrow = context.CanRethrow;
+            context.CurrentInlinedLambdaInvokeIndex = invokeIndex;
+            context.CanRethrow = false;
+            try
+            {
+                return TryCollectInfo(ref context, body, nestedLambda, ref rootNestedLambdas);
+            }
+            finally
+            {
+                context.CanRethrow = callerCanRethrow;
+                context.CurrentInlinedLambdaInvokeIndex = callerIndex;
+            }
+        }
+
         // The generated wrapper evaluates caller arguments before entering the callee body.
         private static Result TryCollectInlinedWrapper(ref CompilerContext context, BlockExpression wrapper,
             Expression body, short invokeIndex, NestedLambdaInfo nestedLambda,
@@ -2126,14 +2226,9 @@ namespace FastExpressionCompiler
                     return result;
             }
             var last = statements[statements.Count - 1];
-            var callerIndex = context.CurrentInlinedLambdaInvokeIndex;
             Result collected;
             if (ReferenceEquals(last, body))
-            {
-                context.CurrentInlinedLambdaInvokeIndex = invokeIndex;
-                collected = TryCollectInfo(ref context, last, nestedLambda, ref rootNestedLambdas);
-                context.CurrentInlinedLambdaInvokeIndex = callerIndex;
-            }
+                collected = TryCollectInlinedLambdaBody(ref context, last, invokeIndex, nestedLambda, ref rootNestedLambdas);
             else
                 collected = TryCollectInlinedWrapper(ref context, (BlockExpression)last,
                     body, invokeIndex, nestedLambda, ref rootNestedLambdas);
@@ -2400,13 +2495,15 @@ namespace FastExpressionCompiler
         private static Result TryCollectArgsAsComplexOwner(ref CompilerContext context, Args args, Expression owner,
             NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
         {
+            var outerHasComplexExpression = context.HasComplexExpression;
             var hasComplexExpression = false;
             var r = Result.OK;
             foreach (var arg in args)
             {
                 context.HasComplexExpression = false; // reset: we want the real result of this arg
                 if ((r = TryCollectInfo(ref context, arg, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
-                    return r;
+                    context.HasComplexExpression |= outerHasComplexExpression;
+            return r;
                 hasComplexExpression |= context.HasComplexExpression;
             }
             if (hasComplexExpression)
@@ -2414,6 +2511,7 @@ namespace FastExpressionCompiler
                 context.HasComplexExpression = true;
                 context.MarkComplexArguments(owner);
             }
+            context.HasComplexExpression |= outerHasComplexExpression;
             return r;
         }
 
@@ -3137,6 +3235,16 @@ namespace FastExpressionCompiler
                             ref var quoteValue = ref context.Quotes.Expressions.Map.TryGetValueRef(((UnaryExpression)expr).Operand, out var foundQuote);
                             return foundQuote && TryEmitConstant(true, exprType, quoteValue.GetType(), quoteValue, il, ref context) &&
                                 il.EmitPopIfIgnoreResult(parent);
+
+                        case ExpressionType.Dynamic:
+                            if (context.DynamicExpressions == null)
+                                return false;
+                            var dynamicOccurrences = context.DynamicExpressions.Expressions.Map.TryGetValueRef(expr, out var foundDynamic);
+                            if (!foundDynamic || dynamicOccurrences.Emitted >= dynamicOccurrences.Reduced.Count)
+                                return false;
+                            var dynamicOccurrence = dynamicOccurrences.Reduced.Items[dynamicOccurrences.Emitted++];
+                            return TryEmitInvoke((InvocationExpression)dynamicOccurrence.Expression, il, ref context, parent, byRefIndex,
+                                dynamicOccurrence.SpillArguments);
 
                         case ExpressionType.RuntimeVariables:
                             return ((RuntimeVariablesExpression)expr).Variables.Count == 0 &&
@@ -6425,11 +6533,11 @@ namespace FastExpressionCompiler
 
             private static bool TryEmitCallWithWritebacks(Expression receiver, Args expressions, MethodInfo method,
                 ConstructorInfo constructor, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex,
-                MethodInfo receiverCompileMethod = null, bool deferReceiverCompile = false)
+                MethodInfo receiverCompileMethod = null, bool deferReceiverCompile = false, bool argumentsBeforeReceiver = false)
             {
                 var receiverVar = -1;
                 var receiverType = receiverCompileMethod?.ReturnType ?? receiver?.Type;
-                if (receiver != null)
+                if (receiver != null && !argumentsBeforeReceiver)
                 {
                     if (!TryEmit(receiver, il, ref context, ParentFlags.Call |
                         (receiverType.IsValueType ? ParentFlags.InstanceAccess : ParentFlags.AssignmentRightValue)))
@@ -6460,8 +6568,12 @@ namespace FastExpressionCompiler
                         return false;
                     arguments.Add(EmitStoreLocalVariable(il, parameterType));
                 }
-
-                if (receiverVar != -1)
+                if (argumentsBeforeReceiver)
+                {
+                    if (!TryEmit(receiver, il, ref context, ParentFlags.Call | ParentFlags.InstanceAccess))
+                        return false;
+                }
+                else if (receiverVar != -1)
                 {
                     EmitLoadLocalVariable(il, receiverVar);
                     if (deferReceiverCompile && !EmitInstanceMethodCall(il, receiverCompileMethod, receiver.Type))
@@ -6753,6 +6865,18 @@ namespace FastExpressionCompiler
                 if (i == -1)
                     return false;
 
+                // Stateful sites belong to each emitted lambda occurrence. Ordinary lambdas
+                // retain deduplication; stateful entries match exact lambda identity so bodies
+                // shared by different delegate signatures cannot select each other's entries.
+                if (outerNestedLambdas[i].HasDynamicExpressions)
+                {
+                    ref var nextIndex = ref context.DynamicLambdaEmissionIndexes.Map.AddOrGetValueRef(lambdaExpr, out _);
+                    i = nextIndex;
+                    while (i < outerNestedLambdasCount && !ReferenceEquals(outerNestedLambdas[i].LambdaExpression, lambdaExpr)) ++i;
+                    if (i == outerNestedLambdasCount) return false;
+                    nextIndex = i + 1;
+                }
+
                 ref var nestedLambdaInfo = ref outerNestedLambdas[i];
                 EmitLoadLocalVariable(il, nestedLambdaInfo.LambdaVarIndex);
 
@@ -6867,8 +6991,9 @@ namespace FastExpressionCompiler
             {
                 context.PushBlockAndConstructLocalVars(wrapper.Variables, il);
                 var statements = wrapper.Expressions;
+                // Caller argument blocks cannot use the callee return-pattern optimization.
                 for (var i = 0; i < statements.Count - 1; ++i)
-                    if (!TryEmit(statements[i], il, ref context, parent | ParentFlags.IgnoreResult))
+                    if (!TryEmit(statements[i], il, ref context, (parent & ~ParentFlags.InlinedLambdaInvoke) | ParentFlags.IgnoreResult))
                         return false;
                 var last = statements[statements.Count - 1];
                 var callerIndex = context.CurrentInlinedLambdaInvokeIndex;
@@ -6887,7 +7012,8 @@ namespace FastExpressionCompiler
                 return emitted;
             }
 
-            private static bool TryEmitInvoke(InvocationExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex = -1)
+            private static bool TryEmitInvoke(InvocationExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex = -1,
+                bool argumentsBeforeReceiver = false)
             {
                 var invokedExpr = expr.Expression;
                 if (invokedExpr is UnaryExpression quote && quote.NodeType == ExpressionType.Quote)
@@ -6957,17 +7083,15 @@ namespace FastExpressionCompiler
                 var deferCompile = compileMethod != null && (context.HasComplexArguments(expr) || context.InvocationArgumentsWithJumps.Set.ContainsKey(expr));
                 var invokeParameters = delegateInvokeMethod.GetParameters();
                 for (var i = 0; i < invokeParameters.Length; ++i)
-                    if (invokeParameters[i].ParameterType.IsByRef)
-                    {
-                        if (NeedsByRefWriteback(expr.GetArgument(i)))
-                            return TryEmitCallWithWritebacks(invokedExpr, expr.GetArgs(), delegateInvokeMethod, null, il, ref context, parent, byRefIndex, compileMethod, deferCompile);
-                    }
+                    if (invokeParameters[i].ParameterType.IsByRef && NeedsByRefWriteback(expr.GetArgument(i)))
+                        return TryEmitCallWithWritebacks(invokedExpr, expr.GetArgs(), delegateInvokeMethod, null, il, ref context, parent, byRefIndex,
+                            compileMethod, deferCompile, argumentsBeforeReceiver);
 
                 // A delegate or expression-tree receiver is a value even when the invocation
                 // result is discarded or its caller requests an address.
                 var receiverFlags = (parent & ~InvocationReceiverFlagsToClear) |
                     ParentFlags.Call | ParentFlags.AssignmentRightValue;
-                if (!TryEmit(invokedExpr, il, ref context, receiverFlags))
+                if (!argumentsBeforeReceiver && !TryEmit(invokedExpr, il, ref context, receiverFlags))
                     return false;
                 if (compileMethod != null && !deferCompile && !EmitInstanceMethodCall(il, compileMethod, invokedExpr.Type))
                     return false;
@@ -6984,12 +7108,14 @@ namespace FastExpressionCompiler
 
                 if (expr.GetArgCount() != 0)
                 {
-                    var useResult = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
+                    // Argument-local returns produce argument values, not enclosing lambda returns.
+                    var useResult = parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.InlinedLambdaInvoke);
                     var args = invokeParameters;
-                    // A try argument requires an empty evaluation stack. Preserve the receiver and
-                    // preceding arguments with the same local storage used for ordinary calls.
-                    var spillArguments = context.HasExceptionBlock || context.InvocationArgumentsWithJumps.Set.ContainsKey(expr);
-                    var receiverVar = spillArguments ? EmitStoreLocalVariable(il, deferCompile ? invokedExpr.Type : delegateType) : -1;
+                    // Jumps and exception-region arguments require an empty evaluation stack.
+                    // Preserve evaluated operands in the same locals used for ordinary calls.
+                    var spillArguments = context.HasExceptionBlock || deferCompile || argumentsBeforeReceiver ||
+                        context.InvocationArgumentsWithJumps.Set.ContainsKey(expr);
+                    var receiverVar = spillArguments && !argumentsBeforeReceiver ? EmitStoreLocalVariable(il, deferCompile ? invokedExpr.Type : delegateType) : -1;
                     SmallList<int, Stack8<int>, NoArrayPool<int>> argVars = default;
                     if (spillArguments)
                     {
@@ -7000,17 +7126,20 @@ namespace FastExpressionCompiler
                         for (var i = 0; i < invokeParameters.Length; ++i)
                             if (!TryEmitCallArgument(expr.GetArgument(i), invokeParameters[i].ParameterType, i, il, ref context, useResult))
                                 return false;
-                    if (receiverVar != -1)
-                            argVars.Add(EmitStoreLocalVariable(il, args[i].ParameterType));
+                    if (argumentsBeforeReceiver)
+                    {
+                        if (!TryEmit(invokedExpr, il, ref context, receiverFlags))
+                            return false;
                     }
-                    if (receiverVar != -1)
+                    else if (receiverVar != -1)
                     {
                         EmitLoadLocalVariable(il, receiverVar);
                         if (deferCompile && !EmitInstanceMethodCall(il, compileMethod, invokedExpr.Type))
                             return false;
+                    }
+                    if (spillArguments)
                         EmitLoadArguments(il, ref argVars);
                     }
-                }
                 else if (deferCompile && !EmitInstanceMethodCall(il, compileMethod, invokedExpr.Type))
                     return false;
 
