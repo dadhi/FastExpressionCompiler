@@ -57,8 +57,7 @@ public struct ScopedLabelBindingRegressionTests : ITestX
    System.Linq.Expressions.Expression<Func<int>> chain=a;for(var i=0;i<4;i++)chain=S.Lambda<Func<int>>(S.Block(S.Return(target,S.Add(S.Invoke(chain),S.Constant(1))),S.Label(target,S.Constant(111))));var growth=S.Lambda<Func<int>>(S.Block(S.Return(target,S.Invoke(chain)),S.Label(target,S.Constant(999))));t.AreEqual(5,growth.Compile()());var grown=growth.FromSysExpression().CompileFast(true,flags);if(t.IsNotNull(grown))t.AreEqual(5,grown());
    var defaultGrowth=S.Lambda<Func<int>>(S.Label(target,S.Invoke(chain)));t.AreEqual(5,defaultGrowth.Compile()());var defaultGrown=defaultGrowth.FromSysExpression().CompileFast(true,flags);if(t.IsNotNull(defaultGrown))t.AreEqual(5,defaultGrown());
    var parameter=S.Parameter(typeof(int));
-   // Non-inlined invocation arguments with nonlocal gotos require a separate operand-spill fix.
-   if(flags==CompilerFlags.Default)
+   // Both inlined and separately compiled invocation arguments keep caller jump semantics.
    {
     var callerTarget=S.Label(typeof(int),"caller-argument-target");var identity=S.Lambda<Func<int,int>>(parameter,parameter);var callerGoto=S.Lambda<Func<int>>(S.Block(S.Invoke(identity,S.Goto(callerTarget,S.Constant(7),typeof(int))),S.Label(callerTarget,S.Constant(8))));t.AreEqual(7,callerGoto.Compile()());var callerFast=callerGoto.FromSysExpression().CompileFast(true,flags);if(t.IsNotNull(callerFast))t.AreEqual(7,callerFast());
    }
