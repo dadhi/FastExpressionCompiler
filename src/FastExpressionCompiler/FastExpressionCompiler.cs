@@ -2436,9 +2436,13 @@ namespace FastExpressionCompiler
                 var p = parent & ~ParentFlags.IgnoreResult | ParentFlags.IndexAccess;
 
                 var objExpr = indexExpr.Object;
-                if (objExpr != null &&
-                    !TryEmit(objExpr, il, ref context, p | ParentFlags.InstanceAccess))
-                    return false;
+                if (objExpr != null)
+                {
+                    if (!TryEmit(objExpr, il, ref context, ParentFlags.InstanceCall))
+                        return false;
+                    if (objExpr.Type.IsValueType && !context.LastEmitIsAddress && !(objExpr is PE pe && pe.IsByRef))
+                        EmitStoreAndLoadLocalVariableAddress(il, objExpr.Type);
+                }
 
                 var indexArgs = indexExpr.GetArgExprs();
                 var indexArgCount = indexArgs.GetArgCount();
@@ -2453,11 +2457,15 @@ namespace FastExpressionCompiler
                         return false;
 
                 var indexerProp = indexExpr.Indexer;
-                return indexerProp != null
-                    ? EmitMethodCallOrVirtualCallCheckForNull(il, indexerProp.GetMethod)
-                    : indexArgCount == 1
-                        ? TryEmitArrayIndexGet(il, indexExpr.Type, ref context, parent) // one-dimensional array
-                        : EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod("Get")); // multi-dimensional array
+                if (indexerProp != null)
+                {
+                    var getter = indexerProp.GetMethod;
+                    context.LastEmitIsAddress = false;
+                    return getter != null && EmitInstanceMethodCall(il, getter, objExpr?.Type) && il.EmitPopIfIgnoreResult(parent);
+                }
+                return indexArgCount == 1
+                    ? TryEmitArrayIndexGet(il, indexExpr.Type, ref context, parent) // one-dimensional array
+                    : EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod("Get")); // multi-dimensional array
             }
 
             private static bool TryEmitLabel(LabelExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
@@ -2787,8 +2795,7 @@ namespace FastExpressionCompiler
                 var paramExprCount = paramExprs.GetParamCount();
                 var paramType = paramExpr.Type;
                 var isValueType = paramType.IsValueType;
-                var isParamOrVarByRef = paramExpr.IsByRef &&
-                    (!paramType.IsNullable() || (parent & (ParentFlags.Arithmetic | ParentFlags.AssignmentRightValue)) != 0); // #461 member access uses the nullable address; value operations dereference it
+                var isParamOrVarByRef = paramExpr.IsByRef;
                 var isPassedRef = byRefIndex != -1;
 
                 // Parameter may represent a variable, so first look if this is the case,
@@ -4174,6 +4181,8 @@ namespace FastExpressionCompiler
                                 if (objExpr != null &&
                                     !TryEmit(objExpr, il, ref context, leftArLeastFlags | ParentFlags.InstanceAccess))
                                     return false;
+                                if (objExpr != null && objExpr.Type.IsValueType && !context.LastEmitIsAddress && !(objExpr is PE pe && pe.IsByRef))
+                                    EmitStoreAndLoadLocalVariableAddress(il, objExpr.Type);
                             }
                             else
                             {
@@ -4184,6 +4193,8 @@ namespace FastExpressionCompiler
                                     var objFlags = isIndexerAMethodCall ? ParentFlags.InstanceCall : ParentFlags.InstanceAccess | ParentFlags.IndexAccess;
                                     if (!TryEmit(objExpr, il, ref context, objFlags | ParentFlags.AssignmentLeftValue))
                                         return false;
+                                    if (objExpr.Type.IsValueType && !context.LastEmitIsAddress && !(objExpr is PE pe && pe.IsByRef))
+                                        EmitStoreAndLoadLocalVariableAddress(il, objExpr.Type);
                                 }
                                 for (var i = 0; i < indexArgCount; i++)
                                     if (!TryEmit(indexArgs.GetArgument(i), il, ref context, baseFlags, -1))
@@ -4205,13 +4216,15 @@ namespace FastExpressionCompiler
 
                             if (leftMemberExpr != null)
                             {
-                                if (!EmitMemberSet(il, leftMemberExpr.Member))
+                                if (!(leftMemberExpr.Member is PropertyInfo property
+                                    ? property.SetMethod != null && EmitInstanceMethodCall(il, property.SetMethod, objExpr?.Type)
+                                    : EmitMemberSet(il, leftMemberExpr.Member)))
                                     return false;
                             }
                             else // if (leftIndexExpr != null)
                             {
                                 var ok = orLeftIndexExpr.Indexer != null
-                                    ? EmitMethodCallOrVirtualCallCheckForNull(il, orLeftIndexExpr.Indexer.SetMethod)
+                                    ? orLeftIndexExpr.Indexer.SetMethod != null && EmitInstanceMethodCall(il, orLeftIndexExpr.Indexer.SetMethod, objExpr?.Type)
                                     : indexArgCount == 1
                                         ? TryEmitArrayIndexSet(il, orLeftIndexExpr.Type) // one-dimensional array
                                         : EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod("Set")); // multi-dimensional array
@@ -4300,7 +4313,7 @@ namespace FastExpressionCompiler
                             var ok = !isIndexerAMethodCall
                                 ? TryEmitArrayIndexGet(il, orLeftIndexExpr.Type, ref context, baseFlags) // one-dimensional array
                                 : orLeftIndexExpr.Indexer != null
-                                    ? EmitMethodCallOrVirtualCallCheckForNull(il, orLeftIndexExpr.Indexer.GetMethod)
+                                    ? orLeftIndexExpr.Indexer.GetMethod != null && EmitInstanceMethodCall(il, orLeftIndexExpr.Indexer.GetMethod, objExpr?.Type)
                                     : EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod("Get")); // multi-dimensional array
                             if (!ok)
                                 return false;
@@ -4420,13 +4433,15 @@ namespace FastExpressionCompiler
                             EmitStoreIndirectlyByRef(il, leftType);
                         else if (leftMemberExpr != null)
                         {
-                            if (!EmitMemberSet(il, leftMemberExpr.Member))
+                            if (!(leftMemberExpr.Member is PropertyInfo property
+                                ? property.SetMethod != null && EmitInstanceMethodCall(il, property.SetMethod, objExpr?.Type)
+                                : EmitMemberSet(il, leftMemberExpr.Member)))
                                 return false;
                         }
                         else // if (leftIndexExpr != null)
                         {
                             var ok = orLeftIndexExpr.Indexer != null
-                                ? EmitMethodCallOrVirtualCallCheckForNull(il, orLeftIndexExpr.Indexer.SetMethod)
+                                ? orLeftIndexExpr.Indexer.SetMethod != null && EmitInstanceMethodCall(il, orLeftIndexExpr.Indexer.SetMethod, objExpr?.Type)
                                 : indexArgCount == 1
                                     ? TryEmitArrayIndexSet(il, orLeftIndexExpr.Type) // one-dimensional array
                                     : EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod("Set")); // multi-dimensional array
@@ -4874,19 +4889,7 @@ namespace FastExpressionCompiler
                     }
                 }
 
-                var ok = true;
-                if (!objIsValueType)
-                    ok = EmitMethodCallOrVirtualCall(il, method);
-                else if (method.DeclaringType != typeof(Enum) &&
-                    (!method.IsVirtual ||
-                    method.DeclaringType == objExpr.Type ||
-                    objExpr is ParameterExpression pe && pe.IsByRef))
-                    ok = EmitMethodCall(il, method);
-                else
-                {
-                    il.Demit(OpCodes.Constrained, objExpr.Type);
-                    ok = EmitVirtualMethodCall(il, method);
-                }
+                var ok = EmitInstanceMethodCall(il, method, objExpr?.Type);
 
                 if (byRefIndex != -1)
                     EmitStoreAndLoadLocalVariableAddress(il, method.ReturnType);
@@ -4924,7 +4927,7 @@ namespace FastExpressionCompiler
                     }
 
                     context.LastEmitIsAddress = false;
-                    return EmitMethodCallOrVirtualCall(il, prop.GetMethod);
+                    return EmitInstanceMethodCall(il, prop.GetMethod, objExpr?.Type) && il.EmitPopIfIgnoreResult(parent);
                 }
 
                 if (expr.Member is FieldInfo field)
@@ -5751,7 +5754,10 @@ namespace FastExpressionCompiler
                 {
                     if (leftIsNullable & rightIsNull)
                     {
-                        if (!TryEmit(left, il, ref context, operandParent))
+                        var leftParent = left is PE { IsByRef: true }
+                            ? (operandParent & ~(ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.InstanceCall
+                            : operandParent;
+                        if (!TryEmit(left, il, ref context, leftParent))
                             return false;
 
                         // See #341 `Nullable_decimal_parameter_with_decimal_constant_comparison_cases`
@@ -5759,6 +5765,7 @@ namespace FastExpressionCompiler
                             EmitStoreAndLoadLocalVariableAddress(il, leftType);
 
                         EmitMethodCall(il, leftType.GetNullableHasValueGetterMethod());
+                        context.LastEmitIsAddress = false;
                         if (nodeType == ExpressionType.Equal)
                             EmitEqualToZeroOrNull(il);
                         return il.EmitPopIfIgnoreResult(parent);
@@ -5766,13 +5773,17 @@ namespace FastExpressionCompiler
 
                     if (leftIsNull && rightType.IsNullable())
                     {
-                        if (!TryEmit(right, il, ref context, operandParent))
+                        var rightParent = right is PE { IsByRef: true }
+                            ? (operandParent & ~(ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.InstanceCall
+                            : operandParent;
+                        if (!TryEmit(right, il, ref context, rightParent))
                             return false;
 
                         if (!context.LastEmitIsAddress && !(right is ParameterExpression p && p.IsByRef))
                             EmitStoreAndLoadLocalVariableAddress(il, rightType);
 
                         EmitMethodCall(il, rightType.GetNullableHasValueGetterMethod());
+                        context.LastEmitIsAddress = false;
                         if (nodeType == ExpressionType.Equal)
                             EmitEqualToZeroOrNull(il);
                         return il.EmitPopIfIgnoreResult(parent);
@@ -6563,6 +6574,16 @@ namespace FastExpressionCompiler
                 // for those you need to call Emit(OpCodes.Call|Callvirt, methodInfo).
                 // So for now the varargs methods are not supported yet.
                 return (method.CallingConvention & CallingConventions.VarArgs) == 0;
+            }
+
+            private static bool EmitInstanceMethodCall(ILGenerator il, MethodInfo method, Type instanceType)
+            {
+                if (instanceType == null || !instanceType.IsValueType)
+                    return EmitMethodCallOrVirtualCall(il, method);
+                if (method.DeclaringType == instanceType)
+                    return EmitMethodCall(il, method);
+                il.Demit(OpCodes.Constrained, instanceType);
+                return EmitVirtualMethodCall(il, method);
             }
 
             [MethodImpl((MethodImplOptions)256)]
