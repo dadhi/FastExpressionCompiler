@@ -1170,7 +1170,8 @@ namespace FastExpressionCompiler
 #endif
                         var constantExpr = (ConstantExpression)expr;
                         var value = constantExpr.Value;
-                        if (value != null && IsClosureBoundConstant(value, value.GetType()))
+                        if (value != null && (IsClosureBoundConstant(value, value.GetType()) ||
+                            !constantExpr.Type.IsValueType && value.GetType().IsValueType))
                             context.AddConstantOrIncrementUsageCount(value);
                         return Result.OK;
 
@@ -3620,6 +3621,18 @@ namespace FastExpressionCompiler
             {
                 if (exprType == null)
                     exprType = constType;
+                if (considerClosure && !exprType.IsValueType && constType.IsValueType)
+                {
+                    // A reference-typed constant denotes its original boxed object, not a fresh box.
+                    // The cached constant local may hold its unboxed value, so load the closure item.
+                    var boxedIndex = closure.Constants.TryGetIndex(constValue, default(RefEq<object>));
+                    if (boxedIndex == -1)
+                        return false;
+                    EmitLoadClosureArrayItem(il, boxedIndex);
+                    if (exprType != typeof(object))
+                        il.Demit(OpCodes.Castclass, exprType);
+                    return true;
+                }
 #if LIGHT_EXPRESSION
                 if (considerClosure && (refField != null || IsClosureBoundConstant(constValue, constType)))
 #else
