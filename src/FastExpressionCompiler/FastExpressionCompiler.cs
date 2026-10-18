@@ -2846,7 +2846,7 @@ namespace FastExpressionCompiler
                     // see the #488 for the details.
                     if (argCount == 1)
                     {
-                        if (!TryEmit(argExprs.GetArgument(0), il, ref context, flags, pars[0].ParameterType.IsByRef ? 0 : -1))
+                        if (!TryEmitCallArgument(argExprs.GetArgument(0), pars[0].ParameterType, 0, il, ref context, flags))
                             return false;
                     }
                     else
@@ -2854,7 +2854,7 @@ namespace FastExpressionCompiler
                         if (!context.HasExceptionBlock && !context.ArgsContainingComplexExpression.Set.ContainsKey(newExpr))
                         {
                             for (var i = 0; i < argCount; ++i)
-                                if (!TryEmit(argExprs.GetArgument(i), il, ref context, flags, pars[i].ParameterType.IsByRef ? i : -1))
+                                if (!TryEmitCallArgument(argExprs.GetArgument(i), pars[i].ParameterType, i, il, ref context, flags))
                                     return false;
                         }
                         else
@@ -2864,7 +2864,7 @@ namespace FastExpressionCompiler
                             {
                                 var argExpr = argExprs.GetArgument(i);
                                 var parType = pars[i].ParameterType;
-                                if (!TryEmit(argExpr, il, ref context, flags, parType.IsByRef ? i : -1))
+                                if (!TryEmitCallArgument(argExpr, parType, i, il, ref context, flags))
                                     return false;
                                 argVars.Add(EmitStoreLocalVariable(il, parType));
                             }
@@ -4768,15 +4768,14 @@ namespace FastExpressionCompiler
                 {
                     var argExprs = newExpr.GetArgExprs();
                     var argCount = argExprs.GetArgCount();
-                    if (argCount > 0)
+                    if (argCount > 0 || exprType.IsAbstract)
                     {
-                        var args = newExpr.Constructor.GetParameters();
-                        for (var i = 0; i < argCount; i++)
-                            if (!TryEmit(argExprs.GetArgument(i), il, ref context, ParentFlags.CtorCall, args[i].ParameterType.IsByRef ? i : -1))
+                        if (!TryEmitNew(newExpr, il, ref context, valueFlags))
                                 return false;
+                        if (valueVarIndex != -1)
+                            EmitStoreLocalVariable(il, valueVarIndex);
                     }
-
-                    if (newExpr.Constructor != null)
+                    else if (newExpr.Constructor != null)
                     {
                         il.Demit(OpCodes.Newobj, newExpr.Constructor);
                         if (valueVarIndex != -1)
@@ -4913,7 +4912,7 @@ namespace FastExpressionCompiler
                         for (var a = 0; a < args.GetArgCount(); ++a)
                         {
                             var parameterType = parameters[a].ParameterType;
-                            if (!TryEmit(args.GetArgument(a), il, ref context, argFlags, parameterType.IsByRef ? a : -1))
+                            if (!TryEmitCallArgument(args.GetArgument(a), parameterType, a, il, ref context, argFlags))
                                 return false;
                             values.Add(EmitStoreLocalVariable(il, parameterType));
                         }
@@ -5033,7 +5032,7 @@ namespace FastExpressionCompiler
                     for (var a = 0; ok && a < addArgCount; ++a)
                     {
                         var parType = methodParams[a].ParameterType;
-                        ok = TryEmit(addArgs.GetArgument(a), il, ref context, callFlags, parType.IsByRef ? a : -1);
+                        ok = TryEmitCallArgument(addArgs.GetArgument(a), parType, a, il, ref context, callFlags);
                         if (ok && spillArguments)
                             argVars.Add(EmitStoreLocalVariable(il, parType));
                     }
@@ -5953,6 +5952,48 @@ namespace FastExpressionCompiler
                 return true;
             }
 
+            private static bool TryEmitCallArgument(Expression expression, Type parameterType, int index,
+                ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            {
+                if (!parameterType.IsByRef)
+                    return TryEmit(expression, il, ref context, parent);
+                var elementType = parameterType.GetElementType();
+                var sameType = elementType == expression.Type;
+                if (!sameType && (elementType.IsValueType || expression.Type.IsValueType ||
+                    !elementType.IsAssignableFrom(expression.Type)))
+                    return false;
+                if (sameType)
+                {
+                    // Writable properties require the prepared call's ordered copyback records.
+                    if (expression is MemberExpression member && member.Member is PropertyInfo property && !property.GetMethod.ReturnType.IsByRef ||
+                        expression is IndexExpression indexer && indexer.Indexer != null)
+                        return false;
+                    switch (expression.NodeType)
+                    {
+                        case ExpressionType.Parameter:
+                        case ExpressionType.MemberAccess:
+                        case ExpressionType.Index:
+                        case ExpressionType.ArrayIndex:
+                        case ExpressionType.Unbox:
+                        case ExpressionType.Call:
+                        case ExpressionType.Invoke:
+                        case ExpressionType.Constant:
+                            return TryEmit(expression, il, ref context, parent, index);
+                    }
+                }
+                // A wider formal reference type denotes a temporary, never an alias or copyback.
+                // Likewise, a value-producing argument has no storage address of its own.
+                var valueFlags = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess |
+                    ParentFlags.MemberAccess | ParentFlags.AssignmentByRef | ParentFlags.AssignmentLeftValue |
+                    ParentFlags.ReturnByRef | ParentFlags.LambdaCall | ParentFlags.DupIt | ParentFlags.IndexAccess)) |
+                    ParentFlags.Call | ParentFlags.AssignmentRightValue;
+                if (!TryEmit(expression, il, ref context, valueFlags))
+                    return false;
+                EmitStoreAndLoadLocalVariableAddress(il, elementType);
+                context.LastEmitIsAddress = true;
+                return true;
+            }
+
             private struct ByRefWriteback
             {
                 public PropertyInfo Property;
@@ -6053,7 +6094,7 @@ namespace FastExpressionCompiler
                 var getterParameters = property.GetMethod.GetParameters();
                 for (var i = 0; i < indexCount; ++i)
                 {
-                    if (!TryEmit(indexes.GetArgument(i), il, ref context, ParentFlags.Call))
+                    if (!TryEmitCallArgument(indexes.GetArgument(i), getterParameters[i].ParameterType, i, il, ref context, ParentFlags.Call))
                         return false;
                     record.Indexes.Add(EmitStoreLocalVariable(il, getterParameters[i].ParameterType));
                 }
@@ -6089,12 +6130,12 @@ namespace FastExpressionCompiler
                 for (var i = 0; i < parameters.Length; ++i)
                 {
                     var argument = expressions.GetArgument(i);
-                    if (parameters[i].ParameterType.IsByRef)
+                    if (parameters[i].ParameterType.IsByRef && parameters[i].ParameterType.GetElementType() == argument.Type)
                     {
                         if (!TryEmitByRefArgument(argument, i, il, ref context, ref writebacks))
                             return false;
                     }
-                    else if (!TryEmit(argument, il, ref context, ParentFlags.Call))
+                    else if (!TryEmitCallArgument(argument, parameters[i].ParameterType, i, il, ref context, ParentFlags.Call))
                         return false;
                     arguments.Add(EmitStoreLocalVariable(il, parameters[i].ParameterType));
                 }
@@ -6199,7 +6240,7 @@ namespace FastExpressionCompiler
                         {
                             var argExpr = callArgs.GetArgument(i);
                             var parType = methodParams[i].ParameterType;
-                            if (!TryEmit(argExpr, il, ref context, flags, parType.IsByRef ? i : -1))
+                            if (!TryEmitCallArgument(argExpr, parType, i, il, ref context, flags))
                                 return false;
                         }
                     }
@@ -6215,7 +6256,7 @@ namespace FastExpressionCompiler
                         {
                             var argExpr = callArgs.GetArgument(i);
                             var parType = methodParams[i].ParameterType;
-                            if (!TryEmit(argExpr, il, ref context, flags, parType.IsByRef ? i : -1))
+                            if (!TryEmitCallArgument(argExpr, parType, i, il, ref context, flags))
                                 return false;
                             argVars.Add(EmitStoreLocalVariable(il, parType));
                         }
@@ -6555,7 +6596,7 @@ namespace FastExpressionCompiler
                     for (var i = 0; i < args.Length; ++i)
                     {
                         var argExpr = argExprs.GetArgument(i);
-                        if (!TryEmit(argExpr, il, ref context, useResult, args[i].ParameterType.IsByRef ? i : -1))
+                        if (!TryEmitCallArgument(argExpr, args[i].ParameterType, i, il, ref context, useResult))
                             return false;
                         if (receiverVar != -1)
                             argVars.Add(EmitStoreLocalVariable(il, args[i].ParameterType));
