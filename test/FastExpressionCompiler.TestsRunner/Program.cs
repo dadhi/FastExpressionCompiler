@@ -64,6 +64,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new LiftedArithmeticOperatorRegressionTests());
             st.Run(new UnsignedDivisionRegressionTests());
             st.Run(new OnesComplementRegressionTests());
+            st.Run(new ByRefConversionRegressionTests());
 
             st.Run(new Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
             st.Run(new Issue498_InvalidProgramException_when_using_loop());
@@ -88,6 +89,7 @@ namespace FastExpressionCompiler.UnitTests
             lt.Run(new LightExpression.UnitTests.LiftedArithmeticOperatorRegressionTests());
             lt.Run(new LightExpression.UnitTests.UnsignedDivisionRegressionTests());
             lt.Run(new LightExpression.UnitTests.OnesComplementRegressionTests());
+            lt.Run(new LightExpression.UnitTests.ByRefConversionRegressionTests());
             lt.Run(new LightExpression.IssueTests.Issue480_CLR_detected_an_invalid_program_exception());
 
 #if NET8_0_OR_GREATER
