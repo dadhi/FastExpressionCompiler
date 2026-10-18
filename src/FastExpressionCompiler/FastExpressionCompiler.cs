@@ -6498,8 +6498,9 @@ namespace FastExpressionCompiler
             {
                 context.PushBlockAndConstructLocalVars(wrapper.Variables, il);
                 var statements = wrapper.Expressions;
+                // Caller argument blocks cannot use the callee return-pattern optimization.
                 for (var i = 0; i < statements.Count - 1; ++i)
-                    if (!TryEmit(statements[i], il, ref context, parent | ParentFlags.IgnoreResult))
+                    if (!TryEmit(statements[i], il, ref context, (parent & ~ParentFlags.InlinedLambdaInvoke) | ParentFlags.IgnoreResult))
                         return false;
                 var last = statements[statements.Count - 1];
                 var callerIndex = context.CurrentInlinedLambdaInvokeIndex;
