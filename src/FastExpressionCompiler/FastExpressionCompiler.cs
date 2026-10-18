@@ -4323,11 +4323,14 @@ namespace FastExpressionCompiler
                         il.Demit(OpCodes.Constrained, exprType); // todo: @clarify it is a value type so... can we de-virtualize the call?
                         ok = EmitVirtualMethodCall(il, method);
                     }
+                    if (ok && method.ReturnType != typeof(void))
+                        il.Demit(OpCodes.Pop);
                 }
 
                 if (valueVarIndex != -1)
                     EmitLoadLocalVariable(il, valueVarIndex);
-                return ok;
+                context.LastEmitIsAddress = false;
+                return ok && il.EmitPopIfIgnoreResult(parent);
             }
 
             // the `right = null` argument indicates the increment/decrement operation
