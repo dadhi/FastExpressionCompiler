@@ -1,7 +1,8 @@
 # Local performance work, 2026-10-18
 
 Base: compatibility fixes `3f682768d6b23e445ae46595e456658899e371e4`.
-Branch: `perf-expression-compilation-and-runtime`. No push or PR publication authorized.
+Branch: `perf-expression-compilation-and-runtime`. Measurements were collected locally;
+draft PR publication was requested afterward. Previous pull requests remain unchanged.
 Host: Windows 10.0.26200, ARM64, .NET 10.0.9, SDK 10.0.301, six logical processors.
 Release, workstation concurrent GC, tiering disabled, BenchmarkDotNet 0.15.8 in-process
 emit, three warmups and eight 150ms measured iterations. Times in CSV are nanoseconds.
@@ -109,5 +110,5 @@ verified without executing the tree body. See `validation.json` for counts and h
 
 144 benchmark measurements were collected across nine serial runs. Each kept optimization
 has a separate code commit with measurements of construction, compilation and runtime.
-These local commits and evidence are ready for a later stacked performance PR; nothing
-has been pushed and the previous pull requests are unchanged.
+These commits and evidence support a separate stacked performance PR. Publishing this
+branch does not change the previous pull requests or the recorded measurement baseline.
