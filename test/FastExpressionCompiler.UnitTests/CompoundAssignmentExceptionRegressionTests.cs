@@ -13,7 +13,7 @@ public struct CompoundAssignmentExceptionRegressionTests : ITestX
     public void Run(TestRun t)
     {
         Nullable_targets_accept_exception_block_rhs(t);
-        
+
         Ref_parameter_reads_before_exception_block_rhs(t);
         Throwing_rhs_runs_finally_without_writeback(t);
     }

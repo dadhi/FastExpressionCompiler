@@ -15,7 +15,7 @@ public struct NullableArithmeticEvaluationRegressionTests : ITestX
     {
 
         Null_ref_assignment_evaluates_right_before_writeback(t);
-        
+
     }
 
     public void Null_ref_assignment_evaluates_right_before_writeback(TestContext t)
