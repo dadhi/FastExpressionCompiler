@@ -3508,8 +3508,14 @@ namespace FastExpressionCompiler
                 var operand = expr.Expression;
                 var operandType = operand.Type;
                 var typeOperand = expr.TypeOperand;
-                if (operandType == typeof(void) | typeOperand == typeof(void))
+                if (operandType == typeof(void) || typeOperand == typeof(void) || typeOperand.IsPointer)
+                {
+                    if (!TryEmit(operand, il, ref context, (parent & ~ParentFlags.InstanceAccess) | ParentFlags.IgnoreResult))
                     return false;
+                    if ((parent & ParentFlags.IgnoreResult) == 0)
+                        il.Demit(operandType == typeof(void) && typeOperand == typeof(void) ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
+                    return true;
+                }
 
                 if ((parent & ParentFlags.IgnoreResult) != 0)
                     return TryEmit(operand, il, ref context, parent);
