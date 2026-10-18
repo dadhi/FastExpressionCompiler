@@ -3268,8 +3268,7 @@ namespace FastExpressionCompiler
 
                 if (underlyingNullableTargetType != null) // sourceType is NOT nullable here (checked above)
                 {
-                    if (!underlyingNullableTargetType.IsEnum &&
-                        !TryEmitPrimitiveValueConvert(sourceType, underlyingNullableTargetType, il, isChecked: false))
+                    if (!TryEmitPrimitiveValueConvert(sourceType, underlyingNullableTargetType, il, expr.NodeType == ExpressionType.ConvertChecked))
                         return false;
                     il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
                 }
@@ -3302,42 +3301,46 @@ namespace FastExpressionCompiler
 
             private static bool TryEmitPrimitiveValueConvert(Type sourceType, Type targetType, ILGenerator il, bool isChecked)
             {
+                // The checked opcodes interpret the source stack value according to its signedness.
+                // TypeCode also covers enum underlying types and unsigned char values.
+                var isUnsignedSource = Type.GetTypeCode(sourceType) is TypeCode.Byte or TypeCode.UInt16 or
+                    TypeCode.Char or TypeCode.UInt32 or TypeCode.UInt64;
                 switch (Type.GetTypeCode(targetType))
                 {
                     case TypeCode.SByte:
-                        il.Demit(isChecked ? OpCodes.Conv_Ovf_I1 : OpCodes.Conv_I1);
+                        il.Demit(isChecked ? (isUnsignedSource ? OpCodes.Conv_Ovf_I1_Un : OpCodes.Conv_Ovf_I1) : OpCodes.Conv_I1);
                         break;
                     case TypeCode.Byte:
-                        il.Demit(isChecked ? OpCodes.Conv_Ovf_U1 : OpCodes.Conv_U1);
+                        il.Demit(isChecked ? (isUnsignedSource ? OpCodes.Conv_Ovf_U1_Un : OpCodes.Conv_Ovf_U1) : OpCodes.Conv_U1);
                         break;
                     case TypeCode.Int16:
-                        il.Demit(isChecked ? OpCodes.Conv_Ovf_I2 : OpCodes.Conv_I2);
+                        il.Demit(isChecked ? (isUnsignedSource ? OpCodes.Conv_Ovf_I2_Un : OpCodes.Conv_Ovf_I2) : OpCodes.Conv_I2);
                         break;
                     case TypeCode.Int32:
-                        il.Demit(isChecked ? OpCodes.Conv_Ovf_I4 : OpCodes.Conv_I4);
+                        il.Demit(isChecked ? (isUnsignedSource ? OpCodes.Conv_Ovf_I4_Un : OpCodes.Conv_Ovf_I4) : OpCodes.Conv_I4);
                         break;
                     case TypeCode.Int64:
-                        il.Demit(isChecked ? OpCodes.Conv_Ovf_I8 : OpCodes.Conv_I8);
+                        il.Demit(isChecked ? (isUnsignedSource ? OpCodes.Conv_Ovf_I8_Un : OpCodes.Conv_Ovf_I8) : (isUnsignedSource ? OpCodes.Conv_U8 : OpCodes.Conv_I8));
                         break;
                     case TypeCode.Double:
-                        if (sourceType.IsUnsigned())
+                        if (isUnsignedSource)
                             il.Demit(OpCodes.Conv_R_Un);
                         il.Demit(OpCodes.Conv_R8);
                         break;
                     case TypeCode.Single:
-                        if (sourceType.IsUnsigned())
+                        if (isUnsignedSource)
                             il.Demit(OpCodes.Conv_R_Un);
                         il.Demit(OpCodes.Conv_R4);
                         break;
                     case TypeCode.UInt16:
                     case TypeCode.Char:
-                        il.Demit(isChecked ? OpCodes.Conv_Ovf_U2 : OpCodes.Conv_U2);
+                        il.Demit(isChecked ? (isUnsignedSource ? OpCodes.Conv_Ovf_U2_Un : OpCodes.Conv_Ovf_U2) : OpCodes.Conv_U2);
                         break;
                     case TypeCode.UInt32:
-                        il.Demit(isChecked ? OpCodes.Conv_Ovf_U4 : OpCodes.Conv_U4);
+                        il.Demit(isChecked ? (isUnsignedSource ? OpCodes.Conv_Ovf_U4_Un : OpCodes.Conv_Ovf_U4) : OpCodes.Conv_U4);
                         break;
                     case TypeCode.UInt64:
-                        il.Demit(isChecked ? OpCodes.Conv_Ovf_U8 : OpCodes.Conv_U8); // should we consider if sourceType.IsUnsigned == false and using the OpCodes.Conv_I8 (seems like the System.Compile does it)
+                        il.Demit(isChecked ? (isUnsignedSource ? OpCodes.Conv_Ovf_U8_Un : OpCodes.Conv_Ovf_U8) : (sourceType.IsIntegerOrUnderlyingInteger() && !isUnsignedSource ? OpCodes.Conv_I8 : OpCodes.Conv_U8));
                         break;
                     default:
                         // todo: @feature for net7+ add Half, Int128, UInt128
