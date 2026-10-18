@@ -66,6 +66,9 @@ namespace FastExpressionCompiler.UnitTests
 #if NET8_0_OR_GREATER
                 lt.Run(new LightExpression.UnitTests.NumericConversionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.IntrinsicConstructorExceptionRegressionTests());
+                lt.Run(new LightExpression.UnitTests.ReadonlyRefFieldRegressionTests());
+                lt.Run(new LightExpression.UnitTests.RefCopybackReceiverReviewTests());
+                lt.Run(new LightExpression.UnitTests.RefCopybackRegressionTests());
                 lt.Run(new LightExpression.UnitTests.NestedMemberBindingRegressionTests());
                 lt.Run(new LightExpression.UnitTests.QuotedInvocationRegressionTests());
                 lt.Run(new LightExpression.UnitTests.CaptureFreeQuoteRegressionTests());
@@ -149,6 +152,9 @@ namespace FastExpressionCompiler.UnitTests
             var stStopwatch = Stopwatch.StartNew();
             st.Run(new NumericConversionRegressionTests());
             st.Run(new IntrinsicConstructorExceptionRegressionTests());
+            st.Run(new ReadonlyRefFieldRegressionTests());
+            st.Run(new RefCopybackReceiverReviewTests());
+            st.Run(new RefCopybackRegressionTests());
             st.Run(new NestedMemberBindingRegressionTests());
             st.Run(new QuotedInvocationRegressionTests());
             st.Run(new CaptureFreeQuoteRegressionTests());
