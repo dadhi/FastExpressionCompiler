@@ -4143,7 +4143,8 @@ namespace FastExpressionCompiler
                     if (method != null)
                         return TryEmitUnaryOperatorMethod(expr, il, ref context, parent, method);
                     return TryEmit(expr.Operand, il, ref context,
-                        (parent & ~(ParentFlags.InstanceAccess | ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue);
+                        (parent & ~(ParentFlags.InstanceAccess | ParentFlags.MemberAccess | ParentFlags.AssignmentLeftValue |
+                            ParentFlags.AssignmentByRef | ParentFlags.DupIt | ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue);
                 }
 
                 if (nodeType == ExpressionType.IsTrue || nodeType == ExpressionType.IsFalse)
@@ -4155,7 +4156,9 @@ namespace FastExpressionCompiler
                 if (nodeType == ExpressionType.Increment || nodeType == ExpressionType.Decrement)
                 {
                     if (!TryEmit(expr.Operand, il, ref context,
-                        (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue)
+                        (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
+                            ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef | ParentFlags.DupIt |
+                            ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue)
                         || !EmitIncOrDec(il, expr.Operand.Type, nodeType == ExpressionType.Increment, expr.Method))
                         return false;
                     context.LastEmitIsAddress = false;
@@ -4171,7 +4174,12 @@ namespace FastExpressionCompiler
                     return false;
                 }
 
-                if (!TryEmit(expr.Operand, il, ref context, parent))
+                if (parent.IgnoresResult())
+                    return TryEmit(expr.Operand, il, ref context, parent);
+                var operandFlags = (parent & ~(ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
+                    ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef | ParentFlags.DupIt |
+                    ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue;
+                if (!TryEmit(expr.Operand, il, ref context, operandFlags))
                     return false;
 
                 if (nodeType == ExpressionType.TypeAs)
@@ -4186,6 +4194,7 @@ namespace FastExpressionCompiler
                 // else if (nodeType == ExpressionType.IsTrue) { }
                 // else if (nodeType == ExpressionType.UnaryPlus) { }
 
+                context.LastEmitIsAddress = false;
                 return il.EmitPopIfIgnoreResult(parent);
             }
 
@@ -4193,10 +4202,14 @@ namespace FastExpressionCompiler
             {
                 if (expr.NodeType == ExpressionType.TypeEqual)
                     return TryEmitTypeEqual(expr, il, ref context, parent);
-                if (!TryEmit(expr.Expression, il, ref context, parent))
-                    return false;
                 if ((parent & ParentFlags.IgnoreResult) != 0)
-                    return true;
+                    return TryEmit(expr.Expression, il, ref context, parent);
+                var operandFlags = (parent & ~(ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
+                    ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef | ParentFlags.DupIt |
+                    ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue;
+                if (!TryEmit(expr.Expression, il, ref context, operandFlags))
+                    return false;
+                context.LastEmitIsAddress = false;
                 if (expr.NodeType == ExpressionType.TypeIs)
                 {
                     if (expr.Expression.Type == typeof(void))
@@ -4317,7 +4330,8 @@ namespace FastExpressionCompiler
                 if (expr.Method != null)
                     return TryEmitUnaryOperatorMethod(expr, il, ref context, parent);
                 if (!TryEmit(expr.Operand, il, ref context,
-                    (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue))
+                    (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
+                        ParentFlags.AssignmentLeftValue | ParentFlags.DupIt | ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue))
                     return false;
                 var underlying = Nullable.GetUnderlyingType(expr.Type);
                 if (underlying != null)
@@ -4377,7 +4391,9 @@ namespace FastExpressionCompiler
                 if (expr.Type.IsNullable())
                 {
                     if (expr.Method != null || !Nullable.GetUnderlyingType(expr.Type).IsPrimitive || !TryEmit(op, il, ref context,
-                        (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall | ParentFlags.MemberAccess | ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.Arithmetic))
+                        (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall | ParentFlags.MemberAccess |
+                            ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef | ParentFlags.DupIt |
+                            ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.Arithmetic | ParentFlags.AssignmentRightValue))
                         return false;
                     var operand = EmitStoreAndLoadLocalVariableAddress(il, expr.Type);
                     EmitMethodCall(il, expr.Type.GetNullableHasValueGetterMethod());
@@ -4405,13 +4421,17 @@ namespace FastExpressionCompiler
                     return TryEmitComparison(((BinaryExpression)op).Left, ((BinaryExpression)op).Right,
                         expr.Type, ExpressionType.NotEqual, il, ref context, parent, IsReferenceComparison((BinaryExpression)op));
 
-                if (!TryEmit(op, il, ref context, parent))
+                var operandFlags = (parent & ~(ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
+                    ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef | ParentFlags.DupIt |
+                    ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue;
+                if (!TryEmit(op, il, ref context, operandFlags))
                     return false;
 
                 if (expr.Type == typeof(bool))
                     EmitEqualToZeroOrNull(il);
                 else
                     il.Demit(OpCodes.Not);
+                context.LastEmitIsAddress = false;
                 return true;
             }
 
@@ -4431,7 +4451,9 @@ namespace FastExpressionCompiler
                         return TryEmit(opExpr, il, ref context, parent & ~ParentFlags.InstanceAccess);
 
                     // Emit the operand before going to the fast checks below
-                    if (!TryEmit(opExpr, il, ref context, (parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess) | ParentFlags.AssignmentRightValue))
+                    if (!TryEmit(opExpr, il, ref context, (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess |
+                        ParentFlags.MemberAccess | ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef |
+                        ParentFlags.DupIt | ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue))
                         return false;
 
                     if (sourceType == targetType)
@@ -4501,7 +4523,9 @@ namespace FastExpressionCompiler
                     var operandFlags = passSourceByRef
                         ? (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
                             ParentFlags.AssignmentRightValue | ParentFlags.Arithmetic | ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.Call
-                        : (parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess) | ParentFlags.AssignmentRightValue;
+                        : (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
+                            ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef | ParentFlags.DupIt |
+                            ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue;
                     if (!TryEmit(opExpr, il, ref context, operandFlags, passSourceByRef ? 0 : -1))
                         return false;
                 }
