@@ -54,6 +54,7 @@ namespace FastExpressionCompiler.UnitTests
 
             st.Run(new NumericConversionRegressionTests());
             st.Run(new IntrinsicConstructorExceptionRegressionTests());
+            st.Run(new IndexQuoteArgumentRegressionTests());
             st.Run(new CustomReducibleNodeRegressionTests());
             st.Run(new RuntimeTypeConstantRegressionTests());
             st.Run(new ReadonlyRefFieldRegressionTests());
@@ -141,6 +142,7 @@ namespace FastExpressionCompiler.UnitTests
 
             lt.Run(new LightExpression.UnitTests.NumericConversionRegressionTests());
             lt.Run(new LightExpression.UnitTests.IntrinsicConstructorExceptionRegressionTests());
+            lt.Run(new LightExpression.UnitTests.IndexQuoteArgumentRegressionTests());
             lt.Run(new LightExpression.UnitTests.RuntimeTypeConstantRegressionTests());
             lt.Run(new LightExpression.UnitTests.ReadonlyRefFieldRegressionTests());
             lt.Run(new LightExpression.UnitTests.RefCopybackReceiverReviewTests());
