@@ -1570,10 +1570,8 @@ namespace FastExpressionCompiler
                                 if (!found)
                                     inlinedExpr = CreateInlinedLambdaInvocationExpression(invokeArgs, lambdaExpr);
 
-                                if (invokeArgCount == 0)
-                                    context.CurrentInlinedLambdaInvokeIndex = invokeIndex;
                                 r = invokeArgCount == 0
-                                    ? TryCollectInfo(ref context, inlinedExpr, nestedLambda, ref rootNestedLambdas)
+                                    ? TryCollectInlinedLambdaBody(ref context, inlinedExpr, invokeIndex, nestedLambda, ref rootNestedLambdas)
                                     : TryCollectInlinedWrapper(ref context, (BlockExpression)inlinedExpr,
                                         lambdaExpr.Body, invokeIndex, nestedLambda, ref rootNestedLambdas);
                                 if (r != Result.OK)
@@ -1905,6 +1903,24 @@ namespace FastExpressionCompiler
             return false;
         }
 
+        private static Result TryCollectInlinedLambdaBody(ref CompilerContext context, Expression body,
+            short invokeIndex, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+        {
+            var callerIndex = context.CurrentInlinedLambdaInvokeIndex;
+            var callerCanRethrow = context.CanRethrow;
+            context.CurrentInlinedLambdaInvokeIndex = invokeIndex;
+            context.CanRethrow = false;
+            try
+            {
+                return TryCollectInfo(ref context, body, nestedLambda, ref rootNestedLambdas);
+            }
+            finally
+            {
+                context.CanRethrow = callerCanRethrow;
+                context.CurrentInlinedLambdaInvokeIndex = callerIndex;
+            }
+        }
+
         // The generated wrapper evaluates caller arguments before entering the callee body.
         private static Result TryCollectInlinedWrapper(ref CompilerContext context, BlockExpression wrapper,
             Expression body, short invokeIndex, NestedLambdaInfo nestedLambda,
@@ -1919,14 +1935,9 @@ namespace FastExpressionCompiler
                     return result;
             }
             var last = statements[statements.Count - 1];
-            var callerIndex = context.CurrentInlinedLambdaInvokeIndex;
             Result collected;
             if (ReferenceEquals(last, body))
-            {
-                context.CurrentInlinedLambdaInvokeIndex = invokeIndex;
-                collected = TryCollectInfo(ref context, last, nestedLambda, ref rootNestedLambdas);
-                context.CurrentInlinedLambdaInvokeIndex = callerIndex;
-            }
+                collected = TryCollectInlinedLambdaBody(ref context, last, invokeIndex, nestedLambda, ref rootNestedLambdas);
             else
                 collected = TryCollectInlinedWrapper(ref context, (BlockExpression)last,
                     body, invokeIndex, nestedLambda, ref rootNestedLambdas);
