@@ -2261,11 +2261,20 @@ namespace FastExpressionCompiler
 
                         case ExpressionType.ArrayIndex:
                             var arrIndexExpr = (BinaryExpression)expr;
-                            return TryEmit(arrIndexExpr.Left, il, ref context, parent | ParentFlags.IndexAccess)
-                                && TryEmit(arrIndexExpr.Right, il, ref context, parent | ParentFlags.IndexAccess) // #265
-                                && (IsNonVectorArray(arrIndexExpr.Left.Type)
-                                    ? EmitMethodCallOrVirtualCallCheckForNull(il, arrIndexExpr.Left.Type.FindMethod("Get")) // the lower bound is not zero
-                                    : TryEmitArrayIndexGet(il, exprType, ref context, parent));
+                            var arrayFlags = ParentFlags.IndexAccess | ParentFlags.AssignmentRightValue;
+                            if (!TryEmit(arrIndexExpr.Left, il, ref context, arrayFlags))
+                                return false;
+                            var arrayVar = context.HasExceptionBlock ? EmitStoreLocalVariable(il, arrIndexExpr.Left.Type) : -1;
+                            if (!TryEmit(arrIndexExpr.Right, il, ref context, arrayFlags))
+                                return false;
+                            if (arrayVar != -1)
+                            {
+                                var indexVar = EmitStoreLocalVariable(il, typeof(int));
+                                EmitLoadLocalVariable(il, arrayVar);
+                                EmitLoadLocalVariable(il, indexVar);
+                            }
+                            return TryEmitArrayElementGet(il, arrIndexExpr.Left.Type, exprType, ref context,
+                                byRefIndex >= 0 ? parent | ParentFlags.AssignmentByRef : parent);
 
                         case ExpressionType.ArrayLength:
                             if (!TryEmit(((UnaryExpression)expr).Operand, il, ref context, parent))
@@ -2678,7 +2687,7 @@ namespace FastExpressionCompiler
                             return true;
 
                         case ExpressionType.Index:
-                            return TryEmitIndexGet((IndexExpression)expr, il, ref context, parent);
+                            return TryEmitIndexGet((IndexExpression)expr, il, ref context, parent, byRefIndex);
 
                         case ExpressionType.Goto:
                             return TryEmitGoto((GotoExpression)expr, il, ref context, parent);
@@ -2825,7 +2834,7 @@ namespace FastExpressionCompiler
             }
 
             // similar code is used by the TryEmitArithmeticAndOrAssign, so don't forget to modify it as well
-            private static bool TryEmitIndexGet(IndexExpression indexExpr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            private static bool TryEmitIndexGet(IndexExpression indexExpr, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex = -1)
             {
                 var p = parent & ~ParentFlags.IgnoreResult | ParentFlags.IndexAccess;
 
@@ -2848,11 +2857,27 @@ namespace FastExpressionCompiler
                     context.LastEmitIsAddress = false;
                     return getter != null && EmitInstanceMethodCall(il, getter, objExpr?.Type) && il.EmitPopIfIgnoreResult(parent);
                 }
-                if (indexArgCount == 1 && !IsNonVectorArray(objExpr.Type))
-                    return TryEmitArrayIndexGet(il, indexExpr.Type, ref context, parent); // one-dimensional array
-                var byAddress = indexExpr.Type.IsValueType &&
-                    (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess | ParentFlags.AssignmentByRef)) != 0;
-                var ok = EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod(byAddress ? "Address" : "Get"));
+                return TryEmitArrayElementGet(il, objExpr.Type, indexExpr.Type, ref context,
+                    byRefIndex >= 0 ? parent | ParentFlags.AssignmentByRef : parent);
+            }
+
+            private static bool IsVectorArray(Type type)
+            {
+                if (type.IsByRef)
+                    type = type.GetElementType();
+                return type.IsArray && type == type.GetElementType().MakeArrayType();
+            }
+
+            private static bool TryEmitArrayElementGet(ILGenerator il, Type arrayType, Type elementType,
+                ref CompilerContext context, ParentFlags parent)
+            {
+                if (arrayType.IsByRef)
+                    arrayType = arrayType.GetElementType();
+                if (IsVectorArray(arrayType))
+                    return TryEmitArrayIndexGet(il, elementType, ref context, parent) && il.EmitPopIfIgnoreResult(parent);
+                var byAddress = (parent & ParentFlags.AssignmentByRef) != 0 ||
+                    elementType.IsValueType && (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0;
+                var ok = EmitMethodCallOrVirtualCallCheckForNull(il, arrayType.FindMethod(byAddress ? "Address" : "Get"));
                 context.LastEmitIsAddress = byAddress && !parent.IgnoresResult();
                 return ok && il.EmitPopIfIgnoreResult(parent);
             }
@@ -5004,7 +5029,7 @@ namespace FastExpressionCompiler
                             else
                             {
                                 Debug.Assert(orLeftIndexExpr != null);
-                                    var isIndexerAMethodCall = indexArgCount > 1 | orLeftIndexExpr.Indexer != null || objExpr != null && IsNonVectorArray(objExpr.Type);
+                                var isIndexerAMethodCall = orLeftIndexExpr.Indexer != null || !IsVectorArray(objExpr.Type);
                                     var objFlags = isIndexerAMethodCall ? ParentFlags.InstanceCall : ParentFlags.InstanceAccess | ParentFlags.IndexAccess;
                                 if (!TryEmitIndexOperands(objExpr, indexArgs, objFlags | ParentFlags.AssignmentLeftValue, baseFlags, il, ref context))
                                         return false;
@@ -5034,7 +5059,7 @@ namespace FastExpressionCompiler
                             {
                                 var ok = orLeftIndexExpr.Indexer != null
                                     ? orLeftIndexExpr.Indexer.SetMethod != null && EmitInstanceMethodCall(il, orLeftIndexExpr.Indexer.SetMethod, objExpr?.Type)
-                                    : indexArgCount == 1 && !IsNonVectorArray(objExpr.Type)
+                                    : IsVectorArray(objExpr.Type)
                                         ? TryEmitArrayIndexSet(il, orLeftIndexExpr.Type) // one-dimensional array
                                         : EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod("Set")); // multi-dimensional array
                                 if (!ok)
@@ -5064,8 +5089,7 @@ namespace FastExpressionCompiler
                         else // if (leftIndexExpr != null)
                         {
                             // determine is the index essentially the method call to get/set value
-                            // objExpr is not null when there is no Indexer, because then it is an array access, so `||` short-circuits before the `.Type`
-                            var isIndexerAMethodCall = indexArgCount > 1 | orLeftIndexExpr.Indexer != null || IsNonVectorArray(objExpr.Type);
+                            var isIndexerAMethodCall = orLeftIndexExpr.Indexer != null || !IsVectorArray(objExpr.Type);
                             var objVar = -1;
                             var objVarByAddress = false;
                             if (objExpr != null)
@@ -5291,7 +5315,7 @@ namespace FastExpressionCompiler
                         {
                             var ok = orLeftIndexExpr.Indexer != null
                                 ? orLeftIndexExpr.Indexer.SetMethod != null && EmitInstanceMethodCall(il, orLeftIndexExpr.Indexer.SetMethod, objExpr?.Type)
-                                : indexArgCount == 1 && !IsNonVectorArray(objExpr.Type)
+                                : IsVectorArray(objExpr.Type)
                                     ? TryEmitArrayIndexSet(il, orLeftIndexExpr.Type) // one-dimensional array
                                     : EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod("Set")); // multi-dimensional array
                             if (!ok)
@@ -5684,6 +5708,12 @@ namespace FastExpressionCompiler
 
             private static bool TryEmitArrayIndexGet(ILGenerator il, Type type, ref CompilerContext closure, ParentFlags parent)
             {
+                if ((parent & ParentFlags.AssignmentByRef) != 0)
+                {
+                    il.Demit(OpCodes.Ldelema, type);
+                    closure.LastEmitIsAddress = true;
+                    return true;
+                }
                 if (!type.IsValueType)
                 {
                     il.Demit(OpCodes.Ldelem_Ref);
