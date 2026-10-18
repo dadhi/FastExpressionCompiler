@@ -53,6 +53,7 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.CoalesceCallbackRegressionTests());
                 t.Run(new LightExpression.UnitTests.VoidLabelValueRegressionTests());
                 t.Run(new LightExpression.UnitTests.TypedLabelControlFlowRegressionTests());
+                t.Run(new LightExpression.UnitTests.NegationBehaviorRegressionTests());
                 t.Run(new LightExpression.UnitTests.ReferenceEqualityRegressionTests());
                 t.Run(new LightExpression.UnitTests.TypeEqualRegressionTests());
                 t.Run(new LightExpression.UnitTests.RuntimeCompilerLayoutBehaviorRegressionTests());
@@ -104,6 +105,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new CoalesceCallbackRegressionTests());
             fecTests.Run(new VoidLabelValueRegressionTests());
             fecTests.Run(new TypedLabelControlFlowRegressionTests());
+            fecTests.Run(new NegationBehaviorRegressionTests());
             fecTests.Run(new ReferenceEqualityRegressionTests());
             fecTests.Run(new TypeEqualRegressionTests());
             fecTests.Run(new RuntimeCompilerLayoutBehaviorRegressionTests());

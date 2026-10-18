@@ -3070,6 +3070,9 @@ namespace FastExpressionCompiler
             {
                 var exprType = expr.Type;
 
+                if (nodeType == ExpressionType.Negate || nodeType == ExpressionType.NegateChecked)
+                    return TryEmitNegate(expr, nodeType == ExpressionType.NegateChecked, il, ref context, parent);
+
                 if (nodeType == ExpressionType.Increment || nodeType == ExpressionType.Decrement)
                 {
                     if (!TryEmit(expr.Operand, il, ref context,
@@ -3109,13 +3112,6 @@ namespace FastExpressionCompiler
                     il.DmarkLabel(falseLabel);
                     il.Demit(OpCodes.Ldc_I4_1);
                     il.DmarkLabel(continueLabel);
-                }
-                else if (nodeType == ExpressionType.Negate | nodeType == ExpressionType.NegateChecked)
-                {
-                    if (exprType.IsPrimitive)
-                        il.Demit(OpCodes.Neg);
-                    else if (!EmitMethodCallCheckForNull(il, exprType.GetMethod("op_UnaryNegation")))
-                        return false;
                 }
                 else if (nodeType == ExpressionType.OnesComplement)
                     il.Demit(OpCodes.Not);
@@ -3197,36 +3193,97 @@ namespace FastExpressionCompiler
                 return true;
             }
 
+            private static bool TryEmitUnaryOperatorMethod(UnaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            {
+                var op = expr.Operand;
+                if (!TryEmit(op, il, ref context,
+                    (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue))
+                    return false;
+                var underlyingOperandType = Nullable.GetUnderlyingType(op.Type);
+                if (underlyingOperandType != null && expr.Method.GetParameters()[0].ParameterType == underlyingOperandType)
+                {
+                    var operand = EmitStoreAndLoadLocalVariableAddress(il, op.Type);
+                    EmitMethodCall(il, op.Type.GetNullableHasValueGetterMethod());
+                    var nullValue = il.DefineLabel();
+                    var done = il.DefineLabel();
+                    il.Demit(OpCodes.Brfalse, nullValue);
+                    EmitLoadLocalVariableAddress(il, operand);
+                    il.Demit(OpCodes.Ldfld, op.Type.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                    EmitMethodCall(il, expr.Method);
+                    il.Demit(OpCodes.Newobj, expr.Type.GetNullableConstructor());
+                    il.Demit(OpCodes.Br, done);
+                    il.DmarkLabel(nullValue);
+                    EmitDefault(il, expr.Type);
+                    il.DmarkLabel(done);
+                }
+                else
+                    EmitMethodCall(il, expr.Method);
+                context.LastEmitIsAddress = false;
+                return il.EmitPopIfIgnoreResult(parent);
+            }
+
+            private static bool TryEmitNegate(UnaryExpression expr, bool isChecked, ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            {
+                if (expr.Method != null)
+                    return TryEmitUnaryOperatorMethod(expr, il, ref context, parent);
+                if (!TryEmit(expr.Operand, il, ref context,
+                    (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue))
+                    return false;
+                var underlying = Nullable.GetUnderlyingType(expr.Type);
+                if (underlying != null)
+                {
+                    var operand = EmitStoreAndLoadLocalVariableAddress(il, expr.Type);
+                    EmitMethodCall(il, expr.Type.GetNullableHasValueGetterMethod());
+                    var nullValue = il.DefineLabel();
+                    var done = il.DefineLabel();
+                    il.Demit(OpCodes.Brfalse, nullValue);
+                    EmitLoadLocalVariableAddress(il, operand);
+                    il.Demit(OpCodes.Ldfld, expr.Type.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                    if (!EmitNegatedValue(il, underlying, isChecked))
+                        return false;
+                    il.Demit(OpCodes.Newobj, expr.Type.GetNullableConstructor());
+                    il.Demit(OpCodes.Br, done);
+                    il.DmarkLabel(nullValue);
+                    EmitLoadLocalVariable(il, operand);
+                    il.DmarkLabel(done);
+                }
+                else if (!EmitNegatedValue(il, expr.Type, isChecked))
+                    return false;
+                context.LastEmitIsAddress = false;
+                return il.EmitPopIfIgnoreResult(parent);
+            }
+
+            private static bool EmitNegatedValue(ILGenerator il, Type type, bool isChecked)
+            {
+                if (!type.IsPrimitive)
+                    return EmitMethodCallCheckForNull(il, type.GetMethod("op_UnaryNegation", new[] { type }));
+                if (type == typeof(float) || type == typeof(double))
+                {
+                    il.Demit(OpCodes.Neg);
+                    return true;
+                }
+                if (type != typeof(short) && type != typeof(int) && type != typeof(long))
+                    return false;
+                if (isChecked)
+                {
+                    if (type == typeof(long))
+                        il.Demit(OpCodes.Ldc_I8, -1L);
+                    else
+                        il.Demit(OpCodes.Ldc_I4_M1);
+                    il.Demit(OpCodes.Mul_Ovf);
+                }
+                else
+                    il.Demit(OpCodes.Neg);
+                if (type == typeof(short))
+                    il.Demit(isChecked ? OpCodes.Conv_Ovf_I2 : OpCodes.Conv_I2);
+                return true;
+            }
+
             private static bool TryEmitNot(UnaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var op = expr.Operand;
                 if (expr.Method != null)
-                {
-                    if (!TryEmit(op, il, ref context,
-                        (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue))
-                        return false;
-                    var underlyingOperandType = Nullable.GetUnderlyingType(op.Type);
-                    if (underlyingOperandType != null && expr.Method.GetParameters()[0].ParameterType == underlyingOperandType)
-                    {
-                        var operand = EmitStoreAndLoadLocalVariableAddress(il, op.Type);
-                        EmitMethodCall(il, op.Type.GetNullableHasValueGetterMethod());
-                        var nullValue = il.DefineLabel();
-                        var done = il.DefineLabel();
-                        il.Demit(OpCodes.Brfalse, nullValue);
-                        EmitLoadLocalVariableAddress(il, operand);
-                        il.Demit(OpCodes.Ldfld, op.Type.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
-                        EmitMethodCall(il, expr.Method);
-                        il.Demit(OpCodes.Newobj, expr.Type.GetNullableConstructor());
-                        il.Demit(OpCodes.Br, done);
-                        il.DmarkLabel(nullValue);
-                        EmitDefault(il, expr.Type);
-                        il.DmarkLabel(done);
-                    }
-                    else
-                        EmitMethodCall(il, expr.Method);
-                    context.LastEmitIsAddress = false;
-                    return il.EmitPopIfIgnoreResult(parent);
-                }
+                    return TryEmitUnaryOperatorMethod(expr, il, ref context, parent);
                 if (expr.Type.IsNullable())
                 {
                     if (expr.Method != null || !Nullable.GetUnderlyingType(expr.Type).IsPrimitive || !TryEmit(op, il, ref context,

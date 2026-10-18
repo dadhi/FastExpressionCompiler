@@ -208,7 +208,7 @@ namespace System.Linq.Expressions.Tests
 
         #endregion
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("NegationBehaviorRegressionTests.Short_checked_negation_matches_runtime")]
         [ActiveIssue("https://github.com/mono/mono/issues/14919", TestRuntimes.Mono)]
         public static void VerifyIL_ShortNegateChecked()
         {
