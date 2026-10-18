@@ -2453,14 +2453,6 @@ namespace FastExpressionCompiler
                 var p = parent & ~ParentFlags.IgnoreResult | ParentFlags.IndexAccess;
 
                 var objExpr = indexExpr.Object;
-                if (objExpr != null)
-                {
-                    if (!TryEmit(objExpr, il, ref context, ParentFlags.InstanceCall))
-                        return false;
-                    if (objExpr.Type.IsValueType && !context.LastEmitIsAddress && !(objExpr is PE pe && pe.IsByRef))
-                        EmitStoreAndLoadLocalVariableAddress(il, objExpr.Type);
-                }
-
                 var indexArgs = indexExpr.GetArgExprs();
                 var indexArgCount = indexArgs.GetArgCount();
                 // Strip InstanceAccess when emitting arguments: they are parameters to the indexer
@@ -2469,9 +2461,8 @@ namespace FastExpressionCompiler
                 // emission, causing value-type args (e.g. int) to be loaded by address (ldloca)
                 // instead of by value (ldloc), producing invalid IL. See #499.
                 var argParent = p & ~ParentFlags.InstanceAccess;
-                for (var i = 0; i < indexArgCount; i++)
-                    if (!TryEmit(indexArgs.GetArgument(i), il, ref context, argParent, -1))
-                        return false;
+                if (!TryEmitIndexOperands(objExpr, indexArgs, ParentFlags.InstanceCall, argParent, il, ref context))
+                    return false;
 
                 var indexerProp = indexExpr.Indexer;
                 if (indexerProp != null)
@@ -2487,6 +2478,40 @@ namespace FastExpressionCompiler
                 var ok = EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod(byAddress ? "Address" : "Get"));
                 context.LastEmitIsAddress = byAddress && !parent.IgnoresResult();
                 return ok && il.EmitPopIfIgnoreResult(parent);
+            }
+
+            private static bool TryEmitIndexOperands(Expression objExpr, ArgExprs indexArgs, ParentFlags objFlags,
+                ParentFlags argFlags, ILGenerator il, ref CompilerContext context)
+            {
+                var objVar = -1;
+                if (objExpr != null)
+                {
+                    if (!TryEmit(objExpr, il, ref context, objFlags))
+                        return false;
+                    if (objExpr.Type.IsValueType && !context.LastEmitIsAddress && !(objExpr is PE pe && pe.IsByRef))
+                        EmitStoreAndLoadLocalVariableAddress(il, objExpr.Type);
+                    if (context.HasExceptionBlock)
+                        objVar = EmitStoreLocalVariable(il, objExpr.Type.IsValueType ? objExpr.Type.MakeByRefType() : objExpr.Type);
+                }
+
+                SmallList<int, Stack8<int>, NoArrayPool<int>> argVars = default;
+                var count = indexArgs.GetArgCount();
+                for (var i = 0; i < count; ++i)
+                {
+                    var argument = indexArgs.GetArgument(i);
+                    if (!TryEmit(argument, il, ref context, argFlags, -1))
+                        return false;
+                    if (context.HasExceptionBlock)
+                        argVars.Add(EmitStoreLocalVariable(il, argument.Type));
+                }
+                if (context.HasExceptionBlock)
+                {
+                    if (objVar != -1)
+                        EmitLoadLocalVariable(il, objVar);
+                    for (var i = 0; i < count; ++i)
+                        EmitLoadLocalVariable(il, argVars[i]);
+                }
+                return true;
             }
 
             private static bool TryEmitLabel(LabelExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
@@ -4454,18 +4479,10 @@ namespace FastExpressionCompiler
                             else
                             {
                                 Debug.Assert(orLeftIndexExpr != null);
-                                if (objExpr != null)
-                                {
-                                    var isIndexerAMethodCall = indexArgCount > 1 | orLeftIndexExpr.Indexer != null;
-                                    var objFlags = isIndexerAMethodCall ? ParentFlags.InstanceCall : ParentFlags.InstanceAccess | ParentFlags.IndexAccess;
-                                    if (!TryEmit(objExpr, il, ref context, objFlags | ParentFlags.AssignmentLeftValue))
-                                        return false;
-                                    if (objExpr.Type.IsValueType && !context.LastEmitIsAddress && !(objExpr is PE pe && pe.IsByRef))
-                                        EmitStoreAndLoadLocalVariableAddress(il, objExpr.Type);
-                                }
-                                for (var i = 0; i < indexArgCount; i++)
-                                    if (!TryEmit(indexArgs.GetArgument(i), il, ref context, baseFlags, -1))
-                                        return false;
+                                var isIndexerAMethodCall = indexArgCount > 1 | orLeftIndexExpr.Indexer != null;
+                                var objFlags = isIndexerAMethodCall ? ParentFlags.InstanceCall : ParentFlags.InstanceAccess | ParentFlags.IndexAccess;
+                                if (!TryEmitIndexOperands(objExpr, indexArgs, objFlags | ParentFlags.AssignmentLeftValue, baseFlags, il, ref context))
+                                    return false;
                             }
 
                             // Load already emitted or emit the right-value normally after the left to be assigned
