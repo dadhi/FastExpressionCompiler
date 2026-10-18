@@ -6339,7 +6339,12 @@ namespace FastExpressionCompiler
                     if (invokeParameters[i].ParameterType.IsByRef && NeedsByRefWriteback(argExprs.GetArgument(i)))
                         return TryEmitCallWithWritebacks(invokedExpr, argExprs, delegateInvokeMethod, null, il, ref context, parent, byRefIndex, compileMethod, deferCompile);
 
-                if (!TryEmit(invokedExpr, il, ref context, parent & ~ParentFlags.IgnoreResult)) // removing the IgnoreResult temporary because we need "full" lambda emit and we will re-apply the IgnoreResult later at the end of the method
+                // A delegate or expression-tree receiver is a value even when the invocation
+                // result is discarded or its caller requests an address.
+                var receiverFlags = parent & ~(ParentFlags.IgnoreResult | ParentFlags.AssignmentLeftValue |
+                    ParentFlags.AssignmentByRef | ParentFlags.InstanceAccess | ParentFlags.ReturnByRef | ParentFlags.DupIt);
+                receiverFlags |= ParentFlags.Call | ParentFlags.AssignmentRightValue;
+                if (!TryEmit(invokedExpr, il, ref context, receiverFlags))
                     return false;
                 if (compileMethod != null && !deferCompile && !EmitInstanceMethodCall(il, compileMethod, invokedExpr.Type))
                     return false;
