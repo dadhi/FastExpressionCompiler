@@ -68,6 +68,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new UnsignedDivisionRegressionTests());
             st.Run(new OnesComplementRegressionTests());
             st.Run(new ByRefConversionRegressionTests());
+            st.Run(new RefConversionMethodRegressionTests());
             st.Run(new IncrementDecrementRegressionTests());
             st.Run(new ValueTypeReceiverRegressionTests());
             st.Run(new MultiRankArrayReceiverRegressionTests());
