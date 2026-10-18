@@ -73,6 +73,23 @@ namespace Xunit
                 Skip = "Requires the system compiler's invalid static-binding IL; strict FEC behavior verified by " + behaviorCoverage;
         }
     }
+    // These upstream expectations depend on interpreter semantics, not compiler IL layout.
+    public sealed class SystemAssignmentDisagreementTheoryAttribute : TheoryAttribute
+    {
+        public SystemAssignmentDisagreementTheoryAttribute(string behaviorCoverage)
+        {
+            if (Environment.GetEnvironmentVariable("FEC_TEST_COMPILER") != "system")
+                Skip = "Upstream assignment expectation differs between System compiled and interpreted execution (runtime#19094); strict FEC follows System compiled behavior, verified by " + behaviorCoverage;
+        }
+    }
+    public sealed class SystemInterpreterOnlyFilterTheoryAttribute : TheoryAttribute
+    {
+        public SystemInterpreterOnlyFilterTheoryAttribute(string behaviorCoverage)
+        {
+            if (Environment.GetEnvironmentVariable("FEC_TEST_COMPILER") != "system")
+                Skip = "Requires interpreter-only nested exception regions inside filters (runtime#20083); strict FEC and System compiled rejection verified by " + behaviorCoverage;
+        }
+    }
     // Temporary known-issue exclusion; this does not establish correct FEC behavior.
     public sealed class KnownFecCrashTheoryAttribute : TheoryAttribute
     {
