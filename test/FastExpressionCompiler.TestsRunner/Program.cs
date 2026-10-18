@@ -54,6 +54,7 @@ namespace FastExpressionCompiler.UnitTests
 
             st.Run(new NumericConversionRegressionTests());
             st.Run(new StaticMemberInitializerRegressionTests());
+            st.Run(new MemberInitializerSpillRegressionTests());
             st.Run(new NonVoidListInitializerRegressionTests());
             st.Run(new ListConstructionExceptionRegressionTests());
             st.Run(new DecimalConstantBitsRegressionTests());
@@ -129,6 +130,7 @@ namespace FastExpressionCompiler.UnitTests
 
             lt.Run(new LightExpression.UnitTests.NumericConversionRegressionTests());
             lt.Run(new LightExpression.UnitTests.StaticMemberInitializerRegressionTests());
+            lt.Run(new LightExpression.UnitTests.MemberInitializerSpillRegressionTests());
             lt.Run(new LightExpression.UnitTests.NonVoidListInitializerRegressionTests());
             lt.Run(new LightExpression.UnitTests.ListConstructionExceptionRegressionTests());
             lt.Run(new LightExpression.UnitTests.DecimalConstantBitsRegressionTests());
