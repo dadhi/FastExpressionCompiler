@@ -1420,6 +1420,7 @@ namespace FastExpressionCompiler
                                 (r = TryCollectInfo(ref context, callObjectExpr, nestedLambda, ref rootNestedLambdas)) != Result.OK)
                                 return r;
 
+                            var outerHasComplexExpression = context.HasComplexExpression;
                             var hasComplexExpression = false;
                             for (var i = 0; i < argCount; i++)
                             {
@@ -1437,6 +1438,7 @@ namespace FastExpressionCompiler
                                 context.HasComplexExpression = true;
                                 context.ArgsContainingComplexExpression.Set.AddOrGetEntryRef(callExpr, out _);
                             }
+                            context.HasComplexExpression |= outerHasComplexExpression;
                             return r;
                         }
 
@@ -1455,6 +1457,7 @@ namespace FastExpressionCompiler
                             if (argCount == 0)
                                 return r;
 
+                            var outerHasComplexExpression = context.HasComplexExpression;
                             var hasComplexExpression = false;
                             for (var i = 0; i < argCount; i++)
                             {
@@ -1471,6 +1474,7 @@ namespace FastExpressionCompiler
                                 context.ArgsContainingComplexExpression.Set.AddOrGetEntryRef(newExpr, out _);
                             }
 
+                            context.HasComplexExpression |= outerHasComplexExpression;
                             return r;
                         }
                     case ExpressionType.NewArrayBounds:
@@ -1733,6 +1737,7 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Goto:
                         var gotoExpr = (GotoExpression)expr;
+                        context.HasComplexExpression = true;
                         context.ExceptionGotos.AddAndGetRef((gotoExpr.Target, context.CurrentExceptionRegion));
                         if (gotoExpr.Target != null)
                             context.TargetToGotosAndLabels.Map.AddOrGetValueRef(gotoExpr.Target, out _).Item1++;
