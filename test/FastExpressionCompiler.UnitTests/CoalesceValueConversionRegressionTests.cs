@@ -30,7 +30,12 @@ public struct CoalesceValueConversionRegressionTests : ITestX
             try { body = SysExpr.Coalesce(left, right); }
             catch (ArgumentException) { continue; }
             var expression = SysExpr.Lambda(body, left, right);
-            var system = expression.Compile();
+            // .NET Framework's coalesce emitter rejects valid implicit decimal conversions.
+            // An explicit conditional exercises the same semantics without that runtime defect.
+            var system = SysExpr.Lambda(SysExpr.Condition(
+                SysExpr.Property(left, "HasValue"),
+                SysExpr.Convert(SysExpr.Property(left, "Value"), body.Type),
+                SysExpr.Convert(right, body.Type)), left, right).Compile();
             var fast = expression.FromSysExpression().CompileFast(true);
             if (!t.IsNotNull(fast)) return;
             foreach (var value in new[] { null, Convert.ChangeType(1, source), source.GetField("MaxValue").GetValue(null) })
