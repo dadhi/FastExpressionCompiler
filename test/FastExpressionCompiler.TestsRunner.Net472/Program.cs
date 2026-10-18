@@ -114,6 +114,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new UnsignedDivisionRegressionTests());
             fecTests.Run(new OnesComplementRegressionTests());
             fecTests.Run(new ByRefConversionRegressionTests());
+            fecTests.Run(new RefConversionMethodRegressionTests());
             fecTests.Run(new IncrementDecrementRegressionTests());
             fecTests.Run(new ValueTypeReceiverRegressionTests());
             fecTests.Run(new MultiRankArrayReceiverRegressionTests());
