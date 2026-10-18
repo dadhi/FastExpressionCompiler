@@ -1,33 +1,40 @@
 {
   "date": "2026-10-18",
-  "testedCompilerCommit": "22b6fe16",
-  "parentCommit": "3f682768",
+  "testedCompilerCommit": "3cf56a5c",
+  "parentCommit": "05110348",
   "baselineCases": 35133,
   "outcomes": {
-    "Passed": 34996,
-    "Skipped": 60,
-    "Failed": 77
+    "Passed": 35048,
+    "Skipped": 62,
+    "Failed": 23
   },
   "crashingMethods": 0,
   "timedOutMethods": 0,
   "completedBatches": 21,
-  "newRegressionMethods": 775,
+  "newRegressionMethods": 829,
   "knownDeferredCrashMethods": 1,
   "knownDeferredCrashCases": 2,
   "skipBreakdown": {
     "upstream": 4,
-    "verifiedSystemRepresentationCases": 54,
+    "verifiedSystemRepresentationCases": 56,
     "knownDeepTreeCases": 2
   },
   "baselineSystemControl": "Reused verified parent system-compiler control, same machine/runtime",
+  "importedTestCommit": "3cf56a5c",
   "changesFromPreviousSnapshot": {
-    "FailedToPassed": 51,
-    "FailedToSkipped": 24
+    "FailedToPassed": 52,
+    "FailedToSkipped": 2
+  },
+  "fixedCategoriesFromPreviousSnapshot": {
+    "Nonempty RuntimeVariables unsupported": 10,
+    "Illegal expression/block-entry validation": 14,
+    "Captured quotation unsupported": 28
   },
   "additionalProbesOutsideBaseline": {
     "knownDeterministicModeDifferences": 1,
     "difference": "Literal Invoke with a reused physical method-tail target: NoInvocationLambdaInlining returns the separate-method result; Default matches System literal inlining.",
     "strictlyUnsupported": "Repeated physical method-tail target reached with pending operands or protected exception regions; null / Result 1011.",
-    "evidence": "method-tail-diagnostics/"
+    "evidence": "method-tail-diagnostics/",
+    "systemNestedStructCompoundWrite": "System compiled nested field compounds return the arithmetic value but keep a defensive copy. FEC writes actual storage; explicit once-only field-assignment System controls verify expected values and effects."
   }
 }

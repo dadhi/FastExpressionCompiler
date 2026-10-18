@@ -1,29 +1,12 @@
-2a460026	fix: reject lambda signatures that exceed the method parameter limit
-90930908	Report duplicate label definitions with InvalidOperationException
-683055d2	test: separate verified FEC behavior from System representation assertions
-5ce778b6	fix: preserve the full character width through managed references
-b939a9b6	Preserve value payloads on Light continue gotos
-af319eeb	fix: validate abstract constructors in nested Light lambdas
-25f62830	test: verify behavior before excluding interpreter representation assertions
-4e967361	Validate rethrow and catch filter scopes during collection
-6fffee01	Validate jumps across exception region boundaries
-e3d34bd0	Support invoking runtime expression-tree values
-e81fe091	Load invocation receivers by value before calling them
-535d902c	test: register remaining compatibility regressions in both runners
-6be85625	fix: spill invocation operands across argument jumps
-62aae704	Bind reused label targets within sibling block scopes
-3c1249b0	Reject label redefinition inside an active default expression
-2a15c195	test: register scoped labels and exercise both invocation modes
-05ab6956	Compile dynamic expressions through per-occurrence DLR call sites
-fe4cf018	Keep rethrow validation inside inlined lambda boundaries
-18e9a8e7	Propagate argument jumps through enclosing calls and constructors
-b0b78162	Defer runtime expression compilation for structural argument spills
-835d819b	Keep argument-local returns inside inlined invocation wrappers
-71d17dee	Keep stateful dynamic sites distinct across nested lambda occurrences
-e2750594	Preserve argument-local returns in computed delegate invocations
-ba22e531	test: register final dynamic and invocation compatibility regressions
-b28a984b	fix: propagate the trimming contract to argument spill metadata
-789c6d35	Preserve physical method tail returns across scoped label definitions
-22b6fe16	test: run method-tail return regressions in every native runner
-18080093	test: keep by-ref spill behavior checks on Framework
-6d87ca5c	Make exception validation test oracles portable to Framework
+76e6500a	fix: restore the declaring variable scope when leaving nested blocks
+13d5cdaa	fix: duplicate only the final assignment field address
+cdb0b13b	feat: bind captured quotes and runtime variables to shared typed cells
+0e59bb2c	test: verify shared struct-cell IL after executing its behavior
+69bfb732	test: retain Framework filter rejection while checking catch quote cells
+a057bef4	fix: preserve explicit block types when binding quoted captures
+6631f514	Revert "fix: preserve explicit block types when binding quoted captures"
+e9b97427	fix: keep struct operator operands separate from receiver addresses
+de486914	test: account for Framework System quote block typing
+0c07d7b2	fix: validate lexical scope of label jumps
+aca7dc1d	Verify runtime-variable spill behavior before excluding IL snapshots
+3cf56a5c	Keep unary and conversion operands in value contexts

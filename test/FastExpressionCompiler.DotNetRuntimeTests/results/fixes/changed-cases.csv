@@ -1,76 +1,55 @@
-﻿method,test,cases,before,after,error
-System.Linq.Expressions.Tests.Continue.AmbiguousJump,System.Linq.Expressions.Tests.Continue.AmbiguousJump(useInterpreter: True),1,Failed,Passed,
-System.Linq.Expressions.Tests.Break.AmbiguousJump,System.Linq.Expressions.Tests.Break.AmbiguousJump(useInterpreter: False),1,Failed,Passed,
-System.Linq.Expressions.Tests.Continue.MultipleDefinitionsInSeparateBlocks,System.Linq.Expressions.Tests.Continue.MultipleDefinitionsInSeparateBlocks(useInterpreter: False),1,Failed,Passed,
-System.Linq.Expressions.Tests.Goto.AmbiguousJumpSplit,System.Linq.Expressions.Tests.Goto.AmbiguousJumpSplit(useInterpreter: True),1,Failed,Passed,
-System.Dynamic.Tests.BinaryOperationTests.BinaryCallSiteBinder_DynamicExpression,System.Dynamic.Tests.BinaryOperationTests.BinaryCallSiteBinder_DynamicExpression(useInterpreter: False),1,Failed,Passed,
-System.Linq.Expressions.Tests.InterpreterTests.VerifyInstructions_Simple,System.Linq.Expressions.Tests.InterpreterTests.VerifyInstructions_Simple,1,Failed,Skipped,
-System.Linq.Expressions.Tests.LoopTests.BreakOutsideLoop,System.Linq.Expressions.Tests.LoopTests.BreakOutsideLoop(useInterpreter: False),1,Failed,Passed,
-System.Linq.Expressions.Tests.InterpreterTests.VerifyInstructions_Exceptions,System.Linq.Expressions.Tests.InterpreterTests.VerifyInstructions_Exceptions,1,Failed,Skipped,
-System.Linq.Expressions.Tests.MemberBindTests.StaticInnerProperty,System.Linq.Expressions.Tests.MemberBindTests.StaticInnerProperty(useInterpreter: False),1,Failed,Skipped,
-System.Linq.Expressions.Tests.ListBindTests.StaticListField,System.Linq.Expressions.Tests.ListBindTests.StaticListField(useInterpreter: True),1,Failed,Skipped,
-System.Linq.Expressions.Tests.Return.MultipleDefinitionsInSeparateBlocks,System.Linq.Expressions.Tests.Return.MultipleDefinitionsInSeparateBlocks(useInterpreter: False),1,Failed,Passed,
-System.Linq.Expressions.Tests.Continue.AmbiguousJump,System.Linq.Expressions.Tests.Continue.AmbiguousJump(useInterpreter: False),1,Failed,Passed,
-System.Linq.Expressions.Tests.ExceptionHandlingExpressions.CannotRethrowWithinFaultWithinCatch,System.Linq.Expressions.Tests.ExceptionHandlingExpressions.CannotRethrowWithinFaultWithinCatch(useInterpreter: False),1,Failed,Passed,
-System.Linq.Expressions.Tests.Return.AmbiguousJump,System.Linq.Expressions.Tests.Return.AmbiguousJump(useInterpreter: False),1,Failed,Passed,
-System.Linq.Expressions.Tests.LambdaTests.ExcessiveArity,System.Linq.Expressions.Tests.LambdaTests.ExcessiveArity(useInterpreter: True),1,Failed,Passed,
-System.Linq.Expressions.Tests.Goto.MultipleDefinitionsInSeparateBlocks,System.Linq.Expressions.Tests.Goto.MultipleDefinitionsInSeparateBlocks(useInterpreter: False),1,Failed,Passed,
-System.Linq.Expressions.Tests.Break.MultipleDefinitionsInSeparateBlocks,System.Linq.Expressions.Tests.Break.MultipleDefinitionsInSeparateBlocks(useInterpreter: True),1,Failed,Passed,
-System.Linq.Expressions.Tests.ListBindTests.StaticListField,System.Linq.Expressions.Tests.ListBindTests.StaticListField(useInterpreter: False),1,Failed,Skipped,
-System.Linq.Expressions.Tests.CompilerTests.VariableBinder_CatchBlock_Filter2,System.Linq.Expressions.Tests.CompilerTests.VariableBinder_CatchBlock_Filter2,1,Failed,Passed,
-System.Linq.Expressions.Tests.ExceptionHandlingExpressions.CannotRethrowOutsideCatch,System.Linq.Expressions.Tests.ExceptionHandlingExpressions.CannotRethrowOutsideCatch(useInterpreter: True),1,Failed,Passed,
-System.Linq.Expressions.Tests.CompilerTests.EmitConstantsToIL_Enums,System.Linq.Expressions.Tests.CompilerTests.EmitConstantsToIL_Enums,1,Failed,Skipped,
-System.Linq.Expressions.Tests.LoopTests.BreakWithinLoop,System.Linq.Expressions.Tests.LoopTests.BreakWithinLoop(useInterpreter: False),1,Failed,Passed,
-System.Linq.Expressions.Tests.ExceptionHandlingExpressions.CannotRethrowWithinFinallyWithinCatch,System.Linq.Expressions.Tests.ExceptionHandlingExpressions.CannotRethrowWithinFinallyWithinCatch(useInterpreter: True),1,Failed,Passed,
-System.Linq.Expressions.Tests.LoopTests.ContinueWithinLoop,System.Linq.Expressions.Tests.LoopTests.ContinueWithinLoop(useInterpreter: False),1,Failed,Passed,
-System.Linq.Expressions.Tests.CompilerTests.EmitConstantsToIL_ShareReferences,System.Linq.Expressions.Tests.CompilerTests.EmitConstantsToIL_ShareReferences,1,Failed,Skipped,
-System.Linq.Expressions.Tests.LoopTests.BreakWithinLoop,System.Linq.Expressions.Tests.LoopTests.BreakWithinLoop(useInterpreter: True),1,Failed,Passed,
-System.Linq.Expressions.Tests.ExceptionHandlingExpressions.JumpIntoTry,System.Linq.Expressions.Tests.ExceptionHandlingExpressions.JumpIntoTry(useInterpreter: False),1,Failed,Passed,
-System.Linq.Expressions.Tests.Goto.AmbiguousJumpSplit,System.Linq.Expressions.Tests.Goto.AmbiguousJumpSplit(useInterpreter: False),1,Failed,Passed,
-System.Linq.Expressions.Tests.MemberBindTests.StaticInnerField,System.Linq.Expressions.Tests.MemberBindTests.StaticInnerField(useInterpreter: False),1,Failed,Skipped,
-System.Linq.Expressions.Tests.Break.MultipleDefinitionsInSeparateBlocks,System.Linq.Expressions.Tests.Break.MultipleDefinitionsInSeparateBlocks(useInterpreter: False),1,Failed,Passed,
-System.Linq.Expressions.Tests.CompilerTests.EmitConstantsToIL_NonNullableValueTypes,System.Linq.Expressions.Tests.CompilerTests.EmitConstantsToIL_NonNullableValueTypes,1,Failed,Skipped,
-System.Linq.Expressions.Tests.LoopTests.ContinueWithinLoop,System.Linq.Expressions.Tests.LoopTests.ContinueWithinLoop(useInterpreter: True),1,Failed,Passed,
-System.Linq.Expressions.Tests.LoopTests.ContinueTheSameAsBreak,System.Linq.Expressions.Tests.LoopTests.ContinueTheSameAsBreak(useInterpreter: False),1,Failed,Passed,
-System.Linq.Expressions.Tests.BindTests.StaticProperty,System.Linq.Expressions.Tests.BindTests.StaticProperty(useInterpreter: True),1,Failed,Skipped,
-System.Linq.Expressions.Tests.ExceptionHandlingExpressions.JumpOutOfExceptionFilter,System.Linq.Expressions.Tests.ExceptionHandlingExpressions.JumpOutOfExceptionFilter(useInterpreter: True),1,Failed,Passed,
-System.Linq.Expressions.Tests.Goto.AmbiguousJumpBack,System.Linq.Expressions.Tests.Goto.AmbiguousJumpBack(useInterpreter: True),1,Failed,Passed,
-System.Linq.Expressions.Tests.ExceptionHandlingExpressions.JumpOutOfFinally,System.Linq.Expressions.Tests.ExceptionHandlingExpressions.JumpOutOfFinally(useInterpreter: False),1,Failed,Passed,
-System.Linq.Expressions.Tests.InterpreterTests.ConstructorThrows_StackTrace,System.Linq.Expressions.Tests.InterpreterTests.ConstructorThrows_StackTrace,1,Failed,Skipped,
-System.Linq.Expressions.Tests.LoopTests.BreakOutsideLoop,System.Linq.Expressions.Tests.LoopTests.BreakOutsideLoop(useInterpreter: True),1,Failed,Passed,
-System.Linq.Expressions.Tests.LambdaTests.ValidateThatInterpreterWithSimpleTypeUsesNonDynamicThunk,System.Linq.Expressions.Tests.LambdaTests.ValidateThatInterpreterWithSimpleTypeUsesNonDynamicThunk,1,Failed,Skipped,
-System.Linq.Expressions.Tests.Return.MultipleDefinitionsInSeparateBlocks,System.Linq.Expressions.Tests.Return.MultipleDefinitionsInSeparateBlocks(useInterpreter: True),1,Failed,Passed,
-System.Linq.Expressions.Tests.LambdaTests.ExcessiveArity,System.Linq.Expressions.Tests.LambdaTests.ExcessiveArity(useInterpreter: False),1,Failed,Passed,
-System.Linq.Expressions.Tests.BindTests.StaticProperty,System.Linq.Expressions.Tests.BindTests.StaticProperty(useInterpreter: False),1,Failed,Skipped,
-System.Linq.Expressions.Tests.LoopTests.ContinueOutsideLoop,System.Linq.Expressions.Tests.LoopTests.ContinueOutsideLoop(useInterpreter: False),1,Failed,Passed,
-System.Linq.Expressions.Tests.Goto.AmbiguousJump,System.Linq.Expressions.Tests.Goto.AmbiguousJump(useInterpreter: True),1,Failed,Passed,
-System.Linq.Expressions.Tests.CompilerTests.VariableBinder_CatchBlock_Filter1,System.Linq.Expressions.Tests.CompilerTests.VariableBinder_CatchBlock_Filter1,1,Failed,Passed,
-System.Linq.Expressions.Tests.Goto.MultipleDefinitionsInSeparateBlocks,System.Linq.Expressions.Tests.Goto.MultipleDefinitionsInSeparateBlocks(useInterpreter: True),1,Failed,Passed,
-System.Linq.Expressions.Tests.LambdaTests.InvokeComputedLambda,System.Linq.Expressions.Tests.LambdaTests.InvokeComputedLambda(useInterpreter: True),1,Failed,Passed,
-System.Linq.Expressions.Tests.MemberBindTests.StaticReadonlyInnerField,System.Linq.Expressions.Tests.MemberBindTests.StaticReadonlyInnerField(useInterpreter: False),1,Failed,Skipped,
-System.Linq.Expressions.Tests.Goto.AmbiguousJumpBack,System.Linq.Expressions.Tests.Goto.AmbiguousJumpBack(useInterpreter: False),1,Failed,Passed,
-System.Linq.Expressions.Tests.ExceptionHandlingExpressions.JumpIntoTry,System.Linq.Expressions.Tests.ExceptionHandlingExpressions.JumpIntoTry(useInterpreter: True),1,Failed,Passed,
-System.Linq.Expressions.Tests.ListBindTests.StaticListProperty,System.Linq.Expressions.Tests.ListBindTests.StaticListProperty(useInterpreter: False),1,Failed,Skipped,
-System.Linq.Expressions.Tests.CompilerTests.EmitConstantsToIL_NullableValueTypes,System.Linq.Expressions.Tests.CompilerTests.EmitConstantsToIL_NullableValueTypes,1,Failed,Skipped,
-System.Linq.Expressions.Tests.CompilerTests.EmitConstantsToIL_ReferenceTypes,System.Linq.Expressions.Tests.CompilerTests.EmitConstantsToIL_ReferenceTypes,1,Failed,Skipped,
-System.Linq.Expressions.Tests.MemberBindTests.StaticReadonlyInnerProperty,System.Linq.Expressions.Tests.MemberBindTests.StaticReadonlyInnerProperty(useInterpreter: True),1,Failed,Skipped,
-System.Linq.Expressions.Tests.ExceptionHandlingExpressions.JumpOutOfExceptionFilter,System.Linq.Expressions.Tests.ExceptionHandlingExpressions.JumpOutOfExceptionFilter(useInterpreter: False),1,Failed,Passed,
-System.Linq.Expressions.Tests.MemberBindTests.StaticInnerField,System.Linq.Expressions.Tests.MemberBindTests.StaticInnerField(useInterpreter: True),1,Failed,Skipped,
-System.Linq.Expressions.Tests.LambdaTests.InvokeComputedLambda,System.Linq.Expressions.Tests.LambdaTests.InvokeComputedLambda(useInterpreter: False),1,Failed,Passed,
-System.Dynamic.Tests.BinaryOperationTests.BinaryCallSiteBinder_DynamicExpression,System.Dynamic.Tests.BinaryOperationTests.BinaryCallSiteBinder_DynamicExpression(useInterpreter: True),1,Failed,Passed,
-System.Linq.Expressions.Tests.ExceptionHandlingExpressions.CannotRethrowWithinFaultWithinCatch,System.Linq.Expressions.Tests.ExceptionHandlingExpressions.CannotRethrowWithinFaultWithinCatch(useInterpreter: True),1,Failed,Passed,
-System.Linq.Expressions.Tests.CompilerTests.EmitConstantsToIL_LiftedToClosure,System.Linq.Expressions.Tests.CompilerTests.EmitConstantsToIL_LiftedToClosure,1,Failed,Skipped,
-System.Linq.Expressions.Tests.MemberBindTests.StaticReadonlyInnerProperty,System.Linq.Expressions.Tests.MemberBindTests.StaticReadonlyInnerProperty(useInterpreter: False),1,Failed,Skipped,
-System.Linq.Expressions.Tests.ListBindTests.StaticListProperty,System.Linq.Expressions.Tests.ListBindTests.StaticListProperty(useInterpreter: True),1,Failed,Skipped,
-System.Linq.Expressions.Tests.ExceptionHandlingExpressions.CannotRethrowWithinFinallyWithinCatch,System.Linq.Expressions.Tests.ExceptionHandlingExpressions.CannotRethrowWithinFinallyWithinCatch(useInterpreter: False),1,Failed,Passed,
-System.Linq.Expressions.Tests.Return.AmbiguousJump,System.Linq.Expressions.Tests.Return.AmbiguousJump(useInterpreter: True),1,Failed,Passed,
-System.Linq.Expressions.Tests.Continue.MultipleDefinitionsInSeparateBlocks,System.Linq.Expressions.Tests.Continue.MultipleDefinitionsInSeparateBlocks(useInterpreter: True),1,Failed,Passed,
-System.Linq.Expressions.Tests.MemberBindTests.StaticInnerProperty,System.Linq.Expressions.Tests.MemberBindTests.StaticInnerProperty(useInterpreter: True),1,Failed,Skipped,
-System.Linq.Expressions.Tests.MemberBindTests.StaticReadonlyInnerField,System.Linq.Expressions.Tests.MemberBindTests.StaticReadonlyInnerField(useInterpreter: True),1,Failed,Skipped,
-System.Linq.Expressions.Tests.LoopTests.ContinueTheSameAsBreak,System.Linq.Expressions.Tests.LoopTests.ContinueTheSameAsBreak(useInterpreter: True),1,Failed,Passed,
-System.Linq.Expressions.Tests.ExceptionHandlingExpressions.JumpOutOfFinally,System.Linq.Expressions.Tests.ExceptionHandlingExpressions.JumpOutOfFinally(useInterpreter: True),1,Failed,Passed,
-System.Linq.Expressions.Tests.Break.AmbiguousJump,System.Linq.Expressions.Tests.Break.AmbiguousJump(useInterpreter: True),1,Failed,Passed,
-System.Linq.Expressions.Tests.ExceptionHandlingExpressions.TryFinallyWithinFilterCompiledProhibited,System.Linq.Expressions.Tests.ExceptionHandlingExpressions.TryFinallyWithinFilterCompiledProhibited,1,Failed,Passed,
-System.Linq.Expressions.Tests.Goto.AmbiguousJump,System.Linq.Expressions.Tests.Goto.AmbiguousJump(useInterpreter: False),1,Failed,Passed,
-System.Linq.Expressions.Tests.LoopTests.ContinueOutsideLoop,System.Linq.Expressions.Tests.LoopTests.ContinueOutsideLoop(useInterpreter: True),1,Failed,Passed,
-System.Linq.Expressions.Tests.ExceptionHandlingExpressions.CannotRethrowOutsideCatch,System.Linq.Expressions.Tests.ExceptionHandlingExpressions.CannotRethrowOutsideCatch(useInterpreter: False),1,Failed,Passed,
+﻿method,test,cases,before,after
+System.Linq.Expressions.Tests.RuntimeVariablesTests.AliasingAllowed,System.Linq.Expressions.Tests.RuntimeVariablesTests.AliasingAllowed(useInterpreter: False),1,Failed,Passed
+System.Linq.Expressions.Tests.RuntimeVariablesTests.ReadAndReturnVars,System.Linq.Expressions.Tests.RuntimeVariablesTests.ReadAndReturnVars(useInterpreter: False),1,Failed,Passed
+System.Linq.Expressions.Tests.Goto.JumpInWithValue,System.Linq.Expressions.Tests.Goto.JumpInWithValue(useInterpreter: True),1,Failed,Passed
+System.Linq.Expressions.Tests.Break.JumpIntoExpression,System.Linq.Expressions.Tests.Break.JumpIntoExpression(useInterpreter: True),1,Failed,Passed
+System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_RuntimeVariables_Local,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_RuntimeVariables_Local(useInterpreter: False),1,Failed,Passed
+System.Linq.Expressions.Tests.Continue.JumpIntoExpression,System.Linq.Expressions.Tests.Continue.JumpIntoExpression(useInterpreter: True),1,Failed,Passed
+System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Lambda_Closure2,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Lambda_Closure2(useInterpreter: True),1,Failed,Passed
+System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_CatchBlock_Variable_Closure2,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_CatchBlock_Variable_Closure2(useInterpreter: True),1,Failed,Passed
+System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_RuntimeVariables_Local,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_RuntimeVariables_Local(useInterpreter: True),1,Failed,Passed
+System.Linq.Expressions.Tests.RuntimeVariablesTests.IRuntimeVariablesListChecksBounds,System.Linq.Expressions.Tests.RuntimeVariablesTests.IRuntimeVariablesListChecksBounds(useInterpreter: True),1,Failed,Passed
+System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Block_LocalAndClosure,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Block_LocalAndClosure(useInterpreter: True),1,Failed,Passed
+System.Linq.Expressions.Tests.Goto.JumpInWithValue,System.Linq.Expressions.Tests.Goto.JumpInWithValue(useInterpreter: False),1,Failed,Passed
+System.Linq.Expressions.Tests.RuntimeVariablesTests.ReadAndWriteVars,System.Linq.Expressions.Tests.RuntimeVariablesTests.ReadAndWriteVars(useInterpreter: False),1,Failed,Passed
+System.Linq.Expressions.Tests.Return.JumpInWithValue,System.Linq.Expressions.Tests.Return.JumpInWithValue(useInterpreter: True),1,Failed,Passed
+System.Linq.Expressions.Tests.Continue.JumpIntoExpression,System.Linq.Expressions.Tests.Continue.JumpIntoExpression(useInterpreter: False),1,Failed,Passed
+System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_CatchBlock_NoVariable_Closure1,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_CatchBlock_NoVariable_Closure1(useInterpreter: True),1,Failed,Passed
+System.Linq.Expressions.Tests.Compiler_Tests.NestedQuotedLambdas,System.Linq.Expressions.Tests.Compiler_Tests.NestedQuotedLambdas(useInterpreter: True),1,Failed,Passed
+System.Linq.Expressions.Tests.Goto.JumpIntoExpression,System.Linq.Expressions.Tests.Goto.JumpIntoExpression(useInterpreter: True),1,Failed,Passed
+System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_CatchBlock_Variable_Closure1,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_CatchBlock_Variable_Closure1(useInterpreter: True),1,Failed,Passed
+System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_RuntimeVariables_ClosureAndLocal,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_RuntimeVariables_ClosureAndLocal(useInterpreter: False),1,Failed,Passed
+System.Linq.Expressions.Tests.StackSpillerTests.Spill_Optimizations_RuntimeVariables2,System.Linq.Expressions.Tests.StackSpillerTests.Spill_Optimizations_RuntimeVariables2,1,Failed,Skipped
+System.Linq.Expressions.Tests.Compiler_Tests.NestedExpressionLambdaWithOuterArg,System.Linq.Expressions.Tests.Compiler_Tests.NestedExpressionLambdaWithOuterArg(useInterpreter: False),1,Failed,Passed
+System.Linq.Expressions.Tests.Return.JumpIntoExpression,System.Linq.Expressions.Tests.Return.JumpIntoExpression(useInterpreter: False),1,Failed,Passed
+System.Linq.Expressions.Tests.RuntimeVariablesTests.MixedScope,System.Linq.Expressions.Tests.RuntimeVariablesTests.MixedScope(useInterpreter: False),1,Failed,Passed
+System.Linq.Expressions.Tests.Break.JumpInWithValue,System.Linq.Expressions.Tests.Break.JumpInWithValue(useInterpreter: True),1,Failed,Passed
+System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_RuntimeVariables_ClosureAndLocal,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_RuntimeVariables_ClosureAndLocal(useInterpreter: True),1,Failed,Passed
+System.Linq.Expressions.Tests.RuntimeVariablesTests.AliasingAllowed,System.Linq.Expressions.Tests.RuntimeVariablesTests.AliasingAllowed(useInterpreter: True),1,Failed,Passed
+System.Linq.Expressions.Tests.Break.JumpIntoExpression,System.Linq.Expressions.Tests.Break.JumpIntoExpression(useInterpreter: False),1,Failed,Passed
+System.Linq.Expressions.Tests.UnaryQuoteTests.QuotePreservesTypingOfBlock,System.Linq.Expressions.Tests.UnaryQuoteTests.QuotePreservesTypingOfBlock(useInterpreter: True),1,Failed,Passed
+System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Block_Closure,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Block_Closure(useInterpreter: True),1,Failed,Passed
+System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_CatchBlock_Variable_Closure2,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_CatchBlock_Variable_Closure2(useInterpreter: False),1,Failed,Passed
+System.Linq.Expressions.Tests.RuntimeVariablesTests.MixedScope,System.Linq.Expressions.Tests.RuntimeVariablesTests.MixedScope(useInterpreter: True),1,Failed,Passed
+System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Lambda_Closure1,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Lambda_Closure1(useInterpreter: False),1,Failed,Passed
+System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_RuntimeVariables_Closure,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_RuntimeVariables_Closure(useInterpreter: True),1,Failed,Passed
+System.Linq.Expressions.Tests.RuntimeVariablesTests.ReadAndReturnVars,System.Linq.Expressions.Tests.RuntimeVariablesTests.ReadAndReturnVars(useInterpreter: True),1,Failed,Passed
+System.Linq.Expressions.Tests.Goto.JumpIntoExpression,System.Linq.Expressions.Tests.Goto.JumpIntoExpression(useInterpreter: False),1,Failed,Passed
+System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_CatchBlock_NoVariable_Closure2,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_CatchBlock_NoVariable_Closure2(useInterpreter: False),1,Failed,Passed
+System.Linq.Expressions.Tests.Compiler_Tests.NestedExpressionLambdaWithOuterArg,System.Linq.Expressions.Tests.Compiler_Tests.NestedExpressionLambdaWithOuterArg(useInterpreter: True),1,Failed,Passed
+System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Lambda_Closure1,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Lambda_Closure1(useInterpreter: True),1,Failed,Passed
+System.Linq.Expressions.Tests.RuntimeVariablesTests.IRuntimeVariablesListChecksBounds,System.Linq.Expressions.Tests.RuntimeVariablesTests.IRuntimeVariablesListChecksBounds(useInterpreter: False),1,Failed,Passed
+System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Block_LocalAndClosure,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Block_LocalAndClosure(useInterpreter: False),1,Failed,Passed
+System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_CatchBlock_NoVariable_Closure1,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_CatchBlock_NoVariable_Closure1(useInterpreter: False),1,Failed,Passed
+System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_RuntimeVariables_Closure,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_RuntimeVariables_Closure(useInterpreter: False),1,Failed,Passed
+System.Linq.Expressions.Tests.UnaryQuoteTests.QuotePreservesTypingOfBlock,System.Linq.Expressions.Tests.UnaryQuoteTests.QuotePreservesTypingOfBlock(useInterpreter: False),1,Failed,Passed
+System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Block_Closure,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Block_Closure(useInterpreter: False),1,Failed,Passed
+System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_CatchBlock_NoVariable_Closure2,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_CatchBlock_NoVariable_Closure2(useInterpreter: True),1,Failed,Passed
+System.Linq.Expressions.Tests.Break.JumpInWithValue,System.Linq.Expressions.Tests.Break.JumpInWithValue(useInterpreter: False),1,Failed,Passed
+System.Linq.Expressions.Tests.RuntimeVariablesTests.ReadAndWriteVars,System.Linq.Expressions.Tests.RuntimeVariablesTests.ReadAndWriteVars(useInterpreter: True),1,Failed,Passed
+System.Linq.Expressions.Tests.Compiler_Tests.NestedQuotedLambdas,System.Linq.Expressions.Tests.Compiler_Tests.NestedQuotedLambdas(useInterpreter: False),1,Failed,Passed
+System.Linq.Expressions.Tests.StackSpillerTests.Spill_Optimizations_RuntimeVariables1,System.Linq.Expressions.Tests.StackSpillerTests.Spill_Optimizations_RuntimeVariables1,1,Failed,Skipped
+System.Linq.Expressions.Tests.Return.JumpIntoExpression,System.Linq.Expressions.Tests.Return.JumpIntoExpression(useInterpreter: True),1,Failed,Passed
+System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_CatchBlock_Variable_Closure1,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_CatchBlock_Variable_Closure1(useInterpreter: False),1,Failed,Passed
+System.Linq.Expressions.Tests.Return.JumpInWithValue,System.Linq.Expressions.Tests.Return.JumpInWithValue(useInterpreter: False),1,Failed,Passed
+System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Lambda_Closure2,System.Linq.Expressions.Tests.UnaryQuoteTests.Quote_Lambda_Closure2(useInterpreter: False),1,Failed,Passed
