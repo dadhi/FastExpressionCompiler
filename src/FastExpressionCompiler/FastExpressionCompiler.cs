@@ -6644,7 +6644,8 @@ namespace FastExpressionCompiler
                 // The Invoke signature was obtained before argument preparation above.
                 if (argCount != 0)
                 {
-                    var useResult = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
+                    // Argument-local returns produce argument values, not enclosing lambda returns.
+                    var useResult = parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.InlinedLambdaInvoke);
                     var args = delegateInvokeMethod.GetParameters(); // todo: @perf avoid this if possible
                     // A try argument requires an empty evaluation stack. Preserve the receiver and
                     // preceding arguments with the same local storage used for ordinary calls.
