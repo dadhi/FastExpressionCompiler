@@ -947,6 +947,23 @@ namespace FastExpressionCompiler
                 return info;
             }
 
+            internal SmallList<(MethodBase Method, ParameterInfo[] Parameters),
+                Stack2<(MethodBase Method, ParameterInfo[] Parameters)>, NoArrayPool<(MethodBase Method, ParameterInfo[] Parameters)>> CaptureMethodParameters;
+
+            [RequiresUnreferencedCode(Trimming.Message)]
+            [MethodImpl((MethodImplOptions)256)]
+            internal ParameterInfo[] GetCaptureMethodParameters(MethodBase method, bool collect = false)
+            {
+                for (var i = CaptureMethodParameters.Count - 1; i >= 0; --i)
+                {
+                    var entry = CaptureMethodParameters.GetSurePresentRef(i);
+                    if (ReferenceEquals(entry.Method, method)) return entry.Parameters;
+                }
+                var parameters = method.GetParameters();
+                if (collect) CaptureMethodParameters.Add((method, parameters));
+                return parameters;
+            }
+
             internal Expression CaptureAnalysisRoot;
             internal SmallSet4<ParameterExpression, RefEq<ParameterExpression>> CaptureCellVariables;
             internal bool CaptureStorageAnalyzed, CaptureStorageRequiresCells;
@@ -977,7 +994,7 @@ namespace FastExpressionCompiler
                 {
                     if (!CaptureStorageAnalyzed)
                     {
-                        CaptureStorageRequiresCells = !AnalyzeCaptureStorage(CaptureAnalysisRoot, ref CaptureCellVariables);
+                        CaptureStorageRequiresCells = !AnalyzeCaptureStorage(CaptureAnalysisRoot, ref this);
                         CaptureStorageAnalyzed = true;
                     }
                     if (!CaptureStorageRequiresCells)
@@ -1459,8 +1476,9 @@ namespace FastExpressionCompiler
         // One conservative mutation analysis serves every nested capture in a compilation.
         [RequiresUnreferencedCode(Trimming.Message)]
         private static bool AnalyzeCaptureStorage(Expression expression,
-            ref SmallSet4<ParameterExpression, RefEq<ParameterExpression>> cells, bool writable = false)
+            ref CompilerContext context, bool writable = false)
         {
+            ref var cells = ref context.CaptureCellVariables;
             if (expression == null) return true;
             if (expression is ParameterExpression parameter)
             {
@@ -1468,7 +1486,7 @@ namespace FastExpressionCompiler
                 return true;
             }
             if (expression is ConstantExpression || expression is DefaultExpression) return true;
-            if (expression is LambdaExpression lambda) return AnalyzeCaptureStorage(lambda.Body, ref cells, writable);
+            if (expression is LambdaExpression lambda) return AnalyzeCaptureStorage(lambda.Body, ref context, writable);
             if (expression is BlockExpression block)
             {
                 var expressions = block.Expressions;
@@ -1490,7 +1508,7 @@ namespace FastExpressionCompiler
                     if (child is BinaryExpression assignment && assignment.NodeType == ExpressionType.Assign &&
                         assignment.Left is ParameterExpression variable && IsLeadingCaptureInitializer(block, i, variable))
                         child = assignment.Right;
-                    if (!AnalyzeCaptureStorage(child, ref cells, writable)) return false;
+                    if (!AnalyzeCaptureStorage(child, ref context, writable)) return false;
                 }
                 return true;
             }
@@ -1505,36 +1523,52 @@ namespace FastExpressionCompiler
                     if (owner is ParameterExpression target && (ReferenceEquals(owner, binary.Left) || target.Type.IsValueType))
                         cells.Set.AddOrGetEntryRef(target, out _);
                 }
-                return AnalyzeCaptureStorage(binary.Left, ref cells, writable || binary.Method != null) &&
-                    AnalyzeCaptureStorage(binary.Right, ref cells, writable || binary.Method != null) &&
-                    AnalyzeCaptureStorage(binary.Conversion, ref cells, writable);
+                var parameters = binary.Method == null ? null : context.GetCaptureMethodParameters(binary.Method, collect: true);
+                return AnalyzeCaptureStorage(binary.Left, ref context, writable || parameters != null && parameters[0].ParameterType.IsByRef) &&
+                    AnalyzeCaptureStorage(binary.Right, ref context, writable || parameters != null && parameters[1].ParameterType.IsByRef) &&
+                    AnalyzeCaptureStorage(binary.Conversion, ref context, writable);
             }
             if (expression is UnaryExpression unary)
             {
                 if (unary.NodeType == ExpressionType.Quote || unary.NodeType == ExpressionType.Throw ||
                     unary.NodeType >= ExpressionType.PreIncrementAssign && unary.NodeType <= ExpressionType.PostDecrementAssign)
                     return false;
-                return AnalyzeCaptureStorage(unary.Operand, ref cells, writable || unary.Method != null);
+                var parameters = unary.Method == null ? null : context.GetCaptureMethodParameters(unary.Method, collect: true);
+                return AnalyzeCaptureStorage(unary.Operand, ref context, writable || parameters != null && parameters[0].ParameterType.IsByRef);
             }
             if (expression is MemberExpression access)
-                return AnalyzeCaptureStorage(access.Expression, ref cells, writable ||
+                return AnalyzeCaptureStorage(access.Expression, ref context, writable ||
                     access.Member is PropertyInfo && access.Expression != null && access.Expression.Type.IsValueType);
             if (expression is ConditionalExpression conditional)
-                return AnalyzeCaptureStorage(conditional.Test, ref cells, writable) && AnalyzeCaptureStorage(conditional.IfTrue, ref cells, writable) &&
-                    AnalyzeCaptureStorage(conditional.IfFalse, ref cells, writable);
+                return AnalyzeCaptureStorage(conditional.Test, ref context, writable) && AnalyzeCaptureStorage(conditional.IfTrue, ref context, writable) &&
+                    AnalyzeCaptureStorage(conditional.IfFalse, ref context, writable);
             if (expression is MethodCallExpression call)
             {
-                if (!AnalyzeCaptureStorage(call.Object, ref cells, writable || call.Object != null && call.Object.Type.IsValueType)) return false;
+                if (!AnalyzeCaptureStorage(call.Object, ref context, writable || call.Object != null && call.Object.Type.IsValueType)) return false;
                 var arguments = call.GetArgExprs();
+                var parameters = arguments.GetArgCount() == 0 ? null : context.GetCaptureMethodParameters(call.Method, collect: true);
                 for (var i = 0; i < arguments.GetArgCount(); ++i)
-                    if (!AnalyzeCaptureStorage(arguments.GetArgument(i), ref cells, true)) return false;
+                    if (!AnalyzeCaptureStorage(arguments.GetArgument(i), ref context, writable || parameters[i].ParameterType.IsByRef)) return false;
                 return true;
             }
+            if (expression is InvocationExpression invocation)
+            {
+                var invokeMethod = invocation.Expression.Type.GetMethod("Invoke");
+                if (invokeMethod == null || !AnalyzeCaptureStorage(invocation.Expression, ref context, writable)) return false;
+                var arguments = invocation.GetArgExprs();
+                var parameters = arguments.GetArgCount() == 0 ? null : context.GetCaptureMethodParameters(invokeMethod, collect: true);
+                for (var i = 0; i < arguments.GetArgCount(); ++i)
+                    if (!AnalyzeCaptureStorage(arguments.GetArgument(i), ref context, writable || parameters[i].ParameterType.IsByRef)) return false;
+                return true;
+            }
+            if (expression is TypeBinaryExpression typeTest)
+                return AnalyzeCaptureStorage(typeTest.Expression, ref context, writable);
             if (expression is NewExpression creation)
             {
                 var arguments = creation.GetArgExprs();
+                var parameters = arguments.GetArgCount() == 0 ? null : context.GetCaptureMethodParameters(creation.Constructor, collect: true);
                 for (var i = 0; i < arguments.GetArgCount(); ++i)
-                    if (!AnalyzeCaptureStorage(arguments.GetArgument(i), ref cells, true)) return false;
+                    if (!AnalyzeCaptureStorage(arguments.GetArgument(i), ref context, writable || parameters[i].ParameterType.IsByRef)) return false;
                 return true;
             }
             return false;
@@ -2129,6 +2163,7 @@ namespace FastExpressionCompiler
                         nestedLambdaContext.HoistedTypes = context.HoistedTypes;
                         nestedLambdaContext.CaptureAnalysisRoot = context.CaptureAnalysisRoot;
                         nestedLambdaContext.CaptureCellVariables = context.CaptureCellVariables;
+                        nestedLambdaContext.CaptureMethodParameters = context.CaptureMethodParameters;
                         nestedLambdaContext.CaptureStorageAnalyzed = context.CaptureStorageAnalyzed;
                         nestedLambdaContext.CaptureStorageRequiresCells = context.CaptureStorageRequiresCells;
                         var newNestedLambda = new NestedLambdaInfo(nestedLambdaExpr);
@@ -2157,6 +2192,7 @@ namespace FastExpressionCompiler
                             return Result.NestedLambdaCompileError;
                         context.HoistedTypes = nestedLambdaContext.HoistedTypes;
                         context.CaptureCellVariables = nestedLambdaContext.CaptureCellVariables;
+                        context.CaptureMethodParameters = nestedLambdaContext.CaptureMethodParameters;
                         context.CaptureStorageAnalyzed = nestedLambdaContext.CaptureStorageAnalyzed;
                         context.CaptureStorageRequiresCells = nestedLambdaContext.CaptureStorageRequiresCells;
 
@@ -3534,7 +3570,7 @@ namespace FastExpressionCompiler
                     throw new InvalidOperationException("Cannot construct an abstract type.");
                 if (argCount != 0)
                 {
-                    var pars = ctor.GetParameters();
+                    var pars = context.GetCaptureMethodParameters(ctor);
                     for (var i = 0; i < argCount; ++i)
                         if (pars[i].ParameterType.IsByRef && NeedsByRefWriteback(argExprs.GetArgument(i)))
                             return TryEmitCallWithWritebacks(null, argExprs, null, ctor, il, ref context, parent, -1);
@@ -4684,7 +4720,7 @@ namespace FastExpressionCompiler
                         ParentFlags.AssignmentLeftValue | ParentFlags.DupIt | ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue))
                     return false;
                 var underlyingOperandType = Nullable.GetUnderlyingType(op.Type);
-                if (underlyingOperandType != null && method.GetParameters()[0].ParameterType == underlyingOperandType)
+                if (underlyingOperandType != null && context.GetCaptureMethodParameters(method)[0].ParameterType == underlyingOperandType)
                 {
                     var operand = EmitStoreAndLoadLocalVariableAddress(il, op.Type);
                     EmitMethodCall(il, op.Type.GetNullableHasValueGetterMethod());
@@ -4894,7 +4930,7 @@ namespace FastExpressionCompiler
                 {
                     methodReturnType = convertMethod.ReturnType;
 
-                    var mParams = convertMethod.GetParameters();
+                    var mParams = context.GetCaptureMethodParameters(convertMethod);
                     Debug.Assert(mParams.Length == 1, $"Expected for the conversion operator to have a single param, but found {mParams.Length}");
                     methodParamType = mParams[0].ParameterType;
                     methodParameterIsByRef = methodParamType.IsByRef;
@@ -4937,7 +4973,7 @@ namespace FastExpressionCompiler
                                 m.Name != "op_Implicit" && m.Name != "op_Explicit")
                                 continue;
 
-                            var operatorParams = m.GetParameters();
+                            var operatorParams = context.GetCaptureMethodParameters(m);
                             Debug.Assert(operatorParams.Length == 1, $"Expected for the conversion operator to have a single param, but found {operatorParams.Length}");
 
                             methodParamType = operatorParams[0].ParameterType;
@@ -5959,7 +5995,7 @@ namespace FastExpressionCompiler
             {
                 // A lifted operator produces Nullable<T>, which cannot be passed to a conversion taking T.
                 if (conversion != null && left.Type.IsNullable() && operationMethod != null &&
-                    operationMethod.GetParameters()[0].ParameterType != left.Type)
+                    context.GetCaptureMethodParameters(operationMethod)[0].ParameterType != left.Type)
                     return false;
                 // we need the result variable and the time of Post/Pre when to store it only if the result is not ignored, otherwise don't bother
                 var resultVar = -1;
@@ -6243,7 +6279,7 @@ namespace FastExpressionCompiler
                         }
 
                         var leftIsNullable = leftType.IsNullable() &&
-                            (operationMethod == null || operationMethod.GetParameters()[0].ParameterType != leftType);
+                            (operationMethod == null || context.GetCaptureMethodParameters(operationMethod)[0].ParameterType != leftType);
                         if (!leftIsNullable)
                         {
                             if (right == null) // optimization for the common increment/decrement case, indicated by using the null for the right argument
@@ -6262,7 +6298,7 @@ namespace FastExpressionCompiler
                                     return false;
 
                                 var rightIsNullable = rightType.IsNullable() &&
-                                    (operationMethod == null || operationMethod.GetParameters()[1].ParameterType != rightType);
+                                    (operationMethod == null || context.GetCaptureMethodParameters(operationMethod)[1].ParameterType != rightType);
                                 if (rightIsNullable) // todo: @perf @clarify is it even possible to have left non-nullable and right nullable
                                 {
                                     var rightVar = EmitStoreAndLoadLocalVariableAddress(il, rightType);
@@ -6313,7 +6349,7 @@ namespace FastExpressionCompiler
                                 var rightVar = EmitStoreLocalVariable(il, rightType);
 
                                 var rightIsNullable = rightType.IsNullable() &&
-                                    (operationMethod == null || operationMethod.GetParameters()[1].ParameterType != rightType);
+                                    (operationMethod == null || context.GetCaptureMethodParameters(operationMethod)[1].ParameterType != rightType);
                                 if (!rightIsNullable) // todo: @perf @clarify if it is possible to have left nullable and right non-nullable
                                 {
                                     EmitLoadLocalVariableAddress(il, leftNullableVar);
@@ -6972,7 +7008,7 @@ namespace FastExpressionCompiler
                 }
                 SmallList<ByRefWriteback, Stack2<ByRefWriteback>, NoArrayPool<ByRefWriteback>> writebacks = default;
                 SmallList<int, Stack8<int>, NoArrayPool<int>> arguments = default;
-                var parameters = method != null ? method.GetParameters() : constructor.GetParameters();
+                var parameters = context.GetCaptureMethodParameters(method != null ? (MethodBase)method : constructor);
                 for (var i = 0; i < parameters.Length; ++i)
                 {
                     var argument = expressions.GetArgument(i);
@@ -7077,7 +7113,7 @@ namespace FastExpressionCompiler
                     if (method == null)
                         return false;
                 }
-                var methodParams = method.GetParameters(); // todo: @perf @mem find how to avoid the call, look at `NewNoByRefArgs` expressions as example
+                var methodParams = context.GetCaptureMethodParameters(method);
 
                 var callArguments = callExpr.GetArgExprs();
                 for (var i = 0; i < methodParams.Length; ++i)
@@ -7509,7 +7545,7 @@ namespace FastExpressionCompiler
                 var delegateInvokeMethod = delegateType.FindDelegateInvokeMethod();
                 if (delegateInvokeMethod == null)
                     return false;
-                var invokeParameters = delegateInvokeMethod.GetParameters();
+                var invokeParameters = context.GetCaptureMethodParameters(delegateInvokeMethod);
                 for (var i = 0; i < invokeParameters.Length; ++i)
                     if (invokeParameters[i].ParameterType.IsByRef && NeedsByRefWriteback(argExprs.GetArgument(i)))
                         return TryEmitCallWithWritebacks(invokedExpr, argExprs, delegateInvokeMethod, null, il, ref context, parent, byRefIndex,
@@ -7930,7 +7966,7 @@ namespace FastExpressionCompiler
                 if (equalityMethod != null)
                 {
                     switchValueParent |= ParentFlags.Call;
-                    var paramInfos = equalityMethod.GetParameters();
+                    var paramInfos = context.GetCaptureMethodParameters(equalityMethod);
                     Debug.Assert(paramInfos.Length == 2);
                     var paramType = paramInfos[0].ParameterType;
                     isEqualityMethodForUnderlyingNullable = paramType == switchNullableUnderlyingValueType;
@@ -8398,7 +8434,7 @@ namespace FastExpressionCompiler
                         ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
                     | ParentFlags.Arithmetic;
 
-                if (right == null && operationMethod != null && operationMethod.GetParameters()[0].ParameterType == left.Type)
+                if (right == null && operationMethod != null && context.GetCaptureMethodParameters(operationMethod)[0].ParameterType == left.Type)
                 {
                     if (!TryEmit(left, il, ref context, flags | ParentFlags.AssignmentRightValue))
                         return false;
@@ -8412,7 +8448,7 @@ namespace FastExpressionCompiler
                 var noNullableValueLabel = default(Label);
                 var leftType = left.Type;
                 var leftIsNullable = leftType.IsNullable() &&
-                    (operationMethod == null || operationMethod.GetParameters()[0].ParameterType != leftType);
+                    (operationMethod == null || context.GetCaptureMethodParameters(operationMethod)[0].ParameterType != leftType);
                 var leftVar = -1;
                 var leftValueVar = -1;
                 var cachedRight = -1;
@@ -8458,7 +8494,7 @@ namespace FastExpressionCompiler
                     // see `Using_try_finally_as_arithmetic_operand_use_void_block_in_finally`
                     var rightType = right.Type;
                     rightIsNullable = rightType.IsNullable() &&
-                        (operationMethod == null || operationMethod.GetParameters()[1].ParameterType != rightType);
+                        (operationMethod == null || context.GetCaptureMethodParameters(operationMethod)[1].ParameterType != rightType);
                     if (leftValueVar == -1 && (rightIsNullable || context.HasExceptionBlock || right.IsComplexExpression()))
                         leftValueVar = EmitStoreLocalVariable(il, leftType);
                     if (rightIsNullable && !leftIsNullable)
