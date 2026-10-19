@@ -714,7 +714,6 @@ namespace FastExpressionCompiler
 
             /// New or Call expressions containing the complex expression, e.g. inlined Lambda Invoke or Try with Finally
             internal SmallSet4<Expression, RefEq<Expression>> ArgsContainingComplexExpression;
-            internal SmallSet4<Expression, RefEq<Expression>> InvocationArgumentsWithJumps;
 
             internal bool HasComplexExpression;
             internal bool HasExceptionBlock;
@@ -920,7 +919,16 @@ namespace FastExpressionCompiler
             public SmallList<object> Constants;
 
             internal QuotedExpressionCache QuotedExpressions;
-            internal DynamicExpressionCache DynamicExpressions;
+            internal ExpressionFeatureCache ExpressionFeatures;
+
+            internal void MarkInvocationArgumentsWithJumps(Expression expression)
+            {
+                ExpressionFeatures ??= new ExpressionFeatureCache();
+                ExpressionFeatures.InvocationArgumentsWithJumps.Set.AddOrGetEntryRef(expression, out _);
+            }
+
+            internal bool InvocationArgumentsHaveJumps(Expression expression) =>
+                ExpressionFeatures != null && ExpressionFeatures.InvocationArgumentsWithJumps.Set.ContainsKey(expression);
 #if LIGHT_EXPRESSION
             internal QuoteConversionCache QuoteConversions;
 #endif
@@ -1440,9 +1448,10 @@ namespace FastExpressionCompiler
 #endif
         }
 
-        internal sealed class DynamicExpressionCache
+        internal sealed class ExpressionFeatureCache
         {
             internal SmallMap4<Expression, DynamicExpressionOccurrences, RefEq<Expression>> Expressions;
+            internal SmallSet4<Expression, RefEq<Expression>> InvocationArgumentsWithJumps;
             internal SmallMap4<Expression, int, RefEq<Expression>> LambdaEmissionIndexes;
         }
 
@@ -2222,10 +2231,10 @@ namespace FastExpressionCompiler
                                     if ((r = TryCollectInfo(ref context, invokeArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas)) != Result.OK)
                                         return r;
                                 if (argumentScope.RequiresSpill || context.HasExceptionBlock)
-                                    context.ArgsContainingComplexExpression.Map.AddOrGetEntryRef(invokeExpr, out _);
+                                    context.ArgsContainingComplexExpression.Set.AddOrGetEntryRef(invokeExpr, out _);
                                 context.HasExceptionBlock |= outerHasExceptionBlock;
                                 if (context.ExceptionGotos.Count != argumentJumpCount)
-                                    context.InvocationArgumentsWithJumps.Set.AddOrGetEntryRef(invokeExpr, out _);
+                                    context.MarkInvocationArgumentsWithJumps(invokeExpr);
                                 return r;
                             }
 
@@ -2244,7 +2253,7 @@ namespace FastExpressionCompiler
                                 if ((r = TryCollectInfo(ref context, invokeArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                                     return r;
                             if (context.ExceptionGotos.Count != jumpCount)
-                                context.InvocationArgumentsWithJumps.Set.AddOrGetEntryRef(invokeExpr, out _);
+                                context.MarkInvocationArgumentsWithJumps(invokeExpr);
                             return r;
                         }
                     case ExpressionType.Conditional:
@@ -2492,8 +2501,8 @@ namespace FastExpressionCompiler
                     case ExpressionType.Dynamic:
                         {
                             if (nestedLambda != null) nestedLambda.HasDynamicExpressions = true;
-                            context.DynamicExpressions ??= new DynamicExpressionCache();
-                            ref var occurrences = ref context.DynamicExpressions.Expressions.Map.AddOrGetValueRef(expr, out _);
+                            context.ExpressionFeatures ??= new ExpressionFeatureCache();
+                            ref var occurrences = ref context.ExpressionFeatures.Expressions.Map.AddOrGetValueRef(expr, out _);
                             occurrences ??= new DynamicExpressionOccurrences();
                             // A reused Dynamic node still denotes a separate call site at every
                             // emitted occurrence. Never cache one reduced site by node identity.
@@ -3693,9 +3702,9 @@ namespace FastExpressionCompiler
                             return il.EmitPopIfIgnoreResult(parent);
 
                         case ExpressionType.Dynamic:
-                            if (context.DynamicExpressions == null)
+                            if (context.ExpressionFeatures == null)
                                 return false;
-                            ref var dynamicOccurrences = ref context.DynamicExpressions.Expressions.Map.TryGetValueRef(expr, out var foundDynamic);
+                            ref var dynamicOccurrences = ref context.ExpressionFeatures.Expressions.Map.TryGetValueRef(expr, out var foundDynamic);
                             if (!foundDynamic || dynamicOccurrences.Emitted >= dynamicOccurrences.Reduced.Count)
                                 return false;
                             var dynamicOccurrence = dynamicOccurrences.Reduced.Items[dynamicOccurrences.Emitted++];
@@ -7284,7 +7293,7 @@ namespace FastExpressionCompiler
 
 #if NETFRAMEWORK
                 if (objExpr?.NodeType == ExpressionType.Unbox && objExpr.Type.IsValueType && !objExpr.Type.IsNullable() &&
-                    context.ArgsContainingComplexExpression.Map.ContainsKey(callExpr))
+                    context.ArgsContainingComplexExpression.Set.ContainsKey(callExpr))
                     return TryEmitCallWithWritebacks(objExpr, callArguments, method, null, il, ref context, parent, byRefIndex);
 #endif
 
@@ -7518,8 +7527,8 @@ namespace FastExpressionCompiler
                 // shared by different delegate signatures cannot select each other's entries.
                 if (outerNestedLambdas[i].HasDynamicExpressions)
                 {
-                    context.DynamicExpressions ??= new DynamicExpressionCache();
-                    ref var nextIndex = ref context.DynamicExpressions.LambdaEmissionIndexes.Map.AddOrGetValueRef(lambdaExpr, out _);
+                    context.ExpressionFeatures ??= new ExpressionFeatureCache();
+                    ref var nextIndex = ref context.ExpressionFeatures.LambdaEmissionIndexes.Map.AddOrGetValueRef(lambdaExpr, out _);
                     i = nextIndex;
                     while (i < outerNestedLambdasCount && !ReferenceEquals(outerNestedLambdas[i].LambdaExpression, lambdaExpr)) ++i;
                     if (i == outerNestedLambdasCount) return false;
@@ -7702,8 +7711,8 @@ namespace FastExpressionCompiler
                 // Invoking runtime Expression<TDelegate> data intrinsically compiles that value.
                 // This is part of Invoke semantics, not a fallback from outer FEC compilation.
                 var compileMethod = invokedExpr.Type.FindExpressionCompileMethod();
-                var deferCompile = compileMethod != null && (context.ArgsContainingComplexExpression.Map.ContainsKey(expr) ||
-                    context.InvocationArgumentsWithJumps.Set.ContainsKey(expr));
+                var deferCompile = compileMethod != null && (context.ArgsContainingComplexExpression.Set.ContainsKey(expr) ||
+                    context.InvocationArgumentsHaveJumps(expr));
                 var delegateType = compileMethod?.ReturnType ?? invokedExpr.Type;
                 var delegateInvokeMethod = delegateType.FindDelegateInvokeMethod();
                 if (delegateInvokeMethod == null)
@@ -7736,7 +7745,7 @@ namespace FastExpressionCompiler
                     // Jumps and exception-region arguments require an empty evaluation stack.
                     // Preserve evaluated operands in the same locals used for ordinary calls.
                     var spillArguments = context.HasExceptionBlock || deferCompile || argumentsBeforeReceiver ||
-                        context.InvocationArgumentsWithJumps.Set.ContainsKey(expr);
+                        context.InvocationArgumentsHaveJumps(expr);
                     var receiverVar = spillArguments && !argumentsBeforeReceiver ? EmitStoreLocalVariable(il, deferCompile ? invokedExpr.Type : delegateType) : -1;
                     SmallList<int, Stack8<int>, NoArrayPool<int>> argVars = default;
                     for (var i = 0; i < args.Length; ++i)
