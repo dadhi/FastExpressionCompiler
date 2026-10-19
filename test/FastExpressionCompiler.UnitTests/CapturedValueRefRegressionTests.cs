@@ -22,6 +22,10 @@ public struct CapturedValueRefRegressionTests : ITestX
         Readonly_reference_captures_are_typed_in_exception_regions(t);
         Public_reference_slot_emission_is_typed_for_user_provided_contexts(t);
         Nested_capture_signatures_do_not_change_parent_or_curry_signatures(t);
+        Exception_regions_in_siblings_keep_one_capture_representation(t);
+#if NETFRAMEWORK
+        Manual_collection_does_not_enable_owned_boxed_captures(t);
+#endif
         Later_assignment_keeps_captures_live(t);
         Capture_before_initialization_observes_the_assigned_value(t);
         Delegate_ref_arguments_keep_captures_live(t);
@@ -320,15 +324,68 @@ public struct CapturedValueRefRegressionTests : ITestX
             // Framework's System compiler rejects a Try argument beside a by-ref operand.
             t.AreEqual(replace ? 9 : 4, actual());
             t.AreEqual(replace ? 9 : 5, actual());
-            t.IsTrue(IsExpectedMutableValueCell<MutableCounter>(GetCapturedCell(actual)));
+            t.IsTrue(IsExpectedMutableValueCell<MutableCounter>(GetCapturedCell(actual), hasExceptionRegions: true));
         }
     }
 
-    private static bool IsExpectedMutableValueCell<T>(object cell) where T : struct =>
+    private static bool IsExpectedMutableValueCell<T>(object cell, bool hasExceptionRegions = false) where T : struct =>
 #if NETFRAMEWORK
-        cell is System.Runtime.CompilerServices.StrongBox<T>;
+        hasExceptionRegions ? cell is System.Runtime.CompilerServices.StrongBox<T> : cell is T;
 #else
         cell is T;
+#endif
+
+    public void Exception_regions_in_siblings_keep_one_capture_representation(TestContext t)
+    {
+        foreach (var reverse in new[] { false, true })
+        foreach (var flags in new[] { CompilerFlags.Default, CompilerFlags.NoInvocationLambdaInlining,
+            CompilerFlags.EnableDelegateDebugInfo | CompilerFlags.ThrowOnNotSupportedExpression })
+        {
+            var value = SysExpr.Parameter(typeof(int));
+            var increment = SysExpr.Lambda<Func<int>>(SysExpr.PreIncrementAssign(value));
+            var read = SysExpr.Lambda<Func<int>>(SysExpr.TryFinally(value, SysExpr.Empty()));
+            var constructor = typeof(Tuple<Func<int>, Func<int>>).GetConstructor(new[] { typeof(Func<int>), typeof(Func<int>) });
+            var expression = SysExpr.Lambda<Func<int, Tuple<Func<int>, Func<int>>>>(
+                SysExpr.New(constructor, reverse ? read : increment, reverse ? increment : read), value);
+            var actual = expression.FromSysExpression().CompileFast(true, flags)(3);
+            var update = reverse ? actual.Item2 : actual.Item1;
+            var reader = reverse ? actual.Item1 : actual.Item2;
+            t.AreEqual(3, reader()); t.AreEqual(4, update()); t.AreEqual(4, reader());
+            t.IsTrue(ReferenceEquals(GetCapturedCell(update), GetCapturedCell(reader)));
+            t.IsTrue(IsExpectedMutableValueCell<int>(GetCapturedCell(update), hasExceptionRegions: true));
+
+            var variable = SysExpr.Variable(typeof(Func<int>));
+            var outer = SysExpr.Lambda<Func<int, Func<int>>>(SysExpr.Block(new[] { variable },
+                SysExpr.Assign(variable, increment), SysExpr.TryFinally(SysExpr.Empty(), SysExpr.Empty()), variable), value);
+            var nested = outer.FromSysExpression().CompileFast(true, flags)(5);
+            t.AreEqual(6, nested()); t.AreEqual(7, nested());
+            t.IsTrue(IsExpectedMutableValueCell<int>(GetCapturedCell(nested), hasExceptionRegions: true));
+        }
+    }
+
+#if NETFRAMEWORK
+    public void Manual_collection_does_not_enable_owned_boxed_captures(TestContext t)
+    {
+        foreach (var status in new[] { ExpressionCompiler.ClosureStatus.ToBeCollected,
+            ExpressionCompiler.ClosureStatus.ToBeCollected | ExpressionCompiler.ClosureStatus.UserProvided })
+        {
+            var value = SysExpr.Parameter(typeof(int));
+            var expression = SysExpr.Lambda<Func<int, Func<int>>>(SysExpr.Lambda<Func<int>>(SysExpr.PreIncrementAssign(value)), value);
+            var converted = expression.FromSysExpression();
+#if LIGHT_EXPRESSION
+            var context = new ExpressionCompiler.CompilerContext(status, converted, CompilerFlags.Default);
+#else
+            var context = new ExpressionCompiler.CompilerContext(status, converted.Parameters, CompilerFlags.Default);
+#endif
+            var result = ExpressionCompiler.TryCollectInfo(ref context, converted.Body, null, ref context.NestedLambdas);
+            if (!t.AreEqual(ExpressionCompiler.Result.OK, result)) return;
+            var holder = (ExpressionCompiler.NestedLambdaForNonPassedParams)context.NestedLambdas.GetSurePresentRef(0).Lambda;
+            var child = (Func<ExpressionCompiler.ArrayClosure, int>)holder.NestedLambda;
+            var cell = new System.Runtime.CompilerServices.StrongBox<int>(3);
+            var closure = new ExpressionCompiler.ArrayClosureWithNonPassedParams(new object[] { cell });
+            t.AreEqual(4, child(closure)); t.AreEqual(5, child(closure)); t.AreEqual(5, cell.Value);
+        }
+    }
 #endif
 
     public void Quote_and_runtime_variables_keep_all_cells_typed(TestContext t)
