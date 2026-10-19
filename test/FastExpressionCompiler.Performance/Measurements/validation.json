@@ -1,0 +1,31 @@
+{
+  "baselineCompilerCommit": "3f682768d6b23e445ae46595e456658899e371e4",
+  "finalProductionCommit": "a9b98445",
+  "completedBatches": 21,
+  "actualBatchOutcomes": {
+    "Passed": 34945,
+    "Failed": 152,
+    "NotExecuted": 34
+  },
+  "knownDeferredDeepTreeCases": 2,
+  "normalizedBaselineCases": 35133,
+  "normalizedOutcomes": {
+    "Passed": 34945,
+    "Failed": 152,
+    "Skipped": 36
+  },
+  "observedCrashes": [],
+  "changedOutcomeGroups": [],
+  "unmatchedCurrentGroups": 0,
+  "unmatchedBaselineGroups": 0,
+  "nativeValidation": {
+    "standard-targets": 0,
+    "light-targets": 0,
+    "native-net10": 0,
+    "native-net8": 0,
+    "framework-build": 0,
+    "framework-run": 0
+  },
+  "importedAssemblySHA256": "974d9a6f614cc796bc942ff5951e2f8d548286153927b01d7a5732356342e26a",
+  "compilerAssemblySHA256": "61ef1449552e6e18c32fc1ea3e21c1bbe4b1b5308636706e5c698be44cad3bb7"
+}

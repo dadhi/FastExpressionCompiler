@@ -1,0 +1,23 @@
+{
+  "date": "2026-10-18",
+  "testedCompilerCommit": "cbb68ede",
+  "parentCommit": "e4c232da",
+  "baselineCases": 35133,
+  "outcomes": {
+    "Passed": 34945,
+    "Skipped": 36,
+    "Failed": 152
+  },
+  "crashingMethods": 0,
+  "timedOutMethods": 0,
+  "completedBatches": 21,
+  "newRegressionMethods": 627,
+  "knownDeferredCrashMethods": 1,
+  "knownDeferredCrashCases": 2,
+  "skipBreakdown": {
+    "upstream": 4,
+    "verifiedSystemLayoutFacts": 30,
+    "knownDeepTreeCases": 2
+  },
+  "baselineSystemControl": "Reused verified parent system-compiler control, same machine/runtime"
+}

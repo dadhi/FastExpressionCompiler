@@ -792,7 +792,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Equal(23, result);
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("RuntimeCompilerLayoutBehaviorRegressionTests.AboveByteMaxArityArgIL_behavior")]
         public void AboveByteMaxArityArgIL()
         {
             ParameterExpression[] pars = Enumerable.Range(0, 300)
@@ -882,7 +882,7 @@ namespace System.Linq.Expressions.Tests
             Assert.True(result.Mutated);
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("RuntimeCompilerLayoutBehaviorRegressionTests.AboveByteMaxArityArgAddressIL_behavior")]
         public void AboveByteMaxArityArgAddressIL()
         {
             ParameterExpression parToMutate = Expression.Parameter(typeof(Mutable));
