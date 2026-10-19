@@ -57,6 +57,7 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.ArrayBoundsExceptionRegressionTests());
                 t.Run(new LightExpression.UnitTests.BackwardTypedLabelTests());
                 t.Run(new LightExpression.UnitTests.TryResultValueRegressionTests());
+                t.Run(new LightExpression.UnitTests.ArrayIndexExceptionRegressionTests());
                 t.Run(new LightExpression.UnitTests.FrameworkFilterRejectionTests());
                 t.Run(new LightExpression.UnitTests.ExceptionRegionValidationRegressionTests());
                 t.Run(new LightExpression.UnitTests.NonVectorArrayRegressionTests());
@@ -78,7 +79,6 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.ReadonlyNestedBindingTests());
                 t.Run(new LightExpression.UnitTests.MultiRankArrayReceiverRegressionTests());
                 t.Run(new LightExpression.UnitTests.FormalReferenceTemporariesTests());
-                t.Run(new LightExpression.UnitTests.ArrayIndexExceptionRegressionTests());
                 t.Run(new LightExpression.UnitTests.IndexerExceptionSpillRegressionTests());
                 t.Run(new LightExpression.UnitTests.ValuePropertyBindingValidationTests());
                 t.Run(new LightExpression.UnitTests.ReadonlyValueReceiverRegressionTests());
@@ -180,6 +180,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new ArrayBoundsExceptionRegressionTests());
             fecTests.Run(new BackwardTypedLabelTests());
             fecTests.Run(new TryResultValueRegressionTests());
+            fecTests.Run(new ArrayIndexExceptionRegressionTests());
             fecTests.Run(new FrameworkFilterRejectionTests());
             fecTests.Run(new ExceptionRegionValidationRegressionTests());
             fecTests.Run(new NonVectorArrayRegressionTests());
@@ -201,7 +202,6 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new ReadonlyNestedBindingTests());
             fecTests.Run(new MultiRankArrayReceiverRegressionTests());
             fecTests.Run(new FormalReferenceTemporariesTests());
-            fecTests.Run(new ArrayIndexExceptionRegressionTests());
             fecTests.Run(new IndexerExceptionSpillRegressionTests());
             fecTests.Run(new ValuePropertyBindingValidationTests());
             fecTests.Run(new ReadonlyValueReceiverRegressionTests());

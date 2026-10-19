@@ -86,6 +86,7 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.UnitTests.ArrayBoundsExceptionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.BackwardTypedLabelTests());
                 lt.Run(new LightExpression.UnitTests.TryResultValueRegressionTests());
+                lt.Run(new LightExpression.UnitTests.ArrayIndexExceptionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.FrameworkFilterRejectionTests());
                 lt.Run(new LightExpression.UnitTests.ExceptionRegionValidationRegressionTests());
                 lt.Run(new LightExpression.UnitTests.NonVectorArrayRegressionTests());
@@ -107,7 +108,6 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.UnitTests.ReadonlyNestedBindingTests());
                 lt.Run(new LightExpression.UnitTests.MultiRankArrayReceiverRegressionTests());
                 lt.Run(new LightExpression.UnitTests.FormalReferenceTemporariesTests());
-                lt.Run(new LightExpression.UnitTests.ArrayIndexExceptionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.IndexerExceptionSpillRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ValuePropertyBindingValidationTests());
                 lt.Run(new LightExpression.UnitTests.ReadonlyValueReceiverRegressionTests());
@@ -206,6 +206,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new ArrayBoundsExceptionRegressionTests());
             st.Run(new BackwardTypedLabelTests());
             st.Run(new TryResultValueRegressionTests());
+            st.Run(new ArrayIndexExceptionRegressionTests());
             st.Run(new FrameworkFilterRejectionTests());
             st.Run(new ExceptionRegionValidationRegressionTests());
             st.Run(new NonVectorArrayRegressionTests());
@@ -227,7 +228,6 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new ReadonlyNestedBindingTests());
             st.Run(new MultiRankArrayReceiverRegressionTests());
             st.Run(new FormalReferenceTemporariesTests());
-            st.Run(new ArrayIndexExceptionRegressionTests());
             st.Run(new IndexerExceptionSpillRegressionTests());
             st.Run(new ValuePropertyBindingValidationTests());
             st.Run(new ReadonlyValueReceiverRegressionTests());

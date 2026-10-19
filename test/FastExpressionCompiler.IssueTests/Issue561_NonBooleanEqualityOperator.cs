@@ -30,6 +30,7 @@ public struct Issue561_NonBooleanEqualityOperator : ITestX
         Selected_methods_keep_non_boolean_value_results(t);
         Boolean_method_is_not_replaced_by_constant_comparison(t);
         Converted_simple_right_operands_reach_the_selected_method(t);
+
 #if LIGHT_EXPRESSION
         Converted_intrinsic_right_operand_can_emit_exception_regions(t);
 #endif
@@ -274,6 +275,14 @@ public struct Issue561_NonBooleanEqualityOperator : ITestX
         t.AreEqual(22, fast(4));
         t.AreEqual("AAF", Trace);
         t.AreEqual(1, CustomObject.OperatorCalls);
+
+        var arithmetic = Expression.Lambda<Func<int, int>>(Expression.Add(read, right), parameter).CompileFast(true);
+        if (!t.IsNotNull(arithmetic)) return;
+        Trace = "";
+        CustomObject.OperatorCalls = 0;
+        t.AreEqual(4, arithmetic(4));
+        t.AreEqual("AAF", Trace);
+        t.AreEqual(0, CustomObject.OperatorCalls);
     }
 #endif
 
