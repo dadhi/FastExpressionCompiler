@@ -708,6 +708,13 @@ namespace FastExpressionCompiler
         /// <summary>Track the info required to build a closure object + some context information not directly related to closure.</summary>
         public struct CompilerContext
         {
+            // Match the existing bounded array-pool policy: collection buffers are
+            // reusable, but unusually large trees do not permanently enlarge the cache.
+            internal const int MaxPooledScopeFrames = 1024;
+            internal static LabelScopeFrame[][] _labelScopeFramePool;
+            internal static ExceptionRegionFrame[][] _exceptionRegionFramePool;
+
+
             /// <summary>Tracks that the last emit was an address</summary>
             public bool LastEmitIsAddress;
 
@@ -732,13 +739,13 @@ namespace FastExpressionCompiler
             internal bool IsEmittingExceptionFilter;
             internal bool CanRethrow;
             internal bool IsCollectingExceptionFilter;
-            internal SmallList<ExceptionRegionFrame, Stack4<ExceptionRegionFrame>, NoArrayPool<ExceptionRegionFrame>> ExceptionRegions;
+            internal SmallList<ExceptionRegionFrame, Stack4<ExceptionRegionFrame>, ProvidedArrayPool<ExceptionRegionFrame, ClearItemsFast<ExceptionRegionFrame>>> ExceptionRegions;
             internal SmallList<(object Target, ExceptionRegionInfo Region), Stack4<(object Target, ExceptionRegionInfo Region)>, NoArrayPool<(object Target, ExceptionRegionInfo Region)>> ExceptionLabels;
             internal SmallList<(object Target, ExceptionRegionInfo Region), Stack4<(object Target, ExceptionRegionInfo Region)>, NoArrayPool<(object Target, ExceptionRegionInfo Region)>> ExceptionGotos;
 
             // Frames follow the existing collector traversal; persistent ancestry is allocated
             // only for expressions that actually contain a label or a jump.
-            internal SmallList<LabelScopeFrame, Stack4<LabelScopeFrame>, NoArrayPool<LabelScopeFrame>> LabelScopes;
+            internal SmallList<LabelScopeFrame, Stack4<LabelScopeFrame>, ProvidedArrayPool<LabelScopeFrame, ClearItemsFast<LabelScopeFrame>>> LabelScopes;
             internal SmallList<(LabelTarget Target, LabelScope Scope), Stack4<(LabelTarget Target, LabelScope Scope)>, NoArrayPool<(LabelTarget Target, LabelScope Scope)>> ScopedLabels;
             internal SmallList<(LabelTarget Target, LabelScope Scope), Stack4<(LabelTarget Target, LabelScope Scope)>, NoArrayPool<(LabelTarget Target, LabelScope Scope)>> ScopedGotos;
 
@@ -757,6 +764,11 @@ namespace FastExpressionCompiler
                         ++last.Count;
                         return;
                     }
+                }
+                if (LabelScopes.Count == LabelScopes.Stack.Capacity && LabelScopes.Rest == null)
+                {
+                    _labelScopeFramePool ??= new LabelScopeFrame[MaxPooledScopeFrames][];
+                    LabelScopes.Pool.Init(_labelScopeFramePool, MaxPooledScopeFrames);
                 }
                 LabelScopes.AddAndGetRef(new LabelScopeFrame { Kind = kind, Count = 1 });
             }
@@ -1862,6 +1874,10 @@ namespace FastExpressionCompiler
                 if (expr == null)
                     return Result.ExpressionIsNull;
                 var nodeType = expr.NodeType;
+                // Terminal nodes cannot define or reference a label.
+                if (nodeType != ExpressionType.Constant && nodeType != ExpressionType.Parameter &&
+                    nodeType != ExpressionType.Default && nodeType != ExpressionType.DebugInfo)
+                {
                 var scopeKind = nodeType == ExpressionType.Block ? LabelScopeKind.Block :
                     nodeType == ExpressionType.Switch ? LabelScopeKind.Switch :
                     nodeType == ExpressionType.Conditional || nodeType == ExpressionType.Loop || nodeType == ExpressionType.Goto ||
@@ -1871,6 +1887,7 @@ namespace FastExpressionCompiler
                     !(nodeType == ExpressionType.Block && switchBody) &&
                     !(scopeKind == LabelScopeKind.Expression && context.LabelScopes[context.LabelScopes.Count - 1].Kind == scopeKind))
                     context.PushLabelScope(scopeKind);
+                }
                 directBlockChild = switchBody = false;
 #if LIGHT_EXPRESSION
                 if (expr.IsIntrinsic)
@@ -2470,10 +2487,16 @@ namespace FastExpressionCompiler
                         return Result.NotSupported_UnknownExpression;
                 }
             }
+
         }
             finally
             {
                 context.RestoreLabelScopeDepth(scopeDepth);
+                if (scopeDepth == 0)
+                {
+                    context.LabelScopes.FreePooled();
+                    context.ExceptionRegions.FreePooled();
+                }
             }
         }
 
@@ -2815,6 +2838,11 @@ namespace FastExpressionCompiler
         private static Result TryCollectExceptionRegionInfo(ref CompilerContext context, Expression expression,
             bool cannotLeave, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
         {
+            if (context.ExceptionRegions.Count == context.ExceptionRegions.Stack.Capacity && context.ExceptionRegions.Rest == null)
+            {
+                CompilerContext._exceptionRegionFramePool ??= new ExceptionRegionFrame[CompilerContext.MaxPooledScopeFrames][];
+                context.ExceptionRegions.Pool.Init(CompilerContext._exceptionRegionFramePool, CompilerContext.MaxPooledScopeFrames);
+            }
             context.ExceptionRegions.AddAndGetRef(new ExceptionRegionFrame { CannotLeave = cannotLeave });
             try
             {
