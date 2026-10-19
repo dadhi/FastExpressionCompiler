@@ -333,8 +333,7 @@ namespace FastExpressionCompiler
 
             // Without collection, the method's exception regions are not known before emission.
             // Anonymous hosting preserves System's non-Exception catch policy.
-            var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, closurePlusParamTypes,
-                restrictedSkipVisibility: true);
+            var method = CreateExceptionAwareDynamicMethod(lambdaExpr.ReturnType, closurePlusParamTypes);
 
             var il = method.GetILGenerator();
             EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref context);
@@ -364,8 +363,7 @@ namespace FastExpressionCompiler
             var closurePlusParamTypes = RentPooledOrNewClosureTypeToParamTypes(context.ParamExprs);
 
             // This entry point skips collection, so handler policy is not known yet.
-            var method = new DynamicMethod(string.Empty, lambdaExpr.ReturnType, closurePlusParamTypes,
-                restrictedSkipVisibility: true);
+            var method = CreateExceptionAwareDynamicMethod(lambdaExpr.ReturnType, closurePlusParamTypes);
 
             var il = method.GetILGenerator();
 
@@ -451,7 +449,7 @@ namespace FastExpressionCompiler
                 // Keep FEC's faster owned hosting for ordinary lambdas; exception regions
                 // need the anonymous policy used by System's expression compiler.
                 var dynMethod = context.HasExceptionBlock
-                    ? new DynamicMethod(string.Empty, returnType, closureAndParamTypes, restrictedSkipVisibility: true)
+                    ? CreateExceptionAwareDynamicMethod(returnType, closureAndParamTypes)
                     : new DynamicMethod(string.Empty, returnType, closureAndParamTypes, typeof(ArrayClosure), true);
 
                 var il = DynamicMethodHacks.RentPooledOrNewILGenerator(dynMethod, returnType, closureAndParamTypes);
@@ -480,6 +478,27 @@ namespace FastExpressionCompiler
             return compiledDelegate
                 ?? ((flags & CompilerFlags.ThrowOnNotSupportedExpression) == 0 ? null : NotSupportedCase<object>(collectResult));
         }
+
+        private static DynamicMethod CreateExceptionAwareDynamicMethod(Type returnType, Type[] parameterTypes)
+        {
+#if NETFRAMEWORK
+            // Framework prohibits using the anonymous module with the module overload.
+            return new DynamicMethod(string.Empty, returnType, parameterTypes, restrictedSkipVisibility: true);
+#else
+            // Preserve the anonymous module's non-Exception catch policy, without the
+            // restricted-skip-visibility constructor's eager JIT at CreateDelegate.
+            return new DynamicMethod(string.Empty, returnType, parameterTypes, AnonymousDynamicMethodHost.Module, true);
+#endif
+        }
+
+#if !NETFRAMEWORK
+        private static class AnonymousDynamicMethodHost
+        {
+            // The runtime owns this module. Initialize it only when a method needs its
+            // catch policy; ordinary owner-hosted compilation has no added startup work.
+            internal static readonly Module Module = new DynamicMethod(string.Empty, typeof(void), Type.EmptyTypes, true).Module;
+        }
+#endif
 
         private static readonly Type[] _closureAsASingleParamType = { typeof(ArrayClosure) };
         private static readonly Type[][] _paramTypesPoolWithElem0OfLength1 = new Type[8][]; // todo: @perf @mem could we use this for other Type arrays?
@@ -2561,7 +2580,7 @@ namespace FastExpressionCompiler
             var closurePlusParamTypes = RentPooledOrNewClosureTypeToParamTypes(nestedLambdaParamExprs);
 
             var method = nestedLambdaContext.HasExceptionBlock
-                ? new DynamicMethod(string.Empty, nestedReturnType, closurePlusParamTypes, restrictedSkipVisibility: true)
+                ? CreateExceptionAwareDynamicMethod(nestedReturnType, closurePlusParamTypes)
                 : new DynamicMethod(string.Empty, nestedReturnType, closurePlusParamTypes, typeof(ArrayClosure), true);
             var il = DynamicMethodHacks.RentPooledOrNewILGenerator(method, nestedReturnType, closurePlusParamTypes);
 
