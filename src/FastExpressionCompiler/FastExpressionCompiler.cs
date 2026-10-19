@@ -904,6 +904,18 @@ namespace FastExpressionCompiler
             /// <summary>The nested lambdas and their info</summary>
             public SmallList<NestedLambdaInfo> NestedLambdas;
 
+            // Reuse reflection metadata within this compilation and its nested lambdas.
+            internal SmallMap4<Type, HoistedTypeInfo, RefEq<Type>> HoistedTypes;
+
+            [RequiresUnreferencedCode(Trimming.Message)]
+            internal HoistedTypeInfo GetHoistedType(Type type)
+            {
+                ref var info = ref HoistedTypes.Map.AddOrGetValueRef(type, out var found);
+                if (!found)
+                    info = new HoistedTypeInfo(type);
+                return info;
+            }
+
             internal SmallList<ParameterExpression> HoistedVariables;
             internal SmallMap4<ParameterExpression, int, RefEq<ParameterExpression>> HoistedParameterLocals;
 
@@ -917,9 +929,14 @@ namespace FastExpressionCompiler
                 var type = variable.Type;
                 if (variable.IsByRef || type.IsByRef || type.IsPointer)
                     return false;
+#if NETFRAMEWORK
                 foreach (var attribute in type.GetCustomAttributesData())
                     if (attribute.AttributeType.FullName == "System.Runtime.CompilerServices.IsByRefLikeAttribute")
                         return false;
+#else
+                if (type.IsByRefLike)
+                    return false;
+#endif
                 HoistedVariables.GetIndexOrAdd(variable, default(RefEq<ParameterExpression>));
                 return true;
             }
@@ -1098,9 +1115,10 @@ namespace FastExpressionCompiler
                     var varType = varExpr.Type;
                     if (IsHoistedVariable(varExpr))
                     {
-                        var boxType = GetHoistedBoxType(varType);
+                        var hoistedType = GetHoistedType(varType);
+                        var boxType = hoistedType.BoxType;
                         var boxIndex = il.GetNextLocalVarIndex(boxType);
-                        il.Demit(OpCodes.Newobj, boxType.GetConstructor(Type.EmptyTypes));
+                        il.Demit(OpCodes.Newobj, hoistedType.EmptyConstructor);
                         EmittingVisitor.EmitStoreLocalVariable(il, boxIndex);
                         PushVarInBlockMap(varExpr, _blockCount, (ushort)boxIndex);
                         continue;
@@ -1387,6 +1405,23 @@ namespace FastExpressionCompiler
         {
             internal SmallList<(Expression Expression, bool SpillArguments)> Reduced;
             internal int Emitted;
+        }
+
+        internal readonly struct HoistedTypeInfo
+        {
+            internal readonly Type BoxType;
+            internal readonly FieldInfo ValueField;
+            internal readonly ConstructorInfo EmptyConstructor;
+            internal readonly ConstructorInfo ValueConstructor;
+
+            [RequiresUnreferencedCode(Trimming.Message)]
+            internal HoistedTypeInfo(Type type)
+            {
+                BoxType = GetHoistedBoxType(type);
+                ValueField = BoxType.GetField("Value");
+                EmptyConstructor = BoxType.GetConstructor(Type.EmptyTypes);
+                ValueConstructor = BoxType.GetConstructor(new[] { type });
+            }
         }
 
         internal static Type GetHoistedBoxType(Type type) =>
@@ -1880,6 +1915,7 @@ namespace FastExpressionCompiler
 #if LIGHT_EXPRESSION
                         nestedLambdaContext.QuoteConversions = context.QuoteConversions;
 #endif
+                        nestedLambdaContext.HoistedTypes = context.HoistedTypes;
                         var newNestedLambda = new NestedLambdaInfo(nestedLambdaExpr);
 
                         if (nestedLambda != null)
@@ -1904,6 +1940,7 @@ namespace FastExpressionCompiler
 
                         if (!TryCompileNestedLambda(ref nestedLambdaContext, newNestedLambda))
                             return Result.NestedLambdaCompileError;
+                        context.HoistedTypes = nestedLambdaContext.HoistedTypes;
 
                         return r;
 
@@ -2789,10 +2826,11 @@ namespace FastExpressionCompiler
                     var parameter = parameters.GetParameter(p);
                     if (!context.IsHoistedVariable(parameter))
                         continue;
-                    var boxType = GetHoistedBoxType(parameter.Type);
+                    var hoistedType = context.GetHoistedType(parameter.Type);
+                    var boxType = hoistedType.BoxType;
                     var boxIndex = il.GetNextLocalVarIndex(boxType);
                     EmitLoadArg(il, p + ((context.Status & ClosureStatus.ShouldBeStaticMethod) == 0 ? 1 : 0));
-                    il.Demit(OpCodes.Newobj, boxType.GetConstructor(new[] { parameter.Type }));
+                    il.Demit(OpCodes.Newobj, hoistedType.ValueConstructor);
                     EmitStoreLocalVariable(il, boxIndex);
                     context.HoistedParameterLocals.Map.AddOrGetValueRef(parameter, out _) = boxIndex;
                 }
@@ -3820,7 +3858,7 @@ namespace FastExpressionCompiler
                     {
                         exVarIndex = context.GetDefinedLocalVarOrDefault(exVarExpr);
                         if (context.IsHoistedVariable(exVarExpr))
-                            exVarIndex = il.GetNextLocalVarIndex(GetHoistedBoxType(exVarExpr.Type));
+                            exVarIndex = il.GetNextLocalVarIndex(context.GetHoistedType(exVarExpr.Type).BoxType);
                         else if (exVarIndex == -1)
                             exVarIndex = il.GetNextLocalVarIndex(exVarExpr.Type);
                         context.PushBlockWithVars(exVarExpr, exVarIndex);
@@ -3841,7 +3879,7 @@ namespace FastExpressionCompiler
                         if (exVarExpr != null)
                         {
                             if (context.IsHoistedVariable(exVarExpr))
-                                il.Demit(OpCodes.Newobj, GetHoistedBoxType(exVarExpr.Type).GetConstructor(new[] { exVarExpr.Type }));
+                                il.Demit(OpCodes.Newobj, context.GetHoistedType(exVarExpr.Type).ValueConstructor);
                             EmitStoreLocalVariable(il, exVarIndex);
                         }
                         else
@@ -3865,7 +3903,7 @@ namespace FastExpressionCompiler
                         if (exVarExpr != null)
                         {
                             if (context.IsHoistedVariable(exVarExpr))
-                                il.Demit(OpCodes.Newobj, GetHoistedBoxType(exVarExpr.Type).GetConstructor(new[] { exVarExpr.Type }));
+                                il.Demit(OpCodes.Newobj, context.GetHoistedType(exVarExpr.Type).ValueConstructor);
                             EmitStoreLocalVariable(il, exVarIndex);
                         }
                         else
@@ -3942,7 +3980,7 @@ namespace FastExpressionCompiler
                         (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0 &&
                         ((parent & ParentFlags.IndexAccess) == 0 ||
                          (parent & (ParentFlags.Call | ParentFlags.MemberAccess)) == 0);
-                    il.Demit(address ? OpCodes.Ldflda : OpCodes.Ldfld, GetHoistedValueField(paramExpr.Type));
+                    il.Demit(address ? OpCodes.Ldflda : OpCodes.Ldfld, context.GetHoistedType(paramExpr.Type).ValueField);
                     context.LastEmitIsAddress = address;
                     return true;
                 }
@@ -4154,7 +4192,7 @@ namespace FastExpressionCompiler
                         EmitLoadNonPassedParams(il);
                         EmitLoadConstantInt(il, captured);
                         il.Demit(OpCodes.Ldelem_Ref);
-                        il.Demit(OpCodes.Castclass, GetHoistedBoxType(parameter.Type));
+                        il.Demit(OpCodes.Castclass, context.GetHoistedType(parameter.Type).BoxType);
                     }
                 }
                 context.LastEmitIsAddress = false;
@@ -4189,7 +4227,7 @@ namespace FastExpressionCompiler
                     var address = closure.LastEmitIsAddress;
                     if (!TryEmitHoistedCell(paramExpr, il, ref closure))
                         return false;
-                    il.Demit(address ? OpCodes.Ldflda : OpCodes.Ldfld, GetHoistedValueField(paramExpr.Type));
+                    il.Demit(address ? OpCodes.Ldflda : OpCodes.Ldfld, closure.GetHoistedType(paramExpr.Type).ValueField);
                     closure.LastEmitIsAddress = address;
                     return true;
                 }
@@ -6189,7 +6227,7 @@ namespace FastExpressionCompiler
                     if (!TryEmitHoistedCell(left, il, ref context))
                         return false;
                     EmitLoadLocalVariable(il, assigned);
-                    il.Demit(OpCodes.Stfld, GetHoistedValueField(left.Type));
+                    il.Demit(OpCodes.Stfld, context.GetHoistedType(left.Type).ValueField);
                     if (resultVar != -1)
                         EmitLoadLocalVariable(il, isPost ? resultVar : assigned);
                     context.LastEmitIsAddress = false;
