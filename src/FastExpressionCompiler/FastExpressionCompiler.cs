@@ -916,9 +916,8 @@ namespace FastExpressionCompiler
             /// Constant expressions to find an index (by reference) of constant expression from compiled expression.
             public SmallList<object> Constants;
 
-            internal SmallMap4<Expression, QuotedExpressionInfo, RefEq<Expression>> QuotedExpressions;
+            internal QuotedExpressionCache QuotedExpressions;
             internal DynamicExpressionCache DynamicExpressions;
-            internal SmallMap4<Expression, int, RefEq<Expression>> DynamicLambdaEmissionIndexes;
 #if LIGHT_EXPRESSION
             internal QuoteConversionCache QuoteConversions;
 #endif
@@ -1322,6 +1321,11 @@ namespace FastExpressionCompiler
             }
         }
 
+        internal sealed class QuotedExpressionCache
+        {
+            internal SmallMap4<Expression, QuotedExpressionInfo, RefEq<Expression>> Expressions;
+        }
+
         internal sealed class QuotedExpressionInfo
         {
             internal System.Linq.Expressions.Expression Template;
@@ -1436,6 +1440,7 @@ namespace FastExpressionCompiler
         internal sealed class DynamicExpressionCache
         {
             internal SmallMap4<Expression, DynamicExpressionOccurrences, RefEq<Expression>> Expressions;
+            internal SmallMap4<Expression, int, RefEq<Expression>> LambdaEmissionIndexes;
             internal SmallMap4<Expression, ReducedExtensionOccurrences, RefEq<Expression>> Extensions;
         }
 
@@ -1452,7 +1457,7 @@ namespace FastExpressionCompiler
             // Dynamic sites and quoted operands carry collection metadata keyed by identity.
             // Retain each occurrence's reduction only on those feature paths. Ordinary
             // reducible nodes do not need a cache or another collection traversal.
-            if (result == Result.OK && (context.DynamicExpressions != null || context.QuotedExpressions.Map.Count != 0))
+            if (result == Result.OK && (context.DynamicExpressions != null || context.QuotedExpressions != null))
             {
                 context.DynamicExpressions ??= new DynamicExpressionCache();
                 ref var occurrences = ref context.DynamicExpressions.Extensions.Map.AddOrGetValueRef(original, out _);
@@ -2459,7 +2464,8 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Quote:
                         var operand = ((UnaryExpression)expr).Operand;
-                        ref var quoted = ref context.QuotedExpressions.Map.AddOrGetValueRef(operand, out var foundQuote);
+                        context.QuotedExpressions ??= new QuotedExpressionCache();
+                        ref var quoted = ref context.QuotedExpressions.Expressions.Map.AddOrGetValueRef(operand, out var foundQuote);
                         if (!foundQuote)
                         {
                             quoted = new QuotedExpressionInfo();
@@ -3562,7 +3568,8 @@ namespace FastExpressionCompiler
                             return true;               // todo: @unclear - just ignoring the info for now
 
                         case ExpressionType.Quote:
-                            ref var quoted = ref context.QuotedExpressions.Map.TryGetValueRef(((UnaryExpression)expr).Operand, out var foundQuote);
+                            if (context.QuotedExpressions == null) return false;
+                            ref var quoted = ref context.QuotedExpressions.Expressions.Map.TryGetValueRef(((UnaryExpression)expr).Operand, out var foundQuote);
                             if (!foundQuote) return false;
                             if (quoted.Variables.Length == 0)
                                 return TryEmitConstant(true, exprType, quoted.Template.GetType(), quoted.Template, il, ref context) &&
@@ -7407,7 +7414,8 @@ namespace FastExpressionCompiler
                 // shared by different delegate signatures cannot select each other's entries.
                 if (outerNestedLambdas[i].HasDynamicExpressions)
                 {
-                    ref var nextIndex = ref context.DynamicLambdaEmissionIndexes.Map.AddOrGetValueRef(lambdaExpr, out _);
+                    context.DynamicExpressions ??= new DynamicExpressionCache();
+                    ref var nextIndex = ref context.DynamicExpressions.LambdaEmissionIndexes.Map.AddOrGetValueRef(lambdaExpr, out _);
                     i = nextIndex;
                     while (i < outerNestedLambdasCount && !ReferenceEquals(outerNestedLambdas[i].LambdaExpression, lambdaExpr)) ++i;
                     if (i == outerNestedLambdasCount) return false;
