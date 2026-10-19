@@ -661,11 +661,16 @@ public struct CapturedValueRefRegressionTests : ITestX
         var number = SysExpr.Parameter(typeof(int));
         var text = SysExpr.Parameter(typeof(string));
         var reference = SysExpr.Parameter(typeof(object));
+        // A third reference type forces the metadata cache past its two inline slots,
+        // including when the integer uses a native boxed value cell.
+        var metadataType = SysExpr.Variable(typeof(Type));
         var body = SysExpr.Block(
+            SysExpr.Assign(metadataType, SysExpr.Constant(typeof(string), typeof(Type))),
             SysExpr.Call(typeof(CapturedValueRefRegressionTests).GetMethod(nameof(Replace)), text),
             SysExpr.Call(typeof(CapturedValueRefRegressionTests).GetMethod(nameof(ReplaceObject)), reference),
             SysExpr.PreIncrementAssign(number));
-        return SysExpr.Lambda<Func<int, string, object, Func<int>>>(SysExpr.Lambda<Func<int>>(body), number, text, reference);
+        return SysExpr.Lambda<Func<int, string, object, Func<int>>>(SysExpr.Block(new[] { metadataType },
+            SysExpr.Assign(metadataType, SysExpr.Constant(typeof(int), typeof(Type))), SysExpr.Lambda<Func<int>>(body)), number, text, reference);
     }
 
     public void Hoisted_metadata_rentals_clear_success_and_failure_state(TestContext t)
@@ -706,6 +711,7 @@ public struct CapturedValueRefRegressionTests : ITestX
         t.IsTrue(scratch[0] == null);
         var types = cache.GetType().GetField("Types", fields).GetValue(cache);
         t.AreEqual(0, (int)types.GetType().GetProperty("Count").GetValue(types));
+        t.IsNotNull(types.GetType().GetField("Rest", fields).GetValue(types));
         AssertNoPooledMetadataReferences(t, types);
     }
 
