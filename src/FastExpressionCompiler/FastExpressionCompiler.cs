@@ -9331,7 +9331,8 @@ namespace FastExpressionCompiler
                     // it prevents the problems in cases of right being a block, try-catch, etc.
                     // see `Using_try_finally_as_arithmetic_operand_use_void_block_in_finally`
                     var rightType = right.Type;
-                    if (leftValueVar == -1 && (context.HasExceptionBlock || right.IsComplexExpression()))
+                    if (leftValueVar == -1 && (context.HasExceptionBlock && (leftIsNullable || !IsAtomicArithmeticOperand(right)) ||
+                        right.IsComplexExpression()))
                         leftValueVar = EmitStoreLocalVariable(il, leftType);
 
                     var rightVar = -1;
