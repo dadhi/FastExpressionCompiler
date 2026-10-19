@@ -4845,12 +4845,19 @@ namespace FastExpressionCompiler
 #if DEMIT
                 Debug.WriteLine("try {");
 #endif
+                // Body and catch results are stored in a typed temporary, not used as
+                // the address requested by a surrounding member access or call.
+                var exprType = tryExpr.Type;
+                var returnsByRef = exprType.IsByRef;
+                var valueParent = returnsByRef ? parent :
+                    (parent & ~(ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
+                        ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef | ParentFlags.DupIt |
+                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue;
                 il.BeginExceptionBlock();
 
-                if (!TryEmit(tryExpr.Body, il, ref context, parent))
+                if (!TryEmit(tryExpr.Body, il, ref context, valueParent))
                     return false;
 
-                var exprType = tryExpr.Type;
                 var returnsResult = exprType != typeof(void) && !parent.IgnoresResult();
                 var resultVarIndex = -1;
 
@@ -4957,7 +4964,7 @@ namespace FastExpressionCompiler
                     Debug.WriteLine($"}} catch {{");
 #endif
 
-                    if (!TryEmit(catchBlock.Body, il, ref context, parent))
+                    if (!TryEmit(catchBlock.Body, il, ref context, valueParent))
                         return false;
 
                     if (exVarExpr != null)
@@ -4999,6 +5006,8 @@ namespace FastExpressionCompiler
                 if (returnsResult)
                     EmitLoadLocalVariable(il, resultVarIndex);
 
+                if (!returnsByRef)
+                    context.LastEmitIsAddress = false;
                 return true;
             }
 
