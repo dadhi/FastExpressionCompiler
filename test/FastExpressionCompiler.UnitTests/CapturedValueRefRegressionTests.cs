@@ -42,6 +42,7 @@ public struct CapturedValueRefRegressionTests : ITestX
         Quote_and_runtime_variables_keep_all_cells_typed(t);
 #if LIGHT_EXPRESSION
         Intrinsics_with_hidden_quotes_keep_typed_cells(t);
+        Opaque_root_intrinsics_keep_hidden_captures_consistent(t);
 #endif
     }
 
@@ -260,6 +261,45 @@ public struct CapturedValueRefRegressionTests : ITestX
         public override System.Linq.Expressions.ExpressionType NodeType => System.Linq.Expressions.ExpressionType.Extension;
         public override Type Type => _quote.Type;
         public override Expression Reduce() => _quote;
+    }
+
+    private sealed class OpaqueCapturePair : ConstantExpression
+    {
+        private readonly NewExpression _pair;
+        internal OpaqueCapturePair(Expression child, Expression quote) =>
+            _pair = Expression.New(typeof(Tuple<Func<int>, System.Linq.Expressions.Expression<Func<int>>>).GetConstructors()[0], child, quote);
+        public override Type Type => _pair.Type;
+        public override object Value => null;
+        public override bool IsIntrinsic => true;
+        public override ExpressionCompiler.Result TryCollectInfo(ref ExpressionCompiler.CompilerContext context,
+            ExpressionCompiler.NestedLambdaInfo nestedLambda, ref ImTools.SmallList<ExpressionCompiler.NestedLambdaInfo> rootNestedLambdas)
+        {
+            var result = ExpressionCompiler.TryCollectInfo(ref context, _pair.GetArgument(0), nestedLambda, ref rootNestedLambdas);
+            return result != ExpressionCompiler.Result.OK ? result :
+                ExpressionCompiler.TryCollectInfo(ref context, _pair.GetArgument(1), nestedLambda, ref rootNestedLambdas);
+        }
+        public override bool TryEmit(ref ExpressionCompiler.CompilerContext context, ILGenerator il,
+            ExpressionCompiler.ParentFlags parent, int byRefIndex = -1) =>
+            ExpressionCompiler.EmittingVisitor.TryEmit(_pair, il, ref context, parent, byRefIndex);
+    }
+
+    public void Opaque_root_intrinsics_keep_hidden_captures_consistent(TestContext t)
+    {
+        foreach (var flags in new[] { CompilerFlags.Default, CompilerFlags.NoInvocationLambdaInlining, CompilerFlags.EnableDelegateDebugInfo })
+        {
+            var value = Expression.Parameter(typeof(int));
+            var expression = Expression.Lambda<Func<int, Tuple<Func<int>, System.Linq.Expressions.Expression<Func<int>>>>>(
+                new OpaqueCapturePair(Expression.Lambda<Func<int>>(Expression.PreIncrementAssign(value)),
+                    Expression.Quote(Expression.Lambda<Func<int>>(value))), value);
+            var factory = expression.CompileFast(true, flags);
+            if (!t.IsNotNull(factory)) return;
+            var actual = factory(3);
+            t.IsTrue(GetCapturedCell(actual.Item1) is System.Runtime.CompilerServices.StrongBox<int>);
+            t.AreEqual(4, actual.Item1());
+            t.AreEqual(4, actual.Item2.Compile()());
+            t.AreEqual(5, actual.Item1());
+            t.AreEqual(5, actual.Item2.Compile()());
+        }
     }
 
     public void Intrinsics_with_hidden_quotes_keep_typed_cells(TestContext t)
