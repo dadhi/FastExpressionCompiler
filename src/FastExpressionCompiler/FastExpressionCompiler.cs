@@ -3604,6 +3604,14 @@ namespace FastExpressionCompiler
             return true;
         }
 
+        [MethodImpl((MethodImplOptions)256)]
+        internal static bool TryEmitUnboxOf(this ILGenerator il, Type sourceType)
+        {
+            if (sourceType.IsValueType)
+                il.Demit(OpCodes.Unbox_Any, sourceType);
+            return true;
+        }
+
         /// <summary>Supports emitting of selected expressions, e.g. lambdaExpr are not supported yet.
         /// When emitter find not supported expression it will return false from <see cref="TryEmit"/>, so I could fallback
         /// to normal and slow Expression.Compile.</summary>
@@ -5138,9 +5146,14 @@ namespace FastExpressionCompiler
                     context.LastEmitIsAddress = true;
                     return true;
                 }
-                if (type.IsValueType)
-                    il.Demit(OpCodes.Unbox_Any, type);
-                return true;
+#if NETFRAMEWORK
+                // Anonymous Framework methods verify the static type after object[] loads.
+                // Collection-skipping entry points also use anonymous hosting.
+                if ((context.HasExceptionBlock || (context.Status & ClosureStatus.UserProvided) != 0) &&
+                    !type.IsValueType && type != typeof(object))
+                    il.Demit(OpCodes.Castclass, type);
+#endif
+                return il.TryEmitUnboxOf(type);
             }
 
 #if LIGHT_EXPRESSION
@@ -5190,6 +5203,11 @@ namespace FastExpressionCompiler
                 EmitLoadNonPassedParams(il);
                 EmitLoadConstantInt(il, nonPassedParamIndex);
                 il.Demit(OpCodes.Ldelem_Ref);
+#if NETFRAMEWORK
+                if ((closure.HasExceptionBlock || (closure.Status & ClosureStatus.UserProvided) != 0) &&
+                    !paramType.IsValueType && paramType != typeof(object))
+                    il.Demit(OpCodes.Castclass, paramType);
+#endif
                 return true;
             }
 
@@ -5880,6 +5898,10 @@ namespace FastExpressionCompiler
                         // for the multiple usages the field was loaded and saved into variable in `EmitLoadConstantsAndNestedLambdasIntoVars`
                         if (refField != null)
                         {
+#if NETFRAMEWORK
+                            if (closure.HasExceptionBlock || (closure.Status & ClosureStatus.UserProvided) != 0)
+                                il.Demit(OpCodes.Castclass, refField.DeclaringType);
+#endif
                             il.Demit(OpCodes.Ldfld, refField);
                             if (refField.FieldType != typeof(object))
                                 return true; // for typed constant we done,
