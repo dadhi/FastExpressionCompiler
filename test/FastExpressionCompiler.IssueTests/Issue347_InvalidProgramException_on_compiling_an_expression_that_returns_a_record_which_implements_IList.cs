@@ -109,7 +109,12 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ldfld,      // ArrayClosureWithNonPassedParams.NonPassedParams
                 OpCodes.Ldc_I4_0,
                 OpCodes.Ldelem_Ref,
+#if NETFRAMEWORK
+                OpCodes.Castclass, // StrongBox<NotifyModel>
+                OpCodes.Ldflda,    // Framework uses typed shared cells for verification
+#else
                 OpCodes.Unbox,     // Address of the live boxed NotifyModel shared by captures
+#endif
                 OpCodes.Call,       // NotifyModel.get_Number1
                 OpCodes.Ret
             );
