@@ -5023,6 +5023,13 @@ namespace FastExpressionCompiler
                     context.LastEmitIsAddress = true;
                     return true;
                 }
+#if NETFRAMEWORK
+                // Anonymous Framework methods verify the static type after object[] loads.
+                // Collection-skipping entry points also use anonymous hosting.
+                if ((context.HasExceptionBlock || (context.Status & ClosureStatus.UserProvided) != 0) &&
+                    !type.IsValueType && type != typeof(object))
+                    il.Demit(OpCodes.Castclass, type);
+#endif
                 return il.TryEmitUnboxOf(type);
             }
 
@@ -5073,6 +5080,11 @@ namespace FastExpressionCompiler
                 EmitLoadNonPassedParams(il);
                 EmitLoadConstantInt(il, nonPassedParamIndex);
                 il.Demit(OpCodes.Ldelem_Ref);
+#if NETFRAMEWORK
+                if ((closure.HasExceptionBlock || (closure.Status & ClosureStatus.UserProvided) != 0) &&
+                    !paramType.IsValueType && paramType != typeof(object))
+                    il.Demit(OpCodes.Castclass, paramType);
+#endif
                 return true;
             }
 
@@ -5824,6 +5836,10 @@ namespace FastExpressionCompiler
                         // for the multiple usages the field was loaded and saved into variable in `EmitLoadConstantsAndNestedLambdasIntoVars`
                         if (refField != null)
                         {
+#if NETFRAMEWORK
+                            if (closure.HasExceptionBlock || (closure.Status & ClosureStatus.UserProvided) != 0)
+                                il.Demit(OpCodes.Castclass, refField.DeclaringType);
+#endif
                             il.Demit(OpCodes.Ldfld, refField);
                             if (refField.FieldType != typeof(object))
                                 return true; // for typed constant we done,

@@ -19,6 +19,8 @@ public struct CapturedValueRefRegressionTests : ITestX
         Nullable_and_reference_captures_expose_writable_cells(t);
         Hoisted_local_ref_calls_update_the_shared_box(t);
         Readonly_captures_keep_the_original_value_storage(t);
+        Readonly_reference_captures_are_typed_in_exception_regions(t);
+        Public_reference_slot_emission_is_typed_for_user_provided_contexts(t);
         Later_assignment_keeps_captures_live(t);
         Capture_before_initialization_observes_the_assigned_value(t);
         Delegate_ref_arguments_keep_captures_live(t);
@@ -43,6 +45,7 @@ public struct CapturedValueRefRegressionTests : ITestX
 #if LIGHT_EXPRESSION
         Intrinsics_with_hidden_quotes_keep_typed_cells(t);
         Opaque_root_intrinsics_keep_hidden_captures_consistent(t);
+        Field_backed_reference_constants_are_typed_in_exception_regions(t);
 #endif
     }
 
@@ -68,6 +71,91 @@ public struct CapturedValueRefRegressionTests : ITestX
         if (t.IsNotNull(fast)) t.AreEqual(expected, fast(3)());
     }
     public static int Add(ref int value, int increment) => value += increment;
+    public interface IReferenceReader { int Read(); }
+    public sealed class ReferenceReader : IReferenceReader
+    {
+        public int Value;
+        public int Read() => Value;
+    }
+
+    public void Readonly_reference_captures_are_typed_in_exception_regions(TestContext t)
+    {
+        var instance = new ReferenceReader { Value = 7 };
+        foreach (var flags in new[] { CompilerFlags.Default, CompilerFlags.NoInvocationLambdaInlining, CompilerFlags.EnableDelegateDebugInfo })
+        {
+            foreach (var local in new[] { false, true })
+            {
+                var value = SysExpr.Parameter(typeof(ReferenceReader));
+                foreach (var call in new[] { false, true })
+                {
+                    var read = call ? (System.Linq.Expressions.Expression)SysExpr.Call(value, typeof(ReferenceReader).GetMethod(nameof(ReferenceReader.Read))) :
+                        SysExpr.Field(value, nameof(ReferenceReader.Value));
+                    var child = SysExpr.Lambda<Func<int>>(SysExpr.TryFinally(read, SysExpr.Empty()));
+                    var source = local ? (System.Linq.Expressions.LambdaExpression)SysExpr.Lambda<Func<Func<int>>>(SysExpr.Block(new[] { value },
+                        SysExpr.Assign(value, SysExpr.Constant(instance)), child)) : SysExpr.Lambda<Func<ReferenceReader, Func<int>>>(child, value);
+                    var compiled = source.FromSysExpression().CompileFast(true, flags);
+                    if (!t.IsNotNull(compiled)) return;
+                    var actual = local ? ((Func<Func<int>>)compiled)() : ((Func<ReferenceReader, Func<int>>)compiled)(instance);
+                    t.AreEqual(7, actual());
+                    t.AreEqual(7, actual());
+                    t.IsTrue(ReferenceEquals(instance, GetCapturedCell(actual)));
+                }
+            }
+            var reference = SysExpr.Parameter(typeof(ReferenceReader));
+            var typedReturn = SysExpr.Lambda<Func<ReferenceReader, Func<ReferenceReader>>>(SysExpr.Lambda<Func<ReferenceReader>>(
+                SysExpr.TryFinally(reference, SysExpr.Empty())), reference).FromSysExpression().CompileFast(true, flags);
+            if (!t.IsNotNull(typedReturn)) return;
+            t.IsTrue(ReferenceEquals(instance, typedReturn(instance)()));
+            t.IsTrue(typedReturn(null)() == null);
+            var contract = SysExpr.Parameter(typeof(IReferenceReader));
+            var interfaceRead = SysExpr.Lambda<Func<IReferenceReader, Func<int>>>(SysExpr.Lambda<Func<int>>(SysExpr.TryFinally(
+                SysExpr.Call(contract, typeof(IReferenceReader).GetMethod(nameof(IReferenceReader.Read))), SysExpr.Empty())), contract)
+                .FromSysExpression().CompileFast(true, flags);
+            if (!t.IsNotNull(interfaceRead)) return;
+            t.AreEqual(7, interfaceRead(instance)());
+            var array = SysExpr.Parameter(typeof(int[]));
+            var arrayRead = SysExpr.Lambda<Func<int[], Func<int>>>(SysExpr.Lambda<Func<int>>(SysExpr.TryFinally(
+                SysExpr.ArrayIndex(array, SysExpr.Constant(0)), SysExpr.Empty())), array).FromSysExpression().CompileFast(true, flags);
+            if (!t.IsNotNull(arrayRead)) return;
+            t.AreEqual(7, arrayRead(new[] { 7 })());
+            var constant = SysExpr.Constant(instance);
+            var constantRead = SysExpr.Lambda<Func<int>>(SysExpr.TryFinally(SysExpr.Field(constant, nameof(ReferenceReader.Value)), SysExpr.Empty()))
+                .FromSysExpression().CompileFast(true, flags);
+            if (!t.IsNotNull(constantRead)) return;
+            t.AreEqual(7, constantRead());
+            var precreated = SysExpr.Lambda<Func<ReferenceReader>>(constant).FromSysExpression();
+#if LIGHT_EXPRESSION
+            var precreatedConstant = precreated.Body as ConstantExpression;
+#else
+            var precreatedConstant = precreated.Body as System.Linq.Expressions.ConstantExpression;
+#endif
+            var precreatedReturn = precreated.TryCompileWithPreCreatedClosure<Func<ReferenceReader>>(new[] { precreatedConstant }, flags);
+            if (t.IsNotNull(precreatedReturn)) t.IsTrue(ReferenceEquals(instance, precreatedReturn()));
+        }
+    }
+
+    public void Public_reference_slot_emission_is_typed_for_user_provided_contexts(TestContext t)
+    {
+#if LIGHT_EXPRESSION
+        var value = Expression.Parameter(typeof(ReferenceReader));
+        var context = new ExpressionCompiler.CompilerContext(ExpressionCompiler.ClosureStatus.UserProvided,
+            Expression.Lambda<Func<ReferenceReader>>(value), CompilerFlags.Default);
+#else
+        var value = SysExpr.Parameter(typeof(ReferenceReader));
+        var context = new ExpressionCompiler.CompilerContext(ExpressionCompiler.ClosureStatus.UserProvided,
+            new System.Linq.Expressions.ParameterExpression[0], CompilerFlags.Default);
+#endif
+        context.NonPassedParameters = new(new[] { value });
+        var method = new DynamicMethod(string.Empty, typeof(ReferenceReader), new[] { typeof(ExpressionCompiler.ArrayClosureWithNonPassedParams) }, true);
+        var il = method.GetILGenerator();
+        t.IsTrue(ExpressionCompiler.EmittingVisitor.TryEmitNonByRefNonValueTypeParameter(value, context.ParamExprs, il, ref context));
+        il.Emit(OpCodes.Ret);
+        var read = (Func<ExpressionCompiler.ArrayClosureWithNonPassedParams, ReferenceReader>)method.CreateDelegate(
+            typeof(Func<ExpressionCompiler.ArrayClosureWithNonPassedParams, ReferenceReader>));
+        var instance = new ReferenceReader { Value = 7 };
+        t.IsTrue(ReferenceEquals(instance, read(new ExpressionCompiler.ArrayClosureWithNonPassedParams(new object[] { instance }))));
+        t.IsTrue(read(new ExpressionCompiler.ArrayClosureWithNonPassedParams(new object[] { null })) == null);
+    }
     public struct MutableCounter
     {
         public int Value;
@@ -239,6 +327,37 @@ public struct CapturedValueRefRegressionTests : ITestX
     }
 
 #if LIGHT_EXPRESSION
+    private sealed class FieldBackedReferenceConstant : ConstantExpression
+    {
+        public readonly ReferenceReader Stored;
+        internal FieldBackedReferenceConstant(ReferenceReader value) => Stored = value;
+        public override Type Type => typeof(ReferenceReader);
+        public override object Value => Stored;
+        public override bool IsIntrinsic => true;
+        public override ExpressionCompiler.Result TryCollectInfo(ref ExpressionCompiler.CompilerContext context,
+            ExpressionCompiler.NestedLambdaInfo nestedLambda, ref ImTools.SmallList<ExpressionCompiler.NestedLambdaInfo> rootNestedLambdas)
+        {
+            context.AddConstantOrIncrementUsageCount(this);
+            return ExpressionCompiler.Result.OK;
+        }
+        public override bool TryEmit(ref ExpressionCompiler.CompilerContext context, ILGenerator il,
+            ExpressionCompiler.ParentFlags parent, int byRefIndex = -1) =>
+            ExpressionCompiler.EmittingVisitor.TryEmitConstant(true, Type, typeof(ReferenceReader), this, il, ref context,
+                byRefIndex, typeof(FieldBackedReferenceConstant).GetField(nameof(Stored)));
+    }
+
+    public void Field_backed_reference_constants_are_typed_in_exception_regions(TestContext t)
+    {
+        var instance = new ReferenceReader { Value = 7 };
+        foreach (var flags in new[] { CompilerFlags.Default, CompilerFlags.NoInvocationLambdaInlining, CompilerFlags.EnableDelegateDebugInfo })
+        {
+            var expression = Expression.Lambda<Func<ReferenceReader>>(Expression.TryFinally(
+                new FieldBackedReferenceConstant(instance), Expression.Empty()));
+            var actual = expression.CompileFast(true, flags);
+            if (t.IsNotNull(actual)) t.IsTrue(ReferenceEquals(instance, actual()));
+        }
+    }
+
     private sealed class HiddenQuote : ConstantExpression
     {
         private readonly Expression _quote;
