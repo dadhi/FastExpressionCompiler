@@ -939,13 +939,16 @@ namespace FastExpressionCompiler
                 return info;
             }
 
+            internal Expression CaptureAnalysisRoot;
+            internal SmallSet4<ParameterExpression, RefEq<ParameterExpression>> ValueCapturedVariables;
             internal SmallList<ParameterExpression> HoistedVariables;
             internal SmallMap4<ParameterExpression, int, RefEq<ParameterExpression>> HoistedParameterLocals;
 
             internal bool IsHoistedVariable(ParameterExpression variable) =>
                 HoistedVariables.TryGetIndex(variable, default(RefEq<ParameterExpression>)) != -1;
 
-            internal bool TryHoistVariable(ParameterExpression variable)
+            [RequiresUnreferencedCode(Trimming.Message)]
+            internal bool TryHoistVariable(ParameterExpression variable, bool requireCell = false)
             {
                 if (IsHoistedVariable(variable))
                     return true;
@@ -953,6 +956,7 @@ namespace FastExpressionCompiler
                 if (variable.IsByRef || type.IsByRef || type.IsPointer)
                     return false;
 #if NETFRAMEWORK
+                if (type.IsValueType && !type.IsPrimitive && !type.IsEnum)
                 foreach (var attribute in type.GetCustomAttributesData())
                     if (attribute.AttributeType.FullName == "System.Runtime.CompilerServices.IsByRefLikeAttribute")
                         return false;
@@ -960,6 +964,15 @@ namespace FastExpressionCompiler
                 if (type.IsByRefLike)
                     return false;
 #endif
+                if (!requireCell && CaptureAnalysisRoot != null)
+                {
+                    ValueCapturedVariables.Set.TryGetEntryRef(variable, out var capturedByValue);
+                    if (capturedByValue || CanCaptureByValue(CaptureAnalysisRoot, variable))
+                    {
+                        ValueCapturedVariables.Set.AddOrGetEntryRef(variable, out _);
+                        return true;
+                    }
+                }
                 HoistedVariables.GetIndexOrAdd(variable, default(RefEq<ParameterExpression>));
                 return true;
             }
@@ -1431,6 +1444,86 @@ namespace FastExpressionCompiler
             internal int Emitted;
         }
 
+        // Captures whose storage cannot change may retain the existing object[] value layout.
+        // This analysis is conservative: unsupported shapes, quotes, runtime variables and
+        // potential writable argument/receiver uses keep their shared typed cells.
+        private static bool CanCaptureByValue(Expression expression, ParameterExpression variable, bool forbidRead = false)
+        {
+            if (expression == null) return true;
+            if (ReferenceEquals(expression, variable)) return !forbidRead;
+            if (expression is ConstantExpression || expression is DefaultExpression) return true;
+            if (expression is ParameterExpression) return true;
+            if (expression is LambdaExpression lambda)
+                return CanCaptureByValue(lambda.Body, variable, forbidRead);
+            if (expression is BlockExpression block)
+            {
+                var expressions = block.Expressions;
+                var declaresVariable = false;
+                for (var i = 0; i < block.Variables.Count; ++i)
+                    declaresVariable |= ReferenceEquals(block.Variables[i], variable);
+                if (declaresVariable)
+                {
+                    // Only a leading, dominating initializer can establish a copied local.
+                    var initializer = -1;
+                    for (var i = 0; i < expressions.Count; ++i)
+                    {
+                        if (expressions[i] is not BinaryExpression assignment || assignment.NodeType != ExpressionType.Assign ||
+                            assignment.Left is not ParameterExpression) break;
+                        if (ReferenceEquals(assignment.Left, variable)) { initializer = i; break; }
+                        if (!CanCaptureByValue(expressions[i], variable, true)) return false;
+                    }
+                    if (initializer < 0 || !CanCaptureByValue(((BinaryExpression)expressions[initializer]).Right, variable, true))
+                        return false;
+                    for (var i = initializer + 1; i < expressions.Count; ++i)
+                        if (!CanCaptureByValue(expressions[i], variable, forbidRead)) return false;
+                    return true;
+                }
+                for (var i = 0; i < expressions.Count; ++i)
+                    if (!CanCaptureByValue(expressions[i], variable, forbidRead)) return false;
+                return true;
+            }
+            if (expression is BinaryExpression binary)
+            {
+                if (binary.NodeType == ExpressionType.Assign || binary.NodeType >= ExpressionType.AddAssign && binary.NodeType <= ExpressionType.SubtractAssignChecked)
+                {
+                    if (ReferenceEquals(binary.Left, variable) || variable.Type.IsValueType && !CanCaptureByValue(binary.Left, variable, true))
+                        return false;
+                }
+                return CanCaptureByValue(binary.Left, variable, forbidRead) &&
+                    CanCaptureByValue(binary.Right, variable, forbidRead) && CanCaptureByValue(binary.Conversion, variable, forbidRead);
+            }
+            if (expression is UnaryExpression unary)
+            {
+                if (unary.NodeType == ExpressionType.Quote || unary.NodeType == ExpressionType.Throw ||
+                    unary.NodeType >= ExpressionType.PreIncrementAssign && unary.NodeType <= ExpressionType.PostDecrementAssign)
+                    return false;
+                return CanCaptureByValue(unary.Operand, variable, forbidRead);
+            }
+            if (expression is MemberExpression member)
+                return CanCaptureByValue(member.Expression, variable, forbidRead ||
+                    member.Member is PropertyInfo && member.Expression != null && member.Expression.Type.IsValueType);
+            if (expression is ConditionalExpression conditional)
+                return CanCaptureByValue(conditional.Test, variable, forbidRead) && CanCaptureByValue(conditional.IfTrue, variable, forbidRead) &&
+                    CanCaptureByValue(conditional.IfFalse, variable, forbidRead);
+            if (expression is MethodCallExpression call)
+            {
+                // A value-type receiver and any argument may expose writable storage.
+                if (!CanCaptureByValue(call.Object, variable, forbidRead || call.Object != null && call.Object.Type.IsValueType)) return false;
+                var arguments = call.GetArgExprs();
+                for (var i = 0; i < arguments.GetArgCount(); ++i)
+                    if (!CanCaptureByValue(arguments.GetArgument(i), variable, true)) return false;
+                return true;
+            }
+            if (expression is NewExpression creation)
+            {
+                var arguments = creation.GetArgExprs();
+                for (var i = 0; i < arguments.GetArgCount(); ++i)
+                    if (!CanCaptureByValue(arguments.GetArgument(i), variable, true)) return false;
+                return true;
+            }
+            return false;
+        }
+
         internal readonly struct HoistedTypeInfo
         {
             internal readonly Type BoxType;
@@ -1742,6 +1835,7 @@ namespace FastExpressionCompiler
             NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas,
             bool directBlockChild = false, bool switchBody = false)
         {
+            context.CaptureAnalysisRoot ??= expr;
             var scopeDepth = context.LabelScopeDepth;
             if (scopeDepth == 0)
                 context.PushLabelScope(LabelScopeKind.Lambda);
@@ -1940,6 +2034,8 @@ namespace FastExpressionCompiler
                         nestedLambdaContext.QuoteConversions = context.QuoteConversions;
 #endif
                         nestedLambdaContext.HoistedTypes = context.HoistedTypes;
+                        nestedLambdaContext.CaptureAnalysisRoot = context.CaptureAnalysisRoot;
+                        nestedLambdaContext.ValueCapturedVariables = context.ValueCapturedVariables;
                         var newNestedLambda = new NestedLambdaInfo(nestedLambdaExpr);
 
                         if (nestedLambda != null)
@@ -1965,6 +2061,7 @@ namespace FastExpressionCompiler
                         if (!TryCompileNestedLambda(ref nestedLambdaContext, newNestedLambda))
                             return Result.NestedLambdaCompileError;
                         context.HoistedTypes = nestedLambdaContext.HoistedTypes;
+                        context.ValueCapturedVariables = nestedLambdaContext.ValueCapturedVariables;
 
                         return r;
 
@@ -2267,7 +2364,7 @@ namespace FastExpressionCompiler
                         for (var i = 0; i < quoted.Variables.Length; ++i)
                         {
                             var variable = quoted.Variables[i];
-                            if (!context.TryHoistVariable(variable)) return Result.NotSupported_HoistedVariable;
+                            if (!context.TryHoistVariable(variable, requireCell: true)) return Result.NotSupported_HoistedVariable;
                             if ((r = TryCollectInfo(ref context, variable, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
                         }
                         context.AddConstantOrIncrementUsageCount(quoted.Variables.Length == 0 ? quoted.Template : quoted);
@@ -2319,7 +2416,7 @@ namespace FastExpressionCompiler
                         for (var i = 0; i < runtimeVariables.Count; ++i)
                         {
                             var variable = runtimeVariables[i];
-                            if (!context.TryHoistVariable(variable)) return Result.NotSupported_HoistedVariable;
+                            if (!context.TryHoistVariable(variable, requireCell: true)) return Result.NotSupported_HoistedVariable;
                             if ((r = TryCollectInfo(ref context, variable, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
                         }
                         return Result.OK;
@@ -7260,8 +7357,16 @@ namespace FastExpressionCompiler
                 {
                     EmitLoadLocalVariable(il, nonPassedParamsVarIndex);
                     EmitLoadConstantInt(il, nestedParamIndex);
-                    if (!TryEmitHoistedCell(nonPassedParams.GetSurePresentRef(nestedParamIndex), il, ref context))
-                        return false;
+                    var captured = nonPassedParams.GetSurePresentRef(nestedParamIndex);
+                    if (context.IsHoistedVariable(captured))
+                    {
+                        if (!TryEmitHoistedCell(captured, il, ref context)) return false;
+                    }
+                    else
+                    {
+                        if (!TryEmitParameter(captured, il, ref context, ParentFlags.Empty)) return false;
+                        il.TryEmitBoxOf(captured.Type);
+                    }
                     il.Demit(OpCodes.Stelem_Ref);
                 }
                 // Load the actual lambda delegate on stack
