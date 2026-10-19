@@ -1,0 +1,3057 @@
+{
+  "reason": "Equal-operation confirmation of fractional adaptive-operation B/op residuals. Original matrix unchanged. No allocation subtraction. Empty-observer samples included.",
+  "rows": [
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "invoke_try_argument",
+      "phase": "compile",
+      "version": "before",
+      "ns": 25253.020833333336,
+      "bytes": 2040.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "invoke_try_argument",
+      "phase": "compile",
+      "version": "fixed",
+      "ns": 87082.60416666666,
+      "bytes": 2056.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "invoke_try_argument",
+      "phase": "compile",
+      "version": "published",
+      "ns": 86403.33333333333,
+      "bytes": 2056.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "invoke_try_argument",
+      "phase": "compile_first",
+      "version": "before",
+      "ns": 106527.91666666667,
+      "bytes": 2040.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "invoke_try_argument",
+      "phase": "compile_first",
+      "version": "fixed",
+      "ns": 80217.91666666666,
+      "bytes": 2056.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "invoke_try_argument",
+      "phase": "compile_first",
+      "version": "published",
+      "ns": 81427.8125,
+      "bytes": 2056.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "invoke_try_argument",
+      "phase": "construct",
+      "version": "before",
+      "ns": 1151.6666666666667,
+      "bytes": 320.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "invoke_try_argument",
+      "phase": "construct",
+      "version": "fixed",
+      "ns": 1057.6041666666665,
+      "bytes": 320.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "invoke_try_argument",
+      "phase": "construct",
+      "version": "published",
+      "ns": 1057.3958333333333,
+      "bytes": 320.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "invoke_try_argument",
+      "phase": "invoke",
+      "version": "before",
+      "ns": 1.67375,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "invoke_try_argument",
+      "phase": "invoke",
+      "version": "fixed",
+      "ns": 2.0720833333333335,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "invoke_try_argument",
+      "phase": "invoke",
+      "version": "published",
+      "ns": 1.2875,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "observer_empty",
+      "phase": "compile",
+      "version": "before",
+      "ns": 1.25,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "observer_empty",
+      "phase": "compile",
+      "version": "fixed",
+      "ns": 1.7708333333333333,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "observer_empty",
+      "phase": "compile",
+      "version": "published",
+      "ns": 1.4583333333333333,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "try_finally",
+      "phase": "compile",
+      "version": "before",
+      "ns": 16478.541666666664,
+      "bytes": 1856.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "try_finally",
+      "phase": "compile",
+      "version": "fixed",
+      "ns": 70632.91666666666,
+      "bytes": 1872.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "try_finally",
+      "phase": "compile",
+      "version": "published",
+      "ns": 61547.083333333336,
+      "bytes": 1872.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "try_finally",
+      "phase": "compile_first",
+      "version": "before",
+      "ns": 66186.66666666666,
+      "bytes": 1856.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "try_finally",
+      "phase": "compile_first",
+      "version": "fixed",
+      "ns": 63704.791666666664,
+      "bytes": 1872.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "try_finally",
+      "phase": "compile_first",
+      "version": "published",
+      "ns": 61927.70833333333,
+      "bytes": 1872.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "try_finally",
+      "phase": "construct",
+      "version": "before",
+      "ns": 869.4791666666666,
+      "bytes": 184.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "try_finally",
+      "phase": "construct",
+      "version": "fixed",
+      "ns": 967.9166666666666,
+      "bytes": 184.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "try_finally",
+      "phase": "construct",
+      "version": "published",
+      "ns": 903.125,
+      "bytes": 184.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "try_finally",
+      "phase": "invoke",
+      "version": "before",
+      "ns": 1.40375,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "try_finally",
+      "phase": "invoke",
+      "version": "fixed",
+      "ns": 1.4447916666666667,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "try_finally",
+      "phase": "invoke",
+      "version": "published",
+      "ns": 1.7874999999999999,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks128",
+      "phase": "compile",
+      "version": "before",
+      "ns": 490072.5,
+      "bytes": 28586.4,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks128",
+      "phase": "compile",
+      "version": "fixed",
+      "ns": 378333.8541666667,
+      "bytes": 28586.4,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks128",
+      "phase": "compile",
+      "version": "published",
+      "ns": 364671.9791666667,
+      "bytes": 28586.4,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks128",
+      "phase": "compile_first",
+      "version": "before",
+      "ns": 1095663.0208333335,
+      "bytes": 28586.4,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks128",
+      "phase": "compile_first",
+      "version": "fixed",
+      "ns": 902447.1875,
+      "bytes": 28586.4,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks128",
+      "phase": "compile_first",
+      "version": "published",
+      "ns": 833871.7708333333,
+      "bytes": 28586.4,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks128",
+      "phase": "construct",
+      "version": "before",
+      "ns": 203057.0833333333,
+      "bytes": 93071.2,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks128",
+      "phase": "construct",
+      "version": "fixed",
+      "ns": 150203.5416666667,
+      "bytes": 93071.2,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks128",
+      "phase": "construct",
+      "version": "published",
+      "ns": 127801.14583333333,
+      "bytes": 93071.2,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks128",
+      "phase": "invoke",
+      "version": "before",
+      "ns": 2.2714583333333334,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks128",
+      "phase": "invoke",
+      "version": "fixed",
+      "ns": 1.3589583333333333,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks128",
+      "phase": "invoke",
+      "version": "published",
+      "ns": 1.9416666666666664,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks32",
+      "phase": "compile",
+      "version": "before",
+      "ns": 100239.79166666666,
+      "bytes": 7848.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks32",
+      "phase": "compile",
+      "version": "fixed",
+      "ns": 120905.9375,
+      "bytes": 7848.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks32",
+      "phase": "compile",
+      "version": "published",
+      "ns": 90112.70833333333,
+      "bytes": 7848.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks32",
+      "phase": "compile_first",
+      "version": "before",
+      "ns": 285606.7708333334,
+      "bytes": 7848.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks32",
+      "phase": "compile_first",
+      "version": "fixed",
+      "ns": 296865.8333333334,
+      "bytes": 7848.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks32",
+      "phase": "compile_first",
+      "version": "published",
+      "ns": 205812.08333333334,
+      "bytes": 7848.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks32",
+      "phase": "construct",
+      "version": "before",
+      "ns": 45112.1875,
+      "bytes": 23674.4,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks32",
+      "phase": "construct",
+      "version": "fixed",
+      "ns": 40418.4375,
+      "bytes": 23674.4,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks32",
+      "phase": "construct",
+      "version": "published",
+      "ns": 36689.6875,
+      "bytes": 23674.4,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks32",
+      "phase": "invoke",
+      "version": "before",
+      "ns": 2.0789583333333335,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks32",
+      "phase": "invoke",
+      "version": "fixed",
+      "ns": 2.7283333333333335,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks32",
+      "phase": "invoke",
+      "version": "published",
+      "ns": 1.6154166666666667,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "phase": "activate",
+      "version": "before",
+      "ns": 576.875,
+      "bytes": 440.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "phase": "activate",
+      "version": "fixed",
+      "ns": 522.3958333333333,
+      "bytes": 440.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "phase": "activate",
+      "version": "published",
+      "ns": 513.75,
+      "bytes": 440.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "phase": "compile",
+      "version": "before",
+      "ns": 68645.10416666666,
+      "bytes": 7544.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "phase": "compile",
+      "version": "fixed",
+      "ns": 94009.6875,
+      "bytes": 7536.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "phase": "compile",
+      "version": "published",
+      "ns": 81934.79166666667,
+      "bytes": 7832.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "phase": "compile_first",
+      "version": "before",
+      "ns": 1385672.6041666665,
+      "bytes": 7984.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "phase": "compile_first",
+      "version": "fixed",
+      "ns": 1473769.375,
+      "bytes": 7976.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "phase": "compile_first",
+      "version": "published",
+      "ns": 1569887.9166666667,
+      "bytes": 8272.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "phase": "construct",
+      "version": "before",
+      "ns": 10775.9375,
+      "bytes": 3440.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "phase": "construct",
+      "version": "fixed",
+      "ns": 7547.083333333333,
+      "bytes": 3440.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "phase": "construct",
+      "version": "published",
+      "ns": 7570.9375,
+      "bytes": 3440.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "phase": "invoke",
+      "version": "before",
+      "ns": 109.833125,
+      "bytes": 440.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "phase": "invoke",
+      "version": "fixed",
+      "ns": 131.60083333333333,
+      "bytes": 440.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "phase": "invoke",
+      "version": "published",
+      "ns": 107.80833333333334,
+      "bytes": 440.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "phase": "nested_invoke",
+      "version": "before",
+      "ns": 13.235833333333334,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "phase": "nested_invoke",
+      "version": "fixed",
+      "ns": 13.310625,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "phase": "nested_invoke",
+      "version": "published",
+      "ns": 16.03666666666667,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "phase": "activate",
+      "version": "before",
+      "ns": 279.7916666666667,
+      "bytes": 184.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "phase": "activate",
+      "version": "fixed",
+      "ns": 310.4166666666667,
+      "bytes": 184.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "phase": "activate",
+      "version": "published",
+      "ns": 332.5,
+      "bytes": 184.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "phase": "compile",
+      "version": "before",
+      "ns": 35034.166666666664,
+      "bytes": 4376.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "phase": "compile",
+      "version": "fixed",
+      "ns": 51598.854166666664,
+      "bytes": 4520.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "phase": "compile",
+      "version": "published",
+      "ns": 61931.5625,
+      "bytes": 5272.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "phase": "compile_first",
+      "version": "before",
+      "ns": 453544.4791666666,
+      "bytes": 4584.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "phase": "compile_first",
+      "version": "fixed",
+      "ns": 637203.75,
+      "bytes": 4704.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "phase": "compile_first",
+      "version": "published",
+      "ns": 950499.5833333334,
+      "bytes": 5456.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "phase": "construct",
+      "version": "before",
+      "ns": 1338.125,
+      "bytes": 544.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "phase": "construct",
+      "version": "fixed",
+      "ns": 1359.4791666666667,
+      "bytes": 544.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "phase": "construct",
+      "version": "published",
+      "ns": 1155.7291666666667,
+      "bytes": 544.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "phase": "invoke",
+      "version": "before",
+      "ns": 48.102916666666665,
+      "bytes": 208.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "phase": "invoke",
+      "version": "fixed",
+      "ns": 49.545833333333334,
+      "bytes": 184.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "phase": "invoke",
+      "version": "published",
+      "ns": 54.52791666666667,
+      "bytes": 184.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "phase": "nested_invoke",
+      "version": "before",
+      "ns": 21.095416666666665,
+      "bytes": 24.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "phase": "nested_invoke",
+      "version": "fixed",
+      "ns": 5.411666666666666,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "phase": "nested_invoke",
+      "version": "published",
+      "ns": 6.581458333333333,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "phase": "activate",
+      "version": "before",
+      "ns": 338.95833333333337,
+      "bytes": 160.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "phase": "activate",
+      "version": "fixed",
+      "ns": 270.3125,
+      "bytes": 160.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "phase": "activate",
+      "version": "published",
+      "ns": 292.1875,
+      "bytes": 160.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "phase": "compile",
+      "version": "before",
+      "ns": 39017.604166666664,
+      "bytes": 4264.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "phase": "compile",
+      "version": "fixed",
+      "ns": 47799.583333333336,
+      "bytes": 4256.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "phase": "compile",
+      "version": "published",
+      "ns": 47683.75,
+      "bytes": 4408.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "phase": "compile_first",
+      "version": "before",
+      "ns": 425704.8958333333,
+      "bytes": 4424.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "phase": "compile_first",
+      "version": "fixed",
+      "ns": 783003.8541666666,
+      "bytes": 4416.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "phase": "compile_first",
+      "version": "published",
+      "ns": 688190.9375,
+      "bytes": 4568.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "phase": "construct",
+      "version": "before",
+      "ns": 3513.4375,
+      "bytes": 1160.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "phase": "construct",
+      "version": "fixed",
+      "ns": 2406.979166666667,
+      "bytes": 1160.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "phase": "construct",
+      "version": "published",
+      "ns": 2527.0833333333335,
+      "bytes": 1160.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "phase": "invoke",
+      "version": "before",
+      "ns": 41.8075,
+      "bytes": 160.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "phase": "invoke",
+      "version": "fixed",
+      "ns": 48.29666666666667,
+      "bytes": 160.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "phase": "invoke",
+      "version": "published",
+      "ns": 46.38666666666667,
+      "bytes": 160.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "phase": "nested_invoke",
+      "version": "before",
+      "ns": 4.504166666666666,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "phase": "nested_invoke",
+      "version": "fixed",
+      "ns": 4.732291666666667,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "phase": "nested_invoke",
+      "version": "published",
+      "ns": 4.747916666666667,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "phase": "activate",
+      "version": "before",
+      "ns": 271.5625,
+      "bytes": 160.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "phase": "activate",
+      "version": "fixed",
+      "ns": 313.95833333333337,
+      "bytes": 160.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "phase": "activate",
+      "version": "published",
+      "ns": 269.0625,
+      "bytes": 160.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "phase": "compile",
+      "version": "before",
+      "ns": 41320.0,
+      "bytes": 4912.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "phase": "compile",
+      "version": "fixed",
+      "ns": 378446.25,
+      "bytes": 5096.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "phase": "compile",
+      "version": "published",
+      "ns": 305282.2916666667,
+      "bytes": 5096.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "phase": "compile_first",
+      "version": "before",
+      "ns": 428177.8125,
+      "bytes": 5072.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "phase": "compile_first",
+      "version": "fixed",
+      "ns": 738297.7083333334,
+      "bytes": 5256.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "phase": "compile_first",
+      "version": "published",
+      "ns": 768501.7708333334,
+      "bytes": 5256.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "phase": "construct",
+      "version": "before",
+      "ns": 3147.3958333333335,
+      "bytes": 1240.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "phase": "construct",
+      "version": "fixed",
+      "ns": 3223.4375,
+      "bytes": 1240.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "phase": "construct",
+      "version": "published",
+      "ns": 3296.1458333333335,
+      "bytes": 1240.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "phase": "invoke",
+      "version": "before",
+      "ns": 41.872708333333335,
+      "bytes": 160.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "phase": "invoke",
+      "version": "fixed",
+      "ns": 46.469375,
+      "bytes": 160.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "phase": "invoke",
+      "version": "published",
+      "ns": 45.46333333333334,
+      "bytes": 160.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "phase": "nested_invoke",
+      "version": "before",
+      "ns": 4.453749999999999,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "phase": "nested_invoke",
+      "version": "fixed",
+      "ns": 4.886666666666667,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "phase": "nested_invoke",
+      "version": "published",
+      "ns": 4.793125,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed128",
+      "phase": "compile",
+      "version": "before",
+      "ns": 339291.4583333333,
+      "bytes": 19857.6,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed128",
+      "phase": "compile",
+      "version": "fixed",
+      "ns": 535350.1041666666,
+      "bytes": 19857.6,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed128",
+      "phase": "compile",
+      "version": "published",
+      "ns": 611240.7291666667,
+      "bytes": 19857.6,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed128",
+      "phase": "compile_first",
+      "version": "before",
+      "ns": 3997493.3333333335,
+      "bytes": 19857.6,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed128",
+      "phase": "compile_first",
+      "version": "fixed",
+      "ns": 5992686.979166666,
+      "bytes": 19857.6,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed128",
+      "phase": "compile_first",
+      "version": "published",
+      "ns": 5251274.0625,
+      "bytes": 19857.6,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed128",
+      "phase": "construct",
+      "version": "before",
+      "ns": 384908.6458333334,
+      "bytes": 34267.2,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed128",
+      "phase": "construct",
+      "version": "fixed",
+      "ns": 429438.75,
+      "bytes": 34267.2,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed128",
+      "phase": "construct",
+      "version": "published",
+      "ns": 411707.5,
+      "bytes": 34267.2,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed128",
+      "phase": "invoke",
+      "version": "before",
+      "ns": 15.404166666666669,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed128",
+      "phase": "invoke",
+      "version": "fixed",
+      "ns": 19.368125,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed128",
+      "phase": "invoke",
+      "version": "published",
+      "ns": 16.171875,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed32",
+      "phase": "compile",
+      "version": "before",
+      "ns": 81427.91666666667,
+      "bytes": 5888.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed32",
+      "phase": "compile",
+      "version": "fixed",
+      "ns": 134716.35416666666,
+      "bytes": 5888.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed32",
+      "phase": "compile",
+      "version": "published",
+      "ns": 92059.6875,
+      "bytes": 5888.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed32",
+      "phase": "compile_first",
+      "version": "before",
+      "ns": 777712.1875,
+      "bytes": 5888.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed32",
+      "phase": "compile_first",
+      "version": "fixed",
+      "ns": 860840.625,
+      "bytes": 5888.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed32",
+      "phase": "compile_first",
+      "version": "published",
+      "ns": 999008.9583333334,
+      "bytes": 5888.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed32",
+      "phase": "construct",
+      "version": "before",
+      "ns": 31006.458333333332,
+      "bytes": 8920.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed32",
+      "phase": "construct",
+      "version": "fixed",
+      "ns": 34975.9375,
+      "bytes": 8920.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed32",
+      "phase": "construct",
+      "version": "published",
+      "ns": 33249.27083333333,
+      "bytes": 8920.8,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed32",
+      "phase": "invoke",
+      "version": "before",
+      "ns": 8.58125,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed32",
+      "phase": "invoke",
+      "version": "fixed",
+      "ns": 9.597083333333334,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed32",
+      "phase": "invoke",
+      "version": "published",
+      "ns": 9.921875,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        100000
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "observer_empty",
+      "phase": "compile",
+      "version": "before",
+      "ns": 1.3541666666666667,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "observer_empty",
+      "phase": "compile",
+      "version": "fixed",
+      "ns": 1.875,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "observer_empty",
+      "phase": "compile",
+      "version": "published",
+      "ns": 1.4583333333333335,
+      "bytes": 0.0,
+      "samples": 14,
+      "operations": [
+        200
+      ]
+    }
+  ],
+  "comparisons": [
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "invoke_try_argument",
+      "phase": "compile",
+      "baseline": "before",
+      "beforeBytes": 2040.8,
+      "fixedBytes": 2056.8,
+      "byteDelta": 16.000000000000227,
+      "nsRatio": 3.4484034500822913
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "invoke_try_argument",
+      "phase": "compile",
+      "baseline": "published",
+      "beforeBytes": 2056.8,
+      "fixedBytes": 2056.8,
+      "byteDelta": 0.0,
+      "nsRatio": 1.0078616276378225
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "invoke_try_argument",
+      "phase": "compile_first",
+      "baseline": "before",
+      "beforeBytes": 2040.8,
+      "fixedBytes": 2056.8,
+      "byteDelta": 16.000000000000227,
+      "nsRatio": 0.7530224862809826
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "invoke_try_argument",
+      "phase": "compile_first",
+      "baseline": "published",
+      "beforeBytes": 2056.8,
+      "fixedBytes": 2056.8,
+      "byteDelta": 0.0,
+      "nsRatio": 0.9851414916330542
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "invoke_try_argument",
+      "phase": "construct",
+      "baseline": "before",
+      "beforeBytes": 320.8,
+      "fixedBytes": 320.8,
+      "byteDelta": 0.0,
+      "nsRatio": 0.9183248914616496
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "invoke_try_argument",
+      "phase": "construct",
+      "baseline": "published",
+      "beforeBytes": 320.8,
+      "fixedBytes": 320.8,
+      "byteDelta": 0.0,
+      "nsRatio": 1.0001970249236527
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "invoke_try_argument",
+      "phase": "invoke",
+      "baseline": "before",
+      "beforeBytes": 0.0,
+      "fixedBytes": 0.0,
+      "byteDelta": 0.0,
+      "nsRatio": 1.2379885486681603
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "invoke_try_argument",
+      "phase": "invoke",
+      "baseline": "published",
+      "beforeBytes": 0.0,
+      "fixedBytes": 0.0,
+      "byteDelta": 0.0,
+      "nsRatio": 1.6093851132686083
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "observer_empty",
+      "phase": "compile",
+      "baseline": "before",
+      "beforeBytes": 0.0,
+      "fixedBytes": 0.0,
+      "byteDelta": 0.0,
+      "nsRatio": 1.4166666666666665
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "observer_empty",
+      "phase": "compile",
+      "baseline": "published",
+      "beforeBytes": 0.0,
+      "fixedBytes": 0.0,
+      "byteDelta": 0.0,
+      "nsRatio": 1.2142857142857142
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "try_finally",
+      "phase": "compile",
+      "baseline": "before",
+      "beforeBytes": 1856.8,
+      "fixedBytes": 1872.8,
+      "byteDelta": 16.0,
+      "nsRatio": 4.286357257544534
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "try_finally",
+      "phase": "compile",
+      "baseline": "published",
+      "beforeBytes": 1872.8,
+      "fixedBytes": 1872.8,
+      "byteDelta": 0.0,
+      "nsRatio": 1.1476241089139072
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "try_finally",
+      "phase": "compile_first",
+      "baseline": "before",
+      "beforeBytes": 1856.8,
+      "fixedBytes": 1872.8,
+      "byteDelta": 16.0,
+      "nsRatio": 0.962501888597905
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "try_finally",
+      "phase": "compile_first",
+      "baseline": "published",
+      "beforeBytes": 1872.8,
+      "fixedBytes": 1872.8,
+      "byteDelta": 0.0,
+      "nsRatio": 1.0286960938998093
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "try_finally",
+      "phase": "construct",
+      "baseline": "before",
+      "beforeBytes": 184.8,
+      "fixedBytes": 184.8,
+      "byteDelta": 0.0,
+      "nsRatio": 1.113214328501258
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "try_finally",
+      "phase": "construct",
+      "baseline": "published",
+      "beforeBytes": 184.8,
+      "fixedBytes": 184.8,
+      "byteDelta": 0.0,
+      "nsRatio": 1.0717416378316031
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "try_finally",
+      "phase": "invoke",
+      "baseline": "before",
+      "beforeBytes": 0.0,
+      "fixedBytes": 0.0,
+      "byteDelta": 0.0,
+      "nsRatio": 1.0292371623627188
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "light",
+      "scenario": "try_finally",
+      "phase": "invoke",
+      "baseline": "published",
+      "beforeBytes": 0.0,
+      "fixedBytes": 0.0,
+      "byteDelta": 0.0,
+      "nsRatio": 0.8082750582750583
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks128",
+      "phase": "compile",
+      "baseline": "before",
+      "beforeBytes": 28586.4,
+      "fixedBytes": 28586.4,
+      "byteDelta": 0.0,
+      "nsRatio": 0.7719956826115865
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks128",
+      "phase": "compile",
+      "baseline": "published",
+      "beforeBytes": 28586.4,
+      "fixedBytes": 28586.4,
+      "byteDelta": 0.0,
+      "nsRatio": 1.0374634624552717
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks128",
+      "phase": "compile_first",
+      "baseline": "before",
+      "beforeBytes": 28586.4,
+      "fixedBytes": 28586.4,
+      "byteDelta": 0.0,
+      "nsRatio": 0.8236539614284158
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks128",
+      "phase": "compile_first",
+      "baseline": "published",
+      "beforeBytes": 28586.4,
+      "fixedBytes": 28586.4,
+      "byteDelta": 0.0,
+      "nsRatio": 1.0822373643829382
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks128",
+      "phase": "construct",
+      "baseline": "before",
+      "beforeBytes": 93071.2,
+      "fixedBytes": 93071.2,
+      "byteDelta": 0.0,
+      "nsRatio": 0.7397109187276978
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks128",
+      "phase": "construct",
+      "baseline": "published",
+      "beforeBytes": 93071.2,
+      "fixedBytes": 93071.2,
+      "byteDelta": 0.0,
+      "nsRatio": 1.1752910405243826
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks128",
+      "phase": "invoke",
+      "baseline": "before",
+      "beforeBytes": 0.0,
+      "fixedBytes": 0.0,
+      "byteDelta": 0.0,
+      "nsRatio": 0.5982757039346969
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks128",
+      "phase": "invoke",
+      "baseline": "published",
+      "beforeBytes": 0.0,
+      "fixedBytes": 0.0,
+      "byteDelta": 0.0,
+      "nsRatio": 0.699892703862661
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks32",
+      "phase": "compile",
+      "baseline": "before",
+      "beforeBytes": 7848.8,
+      "fixedBytes": 7848.8,
+      "byteDelta": 0.0,
+      "nsRatio": 1.2061670868396825
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks32",
+      "phase": "compile",
+      "baseline": "published",
+      "beforeBytes": 7848.8,
+      "fixedBytes": 7848.8,
+      "byteDelta": 0.0,
+      "nsRatio": 1.3417190509107808
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks32",
+      "phase": "compile_first",
+      "baseline": "before",
+      "beforeBytes": 7848.8,
+      "fixedBytes": 7848.8,
+      "byteDelta": 0.0,
+      "nsRatio": 1.0394215531625832
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks32",
+      "phase": "compile_first",
+      "baseline": "published",
+      "beforeBytes": 7848.8,
+      "fixedBytes": 7848.8,
+      "byteDelta": 0.0,
+      "nsRatio": 1.4424120708818118
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks32",
+      "phase": "construct",
+      "baseline": "before",
+      "beforeBytes": 23674.4,
+      "fixedBytes": 23674.4,
+      "byteDelta": 0.0,
+      "nsRatio": 0.8959538373083771
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks32",
+      "phase": "construct",
+      "baseline": "published",
+      "beforeBytes": 23674.4,
+      "fixedBytes": 23674.4,
+      "byteDelta": 0.0,
+      "nsRatio": 1.1016293747391552
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks32",
+      "phase": "invoke",
+      "baseline": "before",
+      "beforeBytes": 0.0,
+      "fixedBytes": 0.0,
+      "byteDelta": 0.0,
+      "nsRatio": 1.3123559474897284
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "blocks32",
+      "phase": "invoke",
+      "baseline": "published",
+      "beforeBytes": 0.0,
+      "fixedBytes": 0.0,
+      "byteDelta": 0.0,
+      "nsRatio": 1.6889347433582667
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "phase": "activate",
+      "baseline": "before",
+      "beforeBytes": 440.0,
+      "fixedBytes": 440.0,
+      "byteDelta": 0.0,
+      "nsRatio": 0.905561574575659
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "phase": "activate",
+      "baseline": "published",
+      "beforeBytes": 440.0,
+      "fixedBytes": 440.0,
+      "byteDelta": 0.0,
+      "nsRatio": 1.0168288726682886
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "phase": "compile",
+      "baseline": "before",
+      "beforeBytes": 7544.8,
+      "fixedBytes": 7536.8,
+      "byteDelta": -8.0,
+      "nsRatio": 1.3695031661944819
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "phase": "compile",
+      "baseline": "published",
+      "beforeBytes": 7832.8,
+      "fixedBytes": 7536.8,
+      "byteDelta": -296.0,
+      "nsRatio": 1.1473720209414497
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "phase": "compile_first",
+      "baseline": "before",
+      "beforeBytes": 7984.8,
+      "fixedBytes": 7976.8,
+      "byteDelta": -8.0,
+      "nsRatio": 1.0635769016205052
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "phase": "compile_first",
+      "baseline": "published",
+      "beforeBytes": 8272.8,
+      "fixedBytes": 7976.8,
+      "byteDelta": -295.9999999999991,
+      "nsRatio": 0.9387736279474304
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "phase": "construct",
+      "baseline": "before",
+      "beforeBytes": 3440.8,
+      "fixedBytes": 3440.8,
+      "byteDelta": 0.0,
+      "nsRatio": 0.7003644307823178
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "phase": "construct",
+      "baseline": "published",
+      "beforeBytes": 3440.8,
+      "fixedBytes": 3440.8,
+      "byteDelta": 0.0,
+      "nsRatio": 0.9968492453323426
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "phase": "invoke",
+      "baseline": "before",
+      "beforeBytes": 440.0,
+      "fixedBytes": 440.0,
+      "byteDelta": 0.0,
+      "nsRatio": 1.1981889191747328
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "phase": "invoke",
+      "baseline": "published",
+      "beforeBytes": 440.0,
+      "fixedBytes": 440.0,
+      "byteDelta": 0.0,
+      "nsRatio": 1.2206925871531267
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "phase": "nested_invoke",
+      "baseline": "before",
+      "beforeBytes": 0.0,
+      "fixedBytes": 0.0,
+      "byteDelta": 0.0,
+      "nsRatio": 1.005650695712397
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "phase": "nested_invoke",
+      "baseline": "published",
+      "beforeBytes": 0.0,
+      "fixedBytes": 0.0,
+      "byteDelta": 0.0,
+      "nsRatio": 0.8300119517771772
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "phase": "activate",
+      "baseline": "before",
+      "beforeBytes": 184.0,
+      "fixedBytes": 184.0,
+      "byteDelta": 0.0,
+      "nsRatio": 1.1094564408041698
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "phase": "activate",
+      "baseline": "published",
+      "beforeBytes": 184.0,
+      "fixedBytes": 184.0,
+      "byteDelta": 0.0,
+      "nsRatio": 0.9335839598997494
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "phase": "compile",
+      "baseline": "before",
+      "beforeBytes": 4376.0,
+      "fixedBytes": 4520.0,
+      "byteDelta": 144.0,
+      "nsRatio": 1.4728152279917224
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "phase": "compile",
+      "baseline": "published",
+      "beforeBytes": 5272.0,
+      "fixedBytes": 4520.0,
+      "byteDelta": -752.0,
+      "nsRatio": 0.8331592500458335
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "phase": "compile_first",
+      "baseline": "before",
+      "beforeBytes": 4584.0,
+      "fixedBytes": 4704.0,
+      "byteDelta": 120.0,
+      "nsRatio": 1.4049421374741131
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "phase": "compile_first",
+      "baseline": "published",
+      "beforeBytes": 5456.0,
+      "fixedBytes": 4704.0,
+      "byteDelta": -752.0,
+      "nsRatio": 0.6703882475838364
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "phase": "construct",
+      "baseline": "before",
+      "beforeBytes": 544.8,
+      "fixedBytes": 544.8,
+      "byteDelta": 0.0,
+      "nsRatio": 1.0159582749494007
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "phase": "construct",
+      "baseline": "published",
+      "beforeBytes": 544.8,
+      "fixedBytes": 544.8,
+      "byteDelta": 0.0,
+      "nsRatio": 1.1762956286615593
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "phase": "invoke",
+      "baseline": "before",
+      "beforeBytes": 208.0,
+      "fixedBytes": 184.0,
+      "byteDelta": -24.0,
+      "nsRatio": 1.0299964485867974
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "phase": "invoke",
+      "baseline": "published",
+      "beforeBytes": 184.0,
+      "fixedBytes": 184.0,
+      "byteDelta": 0.0,
+      "nsRatio": 0.9086324283432797
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "phase": "nested_invoke",
+      "baseline": "before",
+      "beforeBytes": 24.0,
+      "fixedBytes": 0.0,
+      "byteDelta": -24.0,
+      "nsRatio": 0.2565328171601256
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "phase": "nested_invoke",
+      "baseline": "published",
+      "beforeBytes": 0.0,
+      "fixedBytes": 0.0,
+      "byteDelta": 0.0,
+      "nsRatio": 0.8222595042891963
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "phase": "activate",
+      "baseline": "before",
+      "beforeBytes": 160.0,
+      "fixedBytes": 160.0,
+      "byteDelta": 0.0,
+      "nsRatio": 0.7974800245851259
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "phase": "activate",
+      "baseline": "published",
+      "beforeBytes": 160.0,
+      "fixedBytes": 160.0,
+      "byteDelta": 0.0,
+      "nsRatio": 0.9251336898395722
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "phase": "compile",
+      "baseline": "before",
+      "beforeBytes": 4264.0,
+      "fixedBytes": 4256.0,
+      "byteDelta": -8.0,
+      "nsRatio": 1.2250773555740064
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "phase": "compile",
+      "baseline": "published",
+      "beforeBytes": 4408.0,
+      "fixedBytes": 4256.0,
+      "byteDelta": -152.0,
+      "nsRatio": 1.0024291993254166
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "phase": "compile_first",
+      "baseline": "before",
+      "beforeBytes": 4424.0,
+      "fixedBytes": 4416.0,
+      "byteDelta": -8.0,
+      "nsRatio": 1.8393113676409738
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "phase": "compile_first",
+      "baseline": "published",
+      "beforeBytes": 4568.0,
+      "fixedBytes": 4416.0,
+      "byteDelta": -152.0,
+      "nsRatio": 1.137771236876636
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "phase": "construct",
+      "baseline": "before",
+      "beforeBytes": 1160.8,
+      "fixedBytes": 1160.8,
+      "byteDelta": 0.0,
+      "nsRatio": 0.685078122683744
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "phase": "construct",
+      "baseline": "published",
+      "beforeBytes": 1160.8,
+      "fixedBytes": 1160.8,
+      "byteDelta": 0.0,
+      "nsRatio": 0.9524732069249795
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "phase": "invoke",
+      "baseline": "before",
+      "beforeBytes": 160.0,
+      "fixedBytes": 160.0,
+      "byteDelta": 0.0,
+      "nsRatio": 1.1552153720424965
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "phase": "invoke",
+      "baseline": "published",
+      "beforeBytes": 160.0,
+      "fixedBytes": 160.0,
+      "byteDelta": 0.0,
+      "nsRatio": 1.0411756251796493
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "phase": "nested_invoke",
+      "baseline": "before",
+      "beforeBytes": 0.0,
+      "fixedBytes": 0.0,
+      "byteDelta": 0.0,
+      "nsRatio": 1.0506475485661426
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "phase": "nested_invoke",
+      "baseline": "published",
+      "beforeBytes": 0.0,
+      "fixedBytes": 0.0,
+      "byteDelta": 0.0,
+      "nsRatio": 0.9967090829311102
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "phase": "activate",
+      "baseline": "before",
+      "beforeBytes": 160.0,
+      "fixedBytes": 160.0,
+      "byteDelta": 0.0,
+      "nsRatio": 1.1561181434599157
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "phase": "activate",
+      "baseline": "published",
+      "beforeBytes": 160.0,
+      "fixedBytes": 160.0,
+      "byteDelta": 0.0,
+      "nsRatio": 1.1668602400309718
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "phase": "compile",
+      "baseline": "before",
+      "beforeBytes": 4912.0,
+      "fixedBytes": 5096.0,
+      "byteDelta": 184.0,
+      "nsRatio": 9.158912149080349
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "phase": "compile",
+      "baseline": "published",
+      "beforeBytes": 5096.0,
+      "fixedBytes": 5096.0,
+      "byteDelta": 0.0,
+      "nsRatio": 1.2396600141262697
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "phase": "compile_first",
+      "baseline": "before",
+      "beforeBytes": 5072.0,
+      "fixedBytes": 5256.0,
+      "byteDelta": 184.0,
+      "nsRatio": 1.7242782946239965
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "phase": "compile_first",
+      "baseline": "published",
+      "beforeBytes": 5256.0,
+      "fixedBytes": 5256.0,
+      "byteDelta": 0.0,
+      "nsRatio": 0.9606974718259297
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "phase": "construct",
+      "baseline": "before",
+      "beforeBytes": 1240.8,
+      "fixedBytes": 1240.8,
+      "byteDelta": 0.0,
+      "nsRatio": 1.0241601853384081
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "phase": "construct",
+      "baseline": "published",
+      "beforeBytes": 1240.8,
+      "fixedBytes": 1240.8,
+      "byteDelta": 0.0,
+      "nsRatio": 0.977941408842398
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "phase": "invoke",
+      "baseline": "before",
+      "beforeBytes": 160.0,
+      "fixedBytes": 160.0,
+      "byteDelta": 0.0,
+      "nsRatio": 1.1097771519834418
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "phase": "invoke",
+      "baseline": "published",
+      "beforeBytes": 160.0,
+      "fixedBytes": 160.0,
+      "byteDelta": 0.0,
+      "nsRatio": 1.0221286384632302
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "phase": "nested_invoke",
+      "baseline": "before",
+      "beforeBytes": 0.0,
+      "fixedBytes": 0.0,
+      "byteDelta": 0.0,
+      "nsRatio": 1.097202731780335
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "phase": "nested_invoke",
+      "baseline": "published",
+      "beforeBytes": 0.0,
+      "fixedBytes": 0.0,
+      "byteDelta": 0.0,
+      "nsRatio": 1.0195157995392707
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed128",
+      "phase": "compile",
+      "baseline": "before",
+      "beforeBytes": 19857.6,
+      "fixedBytes": 19857.6,
+      "byteDelta": 0.0,
+      "nsRatio": 1.5778472785504596
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed128",
+      "phase": "compile",
+      "baseline": "published",
+      "beforeBytes": 19857.6,
+      "fixedBytes": 19857.6,
+      "byteDelta": 0.0,
+      "nsRatio": 0.8758416751719648
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed128",
+      "phase": "compile_first",
+      "baseline": "before",
+      "beforeBytes": 19857.6,
+      "fixedBytes": 19857.6,
+      "byteDelta": 0.0,
+      "nsRatio": 1.4991111878026895
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed128",
+      "phase": "compile_first",
+      "baseline": "published",
+      "beforeBytes": 19857.6,
+      "fixedBytes": 19857.6,
+      "byteDelta": 0.0,
+      "nsRatio": 1.1411872448176315
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed128",
+      "phase": "construct",
+      "baseline": "before",
+      "beforeBytes": 34267.2,
+      "fixedBytes": 34267.2,
+      "byteDelta": 0.0,
+      "nsRatio": 1.1156900595731183
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed128",
+      "phase": "construct",
+      "baseline": "published",
+      "beforeBytes": 34267.2,
+      "fixedBytes": 34267.2,
+      "byteDelta": 0.0,
+      "nsRatio": 1.0430675904616749
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed128",
+      "phase": "invoke",
+      "baseline": "before",
+      "beforeBytes": 0.0,
+      "fixedBytes": 0.0,
+      "byteDelta": 0.0,
+      "nsRatio": 1.25733026778469
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed128",
+      "phase": "invoke",
+      "baseline": "published",
+      "beforeBytes": 0.0,
+      "fixedBytes": 0.0,
+      "byteDelta": 0.0,
+      "nsRatio": 1.1976425120772947
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed32",
+      "phase": "compile",
+      "baseline": "before",
+      "beforeBytes": 5888.8,
+      "fixedBytes": 5888.8,
+      "byteDelta": 0.0,
+      "nsRatio": 1.6544246700814114
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed32",
+      "phase": "compile",
+      "baseline": "published",
+      "beforeBytes": 5888.8,
+      "fixedBytes": 5888.8,
+      "byteDelta": 0.0,
+      "nsRatio": 1.4633588036746992
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed32",
+      "phase": "compile_first",
+      "baseline": "before",
+      "beforeBytes": 5888.8,
+      "fixedBytes": 5888.8,
+      "byteDelta": 0.0,
+      "nsRatio": 1.1068884335826357
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed32",
+      "phase": "compile_first",
+      "baseline": "published",
+      "beforeBytes": 5888.8,
+      "fixedBytes": 5888.8,
+      "byteDelta": 0.0,
+      "nsRatio": 0.8616946002527922
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed32",
+      "phase": "construct",
+      "baseline": "before",
+      "beforeBytes": 8920.8,
+      "fixedBytes": 8920.8,
+      "byteDelta": 0.0,
+      "nsRatio": 1.1280210440029295
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed32",
+      "phase": "construct",
+      "baseline": "published",
+      "beforeBytes": 8920.8,
+      "fixedBytes": 8920.8,
+      "byteDelta": 0.0,
+      "nsRatio": 1.0519309633983203
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed32",
+      "phase": "invoke",
+      "baseline": "before",
+      "beforeBytes": 0.0,
+      "fixedBytes": 0.0,
+      "byteDelta": 0.0,
+      "nsRatio": 1.1183782471473658
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "nested_mixed32",
+      "phase": "invoke",
+      "baseline": "published",
+      "beforeBytes": 0.0,
+      "fixedBytes": 0.0,
+      "byteDelta": 0.0,
+      "nsRatio": 0.9672650918635172
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "observer_empty",
+      "phase": "compile",
+      "baseline": "before",
+      "beforeBytes": 0.0,
+      "fixedBytes": 0.0,
+      "byteDelta": 0.0,
+      "nsRatio": 1.3846153846153846
+    },
+    {
+      "runtime": "4.0.30319.42000",
+      "flavor": "standard",
+      "scenario": "observer_empty",
+      "phase": "compile",
+      "baseline": "published",
+      "beforeBytes": 0.0,
+      "fixedBytes": 0.0,
+      "byteDelta": 0.0,
+      "nsRatio": 1.2857142857142856
+    }
+  ]
+}
