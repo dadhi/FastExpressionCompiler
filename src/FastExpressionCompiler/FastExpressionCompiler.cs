@@ -642,7 +642,7 @@ namespace FastExpressionCompiler
             internal SmallMap4<InvocationExpression, Expression, RefEq<InvocationExpression>> InlinedLambdaInvocation;
 
             /// New or Call expressions containing the complex expression, e.g. inlined Lambda Invoke or Try with Finally
-            internal SmallMap4<Expression, NoValue, RefEq<Expression>> ArgsContainingComplexExpression;
+            internal SmallSet4<Expression, RefEq<Expression>> ArgsContainingComplexExpression;
 
             internal bool HasComplexExpression;
 
@@ -1223,7 +1223,7 @@ namespace FastExpressionCompiler
                             if (hasComplexExpression)
                             {
                                 context.HasComplexExpression = true;
-                                context.ArgsContainingComplexExpression.Map.AddOrGetValueRef(callExpr, out _);
+                                context.ArgsContainingComplexExpression.Set.AddOrGetEntryRef(callExpr, out _);
                             }
                             return r;
                         }
@@ -1256,7 +1256,7 @@ namespace FastExpressionCompiler
                             if (hasComplexExpression)
                             {
                                 context.HasComplexExpression = true;
-                                context.ArgsContainingComplexExpression.Map.AddOrGetEntryRef(newExpr, out _);
+                                context.ArgsContainingComplexExpression.Set.AddOrGetEntryRef(newExpr, out _);
                             }
 
                             return r;
@@ -2308,7 +2308,7 @@ namespace FastExpressionCompiler
                     }
                     else
                     {
-                        if (!context.ArgsContainingComplexExpression.Map.ContainsKey(newExpr))
+                        if (!context.ArgsContainingComplexExpression.Set.ContainsKey(newExpr))
                         {
                             for (var i = 0; i < argCount; ++i)
                                 if (!TryEmit(argExprs.GetArgument(i), il, ref context, flags, pars[i].ParameterType.IsByRef ? i : -1))
@@ -4690,7 +4690,7 @@ namespace FastExpressionCompiler
 #else
                     var callArgs = callExpr.Arguments;
 #endif
-                    if (!context.ArgsContainingComplexExpression.Map.ContainsKey(callExpr))
+                    if (!context.ArgsContainingComplexExpression.Set.ContainsKey(callExpr))
                     {
                         if (loadObjByAddress)
                             EmitStoreAndLoadLocalVariableAddress(il, objExpr.Type);

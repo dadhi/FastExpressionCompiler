@@ -1330,9 +1330,6 @@ public static class SmallMap
 
     internal const int MinEntriesCapacity = 2;
 
-    /// <summary>For now to use in the Set as a value</summary>
-    public readonly struct NoValue { }
-
     /// <summary>Stores the entries in a single dynamically reallocated growing array</summary>
     [DebuggerDisplay("{Capacity:_entries?.Length ?? 0} of {_entries?[0]}, {_entries?[1]}, ...")]
     public struct SingleArrayEntries<K, TEntry, TEq> : IEntries<K, TEntry, TEq>
@@ -1427,9 +1424,7 @@ public static class SmallMap
         return ref RefTools<TEntry>.GetNullRef();
     }
 
-    /// <summary>Gets the ref to the existing entry.Value by the provided key (found == true),
-    /// or adds a new entry (found == false) and returns it.Value by ref. 
-    /// So the method always return a non-null ref to the value, either existing or added</summary>
+    /// <summary>A sugar to return the ref to the Value of the entry directly, no need for the Set</summary>
     [MethodImpl((MethodImplOptions)256)]
     public static ref V AddOrGetValueRef<K, V, TEq, TStackCap, TStackHashes, TStackEntries, TEntries>(
         this ref SmallMap<K, Entry<K, V>, TEq, TStackCap, TStackHashes, TStackEntries, TEntries> map, K key, out bool found)
@@ -1440,11 +1435,9 @@ public static class SmallMap
         where TEntries : struct, IEntries<K, Entry<K, V>, TEq> =>
         ref map.AddOrGetEntryRef(key, out found).Value;
 
-    /// <summary>Adds an entry for sure absent key.
-    /// Provides the performance in scenarios where you look for the present key, and using it, and if ABSENT then add the new one.
-    /// So this method optimized NOT to look for the present item for the second time</summary>
+    /// <summary>A sugar to add a default entry for a sure absent key and return the ref to its Value directly, no need for the Set</summary>
     [MethodImpl((MethodImplOptions)256)]
-    public static ref V AddSureAbsentDefaultAndGetRef<K, V, TEq, TStackCap, TStackHashes, TStackEntries, TEntries>(
+    public static ref V AddSureAbsentDefaultAndGetValueRef<K, V, TEq, TStackCap, TStackHashes, TStackEntries, TEntries>(
         this ref SmallMap<K, Entry<K, V>, TEq, TStackCap, TStackHashes, TStackEntries, TEntries> map, K key)
         where TEq : struct, IEq<K>
         where TStackCap : struct, ISize2Plus
@@ -1453,7 +1446,7 @@ public static class SmallMap
         where TEntries : struct, IEntries<K, Entry<K, V>, TEq>
         => ref map.AddSureAbsentDefaultEntryAndGetRef(key).Value;
 
-    /// <summary>Lookups for the stored entry by key. Returns the ref to the found entry.Value or the null ref</summary>
+    /// <summary>A sugar to lookup for the stored entry by key. Returns the ref to the found entry.Value or the null ref. No need for the Set</summary>
     [MethodImpl((MethodImplOptions)256)]
     public static ref V TryGetValueRef<K, V, TEq, TStackCap, TStackHashes, TStackEntries, TEntries>(
         this ref SmallMap<K, Entry<K, V>, TEq, TStackCap, TStackHashes, TStackEntries, TEntries> map, K key, out bool found)
