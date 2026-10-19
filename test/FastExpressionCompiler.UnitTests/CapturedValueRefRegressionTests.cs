@@ -36,6 +36,7 @@ public struct CapturedValueRefRegressionTests : ITestX
         Boxed_value_cells_share_struct_mutations_and_replacements(t);
         Boxed_value_cells_preserve_checked_and_enum_assignments(t);
         Boxed_default_struct_cells_do_not_call_user_constructors(t);
+        Boxed_struct_receivers_preserve_storage_across_try_arguments(t);
         Quote_and_runtime_variables_keep_all_cells_typed(t);
 #if LIGHT_EXPRESSION
         Intrinsics_with_hidden_quotes_keep_typed_cells(t);
@@ -68,6 +69,7 @@ public struct CapturedValueRefRegressionTests : ITestX
     {
         public int Value;
         public int Increment() => ++Value;
+        public int Add(int amount) => Value += amount;
     }
     public static int IncrementCounter(ref MutableCounter value) => ++value.Value;
     public struct DefaultCounter
@@ -149,6 +151,19 @@ public struct CapturedValueRefRegressionTests : ITestX
         t.AreEqual(2, first());
         t.AreEqual(1, second());
         t.AreEqual(0, DefaultCounter.ConstructorCalls);
+    }
+
+    public void Boxed_struct_receivers_preserve_storage_across_try_arguments(TestContext t)
+    {
+        var value = SysExpr.Parameter(typeof(MutableCounter));
+        var expression = SysExpr.Lambda<Func<MutableCounter, Func<int>>>(SysExpr.Lambda<Func<int>>(
+            SysExpr.Call(value, typeof(MutableCounter).GetMethod(nameof(MutableCounter.Add)),
+                SysExpr.TryFinally(SysExpr.Constant(1), SysExpr.Empty()))), value);
+        var factory = expression.FromSysExpression().CompileFast(true);
+        if (!t.IsNotNull(factory)) return;
+        var actual = factory(new MutableCounter { Value = 3 });
+        t.AreEqual(4, actual());
+        t.AreEqual(5, actual());
     }
 
     public void Quote_and_runtime_variables_keep_all_cells_typed(TestContext t)
