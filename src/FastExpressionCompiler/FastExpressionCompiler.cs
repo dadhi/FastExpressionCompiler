@@ -428,10 +428,9 @@ namespace FastExpressionCompiler
 
             // The method collects the info from the all nested lambdas deep down up-front and de-duplicates the lambdas as well.
             var context = new CompilerContext(ClosureStatus.ToBeCollected, paramExprs, flags);
-            var collectResult = TryCollectInfo(ref context, bodyExpr, null, ref context.NestedLambdas);
+            var collectResult = TryCollectAndValidate(ref context, bodyExpr, null, ref context.NestedLambdas);
             if (collectResult == Result.OK)
             {
-                context.ValidateExceptionJumps();
                 var constantsAndNestedLambdas = (context.Status & ClosureStatus.HasClosure) != 0
                     ? context.GetArrayOfConstantsAndNestedLambdas()
                     : null;
@@ -667,23 +666,18 @@ namespace FastExpressionCompiler
 
         internal enum LabelScopeKind : byte { Lambda, Block, Statement, Expression, Switch }
 
-        internal sealed class LabelScope
+        internal struct ScopeInfo
         {
-            internal readonly LabelScope Parent;
-            internal readonly LabelScopeKind Kind;
-            internal readonly LabelScope Root;
-            internal LabelScope(LabelScope parent, LabelScopeKind kind)
-            {
-                Parent = parent;
-                Kind = kind;
-                Root = parent == null ? this : parent.Root;
-            }
+            internal int Parent;
+            internal int Root;
+            internal LabelScopeKind Kind;
+            internal bool CannotLeave;
         }
 
         internal struct LabelScopeFrame
         {
             internal LabelScopeKind Kind;
-            internal LabelScope Scope;
+            internal int Scope;
             internal int Count;
             internal int CapturedCount;
         }
@@ -691,18 +685,7 @@ namespace FastExpressionCompiler
         internal struct ExceptionRegionFrame
         {
             internal bool CannotLeave;
-            internal ExceptionRegionInfo Region;
-        }
-
-        internal sealed class ExceptionRegionInfo
-        {
-            internal readonly ExceptionRegionInfo Parent;
-            internal readonly bool CannotLeave;
-            internal ExceptionRegionInfo(ExceptionRegionInfo parent, bool cannotLeave)
-            {
-                Parent = parent;
-                CannotLeave = cannotLeave;
-            }
+            internal int Region;
         }
 
         /// <summary>Track the info required to build a closure object + some context information not directly related to closure.</summary>
@@ -713,6 +696,7 @@ namespace FastExpressionCompiler
             internal const int MaxPooledScopeFrames = 1024;
             internal static LabelScopeFrame[][] _labelScopeFramePool;
             internal static ExceptionRegionFrame[][] _exceptionRegionFramePool;
+            internal static ScopeInfo[][] _scopeInfoPool;
 
 
             /// <summary>Tracks that the last emit was an address</summary>
@@ -739,17 +723,32 @@ namespace FastExpressionCompiler
             internal bool IsEmittingExceptionFilter;
             internal bool CanRethrow;
             internal bool IsCollectingExceptionFilter;
-            internal SmallList<ExceptionRegionFrame, Stack4<ExceptionRegionFrame>, ProvidedArrayPool<ExceptionRegionFrame, ClearItemsFast<ExceptionRegionFrame>>> ExceptionRegions;
-            internal SmallList<(object Target, ExceptionRegionInfo Region), Stack4<(object Target, ExceptionRegionInfo Region)>, NoArrayPool<(object Target, ExceptionRegionInfo Region)>> ExceptionLabels;
-            internal SmallList<(object Target, ExceptionRegionInfo Region), Stack4<(object Target, ExceptionRegionInfo Region)>, NoArrayPool<(object Target, ExceptionRegionInfo Region)>> ExceptionGotos;
+            internal SmallList<ExceptionRegionFrame, Stack4<ExceptionRegionFrame>, ProvidedArrayPool<ExceptionRegionFrame, ClearItemsNo<ExceptionRegionFrame>>> ExceptionRegions;
+            internal SmallList<(object Target, int Region), Stack4<(object Target, int Region)>, NoArrayPool<(object Target, int Region)>> ExceptionLabels;
+            internal SmallList<(object Target, int Region), Stack4<(object Target, int Region)>, NoArrayPool<(object Target, int Region)>> ExceptionGotos;
 
             // Frames follow the existing collector traversal; persistent ancestry is allocated
             // only for expressions that actually contain a label or a jump.
-            internal SmallList<LabelScopeFrame, Stack4<LabelScopeFrame>, ProvidedArrayPool<LabelScopeFrame, ClearItemsFast<LabelScopeFrame>>> LabelScopes;
-            internal SmallList<(LabelTarget Target, LabelScope Scope), Stack4<(LabelTarget Target, LabelScope Scope)>, NoArrayPool<(LabelTarget Target, LabelScope Scope)>> ScopedLabels;
-            internal SmallList<(LabelTarget Target, LabelScope Scope), Stack4<(LabelTarget Target, LabelScope Scope)>, NoArrayPool<(LabelTarget Target, LabelScope Scope)>> ScopedGotos;
+            internal SmallList<LabelScopeFrame, Stack4<LabelScopeFrame>, ProvidedArrayPool<LabelScopeFrame, ClearItemsNo<LabelScopeFrame>>> LabelScopes;
+            internal SmallList<(LabelTarget Target, int Scope), Stack4<(LabelTarget Target, int Scope)>, NoArrayPool<(LabelTarget Target, int Scope)>> ScopedLabels;
+            internal SmallList<(LabelTarget Target, int Scope), Stack4<(LabelTarget Target, int Scope)>, NoArrayPool<(LabelTarget Target, int Scope)>> ScopedGotos;
+
+            internal SmallList<ScopeInfo, Stack8<ScopeInfo>, ProvidedArrayPool<ScopeInfo, ClearItemsNo<ScopeInfo>>> ScopeInfos;
 
             internal int LabelScopeDepth;
+
+            internal int AddScopeInfo(int parent, LabelScopeKind kind, bool cannotLeave = false)
+            {
+                if (ScopeInfos.Count == ScopeInfos.Stack.Capacity && ScopeInfos.Rest == null)
+                {
+                    _scopeInfoPool ??= new ScopeInfo[MaxPooledScopeFrames][];
+                    ScopeInfos.Pool.Init(_scopeInfoPool, MaxPooledScopeFrames);
+                }
+                var index = ScopeInfos.Count + 1;
+                var root = parent == 0 ? index : ScopeInfos[parent - 1].Root;
+                ScopeInfos.AddAndGetRef(new ScopeInfo { Parent = parent, Root = root, Kind = kind, CannotLeave = cannotLeave });
+                return index;
+            }
 
             internal void PushLabelScope(LabelScopeKind kind)
             {
@@ -789,27 +788,27 @@ namespace FastExpressionCompiler
                     frame.Count -= remaining;
                     while (frame.CapturedCount > frame.Count)
                     {
-                        frame.Scope = frame.Scope.Parent;
+                        frame.Scope = ScopeInfos[frame.Scope - 1].Parent;
                         --frame.CapturedCount;
                     }
                     break;
                 }
             }
 
-            internal LabelScope CaptureLabelScope()
+            internal int CaptureLabelScope()
             {
                 var start = LabelScopes.Count - 1;
-                while (start > 0 && LabelScopes[start].Scope == null && LabelScopes[start].Kind != LabelScopeKind.Lambda)
+                while (start > 0 && LabelScopes[start].Scope == 0 && LabelScopes[start].Kind != LabelScopeKind.Lambda)
                     --start;
-                LabelScope parent = null;
+                var parent = 0;
                 for (var i = start; i < LabelScopes.Count; ++i)
                 {
                     ref var frame = ref LabelScopes.GetSurePresentRef(i);
-                    if (frame.Scope != null)
+                    if (frame.Scope != 0)
                     parent = frame.Scope;
                     while (frame.CapturedCount < frame.Count)
                     {
-                        parent = new LabelScope(parent, frame.Kind);
+                        parent = AddScopeInfo(parent, frame.Kind);
                         ++frame.CapturedCount;
                     }
                     frame.Scope = parent;
@@ -817,14 +816,14 @@ namespace FastExpressionCompiler
                 return parent;
             }
 
-            internal ExceptionRegionInfo CaptureExceptionRegion()
+            internal int CaptureExceptionRegion()
             {
-                ExceptionRegionInfo parent = null;
+                var parent = 0;
                 for (var i = 0; i < ExceptionRegions.Count; ++i)
                 {
                     ref var frame = ref ExceptionRegions.GetSurePresentRef(i);
-                    if (frame.Region == null)
-                        frame.Region = new ExceptionRegionInfo(parent, frame.CannotLeave);
+                    if (frame.Region == 0)
+                        frame.Region = AddScopeInfo(parent, LabelScopeKind.Expression, frame.CannotLeave);
                     parent = frame.Region;
                 }
                 return parent;
@@ -835,18 +834,18 @@ namespace FastExpressionCompiler
                 for (var i = 0; i < ScopedGotos.Count; ++i)
                 {
                     var jump = ScopedGotos[i];
-                    LabelScope definition = null;
+                    var definition = 0;
                     var count = 0;
                     var local = false;
                     for (var j = 0; j < ScopedLabels.Count; ++j)
                     {
                         var label = ScopedLabels[j];
-                        if (!ReferenceEquals(label.Target, jump.Target) || !ReferenceEquals(label.Scope.Root, jump.Scope.Root))
+                        if (!ReferenceEquals(label.Target, jump.Target) || ScopeInfos[label.Scope - 1].Root != ScopeInfos[jump.Scope - 1].Root)
                             continue;
                         definition = label.Scope;
                         ++count;
-                        for (var scope = jump.Scope; scope != null; scope = scope.Parent)
-                            if (ReferenceEquals(scope, definition))
+                        for (var scope = jump.Scope; scope != 0; scope = ScopeInfos[scope - 1].Parent)
+                            if (scope == definition)
                             {
                                 local = true;
                                 break;
@@ -858,13 +857,13 @@ namespace FastExpressionCompiler
                         continue;
                     if (jump.Target.Type != typeof(void))
                         throw new InvalidOperationException("Cannot jump to a label with a value from outside its scope: " + jump.Target.Name);
-                    for (var destination = definition; destination != null; destination = destination.Parent)
+                    for (var destination = definition; destination != 0; destination = ScopeInfos[destination - 1].Parent)
                     {
                         var common = false;
-                        for (var source = jump.Scope; source != null; source = source.Parent)
-                            if (ReferenceEquals(source, destination)) { common = true; break; }
+                        for (var source = jump.Scope; source != 0; source = ScopeInfos[source - 1].Parent)
+                            if (source == destination) { common = true; break; }
                         if (common) break;
-                        if (destination.Kind == LabelScopeKind.Expression)
+                        if (ScopeInfos[destination - 1].Kind == LabelScopeKind.Expression)
                             throw new InvalidOperationException("Cannot jump into an expression: " + jump.Target.Name);
                     }
                 }
@@ -879,7 +878,7 @@ namespace FastExpressionCompiler
                 for (var i = 0; i < ExceptionGotos.Count; ++i)
                 {
                     var jump = ExceptionGotos[i];
-                    ExceptionRegionInfo targetRegion = null;
+                    var targetRegion = 0;
                     var definitionCount = 0;
                     for (var j = 0; j < ExceptionLabels.Count; ++j)
                         if (ReferenceEquals(ExceptionLabels[j].Target, jump.Target))
@@ -891,13 +890,13 @@ namespace FastExpressionCompiler
                     if (definitionCount != 1)
                         continue;
                     var region = jump.Region;
-                    while (!ReferenceEquals(region, targetRegion))
+                    while (region != targetRegion)
                     {
-                        if (region == null)
+                        if (region == 0)
                             throw new InvalidOperationException("Cannot jump into an exception region.");
-                        if (region.CannotLeave)
+                        if (ScopeInfos[region - 1].CannotLeave)
                             throw new InvalidOperationException("Cannot jump out of a finally, fault, or exception filter.");
-                        region = region.Parent;
+                        region = ScopeInfos[region - 1].Parent;
                     }
                 }
             }
@@ -1093,9 +1092,10 @@ namespace FastExpressionCompiler
                 var start = LambdaInvokeStackLabels.Count;
                 if (TargetToGotosAndLabels.Map.Count == 0)
                     return start;
-                foreach (var expression in block.Expressions)
+                var expressions = block.Expressions;
+                for (var expressionIndex = 0; expressionIndex < expressions.Count; ++expressionIndex)
                 {
-                    if (expression is not LabelExpression labelExpression)
+                    if (expressions[expressionIndex] is not LabelExpression labelExpression)
                         continue;
                     var target = labelExpression.Target;
                     var counts = TargetToGotosAndLabels.Map.TryGetValueRef(target, out var found);
@@ -1950,15 +1950,29 @@ namespace FastExpressionCompiler
             throw new NotSupportedExpressionException(reason);
         }
 
+        private static Result TryCollectAndValidate(ref CompilerContext context, Expression expression,
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+        {
+            try
+            {
+                var result = TryCollectInfo(ref context, expression, nestedLambda, ref rootNestedLambdas);
+                if (result == Result.OK)
+                    context.ValidateExceptionJumps();
+                return result;
+            }
+            finally
+            {
+                context.ScopeInfos.FreePooled();
+            }
+        }
+
         /// <summary>Wraps the call to `TryCollectInfo` for the compatibility and provide the root place to check the returned error code.
         /// Important: The method collects the info from the nested lambdas up-front and de-duplicates the lambdas as well.</summary>
         [MethodImpl((MethodImplOptions)256)]
         public static bool TryCollectBoundConstants(ref CompilerContext context, Expression expr,
             NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
         {
-            var r = TryCollectInfo(ref context, expr, nestedLambda, ref rootNestedLambdas);
-            if (r == Result.OK)
-                context.ValidateExceptionJumps();
+            var r = TryCollectAndValidate(ref context, expr, nestedLambda, ref rootNestedLambdas);
             return r == Result.OK || (context.CompilerFlags & CompilerFlags.ThrowOnNotSupportedExpression) != 0 && NotSupportedCase<bool>(r);
         }
 
@@ -2190,7 +2204,7 @@ namespace FastExpressionCompiler
                         else
                             rootNestedLambdas.Add(newNestedLambda);
 
-                        if ((r = TryCollectInfo(ref nestedLambdaContext, nestedLambdaExpr.Body, newNestedLambda, ref rootNestedLambdas)) != Result.OK)
+                        if ((r = TryCollectAndValidate(ref nestedLambdaContext, nestedLambdaExpr.Body, newNestedLambda, ref rootNestedLambdas)) != Result.OK)
                             return r;
                         if (nestedLambda != null && newNestedLambda.HasDynamicExpressions)
                             nestedLambda.HasDynamicExpressions = true;
@@ -2198,7 +2212,6 @@ namespace FastExpressionCompiler
                         context.QuoteConversions = nestedLambdaContext.QuoteConversions;
 #endif
 
-                        nestedLambdaContext.ValidateExceptionJumps();
 
                         if (newNestedLambda.NonPassedParameters.Count != 0 &&
                             !PropagateNonPassedParamsToOuterLambda(ref context,
