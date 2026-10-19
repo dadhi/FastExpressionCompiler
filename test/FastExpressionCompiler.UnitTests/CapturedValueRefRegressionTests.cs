@@ -21,6 +21,7 @@ public struct CapturedValueRefRegressionTests : ITestX
         Readonly_captures_keep_the_original_value_storage(t);
         Readonly_reference_captures_are_typed_in_exception_regions(t);
         Public_reference_slot_emission_is_typed_for_user_provided_contexts(t);
+        Nested_capture_signatures_do_not_change_parent_or_curry_signatures(t);
         Later_assignment_keeps_captures_live(t);
         Capture_before_initialization_observes_the_assigned_value(t);
         Delegate_ref_arguments_keep_captures_live(t);
@@ -47,6 +48,49 @@ public struct CapturedValueRefRegressionTests : ITestX
         Opaque_root_intrinsics_keep_hidden_captures_consistent(t);
         Field_backed_reference_constants_are_typed_in_exception_regions(t);
 #endif
+    }
+
+    private sealed class HiddenCaptureReference
+    {
+        internal readonly int Value = 42;
+    }
+
+    public void Nested_capture_signatures_do_not_change_parent_or_curry_signatures(TestContext t)
+    {
+        var local = SysExpr.Variable(typeof(HiddenCaptureReference));
+        var field = typeof(HiddenCaptureReference).GetField(nameof(HiddenCaptureReference.Value),
+            BindingFlags.NonPublic | BindingFlags.Instance);
+        var noArgs = SysExpr.Lambda<Func<Func<int>>>(SysExpr.Block(new[] { local },
+            SysExpr.Assign(local, SysExpr.Constant(new HiddenCaptureReference())),
+            SysExpr.Lambda<Func<int>>(SysExpr.TryFinally(SysExpr.Field(local, field), SysExpr.Empty()))));
+        var value = SysExpr.Parameter(typeof(int));
+        var amount = SysExpr.Parameter(typeof(int));
+        var tuple = typeof(Tuple<Action<int>, Func<int>>);
+        var pair = SysExpr.Lambda<Func<int, Tuple<Action<int>, Func<int>>>>(
+            SysExpr.New(tuple.GetConstructor(new[] { typeof(Action<int>), typeof(Func<int>) }),
+                SysExpr.Lambda<Action<int>>(SysExpr.TryFinally(SysExpr.AddAssign(value, amount), SysExpr.Empty()), amount),
+                SysExpr.Lambda<Func<int>>(value)), value);
+        System.Linq.Expressions.Expression<Func<int, int>> identity = x => x + 1;
+        System.Linq.Expressions.Expression<Func<int>> constant = () => 17;
+        foreach (var flags in new[] { CompilerFlags.Default, CompilerFlags.NoInvocationLambdaInlining,
+            CompilerFlags.EnableDelegateDebugInfo | CompilerFlags.ThrowOnNotSupportedExpression })
+        {
+            var read = noArgs.FromSysExpression().CompileFast(true, flags);
+            if (!t.IsNotNull(read)) return;
+            t.AreEqual(noArgs.Compile()()(), read()());
+            var update = pair.FromSysExpression().CompileFast(true, flags)(3);
+            update.Item1(4); t.AreEqual(7, update.Item2());
+            update.Item1(-2); t.AreEqual(5, update.Item2());
+            // Compiling a capturing child must not mutate a shared zero-argument
+            // signature or leave the derived closure type in a rented parent signature.
+            t.AreEqual(17, constant.FromSysExpression().CompileFast(true, flags)());
+            t.AreEqual(9, identity.FromSysExpression().CompileFast(true, flags)(8));
+        }
+        var results = new bool[16];
+        System.Threading.Tasks.Parallel.For(0, results.Length, i =>
+            results[i] = noArgs.FromSysExpression().CompileFast(true)()() == 42 &&
+                constant.FromSysExpression().CompileFast(true)() == 17);
+        foreach (var result in results) t.IsTrue(result);
     }
 
     public void Static_indexed_properties_allow_captured_parameters(TestContext t)
