@@ -3772,7 +3772,8 @@ namespace FastExpressionCompiler
                                 if (blockVarCount != 0)
                                     context.PushBlockAndConstructLocalVars(blockVarExprs, il);
 
-                                var labelScopeStart = context.PushScopedBlockLabels(blockExpr);
+                                var labelScopeStart = context.TargetToGotosAndLabels.Map.Count == 0
+                                    ? -1 : context.PushScopedBlockLabels(blockExpr);
 
                                 expr = statementExprs[statementCount - 1]; // The last (result) statement in block will provide the result
 
@@ -3838,6 +3839,7 @@ namespace FastExpressionCompiler
                                                 }
                                                 if (blockVarCount != 0)
                                                     context.PopBlock();
+                                                if (labelScopeStart >= 0)
                                                 context.PopScopedBlockLabels(labelScopeStart);
                                                 return true;
                                             }
@@ -3849,7 +3851,7 @@ namespace FastExpressionCompiler
                                 }
 
                                 parent |= ParentFlags.BlockResult;
-                                if (blockVarCount == 0 && labelScopeStart == context.LambdaInvokeStackLabels.Count)
+                                if (blockVarCount == 0 && (labelScopeStart < 0 || labelScopeStart == context.LambdaInvokeStackLabels.Count))
                                     continue; // OMG! no recursion, continue with the last expression
 
                                 if (!TryEmit(expr, il, ref context, parent))
@@ -3857,6 +3859,7 @@ namespace FastExpressionCompiler
 
                                 if (blockVarCount != 0)
                                     context.PopBlock();
+                                if (labelScopeStart >= 0)
                                 context.PopScopedBlockLabels(labelScopeStart);
                                 return true;
                             }
