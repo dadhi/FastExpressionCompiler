@@ -762,6 +762,7 @@ namespace FastExpressionCompiler
                 return index;
             }
 
+            [MethodImpl((MethodImplOptions)256)]
             internal void PushLabelScope(LabelScopeKind kind)
             {
                 ++LabelScopeDepth;
@@ -776,6 +777,12 @@ namespace FastExpressionCompiler
                         return;
                     }
                 }
+                PushNewLabelScopeFrame(kind);
+            }
+
+            [MethodImpl(MethodImplOptions.NoInlining)]
+            private void PushNewLabelScopeFrame(LabelScopeKind kind)
+            {
                 if (LabelScopes.Count == LabelScopes.Stack.Capacity && LabelScopes.Rest == null)
                 {
                     _labelScopeFramePool ??= new LabelScopeFrame[MaxPooledScopeFrames][];
@@ -2246,7 +2253,8 @@ namespace FastExpressionCompiler
         [MethodImpl((MethodImplOptions)256)]
         private static Result RestoreScopeAndReturn(ref CompilerContext context, int scopeDepth, Result result)
         {
-            context.RestoreLabelScopeDepth(scopeDepth);
+            if (context.LabelScopeDepth != scopeDepth)
+                context.RestoreLabelScopeDepth(scopeDepth);
             return result;
         }
 
