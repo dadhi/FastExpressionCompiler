@@ -1,9 +1,13 @@
 using System;
+using System.Reflection;
+using System.Reflection.Emit;
 using S = System.Linq.Expressions.Expression;
 using E = System.Linq.Expressions;
 #if LIGHT_EXPRESSION
+using NestedLambdas = FastExpressionCompiler.LightExpression.ImTools.SmallList<FastExpressionCompiler.LightExpression.ExpressionCompiler.NestedLambdaInfo>;
 namespace FastExpressionCompiler.LightExpression.UnitTests;
 #else
+using NestedLambdas = FastExpressionCompiler.ImTools.SmallList<FastExpressionCompiler.ExpressionCompiler.NestedLambdaInfo>;
 namespace FastExpressionCompiler.UnitTests;
 #endif
 
@@ -23,6 +27,10 @@ public struct LexicalJumpScopeRegressionTests : ITestX
         Deep_adjacent_blocks_preserve_ancestor_and_sibling_scopes(t);
         Alternating_scope_overflow_buffers_can_be_reused(t);
         Label_free_blocks_keep_reused_inlined_invocations(t);
+        Public_collection_unwinds_failed_deep_scopes_and_can_retry(t);
+#if LIGHT_EXPRESSION
+        Custom_intrinsic_can_recover_from_failed_child_collection(t);
+#endif
     }
 
     private static readonly CompilerFlags[] Flags = { CompilerFlags.Default, CompilerFlags.NoInvocationLambdaInlining };
@@ -148,4 +156,73 @@ public struct LexicalJumpScopeRegressionTests : ITestX
             S.Block(new[] { variable }, S.Assign(variable, invoke), S.Add(variable, invoke)));
         Verify(t, S.Lambda<Func<int>>(body), 38);
     }
+    private static int CollectedScopeDepth(ExpressionCompiler.CompilerContext context) =>
+        (int)typeof(ExpressionCompiler.CompilerContext).GetField("LabelScopeDepth", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(context);
+
+    private static E.Expression<Action> FailingDeepScopes()
+    {
+        E.Expression body = S.Rethrow();
+        var test = S.Call(typeof(string).GetMethod(nameof(string.IsNullOrEmpty)), S.Constant(""));
+        for (var i = 0; i < 32; ++i) body = S.Block(S.IfThen(test, body));
+        return S.Lambda<Action>(body);
+    }
+
+    public void Public_collection_unwinds_failed_deep_scopes_and_can_retry(TestContext t)
+    {
+        for (var iteration = 0; iteration < 3; ++iteration)
+        {
+            var context = new ExpressionCompiler.CompilerContext(ExpressionCompiler.ClosureStatus.ToBeCollected, null, CompilerFlags.Default);
+            NestedLambdas nested = default;
+            var failed = FailingDeepScopes().FromSysExpression();
+            t.Throws<InvalidOperationException>(() => ExpressionCompiler.TryCollectInfo(ref context, failed.Body, null, ref nested));
+            t.AreEqual(0, CollectedScopeDepth(context));
+            var frames = typeof(ExpressionCompiler.CompilerContext).GetField("LabelScopes", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(context);
+            t.IsNull(frames.GetType().GetField("Rest").GetValue(frames));
+
+            var target = S.Label("retry");
+            var valid = S.Lambda<Action>(S.Block(S.Goto(target), S.Label(target))).FromSysExpression();
+            t.IsTrue(ExpressionCompiler.TryCollectBoundConstants(ref context, valid.Body, null, ref nested));
+            var method = new DynamicMethod("retry", typeof(void), Type.EmptyTypes, typeof(LexicalJumpScopeRegressionTests), true);
+            var il = method.GetILGenerator();
+            t.IsTrue(ExpressionCompiler.EmittingVisitor.TryEmit(valid.Body, il, ref context, ExpressionCompiler.ParentFlags.IgnoreResult));
+            il.Emit(OpCodes.Ret);
+            ((Action)method.CreateDelegate(typeof(Action)))();
+        }
+    }
+
+#if LIGHT_EXPRESSION
+    private sealed class RecoveringIntrinsic : TypedUnaryExpression
+    {
+        public RecoveringIntrinsic() : base(E.ExpressionType.Convert, Expression.Constant(19), typeof(int)) { }
+        public override bool IsIntrinsic => true;
+        public override ExpressionCompiler.Result TryCollectInfo(ref ExpressionCompiler.CompilerContext context,
+            ExpressionCompiler.NestedLambdaInfo nestedLambda, ref NestedLambdas rootNestedLambdas)
+        {
+            var depth = CollectedScopeDepth(context);
+            var failed = FailingDeepScopes().ToLightExpression();
+            try
+            {
+                ExpressionCompiler.TryCollectInfo(ref context, failed.Body, nestedLambda, ref rootNestedLambdas);
+                throw new Exception("Expected invalid rethrow rejection.");
+            }
+            catch (InvalidOperationException) { }
+            if (CollectedScopeDepth(context) != depth)
+                throw new Exception("Failed child collection leaked lexical scopes into its fallback.");
+            return ExpressionCompiler.TryCollectInfo(ref context, Operand, nestedLambda, ref rootNestedLambdas);
+        }
+        public override bool TryEmit(ref ExpressionCompiler.CompilerContext context, ILGenerator il,
+            ExpressionCompiler.ParentFlags parent, int byRefIndex = -1) =>
+            ExpressionCompiler.EmittingVisitor.TryEmit(Operand, il, ref context, parent, byRefIndex);
+    }
+
+    public void Custom_intrinsic_can_recover_from_failed_child_collection(TestContext t)
+    {
+        var source = Expression.Lambda<Func<int>>(Expression.Block(new RecoveringIntrinsic()));
+        foreach (var flags in Flags)
+        {
+            var compiled = source.CompileFast(true, flags);
+            if (t.IsNotNull(compiled)) t.AreEqual(19, compiled());
+        }
+    }
+#endif
 }
