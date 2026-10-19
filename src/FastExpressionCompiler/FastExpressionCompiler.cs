@@ -944,7 +944,8 @@ namespace FastExpressionCompiler
             }
 
             internal Expression CaptureAnalysisRoot;
-            internal SmallSet4<ParameterExpression, RefEq<ParameterExpression>> ValueCapturedVariables;
+            internal SmallSet4<ParameterExpression, RefEq<ParameterExpression>> CaptureCellVariables;
+            internal bool CaptureStorageAnalyzed, CaptureStorageRequiresCells;
             internal SmallList<ParameterExpression> HoistedVariables;
             internal SmallMap4<ParameterExpression, int, RefEq<ParameterExpression>> HoistedParameterLocals;
 
@@ -970,11 +971,15 @@ namespace FastExpressionCompiler
 #endif
                 if (!requireCell && CaptureAnalysisRoot != null)
                 {
-                    ValueCapturedVariables.Set.TryGetEntryRef(variable, out var capturedByValue);
-                    if (capturedByValue || CanCaptureByValue(CaptureAnalysisRoot, variable))
+                    if (!CaptureStorageAnalyzed)
                     {
-                        ValueCapturedVariables.Set.AddOrGetEntryRef(variable, out _);
-                        return true;
+                        CaptureStorageRequiresCells = !AnalyzeCaptureStorage(CaptureAnalysisRoot, ref CaptureCellVariables);
+                        CaptureStorageAnalyzed = true;
+                    }
+                    if (!CaptureStorageRequiresCells)
+                    {
+                        CaptureCellVariables.Set.TryGetEntryRef(variable, out var requiresCell);
+                        if (!requiresCell) return true;
                     }
                 }
                 HoistedVariables.GetIndexOrAdd(variable, default(RefEq<ParameterExpression>));
@@ -1447,81 +1452,140 @@ namespace FastExpressionCompiler
             internal int Emitted;
         }
 
-        // Captures whose storage cannot change may retain the existing object[] value layout.
-        // This analysis is conservative: unsupported shapes, quotes, runtime variables and
-        // potential writable argument/receiver uses keep their shared typed cells.
-        private static bool CanCaptureByValue(Expression expression, ParameterExpression variable, bool forbidRead = false)
+        // One conservative mutation analysis serves every nested capture in a compilation.
+        [RequiresUnreferencedCode(Trimming.Message)]
+        private static bool AnalyzeCaptureStorage(Expression expression,
+            ref SmallSet4<ParameterExpression, RefEq<ParameterExpression>> cells, bool writable = false)
         {
             if (expression == null) return true;
-            if (ReferenceEquals(expression, variable)) return !forbidRead;
+            if (expression is ParameterExpression parameter)
+            {
+                if (writable) cells.Set.AddOrGetEntryRef(parameter, out _);
+                return true;
+            }
             if (expression is ConstantExpression || expression is DefaultExpression) return true;
-            if (expression is ParameterExpression) return true;
-            if (expression is LambdaExpression lambda)
-                return CanCaptureByValue(lambda.Body, variable, forbidRead);
+            if (expression is LambdaExpression lambda) return AnalyzeCaptureStorage(lambda.Body, ref cells, writable);
             if (expression is BlockExpression block)
             {
                 var expressions = block.Expressions;
-                var declaresVariable = false;
-                for (var i = 0; i < block.Variables.Count; ++i)
-                    declaresVariable |= ReferenceEquals(block.Variables[i], variable);
-                if (declaresVariable)
+                for (var v = 0; v < block.Variables.Count; ++v)
                 {
-                    // Only a leading, dominating initializer can establish a copied local.
-                    var initializer = -1;
+                    var variable = block.Variables[v];
+                    var initialized = false;
                     for (var i = 0; i < expressions.Count; ++i)
                     {
-                        if (expressions[i] is not BinaryExpression assignment || assignment.NodeType != ExpressionType.Assign ||
-                            assignment.Left is not ParameterExpression) break;
-                        if (ReferenceEquals(assignment.Left, variable)) { initializer = i; break; }
-                        if (!CanCaptureByValue(expressions[i], variable, true)) return false;
+                        if (expressions[i] is not BinaryExpression assignment || assignment.NodeType != ExpressionType.Assign) break;
+                        if (ReferenceEquals(assignment.Left, variable))
+                        { initialized = IsLeadingCaptureInitializer(block, i, variable); break; }
                     }
-                    if (initializer < 0 || !CanCaptureByValue(((BinaryExpression)expressions[initializer]).Right, variable, true))
-                        return false;
-                    for (var i = initializer + 1; i < expressions.Count; ++i)
-                        if (!CanCaptureByValue(expressions[i], variable, forbidRead)) return false;
-                    return true;
+                    if (!initialized) cells.Set.AddOrGetEntryRef(variable, out _);
                 }
                 for (var i = 0; i < expressions.Count; ++i)
-                    if (!CanCaptureByValue(expressions[i], variable, forbidRead)) return false;
+                {
+                    var child = expressions[i];
+                    if (child is BinaryExpression assignment && assignment.NodeType == ExpressionType.Assign &&
+                        assignment.Left is ParameterExpression variable && IsLeadingCaptureInitializer(block, i, variable))
+                        child = assignment.Right;
+                    if (!AnalyzeCaptureStorage(child, ref cells, writable)) return false;
+                }
                 return true;
             }
             if (expression is BinaryExpression binary)
             {
-                if (binary.NodeType == ExpressionType.Assign || binary.NodeType >= ExpressionType.AddAssign && binary.NodeType <= ExpressionType.SubtractAssignChecked)
+                var assignment = binary.NodeType == ExpressionType.Assign ||
+                    binary.NodeType >= ExpressionType.AddAssign && binary.NodeType <= ExpressionType.SubtractAssignChecked;
+                if (assignment)
                 {
-                    if (ReferenceEquals(binary.Left, variable) || variable.Type.IsValueType && !CanCaptureByValue(binary.Left, variable, true))
-                        return false;
+                    var owner = binary.Left;
+                    while (owner is MemberExpression member) owner = member.Expression;
+                    if (owner is ParameterExpression target && (ReferenceEquals(owner, binary.Left) || target.Type.IsValueType))
+                        cells.Set.AddOrGetEntryRef(target, out _);
                 }
-                return CanCaptureByValue(binary.Left, variable, forbidRead) &&
-                    CanCaptureByValue(binary.Right, variable, forbidRead) && CanCaptureByValue(binary.Conversion, variable, forbidRead);
+                return AnalyzeCaptureStorage(binary.Left, ref cells, writable || binary.Method != null) &&
+                    AnalyzeCaptureStorage(binary.Right, ref cells, writable || binary.Method != null) &&
+                    AnalyzeCaptureStorage(binary.Conversion, ref cells, writable);
             }
             if (expression is UnaryExpression unary)
             {
                 if (unary.NodeType == ExpressionType.Quote || unary.NodeType == ExpressionType.Throw ||
                     unary.NodeType >= ExpressionType.PreIncrementAssign && unary.NodeType <= ExpressionType.PostDecrementAssign)
                     return false;
-                return CanCaptureByValue(unary.Operand, variable, forbidRead);
+                return AnalyzeCaptureStorage(unary.Operand, ref cells, writable || unary.Method != null);
             }
-            if (expression is MemberExpression member)
-                return CanCaptureByValue(member.Expression, variable, forbidRead ||
-                    member.Member is PropertyInfo && member.Expression != null && member.Expression.Type.IsValueType);
+            if (expression is MemberExpression access)
+                return AnalyzeCaptureStorage(access.Expression, ref cells, writable ||
+                    access.Member is PropertyInfo && access.Expression != null && access.Expression.Type.IsValueType);
             if (expression is ConditionalExpression conditional)
-                return CanCaptureByValue(conditional.Test, variable, forbidRead) && CanCaptureByValue(conditional.IfTrue, variable, forbidRead) &&
-                    CanCaptureByValue(conditional.IfFalse, variable, forbidRead);
+                return AnalyzeCaptureStorage(conditional.Test, ref cells, writable) && AnalyzeCaptureStorage(conditional.IfTrue, ref cells, writable) &&
+                    AnalyzeCaptureStorage(conditional.IfFalse, ref cells, writable);
             if (expression is MethodCallExpression call)
             {
-                // A value-type receiver and any argument may expose writable storage.
-                if (!CanCaptureByValue(call.Object, variable, forbidRead || call.Object != null && call.Object.Type.IsValueType)) return false;
+                if (!AnalyzeCaptureStorage(call.Object, ref cells, writable || call.Object != null && call.Object.Type.IsValueType)) return false;
                 var arguments = call.GetArgExprs();
                 for (var i = 0; i < arguments.GetArgCount(); ++i)
-                    if (!CanCaptureByValue(arguments.GetArgument(i), variable, true)) return false;
+                    if (!AnalyzeCaptureStorage(arguments.GetArgument(i), ref cells, true)) return false;
                 return true;
             }
             if (expression is NewExpression creation)
             {
                 var arguments = creation.GetArgExprs();
                 for (var i = 0; i < arguments.GetArgCount(); ++i)
-                    if (!CanCaptureByValue(arguments.GetArgument(i), variable, true)) return false;
+                    if (!AnalyzeCaptureStorage(arguments.GetArgument(i), ref cells, true)) return false;
+                return true;
+            }
+            return false;
+        }
+
+        [RequiresUnreferencedCode(Trimming.Message)]
+        private static bool IsLeadingCaptureInitializer(BlockExpression block, int index, ParameterExpression variable)
+        {
+            var declared = false;
+            for (var i = 0; i < block.Variables.Count; ++i) declared |= ReferenceEquals(block.Variables[i], variable);
+            if (!declared) return false;
+            for (var i = 0; i < index; ++i)
+            {
+                if (block.Expressions[i] is not BinaryExpression assignment || assignment.NodeType != ExpressionType.Assign ||
+                    assignment.Left is not ParameterExpression || !DoesNotAccessVariable(block.Expressions[i], variable)) return false;
+            }
+            return DoesNotAccessVariable(((BinaryExpression)block.Expressions[index]).Right, variable);
+        }
+
+        // An initializer may not expose its local, including through a nested lambda,
+        // before the initial assignment has completed.
+        [RequiresUnreferencedCode(Trimming.Message)]
+        private static bool DoesNotAccessVariable(Expression expression, ParameterExpression variable)
+        {
+            if (expression == null) return true;
+            if (ReferenceEquals(expression, variable)) return false;
+            if (expression is ConstantExpression || expression is DefaultExpression || expression is ParameterExpression) return true;
+            if (expression is LambdaExpression lambda) return DoesNotAccessVariable(lambda.Body, variable);
+            if (expression is BlockExpression block)
+            {
+                for (var i = 0; i < block.Expressions.Count; ++i)
+                    if (!DoesNotAccessVariable(block.Expressions[i], variable)) return false;
+                return true;
+            }
+            if (expression is BinaryExpression binary)
+                return DoesNotAccessVariable(binary.Left, variable) && DoesNotAccessVariable(binary.Right, variable) &&
+                    DoesNotAccessVariable(binary.Conversion, variable);
+            if (expression is UnaryExpression unary) return DoesNotAccessVariable(unary.Operand, variable);
+            if (expression is MemberExpression member) return DoesNotAccessVariable(member.Expression, variable);
+            if (expression is ConditionalExpression conditional)
+                return DoesNotAccessVariable(conditional.Test, variable) && DoesNotAccessVariable(conditional.IfTrue, variable) &&
+                    DoesNotAccessVariable(conditional.IfFalse, variable);
+            if (expression is MethodCallExpression call)
+            {
+                if (!DoesNotAccessVariable(call.Object, variable)) return false;
+                var arguments = call.GetArgExprs();
+                for (var i = 0; i < arguments.GetArgCount(); ++i)
+                    if (!DoesNotAccessVariable(arguments.GetArgument(i), variable)) return false;
+                return true;
+            }
+            if (expression is NewExpression creation)
+            {
+                var arguments = creation.GetArgExprs();
+                for (var i = 0; i < arguments.GetArgCount(); ++i)
+                    if (!DoesNotAccessVariable(arguments.GetArgument(i), variable)) return false;
                 return true;
             }
             return false;
@@ -2060,7 +2124,9 @@ namespace FastExpressionCompiler
 #endif
                         nestedLambdaContext.HoistedTypes = context.HoistedTypes;
                         nestedLambdaContext.CaptureAnalysisRoot = context.CaptureAnalysisRoot;
-                        nestedLambdaContext.ValueCapturedVariables = context.ValueCapturedVariables;
+                        nestedLambdaContext.CaptureCellVariables = context.CaptureCellVariables;
+                        nestedLambdaContext.CaptureStorageAnalyzed = context.CaptureStorageAnalyzed;
+                        nestedLambdaContext.CaptureStorageRequiresCells = context.CaptureStorageRequiresCells;
                         var newNestedLambda = new NestedLambdaInfo(nestedLambdaExpr);
 
                         if (nestedLambda != null)
@@ -2086,7 +2152,9 @@ namespace FastExpressionCompiler
                         if (!TryCompileNestedLambda(ref nestedLambdaContext, newNestedLambda))
                             return Result.NestedLambdaCompileError;
                         context.HoistedTypes = nestedLambdaContext.HoistedTypes;
-                        context.ValueCapturedVariables = nestedLambdaContext.ValueCapturedVariables;
+                        context.CaptureCellVariables = nestedLambdaContext.CaptureCellVariables;
+                        context.CaptureStorageAnalyzed = nestedLambdaContext.CaptureStorageAnalyzed;
+                        context.CaptureStorageRequiresCells = nestedLambdaContext.CaptureStorageRequiresCells;
 
                         return r;
 
