@@ -697,15 +697,60 @@ namespace FastExpressionCompiler
             internal int Region;
         }
 
+        // These scalar scope lists grow their heap part as 4, 9, 19, 39, ... .
+        // Each growth size has its own logarithmic bucket; keep every reusable size
+        // without allocating a 1024-entry table for the first overflow.
+        internal struct ScopeArrayPool<T> : ISmallArrayPool<T> where T : struct
+        {
+            private static T[][] _arrays;
+            public int MaxArrayLength => CompilerContext.MaxPooledScopeFrames;
+            private static int Bucket(int length)
+            {
+                var bucket = 0;
+                while ((length >>= 1) != 0) ++bucket;
+                return bucket;
+            }
+            private static T[][] GetArrays()
+            {
+                var arrays = _arrays;
+                if (arrays != null) return arrays;
+                var created = new T[Bucket(CompilerContext.MaxPooledScopeFrames) + 1][];
+                return Interlocked.CompareExchange(ref _arrays, created, null) ?? created;
+            }
+            public T[] RentMinOrNew(int minLength)
+            {
+                if (minLength > MaxArrayLength) return new T[minLength];
+                var arrays = GetArrays();
+                for (var bucket = Bucket(minLength); bucket < arrays.Length; ++bucket)
+                {
+                    var array = Interlocked.Exchange(ref arrays[bucket], null);
+                    if (array == null) continue;
+                    if (array.Length >= minLength) return array;
+                    ReuseIfPossible(array);
+                }
+                return new T[minLength];
+            }
+            public T[] RentExactOrNew(int exactLength)
+            {
+                if (exactLength > MaxArrayLength) return new T[exactLength];
+                var array = Interlocked.Exchange(ref GetArrays()[Bucket(exactLength)], null);
+                if (array != null && array.Length == exactLength) return array;
+                ReuseIfPossible(array);
+                return new T[exactLength];
+            }
+            public void ReuseIfPossible(T[] array)
+            {
+                if (array != null && array.Length != 0 && array.Length <= MaxArrayLength)
+                    Interlocked.Exchange(ref GetArrays()[Bucket(array.Length)], array);
+            }
+        }
+
         /// <summary>Track the info required to build a closure object + some context information not directly related to closure.</summary>
         public struct CompilerContext
         {
             // Match the existing bounded array-pool policy: collection buffers are
             // reusable, but unusually large trees do not permanently enlarge the cache.
             internal const int MaxPooledScopeFrames = 1024;
-            internal static LabelScopeFrame[][] _labelScopeFramePool;
-            internal static ExceptionRegionFrame[][] _exceptionRegionFramePool;
-            internal static ScopeInfo[][] _scopeInfoPool;
 
 
             /// <summary>Tracks that the last emit was an address</summary>
@@ -731,27 +776,22 @@ namespace FastExpressionCompiler
             internal bool IsEmittingExceptionFilter;
             internal bool CanRethrow;
             internal bool IsCollectingExceptionFilter;
-            internal SmallList<ExceptionRegionFrame, Stack4<ExceptionRegionFrame>, ProvidedArrayPool<ExceptionRegionFrame, ClearItemsNo<ExceptionRegionFrame>>> ExceptionRegions;
+            internal SmallList<ExceptionRegionFrame, Stack4<ExceptionRegionFrame>, ScopeArrayPool<ExceptionRegionFrame>> ExceptionRegions;
             internal SmallList<(object Target, int Region), Stack4<(object Target, int Region)>, NoArrayPool<(object Target, int Region)>> ExceptionLabels;
             internal SmallList<(object Target, int Region), Stack4<(object Target, int Region)>, NoArrayPool<(object Target, int Region)>> ExceptionGotos;
 
             // Frames follow the existing collector traversal; persistent ancestry is allocated
             // only for expressions that actually contain a label or a jump.
-            internal SmallList<LabelScopeFrame, Stack4<LabelScopeFrame>, ProvidedArrayPool<LabelScopeFrame, ClearItemsNo<LabelScopeFrame>>> LabelScopes;
+            internal SmallList<LabelScopeFrame, Stack4<LabelScopeFrame>, ScopeArrayPool<LabelScopeFrame>> LabelScopes;
             internal SmallList<(LabelTarget Target, int Scope), Stack4<(LabelTarget Target, int Scope)>, NoArrayPool<(LabelTarget Target, int Scope)>> ScopedLabels;
             internal SmallList<(LabelTarget Target, int Scope), Stack4<(LabelTarget Target, int Scope)>, NoArrayPool<(LabelTarget Target, int Scope)>> ScopedGotos;
 
-            internal SmallList<ScopeInfo, Stack8<ScopeInfo>, ProvidedArrayPool<ScopeInfo, ClearItemsNo<ScopeInfo>>> ScopeInfos;
+            internal SmallList<ScopeInfo, Stack8<ScopeInfo>, ScopeArrayPool<ScopeInfo>> ScopeInfos;
 
             internal int LabelScopeDepth;
 
             internal int AddScopeInfo(int parent, LabelScopeKind kind, bool cannotLeave = false)
             {
-                if (ScopeInfos.Count == ScopeInfos.Stack.Capacity && ScopeInfos.Rest == null)
-                {
-                    _scopeInfoPool ??= new ScopeInfo[MaxPooledScopeFrames][];
-                    ScopeInfos.Pool.Init(_scopeInfoPool, MaxPooledScopeFrames);
-                }
                 var index = ScopeInfos.Count + 1;
                 var root = parent == 0 ? index : ScopeInfos[parent - 1].Root;
                 ScopeInfos.AddAndGetRef(new ScopeInfo { Parent = parent, Root = root, Kind = kind, CannotLeave = cannotLeave });
@@ -779,11 +819,6 @@ namespace FastExpressionCompiler
             [MethodImpl(MethodImplOptions.NoInlining)]
             private void PushNewLabelScopeFrame(LabelScopeKind kind)
             {
-                if (LabelScopes.Count == LabelScopes.Stack.Capacity && LabelScopes.Rest == null)
-                {
-                    _labelScopeFramePool ??= new LabelScopeFrame[MaxPooledScopeFrames][];
-                    LabelScopes.Pool.Init(_labelScopeFramePool, MaxPooledScopeFrames);
-                }
                 LabelScopes.AddAndGetRef(new LabelScopeFrame { Kind = kind, Count = 1 });
             }
 
@@ -3455,11 +3490,6 @@ namespace FastExpressionCompiler
         private static Result TryCollectExceptionRegionInfo(ref CompilerContext context, Expression expression,
             bool cannotLeave, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
         {
-            if (context.ExceptionRegions.Count == context.ExceptionRegions.Stack.Capacity && context.ExceptionRegions.Rest == null)
-            {
-                CompilerContext._exceptionRegionFramePool ??= new ExceptionRegionFrame[CompilerContext.MaxPooledScopeFrames][];
-                context.ExceptionRegions.Pool.Init(CompilerContext._exceptionRegionFramePool, CompilerContext.MaxPooledScopeFrames);
-            }
             context.ExceptionRegions.AddAndGetRef(new ExceptionRegionFrame { CannotLeave = cannotLeave });
             try
             {
