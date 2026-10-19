@@ -15,6 +15,12 @@ public struct InvocationExceptionSpillRegressionTests : ITestX
         Try_arguments_preserve_delegate_invocation_behavior(t);
         Invocation_target_and_arguments_are_evaluated_in_order(t);
         By_reference_arguments_remain_references_across_try_arguments(t);
+        Atomic_arithmetic_operands_follow_try_argument_finalizers(t);
+        Left_try_arithmetic_preserves_values_and_overflow_order(t);
+        Right_try_arithmetic_preserves_operand_and_exception_order(t);
+#if LIGHT_EXPRESSION
+        Intrinsic_constants_keep_their_exception_region_spills(t);
+#endif
     }
 
     public void Try_arguments_preserve_delegate_invocation_behavior(TestContext t)
@@ -84,4 +90,105 @@ public struct InvocationExceptionSpillRegressionTests : ITestX
         t.AreEqual(expectedValue, actualValue);
 #endif
     }
+    public void Atomic_arithmetic_operands_follow_try_argument_finalizers(TestContext t)
+    {
+        foreach (var flags in new[] { CompilerFlags.Default, CompilerFlags.NoInvocationLambdaInlining })
+        for (var rightKind = 0; rightKind < 3; ++rightKind)
+        {
+            var value = SysExpr.Parameter(typeof(int));
+            var argument = SysExpr.Parameter(typeof(int));
+            System.Linq.Expressions.Expression right = rightKind == 0 ? SysExpr.Constant(2) :
+                rightKind == 1 ? (System.Linq.Expressions.Expression)value : SysExpr.Default(typeof(int));
+            var inner = SysExpr.Lambda<Func<int, int>>(SysExpr.Add(argument, right), argument);
+            var input = SysExpr.TryFinally(value, SysExpr.Block(SysExpr.Assign(value, SysExpr.Constant(7)), SysExpr.Empty()));
+            var expression = SysExpr.Lambda<Func<int, int>>(SysExpr.Invoke(inner, input), value);
+            var actual = expression.FromSysExpression().CompileFast(true, flags);
+            if (!t.IsNotNull(actual)) return;
+            t.AreEqual(rightKind == 0 ? 5 : rightKind == 1 ? 10 : 3, actual(3));
+            t.AreEqual(expression.Compile()(3), actual(3));
+        }
+    }
+
+    public void Left_try_arithmetic_preserves_values_and_overflow_order(TestContext t)
+    {
+        var value = SysExpr.Parameter(typeof(int));
+        var finalizer = SysExpr.Parameter(typeof(Action));
+        var left = SysExpr.TryFinally(value, SysExpr.Invoke(finalizer));
+        var expression = SysExpr.Lambda<Func<int, Action, int>>(SysExpr.TryCatch(
+            SysExpr.AddChecked(left, SysExpr.Constant(2)), SysExpr.Catch(typeof(OverflowException), SysExpr.Constant(-1))), value, finalizer);
+        var actual = expression.FromSysExpression().CompileFast(true);
+        if (!t.IsNotNull(actual)) return;
+        var calls = 0;
+        Action finish = () => ++calls;
+        t.AreEqual(5, actual(3, finish));
+        t.AreEqual(1, calls);
+        t.AreEqual(-1, actual(int.MaxValue, finish));
+        t.AreEqual(2, calls);
+        calls = 0;
+        var expected = expression.Compile();
+        t.AreEqual(5, expected(3, finish));
+        t.AreEqual(-1, expected(int.MaxValue, finish));
+        t.AreEqual(2, calls);
+    }
+
+    public void Right_try_arithmetic_preserves_operand_and_exception_order(TestContext t)
+    {
+        var first = SysExpr.Parameter(typeof(Func<int>));
+        var second = SysExpr.Parameter(typeof(Func<int>));
+        var finalizer = SysExpr.Parameter(typeof(Action));
+        var expression = SysExpr.Lambda<Func<Func<int>, Func<int>, Action, int>>(
+            SysExpr.Add(SysExpr.Invoke(first), SysExpr.TryFinally(SysExpr.Invoke(second), SysExpr.Invoke(finalizer))), first, second, finalizer);
+        var actual = expression.FromSysExpression().CompileFast(true);
+        if (!t.IsNotNull(actual)) return;
+        var order = new List<int>();
+        Func<int> left = () => { order.Add(1); return 3; };
+        Func<int> right = () => { order.Add(2); return 5; };
+        Action finish = () => order.Add(3);
+        t.AreEqual(8, actual(left, right, finish));
+        t.AreEqual("1,2,3", string.Join(",", order));
+        order.Clear();
+        Func<int> throwingRight = () => { order.Add(2); throw new InvalidOperationException(); };
+        t.Throws<InvalidOperationException>(() => actual(left, throwingRight, finish));
+        t.AreEqual("1,2,3", string.Join(",", order));
+        order.Clear();
+        t.Throws<InvalidOperationException>(() => expression.Compile()(left, throwingRight, finish));
+        t.AreEqual("1,2,3", string.Join(",", order));
+    }
+
+#if LIGHT_EXPRESSION
+    private sealed class TryConstant : ConstantExpression
+    {
+        public override Type Type => typeof(int);
+        public override object Value => 5;
+        public override bool IsIntrinsic => true;
+        public override ExpressionCompiler.Result TryCollectInfo(ref ExpressionCompiler.CompilerContext context,
+            ExpressionCompiler.NestedLambdaInfo nestedLambda, ref ImTools.SmallList<ExpressionCompiler.NestedLambdaInfo> rootNestedLambdas)
+        {
+            return ExpressionCompiler.TryCollectInfo(ref context,
+                Expression.TryFinally(Expression.Constant(5), Expression.Empty()), nestedLambda, ref rootNestedLambdas);
+        }
+        public override bool TryEmit(ref ExpressionCompiler.CompilerContext context, System.Reflection.Emit.ILGenerator il,
+            ExpressionCompiler.ParentFlags parent, int byRefIndex = -1)
+        {
+            var value = il.DeclareLocal(typeof(int));
+            il.BeginExceptionBlock();
+            il.Emit(System.Reflection.Emit.OpCodes.Ldc_I4_5);
+            il.Emit(System.Reflection.Emit.OpCodes.Stloc, value);
+            il.BeginFinallyBlock();
+            il.Emit(System.Reflection.Emit.OpCodes.Nop);
+            il.EndExceptionBlock();
+            il.Emit(System.Reflection.Emit.OpCodes.Ldloc, value);
+            context.LastEmitIsAddress = false;
+            return true;
+        }
+    }
+
+    public void Intrinsic_constants_keep_their_exception_region_spills(TestContext t)
+    {
+        var expression = Expression.Lambda<Func<int>>(Expression.Add(Expression.Constant(3), new TryConstant()));
+        var actual = expression.CompileFast(true);
+        if (!t.IsNotNull(actual)) return;
+        t.AreEqual(8, actual());
+    }
+#endif
 }
