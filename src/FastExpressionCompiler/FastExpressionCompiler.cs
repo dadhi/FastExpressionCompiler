@@ -1042,6 +1042,8 @@ namespace FastExpressionCompiler
                         if (CaptureCellVariables.Set.Count == 0) return true;
                         CaptureCellVariables.Set.TryGetEntryRef(variable, out var requiresCell);
                         if (!requiresCell) return true;
+                        if (!type.IsValueType && IsPrivateReferenceCapture(CaptureAnalysisRoot, variable, ref this))
+                            return true;
                     }
                 }
                 HoistedVariables.GetIndexOrAdd(variable, default(RefEq<ParameterExpression>));
@@ -1520,6 +1522,104 @@ namespace FastExpressionCompiler
         {
             internal SmallList<(Expression Expression, bool SpillArguments)> Reduced;
             internal int Emitted;
+        }
+
+        // A sole child can mutate its own reference slot when no other expression
+        // observes the owner's storage. Reuse the existing closure array in this case.
+        private static bool IsPrivateReferenceCapture(Expression root, ParameterExpression variable, ref CompilerContext context)
+        {
+            LambdaExpression owner = null;
+            var declared = false;
+            return HasOnlyPrivateReferenceUses(root, variable, ref owner, ref declared, false, ref context) && owner != null;
+        }
+
+        private static bool HasOnlyPrivateReferenceUses(Expression expression, ParameterExpression variable,
+            ref LambdaExpression owner, ref bool declared, bool inOwner, ref CompilerContext context)
+        {
+            if (expression == null) return true;
+#if LIGHT_EXPRESSION
+            if (expression.IsIntrinsic) return false;
+#endif
+            if (expression is ParameterExpression parameter) return !ReferenceEquals(parameter, variable) || inOwner;
+            if (expression is ConstantExpression || expression is DefaultExpression || expression is DebugInfoExpression) return true;
+            if (expression is LambdaExpression lambda)
+            {
+                if (owner != null) return false;
+                var parameters = lambda.GetParamExprs();
+                for (var i = 0; i < parameters.GetParamCount(); ++i)
+                    if (ReferenceEquals(parameters.GetParameter(i), variable)) return false;
+                owner = lambda;
+                return HasOnlyPrivateReferenceUses(lambda.Body, variable, ref owner, ref declared, true, ref context);
+            }
+            if (expression is BlockExpression block)
+            {
+                for (var i = 0; i < block.Variables.Count; ++i)
+                    if (ReferenceEquals(block.Variables[i], variable))
+                    {
+                        if (inOwner || declared) return false;
+                        declared = true;
+                    }
+                for (var i = 0; i < block.Expressions.Count; ++i)
+                {
+                    var child = block.Expressions[i];
+                    if (!inOwner && child is BinaryExpression assignment && assignment.NodeType == ExpressionType.Assign &&
+                        ReferenceEquals(assignment.Left, variable) && IsLeadingCaptureInitializer(block, i, variable, false))
+                        child = assignment.Right;
+                    if (!HasOnlyPrivateReferenceUses(child, variable, ref owner, ref declared, inOwner, ref context)) return false;
+                }
+                return true;
+            }
+            if (expression is BinaryExpression binary)
+            {
+                switch (binary.NodeType)
+                {
+                    case ExpressionType.Add: case ExpressionType.AddChecked: case ExpressionType.Subtract: case ExpressionType.SubtractChecked:
+                    case ExpressionType.Multiply: case ExpressionType.MultiplyChecked: case ExpressionType.Divide: case ExpressionType.Modulo:
+                    case ExpressionType.Power: case ExpressionType.And: case ExpressionType.AndAlso: case ExpressionType.Or: case ExpressionType.OrElse:
+                    case ExpressionType.ExclusiveOr: case ExpressionType.LeftShift: case ExpressionType.RightShift:
+                    case ExpressionType.Equal: case ExpressionType.NotEqual: case ExpressionType.GreaterThan: case ExpressionType.GreaterThanOrEqual:
+                    case ExpressionType.LessThan: case ExpressionType.LessThanOrEqual: case ExpressionType.Coalesce: case ExpressionType.ArrayIndex:
+                    case ExpressionType.Assign: case ExpressionType.AddAssign: case ExpressionType.AddAssignChecked:
+                    case ExpressionType.SubtractAssign: case ExpressionType.SubtractAssignChecked: case ExpressionType.MultiplyAssign:
+                    case ExpressionType.MultiplyAssignChecked: case ExpressionType.DivideAssign: case ExpressionType.ModuloAssign:
+                    case ExpressionType.PowerAssign: case ExpressionType.AndAssign: case ExpressionType.OrAssign: case ExpressionType.ExclusiveOrAssign:
+                    case ExpressionType.LeftShiftAssign: case ExpressionType.RightShiftAssign: break;
+                    default: return false;
+                }
+                return binary.Conversion == null && PrivateCaptureMethodIsByValue(binary.Method, ref context) &&
+                    HasOnlyPrivateReferenceUses(binary.Left, variable, ref owner, ref declared, inOwner, ref context) &&
+                    HasOnlyPrivateReferenceUses(binary.Right, variable, ref owner, ref declared, inOwner, ref context);
+            }
+            if (expression is ConditionalExpression conditional)
+                return HasOnlyPrivateReferenceUses(conditional.Test, variable, ref owner, ref declared, inOwner, ref context) &&
+                    HasOnlyPrivateReferenceUses(conditional.IfTrue, variable, ref owner, ref declared, inOwner, ref context) &&
+                    HasOnlyPrivateReferenceUses(conditional.IfFalse, variable, ref owner, ref declared, inOwner, ref context);
+            if (expression is MemberExpression member)
+                return (member.Member is not PropertyInfo property ||
+                    PrivateCaptureMethodIsByValue(property.GetMethod, ref context) && PrivateCaptureMethodIsByValue(property.SetMethod, ref context)) &&
+                    HasOnlyPrivateReferenceUses(member.Expression, variable, ref owner, ref declared, inOwner, ref context);
+            if (expression is MethodCallExpression call)
+            {
+                if (!PrivateCaptureMethodIsByValue(call.Method, ref context) ||
+                    !HasOnlyPrivateReferenceUses(call.Object, variable, ref owner, ref declared, inOwner, ref context)) return false;
+                var arguments = call.GetArgExprs();
+                for (var i = 0; i < arguments.GetArgCount(); ++i)
+                    if (!HasOnlyPrivateReferenceUses(arguments.GetArgument(i), variable, ref owner, ref declared, inOwner, ref context)) return false;
+                return true;
+            }
+            // Quoting, runtime variables, other lambdas, control flow, invocation,
+            // reduction and unrecognized nodes retain shared cells.
+            return false;
+        }
+
+        private static bool PrivateCaptureMethodIsByValue(MethodInfo method, ref CompilerContext context)
+        {
+            if (method == null) return true;
+            if (method.ReturnType.IsByRef) return false;
+            var parameters = context.GetCaptureMethodParameters(method);
+            for (var i = 0; i < parameters.Length; ++i)
+                if (parameters[i].ParameterType.IsByRef) return false;
+            return true;
         }
 
         // One conservative mutation analysis serves every nested capture in a compilation.
