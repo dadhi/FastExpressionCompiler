@@ -943,14 +943,20 @@ namespace FastExpressionCompiler
             public SmallList<NestedLambdaInfo> NestedLambdas;
 
             // Reuse reflection metadata within this compilation and its nested lambdas.
-            internal SmallMap4<Type, HoistedTypeInfo, RefEq<Type>> HoistedTypes;
+            internal HoistedTypeCache HoistedTypes;
 
             [RequiresUnreferencedCode(Trimming.Message)]
             internal HoistedTypeInfo GetHoistedType(Type type)
             {
-                ref var info = ref HoistedTypes.Map.AddOrGetValueRef(type, out var found);
-                if (!found)
-                    info = new HoistedTypeInfo(type);
+                HoistedTypes ??= new HoistedTypeCache();
+                ref var types = ref HoistedTypes.Types;
+                for (var i = types.Count - 1; i >= 0; --i)
+                {
+                    var entry = types.GetSurePresentRef(i);
+                    if (ReferenceEquals(entry.Type, type)) return entry.Info;
+                }
+                var info = new HoistedTypeInfo(type);
+                types.Add((type, info));
                 return info;
             }
 
@@ -1603,6 +1609,12 @@ namespace FastExpressionCompiler
                 return true;
             }
             return false;
+        }
+
+        internal sealed class HoistedTypeCache
+        {
+            internal SmallList<(Type Type, HoistedTypeInfo Info),
+                Stack2<(Type Type, HoistedTypeInfo Info)>, NoArrayPool<(Type Type, HoistedTypeInfo Info)>> Types;
         }
 
         internal readonly struct HoistedTypeInfo
@@ -3143,6 +3155,8 @@ namespace FastExpressionCompiler
             internal static bool TryEmitLambdaBody(Expression body, Type returnType, ILGenerator il,
                 ref CompilerContext context, ParentFlags parent)
             {
+                if (context.HoistedVariables.Count != 0)
+                {
                 var parameters = context.ParamExprs;
                 for (var p = 0; p < parameters.GetParamCount(); ++p)
                 {
@@ -3156,6 +3170,7 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Newobj, hoistedType.ValueConstructor);
                     EmitStoreLocalVariable(il, boxIndex);
                     context.HoistedParameterLocals.Map.AddOrGetValueRef(parameter, out _) = boxIndex;
+                }
                 }
                 context.MethodReturnTarget = GetMethodReturnTarget(body, returnType);
                 return TryEmit(body, il, ref context, parent);
