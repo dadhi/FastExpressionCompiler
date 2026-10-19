@@ -32,6 +32,7 @@ public struct CapturedValueRefRegressionTests : ITestX
         Concurrent_compilation_keeps_hoisted_metadata_isolated(t);
         Static_indexed_properties_allow_captured_parameters(t);
         Private_mutable_reference_captures_reuse_value_slots(t);
+        Private_mutable_reference_container_captures_reuse_value_slots(t);
         Shared_or_byref_reference_captures_keep_cells(t);
         Boxed_value_cells_share_struct_mutations_and_replacements(t);
         Boxed_value_cells_preserve_checked_and_enum_assignments(t);
@@ -302,6 +303,48 @@ public struct CapturedValueRefRegressionTests : ITestX
                 t.IsTrue(SingleCaptureStorage(actual) is string);
             }
         }
+    }
+
+    public sealed class DelegateHolder
+    {
+        public readonly Func<int> Reader;
+        public DelegateHolder(Func<int> reader) => Reader = reader;
+    }
+
+    public sealed class RefStringHolder
+    {
+        public readonly string Value;
+        public RefStringHolder(ref string value) => Value = value = "changed";
+    }
+
+    public void Private_mutable_reference_container_captures_reuse_value_slots(TestContext t)
+    {
+        foreach (var array in new[] { false, true })
+        {
+            var value = SysExpr.Variable(typeof(string));
+            var ignored = SysExpr.Parameter(typeof(int));
+            var update = SysExpr.Assign(value, SysExpr.Condition(SysExpr.Equal(value, SysExpr.Constant("first")),
+                SysExpr.Constant("second"), SysExpr.Constant("first")));
+            var child = SysExpr.Lambda<Func<int>>(SysExpr.Block(update, SysExpr.Property(value, nameof(string.Length))));
+            System.Linq.Expressions.Expression wrapped = array ?
+                SysExpr.ArrayIndex(SysExpr.NewArrayInit(typeof(Func<int>), child), SysExpr.Constant(0)) :
+                SysExpr.Field(SysExpr.New(typeof(DelegateHolder).GetConstructors()[0], child), nameof(DelegateHolder.Reader));
+            var expression = SysExpr.Lambda<Func<int, Func<int>>>(SysExpr.Block(new[] { value },
+                SysExpr.Assign(value, SysExpr.Constant("first")), wrapped), ignored);
+            foreach (var flags in new[] { CompilerFlags.Default, CompilerFlags.NoInvocationLambdaInlining, CompilerFlags.EnableDelegateDebugInfo })
+            {
+                var actual = expression.FromSysExpression().CompileFast(true, flags)(0);
+                var expected = expression.Compile()(0);
+                for (var i = 0; i < 8; ++i) t.AreEqual(expected(), actual());
+                t.IsTrue(SingleCaptureStorage(actual) is string);
+            }
+        }
+        var reference = SysExpr.Parameter(typeof(string));
+        var byRefConstructor = SysExpr.Lambda<Func<string, Func<string>>>(SysExpr.Lambda<Func<string>>(
+            SysExpr.Field(SysExpr.New(typeof(RefStringHolder).GetConstructors()[0], reference), nameof(RefStringHolder.Value))), reference);
+        var captured = byRefConstructor.FromSysExpression().CompileFast(true)("first");
+        t.AreEqual("changed", captured());
+        t.IsTrue(SingleCaptureStorage(captured) is System.Runtime.CompilerServices.StrongBox<string>);
     }
 
     public void Shared_or_byref_reference_captures_keep_cells(TestContext t)

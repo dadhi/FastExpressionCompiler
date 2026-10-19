@@ -1566,8 +1566,9 @@ namespace FastExpressionCompiler
             ref LambdaExpression owner, ref bool declared, bool inOwner, ref CompilerContext context)
         {
             if (expression == null) return true;
+            if (expression.NodeType == ExpressionType.Extension) return false;
 #if LIGHT_EXPRESSION
-            if (expression.IsIntrinsic) return false;
+            if (expression.IsIntrinsic && !IsKnownCaptureIntrinsic(expression)) return false;
 #endif
             if (expression is ParameterExpression parameter) return !ReferenceEquals(parameter, variable) || inOwner;
             if (expression is ConstantExpression || expression is DefaultExpression || expression is DebugInfoExpression) return true;
@@ -1636,15 +1637,29 @@ namespace FastExpressionCompiler
                     if (!HasOnlyPrivateReferenceUses(arguments.GetArgument(i), variable, ref owner, ref declared, inOwner, ref context)) return false;
                 return true;
             }
+            if (expression is NewExpression creation)
+            {
+                if (!PrivateCaptureMethodIsByValue(creation.Constructor, ref context)) return false;
+                var arguments = creation.GetArgExprs();
+                for (var i = 0; i < arguments.GetArgCount(); ++i)
+                    if (!HasOnlyPrivateReferenceUses(arguments.GetArgument(i), variable, ref owner, ref declared, inOwner, ref context)) return false;
+                return true;
+            }
+            if (expression is NewArrayExpression array)
+            {
+                for (var i = 0; i < array.Expressions.Count; ++i)
+                    if (!HasOnlyPrivateReferenceUses(array.Expressions[i], variable, ref owner, ref declared, inOwner, ref context)) return false;
+                return true;
+            }
             // Quoting, runtime variables, other lambdas, control flow, invocation,
             // reduction and unrecognized nodes retain shared cells.
             return false;
         }
 
-        private static bool PrivateCaptureMethodIsByValue(MethodInfo method, ref CompilerContext context)
+        private static bool PrivateCaptureMethodIsByValue(MethodBase method, ref CompilerContext context)
         {
             if (method == null) return true;
-            if (method.ReturnType.IsByRef) return false;
+            if (method is MethodInfo info && info.ReturnType.IsByRef) return false;
             var parameters = context.GetCaptureMethodParameters(method);
             for (var i = 0; i < parameters.Length; ++i)
                 if (parameters[i].ParameterType.IsByRef) return false;
