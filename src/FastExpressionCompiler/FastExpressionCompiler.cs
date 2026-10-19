@@ -664,7 +664,8 @@ namespace FastExpressionCompiler
             ToBeCollected = 1,
             UserProvided = 1 << 1,
             HasClosure = 1 << 2,
-            ShouldBeStaticMethod = 1 << 3
+            ShouldBeStaticMethod = 1 << 3,
+            TypedNonPassedClosure = 1 << 4
         }
 
         [DebuggerDisplay("Target:{Target}, InlinedLambdaInvokeIndex:{InlinedLambdaInvokeIndex}, ReturnVariableIndexPlusOneAndIsDefined:{ReturnVariableIndexPlusOneAndIsDefined}")]
@@ -3389,6 +3390,17 @@ namespace FastExpressionCompiler
 
             var closurePlusParamTypes = RentPooledOrNewClosureTypeToParamTypes(nestedLambdaParamExprs);
 
+#if NETFRAMEWORK
+            // Curry<C,...> accepts the actual derived closure type. Accurate hidden
+            // parameter typing avoids a cast for every access without unverifiable IL.
+            if (hasNonPassedParameters && closurePlusParamTypes.Length > 1)
+            {
+                // A nonzero parameter list is already rented and can be typed
+                // without allocating an additional zero-argument signature.
+                closurePlusParamTypes[0] = typeof(ArrayClosureWithNonPassedParams);
+                nestedLambdaContext.Status |= ClosureStatus.TypedNonPassedClosure;
+            }
+#endif
             var method = nestedLambdaContext.HasExceptionBlock
                 ? CreateExceptionAwareDynamicMethod(nestedReturnType, closurePlusParamTypes)
                 : new DynamicMethod(string.Empty, nestedReturnType, closurePlusParamTypes, typeof(ArrayClosure), true);
@@ -5103,16 +5115,17 @@ namespace FastExpressionCompiler
                     return false;
 
                 // Load non-passed argument from Closure - closure object is always a first argument
-                EmitLoadNonPassedParams(il);
+                EmitLoadNonPassedParams(il, ref context);
                 EmitLoadConstantInt(il, nonPassedParamIndex);
                 il.Demit(OpCodes.Ldelem_Ref);
                 return TryEmitCapturedParameterValue(il, paramType, isPassedRef, ref context);
             }
 
-            private static void EmitLoadNonPassedParams(ILGenerator il)
+            private static void EmitLoadNonPassedParams(ILGenerator il, ref CompilerContext context)
             {
                 il.Demit(OpCodes.Ldarg_0);
 #if NETFRAMEWORK
+                if ((context.Status & ClosureStatus.TypedNonPassedClosure) == 0)
                 il.Demit(OpCodes.Castclass, typeof(ArrayClosureWithNonPassedParams));
 #endif
                 il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
@@ -5135,7 +5148,7 @@ namespace FastExpressionCompiler
                         var captured = context.NonPassedParameters.TryGetIndex(parameter, default(RefEq<ParameterExpression>));
                         if (captured == -1)
                             return false;
-                        EmitLoadNonPassedParams(il);
+                        EmitLoadNonPassedParams(il, ref context);
                         EmitLoadConstantInt(il, captured);
                         il.Demit(OpCodes.Ldelem_Ref);
                         if (!context.UsesBoxedValueCell(parameter.Type))
@@ -5211,7 +5224,7 @@ namespace FastExpressionCompiler
                     return false;
 
                 // Load non-passed argument from Closure - closure object is always a first argument
-                EmitLoadNonPassedParams(il);
+                EmitLoadNonPassedParams(il, ref closure);
                 EmitLoadConstantInt(il, nonPassedParamIndex);
                 il.Demit(OpCodes.Ldelem_Ref);
 #if NETFRAMEWORK
@@ -7344,7 +7357,7 @@ namespace FastExpressionCompiler
                     EmitStoreLocalVariable(il, rightVar);
 
                     // load array field and param item index
-                    EmitLoadNonPassedParams(il);
+                    EmitLoadNonPassedParams(il, ref context);
                     EmitLoadConstantInt(il, nonPassedParamIndex);
 
                     EmitLoadLocalVariable(il, rightVar);
@@ -7364,7 +7377,7 @@ namespace FastExpressionCompiler
 
                 if (resultVar != -1 & isPost)
                 {
-                    EmitLoadNonPassedParams(il);
+                    EmitLoadNonPassedParams(il, ref context);
                     EmitLoadConstantInt(il, nonPassedParamIndex);
                     il.Demit(OpCodes.Ldelem_Ref); // load the variable from array
                     if (exprType.IsValueType)
@@ -7384,7 +7397,7 @@ namespace FastExpressionCompiler
                 var arithmeticResultVar = resultVar != -1 ? resultVar : il.GetNextLocalVarIndex(exprType);
                 EmitStoreLocalVariable(il, arithmeticResultVar);
 
-                EmitLoadNonPassedParams(il);
+                EmitLoadNonPassedParams(il, ref context);
                 EmitLoadConstantInt(il, nonPassedParamIndex);
 
                 EmitLoadLocalVariable(il, arithmeticResultVar);
