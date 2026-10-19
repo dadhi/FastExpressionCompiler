@@ -1346,6 +1346,41 @@ namespace FastExpressionCompiler
         internal sealed class DynamicExpressionCache
         {
             internal SmallMap4<Expression, DynamicExpressionOccurrences, RefEq<Expression>> Expressions;
+            internal SmallMap4<Expression, ReducedExtensionOccurrences, RefEq<Expression>> Extensions;
+        }
+
+        internal sealed class ReducedExtensionOccurrences
+        {
+            internal SmallList<Expression> Reduced;
+            internal int Emitted;
+        }
+
+        private static Result TryCollectReducedExpression(ref CompilerContext context, Expression original, Expression reduced,
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+        {
+            var result = TryCollectInfo(ref context, reduced, nestedLambda, ref rootNestedLambdas);
+            // Dynamic sites and quoted operands carry collection metadata keyed by identity.
+            // Retain each occurrence's reduction only on those feature paths. Ordinary
+            // reducible nodes do not need a cache or another collection traversal.
+            if (result == Result.OK && (context.DynamicExpressions != null || context.QuotedExpressions.Map.Count != 0))
+            {
+                context.DynamicExpressions ??= new DynamicExpressionCache();
+                ref var occurrences = ref context.DynamicExpressions.Extensions.Map.AddOrGetValueRef(original, out _);
+                occurrences ??= new ReducedExtensionOccurrences();
+                occurrences.Reduced.Add(reduced);
+            }
+            return result;
+        }
+
+        private static Expression GetCollectedReduction(Expression expression, ref CompilerContext context)
+        {
+            if (context.DynamicExpressions != null)
+            {
+                ref var occurrences = ref context.DynamicExpressions.Extensions.Map.TryGetValueRef(expression, out var found);
+                if (found && occurrences.Emitted < occurrences.Reduced.Count)
+                    return occurrences.Reduced.Items[occurrences.Emitted++];
+            }
+            return null;
         }
 
         internal sealed class DynamicExpressionOccurrences
@@ -2109,8 +2144,7 @@ namespace FastExpressionCompiler
                         var reduced = expr.Reduce();
                         if (reduced == null || ReferenceEquals(reduced, expr))
                             return Result.NotSupported_UnknownExpression;
-                        expr = reduced;
-                        continue;
+                        return TryCollectReducedExpression(ref context, expr, reduced, nestedLambda, ref rootNestedLambdas);
 
                     case ExpressionType.Default:
                         return r;
@@ -2247,8 +2281,7 @@ namespace FastExpressionCompiler
 #if !LIGHT_EXPRESSION
                         if (expr.CanReduce)
                         {
-                            expr = expr.ReduceAndCheck();
-                            continue;
+                            return TryCollectReducedExpression(ref context, expr, expr.ReduceAndCheck(), nestedLambda, ref rootNestedLambdas);
                         }
 #endif
                         return Result.NotSupported_UnknownExpression;
@@ -3169,7 +3202,7 @@ namespace FastExpressionCompiler
                             return TryEmitSwitch((SwitchExpression)expr, il, ref context, parent);
 
                         case ExpressionType.Extension:
-                            var reduced = expr.Reduce();
+                            var reduced = GetCollectedReduction(expr, ref context) ?? expr.Reduce();
                             if (reduced == null || ReferenceEquals(reduced, expr))
                                 return false;
                             expr = reduced;
@@ -3179,7 +3212,7 @@ namespace FastExpressionCompiler
                             return true;               // todo: @unclear - just ignoring the info for now
 
                         case ExpressionType.Quote:
-                            var quoted = context.QuotedExpressions.Map.TryGetValueRef(((UnaryExpression)expr).Operand, out var foundQuote);
+                            ref var quoted = ref context.QuotedExpressions.Map.TryGetValueRef(((UnaryExpression)expr).Operand, out var foundQuote);
                             if (!foundQuote) return false;
                             if (quoted.Variables.Length == 0)
                                 return TryEmitConstant(true, exprType, quoted.Template.GetType(), quoted.Template, il, ref context) &&
@@ -3193,7 +3226,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.Dynamic:
                             if (context.DynamicExpressions == null)
                                 return false;
-                            var dynamicOccurrences = context.DynamicExpressions.Expressions.Map.TryGetValueRef(expr, out var foundDynamic);
+                            ref var dynamicOccurrences = ref context.DynamicExpressions.Expressions.Map.TryGetValueRef(expr, out var foundDynamic);
                             if (!foundDynamic || dynamicOccurrences.Emitted >= dynamicOccurrences.Reduced.Count)
                                 return false;
                             var dynamicOccurrence = dynamicOccurrences.Reduced.Items[dynamicOccurrences.Emitted++];
@@ -3213,7 +3246,7 @@ namespace FastExpressionCompiler
 #if !LIGHT_EXPRESSION
                             if (expr.CanReduce)
                             {
-                                expr = expr.ReduceAndCheck();
+                                expr = GetCollectedReduction(expr, ref context) ?? expr.ReduceAndCheck();
                                 continue;
                             }
 #endif
