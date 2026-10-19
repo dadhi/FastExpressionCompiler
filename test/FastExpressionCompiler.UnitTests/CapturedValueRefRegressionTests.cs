@@ -33,6 +33,15 @@ public struct CapturedValueRefRegressionTests : ITestX
         Static_indexed_properties_allow_captured_parameters(t);
         Private_mutable_reference_captures_reuse_value_slots(t);
         Shared_or_byref_reference_captures_keep_cells(t);
+        Boxed_value_cells_share_struct_mutations_and_replacements(t);
+        Boxed_value_cells_preserve_checked_and_enum_assignments(t);
+        Boxed_default_struct_cells_do_not_call_user_constructors(t);
+        Boxed_struct_receivers_preserve_storage_across_try_arguments(t);
+        Captured_struct_ref_arguments_and_replacements_cross_exception_regions(t);
+        Quote_and_runtime_variables_keep_all_cells_typed(t);
+#if LIGHT_EXPRESSION
+        Intrinsics_with_hidden_quotes_keep_typed_cells(t);
+#endif
     }
 
     public void Static_indexed_properties_allow_captured_parameters(TestContext t)
@@ -57,7 +66,222 @@ public struct CapturedValueRefRegressionTests : ITestX
         if (t.IsNotNull(fast)) t.AreEqual(expected, fast(3)());
     }
     public static int Add(ref int value, int increment) => value += increment;
+    public struct MutableCounter
+    {
+        public int Value;
+        public int Increment() => ++Value;
+        public int Add(int amount) => Value += amount;
+    }
+    public static int IncrementCounter(ref MutableCounter value) => ++value.Value;
+    public static int AddCounter(ref MutableCounter value, int amount) => value.Value += amount;
+    public struct DefaultCounter
+    {
+        public static int ConstructorCalls;
+        public int Value;
+        public DefaultCounter() { ++ConstructorCalls; Value = 99; }
+        public int Increment() => ++Value;
+    }
+    public enum CounterState { First, Second }
 
+    public void Boxed_value_cells_share_struct_mutations_and_replacements(TestContext t)
+    {
+        var value = SysExpr.Parameter(typeof(MutableCounter));
+        var replacement = SysExpr.Parameter(typeof(MutableCounter));
+        var mutate = SysExpr.Lambda<Func<int>>(SysExpr.Call(value, typeof(MutableCounter).GetMethod(nameof(MutableCounter.Increment))));
+        var replace = SysExpr.Lambda<Action<MutableCounter>>(SysExpr.Assign(value, replacement), replacement);
+        var byRef = SysExpr.Lambda<Func<int>>(SysExpr.Call(typeof(CapturedValueRefRegressionTests).GetMethod(nameof(IncrementCounter)), value));
+        var resultType = typeof(Tuple<Func<int>, Action<MutableCounter>, Func<int>>);
+        var expression = SysExpr.Lambda<Func<MutableCounter, Tuple<Func<int>, Action<MutableCounter>, Func<int>>>>(
+            SysExpr.New(resultType.GetConstructors()[0], mutate, replace, byRef), value);
+        var factory = expression.FromSysExpression().CompileFast(true);
+        if (!t.IsNotNull(factory)) return;
+        var actual = factory(new MutableCounter { Value = 3 });
+        var separate = factory(new MutableCounter { Value = 30 });
+        var cell = GetCapturedCell(actual.Item1);
+        t.IsTrue(IsExpectedMutableValueCell<MutableCounter>(cell));
+        t.IsTrue(ReferenceEquals(cell, GetCapturedCell(actual.Item2)));
+        t.IsTrue(ReferenceEquals(cell, GetCapturedCell(actual.Item3)));
+        t.IsTrue(!ReferenceEquals(cell, GetCapturedCell(separate.Item1)));
+        t.AreEqual(4, actual.Item1());
+        t.AreEqual(5, actual.Item3());
+        actual.Item2(new MutableCounter { Value = 40 });
+        t.AreEqual(41, actual.Item1());
+        var observed = GetCapturedCell(actual.Item3);
+        t.AreEqual(41, (observed is System.Runtime.CompilerServices.IStrongBox typed ? (MutableCounter)typed.Value : (MutableCounter)observed).Value);
+        t.AreEqual(42, actual.Item3());
+        t.AreEqual(31, separate.Item1());
+        var expected = expression.Compile()(new MutableCounter { Value = 3 });
+        t.AreEqual(4, expected.Item1());
+        t.AreEqual(5, expected.Item3());
+        expected.Item2(new MutableCounter { Value = 40 });
+        t.AreEqual(41, expected.Item1());
+        t.AreEqual(42, expected.Item3());
+    }
+
+    public void Boxed_value_cells_preserve_checked_and_enum_assignments(TestContext t)
+    {
+        var number = SysExpr.Parameter(typeof(int));
+        var pairType = typeof(Tuple<Func<int>, Func<int>>);
+        var expression = SysExpr.Lambda<Func<int, Tuple<Func<int>, Func<int>>>>(SysExpr.New(pairType.GetConstructors()[0],
+            SysExpr.Lambda<Func<int>>(SysExpr.AddAssignChecked(number, SysExpr.Constant(1))), SysExpr.Lambda<Func<int>>(number)), number);
+        var factory = expression.FromSysExpression().CompileFast(true);
+        if (!t.IsNotNull(factory)) return;
+        var pair = factory(int.MaxValue);
+        t.IsTrue(IsExpectedMutableValueCell<int>(GetCapturedCell(pair.Item1)));
+        t.Throws<OverflowException>(() => pair.Item1());
+        t.AreEqual(int.MaxValue, pair.Item2());
+        var state = SysExpr.Parameter(typeof(CounterState));
+        var change = SysExpr.Lambda<Func<CounterState, Func<CounterState>>>(SysExpr.Lambda<Func<CounterState>>(
+            SysExpr.Assign(state, SysExpr.Constant(CounterState.Second))), state).FromSysExpression().CompileFast(true);
+        if (!t.IsNotNull(change)) return;
+        var changed = change(CounterState.First);
+        t.IsTrue(IsExpectedMutableValueCell<CounterState>(GetCapturedCell(changed)));
+        t.AreEqual(CounterState.Second, changed());
+    }
+
+    public void Boxed_default_struct_cells_do_not_call_user_constructors(TestContext t)
+    {
+        var value = SysExpr.Variable(typeof(DefaultCounter));
+        var expression = SysExpr.Lambda<Func<Func<int>>>(SysExpr.Block(new[] { value }, SysExpr.Lambda<Func<int>>(
+            SysExpr.Call(value, typeof(DefaultCounter).GetMethod(nameof(DefaultCounter.Increment))))));
+        DefaultCounter.ConstructorCalls = 0;
+        var factory = expression.FromSysExpression().CompileFast(true);
+        if (!t.IsNotNull(factory)) return;
+        var first = factory();
+        var second = factory();
+        t.IsTrue(IsExpectedMutableValueCell<DefaultCounter>(GetCapturedCell(first)));
+        t.AreEqual(1, first());
+        t.AreEqual(2, first());
+        t.AreEqual(1, second());
+        t.AreEqual(0, DefaultCounter.ConstructorCalls);
+    }
+
+    public void Boxed_struct_receivers_preserve_storage_across_try_arguments(TestContext t)
+    {
+        var value = SysExpr.Parameter(typeof(MutableCounter));
+        var expression = SysExpr.Lambda<Func<MutableCounter, Func<int>>>(SysExpr.Lambda<Func<int>>(
+            SysExpr.Call(value, typeof(MutableCounter).GetMethod(nameof(MutableCounter.Add)),
+                SysExpr.TryFinally(SysExpr.Constant(1), SysExpr.Empty()))), value);
+        var factory = expression.FromSysExpression().CompileFast(true);
+        if (!t.IsNotNull(factory)) return;
+        var actual = factory(new MutableCounter { Value = 3 });
+        t.AreEqual(4, actual());
+        t.AreEqual(5, actual());
+    }
+
+    public void Captured_struct_ref_arguments_and_replacements_cross_exception_regions(TestContext t)
+    {
+        foreach (var replace in new[] { false, true })
+        {
+            var value = SysExpr.Parameter(typeof(MutableCounter));
+            var body = replace ? (System.Linq.Expressions.Expression)SysExpr.Block(
+                SysExpr.Assign(value, SysExpr.TryFinally(SysExpr.Constant(new MutableCounter { Value = 9 }), SysExpr.Empty())),
+                SysExpr.Field(value, nameof(MutableCounter.Value))) :
+                SysExpr.Call(typeof(CapturedValueRefRegressionTests).GetMethod(nameof(AddCounter)), value,
+                    SysExpr.TryFinally(SysExpr.Constant(1), SysExpr.Empty()));
+            var expression = SysExpr.Lambda<Func<MutableCounter, Func<int>>>(SysExpr.Lambda<Func<int>>(body), value);
+            var factory = expression.FromSysExpression().CompileFast(true);
+            if (!t.IsNotNull(factory)) return;
+            var actual = factory(new MutableCounter { Value = 3 });
+            // Framework's System compiler rejects a Try argument beside a by-ref operand.
+            t.AreEqual(replace ? 9 : 4, actual());
+            t.AreEqual(replace ? 9 : 5, actual());
+            t.IsTrue(IsExpectedMutableValueCell<MutableCounter>(GetCapturedCell(actual)));
+        }
+    }
+
+    private static bool IsExpectedMutableValueCell<T>(object cell) where T : struct =>
+#if NETFRAMEWORK
+        cell is System.Runtime.CompilerServices.StrongBox<T>;
+#else
+        cell is T;
+#endif
+
+    public void Quote_and_runtime_variables_keep_all_cells_typed(TestContext t)
+    {
+        for (var mode = 0; mode < 3; ++mode)
+        {
+            var value = SysExpr.Parameter(typeof(int));
+            var hasQuote = mode != 1;
+            var hasVariables = mode != 0;
+            var resultType = typeof(Tuple<Func<int>, System.Linq.Expressions.Expression<Func<int>>, System.Runtime.CompilerServices.IRuntimeVariables>);
+            var expression = SysExpr.Lambda<Func<int, Tuple<Func<int>, System.Linq.Expressions.Expression<Func<int>>, System.Runtime.CompilerServices.IRuntimeVariables>>>(
+                SysExpr.New(resultType.GetConstructors()[0], SysExpr.Lambda<Func<int>>(SysExpr.PreIncrementAssign(value)),
+                    hasQuote ? (System.Linq.Expressions.Expression)SysExpr.Quote(SysExpr.Lambda<Func<int>>(value)) :
+                        SysExpr.Constant(SysExpr.Lambda<Func<int>>(SysExpr.Constant(0)), typeof(System.Linq.Expressions.Expression<Func<int>>)),
+                    hasVariables ? (System.Linq.Expressions.Expression)SysExpr.RuntimeVariables(value) :
+                        SysExpr.Constant(null, typeof(System.Runtime.CompilerServices.IRuntimeVariables))), value);
+            var factory = expression.FromSysExpression().CompileFast(true);
+            if (!t.IsNotNull(factory)) return;
+            var actual = factory(3);
+            t.IsTrue(GetCapturedCell(actual.Item1) is System.Runtime.CompilerServices.StrongBox<int>);
+            t.AreEqual(4, actual.Item1());
+            if (hasQuote) t.AreEqual(4, actual.Item2.Compile()());
+            if (hasVariables)
+            {
+                actual.Item3[0] = 40;
+                t.AreEqual(41, actual.Item1());
+                if (hasQuote) t.AreEqual(41, actual.Item2.Compile()());
+                t.AreEqual(41, (int)actual.Item3[0]);
+            }
+        }
+    }
+
+    private static object GetCapturedCell(Delegate captured)
+    {
+        if (captured.Target is ExpressionCompiler.ArrayClosureWithNonPassedParams direct) return direct.NonPassedParams[0];
+        foreach (var field in captured.Target.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            if (field.GetValue(captured.Target) is ExpressionCompiler.ArrayClosureWithNonPassedParams closure)
+                return closure.NonPassedParams[0];
+        throw new InvalidOperationException("Expected a captured cell.");
+    }
+
+#if LIGHT_EXPRESSION
+    private sealed class HiddenQuote : ConstantExpression
+    {
+        private readonly Expression _quote;
+        internal HiddenQuote(Expression quote) => _quote = quote;
+        public override Type Type => _quote.Type;
+        public override object Value => null;
+        public override bool IsIntrinsic => true;
+        public override ExpressionCompiler.Result TryCollectInfo(ref ExpressionCompiler.CompilerContext context,
+            ExpressionCompiler.NestedLambdaInfo nestedLambda, ref ImTools.SmallList<ExpressionCompiler.NestedLambdaInfo> rootNestedLambdas, short scopeIdx) =>
+            ExpressionCompiler.TryCollectInfo(ref context, _quote, nestedLambda, ref rootNestedLambdas);
+        public override bool TryEmit(ref ExpressionCompiler.CompilerContext context, ILGenerator il,
+            ExpressionCompiler.ParentFlags parent, int byRefIndex = -1) =>
+            ExpressionCompiler.EmittingVisitor.TryEmit(_quote, il, ref context, parent, byRefIndex);
+    }
+
+    private sealed class HiddenReducibleQuote : UnaryExpression
+    {
+        private readonly Expression _quote;
+        internal HiddenReducibleQuote(Expression quote) : base(Expression.Constant(0)) => _quote = quote;
+        public override System.Linq.Expressions.ExpressionType NodeType => System.Linq.Expressions.ExpressionType.Extension;
+        public override Type Type => _quote.Type;
+        public override Expression Reduce() => _quote;
+    }
+
+    public void Intrinsics_with_hidden_quotes_keep_typed_cells(TestContext t)
+    {
+        foreach (var intrinsic in new[] { false, true })
+        {
+            var value = Expression.Parameter(typeof(int));
+            var pairType = typeof(Tuple<Func<int>, System.Linq.Expressions.Expression<Func<int>>>);
+            var quote = Expression.Quote(Expression.Lambda<Func<int>>(value));
+            Expression hidden = intrinsic ? (Expression)new HiddenQuote(quote) : new HiddenReducibleQuote(quote);
+            var expression = Expression.Lambda<Func<int, Tuple<Func<int>, System.Linq.Expressions.Expression<Func<int>>>>>(
+                Expression.New(pairType.GetConstructors()[0], Expression.Lambda<Func<int>>(Expression.PreIncrementAssign(value)), hidden), value);
+            var factory = expression.CompileFast(true);
+            if (!t.IsNotNull(factory)) return;
+            var actual = factory(3);
+            t.IsTrue(GetCapturedCell(actual.Item1) is System.Runtime.CompilerServices.StrongBox<int>);
+            t.AreEqual(4, actual.Item1());
+            t.AreEqual(4, actual.Item2.Compile()());
+            t.AreEqual(5, actual.Item1());
+            t.AreEqual(5, actual.Item2.Compile()());
+        }
+    }
+#endif
     public void Private_mutable_reference_captures_reuse_value_slots(TestContext t)
     {
         foreach (var local in new[] { false, true })
@@ -437,11 +661,16 @@ public struct CapturedValueRefRegressionTests : ITestX
         var number = SysExpr.Parameter(typeof(int));
         var text = SysExpr.Parameter(typeof(string));
         var reference = SysExpr.Parameter(typeof(object));
+        // A third reference type forces the metadata cache past its two inline slots,
+        // including when the integer uses a native boxed value cell.
+        var metadataType = SysExpr.Variable(typeof(Type));
         var body = SysExpr.Block(
+            SysExpr.Assign(metadataType, SysExpr.Constant(typeof(string), typeof(Type))),
             SysExpr.Call(typeof(CapturedValueRefRegressionTests).GetMethod(nameof(Replace)), text),
             SysExpr.Call(typeof(CapturedValueRefRegressionTests).GetMethod(nameof(ReplaceObject)), reference),
             SysExpr.PreIncrementAssign(number));
-        return SysExpr.Lambda<Func<int, string, object, Func<int>>>(SysExpr.Lambda<Func<int>>(body), number, text, reference);
+        return SysExpr.Lambda<Func<int, string, object, Func<int>>>(SysExpr.Block(new[] { metadataType },
+            SysExpr.Assign(metadataType, SysExpr.Constant(typeof(int), typeof(Type))), SysExpr.Lambda<Func<int>>(body)), number, text, reference);
     }
 
     public void Hoisted_metadata_rentals_clear_success_and_failure_state(TestContext t)
@@ -482,6 +711,7 @@ public struct CapturedValueRefRegressionTests : ITestX
         t.IsTrue(scratch[0] == null);
         var types = cache.GetType().GetField("Types", fields).GetValue(cache);
         t.AreEqual(0, (int)types.GetType().GetProperty("Count").GetValue(types));
+        t.IsNotNull(types.GetType().GetField("Rest", fields).GetValue(types));
         AssertNoPooledMetadataReferences(t, types);
     }
 
