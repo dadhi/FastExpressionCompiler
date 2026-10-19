@@ -8774,17 +8774,22 @@ namespace FastExpressionCompiler
                 // is required; address/value handling remains in the normal emitter.
                 // Atomic right operands cannot enter a protected region while the left
                 // value is on the stack, even if an earlier operand used try/finally.
-                if (operationMethod == null && right != null && left.Type.IsPrimitive && right.Type.IsPrimitive &&
-                    (!context.HasExceptionBlock || IsAtomicArithmeticOperand(right)) && !right.IsComplexExpression())
+                if (operationMethod == null && right != null)
                 {
-                    var flags = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
-                        ParentFlags.MemberAccess | ParentFlags.AssignmentLeftValue | ParentFlags.DupIt |
-                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.Arithmetic;
-                    if (!TryEmit(left, il, ref context, flags) || !TryEmit(right, il, ref context, flags) ||
-                        !TryEmitArithmeticOperation(left.Type, right.Type, nodeType, exprType, il))
-                        return false;
-                    context.LastEmitIsAddress = false;
-                    return il.EmitPopIfIgnoreResult(parent);
+                    var leftType = left.Type;
+                    var rightType = right.Type;
+                    if (leftType.IsPrimitive && (leftType == rightType || rightType.IsPrimitive) &&
+                        (!context.HasExceptionBlock || IsAtomicArithmeticOperand(right)) && !right.IsComplexExpression())
+                    {
+                        var flags = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
+                            ParentFlags.MemberAccess | ParentFlags.AssignmentLeftValue | ParentFlags.DupIt |
+                            ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.Arithmetic;
+                        if (!TryEmit(left, il, ref context, flags) || !TryEmit(right, il, ref context, flags) ||
+                            !TryEmitArithmeticOperation(leftType, rightType, nodeType, exprType, il))
+                            return false;
+                        context.LastEmitIsAddress = false;
+                        return il.EmitPopIfIgnoreResult(parent);
+                    }
                 }
                 return TryEmitLiftedOrComplexArithmetic(left, right, nodeType, exprType, il, ref context, parent, operationMethod);
             }
