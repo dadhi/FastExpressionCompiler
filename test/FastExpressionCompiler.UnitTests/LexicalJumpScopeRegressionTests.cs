@@ -15,6 +15,7 @@ public struct LexicalJumpScopeRegressionTests : ITestX
         Switch_cases_share_direct_label_scope(t);
         Reused_invocations_have_independent_scope_roots(t);
 
+        Deep_adjacent_blocks_preserve_ancestor_and_sibling_scopes(t);
     }
 
     private static readonly CompilerFlags[] Flags = { CompilerFlags.Default, CompilerFlags.NoInvocationLambdaInlining };
@@ -56,4 +57,19 @@ public struct LexicalJumpScopeRegressionTests : ITestX
         Verify(t, S.Lambda<Func<int>>(S.Add(invocation, invocation)), 14);
     }
 
+    public void Deep_adjacent_blocks_preserve_ancestor_and_sibling_scopes(TestContext t)
+    {
+        var target = S.Label(typeof(int), "ancestor");
+        E.Expression outward = S.Return(target, S.Constant(29));
+        for (var i = 0; i < 128; ++i) outward = S.Block(outward);
+        Verify(t, S.Lambda<Func<int>>(S.Block(outward, S.Label(target, S.Constant(0)))), 29);
+
+        // Capturing one sibling must not make the next sibling inherit its scope.
+        var first = S.Label(typeof(int), "first");
+        var second = S.Label(typeof(int), "second");
+        E.Expression siblings = S.Block(S.Block(S.Label(first, S.Constant(1))),
+            S.Goto(second, S.Constant(2)), S.Block(S.Label(second, S.Constant(3))));
+        for (var i = 0; i < 128; ++i) siblings = S.Block(siblings);
+        Reject(t, S.Lambda<Func<int>>(siblings));
+    }
 }
