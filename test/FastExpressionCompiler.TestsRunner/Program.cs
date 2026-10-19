@@ -80,6 +80,7 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.UnitTests.ArrayBoundsExceptionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.BackwardTypedLabelTests());
                 lt.Run(new LightExpression.UnitTests.TryResultValueRegressionTests());
+                lt.Run(new LightExpression.UnitTests.ArrayIndexExceptionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.FrameworkFilterRejectionTests());
                 lt.Run(new LightExpression.UnitTests.NonVectorArrayRegressionTests());
                 lt.Run(new LightExpression.UnitTests.UnboxStorageRegressionTests());
@@ -116,7 +117,6 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.UnitTests.ExcessiveArityRegressionTests());
 #if NET8_0_OR_GREATER
                 lt.Run(new LightExpression.UnitTests.NestedStructFieldAddressRegressionTests());
-                lt.Run(new LightExpression.UnitTests.NestedBindingNullAccessRegressionTests());
                 lt.Run(new LightExpression.UnitTests.UnboxReceiverSpillRegressionTests());
                 lt.Run(new LightExpression.UnitTests.NonExceptionThrowPolicyRegressionTests());
                 lt.Run(new LightExpression.UnitTests.CapturedStructArithmeticRegressionTests());
@@ -139,12 +139,11 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.UnitTests.IndexQuoteArgumentRegressionTests());
                 lt.Run(new LightExpression.UnitTests.RefCopybackReceiverReviewTests());
                 lt.Run(new LightExpression.UnitTests.RefCopybackRegressionTests());
-                lt.Run(new LightExpression.UnitTests.NestedMemberBindingRegressionTests());
+                lt.Run(new LightExpression.UnitTests.NestedBindingNullAccessRegressionTests());
                 lt.Run(new LightExpression.UnitTests.CaptureFreeQuoteRegressionTests());
                 lt.Run(new LightExpression.UnitTests.NullableArithmeticEvaluationRegressionTests());
                 lt.Run(new LightExpression.UnitTests.CoalesceValueConversionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.TypedLabelControlFlowRegressionTests());
-                lt.Run(new LightExpression.UnitTests.NullableArithmeticEvaluationRegressionTests());
                 lt.Run(new LightExpression.UnitTests.NegationBehaviorRegressionTests());
                 lt.Run(new LightExpression.UnitTests.RuntimeCompilerLayoutBehaviorRegressionTests());
                 lt.Run(new LightExpression.UnitTests.AdditionalCompilerLayoutBehaviorRegressionTests());
@@ -199,6 +198,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new ArrayBoundsExceptionRegressionTests());
             st.Run(new BackwardTypedLabelTests());
             st.Run(new TryResultValueRegressionTests());
+            st.Run(new ArrayIndexExceptionRegressionTests());
             st.Run(new FrameworkFilterRejectionTests());
             st.Run(new NonVectorArrayRegressionTests());
             st.Run(new RefConversionStorageTests());
@@ -234,7 +234,6 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new CompoundIndexExceptionRegressionTests());
             st.Run(new ExcessiveArityRegressionTests());
             st.Run(new NestedStructFieldAddressRegressionTests());
-            st.Run(new NestedBindingNullAccessRegressionTests());
             st.Run(new UnboxReceiverSpillRegressionTests());
             st.Run(new NonExceptionThrowPolicyRegressionTests());
             st.Run(new CapturedStructArithmeticRegressionTests());
@@ -257,12 +256,11 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new IndexQuoteArgumentRegressionTests());
             st.Run(new RefCopybackReceiverReviewTests());
             st.Run(new RefCopybackRegressionTests());
-            st.Run(new NestedMemberBindingRegressionTests());
+            st.Run(new NestedBindingNullAccessRegressionTests());
             st.Run(new CaptureFreeQuoteRegressionTests());
             st.Run(new NullableArithmeticEvaluationRegressionTests());
             st.Run(new CoalesceValueConversionRegressionTests());
             st.Run(new TypedLabelControlFlowRegressionTests());
-            st.Run(new NullableArithmeticEvaluationRegressionTests());
             st.Run(new NegationBehaviorRegressionTests());
             st.Run(new RuntimeCompilerLayoutBehaviorRegressionTests());
             st.Run(new AdditionalCompilerLayoutBehaviorRegressionTests());
