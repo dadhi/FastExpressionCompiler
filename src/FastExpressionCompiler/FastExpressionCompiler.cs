@@ -1473,6 +1473,7 @@ namespace FastExpressionCompiler
         private static System.Runtime.CompilerServices.IRuntimeVariables CreateCellRuntimeVariables(object[] cells) => new CellRuntimeVariables(cells);
         private static System.Runtime.CompilerServices.IRuntimeVariables MergeQuotedVariables(System.Runtime.CompilerServices.IRuntimeVariables locals,
             System.Runtime.CompilerServices.IRuntimeVariables captures, int[] indexes) => new MergedRuntimeVariables(locals, captures, indexes);
+        [RequiresUnreferencedCode(Trimming.Message)]
         private static class QuoteRuntimeVariableMethods
         {
             internal static readonly MethodInfo Bind = typeof(ExpressionCompiler).GetMethod(nameof(BindQuote), BindingFlags.Static | BindingFlags.NonPublic);
