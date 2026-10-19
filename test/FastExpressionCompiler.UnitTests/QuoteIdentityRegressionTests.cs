@@ -8,7 +8,7 @@ namespace FastExpressionCompiler.UnitTests;
 #endif
 public struct QuoteIdentityRegressionTests : ITestX
 {
- public void Run(TestRun t) { Distinct_quote_nodes_share_their_operand(t); Outer_and_nested_lambdas_share_quotes_in_both_orders(t); Sibling_nested_lambdas_share_first_conversion(t); Quoted_subtrees_share_identity_in_both_orders(t); Structurally_equal_operands_remain_distinct(t); Repeated_captured_operands_share_live_storage_across_nested_lambdas(t); }
+ public void Run(TestRun t) { Opaque_quote_extensions_are_not_reduced(t); Distinct_quote_nodes_share_their_operand(t); Outer_and_nested_lambdas_share_quotes_in_both_orders(t); Sibling_nested_lambdas_share_first_conversion(t); Quoted_subtrees_share_identity_in_both_orders(t); Structurally_equal_operands_remain_distinct(t); Repeated_captured_operands_share_live_storage_across_nested_lambdas(t); }
  public void Distinct_quote_nodes_share_their_operand(TestContext t) {
   var operand=E.Lambda<Func<int>>(E.Constant(7)); var tree=E.Lambda<Func<bool>>(E.ReferenceEqual(E.Quote(operand),E.Quote(operand)));
   var fast=tree.CompileFast(true); if(t.IsNotNull(fast)) t.IsTrue(fast());
@@ -79,4 +79,25 @@ public struct QuoteIdentityRegressionTests : ITestX
   }
  }
 
+
+ private sealed class OpaqueQuoteBody : System.Linq.Expressions.Expression {
+  internal int Reductions;
+  public override System.Linq.Expressions.ExpressionType NodeType => System.Linq.Expressions.ExpressionType.Extension;
+  public override Type Type => typeof(int);
+  public override bool CanReduce => true;
+  public override System.Linq.Expressions.Expression Reduce() { ++Reductions; return System.Linq.Expressions.Expression.Constant(42); }
+ }
+ public void Opaque_quote_extensions_are_not_reduced(TestContext t) {
+  var body = new OpaqueQuoteBody();
+  var expression = System.Linq.Expressions.Expression.Lambda<Func<System.Linq.Expressions.Expression<Func<int>>>>(
+   System.Linq.Expressions.Expression.Quote(System.Linq.Expressions.Expression.Lambda<Func<int>>(body)));
+#if LIGHT_EXPRESSION
+  // Conversion of opaque System nodes is unsupported and must not reduce the data.
+  t.Throws<NotSupportedException>(() => expression.FromSysExpression());
+#else
+  foreach (var flags in new[] { CompilerFlags.Default, CompilerFlags.NoInvocationLambdaInlining, CompilerFlags.EnableDelegateDebugInfo })
+   t.IsTrue(expression.CompileFast(true, flags) == null);
+#endif
+  t.AreEqual(0, body.Reductions);
+ }
 }
