@@ -1,0 +1,96 @@
+PR558 SUPPLEMENTAL EVIDENCE
+Status: Final70f297cb validated; bounded combined and map measurements complete. Universal performance/allocation parity not established.
+Final combined code head: 70f297cbd5b2f232fd16ec0753b52f5c9ef387a0
+
+No universal compilation/runtime/allocation parity claim. Frozen42f runtime
+audits, isolated arithmetic44ee measurements, held experiments and separate
+Try-value evidence retain their exact source identities. Prior immutable round2
+results are unchanged; this supplement does not relabel them as final results.
+
+ACCEPTED arithmetic44ee17d7 — real-finally decimalEH64 paired ratios
+net10.0-light            compile 0.732; compile+first 0.627; invoke 0.813; compile bytes 11496->5664
+net10.0-standard         compile 0.744; compile+first 0.559; invoke 0.891; compile bytes 11496->5664
+net472-light             compile 0.833; compile+first 0.826; invoke 0.893; compile bytes 21136->7088
+net472-standard          compile 0.839; compile+first 0.880; invoke 0.933; compile bytes 21136->7088
+net8.0-light             compile 0.705; compile+first 0.611; invoke 0.920; compile bytes 11496->5664
+net8.0-standard          compile 0.711; compile+first 0.622; invoke 0.928; compile bytes 11496->5664
+
+21 unfiltered pairs/phase across Std/Light8/10/Framework. Decimal1 saves104B
+modern/216B Framework; decimal64 saves5832B modern/14048B Framework at warm
+compile. Six semantic/native configurations passed. Explicit Nullable formal
+methods, ordering, lifted nulls, working byref inputs and hidden-EH intrinsics
+were checked. No new reflection/cache/pass/tree rewrite was added.
+
+All control outliers remain: net10 Standard capture8 compile1.761/invoke1.125,
+net8 Standard capture invoke1.085. No warm allocation regression medians.
+Cold5: Standard modern target saves6880B every pair; Framework14048B every
+pair. Light modern12336B modes and positive net10capture median remain.
+FrameworkLight target cold paired time1.265 remains. No universal cold parity.
+
+FROZEN42f runtime audit vs prePR e4c232da and System
+15 shapes/six configurations,4950 rows/90 correctness checks.25 samples<20ms
+are flagged, retained. Same-current A/A:1452 rows/66 phases, none<20ms;
+Lightcapture8 nested B/A1.281(net8)/1.275(net10) with equal bytes/canonical
+identity demonstrates independent-context variation, not a correction factor.
+Separate native diagnostics: scalar add20B identical on8/10; readonly child
+and curry bodies match. Framework internal local signatures remain UNKNOWN.
+Mutable-value child invocation removes24B; other timing costs remain visible.
+
+DECISIONS
+Public restore guard REJECTED: balanced compile+4.5–7.3%, bytes unchanged.
+Empty-finally HOLD: strong targets, coldLight10scalar+12336B unexplained;
+separate receiver/address correctness defect in before/candidate. Prototype
+lacks later Try-value fix and requires rebase/fresh measurement before reuse.
+Modern positive gating preserves unproved Framework/CER behavior. No variant
+search, new exclusion or imported denominator change was made.
+
+TRY-VALUE correctness accepted within6d (measured isolated from44ee)
+Snapshot42f->Try-only:40 focused cases/configuration, all6 passing;
+28620 raw rows/294 comparisons,21 samples x2rounds. FrameworkLight capture1
+compile4152->4344B and capture_try4968->5160B (+192B); compile+first also+192B.
+Activation184B/nested0B unchanged. Isolated checks equal; after priorEHhistory
++192B. Exact allocator UNKNOWN; Framework has no ILGenerator reuse. Modern
+and FrameworkStandard warmed bytes unchanged. Cold modes/costs remain visible.
+
+BOUNDARIES
+Supplied-ref operators: prePR ignored Method (wrong effects);42f/arithmetic
+honor Method but emit invalid arguments. Not fully preexisting or repaired.
+Try-value/ref-return diagnostics remain separately classified with System.
+Pending outward-goto arithmetic: prePR also InvalidProgramException while
+System17; documented outside imported denominator. Deep-tree crash deferred.
+
+REPRODUCIBILITY
+See report.html for all target/control/System tables, explicit paired vs median
+ratios and links to raw manifests/reproduction scripts. Arithmetic reproduction
+verifies hashes by default and preserves original observations in a new output.
+Package.py is metadata-only unless explicitly finalized after timing release.
+Existing round3 held-experiments.zip stays separate unchanged(52.4MB; SHA256
+7e18a65f079f6a936e718a41cf02db322ce91f4cb6c52533ad4b6444b14a4421).
+Committed6d snapshot includes arithmetic44ee and the Try-value change, but
+full native validation was interrupted by an unchanged-prePR map helper bug,
+not a Try-value control-flow failure. Map3be repairs it. The6d preparation
+remains immutable/unmeasured; selected final source/path and validation are in
+final-state.json. Supported EH hosting70f replaces the anonymous-module
+workaround using the public constructor, moving JIT into compile; report
+compile-only, compile+first, invocation and bytes separately. History-dependent+192B observations
+retain allocator UNKNOWN; Framework has no ILGenerator reuse. No pool/signature
+cause is claimed.
+
+FINAL70f COMBINED MATRIX
+12474 raw rows /198 phase groups /0 errors;109 samples under20ms and3027
+under30ms retained. Compile-only independently calibrated per compiler;
+FEC compile+first/runtime use common counts; System independently calibrated.
+Primary byte phase medians:28 higher,139 unchanged,31 lower.22 positives are
+fractional <0.324B/op;6 FrameworkLight capture compile/first groups retain
+approximately+192B/op. Separate equal-count allocation-only confirmation:2970 rows/198groups,
+5samples x200ops after40warmups;164same/26lower/8higher. Six FrameworkLight
+~192B groups plus two FrameworkStandard0.8B groups remain. Of primary28
+positive groups six remain positive,21equal,one lower. Both raw datasets
+are retained separately; confirmation does not replace primary medians. Exact allocator UNKNOWN.
+All198 per-case/phase FEC/System median ratios are in report.html.
+Map causal matrix:1122 rows/42 pairs/0 errors,all bytes delta0; Map8 ratios
+0.964–1.112, including net8 count12 absent lookup +11.16%. No universally
+cost-free map claim. Previously hanging transitions have no finite baseline.
+Final70f full validation:35064 imported pass,0 fail/crash,21 batches;69 prior
+exclusions unchanged. Native alltargets pass. No final70f fresh-process cold
+matrix was run: historical cold data remain source-specific unresolved risk.
