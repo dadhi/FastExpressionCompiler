@@ -1510,18 +1510,6 @@ namespace FastExpressionCompiler
             if (expression is BlockExpression block)
             {
                 var expressions = block.Expressions;
-                for (var v = 0; v < block.Variables.Count; ++v)
-                {
-                    var variable = block.Variables[v];
-                    var initialized = false;
-                    for (var i = 0; i < expressions.Count; ++i)
-                    {
-                        if (expressions[i] is not BinaryExpression assignment || assignment.NodeType != ExpressionType.Assign) break;
-                        if (ReferenceEquals(assignment.Left, variable))
-                        { initialized = IsLeadingCaptureInitializer(block, i, variable); break; }
-                    }
-                    if (!initialized) cells.Set.AddOrGetEntryRef(variable, out _);
-                }
                 for (var i = 0; i < expressions.Count; ++i)
                 {
                     var child = expressions[i];
@@ -1550,12 +1538,25 @@ namespace FastExpressionCompiler
             }
             if (expression is UnaryExpression unary)
             {
-                if (unary.NodeType == ExpressionType.Quote || unary.NodeType == ExpressionType.Throw ||
-                    unary.NodeType >= ExpressionType.PreIncrementAssign && unary.NodeType <= ExpressionType.PostDecrementAssign)
-                    return false;
+                if (unary.NodeType == ExpressionType.Quote)
+                    return AnalyzeCaptureStorage(unary.Operand, ref context, true);
+                if (unary.NodeType >= ExpressionType.PreIncrementAssign && unary.NodeType <= ExpressionType.PostDecrementAssign)
+                {
+                    var owner = unary.Operand;
+                    while (owner is MemberExpression member) owner = member.Expression;
+                    if (owner is ParameterExpression target && (ReferenceEquals(owner, unary.Operand) || target.Type.IsValueType))
+                        cells.Set.AddOrGetEntryRef(target, out _);
+                }
                 var parameters = unary.Method == null ? null : context.GetCaptureMethodParameters(unary.Method, collect: true);
                 return AnalyzeCaptureStorage(unary.Operand, ref context, writable || parameters != null && parameters[0].ParameterType.IsByRef);
             }
+            if (expression is RuntimeVariablesExpression variables)
+            {
+                for (var i = 0; i < variables.Variables.Count; ++i)
+                    cells.Set.AddOrGetEntryRef(variables.Variables[i], out _);
+                return true;
+            }
+            if (expression is DebugInfoExpression) return true;
             if (expression is MemberExpression access)
                 return AnalyzeCaptureStorage(access.Expression, ref context, writable ||
                     access.Member is PropertyInfo && access.Expression != null && access.Expression.Type.IsValueType);
@@ -1571,6 +1572,60 @@ namespace FastExpressionCompiler
                     if (!AnalyzeCaptureStorage(arguments.GetArgument(i), ref context, writable || parameters[i].ParameterType.IsByRef)) return false;
                 return true;
             }
+            if (expression is LoopExpression loop) return AnalyzeCaptureStorage(loop.Body, ref context, writable);
+            if (expression is GotoExpression jump) return AnalyzeCaptureStorage(jump.Value, ref context, writable);
+            if (expression is LabelExpression label) return AnalyzeCaptureStorage(label.DefaultValue, ref context, writable);
+            if (expression is TryExpression attempt)
+            {
+                if (!AnalyzeCaptureStorage(attempt.Body, ref context, writable) ||
+                    !AnalyzeCaptureStorage(attempt.Finally, ref context) || !AnalyzeCaptureStorage(attempt.Fault, ref context)) return false;
+                for (var i = 0; i < attempt.Handlers.Count; ++i)
+                {
+                    var handler = attempt.Handlers[i];
+                    if (!AnalyzeCaptureStorage(handler.Filter, ref context) || !AnalyzeCaptureStorage(handler.Body, ref context, writable)) return false;
+                }
+                return true;
+            }
+            if (expression is SwitchExpression selection)
+            {
+                var parameters = selection.Comparison == null ? null : context.GetCaptureMethodParameters(selection.Comparison, collect: true);
+                if (!AnalyzeCaptureStorage(selection.SwitchValue, ref context, parameters != null && parameters[0].ParameterType.IsByRef) ||
+                    !AnalyzeCaptureStorage(selection.DefaultBody, ref context, writable)) return false;
+                for (var i = 0; i < selection.Cases.Count; ++i)
+                {
+                    var branch = selection.Cases[i];
+                    if (!AnalyzeCaptureStorage(branch.Body, ref context, writable)) return false;
+                    for (var t = 0; t < branch.TestValues.Count; ++t)
+                        if (!AnalyzeCaptureStorage(branch.TestValues[t], ref context, parameters != null && parameters[1].ParameterType.IsByRef)) return false;
+                }
+                return true;
+            }
+            if (expression is NewArrayExpression array)
+            {
+                var elements = array.GetArgExprs();
+                for (var i = 0; i < elements.GetArgCount(); ++i)
+                    if (!AnalyzeCaptureStorage(elements.GetArgument(i), ref context)) return false;
+                return true;
+            }
+            if (expression is IndexExpression index)
+            {
+                if (!AnalyzeCaptureStorage(index.Object, ref context, index.Object.Type.IsValueType)) return false;
+                // Indexer expression validation forbids by-ref accessor arguments.
+                var arguments = index.GetArgExprs();
+                for (var i = 0; i < arguments.GetArgCount(); ++i)
+                    if (!AnalyzeCaptureStorage(arguments.GetArgument(i), ref context)) return false;
+                return true;
+            }
+            if (expression is MemberInitExpression members)
+            {
+                if (!AnalyzeCaptureStorage(members.NewExpression, ref context)) return false;
+                var bindings = members.GetBindings();
+                for (var i = 0; i < bindings.GetBindingCount(); ++i)
+                    if (!AnalyzeCaptureBinding(bindings.GetArgument(i), ref context)) return false;
+                return true;
+            }
+            if (expression is ListInitExpression list)
+                return AnalyzeCaptureStorage(list.NewExpression, ref context) && AnalyzeCaptureInitializers(list.Initializers, ref context);
             if (expression is InvocationExpression invocation)
             {
                 var invokeMethod = invocation.Expression.Type.GetMethod("Invoke");
@@ -1586,12 +1641,44 @@ namespace FastExpressionCompiler
             if (expression is NewExpression creation)
             {
                 var arguments = creation.GetArgExprs();
+#if LIGHT_EXPRESSION
+                // The intrinsic constructors explicitly promise arguments without by-ref storage.
+                var parameters = arguments.GetArgCount() == 0 || creation.IsIntrinsic ? null : context.GetCaptureMethodParameters(creation.Constructor, collect: true);
+#else
                 var parameters = arguments.GetArgCount() == 0 ? null : context.GetCaptureMethodParameters(creation.Constructor, collect: true);
+#endif
                 for (var i = 0; i < arguments.GetArgCount(); ++i)
-                    if (!AnalyzeCaptureStorage(arguments.GetArgument(i), ref context, writable || parameters[i].ParameterType.IsByRef)) return false;
+                    if (!AnalyzeCaptureStorage(arguments.GetArgument(i), ref context, writable || parameters != null && parameters[i].ParameterType.IsByRef)) return false;
                 return true;
             }
             return false;
+        }
+
+        [RequiresUnreferencedCode(Trimming.Message)]
+        private static bool AnalyzeCaptureBinding(MemberBinding binding, ref CompilerContext context)
+        {
+            if (binding is MemberAssignment assignment) return AnalyzeCaptureStorage(assignment.Expression, ref context);
+            if (binding is MemberMemberBinding members)
+            {
+                for (var i = 0; i < members.Bindings.Count; ++i)
+                    if (!AnalyzeCaptureBinding(members.Bindings[i], ref context)) return false;
+                return true;
+            }
+            return binding is MemberListBinding list && AnalyzeCaptureInitializers(list.Initializers, ref context);
+        }
+
+        [RequiresUnreferencedCode(Trimming.Message)]
+        private static bool AnalyzeCaptureInitializers(IReadOnlyList<ElementInit> initializers, ref CompilerContext context)
+        {
+            for (var i = 0; i < initializers.Count; ++i)
+            {
+                var initializer = initializers[i];
+                var arguments = initializer.GetArgExprs();
+                var parameters = arguments.GetArgCount() == 0 ? null : context.GetCaptureMethodParameters(initializer.AddMethod, collect: true);
+                for (var a = 0; a < arguments.GetArgCount(); ++a)
+                    if (!AnalyzeCaptureStorage(arguments.GetArgument(a), ref context, parameters[a].ParameterType.IsByRef)) return false;
+            }
+            return true;
         }
 
         [RequiresUnreferencedCode(Trimming.Message)]
@@ -1639,6 +1726,70 @@ namespace FastExpressionCompiler
                     if (!DoesNotAccessVariable(arguments.GetArgument(i), variable)) return false;
                 return true;
             }
+            if (expression is LoopExpression loop) return DoesNotAccessVariable(loop.Body, variable);
+            if (expression is GotoExpression jump) return DoesNotAccessVariable(jump.Value, variable);
+            if (expression is LabelExpression label) return DoesNotAccessVariable(label.DefaultValue, variable);
+            if (expression is TypeBinaryExpression typeTest) return DoesNotAccessVariable(typeTest.Expression, variable);
+            if (expression is TryExpression attempt)
+            {
+                if (!DoesNotAccessVariable(attempt.Body, variable) || !DoesNotAccessVariable(attempt.Finally, variable) ||
+                    !DoesNotAccessVariable(attempt.Fault, variable)) return false;
+                for (var i = 0; i < attempt.Handlers.Count; ++i)
+                    if (!DoesNotAccessVariable(attempt.Handlers[i].Filter, variable) || !DoesNotAccessVariable(attempt.Handlers[i].Body, variable)) return false;
+                return true;
+            }
+            if (expression is SwitchExpression selection)
+            {
+                if (!DoesNotAccessVariable(selection.SwitchValue, variable) || !DoesNotAccessVariable(selection.DefaultBody, variable)) return false;
+                for (var i = 0; i < selection.Cases.Count; ++i)
+                {
+                    var branch = selection.Cases[i];
+                    if (!DoesNotAccessVariable(branch.Body, variable)) return false;
+                    for (var t = 0; t < branch.TestValues.Count; ++t)
+                        if (!DoesNotAccessVariable(branch.TestValues[t], variable)) return false;
+                }
+                return true;
+            }
+            if (expression is NewArrayExpression array)
+            {
+                var elements = array.GetArgExprs();
+                for (var i = 0; i < elements.GetArgCount(); ++i)
+                    if (!DoesNotAccessVariable(elements.GetArgument(i), variable)) return false;
+                return true;
+            }
+            if (expression is IndexExpression index)
+            {
+                if (!DoesNotAccessVariable(index.Object, variable)) return false;
+                var arguments = index.GetArgExprs();
+                for (var i = 0; i < arguments.GetArgCount(); ++i)
+                    if (!DoesNotAccessVariable(arguments.GetArgument(i), variable)) return false;
+                return true;
+            }
+            if (expression is InvocationExpression invocation)
+            {
+                if (!DoesNotAccessVariable(invocation.Expression, variable)) return false;
+                var arguments = invocation.GetArgExprs();
+                for (var i = 0; i < arguments.GetArgCount(); ++i)
+                    if (!DoesNotAccessVariable(arguments.GetArgument(i), variable)) return false;
+                return true;
+            }
+            if (expression is MemberInitExpression members)
+            {
+                if (!DoesNotAccessVariable(members.NewExpression, variable)) return false;
+                var bindings = members.GetBindings();
+                for (var i = 0; i < bindings.GetBindingCount(); ++i)
+                    if (!BindingDoesNotAccessVariable(bindings.GetArgument(i), variable)) return false;
+                return true;
+            }
+            if (expression is ListInitExpression list)
+                return DoesNotAccessVariable(list.NewExpression, variable) && InitializersDoNotAccessVariable(list.Initializers, variable);
+            if (expression is RuntimeVariablesExpression runtimeVariables)
+            {
+                for (var i = 0; i < runtimeVariables.Variables.Count; ++i)
+                    if (ReferenceEquals(runtimeVariables.Variables[i], variable)) return false;
+                return true;
+            }
+            if (expression is DebugInfoExpression) return true;
             if (expression is NewExpression creation)
             {
                 var arguments = creation.GetArgExprs();
@@ -1647,6 +1798,31 @@ namespace FastExpressionCompiler
                 return true;
             }
             return false;
+        }
+
+        [RequiresUnreferencedCode(Trimming.Message)]
+        private static bool BindingDoesNotAccessVariable(MemberBinding binding, ParameterExpression variable)
+        {
+            if (binding is MemberAssignment assignment) return DoesNotAccessVariable(assignment.Expression, variable);
+            if (binding is MemberMemberBinding members)
+            {
+                for (var i = 0; i < members.Bindings.Count; ++i)
+                    if (!BindingDoesNotAccessVariable(members.Bindings[i], variable)) return false;
+                return true;
+            }
+            return binding is MemberListBinding list && InitializersDoNotAccessVariable(list.Initializers, variable);
+        }
+
+        [RequiresUnreferencedCode(Trimming.Message)]
+        private static bool InitializersDoNotAccessVariable(IReadOnlyList<ElementInit> initializers, ParameterExpression variable)
+        {
+            for (var i = 0; i < initializers.Count; ++i)
+            {
+                var arguments = initializers[i].GetArgExprs();
+                for (var a = 0; a < arguments.GetArgCount(); ++a)
+                    if (!DoesNotAccessVariable(arguments.GetArgument(a), variable)) return false;
+            }
+            return true;
         }
 
         internal sealed class HoistedTypeCache
@@ -7021,7 +7197,7 @@ namespace FastExpressionCompiler
                         record.Receiver = EmitStoreLocalVariable(il, receiver.Type);
                     }
                 }
-                var getterParameters = property.GetMethod.GetParameters();
+                var getterParameters = context.GetCaptureMethodParameters(property.GetMethod);
                 for (var i = 0; i < indexCount; ++i)
                 {
                     if (!TryEmitCallArgument(indexes.GetArgument(i), getterParameters[i].ParameterType, i, il, ref context, ParentFlags.Call))
