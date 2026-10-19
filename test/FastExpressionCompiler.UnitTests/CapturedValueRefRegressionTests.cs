@@ -31,6 +31,8 @@ public struct CapturedValueRefRegressionTests : ITestX
         Hoisted_metadata_rentals_clear_success_and_failure_state(t);
         Concurrent_compilation_keeps_hoisted_metadata_isolated(t);
         Static_indexed_properties_allow_captured_parameters(t);
+        Private_mutable_reference_captures_reuse_value_slots(t);
+        Shared_or_byref_reference_captures_keep_cells(t);
     }
 
     public void Static_indexed_properties_allow_captured_parameters(TestContext t)
@@ -55,6 +57,75 @@ public struct CapturedValueRefRegressionTests : ITestX
         if (t.IsNotNull(fast)) t.AreEqual(expected, fast(3)());
     }
     public static int Add(ref int value, int increment) => value += increment;
+
+    public void Private_mutable_reference_captures_reuse_value_slots(TestContext t)
+    {
+        foreach (var local in new[] { false, true })
+        {
+            var value = SysExpr.Parameter(typeof(string));
+            var update = SysExpr.Assign(value, SysExpr.Condition(SysExpr.Equal(value, SysExpr.Constant("first")),
+                SysExpr.Constant("second"), SysExpr.Constant("first")));
+            var child = SysExpr.Lambda<Func<int>>(SysExpr.Block(update, SysExpr.Property(value, nameof(string.Length))));
+            var parameterExpression = SysExpr.Lambda<Func<string, Func<int>>>(child, value);
+            var localExpression = SysExpr.Lambda<Func<Func<int>>>(SysExpr.Block(new[] { value },
+                SysExpr.Assign(value, SysExpr.Constant("first")), child));
+            foreach (var flags in new[] { CompilerFlags.Default, CompilerFlags.NoInvocationLambdaInlining, CompilerFlags.EnableDelegateDebugInfo })
+            {
+                var actual = local ? localExpression.FromSysExpression().CompileFast(true, flags)() :
+                    parameterExpression.FromSysExpression().CompileFast(true, flags)("first");
+                var expected = local ? localExpression.Compile()() : parameterExpression.Compile()("first");
+                for (var i = 0; i < 8; ++i) t.AreEqual(expected(), actual());
+                t.IsTrue(SingleCaptureStorage(actual) is string);
+            }
+        }
+    }
+
+    public void Shared_or_byref_reference_captures_keep_cells(TestContext t)
+    {
+        var value = SysExpr.Parameter(typeof(string));
+        var writer = SysExpr.Lambda<Func<string>>(SysExpr.Assign(value, SysExpr.Constant("second")));
+        var reader = SysExpr.Lambda<Func<string>>(value);
+        var expression = SysExpr.Lambda<Func<string, Func<string>[]>>(
+            SysExpr.NewArrayInit(typeof(Func<string>), writer, reader), value);
+        var pair = expression.FromSysExpression().CompileFast(true)("first");
+        t.AreEqual("first", pair[1]());
+        t.AreEqual("second", pair[0]());
+        t.AreEqual("second", pair[1]());
+        t.IsTrue(SingleCaptureStorage(pair[0]) is System.Runtime.CompilerServices.StrongBox<string>);
+        var byref = SysExpr.Lambda<Func<string, Func<string>>>(SysExpr.Lambda<Func<string>>(
+            SysExpr.Call(typeof(CapturedValueRefRegressionTests).GetMethod(nameof(Replace)), value)), value);
+        var actual = byref.FromSysExpression().CompileFast(true)("first");
+        t.AreEqual("changed", actual());
+        t.IsTrue(SingleCaptureStorage(actual) is System.Runtime.CompilerServices.StrongBox<string>);
+
+        var toggle = SysExpr.Lambda<Func<string>>(SysExpr.Assign(value, SysExpr.Condition(
+            SysExpr.Equal(value, SysExpr.Constant("first")), SysExpr.Constant("second"), SysExpr.Constant("first"))));
+        var repeated = SysExpr.Lambda<Func<string, Func<string>[]>>(SysExpr.Call(
+            typeof(CapturedValueRefRegressionTests).GetMethod(nameof(PairReferences)), toggle, toggle), value);
+        var repeatedPair = repeated.FromSysExpression().CompileFast(true)("first");
+        t.AreEqual("second", repeatedPair[0]());
+        t.AreEqual("first", repeatedPair[1]());
+        t.IsTrue(SingleCaptureStorage(repeatedPair[0]) is System.Runtime.CompilerServices.StrongBox<string>);
+
+        var saved = SysExpr.Variable(typeof(Func<string>));
+        var outerWrite = SysExpr.Lambda<Func<string, Func<string>>>(SysExpr.Block(new[] { saved },
+            SysExpr.Assign(saved, toggle), SysExpr.Assign(value, SysExpr.Constant("second")), saved), value);
+        var afterOuterWrite = outerWrite.FromSysExpression().CompileFast(true)("first");
+        var expected = outerWrite.Compile()("first");
+        t.AreEqual(expected(), afterOuterWrite());
+        t.AreEqual(expected(), afterOuterWrite());
+        t.IsTrue(SingleCaptureStorage(afterOuterWrite) is System.Runtime.CompilerServices.StrongBox<string>);
+    }
+
+    public static Func<string>[] PairReferences(Func<string> first, Func<string> second) => new[] { first, second };
+
+    private static object SingleCaptureStorage(Delegate captured)
+    {
+        foreach (var field in captured.Target.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            if (field.GetValue(captured.Target) is ExpressionCompiler.ArrayClosureWithNonPassedParams closure)
+                return closure.NonPassedParams[0];
+        return null;
+    }
     public static int? AddNullable(ref int? value, int increment) => value = value + increment;
     public static string Replace(ref string value) => value = "changed";
     public static object Identity(object value) => value;
