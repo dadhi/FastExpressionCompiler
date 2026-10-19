@@ -100,7 +100,7 @@ public struct Issue476_System_ExecutionEngineException_with_nullables_on_repeate
             // Collisions also exercise the displaced-entry hash/index mask.
             var key = i * 32;
             if (sureAbsent)
-                map.Map.AddSureAbsentDefaultAndGetRef(key) = i;
+                map.Map.AddSureAbsentDefaultAndGetValueRef(key) = i;
             else
             {
                 ref var value = ref map.Map.AddOrGetValueRef(key, out var found);
