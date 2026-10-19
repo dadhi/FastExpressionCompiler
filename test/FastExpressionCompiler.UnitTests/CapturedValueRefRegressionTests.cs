@@ -14,6 +14,8 @@ public struct CapturedValueRefRegressionTests : ITestX
 
         Nullable_and_reference_captures_expose_writable_cells(t);
 
+        Readonly_captures_keep_the_original_value_storage(t);
+
     }
     public static int Add(ref int value, int increment) => value += increment;
     public static int? AddNullable(ref int? value, int increment) => value = value + increment;
@@ -38,6 +40,33 @@ public struct CapturedValueRefRegressionTests : ITestX
             var text = strings("original");
             t.AreEqual(reference.Compile()("original")(), text());
             t.AreEqual("changed", text());
+        }
+    }
+
+    public void Readonly_captures_keep_the_original_value_storage(TestContext t)
+    {
+        var value = new object();
+        System.Linq.Expressions.Expression<Func<object, Func<object>>> parameter = x => () => x;
+        var local = SysExpr.Variable(typeof(object));
+        var localExpression = SysExpr.Lambda<Func<Func<object>>>(SysExpr.Block(new[] { local },
+            SysExpr.Assign(local, SysExpr.Constant(value)), SysExpr.Lambda<Func<object>>(local)));
+        var capturedParameter = parameter.FromSysExpression().CompileFast(true)(value);
+        var capturedLocal = localExpression.FromSysExpression().CompileFast(true)();
+        t.IsTrue(ReferenceEquals(value, capturedParameter()));
+        t.IsTrue(ReferenceEquals(value, capturedLocal()));
+        foreach (var captured in new Delegate[] { capturedParameter, capturedLocal })
+        {
+            var foundClosure = false;
+            foreach (var field in captured.Target.GetType().GetFields(System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic))
+            {
+                if (field.GetValue(captured.Target) is ExpressionCompiler.ArrayClosureWithNonPassedParams closure)
+                {
+                    foundClosure = true;
+                    t.IsTrue(ReferenceEquals(value, closure.NonPassedParams[0]));
+                }
+            }
+            t.IsTrue(foundClosure);
         }
     }
 
