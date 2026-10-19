@@ -206,21 +206,34 @@ public struct CapturedValueRefRegressionTests : ITestX
             ExpressionCompiler.EmittingVisitor.TryEmit(_quote, il, ref context, parent, byRefIndex);
     }
 
+    private sealed class HiddenReducibleQuote : UnaryExpression
+    {
+        private readonly Expression _quote;
+        internal HiddenReducibleQuote(Expression quote) : base(Expression.Constant(0)) => _quote = quote;
+        public override System.Linq.Expressions.ExpressionType NodeType => System.Linq.Expressions.ExpressionType.Extension;
+        public override Type Type => _quote.Type;
+        public override Expression Reduce() => _quote;
+    }
+
     public void Intrinsics_with_hidden_quotes_keep_typed_cells(TestContext t)
     {
-        var value = Expression.Parameter(typeof(int));
-        var pairType = typeof(Tuple<Func<int>, System.Linq.Expressions.Expression<Func<int>>>);
-        var expression = Expression.Lambda<Func<int, Tuple<Func<int>, System.Linq.Expressions.Expression<Func<int>>>>>(
-            Expression.New(pairType.GetConstructors()[0], Expression.Lambda<Func<int>>(Expression.PreIncrementAssign(value)),
-                new HiddenQuote(Expression.Quote(Expression.Lambda<Func<int>>(value)))), value);
-        var factory = expression.CompileFast(true);
-        if (!t.IsNotNull(factory)) return;
-        var actual = factory(3);
-        t.IsTrue(GetCapturedCell(actual.Item1) is System.Runtime.CompilerServices.StrongBox<int>);
-        t.AreEqual(4, actual.Item1());
-        t.AreEqual(4, actual.Item2.Compile()());
-        t.AreEqual(5, actual.Item1());
-        t.AreEqual(5, actual.Item2.Compile()());
+        foreach (var intrinsic in new[] { false, true })
+        {
+            var value = Expression.Parameter(typeof(int));
+            var pairType = typeof(Tuple<Func<int>, System.Linq.Expressions.Expression<Func<int>>>);
+            var quote = Expression.Quote(Expression.Lambda<Func<int>>(value));
+            Expression hidden = intrinsic ? (Expression)new HiddenQuote(quote) : new HiddenReducibleQuote(quote);
+            var expression = Expression.Lambda<Func<int, Tuple<Func<int>, System.Linq.Expressions.Expression<Func<int>>>>>(
+                Expression.New(pairType.GetConstructors()[0], Expression.Lambda<Func<int>>(Expression.PreIncrementAssign(value)), hidden), value);
+            var factory = expression.CompileFast(true);
+            if (!t.IsNotNull(factory)) return;
+            var actual = factory(3);
+            t.IsTrue(GetCapturedCell(actual.Item1) is System.Runtime.CompilerServices.StrongBox<int>);
+            t.AreEqual(4, actual.Item1());
+            t.AreEqual(4, actual.Item2.Compile()());
+            t.AreEqual(5, actual.Item1());
+            t.AreEqual(5, actual.Item2.Compile()());
+        }
     }
 #endif
     public void Private_mutable_reference_captures_reuse_value_slots(TestContext t)
