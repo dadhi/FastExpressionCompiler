@@ -18,6 +18,35 @@ public struct StringConstantIdentityRegressionTests : ITestX
         Declared_reference_types_preserve_string_identity(t);
         Distinct_constants_and_nested_lambdas_preserve_identity(t);
         Explicit_closure_compilation_preserves_string_identity(t);
+        Constant_lengths_fold_without_observing_string_identity(t);
+    }
+
+    public void Constant_lengths_fold_without_observing_string_identity(TestContext t)
+    {
+        foreach (var flags in Flags)
+        foreach (var text in new[] { "", "literal", Fresh() })
+        {
+            var source = S.Lambda<Func<int>>(S.Property(S.Constant(text), nameof(string.Length)));
+            var tree = source.FromSysExpression();
+            var fast = tree.CompileFast(true, flags);
+            if (t.IsNotNull(fast)) t.AreEqual(text.Length, fast());
+            // Reading a known immutable length need not retain the string as a constant.
+            var without = tree.TryCompileWithoutClosure<Func<int>>(flags);
+            if (t.IsNotNull(without)) t.AreEqual(text.Length, without());
+            var ignored = S.Lambda<Action>(source.Body).FromSysExpression().CompileFast(true, flags);
+            if (t.IsNotNull(ignored)) ignored();
+        }
+        var nullLength = S.Lambda<Func<int>>(S.Property(S.Constant(null, typeof(string)), nameof(string.Length)))
+            .FromSysExpression().CompileFast(true);
+        if (t.IsNotNull(nullLength)) t.Throws<NullReferenceException>(() => nullLength());
+        var parameter = S.Parameter(typeof(string));
+        var variableLength = S.Lambda<Func<string, int>>(S.Property(parameter, nameof(string.Length)), parameter)
+            .FromSysExpression().CompileFast(true);
+        if (t.IsNotNull(variableLength))
+        {
+            t.AreEqual(3, variableLength("abc"));
+            t.Throws<NullReferenceException>(() => variableLength(null));
+        }
     }
 
     private static string Fresh() => new string(string.Intern("fec-string-constant-identity").ToCharArray());
