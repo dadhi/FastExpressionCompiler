@@ -1647,8 +1647,9 @@ namespace FastExpressionCompiler
             }
             if (expression is NewArrayExpression array)
             {
-                for (var i = 0; i < array.Expressions.Count; ++i)
-                    if (!HasOnlyPrivateReferenceUses(array.Expressions[i], variable, ref owner, ref declared, inOwner, ref context)) return false;
+                var elements = array.GetArgExprs();
+                for (var i = 0; i < elements.GetArgCount(); ++i)
+                    if (!HasOnlyPrivateReferenceUses(elements.GetArgument(i), variable, ref owner, ref declared, inOwner, ref context)) return false;
                 return true;
             }
             // Quoting, runtime variables, other lambdas, control flow, invocation,
