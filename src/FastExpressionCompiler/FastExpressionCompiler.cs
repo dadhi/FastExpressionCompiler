@@ -1650,10 +1650,13 @@ namespace FastExpressionCompiler
         {
             ref var cells = ref context.CaptureCellVariables;
             if (expression == null) return true;
+            // Reduction may expose additional storage uses beyond a custom node's
+            // apparent shape. Do not execute user reduction during this analysis.
+            if (expression.NodeType == ExpressionType.Extension) return false;
 #if LIGHT_EXPRESSION
             // Built-in intrinsics expose their operands through the standard node shape.
             // User intrinsics may hide quoted trees or runtime-variable views.
-            if (expression.IsIntrinsic && expression.GetType().Assembly != typeof(Expression).Assembly) return false;
+            if (expression.IsIntrinsic && !IsKnownCaptureIntrinsic(expression)) return false;
 #endif
             if (expression is ParameterExpression parameter)
             {
@@ -1821,6 +1824,23 @@ namespace FastExpressionCompiler
             }
             return false;
         }
+
+#if LIGHT_EXPRESSION
+        private static bool IsKnownCaptureIntrinsic(Expression expression)
+        {
+            // These constructor nodes are sealed. An arbitrary derived intrinsic can
+            // hide extra operands, including when FEC sources are embedded by a user.
+            if (expression is NoArgsNewClassIntrinsicExpression || expression is NoByRefOneArgNewIntrinsicExpression ||
+                expression is NoByRefTwoArgumentsNewIntrinsicExpression || expression is NoByRefThreeArgumentsNewIntrinsicExpression ||
+                expression is NoByRefFourArgumentsNewIntrinsicExpression || expression is NoByRefFiveArgumentsNewIntrinsicExpression ||
+                expression is NoByRefSixArgumentsNewIntrinsicExpression || expression is NoByRefSevenArgumentsNewIntrinsicExpression ||
+                expression is NoByRefManyArgsNewIntrinsicExpression)
+                return true;
+            var type = expression.GetType();
+            return type == typeof(ConvertDelegateIntrinsicExpression) || type == typeof(ConvertIntrinsicExpression) ||
+                type.IsGenericType && type.GetGenericTypeDefinition() == typeof(ConvertIntrinsicExpression<>);
+        }
+#endif
 
         [RequiresUnreferencedCode(Trimming.Message)]
         private static bool AnalyzeCaptureBinding(MemberBinding binding, ref CompilerContext context)
