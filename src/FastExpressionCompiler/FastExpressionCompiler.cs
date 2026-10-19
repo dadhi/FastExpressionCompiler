@@ -2433,11 +2433,10 @@ namespace FastExpressionCompiler
             if (scopeDepth == 0)
                 context.PushLabelScope(LabelScopeKind.Lambda);
             var r = Result.OK;
-            while (true)
+            for (var nodeType = initialNodeType; ; nodeType = expr?.NodeType ?? default)
             {
                 if (expr == null)
                     return RestoreScopeAndReturn(ref context, scopeDepth, Result.ExpressionIsNull);
-                var nodeType = expr.NodeType;
                 // Terminal nodes cannot define or reference a label.
                 if (nodeType != ExpressionType.Constant && nodeType != ExpressionType.Parameter &&
                     nodeType != ExpressionType.Default && nodeType != ExpressionType.DebugInfo)
