@@ -8658,6 +8658,27 @@ namespace FastExpressionCompiler
             private static bool TryEmitArithmetic(Expression left, Expression right, ExpressionType nodeType, Type exprType,
                 ILGenerator il, ref CompilerContext context, ParentFlags parent, MethodInfo operationMethod = null)
             {
+                // Keep the common scalar path out of the lifted-operation frame. The
+                // general path uses exactly these operands when no nullable/spill work
+                // is required; address/value handling remains in the normal emitter.
+                if (operationMethod == null && right != null && left.Type.IsPrimitive && right.Type.IsPrimitive &&
+                    !context.HasExceptionBlock && !right.IsComplexExpression())
+                {
+                    var flags = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
+                        ParentFlags.MemberAccess | ParentFlags.AssignmentLeftValue | ParentFlags.DupIt |
+                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.Arithmetic;
+                    if (!TryEmit(left, il, ref context, flags) || !TryEmit(right, il, ref context, flags) ||
+                        !TryEmitArithmeticOperation(left.Type, right.Type, nodeType, exprType, il))
+                        return false;
+                    context.LastEmitIsAddress = false;
+                    return il.EmitPopIfIgnoreResult(parent);
+                }
+                return TryEmitLiftedOrComplexArithmetic(left, right, nodeType, exprType, il, ref context, parent, operationMethod);
+            }
+
+            private static bool TryEmitLiftedOrComplexArithmetic(Expression left, Expression right, ExpressionType nodeType, Type exprType,
+                ILGenerator il, ref CompilerContext context, ParentFlags parent, MethodInfo operationMethod)
+            {
                 var flags = (parent
                     & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
                         ParentFlags.MemberAccess | ParentFlags.AssignmentLeftValue | ParentFlags.DupIt |
