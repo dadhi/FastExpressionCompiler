@@ -1,0 +1,6 @@
+TestResults/
+Reports/
+build.log
+
+__pycache__/
+*.pyc
