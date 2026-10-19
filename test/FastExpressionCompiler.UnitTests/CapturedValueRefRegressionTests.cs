@@ -37,6 +37,7 @@ public struct CapturedValueRefRegressionTests : ITestX
         Boxed_value_cells_preserve_checked_and_enum_assignments(t);
         Boxed_default_struct_cells_do_not_call_user_constructors(t);
         Boxed_struct_receivers_preserve_storage_across_try_arguments(t);
+        Captured_struct_ref_arguments_and_replacements_cross_exception_regions(t);
         Quote_and_runtime_variables_keep_all_cells_typed(t);
 #if LIGHT_EXPRESSION
         Intrinsics_with_hidden_quotes_keep_typed_cells(t);
@@ -72,6 +73,7 @@ public struct CapturedValueRefRegressionTests : ITestX
         public int Add(int amount) => Value += amount;
     }
     public static int IncrementCounter(ref MutableCounter value) => ++value.Value;
+    public static int AddCounter(ref MutableCounter value, int amount) => value.Value += amount;
     public struct DefaultCounter
     {
         public static int ConstructorCalls;
@@ -96,7 +98,7 @@ public struct CapturedValueRefRegressionTests : ITestX
         var actual = factory(new MutableCounter { Value = 3 });
         var separate = factory(new MutableCounter { Value = 30 });
         var cell = GetCapturedCell(actual.Item1);
-        t.IsTrue(cell is MutableCounter);
+        t.IsTrue(IsExpectedMutableValueCell<MutableCounter>(cell));
         t.IsTrue(ReferenceEquals(cell, GetCapturedCell(actual.Item2)));
         t.IsTrue(ReferenceEquals(cell, GetCapturedCell(actual.Item3)));
         t.IsTrue(!ReferenceEquals(cell, GetCapturedCell(separate.Item1)));
@@ -104,7 +106,8 @@ public struct CapturedValueRefRegressionTests : ITestX
         t.AreEqual(5, actual.Item3());
         actual.Item2(new MutableCounter { Value = 40 });
         t.AreEqual(41, actual.Item1());
-        t.AreEqual(41, ((MutableCounter)GetCapturedCell(actual.Item3)).Value);
+        var observed = GetCapturedCell(actual.Item3);
+        t.AreEqual(41, (observed is System.Runtime.CompilerServices.IStrongBox typed ? (MutableCounter)typed.Value : (MutableCounter)observed).Value);
         t.AreEqual(42, actual.Item3());
         t.AreEqual(31, separate.Item1());
         var expected = expression.Compile()(new MutableCounter { Value = 3 });
@@ -124,7 +127,7 @@ public struct CapturedValueRefRegressionTests : ITestX
         var factory = expression.FromSysExpression().CompileFast(true);
         if (!t.IsNotNull(factory)) return;
         var pair = factory(int.MaxValue);
-        t.IsTrue(GetCapturedCell(pair.Item1) is int);
+        t.IsTrue(IsExpectedMutableValueCell<int>(GetCapturedCell(pair.Item1)));
         t.Throws<OverflowException>(() => pair.Item1());
         t.AreEqual(int.MaxValue, pair.Item2());
         var state = SysExpr.Parameter(typeof(CounterState));
@@ -132,7 +135,7 @@ public struct CapturedValueRefRegressionTests : ITestX
             SysExpr.Assign(state, SysExpr.Constant(CounterState.Second))), state).FromSysExpression().CompileFast(true);
         if (!t.IsNotNull(change)) return;
         var changed = change(CounterState.First);
-        t.IsTrue(GetCapturedCell(changed) is CounterState);
+        t.IsTrue(IsExpectedMutableValueCell<CounterState>(GetCapturedCell(changed)));
         t.AreEqual(CounterState.Second, changed());
     }
 
@@ -146,7 +149,7 @@ public struct CapturedValueRefRegressionTests : ITestX
         if (!t.IsNotNull(factory)) return;
         var first = factory();
         var second = factory();
-        t.IsTrue(GetCapturedCell(first) is DefaultCounter);
+        t.IsTrue(IsExpectedMutableValueCell<DefaultCounter>(GetCapturedCell(first)));
         t.AreEqual(1, first());
         t.AreEqual(2, first());
         t.AreEqual(1, second());
@@ -165,6 +168,34 @@ public struct CapturedValueRefRegressionTests : ITestX
         t.AreEqual(4, actual());
         t.AreEqual(5, actual());
     }
+
+    public void Captured_struct_ref_arguments_and_replacements_cross_exception_regions(TestContext t)
+    {
+        foreach (var replace in new[] { false, true })
+        {
+            var value = SysExpr.Parameter(typeof(MutableCounter));
+            var body = replace ? (System.Linq.Expressions.Expression)SysExpr.Block(
+                SysExpr.Assign(value, SysExpr.TryFinally(SysExpr.Constant(new MutableCounter { Value = 9 }), SysExpr.Empty())),
+                SysExpr.Field(value, nameof(MutableCounter.Value))) :
+                SysExpr.Call(typeof(CapturedValueRefRegressionTests).GetMethod(nameof(AddCounter)), value,
+                    SysExpr.TryFinally(SysExpr.Constant(1), SysExpr.Empty()));
+            var expression = SysExpr.Lambda<Func<MutableCounter, Func<int>>>(SysExpr.Lambda<Func<int>>(body), value);
+            var factory = expression.FromSysExpression().CompileFast(true);
+            if (!t.IsNotNull(factory)) return;
+            var actual = factory(new MutableCounter { Value = 3 });
+            // Framework's System compiler rejects a Try argument beside a by-ref operand.
+            t.AreEqual(replace ? 9 : 4, actual());
+            t.AreEqual(replace ? 9 : 5, actual());
+            t.IsTrue(IsExpectedMutableValueCell<MutableCounter>(GetCapturedCell(actual)));
+        }
+    }
+
+    private static bool IsExpectedMutableValueCell<T>(object cell) where T : struct =>
+#if NETFRAMEWORK
+        cell is System.Runtime.CompilerServices.StrongBox<T>;
+#else
+        cell is T;
+#endif
 
     public void Quote_and_runtime_variables_keep_all_cells_typed(TestContext t)
     {
