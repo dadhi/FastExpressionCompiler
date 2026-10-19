@@ -3835,7 +3835,11 @@ namespace FastExpressionCompiler
             {
                 if (type.IsByRef)
                     type = type.GetElementType();
+#if NETFRAMEWORK
                 return type.IsArray && type == type.GetElementType().MakeArrayType();
+#else
+                return type.IsSZArray;
+#endif
             }
 
             private static bool TryEmitArrayElementGet(ILGenerator il, Type arrayType, Type elementType,
