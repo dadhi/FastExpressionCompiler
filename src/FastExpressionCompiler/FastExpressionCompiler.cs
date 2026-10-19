@@ -982,7 +982,7 @@ namespace FastExpressionCompiler
 
             internal Expression CaptureAnalysisRoot;
             internal SmallSet4<ParameterExpression, RefEq<ParameterExpression>> CaptureCellVariables;
-            internal bool CaptureStorageAnalyzed, CaptureStorageRequiresCells;
+            internal bool CaptureStorageAnalyzed, CaptureStorageRequiresCells, CaptureStorageQuoteReferences;
             internal SmallList<ParameterExpression> HoistedVariables;
             internal SmallMap4<ParameterExpression, int, RefEq<ParameterExpression>> HoistedParameterLocals;
 
@@ -1507,7 +1507,7 @@ namespace FastExpressionCompiler
             if (expression == null) return true;
             if (expression is ParameterExpression parameter)
             {
-                if (writable) cells.Set.AddOrGetEntryRef(parameter, out _);
+                if (writable || context.CaptureStorageQuoteReferences) cells.Set.AddOrGetEntryRef(parameter, out _);
                 return true;
             }
             if (expression is ConstantExpression || expression is DefaultExpression) return true;
@@ -1515,13 +1515,17 @@ namespace FastExpressionCompiler
             if (expression is BlockExpression block)
             {
                 var expressions = block.Expressions;
+                var simplePrefix = true;
                 for (var i = 0; i < expressions.Count; ++i)
                 {
                     var child = expressions[i];
+                    var simpleAssignment = child is BinaryExpression simple && simple.NodeType == ExpressionType.Assign &&
+                        (simple.Right is ConstantExpression || simple.Right is DefaultExpression || simple.Right is ParameterExpression);
                     if (child is BinaryExpression assignment && assignment.NodeType == ExpressionType.Assign &&
-                        assignment.Left is ParameterExpression variable && IsLeadingCaptureInitializer(block, i, variable))
+                        assignment.Left is ParameterExpression variable && IsLeadingCaptureInitializer(block, i, variable, simplePrefix))
                         child = assignment.Right;
                     if (!AnalyzeCaptureStorage(child, ref context, writable)) return false;
+                    simplePrefix &= simpleAssignment;
                 }
                 return true;
             }
@@ -1537,14 +1541,20 @@ namespace FastExpressionCompiler
                         cells.Set.AddOrGetEntryRef(target, out _);
                 }
                 var parameters = binary.Method == null ? null : context.GetCaptureMethodParameters(binary.Method, collect: true);
-                return AnalyzeCaptureStorage(binary.Left, ref context, writable || parameters != null && parameters[0].ParameterType.IsByRef) &&
-                    AnalyzeCaptureStorage(binary.Right, ref context, writable || parameters != null && parameters[1].ParameterType.IsByRef) &&
+                var operandWritable = writable && binary.NodeType != ExpressionType.ArrayIndex;
+                return AnalyzeCaptureStorage(binary.Left, ref context, operandWritable || parameters != null && parameters[0].ParameterType.IsByRef) &&
+                    AnalyzeCaptureStorage(binary.Right, ref context, operandWritable || parameters != null && parameters[1].ParameterType.IsByRef) &&
                     AnalyzeCaptureStorage(binary.Conversion, ref context, writable);
             }
             if (expression is UnaryExpression unary)
             {
                 if (unary.NodeType == ExpressionType.Quote)
-                    return AnalyzeCaptureStorage(unary.Operand, ref context, true);
+                {
+                    var previousQuote = context.CaptureStorageQuoteReferences;
+                    context.CaptureStorageQuoteReferences = true;
+                    try { return AnalyzeCaptureStorage(unary.Operand, ref context); }
+                    finally { context.CaptureStorageQuoteReferences = previousQuote; }
+                }
                 if (unary.NodeType >= ExpressionType.PreIncrementAssign && unary.NodeType <= ExpressionType.PostDecrementAssign)
                 {
                     var owner = unary.Operand;
@@ -1553,7 +1563,8 @@ namespace FastExpressionCompiler
                         cells.Set.AddOrGetEntryRef(target, out _);
                 }
                 var parameters = unary.Method == null ? null : context.GetCaptureMethodParameters(unary.Method, collect: true);
-                return AnalyzeCaptureStorage(unary.Operand, ref context, writable || parameters != null && parameters[0].ParameterType.IsByRef);
+                var operandWritable = writable && unary.NodeType != ExpressionType.Unbox && unary.NodeType != ExpressionType.ArrayLength;
+                return AnalyzeCaptureStorage(unary.Operand, ref context, operandWritable || parameters != null && parameters[0].ParameterType.IsByRef);
             }
             if (expression is RuntimeVariablesExpression variables)
             {
@@ -1563,18 +1574,18 @@ namespace FastExpressionCompiler
             }
             if (expression is DebugInfoExpression) return true;
             if (expression is MemberExpression access)
-                return AnalyzeCaptureStorage(access.Expression, ref context, writable ||
-                    access.Member is PropertyInfo && access.Expression != null && access.Expression.Type.IsValueType);
+                return AnalyzeCaptureStorage(access.Expression, ref context, access.Expression != null && access.Expression.Type.IsValueType &&
+                    (writable || access.Member is PropertyInfo));
             if (expression is ConditionalExpression conditional)
                 return AnalyzeCaptureStorage(conditional.Test, ref context, writable) && AnalyzeCaptureStorage(conditional.IfTrue, ref context, writable) &&
                     AnalyzeCaptureStorage(conditional.IfFalse, ref context, writable);
             if (expression is MethodCallExpression call)
             {
-                if (!AnalyzeCaptureStorage(call.Object, ref context, writable || call.Object != null && call.Object.Type.IsValueType)) return false;
+                if (!AnalyzeCaptureStorage(call.Object, ref context, call.Object != null && call.Object.Type.IsValueType)) return false;
                 var arguments = call.GetArgExprs();
                 var parameters = arguments.GetArgCount() == 0 ? null : context.GetCaptureMethodParameters(call.Method, collect: true);
                 for (var i = 0; i < arguments.GetArgCount(); ++i)
-                    if (!AnalyzeCaptureStorage(arguments.GetArgument(i), ref context, writable || parameters[i].ParameterType.IsByRef)) return false;
+                    if (!AnalyzeCaptureStorage(arguments.GetArgument(i), ref context, parameters[i].ParameterType.IsByRef)) return false;
                 return true;
             }
             if (expression is LoopExpression loop) return AnalyzeCaptureStorage(loop.Body, ref context, writable);
@@ -1634,11 +1645,11 @@ namespace FastExpressionCompiler
             if (expression is InvocationExpression invocation)
             {
                 var invokeMethod = invocation.Expression.Type.GetMethod("Invoke");
-                if (invokeMethod == null || !AnalyzeCaptureStorage(invocation.Expression, ref context, writable)) return false;
+                if (invokeMethod == null || !AnalyzeCaptureStorage(invocation.Expression, ref context)) return false;
                 var arguments = invocation.GetArgExprs();
                 var parameters = arguments.GetArgCount() == 0 ? null : context.GetCaptureMethodParameters(invokeMethod, collect: true);
                 for (var i = 0; i < arguments.GetArgCount(); ++i)
-                    if (!AnalyzeCaptureStorage(arguments.GetArgument(i), ref context, writable || parameters[i].ParameterType.IsByRef)) return false;
+                    if (!AnalyzeCaptureStorage(arguments.GetArgument(i), ref context, parameters[i].ParameterType.IsByRef)) return false;
                 return true;
             }
             if (expression is TypeBinaryExpression typeTest)
@@ -1653,7 +1664,7 @@ namespace FastExpressionCompiler
                 var parameters = arguments.GetArgCount() == 0 ? null : context.GetCaptureMethodParameters(creation.Constructor, collect: true);
 #endif
                 for (var i = 0; i < arguments.GetArgCount(); ++i)
-                    if (!AnalyzeCaptureStorage(arguments.GetArgument(i), ref context, writable || parameters != null && parameters[i].ParameterType.IsByRef)) return false;
+                    if (!AnalyzeCaptureStorage(arguments.GetArgument(i), ref context, parameters != null && parameters[i].ParameterType.IsByRef)) return false;
                 return true;
             }
             return false;
@@ -1687,11 +1698,14 @@ namespace FastExpressionCompiler
         }
 
         [RequiresUnreferencedCode(Trimming.Message)]
-        private static bool IsLeadingCaptureInitializer(BlockExpression block, int index, ParameterExpression variable)
+        private static bool IsLeadingCaptureInitializer(BlockExpression block, int index, ParameterExpression variable, bool simplePrefix)
         {
-            var declared = false;
-            for (var i = 0; i < block.Variables.Count; ++i) declared |= ReferenceEquals(block.Variables[i], variable);
+            var declared = index < block.Variables.Count && ReferenceEquals(block.Variables[index], variable);
+            for (var i = 0; !declared && i < block.Variables.Count; ++i) declared = ReferenceEquals(block.Variables[i], variable);
             if (!declared) return false;
+            var right = ((BinaryExpression)block.Expressions[index]).Right;
+            // Plain value assignments cannot expose local storage before a later capture.
+            if (simplePrefix && (right is ConstantExpression || right is DefaultExpression || right is ParameterExpression)) return true;
             for (var i = 0; i < index; ++i)
             {
                 if (block.Expressions[i] is not BinaryExpression assignment || assignment.NodeType != ExpressionType.Assign ||
