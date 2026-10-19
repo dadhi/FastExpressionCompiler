@@ -9226,7 +9226,9 @@ namespace FastExpressionCompiler
                     var rightType = right.Type;
                     rightIsNullable = rightType.IsNullable() &&
                         (operationMethod == null || context.GetCaptureMethodParameters(operationMethod)[1].ParameterType != rightType);
-                    if (leftValueVar == -1 && (rightIsNullable || context.HasExceptionBlock || right.IsComplexExpression()))
+                    if (leftValueVar == -1 && (rightIsNullable ||
+                        context.HasExceptionBlock && (leftIsNullable || !IsAtomicArithmeticOperand(right)) ||
+                        right.IsComplexExpression()))
                         leftValueVar = EmitStoreLocalVariable(il, leftType);
                     if (rightIsNullable && !leftIsNullable)
                         noNullableValueLabel = il.DefineLabel();
