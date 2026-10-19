@@ -1961,6 +1961,14 @@ namespace FastExpressionCompiler
             NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas,
             bool directBlockChild = false, bool switchBody = false)
         {
+            if (expr == null)
+                return Result.ExpressionIsNull;
+            var initialNodeType = expr.NodeType;
+            // Leaves cannot introduce a lexical scope or an exception region. Keep
+            // their collection out of the scope stack and its cleanup on every visit.
+            if (initialNodeType == ExpressionType.Constant || initialNodeType == ExpressionType.Parameter ||
+                initialNodeType == ExpressionType.Default || initialNodeType == ExpressionType.DebugInfo)
+                return TryCollectTerminalInfo(ref context, expr, initialNodeType, nestedLambda, ref rootNestedLambdas);
             context.CaptureAnalysisRoot ??= expr;
             var scopeDepth = context.LabelScopeDepth;
             if (scopeDepth == 0)
@@ -1995,42 +2003,8 @@ namespace FastExpressionCompiler
                 switch (nodeType)
                 {
                     case ExpressionType.Constant:
-#if LIGHT_EXPRESSION
-                        if (expr == NullConstant | expr == FalseConstant | expr == TrueConstant || expr is IntConstantExpression)
-                            return r;
-#endif
-                        var constantExpr = (ConstantExpression)expr;
-                        var value = constantExpr.Value;
-                        // the boxed value type of the reference type constant should keep its box identity, e.g. for the `ReferenceEqual`, so it is closure bound too
-                        if (value != null && (IsClosureBoundConstant(value, value.GetType()) || value.GetType().IsValueType && !constantExpr.Type.IsValueType))
-                            context.AddConstantOrIncrementUsageCount(value);
-                        return Result.OK;
-
                     case ExpressionType.Parameter:
-                        {
-                            var paramExprs = context.ParamExprs;
-                            var paramCount = paramExprs.GetParamCount();
-
-                            // if parameter is used BUT is not in passed parameters and not in local variables,
-                            // it means parameter is provided by outer lambda and should be put in closure for current lambda
-                            var p = paramCount - 1;
-                            var parExpr = (PE)expr;
-                            while (p != -1 && !ReferenceEquals(paramExprs.GetParameter(p), parExpr)) --p;
-                            if (p == -1 && !context.IsLocalVar(parExpr))
-                            {
-                                if (nestedLambda == null) // means that we are in the root lambda
-                                {
-                                    if (context.IsCollectingExceptionFilter)
-                                        throw new InvalidOperationException("A variable referenced from an exception filter is not defined in its scope.");
-                                    return Result.ParameterIsNotVariableNorInPassedParameters;
-                                }
-                                context.Status |= ClosureStatus.HasClosure;
-                                if (!context.TryHoistVariable(parExpr))
-                                    return Result.NotSupported_HoistedVariable;
-                                _ = nestedLambda.NonPassedParameters.GetIndexOrAdd(parExpr, default(RefEq<ParameterExpression>));
-                            }
-                            return Result.OK;
-                        }
+                        return TryCollectTerminalInfo(ref context, expr, nodeType, nestedLambda, ref rootNestedLambdas);
                     case ExpressionType.Call:
                         {
                             var callExpr = (MethodCallExpression)expr;
@@ -2629,30 +2603,46 @@ namespace FastExpressionCompiler
             return reduced;
         }
 
-        // Caller arguments retain the caller's catch scope. Only the callee body starts
-        // a new lambda scope, even when emitted inline into the same physical method.
-        private static Result TryCollectInlinedLambdaInfo(ref CompilerContext context, Expression inlined,
-            Expression body, bool bodyOnly, NestedLambdaInfo nestedLambda,
-            ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
+        private static Result TryCollectTerminalInfo(ref CompilerContext context, Expression expr, ExpressionType nodeType,
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
         {
-            if (bodyOnly || ReferenceEquals(inlined, body))
+#if LIGHT_EXPRESSION
+            if (expr.IsIntrinsic)
+                return expr.TryCollectInfo(ref context, nestedLambda, ref rootNestedLambdas, checked((short)context.LabelScopeDepth));
+#endif
+            if (nodeType == ExpressionType.Constant)
             {
-                var labelScope = new LabelScope { Parent = new ScopeIdx(scopeIdx, false), ExceptionRegion = ExceptionRegion.Lambda };
-                var lambdaScopeIdx = (short)context.Scopes.Add(labelScope);
-                return TryCollectInfo(ref context, inlined, nestedLambda, ref rootNestedLambdas, lambdaScopeIdx);
+#if LIGHT_EXPRESSION
+                if (expr == NullConstant | expr == FalseConstant | expr == TrueConstant || expr is IntConstantExpression)
+                    return Result.OK;
+#endif
+                var constantExpr = (ConstantExpression)expr;
+                var value = constantExpr.Value;
+                if (value != null && (IsClosureBoundConstant(value, value.GetType()) ||
+                    !constantExpr.Type.IsValueType && value.GetType().IsValueType))
+                    context.AddConstantOrIncrementUsageCount(value);
             }
-            var wrapper = (BlockExpression)inlined;
-            context.PushBlockWithVars(wrapper.Variables);
-            var statements = wrapper.Expressions;
-            var result = Result.OK;
-            for (var i = 0; i < statements.Count - 1; ++i)
-                if ((result = TryCollectInfo(ref context, statements[i], nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
-                    break;
-            if (result == Result.OK)
-                result = TryCollectInlinedLambdaInfo(ref context, statements[statements.Count - 1], body,
-                    false, nestedLambda, ref rootNestedLambdas, scopeIdx);
-            context.PopBlock();
-            return result;
+            else if (nodeType == ExpressionType.Parameter)
+            {
+                var paramExprs = context.ParamExprs;
+                var p = paramExprs.GetParamCount() - 1;
+                var parExpr = (PE)expr;
+                while (p != -1 && !ReferenceEquals(paramExprs.GetParameter(p), parExpr)) --p;
+                if (p == -1 && !context.IsLocalVar(parExpr))
+                {
+                    if (nestedLambda == null)
+                    {
+                        if (context.IsCollectingExceptionFilter)
+                            throw new InvalidOperationException("A variable referenced from an exception filter is not defined in its scope.");
+                        return Result.ParameterIsNotVariableNorInPassedParameters;
+                    }
+                    context.Status |= ClosureStatus.HasClosure;
+                    if (!context.TryHoistVariable(parExpr))
+                        return Result.NotSupported_HoistedVariable;
+                    _ = nestedLambda.NonPassedParameters.GetIndexOrAdd(parExpr, default(RefEq<ParameterExpression>));
+                }
+            }
+            return Result.OK;
         }
 
         private static Result TryCollectInlinedLambdaBody(ref CompilerContext context, Expression body,
