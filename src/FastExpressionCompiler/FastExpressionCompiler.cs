@@ -2371,16 +2371,15 @@ namespace FastExpressionCompiler
                             return r;
 
                         var switchCases = switchExpr.Cases;
-                        if (switchCases.Count != 0)
+                        for (var i = 0; i < switchCases.Count; ++i)
                         {
-                            // The test values may be the non-primitive constants or the Invoke, so collect them too
-                            for (var i = 0; i < switchCases.Count; i++)
-                            {
-                                var caseTestValues = switchCases[i].TestValues;
-                                for (var v = 0; v < caseTestValues.Count; v++)
-                                    if ((r = TryCollectInfo(ref context, caseTestValues[v], nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
+                            var testValues = switchCases[i].TestValues;
+                            for (var j = 0; j < testValues.Count; ++j)
+                                if ((r = TryCollectInfo(ref context, testValues[j], nestedLambda, ref rootNestedLambdas)) != Result.OK)
                                         return r;
                             }
+                        if (switchCases.Count != 0)
+                        {
                             for (var i = 0; i < switchCases.Count - 1; i++)
                                 if ((r = TryCollectInfo(ref context, switchCases[i].Body, nestedLambda, ref rootNestedLambdas, switchBody: true)) != Result.OK)
                                     return r;
