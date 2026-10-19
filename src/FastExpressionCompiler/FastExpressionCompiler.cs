@@ -2092,12 +2092,14 @@ namespace FastExpressionCompiler
 
         internal sealed class HoistedTypeCache
         {
+#if !NETFRAMEWORK
             // Cache only framework generic-definition handles, never a user's closed capture type.
             internal static readonly RuntimeMethodHandle EmptyConstructorHandle =
                 typeof(System.Runtime.CompilerServices.StrongBox<>).GetConstructor(Type.EmptyTypes).MethodHandle;
             internal static readonly RuntimeMethodHandle ValueConstructorHandle =
                 typeof(System.Runtime.CompilerServices.StrongBox<>).GetConstructor(
                     typeof(System.Runtime.CompilerServices.StrongBox<>).GetGenericArguments()).MethodHandle;
+#endif
 
             internal readonly Type[] Scratch = new Type[1];
             internal SmallList<(Type Type, HoistedTypeInfo Info),
@@ -2119,8 +2121,16 @@ namespace FastExpressionCompiler
                 {
                     BoxType = typeof(System.Runtime.CompilerServices.StrongBox<>).MakeGenericType(scratch);
                     ValueField = BoxType.GetField("Value");
+#if NETFRAMEWORK
+                    // Framework allocates reflection wrappers for GetMethodFromHandle.
+                    // Its normal constructor lookup reuses the empty constructor and
+                    // allocates less for the value constructor with our existing scratch.
+                    EmptyConstructor = BoxType.GetConstructor(Type.EmptyTypes);
+                    ValueConstructor = BoxType.GetConstructor(scratch);
+#else
                     EmptyConstructor = (ConstructorInfo)MethodBase.GetMethodFromHandle(HoistedTypeCache.EmptyConstructorHandle, BoxType.TypeHandle);
                     ValueConstructor = (ConstructorInfo)MethodBase.GetMethodFromHandle(HoistedTypeCache.ValueConstructorHandle, BoxType.TypeHandle);
+#endif
                 }
                 finally { scratch[0] = null; }
             }
