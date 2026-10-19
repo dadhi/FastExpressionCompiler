@@ -2463,6 +2463,14 @@ namespace FastExpressionCompiler
             var scopeDepth = context.LabelScopeDepth;
             try
             {
+                if (scopeDepth == 0 && nestedLambda == null && expr is BinaryExpression binary &&
+                    (binary.Left is ParameterExpression || binary.Left is ConstantExpression) &&
+                    (binary.Right is ParameterExpression || binary.Right is ConstantExpression) &&
+#if LIGHT_EXPRESSION
+                    !binary.IsIntrinsic && !binary.Left.IsIntrinsic && !binary.Right.IsIntrinsic &&
+#endif
+                    TryCollectSimpleBinary(ref context, binary, ref rootNestedLambdas, out var simpleResult))
+                    return simpleResult;
                 return TryCollectInfo(ref context, expr, nestedLambda, ref rootNestedLambdas, false, false);
             }
             finally
@@ -3121,6 +3129,38 @@ namespace FastExpressionCompiler
                 }
             }
 
+        }
+
+        // Root binary operations with terminal operands cannot introduce label scopes.
+        // Intrinsic Light nodes retain the ordinary collector and its callback scopes.
+        private static bool TryCollectSimpleBinary(ref CompilerContext context, BinaryExpression binary,
+            ref SmallList<NestedLambdaInfo> rootNestedLambdas, out Result result)
+        {
+            result = Result.OK;
+            if (binary.Conversion != null) return false;
+            switch (binary.NodeType)
+            {
+                case ExpressionType.Add: case ExpressionType.AddChecked:
+                case ExpressionType.Subtract: case ExpressionType.SubtractChecked:
+                case ExpressionType.Multiply: case ExpressionType.MultiplyChecked:
+                case ExpressionType.Divide: case ExpressionType.Modulo: case ExpressionType.Power:
+                case ExpressionType.And: case ExpressionType.Or: case ExpressionType.ExclusiveOr:
+                case ExpressionType.LeftShift: case ExpressionType.RightShift:
+                case ExpressionType.Equal: case ExpressionType.NotEqual:
+                case ExpressionType.LessThan: case ExpressionType.LessThanOrEqual:
+                case ExpressionType.GreaterThan: case ExpressionType.GreaterThanOrEqual:
+                case ExpressionType.ArrayIndex:
+                    var left = binary.Left;
+                    result = TryCollectTerminalInfo(ref context, left, left.NodeType, null, ref rootNestedLambdas);
+                    if (result == Result.OK)
+                    {
+                        var right = binary.Right;
+                        result = TryCollectTerminalInfo(ref context, right, right.NodeType, null, ref rootNestedLambdas);
+                    }
+                    return true;
+                default:
+                    return false;
+            }
         }
 
         private static Result TryCollectTerminalInfo(ref CompilerContext context, Expression expr, ExpressionType nodeType,

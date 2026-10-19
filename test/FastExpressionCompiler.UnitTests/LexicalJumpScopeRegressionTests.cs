@@ -15,6 +15,8 @@ public struct LexicalJumpScopeRegressionTests : ITestX
 {
     public void Run(TestRun t)
     {
+        Simple_binary_collection_preserves_left_to_right_failure(t);
+        Simple_binary_roots_preserve_bound_constant_identity(t);
         Operand_entry_is_rejected_for_each_jump_kind(t);
         Typed_child_block_entry_is_rejected(t);
         Unique_void_child_block_entry_is_allowed(t);
@@ -32,7 +34,48 @@ public struct LexicalJumpScopeRegressionTests : ITestX
         Public_collection_unwinds_failed_deep_scopes_and_can_retry(t);
 #if LIGHT_EXPRESSION
         Custom_intrinsic_can_recover_from_failed_child_collection(t);
+        Custom_binary_and_constant_intrinsics_keep_parent_scopes(t);
 #endif
+    }
+
+    public void Simple_binary_collection_preserves_left_to_right_failure(TestContext t)
+    {
+        var undefined = S.Parameter(typeof(object), "undefined");
+        var value = S.Constant(new object());
+        foreach (var constantFirst in new[] { false, true })
+        {
+            var body = constantFirst ? S.ReferenceEqual(value, undefined) : S.ReferenceEqual(undefined, value);
+            var source = S.Lambda<Func<bool>>(body).FromSysExpression();
+            var context = new ExpressionCompiler.CompilerContext(ExpressionCompiler.ClosureStatus.ToBeCollected,
+#if LIGHT_EXPRESSION
+                source,
+#else
+                source.Parameters,
+#endif
+                CompilerFlags.Default);
+            NestedLambdas nested = default;
+            t.AreEqual(ExpressionCompiler.Result.ParameterIsNotVariableNorInPassedParameters,
+                ExpressionCompiler.TryCollectInfo(ref context, source.Body, null, ref nested));
+            t.AreEqual(constantFirst ? 1 : 0, context.Constants.Count);
+            t.AreEqual(0, CollectedScopeDepth(context));
+        }
+    }
+
+    public void Simple_binary_roots_preserve_bound_constant_identity(TestContext t)
+    {
+        var value = new string('q', 37);
+        var parameter = S.Parameter(typeof(object), "value");
+        var source = S.Lambda<Func<object, bool>>(S.ReferenceEqual(parameter, S.Constant(value, typeof(object))), parameter).FromSysExpression();
+        foreach (var flags in new[] { CompilerFlags.Default, CompilerFlags.NoInvocationLambdaInlining, CompilerFlags.EnableDelegateDebugInfo })
+        {
+            var compiled = source.CompileFast(true, flags);
+            if (t.IsNotNull(compiled))
+            {
+                t.IsTrue(compiled(value));
+                t.IsFalse(compiled(new string('q', 37)));
+                t.IsFalse(compiled(null));
+            }
+        }
     }
 
     private static readonly CompilerFlags[] Flags = { CompilerFlags.Default, CompilerFlags.NoInvocationLambdaInlining };
@@ -225,6 +268,62 @@ public struct LexicalJumpScopeRegressionTests : ITestX
     }
 
 #if LIGHT_EXPRESSION
+    private sealed class ScopedBinaryIntrinsic : BinaryExpression
+    {
+        public int Depth;
+        public ScopedBinaryIntrinsic() : base(Expression.Constant(1), Expression.Constant(2)) { }
+        public override E.ExpressionType NodeType => E.ExpressionType.Add;
+        public override Type Type => typeof(int);
+        public override bool IsIntrinsic => true;
+        public override ExpressionCompiler.Result TryCollectInfo(ref ExpressionCompiler.CompilerContext context,
+            ExpressionCompiler.NestedLambdaInfo nestedLambda, ref NestedLambdas rootNestedLambdas)
+        {
+            Depth = CollectedScopeDepth(context);
+            return ExpressionCompiler.Result.OK;
+        }
+        public override bool TryEmit(ref ExpressionCompiler.CompilerContext context, ILGenerator il,
+            ExpressionCompiler.ParentFlags parent, int byRefIndex = -1)
+        {
+            il.Emit(OpCodes.Ldc_I4, 71);
+            return true;
+        }
+    }
+
+    private sealed class ScopedConstantIntrinsic : ConstantExpression
+    {
+        public int Depth;
+        public override Type Type => typeof(int);
+        public override object Value => 71;
+        public override bool IsIntrinsic => true;
+        public override ExpressionCompiler.Result TryCollectInfo(ref ExpressionCompiler.CompilerContext context,
+            ExpressionCompiler.NestedLambdaInfo nestedLambda, ref NestedLambdas rootNestedLambdas)
+        {
+            Depth = CollectedScopeDepth(context);
+            return ExpressionCompiler.Result.OK;
+        }
+        public override bool TryEmit(ref ExpressionCompiler.CompilerContext context, ILGenerator il,
+            ExpressionCompiler.ParentFlags parent, int byRefIndex = -1)
+        {
+            il.Emit(OpCodes.Ldc_I4, 71);
+            return true;
+        }
+    }
+
+    public void Custom_binary_and_constant_intrinsics_keep_parent_scopes(TestContext t)
+    {
+        foreach (var flags in Flags)
+        {
+            var binary = new ScopedBinaryIntrinsic();
+            var compiled = Expression.Lambda<Func<int>>(binary).CompileFast(true, flags);
+            if (t.IsNotNull(compiled)) t.AreEqual(71, compiled());
+            t.IsTrue(binary.Depth > 0);
+            var constant = new ScopedConstantIntrinsic();
+            compiled = Expression.Lambda<Func<int>>(Expression.Add(Expression.Constant(1), constant)).CompileFast(true, flags);
+            if (t.IsNotNull(compiled)) t.AreEqual(72, compiled());
+            t.IsTrue(constant.Depth > 0);
+        }
+    }
+
     private sealed class RecoveringIntrinsic : TypedUnaryExpression
     {
         public RecoveringIntrinsic(bool block = false) : base(block ? E.ExpressionType.Block : E.ExpressionType.Convert, Expression.Constant(19), typeof(int)) { }
