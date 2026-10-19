@@ -5079,7 +5079,9 @@ namespace FastExpressionCompiler
             {
                 il.Demit(OpCodes.Ldarg_0);
 #if NETFRAMEWORK
-                if ((context.Status & ClosureStatus.TypedNonPassedClosure) == 0)
+                if ((context.Status & ClosureStatus.TypedNonPassedClosure) == 0 &&
+                    ((context.Status & (ClosureStatus.UserProvided | ClosureStatus.OwnedValueCaptureRoot)) != ClosureStatus.OwnedValueCaptureRoot ||
+                    !context.CaptureStorageAnalyzed || context.CaptureStorageRequiresTypedCells || context.HasExceptionBlock))
                     il.Demit(OpCodes.Castclass, typeof(ArrayClosureWithNonPassedParams));
 #endif
                 il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
