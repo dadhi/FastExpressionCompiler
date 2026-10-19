@@ -149,23 +149,27 @@ namespace FastExpressionCompiler
                 throw new NotSupportedException("The `CompilerFlags.EnableDelegateDebugInfo` is not supported because the debug info is gathered into the closure object which is not allowed for static lambda to be compiled to method.");
 
             var context = new CompilerContext(ClosureStatus.ShouldBeStaticMethod, lambdaExpr.GetParamExprs(), flags);
-            var bodyExpr = lambdaExpr.Body;
-            var nestedLambdas = new SmallList<NestedLambdaInfo>();
-            if (!TryCollectBoundConstants(ref context, bodyExpr, null, ref nestedLambdas))
-                return false;
+            try
+            {
+                var bodyExpr = lambdaExpr.Body;
+                var nestedLambdas = new SmallList<NestedLambdaInfo>();
+                if (!TryCollectBoundConstants(ref context, bodyExpr, null, ref nestedLambdas))
+                    return false;
 
-            if ((context.Status & ClosureStatus.HasClosure) != 0)
-                return false;
+                if ((context.Status & ClosureStatus.HasClosure) != 0)
+                    return false;
 
-            var returnType = lambdaExpr.ReturnType;
-            var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
-            if (!EmittingVisitor.TryEmitLambdaBody(bodyExpr, returnType, il, ref context, parent))
-                return false;
+                var returnType = lambdaExpr.ReturnType;
+                var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
+                if (!EmittingVisitor.TryEmitLambdaBody(bodyExpr, returnType, il, ref context, parent))
+                    return false;
 
-            if (bodyExpr.Type.IsByRef && !returnType.IsByRef) // don't forget to de-ref the reference if the lambda should return de-ref value of the body and not itself by-ref return, see #414
-                EmittingVisitor.EmitLoadIndirectlyByRef(il, bodyExpr.Type);
-            il.Demit(OpCodes.Ret);
-            return true;
+                if (bodyExpr.Type.IsByRef && !returnType.IsByRef) // don't forget to de-ref the reference if the lambda should return de-ref value of the body and not itself by-ref return, see #414
+                    EmittingVisitor.EmitLoadIndirectlyByRef(il, bodyExpr.Type);
+                il.Demit(OpCodes.Ret);
+                return true;
+            }
+            finally { FreeHoistedTypes(ref context); }
         }
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
@@ -326,29 +330,33 @@ namespace FastExpressionCompiler
         internal static TDelegate TryCompileWithPreCreatedClosure<TDelegate>(
             LambdaExpression lambdaExpr, ref CompilerContext context, CompilerFlags flags) where TDelegate : class
         {
-            var closurePlusParamTypes = RentPooledOrNewClosureTypeToParamTypes(lambdaExpr.GetParamExprs());
+            try
+            {
+                var closurePlusParamTypes = RentPooledOrNewClosureTypeToParamTypes(lambdaExpr.GetParamExprs());
 
-            // Without collection, the method's exception regions are not known before emission.
-            // Anonymous hosting preserves System's non-Exception catch policy.
-            var method = CreateExceptionAwareDynamicMethod(lambdaExpr.ReturnType, closurePlusParamTypes);
+                // Without collection, the method's exception regions are not known before emission.
+                // Anonymous hosting preserves System's non-Exception catch policy.
+                var method = CreateExceptionAwareDynamicMethod(lambdaExpr.ReturnType, closurePlusParamTypes);
 
-            var il = method.GetILGenerator();
-            EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref context);
+                var il = method.GetILGenerator();
+                EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref context);
 
-            var bodyExpr = lambdaExpr.Body;
-            var returnType = lambdaExpr.ReturnType;
-            var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
-            if (!EmittingVisitor.TryEmitLambdaBody(bodyExpr, returnType, il, ref context, parent))
-                return null;
+                var bodyExpr = lambdaExpr.Body;
+                var returnType = lambdaExpr.ReturnType;
+                var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
+                if (!EmittingVisitor.TryEmitLambdaBody(bodyExpr, returnType, il, ref context, parent))
+                    return null;
 
-            if (bodyExpr.Type.IsByRef && !returnType.IsByRef) // don't forget to de-ref the reference if the lambda should return de-ref value of the body and not itself by-ref return, see #414
-                EmittingVisitor.EmitLoadIndirectlyByRef(il, bodyExpr.Type);
-            il.Demit(OpCodes.Ret);
+                if (bodyExpr.Type.IsByRef && !returnType.IsByRef) // don't forget to de-ref the reference if the lambda should return de-ref value of the body and not itself by-ref return, see #414
+                    EmittingVisitor.EmitLoadIndirectlyByRef(il, bodyExpr.Type);
+                il.Demit(OpCodes.Ret);
 
-            var delegateType = typeof(TDelegate) != typeof(Delegate) ? typeof(TDelegate) : lambdaExpr.Type;
-            var dlg = (TDelegate)(object)method.CreateDelegate(delegateType, new ArrayClosure(context.Constants.Items));
-            FreePooledClosureTypeAndParamTypes(closurePlusParamTypes);
-            return dlg;
+                var delegateType = typeof(TDelegate) != typeof(Delegate) ? typeof(TDelegate) : lambdaExpr.Type;
+                var dlg = (TDelegate)(object)method.CreateDelegate(delegateType, new ArrayClosure(context.Constants.Items));
+                FreePooledClosureTypeAndParamTypes(closurePlusParamTypes);
+                return dlg;
+            }
+            finally { FreeHoistedTypes(ref context); }
         }
 
         /// <summary>Tries to compile expression to "static" delegate, skipping the step of collecting the closure object.</summary>
@@ -356,28 +364,32 @@ namespace FastExpressionCompiler
             CompilerFlags flags = CompilerFlags.Default) where TDelegate : class
         {
             var context = new CompilerContext(ClosureStatus.UserProvided, lambdaExpr.GetParamExprs(), flags);
+            try
+            {
 
-            var closurePlusParamTypes = RentPooledOrNewClosureTypeToParamTypes(context.ParamExprs);
+                var closurePlusParamTypes = RentPooledOrNewClosureTypeToParamTypes(context.ParamExprs);
 
-            // This entry point skips collection, so handler policy is not known yet.
-            var method = CreateExceptionAwareDynamicMethod(lambdaExpr.ReturnType, closurePlusParamTypes);
+                // This entry point skips collection, so handler policy is not known yet.
+                var method = CreateExceptionAwareDynamicMethod(lambdaExpr.ReturnType, closurePlusParamTypes);
 
-            var il = method.GetILGenerator();
+                var il = method.GetILGenerator();
 
-            var bodyExpr = lambdaExpr.Body;
-            var returnType = lambdaExpr.ReturnType;
-            var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
-            if (!EmittingVisitor.TryEmitLambdaBody(bodyExpr, returnType, il, ref context, parent))
-                return null;
+                var bodyExpr = lambdaExpr.Body;
+                var returnType = lambdaExpr.ReturnType;
+                var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
+                if (!EmittingVisitor.TryEmitLambdaBody(bodyExpr, returnType, il, ref context, parent))
+                    return null;
 
-            if (bodyExpr.Type.IsByRef && !returnType.IsByRef) // don't forget to de-ref the reference if the lambda should return de-ref value of the body and not itself by-ref return, see #414
-                EmittingVisitor.EmitLoadIndirectlyByRef(il, bodyExpr.Type);
-            il.Demit(OpCodes.Ret);
+                if (bodyExpr.Type.IsByRef && !returnType.IsByRef) // don't forget to de-ref the reference if the lambda should return de-ref value of the body and not itself by-ref return, see #414
+                    EmittingVisitor.EmitLoadIndirectlyByRef(il, bodyExpr.Type);
+                il.Demit(OpCodes.Ret);
 
-            var delegateType = typeof(TDelegate) != typeof(Delegate) ? typeof(TDelegate) : lambdaExpr.Type;
-            var dlg = (TDelegate)(object)method.CreateDelegate(delegateType, EmptyArrayClosure);
-            FreePooledClosureTypeAndParamTypes(closurePlusParamTypes);
-            return dlg;
+                var delegateType = typeof(TDelegate) != typeof(Delegate) ? typeof(TDelegate) : lambdaExpr.Type;
+                var dlg = (TDelegate)(object)method.CreateDelegate(delegateType, EmptyArrayClosure);
+                FreePooledClosureTypeAndParamTypes(closurePlusParamTypes);
+                return dlg;
+            }
+            finally { FreeHoistedTypes(ref context); }
         }
 
         private static Delegate CompileNoArgsNew(NewExpression newExpr, Type delegateType, Type[] closurePlusParamTypes, Type returnType, CompilerFlags flags)
@@ -425,54 +437,58 @@ namespace FastExpressionCompiler
 
             // The method collects the info from the all nested lambdas deep down up-front and de-duplicates the lambdas as well.
             var context = new CompilerContext(ClosureStatus.ToBeCollected, paramExprs, flags);
-            var collectResult = TryCollectAndValidate(ref context, bodyExpr, null, ref context.NestedLambdas);
-            if (collectResult == Result.OK)
+            try
             {
-                var constantsAndNestedLambdas = (context.Status & ClosureStatus.HasClosure) != 0
-                    ? context.GetArrayOfConstantsAndNestedLambdas()
-                    : null;
-
-                ArrayClosure closure;
-                if ((flags & CompilerFlags.EnableDelegateDebugInfo) == 0)
-                    closure = constantsAndNestedLambdas == null ? EmptyArrayClosure : new ArrayClosure(constantsAndNestedLambdas);
-                else
+                var collectResult = TryCollectAndValidate(ref context, bodyExpr, null, ref context.NestedLambdas);
+                if (collectResult == Result.OK)
                 {
-                    var debugLambdaExpr = Lambda(delegateType, bodyExpr, paramExprs?.ToReadOnlyList() ?? Tools.Empty<PE>());
-                    closure = new DebugArrayClosure(null, constantsAndNestedLambdas, debugLambdaExpr);
+                    var constantsAndNestedLambdas = (context.Status & ClosureStatus.HasClosure) != 0
+                        ? context.GetArrayOfConstantsAndNestedLambdas()
+                        : null;
+
+                    ArrayClosure closure;
+                    if ((flags & CompilerFlags.EnableDelegateDebugInfo) == 0)
+                        closure = constantsAndNestedLambdas == null ? EmptyArrayClosure : new ArrayClosure(constantsAndNestedLambdas);
+                    else
+                    {
+                        var debugLambdaExpr = Lambda(delegateType, bodyExpr, paramExprs?.ToReadOnlyList() ?? Tools.Empty<PE>());
+                        closure = new DebugArrayClosure(null, constantsAndNestedLambdas, debugLambdaExpr);
+                    }
+
+                    // The host assembly controls non-Exception wrapping and catch matching.
+                    // Keep FEC's faster owned hosting for ordinary lambdas; exception regions
+                    // need the anonymous policy used by System's expression compiler.
+                    var dynMethod = context.HasExceptionBlock
+                        ? CreateExceptionAwareDynamicMethod(returnType, closureAndParamTypes)
+                        : new DynamicMethod(string.Empty, returnType, closureAndParamTypes, typeof(ArrayClosure), true);
+
+                    var il = DynamicMethodHacks.RentPooledOrNewILGenerator(dynMethod, returnType, closureAndParamTypes);
+
+                    if (closure.ConstantsAndNestedLambdas != null)
+                        EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref context);
+
+                    var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
+                    if (returnType.IsByRef)
+                        parent |= ParentFlags.ReturnByRef;
+
+                    if (EmittingVisitor.TryEmitLambdaBody(bodyExpr, returnType, il, ref context, parent))
+                    {
+                        if (bodyExpr.Type.IsByRef && !returnType.IsByRef) // don't forget to de-ref the reference if the lambda should return de-ref value of the body and not itself by-ref return, see #414
+                            EmittingVisitor.EmitLoadIndirectlyByRef(il, bodyExpr.Type);
+                        il.Demit(OpCodes.Ret);
+                        compiledDelegate = dynMethod.CreateDelegate(delegateType, closure);
+                        if (closure is DebugArrayClosure diagClosure)
+                            diagClosure.ILInstructions = compiledDelegate.Method.ReadAllInstructions();
+                    }
+
+                    DynamicMethodHacks.FreePooledILGenerator(dynMethod, il);
                 }
+                FreePooledClosureTypeAndParamTypes(closureAndParamTypes);
 
-                // The host assembly controls non-Exception wrapping and catch matching.
-                // Keep FEC's faster owned hosting for ordinary lambdas; exception regions
-                // need the anonymous policy used by System's expression compiler.
-                var dynMethod = context.HasExceptionBlock
-                    ? CreateExceptionAwareDynamicMethod(returnType, closureAndParamTypes)
-                    : new DynamicMethod(string.Empty, returnType, closureAndParamTypes, typeof(ArrayClosure), true);
-
-                var il = DynamicMethodHacks.RentPooledOrNewILGenerator(dynMethod, returnType, closureAndParamTypes);
-
-                if (closure.ConstantsAndNestedLambdas != null)
-                    EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref context);
-
-                var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
-                if (returnType.IsByRef)
-                    parent |= ParentFlags.ReturnByRef;
-
-                if (EmittingVisitor.TryEmitLambdaBody(bodyExpr, returnType, il, ref context, parent))
-                {
-                    if (bodyExpr.Type.IsByRef && !returnType.IsByRef) // don't forget to de-ref the reference if the lambda should return de-ref value of the body and not itself by-ref return, see #414
-                        EmittingVisitor.EmitLoadIndirectlyByRef(il, bodyExpr.Type);
-                    il.Demit(OpCodes.Ret);
-                    compiledDelegate = dynMethod.CreateDelegate(delegateType, closure);
-                    if (closure is DebugArrayClosure diagClosure)
-                        diagClosure.ILInstructions = compiledDelegate.Method.ReadAllInstructions();
-                }
-
-                DynamicMethodHacks.FreePooledILGenerator(dynMethod, il);
+                return compiledDelegate
+                    ?? ((flags & CompilerFlags.ThrowOnNotSupportedExpression) == 0 ? null : NotSupportedCase<object>(collectResult));
             }
-            FreePooledClosureTypeAndParamTypes(closureAndParamTypes);
-
-            return compiledDelegate
-                ?? ((flags & CompilerFlags.ThrowOnNotSupportedExpression) == 0 ? null : NotSupportedCase<object>(collectResult));
+            finally { FreeHoistedTypes(ref context); }
         }
 
         private static DynamicMethod CreateExceptionAwareDynamicMethod(Type returnType, Type[] parameterTypes)
@@ -947,14 +963,14 @@ namespace FastExpressionCompiler
             [RequiresUnreferencedCode(Trimming.Message)]
             internal HoistedTypeInfo GetHoistedType(Type type)
             {
-                HoistedTypes ??= new HoistedTypeCache();
+                HoistedTypes ??= Interlocked.Exchange(ref _hoistedTypeCachePool, null) ?? new HoistedTypeCache();
                 ref var types = ref HoistedTypes.Types;
                 for (var i = types.Count - 1; i >= 0; --i)
                 {
                     var entry = types.GetSurePresentRef(i);
                     if (ReferenceEquals(entry.Type, type)) return entry.Info;
                 }
-                var info = new HoistedTypeInfo(type);
+                var info = new HoistedTypeInfo(type, HoistedTypes.Scratch);
                 types.Add((type, info));
                 return info;
             }
@@ -979,11 +995,12 @@ namespace FastExpressionCompiler
             internal Expression CaptureAnalysisRoot;
             internal SmallSet4<ParameterExpression, RefEq<ParameterExpression>> CaptureCellVariables;
             internal bool CaptureStorageAnalyzed, CaptureStorageRequiresCells, CaptureStorageQuoteReferences;
-            internal SmallList<ParameterExpression> HoistedVariables;
+            internal SmallList<ParameterExpression, Stack2<ParameterExpression>, NoArrayPool<ParameterExpression>> HoistedVariables;
             internal SmallMap4<ParameterExpression, int, RefEq<ParameterExpression>> HoistedParameterLocals;
 
+            [MethodImpl((MethodImplOptions)256)]
             internal bool IsHoistedVariable(ParameterExpression variable) =>
-                HoistedVariables.TryGetIndex(variable, default(RefEq<ParameterExpression>)) != -1;
+                HoistedVariables.Count != 0 && HoistedVariables.TryGetIndex(variable, default(RefEq<ParameterExpression>)) != -1;
 
             [RequiresUnreferencedCode(Trimming.Message)]
             internal bool TryHoistVariable(ParameterExpression variable, bool requireCell = false)
@@ -1620,7 +1637,7 @@ namespace FastExpressionCompiler
             }
             if (expression is IndexExpression index)
             {
-                if (!AnalyzeCaptureStorage(index.Object, ref context, index.Object.Type.IsValueType)) return false;
+                if (!AnalyzeCaptureStorage(index.Object, ref context, index.Object != null && index.Object.Type.IsValueType)) return false;
                 // Indexer expression validation forbids by-ref accessor arguments.
                 var arguments = index.GetArgExprs();
                 for (var i = 0; i < arguments.GetArgCount(); ++i)
@@ -1839,8 +1856,30 @@ namespace FastExpressionCompiler
             return true;
         }
 
+        private static HoistedTypeCache _hoistedTypeCachePool;
+
+        private static void FreeHoistedTypes(ref CompilerContext context)
+        {
+            var cache = context.HoistedTypes;
+            context.HoistedTypes = null;
+            if (cache == null) return;
+            cache.Types.Clear();
+            if (cache.Types.Rest != null && cache.Types.Rest.Length > 1024)
+                cache.Types = default;
+            cache.Scratch[0] = null;
+            Interlocked.Exchange(ref _hoistedTypeCachePool, cache);
+        }
+
         internal sealed class HoistedTypeCache
         {
+            // Cache only framework generic-definition handles, never a user's closed capture type.
+            internal static readonly RuntimeMethodHandle EmptyConstructorHandle =
+                typeof(System.Runtime.CompilerServices.StrongBox<>).GetConstructor(Type.EmptyTypes).MethodHandle;
+            internal static readonly RuntimeMethodHandle ValueConstructorHandle =
+                typeof(System.Runtime.CompilerServices.StrongBox<>).GetConstructor(
+                    typeof(System.Runtime.CompilerServices.StrongBox<>).GetGenericArguments()).MethodHandle;
+
+            internal readonly Type[] Scratch = new Type[1];
             internal SmallList<(Type Type, HoistedTypeInfo Info),
                 Stack2<(Type Type, HoistedTypeInfo Info)>, NoArrayPool<(Type Type, HoistedTypeInfo Info)>> Types;
         }
@@ -1853,12 +1892,17 @@ namespace FastExpressionCompiler
             internal readonly ConstructorInfo ValueConstructor;
 
             [RequiresUnreferencedCode(Trimming.Message)]
-            internal HoistedTypeInfo(Type type)
+            internal HoistedTypeInfo(Type type, Type[] scratch)
             {
-                BoxType = GetHoistedBoxType(type);
-                ValueField = BoxType.GetField("Value");
-                EmptyConstructor = BoxType.GetConstructor(Type.EmptyTypes);
-                ValueConstructor = BoxType.GetConstructor(new[] { type });
+                scratch[0] = type;
+                try
+                {
+                    BoxType = typeof(System.Runtime.CompilerServices.StrongBox<>).MakeGenericType(scratch);
+                    ValueField = BoxType.GetField("Value");
+                    EmptyConstructor = (ConstructorInfo)MethodBase.GetMethodFromHandle(HoistedTypeCache.EmptyConstructorHandle, BoxType.TypeHandle);
+                    ValueConstructor = (ConstructorInfo)MethodBase.GetMethodFromHandle(HoistedTypeCache.ValueConstructorHandle, BoxType.TypeHandle);
+                }
+                finally { scratch[0] = null; }
             }
         }
 
@@ -2370,36 +2414,40 @@ namespace FastExpressionCompiler
                         nestedLambdaContext.CaptureMethodParameters = context.CaptureMethodParameters;
                         nestedLambdaContext.CaptureStorageAnalyzed = context.CaptureStorageAnalyzed;
                         nestedLambdaContext.CaptureStorageRequiresCells = context.CaptureStorageRequiresCells;
-                        var newNestedLambda = new NestedLambdaInfo(nestedLambdaExpr);
+                        try
+                        {
+                            var newNestedLambda = new NestedLambdaInfo(nestedLambdaExpr);
 
-                        if (nestedLambda != null)
-                            nestedLambda.NestedLambdas.Add(newNestedLambda);
-                        else
-                            rootNestedLambdas.Add(newNestedLambda);
+                            if (nestedLambda != null)
+                                nestedLambda.NestedLambdas.Add(newNestedLambda);
+                            else
+                                rootNestedLambdas.Add(newNestedLambda);
 
-                        if ((r = TryCollectAndValidate(ref nestedLambdaContext, nestedLambdaExpr.Body, newNestedLambda, ref rootNestedLambdas)) != Result.OK)
+                            if ((r = TryCollectAndValidate(ref nestedLambdaContext, nestedLambdaExpr.Body, newNestedLambda, ref rootNestedLambdas)) != Result.OK)
+                                return r;
+                            if (nestedLambda != null && newNestedLambda.HasDynamicExpressions)
+                                nestedLambda.HasDynamicExpressions = true;
+    #if LIGHT_EXPRESSION
+                            context.QuoteConversions = nestedLambdaContext.QuoteConversions;
+    #endif
+
+
+                            if (newNestedLambda.NonPassedParameters.Count != 0 &&
+                                !PropagateNonPassedParamsToOuterLambda(ref context,
+                                    nestedLambda, nestedParamExprs, ref newNestedLambda.NonPassedParameters))
+                                return Result.ParameterIsNotVariableNorInPassedParameters;
+
+                            if (!TryCompileNestedLambda(ref nestedLambdaContext, newNestedLambda))
+                                return Result.NestedLambdaCompileError;
+                            context.HoistedTypes = nestedLambdaContext.HoistedTypes;
+                            context.CaptureCellVariables = nestedLambdaContext.CaptureCellVariables;
+                            context.CaptureMethodParameters = nestedLambdaContext.CaptureMethodParameters;
+                            context.CaptureStorageAnalyzed = nestedLambdaContext.CaptureStorageAnalyzed;
+                            context.CaptureStorageRequiresCells = nestedLambdaContext.CaptureStorageRequiresCells;
+
                             return r;
-                        if (nestedLambda != null && newNestedLambda.HasDynamicExpressions)
-                            nestedLambda.HasDynamicExpressions = true;
-#if LIGHT_EXPRESSION
-                        context.QuoteConversions = nestedLambdaContext.QuoteConversions;
-#endif
-
-
-                        if (newNestedLambda.NonPassedParameters.Count != 0 &&
-                            !PropagateNonPassedParamsToOuterLambda(ref context,
-                                nestedLambda, nestedParamExprs, ref newNestedLambda.NonPassedParameters))
-                            return Result.ParameterIsNotVariableNorInPassedParameters;
-
-                        if (!TryCompileNestedLambda(ref nestedLambdaContext, newNestedLambda))
-                            return Result.NestedLambdaCompileError;
-                        context.HoistedTypes = nestedLambdaContext.HoistedTypes;
-                        context.CaptureCellVariables = nestedLambdaContext.CaptureCellVariables;
-                        context.CaptureMethodParameters = nestedLambdaContext.CaptureMethodParameters;
-                        context.CaptureStorageAnalyzed = nestedLambdaContext.CaptureStorageAnalyzed;
-                        context.CaptureStorageRequiresCells = nestedLambdaContext.CaptureStorageRequiresCells;
-
-                        return r;
+                        }
+                        finally { context.HoistedTypes = nestedLambdaContext.HoistedTypes; }
 
                     case ExpressionType.Invoke:
                         {
