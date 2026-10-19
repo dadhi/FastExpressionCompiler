@@ -2746,6 +2746,33 @@ namespace FastExpressionCompiler
                         var varExprs = blockExpr.Variables;
                         var varExprCount = varExprs?.Count ?? 0; // todo: @perf optimize for an empty and a single variable
 
+                        if (varExprCount == 0 && blockExprCount == 1)
+                        {
+                            expr = blockExprs[0];
+                            var additionalBlocks = 0;
+                            while (expr != null && expr.NodeType == ExpressionType.Block
+#if LIGHT_EXPRESSION
+                                && !expr.IsIntrinsic
+#endif
+                                )
+                            {
+                                var childBlock = (BlockExpression)expr;
+                                if ((childBlock.Variables?.Count ?? 0) != 0 || childBlock.Expressions.Count != 1)
+                                    break;
+                                ++additionalBlocks;
+                                expr = childBlock.Expressions[0];
+                            }
+                            // Keep each lexical ancestor; only batch their unobserved frame counts.
+                            if (additionalBlocks != 0)
+                            {
+                                context.PushLabelScope(LabelScopeKind.Block);
+                                context.LabelScopes.GetSurePresentRef(context.LabelScopes.Count - 1).Count += additionalBlocks - 1;
+                                context.LabelScopeDepth += additionalBlocks - 1;
+                            }
+                            directBlockChild = true;
+                            continue;
+                        }
+
                         if (varExprCount == 1 & blockExprCount == 2 &&
                             blockExprs[0] is BinaryExpression st0 && st0.NodeType == ExpressionType.Assign &&
                             blockExprs[1] is BinaryExpression st1 && st1.NodeType == ExpressionType.Assign &&
