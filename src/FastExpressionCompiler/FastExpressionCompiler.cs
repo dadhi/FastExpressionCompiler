@@ -437,6 +437,12 @@ namespace FastExpressionCompiler
 
             // The method collects the info from the all nested lambdas deep down up-front and de-duplicates the lambdas as well.
             var context = new CompilerContext(ClosureStatus.ToBeCollected, paramExprs, flags);
+#if NETFRAMEWORK
+            // Only this fully collecting entry chooses owned hosting when the root
+            // contains no exception regions. Manual/collection-skipping roots do not
+            // establish this proof, including their privately compiled children.
+            context.Status |= ClosureStatus.OwnedValueCaptureRoot;
+#endif
             try
             {
                 var collectResult = TryCollectAndValidate(ref context, bodyExpr, null, ref context.NestedLambdas);
@@ -662,7 +668,8 @@ namespace FastExpressionCompiler
             UserProvided = 1 << 1,
             HasClosure = 1 << 2,
             ShouldBeStaticMethod = 1 << 3,
-            TypedNonPassedClosure = 1 << 4
+            TypedNonPassedClosure = 1 << 4,
+            OwnedValueCaptureRoot = 1 << 5
         }
 
         [DebuggerDisplay("Target:{Target}, InlinedLambdaInvokeIndex:{InlinedLambdaInvokeIndex}, ReturnVariableIndexPlusOneAndIsDefined:{ReturnVariableIndexPlusOneAndIsDefined}")]
@@ -1057,9 +1064,10 @@ namespace FastExpressionCompiler
             [MethodImpl((MethodImplOptions)256)]
             internal bool UsesBoxedValueCell(Type type) =>
 #if NETFRAMEWORK
-                // Anonymous Framework methods cannot verify writable unbox addresses.
-                // Keep one representation throughout the root, including exception bodies.
-                false;
+                // A complete known root without exception regions keeps FEC's
+                // existing owned hosting. Anonymous/manual roots retain typed cells.
+                (Status & (ClosureStatus.UserProvided | ClosureStatus.OwnedValueCaptureRoot)) == ClosureStatus.OwnedValueCaptureRoot &&
+                CaptureStorageAnalyzed && !CaptureStorageRequiresTypedCells && type.IsValueType && !type.IsNullable();
 #else
                 !CaptureStorageRequiresTypedCells && type.IsValueType && !type.IsNullable();
 #endif
@@ -1813,6 +1821,11 @@ namespace FastExpressionCompiler
             if (expression is LabelExpression label) return AnalyzeCaptureStorage(label.DefaultValue, ref context, writable);
             if (expression is TryExpression attempt)
             {
+#if NETFRAMEWORK
+                // An exception region anywhere in the root requires one typed
+                // representation, even in an earlier compiled ordinary sibling.
+                context.CaptureStorageRequiresTypedCells = true;
+#endif
                 if (!AnalyzeCaptureStorage(attempt.Body, ref context, writable) ||
                     !AnalyzeCaptureStorage(attempt.Finally, ref context) || !AnalyzeCaptureStorage(attempt.Fault, ref context)) return false;
                 for (var i = 0; i < attempt.Handlers.Count; ++i)
@@ -2672,6 +2685,9 @@ namespace FastExpressionCompiler
                         }
 
                         var nestedLambdaContext = new CompilerContext(ClosureStatus.ToBeCollected, nestedParamExprs, context.CompilerFlags);
+#if NETFRAMEWORK
+                        nestedLambdaContext.Status |= context.Status & ClosureStatus.OwnedValueCaptureRoot;
+#endif
 #if LIGHT_EXPRESSION
                         nestedLambdaContext.QuoteConversions = context.QuoteConversions;
 #endif
