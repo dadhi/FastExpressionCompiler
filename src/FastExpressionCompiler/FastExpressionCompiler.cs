@@ -2377,11 +2377,12 @@ namespace FastExpressionCompiler
         /// <summary>Collects the information about closure constants, nested lambdas, non-passed parameters, goto labels and variables in blocks.
         /// Returns `OK` result if everything is fine and other result for error.</summary>
         public static Result TryCollectInfo(ref CompilerContext context, Expression expr,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx = -1)
         {
+            context.CaptureAnalysisRoot ??= expr;
             // Keep exception unwinding at the public boundary: custom Light
             // expressions may catch a child collection error and continue.
-            var scopeDepth = context.LabelScopeDepth;
+            var scopeDepth = scopeIdx < 0 ? context.LabelScopeDepth : scopeIdx;
             try
             {
                 return TryCollectInfo(ref context, expr, nestedLambda, ref rootNestedLambdas, false, false);
@@ -2417,7 +2418,6 @@ namespace FastExpressionCompiler
             if (initialNodeType == ExpressionType.Constant || initialNodeType == ExpressionType.Parameter ||
                 initialNodeType == ExpressionType.Default || initialNodeType == ExpressionType.DebugInfo)
                 return TryCollectTerminalInfo(ref context, expr, initialNodeType, nestedLambda, ref rootNestedLambdas);
-            context.CaptureAnalysisRoot ??= expr;
             var scopeDepth = context.LabelScopeDepth;
             if (scopeDepth == 0)
                 context.PushLabelScope(LabelScopeKind.Lambda);
