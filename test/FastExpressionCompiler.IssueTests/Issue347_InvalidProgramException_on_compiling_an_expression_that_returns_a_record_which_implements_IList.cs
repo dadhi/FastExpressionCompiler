@@ -109,8 +109,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ldfld,      // ArrayClosureWithNonPassedParams.NonPassedParams
                 OpCodes.Ldc_I4_0,
                 OpCodes.Ldelem_Ref,
-                OpCodes.Castclass, // StrongBox<NotifyModel>
-                OpCodes.Ldflda,    // StrongBox<NotifyModel>.Value: live shared storage
+                OpCodes.Unbox,     // Address of the live boxed NotifyModel shared by captures
                 OpCodes.Call,       // NotifyModel.get_Number1
                 OpCodes.Ret
             );

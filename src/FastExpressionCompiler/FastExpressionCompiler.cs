@@ -1013,13 +1013,18 @@ namespace FastExpressionCompiler
 
             internal Expression CaptureAnalysisRoot;
             internal SmallSet4<ParameterExpression, RefEq<ParameterExpression>> CaptureCellVariables;
-            internal bool CaptureStorageAnalyzed, CaptureStorageRequiresCells, CaptureStorageQuoteReferences;
+            internal bool CaptureStorageAnalyzed, CaptureStorageRequiresCells, CaptureStorageQuoteReferences, CaptureStorageRequiresTypedCells;
             internal SmallList<ParameterExpression, Stack2<ParameterExpression>, NoArrayPool<ParameterExpression>> HoistedVariables;
             internal SmallMap4<ParameterExpression, int, RefEq<ParameterExpression>> HoistedParameterLocals;
 
             [MethodImpl((MethodImplOptions)256)]
             internal bool IsHoistedVariable(ParameterExpression variable) =>
                 HoistedVariables.Count != 0 && HoistedVariables.TryGetIndex(variable, default(RefEq<ParameterExpression>)) != -1;
+
+            [RequiresUnreferencedCode(Trimming.Message)]
+            [MethodImpl((MethodImplOptions)256)]
+            internal bool UsesBoxedValueCell(Type type) =>
+                !CaptureStorageRequiresTypedCells && type.IsValueType && !type.IsNullable();
 
             [RequiresUnreferencedCode(Trimming.Message)]
             internal bool TryHoistVariable(ParameterExpression variable, bool requireCell = false)
@@ -1038,13 +1043,16 @@ namespace FastExpressionCompiler
                 if (type.IsByRefLike)
                     return false;
 #endif
-                if (!requireCell && CaptureAnalysisRoot != null)
-                {
+                // Select one cell representation for the complete root before any nested
+                // body is emitted. Quoted trees and runtime-variable views require StrongBox<T>.
                     if (!CaptureStorageAnalyzed)
                     {
-                        CaptureStorageRequiresCells = !AnalyzeCaptureStorage(CaptureAnalysisRoot, ref this);
+                    CaptureStorageRequiresCells = CaptureAnalysisRoot == null || !AnalyzeCaptureStorage(CaptureAnalysisRoot, ref this);
+                    CaptureStorageRequiresTypedCells |= CaptureStorageRequiresCells;
                         CaptureStorageAnalyzed = true;
                     }
+                if (!requireCell && CaptureAnalysisRoot != null)
+                {
                     if (!CaptureStorageRequiresCells)
                     {
                         if (CaptureCellVariables.Set.Count == 0) return true;
@@ -1234,10 +1242,19 @@ namespace FastExpressionCompiler
                     var varType = varExpr.Type;
                     if (IsHoistedVariable(varExpr))
                     {
+                        int boxIndex;
+                        if (UsesBoxedValueCell(varType))
+                        {
+                            boxIndex = il.GetNextLocalVarIndex(typeof(object));
+                            EmittingVisitor.EmitDefault(il, varType);
+                            il.Demit(OpCodes.Box, varType);
+                        }
+                        else
+                        {
                         var hoistedType = GetHoistedType(varType);
-                        var boxType = hoistedType.BoxType;
-                        var boxIndex = il.GetNextLocalVarIndex(boxType);
+                            boxIndex = il.GetNextLocalVarIndex(hoistedType.BoxType);
                         il.Demit(OpCodes.Newobj, hoistedType.EmptyConstructor);
+                        }
                         EmittingVisitor.EmitStoreLocalVariable(il, boxIndex);
                         PushVarInBlockMap(varExpr, _blockCount, (ushort)boxIndex);
                         continue;
@@ -1638,6 +1655,11 @@ namespace FastExpressionCompiler
         {
             ref var cells = ref context.CaptureCellVariables;
             if (expression == null) return true;
+#if LIGHT_EXPRESSION
+            // Built-in intrinsics expose their operands through the standard node shape.
+            // User intrinsics may hide quoted trees or runtime-variable views.
+            if (expression.IsIntrinsic && expression.GetType().Assembly != typeof(Expression).Assembly) return false;
+#endif
             if (expression is ParameterExpression parameter)
             {
                 if (writable || context.CaptureStorageQuoteReferences) cells.Set.AddOrGetEntryRef(parameter, out _);
@@ -1683,6 +1705,7 @@ namespace FastExpressionCompiler
             {
                 if (unary.NodeType == ExpressionType.Quote)
                 {
+                    context.CaptureStorageRequiresTypedCells = true;
                     var previousQuote = context.CaptureStorageQuoteReferences;
                     context.CaptureStorageQuoteReferences = true;
                     try { return AnalyzeCaptureStorage(unary.Operand, ref context); }
@@ -1701,6 +1724,7 @@ namespace FastExpressionCompiler
             }
             if (expression is RuntimeVariablesExpression variables)
             {
+                context.CaptureStorageRequiresTypedCells = true;
                 for (var i = 0; i < variables.Variables.Count; ++i)
                     cells.Set.AddOrGetEntryRef(variables.Variables[i], out _);
                 return true;
@@ -2558,6 +2582,7 @@ namespace FastExpressionCompiler
                         nestedLambdaContext.CaptureMethodParameters = context.CaptureMethodParameters;
                         nestedLambdaContext.CaptureStorageAnalyzed = context.CaptureStorageAnalyzed;
                         nestedLambdaContext.CaptureStorageRequiresCells = context.CaptureStorageRequiresCells;
+                        nestedLambdaContext.CaptureStorageRequiresTypedCells = context.CaptureStorageRequiresTypedCells;
                         try
                         {
                         var newNestedLambda = new NestedLambdaInfo(nestedLambdaExpr);
@@ -2582,6 +2607,7 @@ namespace FastExpressionCompiler
                             context.CaptureMethodParameters = nestedLambdaContext.CaptureMethodParameters;
                             context.CaptureStorageAnalyzed = nestedLambdaContext.CaptureStorageAnalyzed;
                             context.CaptureStorageRequiresCells = nestedLambdaContext.CaptureStorageRequiresCells;
+                            context.CaptureStorageRequiresTypedCells = nestedLambdaContext.CaptureStorageRequiresTypedCells;
 
                         if (newNestedLambda.NonPassedParameters.Count != 0 &&
                             !PropagateNonPassedParamsToOuterLambda(ref context,
@@ -3526,11 +3552,19 @@ namespace FastExpressionCompiler
                     var parameter = parameters.GetParameter(p);
                     if (!context.IsHoistedVariable(parameter))
                         continue;
-                    var hoistedType = context.GetHoistedType(parameter.Type);
-                    var boxType = hoistedType.BoxType;
-                    var boxIndex = il.GetNextLocalVarIndex(boxType);
+                        int boxIndex;
                     EmitLoadArg(il, p + ((context.Status & ClosureStatus.ShouldBeStaticMethod) == 0 ? 1 : 0));
+                        if (context.UsesBoxedValueCell(parameter.Type))
+                        {
+                            boxIndex = il.GetNextLocalVarIndex(typeof(object));
+                            il.Demit(OpCodes.Box, parameter.Type);
+                        }
+                        else
+                        {
+                            var hoistedType = context.GetHoistedType(parameter.Type);
+                            boxIndex = il.GetNextLocalVarIndex(hoistedType.BoxType);
                     il.Demit(OpCodes.Newobj, hoistedType.ValueConstructor);
+                        }
                     EmitStoreLocalVariable(il, boxIndex);
                     context.HoistedParameterLocals.Map.AddOrGetValueRef(parameter, out _) = boxIndex;
                 }
@@ -4772,6 +4806,9 @@ namespace FastExpressionCompiler
                         (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0 &&
                         ((parent & ParentFlags.IndexAccess) == 0 ||
                          (parent & (ParentFlags.Call | ParentFlags.MemberAccess)) == 0);
+                    if (context.UsesBoxedValueCell(paramExpr.Type))
+                        il.Demit(address ? OpCodes.Unbox : OpCodes.Unbox_Any, paramExpr.Type);
+                    else
                     il.Demit(address ? OpCodes.Ldflda : OpCodes.Ldfld, context.GetHoistedType(paramExpr.Type).ValueField);
                     context.LastEmitIsAddress = address;
                     return true;
@@ -4984,6 +5021,7 @@ namespace FastExpressionCompiler
                         EmitLoadNonPassedParams(il);
                         EmitLoadConstantInt(il, captured);
                         il.Demit(OpCodes.Ldelem_Ref);
+                        if (!context.UsesBoxedValueCell(parameter.Type))
                         il.Demit(OpCodes.Castclass, context.GetHoistedType(parameter.Type).BoxType);
                     }
                 }
@@ -5019,6 +5057,9 @@ namespace FastExpressionCompiler
                     var address = closure.LastEmitIsAddress;
                     if (!TryEmitHoistedCell(paramExpr, il, ref closure))
                         return false;
+                    if (closure.UsesBoxedValueCell(paramExpr.Type))
+                        il.Demit(address ? OpCodes.Unbox : OpCodes.Unbox_Any, paramExpr.Type);
+                    else
                     il.Demit(address ? OpCodes.Ldflda : OpCodes.Ldfld, closure.GetHoistedType(paramExpr.Type).ValueField);
                     closure.LastEmitIsAddress = address;
                     return true;
@@ -7047,7 +7088,13 @@ namespace FastExpressionCompiler
                     EmitStoreLocalVariable(il, assigned);
                     if (!TryEmitHoistedCell(left, il, ref context))
                         return false;
+                    var boxedValue = context.UsesBoxedValueCell(left.Type);
+                    if (boxedValue)
+                        il.Demit(OpCodes.Unbox, left.Type);
                     EmitLoadLocalVariable(il, assigned);
+                    if (boxedValue)
+                        il.Demit(OpCodes.Stobj, left.Type);
+                    else
                     il.Demit(OpCodes.Stfld, context.GetHoistedType(left.Type).ValueField);
                     if (resultVar != -1)
                         EmitLoadLocalVariable(il, isPost ? resultVar : assigned);
