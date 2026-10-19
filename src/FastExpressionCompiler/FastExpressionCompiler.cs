@@ -1035,6 +1035,8 @@ namespace FastExpressionCompiler
             [RequiresUnreferencedCode(Trimming.Message)]
             internal bool TryHoistVariable(ParameterExpression variable, bool requireCell = false)
             {
+                if (requireCell)
+                    CaptureStorageRequiresTypedCells = true;
                 if (IsHoistedVariable(variable))
                     return true;
                 var type = variable.Type;
@@ -1049,9 +1051,9 @@ namespace FastExpressionCompiler
                 if (type.IsByRefLike)
                     return false;
 #endif
-                // Select one cell representation for the complete root before any nested
-                // body is emitted. Quoted trees and runtime-variable views require StrongBox<T>.
-                    if (!CaptureStorageAnalyzed)
+                // Ordinary captures analyze the complete root before choosing boxed storage.
+                // Quote/runtime-variable requests already require typed cells and need no scan.
+                if (!requireCell && !CaptureStorageAnalyzed)
                     {
                     CaptureStorageRequiresCells = CaptureAnalysisRoot == null || !AnalyzeCaptureStorage(CaptureAnalysisRoot, ref this);
                     CaptureStorageRequiresTypedCells |= CaptureStorageRequiresCells;
