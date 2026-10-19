@@ -16,6 +16,9 @@ public struct Issue476_System_ExecutionEngineException_with_nullables_on_repeate
     public void Run(TestRun t)
     {
         TestSmallMap_Lookup_SIMD(t);
+        SmallMap16_promotes_and_resizes(t, false);
+        SmallMap16_promotes_and_resizes(t, true);
+        SmallMap8_retains_initial_hash_capacity(t);
         TestSmallList(t);
         Original_case(t);
     }
@@ -85,5 +88,50 @@ public struct Issue476_System_ExecutionEngineException_with_nullables_on_repeate
         }
 
         t.AreEqual(28, sum);
+    }
+
+    public void SmallMap16_promotes_and_resizes(TestContext t, bool sureAbsent)
+    {
+        SmallMap16<int, int, IntEq> map = default;
+        map.Map.AddOrGetValueRef(0, out _) = 0;
+        ref var firstInlineValue = ref map.Map.TryGetValueRef(0, out _);
+        for (var i = 1; i < 80; ++i)
+        {
+            // Collisions also exercise the displaced-entry hash/index mask.
+            var key = i * 32;
+            if (sureAbsent)
+                map.Map.AddSureAbsentDefaultAndGetRef(key) = i;
+            else
+            {
+                ref var value = ref map.Map.AddOrGetValueRef(key, out var found);
+                t.IsFalse(found);
+                value = i;
+            }
+            if (i == 16)
+                t.AreEqual(32, map.Map.PackedHashesAndIndexes.Length);
+        }
+        t.AreEqual(80, map.Map.Count);
+        firstInlineValue = -7;
+        for (var i = 0; i < 80; ++i)
+        {
+            var value = map.Map.TryGetValueRef(i * 32, out var found);
+            t.IsTrue(found);
+            t.AreEqual(i == 0 ? -7 : i, value);
+        }
+        map.Map.TryGetValueRef(-1, out var missing);
+        t.IsFalse(missing);
+        ref var existing = ref map.Map.AddOrGetValueRef(32, out var alreadyPresent);
+        t.IsTrue(alreadyPresent);
+        t.AreEqual(1, existing);
+        t.AreEqual(80, map.Map.Count);
+    }
+
+    public void SmallMap8_retains_initial_hash_capacity(TestContext t)
+    {
+        SmallMap8<int, int, IntEq> map = default;
+        for (var i = 0; i < 9; ++i)
+            map.Map.AddOrGetValueRef(i, out _) = i;
+        t.AreEqual(16, map.Map.PackedHashesAndIndexes.Length);
+        t.AreEqual(9, map.Map.Count);
     }
 }

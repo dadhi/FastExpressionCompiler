@@ -1601,7 +1601,8 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
 
     private void AddJustHashAndEntryIndexWithoutResizing(int hash, int index)
     {
-        var hashIndex = hash & IndexMask;
+        var indexMask = (1 << _capacityBitShift) - 1;
+        var hashIndex = hash & indexMask;
 
 #if NET7_0_OR_GREATER
         ref var hashesAndIndexes = ref MemoryMarshal.GetArrayDataReference(_packedHashesAndIndexes);
@@ -1613,20 +1614,20 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
         var probe = 1;
         while ((h >>> ProbeCountShift) >= probe)
         {
-            h = ref hashesAndIndexes.GetSurePresentRef(++hashIndex & IndexMask);
+            h = ref hashesAndIndexes.GetSurePresentRef(++hashIndex & indexMask);
             ++probe;
         }
 
         // 3. We did not find the hash and therefore the key, so insert the new entry
         var hRobinHooded = h;
-        h = (probe << ProbeCountShift) | (hash & HashMask) | index;
+        h = (probe << ProbeCountShift) | (hash & HashAndIndexMask & ~indexMask) | index;
 
         // 4. If the robin hooded hash is empty then we stop
         // 5. Otherwise we steal the slot with the smaller probes
         probe = hRobinHooded >>> ProbeCountShift;
         while (hRobinHooded != 0)
         {
-            h = ref hashesAndIndexes.GetSurePresentRef(++hashIndex & IndexMask);
+            h = ref hashesAndIndexes.GetSurePresentRef(++hashIndex & indexMask);
             if ((h >>> ProbeCountShift) < ++probe)
             {
                 var tmp = h;
@@ -1670,7 +1671,10 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
         // because they are not copied when the Entries need to Resize (depending on the TEntries implementation). 
 
         _capacityBitShift = DefaultHashesCapacityBitShift;
-        _packedHashesAndIndexes = new int[1 << DefaultHashesCapacityBitShift];
+        // Promotion also inserts one entry beyond the inline capacity.
+        while ((1 << _capacityBitShift) <= StackEntries.Capacity)
+            ++_capacityBitShift;
+        _packedHashesAndIndexes = new int[1 << _capacityBitShift];
 
         for (var i = 0; i < StackEntries.Capacity; ++i)
             AddJustHashAndEntryIndexWithoutResizing(default(TEq).GetHashCode(GetSurePresentEntryRef(i).Key), i);
@@ -1782,7 +1786,10 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
         }
 
         _capacityBitShift = DefaultHashesCapacityBitShift;
-        _packedHashesAndIndexes = new int[1 << DefaultHashesCapacityBitShift];
+        // Promotion also inserts one entry beyond the inline capacity.
+        while ((1 << _capacityBitShift) <= StackEntries.Capacity)
+            ++_capacityBitShift;
+        _packedHashesAndIndexes = new int[1 << _capacityBitShift];
 
         for (var i = 0; i < StackEntries.Capacity; ++i)
             AddJustHashAndEntryIndexWithoutResizing(default(TEq).GetHashCode(GetSurePresentEntryRef(i).Key), i);
