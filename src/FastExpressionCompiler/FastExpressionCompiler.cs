@@ -691,9 +691,10 @@ namespace FastExpressionCompiler
             internal int Region;
         }
 
-        // These scalar scope lists grow their heap part as 4, 9, 19, 39, ... .
-        // Each growth size has its own logarithmic bucket; keep every reusable size
-        // without allocating a 1024-entry table for the first overflow.
+        // Heap lengths grow as 4, 9, 19, 39, ... (2*n+1), each in a distinct
+        // floor(log2(length)) bucket. The 1024 retention bound needs only 11 slots.
+        // Other lengths may share a slot: rent checks the actual length, so a
+        // collision can lose reuse but cannot return an incorrectly sized array.
         internal struct ScopeArrayPool<T> : ISmallArrayPool<T> where T : struct
         {
             private static T[][] _arrays;
@@ -810,6 +811,8 @@ namespace FastExpressionCompiler
                 PushNewLabelScopeFrame(kind);
             }
 
+            // Keep the repeated-kind fast path small when PushLabelScope is
+            // inlined; appending a new frame (including list growth) stays outlined.
             [MethodImpl(MethodImplOptions.NoInlining)]
             private void PushNewLabelScopeFrame(LabelScopeKind kind)
             {
