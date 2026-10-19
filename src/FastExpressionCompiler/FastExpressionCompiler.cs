@@ -8184,6 +8184,10 @@ namespace FastExpressionCompiler
                 EmitLoadLocalVariable(il, nestedLambdaInfo.LambdaVarIndex);
                 il.Demit(OpCodes.Ldfld, NestedLambdaForNonPassedParams.NestedLambdaField);
 #if NETFRAMEWORK
+                // Anonymous/manual roots require the verifier's exact delegate type.
+                // Proven ordinary owned roots retain FEC's original slot load.
+                if ((context.Status & (ClosureStatus.UserProvided | ClosureStatus.OwnedValueCaptureRoot)) != ClosureStatus.OwnedValueCaptureRoot ||
+                    !context.CaptureStorageAnalyzed || context.CaptureStorageRequiresTypedCells || context.HasExceptionBlock)
                 il.Demit(OpCodes.Castclass, ((NestedLambdaForNonPassedParams)nestedLambdaInfo.Lambda).NestedLambda.GetType());
 #endif
 
