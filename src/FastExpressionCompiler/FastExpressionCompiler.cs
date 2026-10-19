@@ -1762,6 +1762,21 @@ namespace FastExpressionCompiler
             !type.IsPrimitive && !type.IsEnum && value is decimal == false &&
             (value is Type == false || type != typeof(object).GetType());
 
+        private static bool TryGetConstantStringLength(MemberExpression expression, out int length)
+        {
+            // String is immutable and sealed. Reading Length of a non-null constant has
+            // no user code, side effects, or reference-identity observation to preserve.
+            if (expression.Expression is ConstantExpression constant && constant.Value is string text &&
+                expression.Member is PropertyInfo property && property.DeclaringType == typeof(string) &&
+                property.Name == nameof(string.Length))
+            {
+                length = text.Length;
+                return true;
+            }
+            length = 0;
+            return false;
+        }
+
         public enum Result
         {
             OK = 0,
@@ -1939,6 +1954,8 @@ namespace FastExpressionCompiler
                         }
 
                     case ExpressionType.MemberAccess:
+                        if (TryGetConstantStringLength((MemberExpression)expr, out _))
+                            return r;
                         var memberExpr = ((MemberExpression)expr).Expression;
                         if (memberExpr == null)
                             return r;
@@ -7058,6 +7075,12 @@ namespace FastExpressionCompiler
 
             public static bool TryEmitMemberGet(MemberExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex = -1)
             {
+                if (TryGetConstantStringLength(expr, out var length))
+                {
+                    context.LastEmitIsAddress = false;
+                    if (!parent.IgnoresResult()) EmitLoadConstantInt(il, length);
+                    return true;
+                }
                 var objExpr = expr.Expression;
                 if (expr.Member is PropertyInfo prop)
                 {
