@@ -22,6 +22,7 @@ public struct LexicalJumpScopeRegressionTests : ITestX
         Loop_owned_targets_remain_legal(t);
         Deep_adjacent_blocks_preserve_ancestor_and_sibling_scopes(t);
         Alternating_scope_overflow_buffers_can_be_reused(t);
+        Label_free_blocks_keep_reused_inlined_invocations(t);
     }
 
     private static readonly CompilerFlags[] Flags = { CompilerFlags.Default, CompilerFlags.NoInvocationLambdaInlining };
@@ -138,5 +139,13 @@ public struct LexicalJumpScopeRegressionTests : ITestX
                 invalid = S.Block(S.Condition(test, invalid, S.Constant(0)));
             Reject(t, S.Lambda<Func<int>>(invalid));
         }
+    }
+    public void Label_free_blocks_keep_reused_inlined_invocations(TestContext t)
+    {
+        var invoke = S.Invoke(S.Lambda<Func<int>>(S.Constant(19)));
+        var variable = S.Variable(typeof(int), "value");
+        var body = S.Block(S.Block(invoke),
+            S.Block(new[] { variable }, S.Assign(variable, invoke), S.Add(variable, invoke)));
+        Verify(t, S.Lambda<Func<int>>(body), 38);
     }
 }
