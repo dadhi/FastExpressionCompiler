@@ -1,4 +1,6 @@
 using System;
+using System.Reflection;
+using System.Reflection.Emit;
 using SysExpr = System.Linq.Expressions.Expression;
 
 #if LIGHT_EXPRESSION
@@ -28,6 +30,29 @@ public struct CapturedValueRefRegressionTests : ITestX
         Leading_value_assignments_do_not_allocate_capture_cells(t);
         Hoisted_metadata_rentals_clear_success_and_failure_state(t);
         Concurrent_compilation_keeps_hoisted_metadata_isolated(t);
+        Static_indexed_properties_allow_captured_parameters(t);
+    }
+
+    public void Static_indexed_properties_allow_captured_parameters(TestContext t)
+    {
+        var assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("StaticCapturedIndexer"), AssemblyBuilderAccess.Run);
+        var type = assembly.DefineDynamicModule("Main").DefineType("IndexedValues", TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed);
+        var getter = type.DefineMethod("get_Item", MethodAttributes.Public | MethodAttributes.Static | MethodAttributes.SpecialName,
+            typeof(int), new[] { typeof(int) });
+        var il = getter.GetILGenerator();
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Ldc_I4, 40);
+        il.Emit(OpCodes.Add);
+        il.Emit(OpCodes.Ret);
+        var property = type.DefineProperty("Item", PropertyAttributes.None, typeof(int), new[] { typeof(int) });
+        property.SetGetMethod(getter);
+        var indexer = type.CreateType().GetProperty("Item");
+        var value = SysExpr.Parameter(typeof(int));
+        var expression = SysExpr.Lambda<Func<int, Func<int>>>(SysExpr.Lambda<Func<int>>(
+            SysExpr.Add(SysExpr.MakeIndex(null, indexer, new[] { SysExpr.Constant(2) }), value)), value);
+        var expected = expression.Compile()(3)();
+        var fast = expression.FromSysExpression().CompileFast(true);
+        if (t.IsNotNull(fast)) t.AreEqual(expected, fast(3)());
     }
     public static int Add(ref int value, int increment) => value += increment;
     public static int? AddNullable(ref int? value, int increment) => value = value + increment;
