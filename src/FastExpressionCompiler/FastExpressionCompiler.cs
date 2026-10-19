@@ -989,6 +989,14 @@ namespace FastExpressionCompiler
             [MethodImpl((MethodImplOptions)256)]
             internal ParameterInfo[] GetCaptureMethodParameters(MethodBase method, bool collect = false)
             {
+                if (!collect && CaptureMethodParameters.Count == 0)
+                    return method.GetParameters();
+                return GetOrCollectCaptureMethodParameters(method, collect);
+            }
+
+            [RequiresUnreferencedCode(Trimming.Message)]
+            private ParameterInfo[] GetOrCollectCaptureMethodParameters(MethodBase method, bool collect)
+            {
                 for (var i = CaptureMethodParameters.Count - 1; i >= 0; --i)
                 {
                     var entry = CaptureMethodParameters.GetSurePresentRef(i);
