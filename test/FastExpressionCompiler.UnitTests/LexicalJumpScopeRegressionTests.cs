@@ -20,6 +20,7 @@ public struct LexicalJumpScopeRegressionTests : ITestX
         Reused_invocations_have_independent_scope_roots(t);
 
         Deep_adjacent_blocks_preserve_ancestor_and_sibling_scopes(t);
+        Single_expression_block_chains_preserve_switch_and_operand_scopes(t);
         Alternating_scope_overflow_buffers_can_be_reused(t);
         Label_free_blocks_keep_reused_inlined_invocations(t);
         Public_collection_unwinds_failed_deep_scopes_and_can_retry(t);
@@ -81,6 +82,22 @@ public struct LexicalJumpScopeRegressionTests : ITestX
             S.Goto(second, S.Constant(2)), S.Block(S.Label(second, S.Constant(3))));
         for (var i = 0; i < 128; ++i) siblings = S.Block(siblings);
         Reject(t, S.Lambda<Func<int>>(siblings));
+    }
+    public void Single_expression_block_chains_preserve_switch_and_operand_scopes(TestContext t)
+    {
+        var result = S.Label(typeof(int), "chain-case");
+        E.Expression jumpChain = S.Goto(result, S.Constant(47));
+        for (var i = 0; i < 32; ++i) jumpChain = S.Block(jumpChain);
+        var input = S.Parameter(typeof(int));
+        var selection = S.Switch(typeof(int), input, S.Constant(0), null,
+            S.SwitchCase(S.Block(jumpChain, S.Constant(1)), S.Constant(0)),
+            S.SwitchCase(S.Block(S.Label(result, S.Constant(2))), S.Constant(1)));
+        Verify(t, S.Lambda<Func<int>>(S.Invoke(S.Lambda<Func<int, int>>(selection, input), S.Constant(0))), 47);
+
+        var target = S.Label("chain-operand");
+        E.Expression operand = S.Block(S.Label(target), S.Constant(3));
+        for (var i = 0; i < 32; ++i) operand = S.Block(operand);
+        Reject(t, S.Lambda<Func<int>>(S.Block(S.Goto(target), S.Add(operand, S.Constant(4)))));
     }
     public void Alternating_scope_overflow_buffers_can_be_reused(TestContext t)
     {
@@ -146,7 +163,7 @@ public struct LexicalJumpScopeRegressionTests : ITestX
 #if LIGHT_EXPRESSION
     private sealed class RecoveringIntrinsic : TypedUnaryExpression
     {
-        public RecoveringIntrinsic() : base(E.ExpressionType.Convert, Expression.Constant(19), typeof(int)) { }
+        public RecoveringIntrinsic(bool block = false) : base(block ? E.ExpressionType.Block : E.ExpressionType.Convert, Expression.Constant(19), typeof(int)) { }
         public override bool IsIntrinsic => true;
         public override ExpressionCompiler.Result TryCollectInfo(ref ExpressionCompiler.CompilerContext context,
             ExpressionCompiler.NestedLambdaInfo nestedLambda, ref NestedLambdas rootNestedLambdas, short scopeIdx)
@@ -170,6 +187,10 @@ public struct LexicalJumpScopeRegressionTests : ITestX
 
     public void Custom_intrinsic_can_recover_from_failed_child_collection(TestContext t)
     {
+        Expression child = new RecoveringIntrinsic(block: true);
+        for (var i = 0; i < 32; ++i) child = Expression.Block(child);
+        var intrinsicBlock = Expression.Lambda<Func<int>>(child).CompileFast(true);
+        if (t.IsNotNull(intrinsicBlock)) t.AreEqual(19, intrinsicBlock());
         var source = Expression.Lambda<Func<int>>(Expression.Block(new RecoveringIntrinsic()));
         foreach (var flags in Flags)
         {
