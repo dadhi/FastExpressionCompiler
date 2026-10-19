@@ -2428,7 +2428,9 @@ namespace FastExpressionCompiler
             try
             {
                 var result = TryCollectInfo(ref context, expression, nestedLambda, ref rootNestedLambdas);
-                if (result == Result.OK)
+                // Neither validator has work without a goto. Avoid first-use JIT of
+                // the validation paths for ordinary jump-free expressions.
+                if (result == Result.OK && (context.ScopedGotos.Count != 0 || context.ExceptionGotos.Count != 0))
                     context.ValidateExceptionJumps();
                 return result;
             }
