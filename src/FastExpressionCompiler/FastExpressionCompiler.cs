@@ -1016,7 +1016,13 @@ namespace FastExpressionCompiler
             [RequiresUnreferencedCode(Trimming.Message)]
             [MethodImpl((MethodImplOptions)256)]
             internal bool UsesBoxedValueCell(Type type) =>
+#if NETFRAMEWORK
+                // Anonymous Framework methods cannot verify writable unbox addresses.
+                // Keep one representation throughout the root, including exception bodies.
+                false;
+#else
                 !CaptureStorageRequiresTypedCells && type.IsValueType && !type.IsNullable();
+#endif
 
             [RequiresUnreferencedCode(Trimming.Message)]
             internal bool TryHoistVariable(ParameterExpression variable, bool requireCell = false)
