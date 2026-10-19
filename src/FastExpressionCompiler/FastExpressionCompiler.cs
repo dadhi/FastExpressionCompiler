@@ -655,6 +655,14 @@ namespace FastExpressionCompiler
         {
             internal LabelScopeKind Kind;
             internal LabelScope Scope;
+            internal int Count;
+            internal int CapturedCount;
+        }
+
+        internal struct ExceptionRegionFrame
+        {
+            internal bool CannotLeave;
+            internal ExceptionRegionInfo Region;
         }
 
         internal sealed class ExceptionRegionInfo
@@ -708,7 +716,7 @@ namespace FastExpressionCompiler
 #endif
             internal bool CanRethrow;
             internal bool IsCollectingExceptionFilter;
-            internal ExceptionRegionInfo CurrentExceptionRegion;
+            internal SmallList<ExceptionRegionFrame, Stack4<ExceptionRegionFrame>, NoArrayPool<ExceptionRegionFrame>> ExceptionRegions;
             internal SmallList<(object Target, ExceptionRegionInfo Region), Stack4<(object Target, ExceptionRegionInfo Region)>, NoArrayPool<(object Target, ExceptionRegionInfo Region)>> ExceptionLabels;
             internal SmallList<(object Target, ExceptionRegionInfo Region), Stack4<(object Target, ExceptionRegionInfo Region)>, NoArrayPool<(object Target, ExceptionRegionInfo Region)>> ExceptionGotos;
 
@@ -718,8 +726,47 @@ namespace FastExpressionCompiler
             internal SmallList<(LabelTarget Target, LabelScope Scope), Stack4<(LabelTarget Target, LabelScope Scope)>, NoArrayPool<(LabelTarget Target, LabelScope Scope)>> ScopedLabels;
             internal SmallList<(LabelTarget Target, LabelScope Scope), Stack4<(LabelTarget Target, LabelScope Scope)>, NoArrayPool<(LabelTarget Target, LabelScope Scope)>> ScopedGotos;
 
-            internal void PushLabelScope(LabelScopeKind kind) =>
-                LabelScopes.AddAndGetRef(new LabelScopeFrame { Kind = kind });
+            internal int LabelScopeDepth;
+
+            internal void PushLabelScope(LabelScopeKind kind)
+            {
+                ++LabelScopeDepth;
+                // Equal adjacent kinds still represent distinct scopes. Only their
+                // unobserved frames are compressed; labels materialize every ancestor.
+                if (kind != LabelScopeKind.Lambda && LabelScopes.Count != 0)
+                {
+                    ref var last = ref LabelScopes.GetSurePresentRef(LabelScopes.Count - 1);
+                    if (last.Kind == kind)
+                    {
+                        ++last.Count;
+                        return;
+                    }
+                }
+                LabelScopes.AddAndGetRef(new LabelScopeFrame { Kind = kind, Count = 1 });
+            }
+
+            internal void RestoreLabelScopeDepth(int depth)
+            {
+                var remaining = LabelScopeDepth - depth;
+                LabelScopeDepth = depth;
+                while (remaining != 0)
+                {
+                    ref var frame = ref LabelScopes.GetSurePresentRef(LabelScopes.Count - 1);
+                    if (frame.Count <= remaining)
+                    {
+                        remaining -= frame.Count;
+                        --LabelScopes.Count;
+                        continue;
+                    }
+                    frame.Count -= remaining;
+                    while (frame.CapturedCount > frame.Count)
+                    {
+                        frame.Scope = frame.Scope.Parent;
+                        --frame.CapturedCount;
+                    }
+                    break;
+                }
+            }
 
             internal LabelScope CaptureLabelScope()
             {
@@ -727,14 +774,30 @@ namespace FastExpressionCompiler
                 while (start > 0 && LabelScopes[start].Scope == null && LabelScopes[start].Kind != LabelScopeKind.Lambda)
                     --start;
                 LabelScope parent = null;
-                if (LabelScopes[start].Kind != LabelScopeKind.Lambda)
-                    parent = LabelScopes[start].Scope;
                 for (var i = start; i < LabelScopes.Count; ++i)
                 {
                     ref var frame = ref LabelScopes.GetSurePresentRef(i);
-                    if (frame.Scope == null)
-                        frame.Scope = new LabelScope(parent, frame.Kind);
+                    if (frame.Scope != null)
                     parent = frame.Scope;
+                    while (frame.CapturedCount < frame.Count)
+                    {
+                        parent = new LabelScope(parent, frame.Kind);
+                        ++frame.CapturedCount;
+                    }
+                    frame.Scope = parent;
+                }
+                return parent;
+            }
+
+            internal ExceptionRegionInfo CaptureExceptionRegion()
+            {
+                ExceptionRegionInfo parent = null;
+                for (var i = 0; i < ExceptionRegions.Count; ++i)
+                {
+                    ref var frame = ref ExceptionRegions.GetSurePresentRef(i);
+                    if (frame.Region == null)
+                        frame.Region = new ExceptionRegionInfo(parent, frame.CannotLeave);
+                    parent = frame.Region;
                 }
                 return parent;
             }
@@ -1614,7 +1677,7 @@ namespace FastExpressionCompiler
             NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas,
             bool directBlockChild = false, bool switchBody = false)
         {
-            var scopeDepth = context.LabelScopes.Count;
+            var scopeDepth = context.LabelScopeDepth;
             if (scopeDepth == 0)
                 context.PushLabelScope(LabelScopeKind.Lambda);
             try
@@ -1948,11 +2011,10 @@ namespace FastExpressionCompiler
                         if (loopExpr.ContinueLabel != null)
                             context.ScopedLabels.AddAndGetRef((loopExpr.ContinueLabel, context.CaptureLabelScope()));
                         if (loopExpr.BreakLabel != null)
-                            context.ExceptionLabels.AddAndGetRef((loopExpr.BreakLabel, context.CurrentExceptionRegion));
+                            context.ExceptionLabels.AddAndGetRef((loopExpr.BreakLabel, context.CaptureExceptionRegion()));
                         if (loopExpr.ContinueLabel != null)
-                            context.ExceptionLabels.AddAndGetRef((loopExpr.ContinueLabel, context.CurrentExceptionRegion));
+                            context.ExceptionLabels.AddAndGetRef((loopExpr.ContinueLabel, context.CaptureExceptionRegion()));
                         expr = loopExpr.Body;
-                        enterable = true;
                         continue;
 
                     case ExpressionType.Index:
@@ -1995,10 +2057,7 @@ namespace FastExpressionCompiler
                         var labelExpr = (LabelExpression)expr;
                         context.ScopedLabels.AddAndGetRef((labelExpr.Target, context.CaptureLabelScope()));
                         context.AddLabel(labelExpr.Target, context.CurrentInlinedLambdaInvokeIndex);
-                        _ = context.DefTargets.Add(labelExpr.Target);
-                        _ = context.DefPositions.Add(new ScopeIdx(scopeIdx, enterable));
-
-                        context.ExceptionLabels.AddAndGetRef((labelExpr.Target, context.CurrentExceptionRegion));
+                        context.ExceptionLabels.AddAndGetRef((labelExpr.Target, context.CaptureExceptionRegion()));
                         if (labelExpr.Target != null)
                             context.TargetToGotosAndLabels.Map.AddOrGetValueRef(labelExpr.Target, out _).Item2++;
                         if (labelExpr.DefaultValue == null)
@@ -2011,7 +2070,7 @@ namespace FastExpressionCompiler
                         var gotoExpr = (GotoExpression)expr;
                         context.HasComplexExpression = true;
                         context.ScopedGotos.AddAndGetRef((gotoExpr.Target, context.CaptureLabelScope()));
-                        context.ExceptionGotos.AddAndGetRef((gotoExpr.Target, context.CurrentExceptionRegion));
+                        context.ExceptionGotos.AddAndGetRef((gotoExpr.Target, context.CaptureExceptionRegion()));
                         if (gotoExpr.Target != null)
                             context.TargetToGotosAndLabels.Map.AddOrGetValueRef(gotoExpr.Target, out _).Item1++;
                         if (gotoExpr.Value == null)
@@ -2208,7 +2267,7 @@ namespace FastExpressionCompiler
         }
             finally
             {
-                context.LabelScopes.Count = scopeDepth;
+                context.RestoreLabelScopeDepth(scopeDepth);
             }
         }
 
@@ -2263,7 +2322,7 @@ namespace FastExpressionCompiler
             var callerCanRethrow = context.CanRethrow;
             context.CurrentInlinedLambdaInvokeIndex = invokeIndex;
             context.CanRethrow = false;
-            var callerScopeDepth = context.LabelScopes.Count;
+            var callerScopeDepth = context.LabelScopeDepth;
             context.PushLabelScope(LabelScopeKind.Lambda);
             try
             {
@@ -2271,7 +2330,7 @@ namespace FastExpressionCompiler
             }
             finally
             {
-                context.LabelScopes.Count = callerScopeDepth;
+                context.RestoreLabelScopeDepth(callerScopeDepth);
                 context.CanRethrow = callerCanRethrow;
                 context.CurrentInlinedLambdaInvokeIndex = callerIndex;
             }
@@ -2622,11 +2681,15 @@ namespace FastExpressionCompiler
         private static Result TryCollectExceptionRegionInfo(ref CompilerContext context, Expression expression,
             bool cannotLeave, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
         {
-            var parent = context.CurrentExceptionRegion;
-            context.CurrentExceptionRegion = new ExceptionRegionInfo(parent, cannotLeave);
-            var result = TryCollectInfo(ref context, expression, nestedLambda, ref rootNestedLambdas);
-            context.CurrentExceptionRegion = parent;
-            return result;
+            context.ExceptionRegions.AddAndGetRef(new ExceptionRegionFrame { CannotLeave = cannotLeave });
+            try
+            {
+                return TryCollectInfo(ref context, expression, nestedLambda, ref rootNestedLambdas);
+            }
+            finally
+            {
+                --context.ExceptionRegions.Count;
+            }
         }
 
         private static Result TryCollectTryExprInfo(ref CompilerContext context, TryExpression tryExpr,
