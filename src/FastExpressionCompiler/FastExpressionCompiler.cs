@@ -1435,7 +1435,7 @@ namespace FastExpressionCompiler
                     else { indexes[i] = locals.Count; locals.Add(variable); }
                 }
                 if (!hasCapture) return node;
-                return System.Linq.Expressions.Expression.Call(MergeQuotedVariablesMethod,
+                return System.Linq.Expressions.Expression.Call(QuoteRuntimeVariableMethods.Merge,
                     System.Linq.Expressions.Expression.RuntimeVariables(locals),
                     System.Linq.Expressions.Expression.Constant(new CellRuntimeVariables(_cells), typeof(System.Runtime.CompilerServices.IRuntimeVariables)),
                     System.Linq.Expressions.Expression.Constant(indexes));
@@ -1444,7 +1444,6 @@ namespace FastExpressionCompiler
 
         private static System.Linq.Expressions.Expression BindQuote(QuotedExpressionInfo quote, object[] cells) =>
             new QuoteBinder(quote, cells).Visit(quote.Template);
-        private static readonly MethodInfo BindQuoteMethod = typeof(ExpressionCompiler).GetMethod(nameof(BindQuote), BindingFlags.Static | BindingFlags.NonPublic);
 
         private sealed class CellRuntimeVariables : System.Runtime.CompilerServices.IRuntimeVariables
         {
@@ -1474,8 +1473,13 @@ namespace FastExpressionCompiler
         private static System.Runtime.CompilerServices.IRuntimeVariables CreateCellRuntimeVariables(object[] cells) => new CellRuntimeVariables(cells);
         private static System.Runtime.CompilerServices.IRuntimeVariables MergeQuotedVariables(System.Runtime.CompilerServices.IRuntimeVariables locals,
             System.Runtime.CompilerServices.IRuntimeVariables captures, int[] indexes) => new MergedRuntimeVariables(locals, captures, indexes);
-        private static readonly MethodInfo CreateCellRuntimeVariablesMethod = typeof(ExpressionCompiler).GetMethod(nameof(CreateCellRuntimeVariables), BindingFlags.Static | BindingFlags.NonPublic);
-        private static readonly MethodInfo MergeQuotedVariablesMethod = typeof(ExpressionCompiler).GetMethod(nameof(MergeQuotedVariables), BindingFlags.Static | BindingFlags.NonPublic);
+        private static class QuoteRuntimeVariableMethods
+        {
+            internal static readonly MethodInfo Bind = typeof(ExpressionCompiler).GetMethod(nameof(BindQuote), BindingFlags.Static | BindingFlags.NonPublic);
+            internal static readonly MethodInfo Create = typeof(ExpressionCompiler).GetMethod(nameof(CreateCellRuntimeVariables), BindingFlags.Static | BindingFlags.NonPublic);
+            internal static readonly MethodInfo Merge = typeof(ExpressionCompiler).GetMethod(nameof(MergeQuotedVariables), BindingFlags.Static | BindingFlags.NonPublic);
+            static QuoteRuntimeVariableMethods() { }
+        }
 
         // Exception regions and jumps affect invocation spilling even in branches that
         // constant folding removes. Lambda/quote bodies execute separately; opaque
@@ -4153,7 +4157,7 @@ namespace FastExpressionCompiler
                                 il.EmitPopIfIgnoreResult(parent);
                             if (!TryEmitConstant(true, typeof(QuotedExpressionInfo), typeof(QuotedExpressionInfo), quoted, il, ref context) ||
                                 !TryEmitHoistedCells(quoted.Variables, il, ref context)) return false;
-                            il.Demit(OpCodes.Call, BindQuoteMethod);
+                            il.Demit(OpCodes.Call, QuoteRuntimeVariableMethods.Bind);
                             il.Demit(OpCodes.Castclass, exprType);
                             return il.EmitPopIfIgnoreResult(parent);
 
@@ -4173,7 +4177,7 @@ namespace FastExpressionCompiler
                                 return TryEmitConstant(true, exprType, typeof(EmptyRuntimeVariables), EmptyRuntimeVariables.Instance, il, ref context) &&
                                 il.EmitPopIfIgnoreResult(parent);
                             if (!TryEmitHoistedCells(runtimeVariables, il, ref context)) return false;
-                            il.Demit(OpCodes.Call, CreateCellRuntimeVariablesMethod);
+                            il.Demit(OpCodes.Call, QuoteRuntimeVariableMethods.Create);
                             return il.EmitPopIfIgnoreResult(parent);
 
                         default:
