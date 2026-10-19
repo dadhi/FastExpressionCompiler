@@ -1036,6 +1036,7 @@ namespace FastExpressionCompiler
                     }
                     if (!CaptureStorageRequiresCells)
                     {
+                        if (CaptureCellVariables.Set.Count == 0) return true;
                         CaptureCellVariables.Set.TryGetEntryRef(variable, out var requiresCell);
                         if (!requiresCell) return true;
                     }
@@ -2375,6 +2376,13 @@ namespace FastExpressionCompiler
     #endif
 
 
+                            // This analysis covers the complete root. Share it before propagation,
+                            // otherwise each enclosing lambda repeats the same root traversal.
+                            context.CaptureCellVariables = nestedLambdaContext.CaptureCellVariables;
+                            context.CaptureMethodParameters = nestedLambdaContext.CaptureMethodParameters;
+                            context.CaptureStorageAnalyzed = nestedLambdaContext.CaptureStorageAnalyzed;
+                            context.CaptureStorageRequiresCells = nestedLambdaContext.CaptureStorageRequiresCells;
+
                         if (newNestedLambda.NonPassedParameters.Count != 0 &&
                             !PropagateNonPassedParamsToOuterLambda(ref context,
                                 nestedLambda, nestedParamExprs, ref newNestedLambda.NonPassedParameters))
@@ -2383,10 +2391,6 @@ namespace FastExpressionCompiler
                         if (!TryCompileNestedLambda(ref nestedLambdaContext, newNestedLambda))
                             return Result.NestedLambdaCompileError;
                         context.HoistedTypes = nestedLambdaContext.HoistedTypes;
-                        context.CaptureCellVariables = nestedLambdaContext.CaptureCellVariables;
-                        context.CaptureMethodParameters = nestedLambdaContext.CaptureMethodParameters;
-                        context.CaptureStorageAnalyzed = nestedLambdaContext.CaptureStorageAnalyzed;
-                        context.CaptureStorageRequiresCells = nestedLambdaContext.CaptureStorageRequiresCells;
 
                         return r;
                         }
