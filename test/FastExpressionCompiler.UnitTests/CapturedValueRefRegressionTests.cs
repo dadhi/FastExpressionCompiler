@@ -26,6 +26,8 @@ public struct CapturedValueRefRegressionTests : ITestX
         Mutating_struct_indexers_keep_the_capture_live(t);
         Writes_through_reference_members_keep_value_captures(t);
         Leading_value_assignments_do_not_allocate_capture_cells(t);
+        Hoisted_metadata_rentals_clear_success_and_failure_state(t);
+        Concurrent_compilation_keeps_hoisted_metadata_isolated(t);
     }
     public static int Add(ref int value, int increment) => value += increment;
     public static int? AddNullable(ref int? value, int increment) => value = value + increment;
@@ -333,5 +335,73 @@ public struct CapturedValueRefRegressionTests : ITestX
         var actual = expression.FromSysExpression().CompileFast(true)();
         AssertOriginalValueStorage(t, actual, expected);
         t.IsTrue(ReferenceEquals(expression.Compile()()(), actual()));
+    }
+    private static System.Linq.Expressions.Expression<Func<int, string, object, Func<int>>> MutableCaptureExpression()
+    {
+        var number = SysExpr.Parameter(typeof(int));
+        var text = SysExpr.Parameter(typeof(string));
+        var reference = SysExpr.Parameter(typeof(object));
+        var body = SysExpr.Block(
+            SysExpr.Call(typeof(CapturedValueRefRegressionTests).GetMethod(nameof(Replace)), text),
+            SysExpr.Call(typeof(CapturedValueRefRegressionTests).GetMethod(nameof(ReplaceObject)), reference),
+            SysExpr.PreIncrementAssign(number));
+        return SysExpr.Lambda<Func<int, string, object, Func<int>>>(SysExpr.Lambda<Func<int>>(body), number, text, reference);
+    }
+
+    public void Hoisted_metadata_rentals_clear_success_and_failure_state(TestContext t)
+    {
+        var expression = MutableCaptureExpression();
+        var actual = expression.FromSysExpression().CompileFast(true)(3, "initial", new object());
+        t.AreEqual(4, actual());
+        AssertClearedHoistedMetadataPool(t);
+        var target = SysExpr.Label();
+        var broken = SysExpr.Lambda<Func<int, string, object, int>>(
+            SysExpr.Block(expression.Body, SysExpr.Goto(target), SysExpr.Constant(0)), expression.Parameters);
+        t.Throws<InvalidOperationException>(() => broken.FromSysExpression().CompileFast(true));
+        AssertClearedHoistedMetadataPool(t);
+        t.AreEqual(5, actual());
+    }
+
+    public void Concurrent_compilation_keeps_hoisted_metadata_isolated(TestContext t)
+    {
+        var expression = MutableCaptureExpression();
+        var passed = new bool[64];
+        System.Threading.Tasks.Parallel.For(0, passed.Length, i =>
+        {
+            var actual = expression.FromSysExpression().CompileFast(true)(i, "initial", new object());
+            passed[i] = actual() == i + 1 && actual() == i + 2;
+        });
+        foreach (var pass in passed) t.IsTrue(pass);
+        AssertClearedHoistedMetadataPool(t);
+    }
+
+    private static void AssertClearedHoistedMetadataPool(TestContext t)
+    {
+        const System.Reflection.BindingFlags fields = System.Reflection.BindingFlags.Instance |
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
+        var cache = typeof(ExpressionCompiler).GetField("_hoistedTypeCachePool",
+            System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic).GetValue(null);
+        if (!t.IsNotNull(cache)) return;
+        var scratch = (Type[])cache.GetType().GetField("Scratch", fields).GetValue(cache);
+        t.IsTrue(scratch[0] == null);
+        var types = cache.GetType().GetField("Types", fields).GetValue(cache);
+        t.AreEqual(0, (int)types.GetType().GetProperty("Count").GetValue(types));
+        AssertNoPooledMetadataReferences(t, types);
+    }
+
+    private static void AssertNoPooledMetadataReferences(TestContext t, object value)
+    {
+        if (value == null) return;
+        if (value is Array array)
+        {
+            foreach (var element in array) AssertNoPooledMetadataReferences(t, element);
+            return;
+        }
+        var type = value.GetType();
+        if (type.IsPrimitive || type.IsEnum) return;
+        if (!t.IsTrue(type.IsValueType)) return;
+        foreach (var field in type.GetFields(System.Reflection.BindingFlags.Instance |
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic))
+            AssertNoPooledMetadataReferences(t, field.GetValue(value));
     }
 }
