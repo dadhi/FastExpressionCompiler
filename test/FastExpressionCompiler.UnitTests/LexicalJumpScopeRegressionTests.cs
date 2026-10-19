@@ -27,6 +27,7 @@ public struct LexicalJumpScopeRegressionTests : ITestX
         Deep_adjacent_blocks_preserve_ancestor_and_sibling_scopes(t);
         Single_expression_block_chains_preserve_switch_and_operand_scopes(t);
         Alternating_scope_overflow_buffers_can_be_reused(t);
+        Scope_overflow_buffers_are_independent_during_concurrent_compilation(t);
         Label_free_blocks_keep_reused_inlined_invocations(t);
         Public_collection_unwinds_failed_deep_scopes_and_can_retry(t);
 #if LIGHT_EXPRESSION
@@ -147,6 +148,22 @@ public struct LexicalJumpScopeRegressionTests : ITestX
         for (var i = 0; i < 32; ++i) operand = S.Block(operand);
         Reject(t, S.Lambda<Func<int>>(S.Block(S.Goto(target), S.Add(operand, S.Constant(4)))));
     }
+    public void Scope_overflow_buffers_are_independent_during_concurrent_compilation(TestContext t)
+    {
+        var target = S.Label(typeof(int), "concurrent-scope");
+        E.Expression body = S.Return(target, S.Constant(53));
+        var condition = S.Call(typeof(string).GetMethod(nameof(string.IsNullOrEmpty)), S.Constant(""));
+        for (var i = 0; i < 48; ++i) body = S.Block(S.Condition(condition, S.Block(body), S.Empty()));
+        var source = S.Lambda<Func<int>>(S.Block(body, S.Label(target, S.Constant(0)))).FromSysExpression();
+        System.Threading.Tasks.Parallel.For(0, 32, iteration =>
+        {
+            var compiled = source.CompileFast(true);
+            if (compiled == null || compiled() != 53)
+                throw new Exception("Concurrent scope buffers corrupted compiled control flow.");
+        });
+        t.AreEqual(53, source.CompileFast(true)());
+    }
+
     public void Alternating_scope_overflow_buffers_can_be_reused(TestContext t)
     {
         for (var repetition = 0; repetition < 3; ++repetition)
