@@ -24,6 +24,8 @@ public struct CapturedValueRefRegressionTests : ITestX
         Loop_and_finally_writes_keep_the_shared_capture_live(t);
         Never_assigned_locals_keep_the_default_value_slot(t);
         Mutating_struct_indexers_keep_the_capture_live(t);
+        Writes_through_reference_members_keep_value_captures(t);
+        Leading_value_assignments_do_not_allocate_capture_cells(t);
     }
     public static int Add(ref int value, int increment) => value += increment;
     public static int? AddNullable(ref int? value, int increment) => value = value + increment;
@@ -194,6 +196,7 @@ public struct CapturedValueRefRegressionTests : ITestX
     public sealed class ReferenceNode
     {
         public object Value;
+        public object Property { get => Value; set => Value = value; }
         public NestedReferenceNode Child = new NestedReferenceNode();
         public ReferenceHolder Holder = new ReferenceHolder(null);
         public System.Collections.Generic.List<object> Values = new System.Collections.Generic.List<object>();
@@ -297,5 +300,38 @@ public struct CapturedValueRefRegressionTests : ITestX
         t.AreEqual(expected(), 4);
         t.AreEqual(5, actual());
         t.AreEqual(expected(), 5);
+    }
+    public void Writes_through_reference_members_keep_value_captures(TestContext t)
+    {
+        var holder = SysExpr.Parameter(typeof(ReferenceNode));
+        var node = new ReferenceNode();
+        var replace = typeof(CapturedValueRefRegressionTests).GetMethod(nameof(ReplaceObject));
+        var fieldExpression = SysExpr.Lambda<Func<ReferenceNode, Func<object>>>(SysExpr.Lambda<Func<object>>(
+            SysExpr.Block(SysExpr.Call(replace, SysExpr.Field(holder, nameof(ReferenceNode.Value))), SysExpr.Convert(holder, typeof(object)))), holder);
+        AssertOriginalValueStorage(t, fieldExpression.FromSysExpression().CompileFast(true)(node), node);
+        t.IsTrue(ReferenceEquals(ChangedReference, node.Value));
+        node.Value = null;
+        var propertyExpression = SysExpr.Lambda<Func<ReferenceNode, Func<object>>>(SysExpr.Lambda<Func<object>>(
+            SysExpr.Block(SysExpr.Call(replace, SysExpr.Property(holder, nameof(ReferenceNode.Property))), SysExpr.Convert(holder, typeof(object)))), holder);
+        AssertOriginalValueStorage(t, propertyExpression.FromSysExpression().CompileFast(true)(node), node);
+        t.IsTrue(ReferenceEquals(ChangedReference, node.Value));
+        var array = SysExpr.Parameter(typeof(object[]));
+        var values = new object[1];
+        var arrayExpression = SysExpr.Lambda<Func<object[], Func<object>>>(SysExpr.Lambda<Func<object>>(
+            SysExpr.Block(SysExpr.Call(replace, SysExpr.ArrayAccess(array, SysExpr.Constant(0))), SysExpr.Convert(array, typeof(object)))), array);
+        AssertOriginalValueStorage(t, arrayExpression.FromSysExpression().CompileFast(true)(values), values);
+        t.IsTrue(ReferenceEquals(ChangedReference, values[0]));
+    }
+    public void Leading_value_assignments_do_not_allocate_capture_cells(TestContext t)
+    {
+        var value = SysExpr.Variable(typeof(object));
+        var copiedDefault = SysExpr.Variable(typeof(object));
+        var expected = new object();
+        var expression = SysExpr.Lambda<Func<Func<object>>>(SysExpr.Block(new[] { value, copiedDefault },
+            SysExpr.Assign(copiedDefault, value), SysExpr.Assign(value, SysExpr.Constant(expected)),
+            SysExpr.Assign(value, value), SysExpr.Lambda<Func<object>>(value)));
+        var actual = expression.FromSysExpression().CompileFast(true)();
+        AssertOriginalValueStorage(t, actual, expected);
+        t.IsTrue(ReferenceEquals(expression.Compile()()(), actual()));
     }
 }
