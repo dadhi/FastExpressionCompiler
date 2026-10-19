@@ -16,6 +16,9 @@ public struct CapturedValueRefRegressionTests : ITestX
         Separate_closures_keep_ref_mutations_isolated(t);
         Nullable_and_reference_captures_expose_writable_cells(t);
         Hoisted_local_ref_calls_update_the_shared_box(t);
+        Readonly_captures_keep_the_original_value_storage(t);
+        Later_assignment_keeps_captures_live(t);
+        Capture_before_initialization_observes_the_assigned_value(t);
     }
     public static int Add(ref int value, int increment) => value += increment;
     public static int? AddNullable(ref int? value, int increment) => value = value + increment;
@@ -99,5 +102,56 @@ public struct CapturedValueRefRegressionTests : ITestX
         if (!t.IsNotNull(fast)) return;
         t.AreEqual(4, fast());
         t.AreEqual(expression.Compile()(), fast());
+    }
+    public void Readonly_captures_keep_the_original_value_storage(TestContext t)
+    {
+        var value = new object();
+        System.Linq.Expressions.Expression<Func<object, Func<object>>> parameter = x => () => x;
+        var local = SysExpr.Variable(typeof(object));
+        var localExpression = SysExpr.Lambda<Func<Func<object>>>(SysExpr.Block(new[] { local },
+            SysExpr.Assign(local, SysExpr.Constant(value)), SysExpr.Lambda<Func<object>>(local)));
+        var capturedParameter = parameter.FromSysExpression().CompileFast(true)(value);
+        var capturedLocal = localExpression.FromSysExpression().CompileFast(true)();
+        t.IsTrue(ReferenceEquals(value, capturedParameter()));
+        t.IsTrue(ReferenceEquals(value, capturedLocal()));
+        foreach (var captured in new Delegate[] { capturedParameter, capturedLocal })
+        {
+            var foundClosure = false;
+            foreach (var field in captured.Target.GetType().GetFields(System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic))
+            {
+                if (field.GetValue(captured.Target) is ExpressionCompiler.ArrayClosureWithNonPassedParams closure)
+                {
+                    foundClosure = true;
+                    t.IsTrue(ReferenceEquals(value, closure.NonPassedParams[0]));
+                }
+            }
+            t.IsTrue(foundClosure);
+        }
+    }
+
+    public void Later_assignment_keeps_captures_live(TestContext t)
+    {
+        var value = SysExpr.Variable(typeof(object));
+        var getter = SysExpr.Variable(typeof(Func<object>));
+        var expected = new object();
+        var expression = SysExpr.Lambda<Func<Func<object>>>(SysExpr.Block(new[] { value, getter },
+            SysExpr.Assign(value, SysExpr.Constant(new object())),
+            SysExpr.Assign(getter, SysExpr.Lambda<Func<object>>(value)),
+            SysExpr.Assign(value, SysExpr.Constant(expected)), getter));
+        var actual = expression.FromSysExpression().CompileFast(true)();
+        t.IsTrue(ReferenceEquals(expected, actual()));
+    }
+
+    public void Capture_before_initialization_observes_the_assigned_value(TestContext t)
+    {
+        var value = SysExpr.Variable(typeof(object));
+        var getter = SysExpr.Variable(typeof(Func<object>));
+        var expected = new object();
+        var expression = SysExpr.Lambda<Func<Func<object>>>(SysExpr.Block(new[] { value, getter },
+            SysExpr.Assign(getter, SysExpr.Lambda<Func<object>>(value)),
+            SysExpr.Assign(value, SysExpr.Constant(expected)), getter));
+        var actual = expression.FromSysExpression().CompileFast(true)();
+        t.IsTrue(ReferenceEquals(expected, actual()));
     }
 }
