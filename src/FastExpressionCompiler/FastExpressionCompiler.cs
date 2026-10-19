@@ -8919,8 +8919,10 @@ namespace FastExpressionCompiler
                 // Keep the common scalar path out of the lifted-operation frame. The
                 // general path uses exactly these operands when no nullable/spill work
                 // is required; address/value handling remains in the normal emitter.
+                // Atomic right operands cannot enter a protected region while the left
+                // value is on the stack, even if an earlier operand used try/finally.
                 if (operationMethod == null && right != null && left.Type.IsPrimitive && right.Type.IsPrimitive &&
-                    !context.HasExceptionBlock && !right.IsComplexExpression())
+                    (!context.HasExceptionBlock || IsAtomicArithmeticOperand(right)) && !right.IsComplexExpression())
                 {
                     var flags = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
                         ParentFlags.MemberAccess | ParentFlags.AssignmentLeftValue | ParentFlags.DupIt |
@@ -8933,6 +8935,13 @@ namespace FastExpressionCompiler
                 }
                 return TryEmitLiftedOrComplexArithmetic(left, right, nodeType, exprType, il, ref context, parent, operationMethod);
             }
+
+            [MethodImpl((MethodImplOptions)256)]
+            private static bool IsAtomicArithmeticOperand(Expression operand) =>
+#if LIGHT_EXPRESSION
+                !operand.IsIntrinsic &&
+#endif
+                (operand is ConstantExpression || operand is ParameterExpression || operand is DefaultExpression);
 
             private static bool TryEmitLiftedOrComplexArithmetic(Expression left, Expression right, ExpressionType nodeType, Type exprType,
                 ILGenerator il, ref CompilerContext context, ParentFlags parent, MethodInfo operationMethod)
