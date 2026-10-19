@@ -122,7 +122,7 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.RuntimeCompilerLayoutBehaviorRegressionTests());
                 t.Run(new LightExpression.UnitTests.AdditionalCompilerLayoutBehaviorRegressionTests());
                 t.Run(new LightExpression.UnitTests.CompilerLayoutBehaviorRegressionTests());
-                t.Run(new LightExpression.UnitTests.InvocationExceptionSpillRegressionTests());
+                t.Run(new LightExpression.UnitTests.InvocationArgumentContextRegressionTests());
                 t.Run(new LightExpression.UnitTests.InvalidFilterControlFlowRegressionTests());
                 t.Run(new LightExpression.UnitTests.CatchFilterSafetyRegressionTests());
                 t.Run(new LightExpression.IssueTests.Issue183_NullableDecimal());
@@ -245,7 +245,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new RuntimeCompilerLayoutBehaviorRegressionTests());
             fecTests.Run(new AdditionalCompilerLayoutBehaviorRegressionTests());
             fecTests.Run(new CompilerLayoutBehaviorRegressionTests());
-            fecTests.Run(new InvocationExceptionSpillRegressionTests());
+            fecTests.Run(new InvocationArgumentContextRegressionTests());
             fecTests.Run(new InvalidFilterControlFlowRegressionTests());
             fecTests.Run(new CatchFilterSafetyRegressionTests());
             fecTests.Run(new Issue183_NullableDecimal());
