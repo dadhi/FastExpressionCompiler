@@ -64,3 +64,15 @@ System's compiled nested-struct compound assignments have a defensive-copy discr
 2043b6f7	Preserve original string constant reference identity
 d01d4c2e	Keep Framework boxed receivers verifiable during argument spills
 ```
+
+## Subsequent regression repairs
+
+The [repair measurements and validation report](../repairs/report.html) records
+source `6676ab49`, the 46 local repair commits after reviewed PR snapshot
+`b8f8b38b`, and comparisons with pre-PR `e4c232da` and System.Linq.Expressions.
+Imported validation passes all 35,064 active tests with zero failures or crashes.
+Modern paired warmed allocations are unchanged or lower in the common cases,
+but compiler time, cold startup, and Framework capture allocation regressions
+remain. The report includes those limits, raw samples, reproduction sources,
+hashes, and historical failures separately. This does not replace the historical
+triage above, and the repair commits have not been pushed.
