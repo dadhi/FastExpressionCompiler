@@ -18,10 +18,20 @@ public struct CapturedValueRefRegressionTests : ITestX
         Hoisted_local_ref_calls_update_the_shared_box(t);
         Readonly_captures_keep_the_original_value_storage(t);
 
+        Delegate_ref_arguments_keep_captures_live(t);
     }
     public static int Add(ref int value, int increment) => value += increment;
     public static int? AddNullable(ref int? value, int increment) => value = value + increment;
     public static string Replace(ref string value) => value = "changed";
+    public static object Identity(object value) => value;
+    public sealed class ReferenceHolder
+    {
+        public readonly object Value;
+        public ReferenceHolder(object value) => Value = value;
+    }
+    public delegate object ObjectRefUpdater(ref object value);
+    private static readonly object ChangedReference = new object();
+    public static object ReplaceObject(ref object value) => value = ChangedReference;
 
     public void Curried_ref_calls_preserve_reads_and_mutations(TestContext t)
     {
@@ -113,7 +123,14 @@ public struct CapturedValueRefRegressionTests : ITestX
         var capturedLocal = localExpression.FromSysExpression().CompileFast(true)();
         t.IsTrue(ReferenceEquals(value, capturedParameter()));
         t.IsTrue(ReferenceEquals(value, capturedLocal()));
-        foreach (var captured in new Delegate[] { capturedParameter, capturedLocal })
+        System.Linq.Expressions.Expression<Func<object, Func<object>>> call = x => () => Identity(x);
+        System.Linq.Expressions.Expression<Func<object, Func<object>>> constructor = x => () => new ReferenceHolder(x).Value;
+        var argument = SysExpr.Parameter(typeof(object));
+        var invoke = SysExpr.Lambda<Func<object, Func<object>>>(SysExpr.Lambda<Func<object>>(
+            SysExpr.Invoke(SysExpr.Constant((Func<object, object>)Identity), argument)), argument);
+        foreach (var captured in new Delegate[] { capturedParameter, capturedLocal,
+            call.FromSysExpression().CompileFast(true)(value), constructor.FromSysExpression().CompileFast(true)(value),
+            invoke.FromSysExpression().CompileFast(true)(value) })
         {
             var foundClosure = false;
             foreach (var field in captured.Target.GetType().GetFields(System.Reflection.BindingFlags.Instance |
@@ -129,4 +146,13 @@ public struct CapturedValueRefRegressionTests : ITestX
         }
     }
 
+    public void Delegate_ref_arguments_keep_captures_live(TestContext t)
+    {
+        var value = SysExpr.Parameter(typeof(object));
+        var expression = SysExpr.Lambda<Func<object, Func<object>>>(SysExpr.Lambda<Func<object>>(
+            SysExpr.Block(SysExpr.Invoke(SysExpr.Constant((ObjectRefUpdater)ReplaceObject), value), value)), value);
+        var actual = expression.FromSysExpression().CompileFast(true)(new object());
+        t.IsTrue(ReferenceEquals(ChangedReference, actual()));
+        t.IsTrue(ReferenceEquals(ChangedReference, actual()));
+    }
 }
