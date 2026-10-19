@@ -499,24 +499,10 @@ namespace FastExpressionCompiler
 
         private static DynamicMethod CreateExceptionAwareDynamicMethod(Type returnType, Type[] parameterTypes)
         {
-#if NETFRAMEWORK
-            // Framework prohibits using the anonymous module with the module overload.
+            // Use the supported anonymous host for non-Exception catch matching.
+            // restrictedSkipVisibility performs accessibility checks and JIT at CreateDelegate.
             return new DynamicMethod(string.Empty, returnType, parameterTypes, restrictedSkipVisibility: true);
-#else
-            // Preserve the anonymous module's non-Exception catch policy, without the
-            // restricted-skip-visibility constructor's eager JIT at CreateDelegate.
-            return new DynamicMethod(string.Empty, returnType, parameterTypes, AnonymousDynamicMethodHost.Module, true);
-#endif
         }
-
-#if !NETFRAMEWORK
-        private static class AnonymousDynamicMethodHost
-        {
-            // The runtime owns this module. Initialize it only when a method needs its
-            // catch policy; ordinary owner-hosted compilation has no added startup work.
-            internal static readonly Module Module = new DynamicMethod(string.Empty, typeof(void), Type.EmptyTypes, true).Module;
-        }
-#endif
 
         private static readonly Type[] _closureAsASingleParamType = { typeof(ArrayClosure) };
         private static readonly Type[][] _paramTypesPoolWithElem0OfLength1 = new Type[8][]; // todo: @perf @mem could we use this for other Type arrays?
