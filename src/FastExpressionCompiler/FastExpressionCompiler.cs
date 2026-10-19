@@ -2202,8 +2202,32 @@ namespace FastExpressionCompiler
         /// <summary>Collects the information about closure constants, nested lambdas, non-passed parameters, goto labels and variables in blocks.
         /// Returns `OK` result if everything is fine and other result for error.</summary>
         public static Result TryCollectInfo(ref CompilerContext context, Expression expr,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) =>
-            TryCollectInfo(ref context, expr, nestedLambda, ref rootNestedLambdas, false, false);
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+        {
+            // Keep exception unwinding at the public boundary: custom Light
+            // expressions may catch a child collection error and continue.
+            var scopeDepth = context.LabelScopeDepth;
+            try
+            {
+                return TryCollectInfo(ref context, expr, nestedLambda, ref rootNestedLambdas, false, false);
+            }
+            finally
+            {
+                context.RestoreLabelScopeDepth(scopeDepth);
+                if (scopeDepth == 0)
+                {
+                    context.LabelScopes.FreePooled();
+                    context.ExceptionRegions.FreePooled();
+                }
+            }
+        }
+
+        [MethodImpl((MethodImplOptions)256)]
+        private static Result RestoreScopeAndReturn(ref CompilerContext context, int scopeDepth, Result result)
+        {
+            context.RestoreLabelScopeDepth(scopeDepth);
+            return result;
+        }
 
         private static Result TryCollectInfo(ref CompilerContext context, Expression expr,
             NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas,
@@ -2221,13 +2245,11 @@ namespace FastExpressionCompiler
             var scopeDepth = context.LabelScopeDepth;
             if (scopeDepth == 0)
                 context.PushLabelScope(LabelScopeKind.Lambda);
-            try
-        {
             var r = Result.OK;
             while (true)
             {
                 if (expr == null)
-                    return Result.ExpressionIsNull;
+                    return RestoreScopeAndReturn(ref context, scopeDepth, Result.ExpressionIsNull);
                 var nodeType = expr.NodeType;
                 // Terminal nodes cannot define or reference a label.
                 if (nodeType != ExpressionType.Constant && nodeType != ExpressionType.Parameter &&
@@ -2246,13 +2268,13 @@ namespace FastExpressionCompiler
                 directBlockChild = switchBody = false;
 #if LIGHT_EXPRESSION
                 if (expr.IsIntrinsic)
-                    return expr.TryCollectInfo(ref context, nestedLambda, ref rootNestedLambdas, scopeIdx);
+                    return RestoreScopeAndReturn(ref context, scopeDepth, expr.TryCollectInfo(ref context, nestedLambda, ref rootNestedLambdas, checked((short)context.LabelScopeDepth)));
 #endif
                 switch (nodeType)
                 {
                     case ExpressionType.Constant:
                     case ExpressionType.Parameter:
-                        return TryCollectTerminalInfo(ref context, expr, nodeType, nestedLambda, ref rootNestedLambdas);
+                        return RestoreScopeAndReturn(ref context, scopeDepth, TryCollectTerminalInfo(ref context, expr, nodeType, nestedLambda, ref rootNestedLambdas));
                     case ExpressionType.Call:
                         {
                             var callExpr = (MethodCallExpression)expr;
@@ -2266,24 +2288,23 @@ namespace FastExpressionCompiler
                                     expr = callObjectExpr;
                                     continue;
                                 }
-                                return Result.OK;
+                                return RestoreScopeAndReturn(ref context, scopeDepth, Result.OK);
                             }
 
                             if (callObjectExpr != null &&
-                                (r = TryCollectInfo(ref context, callObjectExpr, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
-                                return r;
+                                (r = TryCollectInfo(ref context, callObjectExpr, nestedLambda, ref rootNestedLambdas, false, false)) != Result.OK)
+                                return RestoreScopeAndReturn(ref context, scopeDepth, r);
 
-                            return TryCollectArgsAsComplexOwner(ref context, callArgs, callExpr, nestedLambda, ref rootNestedLambdas, scopeIdx);
+                            return RestoreScopeAndReturn(ref context, scopeDepth, TryCollectArgsAsComplexOwner(ref context, callArgs, callExpr, nestedLambda, ref rootNestedLambdas));
                         }
 
                     case ExpressionType.MemberAccess:
                         if (TryGetConstantStringLength((MemberExpression)expr, out _))
-                            return r;
+                            return RestoreScopeAndReturn(ref context, scopeDepth, r);
                         var memberExpr = ((MemberExpression)expr).Expression;
                         if (memberExpr == null)
-                            return r;
+                            return RestoreScopeAndReturn(ref context, scopeDepth, r);
                         expr = memberExpr;
-                        enterable = false;
                         continue;
 
                     case ExpressionType.New:
@@ -2291,36 +2312,36 @@ namespace FastExpressionCompiler
                             var newExpr = (NewExpression)expr;
                             var ctorArgs = newExpr.GetArgs();
                             if (ctorArgs.Count == 0)
-                                return r;
-                            return TryCollectArgsAsComplexOwner(ref context, ctorArgs, newExpr, nestedLambda, ref rootNestedLambdas, scopeIdx);
+                                return RestoreScopeAndReturn(ref context, scopeDepth, r);
+                            return RestoreScopeAndReturn(ref context, scopeDepth, TryCollectArgsAsComplexOwner(ref context, ctorArgs, newExpr, nestedLambda, ref rootNestedLambdas));
                         }
                     case ExpressionType.NewArrayBounds:
                     case ExpressionType.NewArrayInit:
                         // todo: @feature multi-dimensional array initializers are not supported yet, they also are not supported by the hoisted expression
                         if (expr.NodeType == ExpressionType.NewArrayInit && expr.Type.GetArrayRank() > 1)
-                            return Result.NotSupported_NewArrayInit_MultidimensionalArray;
+                            return RestoreScopeAndReturn(ref context, scopeDepth, Result.NotSupported_NewArrayInit_MultidimensionalArray);
                         var arrExpr = (NewArrayExpression)expr;
                         var elemCount = arrExpr.GetArgCount();
                         if (elemCount == 0)
-                            return r;
+                            return RestoreScopeAndReturn(ref context, scopeDepth, r);
                         var isArrayInitializer = expr.NodeType == ExpressionType.NewArrayInit;
                         for (var i = 0; i < elemCount; ++i)
                         {
                             var precedingArrayElementTryCount = context.TryExpressionCount;
-                            if ((r = TryCollectInfo(ref context, arrExpr.GetArgument(i), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
-                                return r;
+                            if ((r = TryCollectInfo(ref context, arrExpr.GetArgument(i), nestedLambda, ref rootNestedLambdas, false, false)) != Result.OK)
+                                return RestoreScopeAndReturn(ref context, scopeDepth, r);
                             // Initializers keep the array on the stack; bounds only have
                             // preceding values after the first bound has been evaluated.
                             if ((isArrayInitializer || i != 0) && context.TryExpressionCount != precedingArrayElementTryCount)
                                 context.MarkComplexArguments(expr);
                         }
-                        return r;
+                        return RestoreScopeAndReturn(ref context, scopeDepth, r);
 
                     case ExpressionType.MemberInit:
-                        return TryCollectMemberInitExprConstants(ref context, (MemberInitExpression)expr, nestedLambda, ref rootNestedLambdas, scopeIdx);
+                        return RestoreScopeAndReturn(ref context, scopeDepth, TryCollectMemberInitExprConstants(ref context, (MemberInitExpression)expr, nestedLambda, ref rootNestedLambdas));
 
                     case ExpressionType.ListInit:
-                        return TryCollectListInitExprConstants(ref context, (ListInitExpression)expr, nestedLambda, ref rootNestedLambdas, scopeIdx);
+                        return RestoreScopeAndReturn(ref context, scopeDepth, TryCollectListInitExprConstants(ref context, (ListInitExpression)expr, nestedLambda, ref rootNestedLambdas));
 
                     case ExpressionType.Lambda:
                         // Here we look if the lambda is already stored in the nested lambdas tree (Collected+Compiled),
@@ -2342,9 +2363,9 @@ namespace FastExpressionCompiler
                             if (compiledNestedLambda.NonPassedParameters.Count != 0 &&
                                 !PropagateNonPassedParamsToOuterLambda(ref context,
                                     nestedLambda, nestedParamExprs, ref compiledNestedLambda.NonPassedParameters))
-                                return Result.ParameterIsNotVariableNorInPassedParameters;
+                                return RestoreScopeAndReturn(ref context, scopeDepth, Result.ParameterIsNotVariableNorInPassedParameters);
 
-                            return r;
+                            return RestoreScopeAndReturn(ref context, scopeDepth, r);
                         }
 
                         var nestedLambdaContext = new CompilerContext(ClosureStatus.ToBeCollected, nestedParamExprs, context.CompilerFlags);
@@ -2367,7 +2388,7 @@ namespace FastExpressionCompiler
                             rootNestedLambdas.Add(newNestedLambda);
 
                         if ((r = TryCollectAndValidate(ref nestedLambdaContext, nestedLambdaExpr.Body, newNestedLambda, ref rootNestedLambdas)) != Result.OK)
-                            return r;
+                                return RestoreScopeAndReturn(ref context, scopeDepth, r);
                         if (nestedLambda != null && newNestedLambda.HasDynamicExpressions)
                             nestedLambda.HasDynamicExpressions = true;
     #if LIGHT_EXPRESSION
@@ -2385,13 +2406,13 @@ namespace FastExpressionCompiler
                         if (newNestedLambda.NonPassedParameters.Count != 0 &&
                             !PropagateNonPassedParamsToOuterLambda(ref context,
                                 nestedLambda, nestedParamExprs, ref newNestedLambda.NonPassedParameters))
-                            return Result.ParameterIsNotVariableNorInPassedParameters;
+                                return RestoreScopeAndReturn(ref context, scopeDepth, Result.ParameterIsNotVariableNorInPassedParameters);
 
                         if (!TryCompileNestedLambda(ref nestedLambdaContext, newNestedLambda))
-                            return Result.NestedLambdaCompileError;
+                                return RestoreScopeAndReturn(ref context, scopeDepth, Result.NestedLambdaCompileError);
                         context.HoistedTypes = nestedLambdaContext.HoistedTypes;
 
-                        return r;
+                            return RestoreScopeAndReturn(ref context, scopeDepth, r);
                         }
                         finally { context.HoistedTypes = nestedLambdaContext.HoistedTypes; }
 
@@ -2416,21 +2437,21 @@ namespace FastExpressionCompiler
                                 r = invokeArgCount == 0
                                     ? TryCollectInlinedLambdaBody(ref context, inlinedExpr, invokeIndex, nestedLambda, ref rootNestedLambdas)
                                     : TryCollectInlinedWrapper(ref context, (BlockExpression)inlinedExpr,
-                                        lambdaExpr.Body, invokeIndex, nestedLambda, ref rootNestedLambdas, scopeIdx);
+                                        lambdaExpr.Body, invokeIndex, nestedLambda, ref rootNestedLambdas);
                                 if (r != Result.OK)
-                                    return r;
+                                    return RestoreScopeAndReturn(ref context, scopeDepth, r);
 
                                 context.HasComplexExpression = true;
                                 context.CurrentInlinedLambdaInvokeIndex = oldIndex;
-                                return r;
+                                return RestoreScopeAndReturn(ref context, scopeDepth, r);
                             }
 
                             if (typeof(System.Linq.Expressions.LambdaExpression).IsAssignableFrom(invokedExpr.Type))
                             {
                                 // A spilled runtime-expression invocation evaluates its operands
                                 // before the intrinsic Compile call, matching System's stack spiller.
-                                if ((r = TryCollectInfo(ref context, invokedExpr, nestedLambda, ref rootNestedLambdas)) != Result.OK)
-                                    return r;
+                                if ((r = TryCollectInfo(ref context, invokedExpr, nestedLambda, ref rootNestedLambdas, false, false)) != Result.OK)
+                                    return RestoreScopeAndReturn(ref context, scopeDepth, r);
                                 var argumentScope = new ArgumentSpillScope();
                                 for (var i = 0; i < invokeArgCount; ++i)
                                     argumentScope.Visit(invokeArgs.GetArgument(i));
@@ -2438,14 +2459,14 @@ namespace FastExpressionCompiler
                                 var argumentJumpCount = context.ExceptionGotos.Count;
                                 context.HasExceptionBlock = false;
                                 for (var i = 0; i < invokeArgCount; ++i)
-                                    if ((r = TryCollectInfo(ref context, invokeArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas)) != Result.OK)
-                                        return r;
+                                    if ((r = TryCollectInfo(ref context, invokeArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas, false, false)) != Result.OK)
+                                        return RestoreScopeAndReturn(ref context, scopeDepth, r);
                                 if (argumentScope.RequiresSpill || context.HasExceptionBlock)
                                     context.MarkComplexArguments(invokeExpr);
                                 context.HasExceptionBlock |= outerHasExceptionBlock;
                                 if (context.ExceptionGotos.Count != argumentJumpCount)
                                     context.MarkInvocationArgumentsWithJumps(invokeExpr);
-                                return r;
+                                return RestoreScopeAndReturn(ref context, scopeDepth, r);
                             }
 
                             // No inlining, collect the normal way
@@ -2455,16 +2476,16 @@ namespace FastExpressionCompiler
                                 continue;
                             }
 
-                            if ((r = TryCollectInfo(ref context, invokedExpr, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
-                                return r;
+                            if ((r = TryCollectInfo(ref context, invokedExpr, nestedLambda, ref rootNestedLambdas, false, false)) != Result.OK)
+                                return RestoreScopeAndReturn(ref context, scopeDepth, r);
 
                             var jumpCount = context.ExceptionGotos.Count;
                             for (var i = 0; i < invokeArgCount; i++)
-                                if ((r = TryCollectInfo(ref context, invokeArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
-                                    return r;
+                                if ((r = TryCollectInfo(ref context, invokeArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas, false, false)) != Result.OK)
+                                    return RestoreScopeAndReturn(ref context, scopeDepth, r);
                             if (context.ExceptionGotos.Count != jumpCount)
                                 context.MarkInvocationArgumentsWithJumps(invokeExpr);
-                            return r;
+                            return RestoreScopeAndReturn(ref context, scopeDepth, r);
                         }
                     case ExpressionType.Conditional:
                         var condExpr = (ConditionalExpression)expr;
@@ -2477,9 +2498,9 @@ namespace FastExpressionCompiler
                                 continue;
                             }
                         }
-                        if ((r = TryCollectInfo(ref context, condExpr.Test, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK ||
-                            (r = TryCollectInfo(ref context, condExpr.IfFalse, nestedLambda, ref rootNestedLambdas, scopeIdx, enterable)) != Result.OK)
-                            return r;
+                        if ((r = TryCollectInfo(ref context, condExpr.Test, nestedLambda, ref rootNestedLambdas, false, false)) != Result.OK ||
+                            (r = TryCollectInfo(ref context, condExpr.IfFalse, nestedLambda, ref rootNestedLambdas, false, false)) != Result.OK)
+                            return RestoreScopeAndReturn(ref context, scopeDepth, r);
                         expr = condExpr.IfTrue;
                         continue;
 
@@ -2488,14 +2509,7 @@ namespace FastExpressionCompiler
                         var blockExprs = blockExpr.Expressions;
                         var blockExprCount = blockExprs.Count;
                         if (blockExprCount == 0)
-                            return r; // yeah, this is the real case - the block may not contain any expressions
-
-                        // The enterable block without the direct labels is transparent for the validation, so it does not need its own scope
-                        var needsScope = !enterable;
-                        for (var i = 0; !needsScope & i < blockExprCount; ++i)
-                            needsScope = blockExprs[i].NodeType == ExpressionType.Label;
-                        if (needsScope)
-                            scopeIdx = (short)context.Scopes.Add(new LabelScope { Parent = new ScopeIdx(scopeIdx, enterable) });
+                            return RestoreScopeAndReturn(ref context, scopeDepth, r); // yeah, this is the real case - the block may not contain any expressions
 
                         var varExprs = blockExpr.Variables;
                         var varExprCount = varExprs?.Count ?? 0; // todo: @perf optimize for an empty and a single variable
@@ -2505,10 +2519,9 @@ namespace FastExpressionCompiler
                             blockExprs[1] is BinaryExpression st1 && st1.NodeType == ExpressionType.Assign &&
                             st0.Left == blockExprs[0] && st1.Right == blockExprs[0])
                         {
-                            if ((r = TryCollectInfo(ref context, st0.Right, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
-                                return r;
+                            if ((r = TryCollectInfo(ref context, st0.Right, nestedLambda, ref rootNestedLambdas, false, false)) != Result.OK)
+                                return RestoreScopeAndReturn(ref context, scopeDepth, r);
                             expr = st1.Left;
-                            enterable = false;
                             continue;
                         }
 
@@ -2518,18 +2531,18 @@ namespace FastExpressionCompiler
                             context.PushBlockWithVars(varExprs);
 
                         for (var i = 0; i < blockExprCount - 1; i++)
-                            if ((r = TryCollectInfo(ref context, blockExprs[i], nestedLambda, ref rootNestedLambdas, directBlockChild: true)) != Result.OK)
-                                return r;
+                            if ((r = TryCollectInfo(ref context, blockExprs[i], nestedLambda, ref rootNestedLambdas, directBlockChild: true, switchBody: false)) != Result.OK)
+                                return RestoreScopeAndReturn(ref context, scopeDepth, r);
 
                         expr = blockExprs[blockExprCount - 1];
                         directBlockChild = true;
                         if (varExprCount == 0)
                             continue; // in case of no variables we can collect the last expr without recursion
 
-                        if ((r = TryCollectInfo(ref context, expr, nestedLambda, ref rootNestedLambdas, directBlockChild: true)) != Result.OK)
-                            return r;
+                        if ((r = TryCollectInfo(ref context, expr, nestedLambda, ref rootNestedLambdas, directBlockChild: true, switchBody: false)) != Result.OK)
+                            return RestoreScopeAndReturn(ref context, scopeDepth, r);
                         context.PopBlock();
-                        return r;
+                        return RestoreScopeAndReturn(ref context, scopeDepth, r);
 
                     case ExpressionType.Loop:
                         var loopExpr = (LoopExpression)expr;
@@ -2550,14 +2563,13 @@ namespace FastExpressionCompiler
                         var indexExpr = (IndexExpression)expr;
                         var precedingTryCount = context.TryExpressionCount;
                         foreach (var indexArg in indexExpr.GetArgs())
-                            if ((r = TryCollectInfo(ref context, indexArg, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
-                                return r;
+                            if ((r = TryCollectInfo(ref context, indexArg, nestedLambda, ref rootNestedLambdas, false, false)) != Result.OK)
+                                return RestoreScopeAndReturn(ref context, scopeDepth, r);
                         if (context.TryExpressionCount != precedingTryCount)
                             context.MarkComplexArguments(indexExpr);
                         if (indexExpr.Object == null)
-                            return r;
+                            return RestoreScopeAndReturn(ref context, scopeDepth, r);
                         expr = indexExpr.Object;
-                        enterable = false;
                         continue;
 
                     case ExpressionType.Throw:
@@ -2566,7 +2578,7 @@ namespace FastExpressionCompiler
                         {
                             if (!context.CanRethrow && !context.IsCollectingExceptionFilter)
                                 throw new InvalidOperationException("Rethrow is only valid within the body of a catch handler.");
-                            return Result.OK;
+                            return RestoreScopeAndReturn(ref context, scopeDepth, Result.OK);
                         }
                         expr = throwExpression.Operand;
                         continue;
@@ -2578,9 +2590,9 @@ namespace FastExpressionCompiler
                             ++context.TryExpressionCount;
                             context.HasExceptionBlock = true;
                             context.HasComplexExpression = false;
-                            r = TryCollectTryExprInfo(ref context, (TryExpression)expr, nestedLambda, ref rootNestedLambdas, scopeIdx);
+                            r = TryCollectTryExprInfo(ref context, (TryExpression)expr, nestedLambda, ref rootNestedLambdas);
                             context.HasComplexExpression = true;
-                            return r;
+                            return RestoreScopeAndReturn(ref context, scopeDepth, r);
                         }
                     case ExpressionType.Label:
                         var labelExpr = (LabelExpression)expr;
@@ -2590,8 +2602,7 @@ namespace FastExpressionCompiler
                         if (labelExpr.Target != null)
                             context.TargetToGotosAndLabels.Map.AddOrGetValueRef(labelExpr.Target, out _).Item2++;
                         if (labelExpr.DefaultValue == null)
-                            return r;
-                        enterable = false;
+                            return RestoreScopeAndReturn(ref context, scopeDepth, r);
                         expr = labelExpr.DefaultValue;
                         continue;
 
@@ -2603,8 +2614,9 @@ namespace FastExpressionCompiler
                         if (gotoExpr.Target != null)
                             context.TargetToGotosAndLabels.Map.AddOrGetValueRef(gotoExpr.Target, out _).Item1++;
                         if (gotoExpr.Value == null)
-                            return r;
-                        enterable = false;
+                            return RestoreScopeAndReturn(ref context, scopeDepth, r);
+                        // A goto value is an operand, even when the goto is a statement.
+                        context.PushLabelScope(LabelScopeKind.Expression);
                         expr = gotoExpr.Value;
                         continue;
 
@@ -2618,42 +2630,41 @@ namespace FastExpressionCompiler
                                 expr = switchMatchedBody;
                                 continue;
                             }
-                            return r; // no matched body and no default -> nothing to collect
+                            return RestoreScopeAndReturn(ref context, scopeDepth, r); // no matched body and no default -> nothing to collect
                         }
-                        if ((r = TryCollectInfo(ref context, switchExpr.SwitchValue, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK ||
+                        if ((r = TryCollectInfo(ref context, switchExpr.SwitchValue, nestedLambda, ref rootNestedLambdas, false, false)) != Result.OK ||
                             switchExpr.DefaultBody != null && // todo: @check is the order of collection affects the result?
-                            (r = TryCollectInfo(ref context, switchExpr.DefaultBody, nestedLambda, ref rootNestedLambdas, switchBody: true)) != Result.OK)
-                            return r;
+                            (r = TryCollectInfo(ref context, switchExpr.DefaultBody, nestedLambda, ref rootNestedLambdas, directBlockChild: false, switchBody: true)) != Result.OK)
+                            return RestoreScopeAndReturn(ref context, scopeDepth, r);
 
                         var switchCases = switchExpr.Cases;
                         for (var i = 0; i < switchCases.Count; ++i)
                         {
                             var testValues = switchCases[i].TestValues;
                             for (var j = 0; j < testValues.Count; ++j)
-                                if ((r = TryCollectInfo(ref context, testValues[j], nestedLambda, ref rootNestedLambdas)) != Result.OK)
-                                        return r;
-                            }
+                                if ((r = TryCollectInfo(ref context, testValues[j], nestedLambda, ref rootNestedLambdas, false, false)) != Result.OK)
+                                    return RestoreScopeAndReturn(ref context, scopeDepth, r);
+                        }
                         if (switchCases.Count != 0)
                         {
                             for (var i = 0; i < switchCases.Count - 1; i++)
-                                if ((r = TryCollectInfo(ref context, switchCases[i].Body, nestedLambda, ref rootNestedLambdas, switchBody: true)) != Result.OK)
-                                    return r;
+                                if ((r = TryCollectInfo(ref context, switchCases[i].Body, nestedLambda, ref rootNestedLambdas, directBlockChild: false, switchBody: true)) != Result.OK)
+                                    return RestoreScopeAndReturn(ref context, scopeDepth, r);
                             expr = switchCases[switchCases.Count - 1].Body;
                             switchBody = true;
                             continue;
                         }
-                        return r;
+                        return RestoreScopeAndReturn(ref context, scopeDepth, r);
 
                     case ExpressionType.Extension:
                         var reduced = TryReduceNode(expr, ref context);
                         if (reduced == null)
-                            return Result.NotSupported_UnknownExpression;
+                            return RestoreScopeAndReturn(ref context, scopeDepth, Result.NotSupported_UnknownExpression);
                         expr = reduced;
-                        enterable = false;
                         continue;
 
                     case ExpressionType.Default:
-                        return r;
+                        return RestoreScopeAndReturn(ref context, scopeDepth, r);
 
                     case ExpressionType.TypeIs:
                     case ExpressionType.TypeEqual:
@@ -2676,7 +2687,7 @@ namespace FastExpressionCompiler
                         var quoteVariables = new QuoteVariableScope();
                             quoteVariables.Visit(quoted.Template);
                             if (quoteVariables.HasOpaqueExtension)
-                        return Result.NotSupported_Quote;
+                                return RestoreScopeAndReturn(ref context, scopeDepth, Result.NotSupported_Quote);
                             quoted.Parameters = quoteVariables.FreeVariables.ToArray();
                             quoted.Variables = new ParameterExpression[quoted.Parameters.Length];
                             for (var i = 0; i < quoted.Parameters.Length; ++i)
@@ -2686,7 +2697,7 @@ namespace FastExpressionCompiler
                                 for (var j = 0; j < converted.Count; ++j)
                                     if (ReferenceEquals(converted.Items[j].SysExpr, quoted.Parameters[i]))
                                     { quoted.Variables[i] = (ParameterExpression)converted.Items[j].LightObj; break; }
-                                if (quoted.Variables[i] == null) return Result.NotSupported_Quote;
+                                if (quoted.Variables[i] == null) return RestoreScopeAndReturn(ref context, scopeDepth, Result.NotSupported_Quote);
 #else
                                 quoted.Variables[i] = quoted.Parameters[i];
 #endif
@@ -2695,11 +2706,11 @@ namespace FastExpressionCompiler
                         for (var i = 0; i < quoted.Variables.Length; ++i)
                         {
                             var variable = quoted.Variables[i];
-                            if (!context.TryHoistVariable(variable, requireCell: true)) return Result.NotSupported_HoistedVariable;
-                            if ((r = TryCollectInfo(ref context, variable, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
+                            if (!context.TryHoistVariable(variable, requireCell: true)) return RestoreScopeAndReturn(ref context, scopeDepth, Result.NotSupported_HoistedVariable);
+                            if ((r = TryCollectInfo(ref context, variable, nestedLambda, ref rootNestedLambdas, false, false)) != Result.OK) return RestoreScopeAndReturn(ref context, scopeDepth, r);
                         }
                         context.AddConstantOrIncrementUsageCount(quoted.Variables.Length == 0 ? quoted.Template : quoted);
-                        return Result.OK;
+                        return RestoreScopeAndReturn(ref context, scopeDepth, Result.OK);
                     case ExpressionType.Dynamic:
                         {
                             if (nestedLambda != null) nestedLambda.HasDynamicExpressions = true;
@@ -2735,10 +2746,10 @@ namespace FastExpressionCompiler
                                 argumentScope.Visit(reducedArguments.GetArgument(i));
                             var outerHasExceptionBlock = context.HasExceptionBlock;
                             context.HasExceptionBlock = false;
-                            r = TryCollectInfo(ref context, reducedDynamic, nestedLambda, ref rootNestedLambdas);
+                            r = TryCollectInfo(ref context, reducedDynamic, nestedLambda, ref rootNestedLambdas, false, false);
                             occurrences.Reduced.Add((reducedDynamic, argumentScope.RequiresSpill || context.HasExceptionBlock));
                             context.HasExceptionBlock |= outerHasExceptionBlock;
-                            return r;
+                            return RestoreScopeAndReturn(ref context, scopeDepth, r);
                         }
                     case ExpressionType.RuntimeVariables:
                         var runtimeVariables = ((RuntimeVariablesExpression)expr).Variables;
@@ -2747,37 +2758,31 @@ namespace FastExpressionCompiler
                         for (var i = 0; i < runtimeVariables.Count; ++i)
                         {
                             var variable = runtimeVariables[i];
-                            if (!context.TryHoistVariable(variable, requireCell: true)) return Result.NotSupported_HoistedVariable;
-                            if ((r = TryCollectInfo(ref context, variable, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
+                            if (!context.TryHoistVariable(variable, requireCell: true)) return RestoreScopeAndReturn(ref context, scopeDepth, Result.NotSupported_HoistedVariable);
+                            if ((r = TryCollectInfo(ref context, variable, nestedLambda, ref rootNestedLambdas, false, false)) != Result.OK) return RestoreScopeAndReturn(ref context, scopeDepth, r);
                         }
-                        return Result.OK;
+                        return RestoreScopeAndReturn(ref context, scopeDepth, Result.OK);
 
                     case ExpressionType.DebugInfo: // todo: @feature - is not supported yet
-                        return r;                  // todo: @unclear - just ignoring the info for now
+                        return RestoreScopeAndReturn(ref context, scopeDepth, r);                  // todo: @unclear - just ignoring the info for now
 
                     default:
                         if (expr is UnaryExpression unaryExpr)
                         {
                             if (unaryExpr.Operand is null)
-                            {
-                                if (unaryExpr.NodeType == ExpressionType.Throw)
-                                    context.Rethrows.Add(scopeIdx);
-                                return r;
-                            }
+                                return RestoreScopeAndReturn(ref context, scopeDepth, r);
                             expr = unaryExpr.Operand;
-                            enterable = false;
                             continue;
                         }
 
                         if (expr is BinaryExpression binaryExpr)
                         {
                             if (binaryExpr.Conversion != null &&
-                                (r = TryCollectInfo(ref context, binaryExpr.Conversion, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
-                                return r;
-                            if ((r = TryCollectInfo(ref context, binaryExpr.Left, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
-                                return r;
+                                (r = TryCollectInfo(ref context, binaryExpr.Conversion, nestedLambda, ref rootNestedLambdas, false, false)) != Result.OK)
+                                return RestoreScopeAndReturn(ref context, scopeDepth, r);
+                            if ((r = TryCollectInfo(ref context, binaryExpr.Left, nestedLambda, ref rootNestedLambdas, false, false)) != Result.OK)
+                                return RestoreScopeAndReturn(ref context, scopeDepth, r);
                             expr = binaryExpr.Right;
-                            enterable = false;
                             continue;
                         }
 
@@ -2786,24 +2791,13 @@ namespace FastExpressionCompiler
                         if (customReduced != null)
                         {
                             expr = customReduced;
-                            enterable = false;
                             continue;
                         }
 #endif
-                        return Result.NotSupported_UnknownExpression;
+                        return RestoreScopeAndReturn(ref context, scopeDepth, Result.NotSupported_UnknownExpression);
                 }
             }
 
-        }
-            finally
-            {
-                context.RestoreLabelScopeDepth(scopeDepth);
-                if (scopeDepth == 0)
-                {
-                    context.LabelScopes.FreePooled();
-                    context.ExceptionRegions.FreePooled();
-                }
-            }
         }
 
         internal sealed class ExpressionReductionCache
@@ -2903,7 +2897,7 @@ namespace FastExpressionCompiler
             context.PushLabelScope(LabelScopeKind.Lambda);
             try
             {
-                return TryCollectInfo(ref context, body, nestedLambda, ref rootNestedLambdas);
+                return TryCollectInfo(ref context, body, nestedLambda, ref rootNestedLambdas, false, false);
             }
             finally
             {
@@ -2922,7 +2916,7 @@ namespace FastExpressionCompiler
             var statements = wrapper.Expressions;
             for (var i = 0; i < statements.Count - 1; ++i)
             {
-                var result = TryCollectInfo(ref context, statements[i], nestedLambda, ref rootNestedLambdas);
+                var result = TryCollectInfo(ref context, statements[i], nestedLambda, ref rootNestedLambdas, false, false);
                 if (result != Result.OK)
                     return result;
             }
@@ -3154,28 +3148,28 @@ namespace FastExpressionCompiler
             var newExpr = expr.NewExpression;
             var binds = expr.GetBindings();
             var r = Result.OK;
-            if ((r = TryCollectInfo(ref context, newExpr, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
+            if ((r = TryCollectInfo(ref context, newExpr, nestedLambda, ref rootNestedLambdas, false, false)) != Result.OK)
                 return r;
 
             var precedingTryCount = context.TryExpressionCount;
             var count = binds.GetBindingCount();
             for (var i = 0; i < count; ++i)
-                if ((r = TryCollectBindingInfo(ref context, binds.GetArgument(i), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
+                if ((r = TryCollectMemberBindingInfo(ref context, binds.GetArgument(i), nestedLambda, ref rootNestedLambdas)) != Result.OK)
                     return r;
             if (context.TryExpressionCount != precedingTryCount)
                 context.MarkComplexArguments(expr);
             return r;
         }
 
-        private static Result TryCollectBindingInfo(ref CompilerContext context, MemberBinding b,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
+        private static Result TryCollectMemberBindingInfo(ref CompilerContext context, MemberBinding b,
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
         {
             var r = Result.OK;
             if (b.BindingType == MemberBindingType.Assignment)
             {
                 var value = ((MemberAssignment)b).Expression;
                 var precedingTryCount = context.TryExpressionCount;
-                r = TryCollectInfo(ref context, value, nestedLambda, ref rootNestedLambdas, scopeIdx);
+                r = TryCollectInfo(ref context, value, nestedLambda, ref rootNestedLambdas, false, false);
                 if (context.TryExpressionCount != precedingTryCount)
                     context.MarkComplexArguments(value);
                 return r;
@@ -3185,30 +3179,29 @@ namespace FastExpressionCompiler
             {
                 var subs = ((MemberMemberBinding)b).Bindings;
                 for (var i = 0; i < subs.Count; ++i)
-                    if ((r = TryCollectBindingInfo(ref context, subs[i], nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
+                    if ((r = TryCollectMemberBindingInfo(ref context, subs[i], nestedLambda, ref rootNestedLambdas)) != Result.OK)
                         return r;
                 return r;
             }
 
             var inits = ((MemberListBinding)b).Initializers;
             for (var i = 0; i < inits.Count; ++i)
-                if ((r = TryCollectElementInitInfo(ref context, inits[i], nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
+                if ((r = TryCollectElementInitInfo(ref context, inits[i], nestedLambda, ref rootNestedLambdas)) != Result.OK)
                     return r;
             return r;
         }
-        // Call/New: any complex arg means the whole node is spilled (cannot store just one arg).
+        // Call/New: any complex arg means the whole node is spilled.
         private static Result TryCollectArgsAsComplexOwner(ref CompilerContext context, Args args, Expression owner,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
         {
             var outerHasComplexExpression = context.HasComplexExpression;
             var hasComplexExpression = false;
             var r = Result.OK;
             foreach (var arg in args)
             {
-                context.HasComplexExpression = false; // reset: we want the real result of this arg
-                if ((r = TryCollectInfo(ref context, arg, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
-                    context.HasComplexExpression |= outerHasComplexExpression;
-            return r;
+                context.HasComplexExpression = false;
+                if ((r = TryCollectInfo(ref context, arg, nestedLambda, ref rootNestedLambdas, false, false)) != Result.OK)
+                    return r;
                 hasComplexExpression |= context.HasComplexExpression;
             }
             if (hasComplexExpression)
@@ -3222,12 +3215,12 @@ namespace FastExpressionCompiler
 
         [MethodImpl((MethodImplOptions)256)]
         private static Result TryCollectElementInitInfo(ref CompilerContext context, ElementInit init,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
         {
             foreach (var argument in init.GetArgs())
             {
                 var precedingTryCount = context.TryExpressionCount;
-                var r = TryCollectInfo(ref context, argument, nestedLambda, ref rootNestedLambdas, scopeIdx);
+                var r = TryCollectInfo(ref context, argument, nestedLambda, ref rootNestedLambdas, false, false);
                 if (r != Result.OK) return r;
                 if (context.TryExpressionCount != precedingTryCount)
                     context.MarkComplexArguments(argument);
@@ -3236,19 +3229,19 @@ namespace FastExpressionCompiler
         }
 
         private static Result TryCollectListInitExprConstants(ref CompilerContext context, ListInitExpression expr,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
         {
             var newExpr = expr.NewExpression;
             var inits = expr.Initializers;
             var count = inits.Count;
 
             var r = Result.OK;
-            if ((r = TryCollectInfo(ref context, newExpr, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
+            if ((r = TryCollectInfo(ref context, newExpr, nestedLambda, ref rootNestedLambdas, false, false)) != Result.OK)
                 return r;
 
             var precedingTryCount = context.TryExpressionCount;
             for (var i = 0; i < count; ++i)
-                if ((r = TryCollectElementInitInfo(ref context, inits.GetArgument(i), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
+                if ((r = TryCollectElementInitInfo(ref context, inits.GetArgument(i), nestedLambda, ref rootNestedLambdas)) != Result.OK)
                     return r;
             if (context.TryExpressionCount != precedingTryCount)
                 context.MarkComplexArguments(expr);
@@ -3266,7 +3259,7 @@ namespace FastExpressionCompiler
             context.ExceptionRegions.AddAndGetRef(new ExceptionRegionFrame { CannotLeave = cannotLeave });
             try
             {
-                return TryCollectInfo(ref context, expression, nestedLambda, ref rootNestedLambdas);
+                return TryCollectInfo(ref context, expression, nestedLambda, ref rootNestedLambdas, false, false);
             }
             finally
             {
@@ -3290,7 +3283,7 @@ namespace FastExpressionCompiler
                 if (catchExVar != null)
                 {
                     context.PushBlockWithVars(catchExVar);
-                    if ((r = TryCollectInfo(ref context, catchExVar, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
+                    if ((r = TryCollectInfo(ref context, catchExVar, nestedLambda, ref rootNestedLambdas, false, false)) != Result.OK)
                         return r;
                 }
 
