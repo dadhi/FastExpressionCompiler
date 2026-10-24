@@ -9303,11 +9303,23 @@ namespace FastExpressionCompiler
             }
 
             [MethodImpl((MethodImplOptions)256)]
-            private static bool IsAtomicArithmeticOperand(Expression operand) =>
+            private static bool IsAtomicArithmeticOperand(Expression operand)
+            {
+                if (!operand.IsParamOrConstantOrDefault())
+                    return false;
 #if LIGHT_EXPRESSION
-                !operand.IsIntrinsic &&
+                // Intrinsic conversions may emit exception regions despite a simple operand.
+                while (true)
+                {
+                    if (operand.IsIntrinsic)
+                        return false;
+                    if (operand is not UnaryExpression convert || convert.NodeType != ExpressionType.Convert)
+                        break;
+                    operand = convert.Operand;
+                }
 #endif
-                (operand is ConstantExpression || operand is ParameterExpression || operand is DefaultExpression);
+                return true;
+            }
 
             private static bool TryEmitLiftedOrComplexArithmetic(Expression left, Expression right, ExpressionType nodeType, Type exprType,
                 ILGenerator il, ref CompilerContext context, ParentFlags parent, MethodInfo operationMethod)
