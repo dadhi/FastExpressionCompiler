@@ -628,13 +628,13 @@ public abstract class Expression
     /// <summary>Returns whether the expression evaluates to false.</summary>
     public static UnaryExpression IsFalse(Expression expression) =>
        Nullable.GetUnderlyingType(expression.Type) != null
-        ? new TypedUnaryExpression<bool?>(ExpressionType.IsFalse, expression) 
+        ? new TypedUnaryExpression<bool?>(ExpressionType.IsFalse, expression)
         : new TypedUnaryExpression<bool>(ExpressionType.IsFalse, expression);
 
     /// <summary>Returns whether the expression evaluates to true.</summary>
     public static UnaryExpression IsTrue(Expression expression) =>
-       Nullable.GetUnderlyingType(expression.Type) != null 
-        ? new TypedUnaryExpression<bool?>(ExpressionType.IsTrue, expression) 
+       Nullable.GetUnderlyingType(expression.Type) != null
+        ? new TypedUnaryExpression<bool?>(ExpressionType.IsTrue, expression)
         : new TypedUnaryExpression<bool>(ExpressionType.IsTrue, expression);
 
     /// <summary>Creates a UnaryExpression, given an operand and its type</summary>
@@ -2152,11 +2152,11 @@ public abstract class Expression
 
     /// <summary>Creates a BinaryExpression that represents a reference equality comparison.</summary>
     public static BinaryExpression ReferenceEqual(Expression left, Expression right) =>
-        new LogicalBinaryExpression(ExpressionType.Equal, left, right);
+        new LogicalBinaryExpression(ExpressionType.Equal, left, right, isReferenceComparison: true);
 
     /// <summary>Creates a BinaryExpression that represents a reference inequality comparison.</summary>
     public static BinaryExpression ReferenceNotEqual(Expression left, Expression right) =>
-        new LogicalBinaryExpression(ExpressionType.NotEqual, left, right);
+        new LogicalBinaryExpression(ExpressionType.NotEqual, left, right, isReferenceComparison: true);
 
     /// <summary>Creates a BinaryExpression that represents a coalescing operation.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
@@ -2927,6 +2927,14 @@ public static class FromSysExpressionConverter
                     var left = be.Left.ToLightExpression(ref exprsConverted);
                     var raft = be.Right.ToLightExpression(ref exprsConverted);
                     var conv = be.Conversion?.ToLightExpression(ref exprsConverted) as LambdaExpression;
+
+                    // System `ReferenceEqual`/`ReferenceNotEqual` are `Equal`/`NotEqual` without the method for the reference type operands,
+                    // for the types with `==` operator System binds the method, so the missing method means the reference comparison
+                    if ((nodeType == ExpressionType.Equal | nodeType == ExpressionType.NotEqual) &&
+                        be.Method == null && !be.IsLiftedToNull && be.Conversion == null &&
+                        !be.Left.Type.IsValueType && !be.Right.Type.IsValueType)
+                        return nodeType == ExpressionType.Equal ? Expression.ReferenceEqual(left, raft) : Expression.ReferenceNotEqual(left, raft);
+
                     return Expression.MakeBinary(nodeType, left, raft, be.IsLiftedToNull, be.Method, conv);
                 }
 
@@ -3563,11 +3571,23 @@ internal sealed class LogicalBinaryExpression : BinaryExpression
 {
     public override ExpressionType NodeType { get; }
     public override Type Type => typeof(bool);
-    internal LogicalBinaryExpression(ExpressionType nodeType, Expression left, Expression right) : base(left, right) =>
+    internal readonly bool IsReferenceComparison;
+    internal LogicalBinaryExpression(ExpressionType nodeType, Expression left, Expression right, bool isReferenceComparison = false) : base(left, right)
+    {
         NodeType = nodeType;
-
+        IsReferenceComparison = isReferenceComparison;
+    }
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted)
     {
+        if (IsReferenceComparison)
+        {
+            var refLeft = Left.ToExpression(ref exprsConverted);
+            var refRight = Right.ToExpression(ref exprsConverted);
+            return NodeType == ExpressionType.Equal
+                ? SysExpr.ReferenceEqual(refLeft, refRight)
+                : SysExpr.ReferenceNotEqual(refLeft, refRight);
+        }
+
         if (NodeType == ExpressionType.Equal ||
             NodeType == ExpressionType.NotEqual)
         {
@@ -4077,7 +4097,7 @@ public class TwoArgumentsNewExpression : NewExpression
     public override IReadOnlyList<Expression> Arguments => new[] { Argument0, Argument1 };
     public override int ArgumentCount => 2;
     public override Expression GetArgument(int i) => _args.GetSurePresentRef(i).AsExpr();
-    internal TwoArgumentsNewExpression(ConstructorInfo constructor, object a0, object a1) : base(constructor) => 
+    internal TwoArgumentsNewExpression(ConstructorInfo constructor, object a0, object a1) : base(constructor) =>
         _args = new(a0, a1);
 }
 
@@ -4230,7 +4250,7 @@ public sealed class NoByRefFiveArgumentsNewIntrinsicExpression : FiveArgumentsNe
         if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument1, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
         if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument2, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
         if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument3, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
-        return   ExpressionCompiler.TryCollectInfo(ref context, Argument4, nestedLambda, ref rootNestedLambdas);
+        return ExpressionCompiler.TryCollectInfo(ref context, Argument4, nestedLambda, ref rootNestedLambdas);
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]
@@ -4284,7 +4304,7 @@ public sealed class NoByRefSixArgumentsNewIntrinsicExpression : SixArgumentsNewE
         if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument2, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
         if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument3, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
         if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument4, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
-        return   ExpressionCompiler.TryCollectInfo(ref context, Argument5, nestedLambda, ref rootNestedLambdas);
+        return ExpressionCompiler.TryCollectInfo(ref context, Argument5, nestedLambda, ref rootNestedLambdas);
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]
@@ -4341,7 +4361,7 @@ public sealed class NoByRefSevenArgumentsNewIntrinsicExpression : SevenArguments
         if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument3, nestedLambda, ref rootNestedLambdas)) != 0) return r;
         if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument4, nestedLambda, ref rootNestedLambdas)) != 0) return r;
         if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument5, nestedLambda, ref rootNestedLambdas)) != 0) return r;
-        return   ExpressionCompiler.TryCollectInfo(ref context, Argument6, nestedLambda, ref rootNestedLambdas);
+        return ExpressionCompiler.TryCollectInfo(ref context, Argument6, nestedLambda, ref rootNestedLambdas);
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]

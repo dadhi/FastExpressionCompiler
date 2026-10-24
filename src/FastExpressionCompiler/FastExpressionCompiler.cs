@@ -2020,6 +2020,10 @@ namespace FastExpressionCompiler
                                 var comparison = (BinaryExpression)expr;
                                 if (comparison.Method != null && !comparison.IsLifted)
                                     return TryEmitComparisonMethod(comparison, il, ref context, parent);
+#if LIGHT_EXPRESSION
+                                if (comparison is LogicalBinaryExpression { IsReferenceComparison: true })
+                                    return TryEmitReferenceComparison(comparison, nodeType == ExpressionType.NotEqual, il, ref context, parent);
+#endif
                                 if (exprType.IsPrimitive && Interpreter.TryInterpretBool(out var boolResult, expr, context.CompilerFlags))
                                 {
                                     if ((parent & ParentFlags.IgnoreResult) == 0)
@@ -2042,9 +2046,9 @@ namespace FastExpressionCompiler
                                 var binary = (BinaryExpression)expr;
                                 var binaryLeft = binary.Left;
                                 var binaryRight = binary.Right;
-                                if (nodeType == ExpressionType.And && binary.Method == null &&
+                                if ((nodeType == ExpressionType.And || nodeType == ExpressionType.Or) && binary.Method == null &&
                                     exprType == typeof(bool?) && binaryLeft.Type == typeof(bool?) && binaryRight.Type == typeof(bool?))
-                                    return TryEmitNullableBooleanAnd(binaryLeft, binaryRight, il, ref context, parent);
+                                    return TryEmitNullableBooleanAndOr(binaryLeft, binaryRight, nodeType == ExpressionType.And, il, ref context, parent);
 
                                 return exprType.IsPrimitive
                                     && TryInterpretAndEmitResult(expr, il, parent, context.CompilerFlags)
@@ -5591,6 +5595,26 @@ namespace FastExpressionCompiler
                 return null;
             }
 
+#if LIGHT_EXPRESSION
+            // `ReferenceEqual` and `ReferenceNotEqual` compare the references even when the type defines the `==` operator, e.g. string
+            private static bool TryEmitReferenceComparison(BinaryExpression expr, bool isNotEqual, ILGenerator il,
+                ref CompilerContext context, ParentFlags parent)
+            {
+                var flags = parent
+                    & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
+                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef);
+
+                if (!TryEmit(expr.Left, il, ref context, flags) ||
+                    !TryEmit(expr.Right, il, ref context, flags))
+                    return false;
+
+                il.Demit(OpCodes.Ceq);
+                if (isNotEqual)
+                    EmitEqualToZeroOrNull(il);
+                return il.EmitPopIfIgnoreResult(parent);
+            }
+#endif
+
             private static bool TryEmitComparisonMethod(BinaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var method = expr.Method;
@@ -6022,7 +6046,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitNullableBooleanAnd(Expression left, Expression right, ILGenerator il,
+            private static bool TryEmitNullableBooleanAndOr(Expression left, Expression right, bool isAnd, ILGenerator il,
                 ref CompilerContext context, ParentFlags parent)
             {
                 var flags = (parent
@@ -6038,7 +6062,7 @@ namespace FastExpressionCompiler
                     return false;
                 var rightVar = EmitStoreLocalVariable(il, typeof(bool?));
 
-                var falseLabel = il.DefineLabel();
+                var absorbLabel = il.DefineLabel();
                 var nullLabel = il.DefineLabel();
                 var doneLabel = il.DefineLabel();
 
@@ -6052,13 +6076,13 @@ namespace FastExpressionCompiler
                 il.Demit(OpCodes.Brfalse, nullLabel);
                 EmitLoadLocalVariableAddress(il, rightVar);
                 il.Demit(OpCodes.Ldfld, typeof(bool?).GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
-                il.Demit(OpCodes.Brtrue, nullLabel);
-                il.Demit(OpCodes.Br, falseLabel);
+                il.Demit(isAnd ? OpCodes.Brtrue : OpCodes.Brfalse, nullLabel);
+                il.Demit(OpCodes.Br, absorbLabel);
 
                 il.DmarkLabel(leftHasValueLabel);
                 EmitLoadLocalVariableAddress(il, leftVar);
                 il.Demit(OpCodes.Ldfld, typeof(bool?).GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
-                il.Demit(OpCodes.Brfalse, falseLabel);
+                il.Demit(isAnd ? OpCodes.Brfalse : OpCodes.Brtrue, absorbLabel);
                 EmitLoadLocalVariableAddress(il, rightVar);
                 EmitMethodCall(il, typeof(bool?).GetNullableHasValueGetterMethod());
                 il.Demit(OpCodes.Brfalse, nullLabel);
@@ -6067,8 +6091,8 @@ namespace FastExpressionCompiler
                 il.Demit(OpCodes.Newobj, typeof(bool?).GetNullableConstructor());
                 il.Demit(OpCodes.Br, doneLabel);
 
-                il.DmarkLabel(falseLabel);
-                il.Demit(OpCodes.Ldc_I4_0);
+                il.DmarkLabel(absorbLabel);
+                il.Demit(isAnd ? OpCodes.Ldc_I4_0 : OpCodes.Ldc_I4_1);
                 il.Demit(OpCodes.Newobj, typeof(bool?).GetNullableConstructor());
                 il.Demit(OpCodes.Br, doneLabel);
 
@@ -10076,6 +10100,15 @@ namespace FastExpressionCompiler
 
                         if (e is BinaryExpression b)
                         {
+#if LIGHT_EXPRESSION
+                            if (b is LogicalBinaryExpression { IsReferenceComparison: true })
+                            {
+                                sb.Append(e.NodeType == ExpressionType.Equal ? "ReferenceEqual(" : "ReferenceNotEqual(");
+                                sb.NewLineIndentExpr(b.Left, paramsExprs, uniqueExprs, lts, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).Append(',');
+                                sb.NewLineIndentExpr(b.Right, paramsExprs, uniqueExprs, lts, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
+                                return sb.Append(')');
+                            }
+#endif
                             sb.Append("MakeBinary(").Append(typeof(ExpressionType).Name).Append('.').Append(name).Append(',');
                             sb.NewLineIndentExpr(b.Left, paramsExprs, uniqueExprs, lts, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).Append(',');
                             sb.NewLineIndentExpr(b.Right, paramsExprs, uniqueExprs, lts, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
@@ -10098,7 +10131,7 @@ namespace FastExpressionCompiler
     }
 
     /// <summary>Provides structural equality comparison for expression trees (both LightExpression and System.Linq.Expressions).
-    /// Use the static <see cref="EqualsTo"/> method as the primary entry point — it creates a temporary struct on the stack with no heap allocation.
+    /// Use the static <see cref="EqualsTo"/> method as the primary entry point вЂ” it creates a temporary struct on the stack with no heap allocation.
     /// Parameters are matched by their position within their enclosing lambda or block, and label targets by identity pairing.
     /// Up to 8 lambda parameters and label targets are stored on the stack; larger numbers spill to a heap array.</summary>
     public struct ExpressionEqualityComparer : IEqualityComparer<Expression>, IEqualityComparer
@@ -10108,7 +10141,7 @@ namespace FastExpressionCompiler
         private SmallList<ParameterExpression, Stack8<ParameterExpression>, NoArrayPool<ParameterExpression>> _xps, _yps;
         private SmallList<LabelTarget, Stack8<LabelTarget>, NoArrayPool<LabelTarget>> _xls, _yls;
 
-        /// <summary>Structurally compares two expressions. Primary entry point — no heap allocation for the comparer.</summary>
+        /// <summary>Structurally compares two expressions. Primary entry point вЂ” no heap allocation for the comparer.</summary>
         [MethodImpl((MethodImplOptions)256)]
         public static bool EqualsTo(Expression x, Expression y) =>
             new ExpressionEqualityComparer().Eq(x, y);
@@ -10300,19 +10333,19 @@ namespace FastExpressionCompiler
             }
         }
 
-        /// <summary>IEqualityComparer&lt;Expression&gt; implementation — delegates to the static <see cref="EqualsTo"/> for a fresh context per call.</summary>
+        /// <summary>IEqualityComparer&lt;Expression&gt; implementation вЂ” delegates to the static <see cref="EqualsTo"/> for a fresh context per call.</summary>
         [MethodImpl((MethodImplOptions)256)]
         bool IEqualityComparer<Expression>.Equals(Expression x, Expression y) => EqualsTo(x, y);
 
-        /// <summary>IEqualityComparer&lt;Expression&gt; implementation — delegates to the static <see cref="GetHashCode(Expression)"/>.</summary>
+        /// <summary>IEqualityComparer&lt;Expression&gt; implementation вЂ” delegates to the static <see cref="GetHashCode(Expression)"/>.</summary>
         [MethodImpl((MethodImplOptions)256)]
         int IEqualityComparer<Expression>.GetHashCode(Expression obj) => GetHashCode(obj);
 
-        /// <summary>Non-generic IEqualityComparer implementation — delegates to the static methods for use with legacy BCL APIs.</summary>
+        /// <summary>Non-generic IEqualityComparer implementation вЂ” delegates to the static methods for use with legacy BCL APIs.</summary>
         [MethodImpl((MethodImplOptions)256)]
         bool IEqualityComparer.Equals(object x, object y) => EqualsTo(x as Expression, y as Expression);
 
-        /// <summary>Non-generic IEqualityComparer implementation — delegates to the static <see cref="GetHashCode(Expression)"/>.</summary>
+        /// <summary>Non-generic IEqualityComparer implementation вЂ” delegates to the static <see cref="GetHashCode(Expression)"/>.</summary>
         [MethodImpl((MethodImplOptions)256)]
         int IEqualityComparer.GetHashCode(object obj) => GetHashCode(obj as Expression);
 
@@ -11596,6 +11629,19 @@ namespace FastExpressionCompiler
 
                             if (containerIgnoresResult | enclosedIn == EnclosedIn.Block)
                                 sb.Append("_ = "); // apply for non assignments
+
+#if LIGHT_EXPRESSION
+                            if (b is LogicalBinaryExpression { IsReferenceComparison: true })
+                            {
+                                if (nodeType == ExpressionType.NotEqual)
+                                    sb.Append('!');
+                                sb.Append("object.ReferenceEquals(");
+                                b.Left.ToCSharpExpression(sb, EnclosedIn.AvoidParens, ref ctx,
+                                    false, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).Append(", ");
+                                return b.Right.ToCSharpExpression(sb, EnclosedIn.AvoidParens, ref ctx,
+                                    false, lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).Append(')');
+                            }
+#endif
 
                             sb = sb.AddParenIfNeeded('(', avoidParens);
                             b.Left.ToCSharpExpression(sb, EnclosedIn.ParensByDefault, ref ctx,

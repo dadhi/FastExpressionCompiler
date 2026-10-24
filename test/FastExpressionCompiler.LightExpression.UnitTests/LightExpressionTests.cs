@@ -62,6 +62,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Flat_standalone_parameters_use_name_in_structural_equality();
             Flat_structural_hash_supports_dictionary_lookup();
             Can_compile_nullable_boolean_and();
+            Can_compile_nullable_boolean_or();
             Can_compile_shifts_with_nullable_shift_count();
             Can_compile_nullable_boolean_and_also();
             Can_compile_nullable_boolean_or_else();
@@ -70,8 +71,11 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_compile_goto_with_value_of_all_kinds();
             Can_compile_loop_with_break_and_continue_with_value();
             Can_print_new_expression_kinds();
+            Reference_equality_is_converted_to_system_reference_comparison();
+            Can_print_reference_comparison();
+            Can_round_trip_new_expression_kinds_through_system_expressions();
 
-            return 53;
+            return 57;
         }
 
         private static int _sideEffectCalls;
@@ -231,6 +235,174 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.AreEqual("!(b)", Not(Parameter(typeof(bool), "b")).ToCSharpString());
         }
 
+        public void Reference_equality_is_converted_to_system_reference_comparison()
+        {
+            var a = Parameter(typeof(string), "a");
+            var b = Parameter(typeof(string), "b");
+
+            var refEq = ReferenceEqual(a, b);
+            var refNotEq = ReferenceNotEqual(a, b);
+            Asserts.AreEqual(typeof(bool), refEq.Type);
+
+            // the plain Equal on strings must still go to the value comparison via the op_Equality
+            var valueEq = (System.Linq.Expressions.BinaryExpression)Equal(a, b).ToExpression();
+            Asserts.IsNotNull(valueEq.Method);
+
+            var sysRefEq = (System.Linq.Expressions.BinaryExpression)refEq.ToExpression();
+            Asserts.AreEqual(ExpressionType.Equal, sysRefEq.NodeType);
+            Asserts.AreEqual(null, sysRefEq.Method);
+            var sysRefNotEq = (System.Linq.Expressions.BinaryExpression)refNotEq.ToExpression();
+            Asserts.AreEqual(ExpressionType.NotEqual, sysRefNotEq.NodeType);
+            Asserts.AreEqual(null, sysRefNotEq.Method);
+
+            var s1 = new string('x', 3);
+            var s2 = new string('x', 3);
+            Asserts.IsTrue(!ReferenceEquals(s1, s2) && s1 == s2);
+
+            var eqLambda = Lambda<Func<string, string, bool>>(refEq, a, b);
+            var notEqLambda = Lambda<Func<string, string, bool>>(refNotEq, a, b);
+            var valueEqLambda = Lambda<Func<string, string, bool>>(Equal(a, b), a, b);
+
+            var eqSys = eqLambda.CompileSys();
+            Asserts.AreEqual(false, eqSys(s1, s2));
+            Asserts.AreEqual(true, eqSys(s1, s1));
+            var notEqSys = notEqLambda.CompileSys();
+            Asserts.AreEqual(true, notEqSys(s1, s2));
+            Asserts.AreEqual(false, notEqSys(s1, s1));
+            Asserts.AreEqual(true, valueEqLambda.CompileSys()(s1, s2));
+
+            var eqFast = eqLambda.CompileFast(true);
+            Asserts.IsNotNull(eqFast);
+            Asserts.AreEqual(false, eqFast(s1, s2));
+            Asserts.AreEqual(true, eqFast(s1, s1));
+            var notEqFast = notEqLambda.CompileFast(true);
+            Asserts.IsNotNull(notEqFast);
+            Asserts.AreEqual(true, notEqFast(s1, s2));
+            Asserts.AreEqual(false, notEqFast(s1, s1));
+
+            // the reference comparison with null
+            var nullEq = Lambda<Func<string, bool>>(ReferenceEqual(a, Constant(null, typeof(string))), a);
+            Asserts.AreEqual(true, nullEq.CompileSys()(null));
+            Asserts.AreEqual(false, nullEq.CompileSys()(s1));
+            Asserts.AreEqual(true, nullEq.CompileFast(true)(null));
+            Asserts.AreEqual(false, nullEq.CompileFast(true)(s1));
+
+            // converting System expressions back to Light
+            var sysA = SysExpr.Parameter(typeof(string), "a");
+            var sysB = SysExpr.Parameter(typeof(string), "b");
+            var backRefEq = SysExpr.ReferenceEqual(sysA, sysB).ToLightExpression();
+            var backRefNotEq = SysExpr.ReferenceNotEqual(sysA, sysB).ToLightExpression();
+            var backValueEq = SysExpr.Equal(sysA, sysB).ToLightExpression();
+
+            Asserts.AreEqual("object.ReferenceEquals(a, b)", backRefEq.ToCSharpString());
+            Asserts.AreEqual("!object.ReferenceEquals(a, b)", backRefNotEq.ToCSharpString());
+            Asserts.AreEqual("a == b", backValueEq.ToCSharpString());
+
+            var backLambda = SysExpr.Lambda<Func<string, string, bool>>(SysExpr.ReferenceEqual(sysA, sysB), sysA, sysB)
+                .ToLightExpression();
+            Asserts.AreEqual(false, backLambda.CompileFast()(s1, s2));
+            Asserts.AreEqual(true, backLambda.CompileFast()(s1, s1));
+
+            // the round trip Light -> Sys -> Light keeps the reference comparison
+            var roundTrip = refNotEq.ToExpression().ToLightExpression();
+            Asserts.AreEqual("!object.ReferenceEquals(a, b)", roundTrip.ToCSharpString());
+        }
+
+        public void Can_round_trip_new_expression_kinds_through_system_expressions()
+        {
+            // Light -> Sys -> Light, then the round-tripped lambda must compile and behave like the original
+            static Func<T1, T2, R> RoundTrip<T1, T2, R>(LambdaExpression light)
+            {
+                var back = (LambdaExpression)light.ToExpression().ToLightExpression();
+                var expected = (Func<T1, T2, R>)light.CompileSys();
+                var actual = back.CompileFast<Func<T1, T2, R>>(true);
+                Asserts.IsNotNull(actual);
+                return (x, y) =>
+                {
+                    Asserts.AreEqual(expected(x, y), actual(x, y));
+                    return actual(x, y);
+                };
+            }
+
+            var l = Parameter(typeof(bool?), "l");
+            var r = Parameter(typeof(bool?), "r");
+            bool?[] values = { null, true, false };
+
+            var kinds = new Func<Expression, Expression, Expression>[]
+            {
+                (a, b) => And(a, b),
+                (a, b) => Or(a, b),
+                (a, b) => AndAlso(a, b),
+                (a, b) => OrElse(a, b),
+            };
+            foreach (var make in kinds)
+            {
+                var f = RoundTrip<bool?, bool?, bool?>(Lambda<Func<bool?, bool?, bool?>>(make(l, r), l, r));
+                foreach (var x in values)
+                    foreach (var y in values)
+                        f(x, y);
+            }
+
+            var not = RoundTrip<bool?, bool?, bool?>(Lambda<Func<bool?, bool?, bool?>>(Not(l), l, r));
+            foreach (var x in values)
+                not(x, null);
+
+            var n = Parameter(typeof(int?), "n");
+            var c = Parameter(typeof(int?), "c");
+            var shl = RoundTrip<int?, int?, int?>(Lambda<Func<int?, int?, int?>>(LeftShift(n, c), n, c));
+            var shr = RoundTrip<int?, int?, int?>(Lambda<Func<int?, int?, int?>>(RightShift(n, c), n, c));
+            foreach (int? x in new int?[] { null, 1, 8 })
+                foreach (int? y in new int?[] { null, 1, 2 })
+                {
+                    shl(x, y);
+                    shr(x, y);
+                }
+
+            // goto with a value: Break and Continue to a typed label
+            var p = Parameter(typeof(int), "p");
+            var label = Label(typeof(int), "done");
+            var breakWithValue = RoundTrip<int, int, int>(Lambda<Func<int, int, int>>(
+                Block(
+                    IfThen(Equal(p, Constant(0)), Break(label, Constant(42))),
+                    Label(label, Constant(7))),
+                p, Parameter(typeof(int), "q")));
+            Asserts.AreEqual(42, breakWithValue(0, 0));
+            Asserts.AreEqual(7, breakWithValue(1, 0));
+
+            var continueWithValue = RoundTrip<int, int, int>(Lambda<Func<int, int, int>>(
+                Block(
+                    IfThen(Equal(p, Constant(0)), Continue(label, Constant(5))),
+                    Label(label, Constant(9))),
+                p, Parameter(typeof(int), "q")));
+            Asserts.AreEqual(5, continueWithValue(0, 0));
+            Asserts.AreEqual(9, continueWithValue(1, 0));
+        }
+
+        public void Can_print_reference_comparison()
+        {
+            var a = Parameter(typeof(string), "a");
+            var b = Parameter(typeof(string), "b");
+
+            var refEq = ReferenceEqual(a, b);
+            var refNotEq = ReferenceNotEqual(a, b);
+            var valueEq = Equal(a, b);
+
+            var refEqEs = refEq.ToExpressionString();
+            Asserts.Contains("ReferenceEqual(", refEqEs);
+            Asserts.Contains("Parameter(typeof(string), \"a\")", refEqEs);
+            Asserts.DoesNotContain("MakeBinary", refEqEs);
+            Asserts.Contains("ReferenceNotEqual(", refNotEq.ToExpressionString());
+            Asserts.DoesNotContain("MakeBinary", refNotEq.ToExpressionString());
+
+            // the plain Equal is still printed as before
+            Asserts.Contains("MakeBinary(ExpressionType.Equal,", valueEq.ToExpressionString());
+            Asserts.DoesNotContain("ReferenceEqual", valueEq.ToExpressionString());
+
+            Asserts.AreEqual("object.ReferenceEquals(a, b)", refEq.ToCSharpString());
+            Asserts.AreEqual("!object.ReferenceEquals(a, b)", refNotEq.ToCSharpString());
+            Asserts.AreEqual("a == b", valueEq.ToCSharpString());
+        }
+
         private static int AndInts(int left, int right) => left & right;
 
         public void Can_compile_nullable_boolean_not()
@@ -364,6 +536,40 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                 nameof(AndInts), BindingFlags.Static | BindingFlags.NonPublic);
             Asserts.IsNotNull(incompatibleMethod);
             Asserts.Throws<InvalidOperationException>(() => And(left, right, incompatibleMethod));
+        }
+
+        public void Can_compile_nullable_boolean_or()
+        {
+            var left = Parameter(typeof(bool?), "left");
+            var right = Parameter(typeof(bool?), "right");
+            var or = Or(left, right);
+            Asserts.AreEqual(typeof(bool?), or.Type);
+
+            var lambda = Lambda<Func<bool?, bool?, bool?>>(or, left, right);
+            var fast = lambda.CompileFast(true);
+            Asserts.IsNotNull(fast);
+            var sys = lambda.CompileSys();
+
+            void AssertResult(bool? l, bool? r, bool? expected)
+            {
+                Asserts.AreEqual(expected, sys(l, r));
+                Asserts.AreEqual(expected, fast(l, r));
+            }
+
+            AssertResult(true, true, true);
+            AssertResult(true, false, true);
+            AssertResult(false, true, true);
+            AssertResult(false, false, false);
+            AssertResult(true, null, true);
+            AssertResult(false, null, null);
+            AssertResult(null, true, true);
+            AssertResult(null, false, null);
+            AssertResult(null, null, null);
+
+            var withNullMethod = Or(left, right, (MethodInfo)null);
+            var nullMethodFast = Lambda<Func<bool?, bool?, bool?>>(withNullMethod, left, right).CompileFast(true);
+            Asserts.AreEqual(true, nullMethodFast(null, true));
+            Asserts.AreEqual(null, nullMethodFast(null, false));
         }
 
         public void Can_compile_shifts_with_nullable_shift_count()
