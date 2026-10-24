@@ -2011,6 +2011,9 @@ namespace FastExpressionCompiler
                         case ExpressionType.Equal:
                         case ExpressionType.NotEqual:
                             {
+                                var comparison = (BinaryExpression)expr;
+                                if (comparison.Method != null && !comparison.IsLifted)
+                                    return TryEmitComparisonMethod(comparison, il, ref context, parent);
                                 if (exprType.IsPrimitive && Interpreter.TryInterpretBool(out var boolResult, expr, context.CompilerFlags))
                                 {
                                     if ((parent & ParentFlags.IgnoreResult) == 0)
@@ -5521,6 +5524,47 @@ namespace FastExpressionCompiler
                 return null;
             }
 
+            private static bool TryEmitComparisonMethod(BinaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            {
+                var method = expr.Method;
+                var parameters = method.GetParameters();
+                if (!TryEmit(expr.Left, il, ref context, ParentFlags.Call, parameters[0].ParameterType.IsByRef ? 0 : -1))
+                    return false;
+
+                // Keep the evaluation stack empty while a nontrivial right operand
+                // may emit exception regions or jumps, just as for call arguments.
+                var right = expr.Right;
+                var spillLeft = !right.IsParamOrConstantOrDefault();
+#if LIGHT_EXPRESSION
+                // A conversion chain may contain a custom IL emitter.
+                for (var operand = right; !spillLeft;)
+                {
+                    if (operand.IsIntrinsic)
+                    {
+                        spillLeft = true;
+                        break;
+                    }
+                    if (operand is not UnaryExpression convert || convert.NodeType != ExpressionType.Convert)
+                        break;
+                    operand = convert.Operand;
+                }
+#endif
+                var leftVar = spillLeft ? EmitStoreLocalVariable(il, parameters[0].ParameterType) : -1;
+
+                if (!TryEmit(expr.Right, il, ref context, ParentFlags.Call, parameters[1].ParameterType.IsByRef ? 1 : -1))
+                    return false;
+                if (leftVar != -1)
+                {
+                    var rightVar = EmitStoreLocalVariable(il, parameters[1].ParameterType);
+                    EmitLoadLocalVariable(il, leftVar);
+                    EmitLoadLocalVariable(il, rightVar);
+                }
+                if (!EmitMethodCall(il, method))
+                    return false;
+                context.LastEmitIsAddress = false;
+                return il.EmitPopIfIgnoreResult(parent);
+            }
+
             private static bool TryEmitComparison(
                 Expression left, Expression right, Type exprType, ExpressionType nodeType,
                 ILGenerator il, ref CompilerContext context, ParentFlags parent)
@@ -7310,6 +7354,8 @@ namespace FastExpressionCompiler
             /// <summary>Tries to interpret the expression of the Primitive type of Constant, Convert, Logical, Comparison, Arithmetic.</summary>
             internal static bool TryInterpretBool(ref bool resultBool, Expression expr, ExpressionType nodeType)
             {
+                if (expr is BinaryExpression binary && binary.Method != null)
+                    return false;
                 // what operations are supported, to get the boolean result?
                 // yes: not, logical, comparison, default
                 // not: negate, arithmetic, convert to bool
