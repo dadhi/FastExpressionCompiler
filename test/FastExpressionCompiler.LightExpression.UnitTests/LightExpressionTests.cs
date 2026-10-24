@@ -61,9 +61,61 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Flat_equal_nested_lambdas_with_captures_are_structurally_equal_and_hash_equal();
             Flat_standalone_parameters_use_name_in_structural_equality();
             Flat_structural_hash_supports_dictionary_lookup();
+            Can_compile_nullable_boolean_and();
             Can_compile_shifts_with_nullable_shift_count();
 
-            return 45;
+            return 46;
+        }
+
+        private static int AndInts(int left, int right) => left & right;
+
+        public void Can_compile_nullable_boolean_and()
+        {
+            var left = Parameter(typeof(bool?), "left");
+            var right = Parameter(typeof(bool?), "right");
+            var and = And(left, right);
+            Asserts.AreEqual(typeof(bool?), and.Type);
+
+            var lambda = Lambda<Func<bool?, bool?, bool?>>(and, left, right);
+            var fast = lambda.CompileFast(true);
+            Asserts.IsNotNull(fast);
+            var sys = lambda.CompileSys();
+
+            void AssertResult(bool? leftValue, bool? rightValue, bool? expected)
+            {
+                var sysResult = sys(leftValue, rightValue);
+                Asserts.AreEqual(expected, sysResult);
+                Asserts.AreEqual(sysResult, fast(leftValue, rightValue));
+            }
+
+            AssertResult(true, true, true);
+            AssertResult(true, false, false);
+            AssertResult(false, true, false);
+            AssertResult(false, false, false);
+            AssertResult(true, null, null);
+            AssertResult(false, null, false);
+            AssertResult(null, true, null);
+            AssertResult(null, false, false);
+            AssertResult(null, null, null);
+
+            var andWithNullMethod = And(left, right, (MethodInfo)null);
+            Asserts.AreEqual(typeof(bool?), andWithNullMethod.Type);
+            var nullMethodLambda = Lambda<Func<bool?, bool?, bool?>>(andWithNullMethod, left, right);
+            var nullMethodFast = nullMethodLambda.CompileFast(true);
+            Asserts.IsNotNull(nullMethodFast);
+            var nullMethodSys = nullMethodLambda.CompileSys();
+            Asserts.AreEqual(nullMethodSys(false, null), nullMethodFast(false, null));
+
+            var nonNullableLeft = Parameter(typeof(bool), "nonNullableLeft");
+            Asserts.Throws<InvalidOperationException>(() =>
+                And(nonNullableLeft, right, (MethodInfo)null));
+            Asserts.Throws<InvalidOperationException>(() =>
+                And(left, Parameter(typeof(int?), "unrelatedRight"), (MethodInfo)null));
+
+            var incompatibleMethod = typeof(LightExpressionTests).GetMethod(
+                nameof(AndInts), BindingFlags.Static | BindingFlags.NonPublic);
+            Asserts.IsNotNull(incompatibleMethod);
+            Asserts.Throws<InvalidOperationException>(() => And(left, right, incompatibleMethod));
         }
 
         public void Can_compile_shifts_with_nullable_shift_count()
@@ -72,10 +124,15 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
             var leftShift = LeftShift(Constant(16), shift);
             Asserts.AreEqual(typeof(int?), leftShift.Type);
-            var leftShiftFunc = Lambda<Func<int?, int?>>(leftShift, shift).CompileFast(true);
-            Asserts.IsNotNull(leftShiftFunc);
-            Asserts.AreEqual(64, leftShiftFunc(2));
-            Asserts.AreEqual(null, leftShiftFunc(null));
+            var lambda = Lambda<Func<int?, int?>>(leftShift, shift);
+            var fast = lambda.CompileFast(true);
+            Asserts.IsNotNull(fast);
+            var sys = lambda.CompileSys();
+
+            Asserts.AreEqual(64, fast(2));
+            Asserts.AreEqual(64, sys(2));
+            Asserts.AreEqual(null, fast(null));
+            Asserts.AreEqual(null, sys(null));
         }
 
         public void Can_compile_lambda_without_converting_to_expression()

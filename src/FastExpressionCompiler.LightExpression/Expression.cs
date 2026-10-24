@@ -1436,7 +1436,10 @@ public abstract class Expression
     [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression GetLeftTypedBinary(ExpressionType nodeType, Expression left, Expression right, MethodInfo method = null) =>
         method == null
-            ? new LeftTypedBinaryExpression(nodeType, left, right)
+            ? left.Type == right.Type ||
+                left.Type.IsNullable() && left.Type.GetNonNullableOrSelf() == right.Type
+                ? new LeftTypedBinaryExpression(nodeType, left, right)
+                : throw new InvalidOperationException("Incompatible types for binary operation: left is " + left.Type + ", right is " + right.Type)
             : GetMethodBasedBinaryOperator(nodeType, left, right, method, liftToNull: true);
 
     /// <summary>Creates a BinaryExpression that represents a bitwise XOR operation.</summary>
@@ -1539,7 +1542,9 @@ public abstract class Expression
 
     /// <summary>Creates a BinaryExpression that represents a bitwise AND operation.</summary>
     public static BinaryExpression And(Expression left, Expression right) =>
-        new LogicalBinaryExpression(ExpressionType.And, left, right);
+        left.Type == typeof(bool?)
+            ? new LeftTypedBinaryExpression(ExpressionType.And, left, right)
+            : new LogicalBinaryExpression(ExpressionType.And, left, right);
 
     /// <summary>Creates a BinaryExpression that represents a bitwise AND operation.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]

@@ -2037,9 +2037,16 @@ namespace FastExpressionCompiler
                         case ExpressionType.LeftShift:
                         case ExpressionType.RightShift:
                             {
+                                var binary = (BinaryExpression)expr;
+                                var binaryLeft = binary.Left;
+                                var binaryRight = binary.Right;
+                                if (nodeType == ExpressionType.And && binary.Method == null &&
+                                    exprType == typeof(bool?) && binaryLeft.Type == typeof(bool?) && binaryRight.Type == typeof(bool?))
+                                    return TryEmitNullableBooleanAnd(binaryLeft, binaryRight, il, ref context, parent);
+
                                 return exprType.IsPrimitive
                                     && TryInterpretAndEmitResult(expr, il, parent, context.CompilerFlags)
-                                    || TryEmitArithmetic(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, nodeType, exprType, il, ref context, parent);
+                                    || TryEmitArithmetic(binaryLeft, binaryRight, nodeType, exprType, il, ref context, parent);
                             }
                         // todo: @feature #472 add interpretation when those node types are supported
                         case ExpressionType.AddChecked:
@@ -5989,6 +5996,63 @@ namespace FastExpressionCompiler
 
                 il.EmitPopIfIgnoreResult(parent);
                 return true;
+            }
+
+            private static bool TryEmitNullableBooleanAnd(Expression left, Expression right, ILGenerator il,
+                ref CompilerContext context, ParentFlags parent)
+            {
+                var flags = (parent
+                    & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
+                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
+                    | ParentFlags.Arithmetic;
+
+                if (!TryEmit(left, il, ref context, flags))
+                    return false;
+                var leftVar = EmitStoreLocalVariable(il, typeof(bool?));
+
+                if (!TryEmit(right, il, ref context, flags))
+                    return false;
+                var rightVar = EmitStoreLocalVariable(il, typeof(bool?));
+
+                var falseLabel = il.DefineLabel();
+                var nullLabel = il.DefineLabel();
+                var doneLabel = il.DefineLabel();
+
+                EmitLoadLocalVariableAddress(il, leftVar);
+                EmitMethodCall(il, typeof(bool?).GetNullableHasValueGetterMethod());
+                var leftHasValueLabel = il.DefineLabel();
+                il.Demit(OpCodes.Brtrue, leftHasValueLabel);
+
+                EmitLoadLocalVariableAddress(il, rightVar);
+                EmitMethodCall(il, typeof(bool?).GetNullableHasValueGetterMethod());
+                il.Demit(OpCodes.Brfalse, nullLabel);
+                EmitLoadLocalVariableAddress(il, rightVar);
+                il.Demit(OpCodes.Ldfld, typeof(bool?).GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                il.Demit(OpCodes.Brtrue, nullLabel);
+                il.Demit(OpCodes.Br, falseLabel);
+
+                il.DmarkLabel(leftHasValueLabel);
+                EmitLoadLocalVariableAddress(il, leftVar);
+                il.Demit(OpCodes.Ldfld, typeof(bool?).GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                il.Demit(OpCodes.Brfalse, falseLabel);
+                EmitLoadLocalVariableAddress(il, rightVar);
+                EmitMethodCall(il, typeof(bool?).GetNullableHasValueGetterMethod());
+                il.Demit(OpCodes.Brfalse, nullLabel);
+                EmitLoadLocalVariableAddress(il, rightVar);
+                il.Demit(OpCodes.Ldfld, typeof(bool?).GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                il.Demit(OpCodes.Newobj, typeof(bool?).GetNullableConstructor());
+                il.Demit(OpCodes.Br, doneLabel);
+
+                il.DmarkLabel(falseLabel);
+                il.Demit(OpCodes.Ldc_I4_0);
+                il.Demit(OpCodes.Newobj, typeof(bool?).GetNullableConstructor());
+                il.Demit(OpCodes.Br, doneLabel);
+
+                il.DmarkLabel(nullLabel);
+                EmitLoadLocalVariable(il, InitValueTypeVariable(il, typeof(bool?)));
+
+                il.DmarkLabel(doneLabel);
+                return il.EmitPopIfIgnoreResult(parent);
             }
 
             private static MethodInfo _stringStringConcatMethod, _stringObjectConcatMethod;
