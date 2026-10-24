@@ -2591,20 +2591,41 @@ namespace FastExpressionCompiler
 
                     il.Demit(OpCodes.Brfalse, labelFalse);
 
-                    if (exprType == Nullable.GetUnderlyingType(leftType))
+                    var underlyingLeftType = Nullable.GetUnderlyingType(leftType);
+                    var underlyingExprType = Nullable.GetUnderlyingType(exprType) ?? exprType;
+
+                    if (exprType == leftType)
+                        EmitLoadLocalVariable(il, varIndex); // loading the value (not address) to return it
+                    else
                     {
-                        // if the target expression type is of underlying nullable, and the left operand is not null,
-                        // then extract its underlying value
+                        // the target expression type is the underlying type or a wider one (e.g. `int? ?? long`),
+                        // then extract the underlying value and convert it if needed
                         EmitLoadLocalVariableAddress(il, varIndex);
                         il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                        if (underlyingLeftType != underlyingExprType &&
+                            !TryEmitPrimitiveValueConvert(underlyingLeftType, underlyingExprType, il, isChecked: false))
+                            return false;
+                        if (exprType != underlyingExprType)
+                            il.Demit(OpCodes.Newobj, exprType.GetNullableConstructor());
                     }
-                    else
-                        EmitLoadLocalVariable(il, varIndex); // loading the value (not address) to return it
 
                     il.Demit(OpCodes.Br, labelDone);
                     il.DmarkLabel(labelFalse);
                     if (!TryEmit(right, il, ref context, flags))
                         return false;
+
+                    // the right operand may be of the narrower type than the result, e.g. `long? ?? int` or `int? ?? long?`
+                    var rightType = right.Type;
+                    if (rightType != exprType && rightType.IsValueType)
+                    {
+                        var underlyingRightType = Nullable.GetUnderlyingType(rightType);
+                        if (underlyingRightType != null)
+                            return false;
+                        if (rightType != underlyingExprType && !TryEmitPrimitiveValueConvert(rightType, underlyingExprType, il, isChecked: false))
+                            return false;
+                        if (exprType != underlyingExprType)
+                            il.Demit(OpCodes.Newobj, exprType.GetNullableConstructor());
+                    }
 
                     il.DmarkLabel(labelDone);
                 }

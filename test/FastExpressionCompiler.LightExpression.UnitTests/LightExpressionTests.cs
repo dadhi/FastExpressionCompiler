@@ -65,6 +65,8 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_compile_nullable_boolean_and();
             Can_compile_nullable_boolean_or();
             Nullable_boolean_logic_emits_the_same_IL_shape_as_system();
+            Coalesce_type_is_the_same_as_in_system_expressions();
+            Coalesce_with_nullable_left_emits_the_same_IL_shape_as_system();
             Can_compile_shifts_with_nullable_shift_count();
             Can_compile_nullable_boolean_and_also();
             Can_compile_nullable_boolean_or_else();
@@ -77,7 +79,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_print_reference_comparison();
             Can_round_trip_new_expression_kinds_through_system_expressions();
 
-            return 58;
+            return 60;
         }
 
         private static int _sideEffectCalls;
@@ -538,6 +540,109 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                 nameof(AndInts), BindingFlags.Static | BindingFlags.NonPublic);
             Asserts.IsNotNull(incompatibleMethod);
             Asserts.Throws<InvalidOperationException>(() => And(left, right, incompatibleMethod));
+        }
+
+        public void Coalesce_with_nullable_left_emits_the_same_IL_shape_as_system()
+        {
+            var ni = Parameter(typeof(int?), "ni");
+            var nl = Parameter(typeof(long?), "nl");
+
+            Lambda<Func<int?, int>>(Coalesce(ni, Constant(5)), ni)
+                .CompileFast(true, CompilerFlags.EnableDelegateDebugInfo).AssertOpCodes(
+                    OpCodes.Ldarg_1, OpCodes.Stloc_0, OpCodes.Ldloca_S, OpCodes.Call, OpCodes.Brfalse,
+                    OpCodes.Ldloca_S, OpCodes.Ldfld, OpCodes.Br, OpCodes.Ldc_I4_5, OpCodes.Ret);
+
+            Lambda<Func<int?, long>>(Coalesce(ni, Constant(5L)), ni)
+                .CompileFast(true, CompilerFlags.EnableDelegateDebugInfo).AssertOpCodes(
+                    OpCodes.Ldarg_1, OpCodes.Stloc_0, OpCodes.Ldloca_S, OpCodes.Call, OpCodes.Brfalse,
+                    OpCodes.Ldloca_S, OpCodes.Ldfld, OpCodes.Conv_I8, OpCodes.Br, OpCodes.Ldc_I8, OpCodes.Ret);
+
+            Lambda<Func<int?, double>>(Coalesce(ni, Constant(5.5)), ni)
+                .CompileFast(true, CompilerFlags.EnableDelegateDebugInfo).AssertOpCodes(
+                    OpCodes.Ldarg_1, OpCodes.Stloc_0, OpCodes.Ldloca_S, OpCodes.Call, OpCodes.Brfalse,
+                    OpCodes.Ldloca_S, OpCodes.Ldfld, OpCodes.Conv_R8, OpCodes.Br, OpCodes.Ldc_R8, OpCodes.Ret);
+
+            Lambda<Func<long?, long>>(Coalesce(nl, Constant(5)), nl)
+                .CompileFast(true, CompilerFlags.EnableDelegateDebugInfo).AssertOpCodes(
+                    OpCodes.Ldarg_1, OpCodes.Stloc_0, OpCodes.Ldloca_S, OpCodes.Call, OpCodes.Brfalse,
+                    OpCodes.Ldloca_S, OpCodes.Ldfld, OpCodes.Br, OpCodes.Ldc_I4_5, OpCodes.Conv_I8, OpCodes.Ret);
+
+            Lambda<Func<int?, long?, long?>>(Coalesce(ni, nl), ni, nl)
+                .CompileFast(true, CompilerFlags.EnableDelegateDebugInfo).AssertOpCodes(
+                    OpCodes.Ldarg_1, OpCodes.Stloc_0, OpCodes.Ldloca_S, OpCodes.Call, OpCodes.Brfalse,
+                    OpCodes.Ldloca_S, OpCodes.Ldfld, OpCodes.Conv_I8, OpCodes.Newobj, OpCodes.Br, OpCodes.Ldarg_2, OpCodes.Ret);
+        }
+        public void Coalesce_type_is_the_same_as_in_system_expressions()
+        {
+            var ni = Parameter(typeof(int?), "ni");
+            var nl = Parameter(typeof(long?), "nl");
+            var s = Parameter(typeof(string), "s");
+            var sysNi = SysExpr.Parameter(typeof(int?), "ni");
+            var sysNl = SysExpr.Parameter(typeof(long?), "nl");
+            var sysS = SysExpr.Parameter(typeof(string), "s");
+
+            // int? ?? int -> int, int? ?? long -> long (widening of the underlying type), int? ?? double -> double
+            var intOrInt = Coalesce(ni, Constant(5));
+            Asserts.AreEqual(SysExpr.Coalesce(sysNi, SysExpr.Constant(5)).Type, intOrInt.Type);
+            Asserts.AreEqual(typeof(int), intOrInt.Type);
+
+            var intOrLong = Coalesce(ni, Constant(5L));
+            Asserts.AreEqual(SysExpr.Coalesce(sysNi, SysExpr.Constant(5L)).Type, intOrLong.Type);
+            Asserts.AreEqual(typeof(long), intOrLong.Type);
+
+            var intOrDouble = Coalesce(ni, Constant(5.5));
+            Asserts.AreEqual(SysExpr.Coalesce(sysNi, SysExpr.Constant(5.5)).Type, intOrDouble.Type);
+            Asserts.AreEqual(typeof(double), intOrDouble.Type);
+
+            // int? ?? int? and long? ?? int stay nullable or widen as in BCL
+            var intOrNullableInt = Coalesce(ni, Parameter(typeof(int?), "other"));
+            Asserts.AreEqual(typeof(int?), intOrNullableInt.Type);
+
+            var nullableLongOrInt = Coalesce(nl, Constant(5));
+            Asserts.AreEqual(SysExpr.Coalesce(sysNl, SysExpr.Constant(5)).Type, nullableLongOrInt.Type);
+            Asserts.AreEqual(typeof(long), nullableLongOrInt.Type);
+
+            // int? ?? long? -> long?
+            var intOrNullableLong = Coalesce(ni, nl);
+            Asserts.AreEqual(SysExpr.Coalesce(sysNi, sysNl).Type, intOrNullableLong.Type);
+            Asserts.AreEqual(typeof(long?), intOrNullableLong.Type);
+
+            // reference types
+            var strOrObj = Coalesce(s, Constant(new object()));
+            Asserts.AreEqual(typeof(object), strOrObj.Type);
+            var strOrStr = Coalesce(s, Constant("x"));
+            Asserts.AreEqual(typeof(string), strOrStr.Type);
+
+            // the result of compiled lambdas is the same as of the System ones
+            var longLambda = Lambda<Func<int?, long>>(intOrLong, ni);
+            var longSys = longLambda.CompileSys();
+            var longFast = longLambda.CompileFast(true);
+            Asserts.AreEqual(5L, longSys(null));
+            Asserts.AreEqual(5L, longFast(null));
+            Asserts.AreEqual(7L, longSys(7));
+            Asserts.AreEqual(7L, longFast(7));
+
+            var doubleLambda = Lambda<Func<int?, double>>(intOrDouble, ni);
+            var doubleSys = doubleLambda.CompileSys();
+            var doubleFast = doubleLambda.CompileFast(true);
+            Asserts.AreEqual(5.5, doubleSys(null));
+            Asserts.AreEqual(5.5, doubleFast(null));
+            Asserts.AreEqual(7.0, doubleSys(7));
+            Asserts.AreEqual(7.0, doubleFast(7));
+
+            var nullableLongLambda = Lambda<Func<int?, long?, long?>>(intOrNullableLong, ni, nl);
+            var nlSys = nullableLongLambda.CompileSys();
+            var nlFast = nullableLongLambda.CompileFast(true);
+            foreach (int? a in new int?[] { null, 3 })
+                foreach (long? b in new long?[] { null, 9 })
+                    Asserts.AreEqual(nlSys(a, b), nlFast(a, b));
+
+            // the conversion to System expression keeps the type
+            Asserts.AreEqual(typeof(long), intOrLong.ToExpression().Type);
+
+            // incompatible operands still throw
+            Asserts.Throws<ArgumentException>(() => Coalesce(ni, Constant("x")));
+            Asserts.Throws<ArgumentException>(() => Coalesce(Parameter(typeof(DateTime?), "d"), Constant(1)));
         }
 
         public void Nullable_boolean_logic_emits_the_same_IL_shape_as_system()

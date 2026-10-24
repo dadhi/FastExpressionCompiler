@@ -2179,7 +2179,7 @@ public abstract class Expression
 
         if (right.IsImplicitlyConvertibleTo(left))
             return left;
-        if (left.IsImplicitlyConvertibleTo(right))
+        if ((underlyingLeft ?? left).IsImplicitlyConvertibleTo(right))
             return right;
         throw new ArgumentException($"Unable to coalesce arguments of left type of {left} and right type of {right}.");
     }

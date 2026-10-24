@@ -4,7 +4,7 @@
     <Nullable>disable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <EnableDefaultCompileItems>true</EnableDefaultCompileItems>
-    <NoWarn>$(NoWarn);CS0618;CS0672;CS0649;CS0108;CS0659;CS0660;CS0661;xUnit1013;xUnit1026;xUnit1045;xUnit1044;xUnit2013</NoWarn>
+    <NoWarn>$(NoWarn);CS0618;CS0672;CS0649;CS0108;CS0659;CS0660;CS0661;xUnit1013;xUnit1026;xUnit1045;xUnit1044;xUnit2013;xUnit2017</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
