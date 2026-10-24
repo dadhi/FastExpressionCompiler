@@ -3000,17 +3000,17 @@ namespace FastExpressionCompiler
                     var endLabel = il.DefineLabel();
 
                     EmitLoadLocalVariableAddress(il, valueVar);
-                    il.Demit(OpCodes.Call, typeof(bool?).GetNullableHasValueGetterMethod());
+                    il.Demit(OpCodes.Call, Tools.NullableReflected<bool>.HasValueGetterMethod);
                     il.Demit(OpCodes.Brfalse, nullLabel);
 
                     EmitLoadLocalVariableAddress(il, valueVar);
-                    il.Demit(OpCodes.Ldfld, typeof(bool?).GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                    il.Demit(OpCodes.Ldfld, Tools.NullableReflected<bool>.ValueField);
                     if (nodeType == ExpressionType.IsFalse)
                     {
                         il.Demit(OpCodes.Ldc_I4_0);
                         il.Demit(OpCodes.Ceq);
                     }
-                    il.Demit(OpCodes.Newobj, typeof(bool?).GetNullableConstructor());
+                    il.Demit(OpCodes.Newobj, Tools.NullableReflected<bool>.Constructor);
                     il.Demit(OpCodes.Br, endLabel);
 
                     il.DmarkLabel(nullLabel);
@@ -6062,42 +6062,31 @@ namespace FastExpressionCompiler
                     return false;
                 var rightVar = EmitStoreLocalVariable(il, typeof(bool?));
 
-                var absorbLabel = il.DefineLabel();
-                var nullLabel = il.DefineLabel();
+                var hasValueGetter = Tools.NullableReflected<bool>.HasValueGetterMethod;
+                var valueField = Tools.NullableReflected<bool>.ValueField;
+
+                // The same shape as System emits: no `newobj` and no extra locals, the result is one of the operands.
+                // And: left.value ? right : (left.has | right.value) ? left : right
+                // Or:  left.value ? left  : (right.value | left.has) ? right : left
+                var sameLabel = il.DefineLabel();
                 var doneLabel = il.DefineLabel();
 
                 EmitLoadLocalVariableAddress(il, leftVar);
-                EmitMethodCall(il, typeof(bool?).GetNullableHasValueGetterMethod());
-                var leftHasValueLabel = il.DefineLabel();
-                il.Demit(OpCodes.Brtrue, leftHasValueLabel);
+                il.Demit(OpCodes.Ldfld, valueField);
+                il.Demit(OpCodes.Brtrue, sameLabel);
 
-                EmitLoadLocalVariableAddress(il, rightVar);
-                EmitMethodCall(il, typeof(bool?).GetNullableHasValueGetterMethod());
-                il.Demit(OpCodes.Brfalse, nullLabel);
-                EmitLoadLocalVariableAddress(il, rightVar);
-                il.Demit(OpCodes.Ldfld, typeof(bool?).GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
-                il.Demit(isAnd ? OpCodes.Brtrue : OpCodes.Brfalse, nullLabel);
-                il.Demit(OpCodes.Br, absorbLabel);
-
-                il.DmarkLabel(leftHasValueLabel);
                 EmitLoadLocalVariableAddress(il, leftVar);
-                il.Demit(OpCodes.Ldfld, typeof(bool?).GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
-                il.Demit(isAnd ? OpCodes.Brfalse : OpCodes.Brtrue, absorbLabel);
+                EmitMethodCall(il, hasValueGetter);
                 EmitLoadLocalVariableAddress(il, rightVar);
-                EmitMethodCall(il, typeof(bool?).GetNullableHasValueGetterMethod());
-                il.Demit(OpCodes.Brfalse, nullLabel);
-                EmitLoadLocalVariableAddress(il, rightVar);
-                il.Demit(OpCodes.Ldfld, typeof(bool?).GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
-                il.Demit(OpCodes.Newobj, typeof(bool?).GetNullableConstructor());
+                il.Demit(OpCodes.Ldfld, valueField);
+                il.Demit(OpCodes.Or);
+                il.Demit(OpCodes.Brfalse, sameLabel);
+
+                EmitLoadLocalVariable(il, isAnd ? leftVar : rightVar);
                 il.Demit(OpCodes.Br, doneLabel);
 
-                il.DmarkLabel(absorbLabel);
-                il.Demit(isAnd ? OpCodes.Ldc_I4_0 : OpCodes.Ldc_I4_1);
-                il.Demit(OpCodes.Newobj, typeof(bool?).GetNullableConstructor());
-                il.Demit(OpCodes.Br, doneLabel);
-
-                il.DmarkLabel(nullLabel);
-                EmitLoadLocalVariable(il, InitValueTypeVariable(il, typeof(bool?)));
+                il.DmarkLabel(sameLabel);
+                EmitLoadLocalVariable(il, isAnd ? rightVar : leftVar);
 
                 il.DmarkLabel(doneLabel);
                 return il.EmitPopIfIgnoreResult(parent);
@@ -6116,21 +6105,24 @@ namespace FastExpressionCompiler
                     return false;
                 var opVar = EmitStoreLocalVariable(il, typeof(bool?));
 
+                var hasValueGetter = Tools.NullableReflected<bool>.HasValueGetterMethod;
+                var valueField = Tools.NullableReflected<bool>.ValueField;
                 var nullLabel = il.DefineLabel();
                 var doneLabel = il.DefineLabel();
 
                 EmitLoadLocalVariableAddress(il, opVar);
-                EmitMethodCall(il, typeof(bool?).GetNullableHasValueGetterMethod());
+                EmitMethodCall(il, hasValueGetter);
                 il.Demit(OpCodes.Brfalse, nullLabel);
                 EmitLoadLocalVariableAddress(il, opVar);
-                il.Demit(OpCodes.Ldfld, typeof(bool?).GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                il.Demit(OpCodes.Ldfld, valueField);
                 il.Demit(OpCodes.Ldc_I4_0);
                 il.Demit(OpCodes.Ceq);
-                il.Demit(OpCodes.Newobj, typeof(bool?).GetNullableConstructor());
+                il.Demit(OpCodes.Newobj, Tools.NullableReflected<bool>.Constructor);
                 il.Demit(OpCodes.Br, doneLabel);
 
+                // null stays null, so the operand itself is the result
                 il.DmarkLabel(nullLabel);
-                EmitLoadLocalVariable(il, InitValueTypeVariable(il, typeof(bool?)));
+                EmitLoadLocalVariable(il, opVar);
 
                 il.DmarkLabel(doneLabel);
                 return il.EmitPopIfIgnoreResult(parent);
@@ -6149,49 +6141,59 @@ namespace FastExpressionCompiler
                     return false;
                 var leftVar = EmitStoreLocalVariable(il, typeof(bool?));
 
-                var hasValueGetter = typeof(bool?).GetNullableHasValueGetterMethod();
-                var valueField = typeof(bool?).GetNullableValueUnsafeAkaGetValueOrDefaultMethod();
-                var shortLabel = il.DefineLabel();
-                var leftNullLabel = il.DefineLabel();
-                var nullResultLabel = il.DefineLabel();
+                var hasValueGetter = Tools.NullableReflected<bool>.HasValueGetterMethod;
+                var valueField = Tools.NullableReflected<bool>.ValueField;
+                var evalRightLabel = il.DefineLabel();
+                var leftResultLabel = il.DefineLabel();
                 var doneLabel = il.DefineLabel();
-                var decidingOp = isAnd ? OpCodes.Brfalse : OpCodes.Brtrue;
 
-                EmitLoadLocalVariableAddress(il, leftVar);
-                EmitMethodCall(il, hasValueGetter);
-                il.Demit(OpCodes.Brfalse, leftNullLabel);
+                // The same shape as System emits: the result is one of the operands, no `newobj` and no extra locals
                 EmitLoadLocalVariableAddress(il, leftVar);
                 il.Demit(OpCodes.Ldfld, valueField);
-                il.Demit(decidingOp, shortLabel);
+                if (isAnd)
+                {
+                    // left == true: evaluate right, left == false: the result is left, left == null: evaluate right
+                    il.Demit(OpCodes.Brtrue, evalRightLabel);
+                    EmitLoadLocalVariableAddress(il, leftVar);
+                    EmitMethodCall(il, hasValueGetter);
+                    il.Demit(OpCodes.Brtrue, leftResultLabel);
+                }
+                else
+                    il.Demit(OpCodes.Brtrue, leftResultLabel);
 
-                il.DmarkLabel(leftNullLabel);
+                il.DmarkLabel(evalRightLabel);
                 if (!TryEmit(right, il, ref context, flags))
                     return false;
                 var rightVar = EmitStoreLocalVariable(il, typeof(bool?));
 
-                // left is either null or the non-deciding value, so the result is the right one
-                EmitLoadLocalVariableAddress(il, leftVar);
-                EmitMethodCall(il, hasValueGetter);
-                var leftNullBranch = il.DefineLabel();
-                il.Demit(OpCodes.Brfalse, leftNullBranch);
-                EmitLoadLocalVariable(il, rightVar);
+                if (isAnd)
+                {
+                    // left.value ? right : right.value ? left : right
+                    var rightResultLabel = il.DefineLabel();
+                    EmitLoadLocalVariableAddress(il, leftVar);
+                    il.Demit(OpCodes.Ldfld, valueField);
+                    il.Demit(OpCodes.Brtrue, rightResultLabel);
+                    EmitLoadLocalVariableAddress(il, rightVar);
+                    il.Demit(OpCodes.Ldfld, valueField);
+                    il.Demit(OpCodes.Brtrue, leftResultLabel);
+                    il.DmarkLabel(rightResultLabel);
+                    EmitLoadLocalVariable(il, rightVar);
+                }
+                else
+                {
+                    // (right.value | left.has) ? right : left
+                    EmitLoadLocalVariableAddress(il, rightVar);
+                    il.Demit(OpCodes.Ldfld, valueField);
+                    EmitLoadLocalVariableAddress(il, leftVar);
+                    EmitMethodCall(il, hasValueGetter);
+                    il.Demit(OpCodes.Or);
+                    il.Demit(OpCodes.Brfalse, leftResultLabel);
+                    EmitLoadLocalVariable(il, rightVar);
+                }
                 il.Demit(OpCodes.Br, doneLabel);
 
-                il.DmarkLabel(leftNullBranch);
-                EmitLoadLocalVariableAddress(il, rightVar);
-                EmitMethodCall(il, hasValueGetter);
-                il.Demit(OpCodes.Brfalse, nullResultLabel);
-                EmitLoadLocalVariableAddress(il, rightVar);
-                il.Demit(OpCodes.Ldfld, valueField);
-                il.Demit(decidingOp, shortLabel);
-
-                il.DmarkLabel(nullResultLabel);
-                EmitLoadLocalVariable(il, InitValueTypeVariable(il, typeof(bool?)));
-                il.Demit(OpCodes.Br, doneLabel);
-
-                il.DmarkLabel(shortLabel);
-                il.Demit(isAnd ? OpCodes.Ldc_I4_0 : OpCodes.Ldc_I4_1);
-                il.Demit(OpCodes.Newobj, typeof(bool?).GetNullableConstructor());
+                il.DmarkLabel(leftResultLabel);
+                EmitLoadLocalVariable(il, leftVar);
 
                 il.DmarkLabel(doneLabel);
                 return il.EmitPopIfIgnoreResult(parent);
@@ -10131,7 +10133,7 @@ namespace FastExpressionCompiler
     }
 
     /// <summary>Provides structural equality comparison for expression trees (both LightExpression and System.Linq.Expressions).
-    /// Use the static <see cref="EqualsTo"/> method as the primary entry point вЂ” it creates a temporary struct on the stack with no heap allocation.
+    /// Use the static <see cref="EqualsTo"/> method as the primary entry point - it creates a temporary struct on the stack with no heap allocation.
     /// Parameters are matched by their position within their enclosing lambda or block, and label targets by identity pairing.
     /// Up to 8 lambda parameters and label targets are stored on the stack; larger numbers spill to a heap array.</summary>
     public struct ExpressionEqualityComparer : IEqualityComparer<Expression>, IEqualityComparer
@@ -10141,7 +10143,7 @@ namespace FastExpressionCompiler
         private SmallList<ParameterExpression, Stack8<ParameterExpression>, NoArrayPool<ParameterExpression>> _xps, _yps;
         private SmallList<LabelTarget, Stack8<LabelTarget>, NoArrayPool<LabelTarget>> _xls, _yls;
 
-        /// <summary>Structurally compares two expressions. Primary entry point вЂ” no heap allocation for the comparer.</summary>
+        /// <summary>Structurally compares two expressions. Primary entry point - no heap allocation for the comparer.</summary>
         [MethodImpl((MethodImplOptions)256)]
         public static bool EqualsTo(Expression x, Expression y) =>
             new ExpressionEqualityComparer().Eq(x, y);
@@ -10333,19 +10335,19 @@ namespace FastExpressionCompiler
             }
         }
 
-        /// <summary>IEqualityComparer&lt;Expression&gt; implementation вЂ” delegates to the static <see cref="EqualsTo"/> for a fresh context per call.</summary>
+        /// <summary>IEqualityComparer&lt;Expression&gt; implementation - delegates to the static <see cref="EqualsTo"/> for a fresh context per call.</summary>
         [MethodImpl((MethodImplOptions)256)]
         bool IEqualityComparer<Expression>.Equals(Expression x, Expression y) => EqualsTo(x, y);
 
-        /// <summary>IEqualityComparer&lt;Expression&gt; implementation вЂ” delegates to the static <see cref="GetHashCode(Expression)"/>.</summary>
+        /// <summary>IEqualityComparer&lt;Expression&gt; implementation - delegates to the static <see cref="GetHashCode(Expression)"/>.</summary>
         [MethodImpl((MethodImplOptions)256)]
         int IEqualityComparer<Expression>.GetHashCode(Expression obj) => GetHashCode(obj);
 
-        /// <summary>Non-generic IEqualityComparer implementation вЂ” delegates to the static methods for use with legacy BCL APIs.</summary>
+        /// <summary>Non-generic IEqualityComparer implementation - delegates to the static methods for use with legacy BCL APIs.</summary>
         [MethodImpl((MethodImplOptions)256)]
         bool IEqualityComparer.Equals(object x, object y) => EqualsTo(x as Expression, y as Expression);
 
-        /// <summary>Non-generic IEqualityComparer implementation вЂ” delegates to the static <see cref="GetHashCode(Expression)"/>.</summary>
+        /// <summary>Non-generic IEqualityComparer implementation - delegates to the static <see cref="GetHashCode(Expression)"/>.</summary>
         [MethodImpl((MethodImplOptions)256)]
         int IEqualityComparer.GetHashCode(object obj) => GetHashCode(obj as Expression);
 

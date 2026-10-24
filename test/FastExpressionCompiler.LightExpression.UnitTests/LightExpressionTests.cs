@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using FastExpressionCompiler.FlatExpression;
 
@@ -63,6 +64,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Flat_structural_hash_supports_dictionary_lookup();
             Can_compile_nullable_boolean_and();
             Can_compile_nullable_boolean_or();
+            Nullable_boolean_logic_emits_the_same_IL_shape_as_system();
             Can_compile_shifts_with_nullable_shift_count();
             Can_compile_nullable_boolean_and_also();
             Can_compile_nullable_boolean_or_else();
@@ -75,7 +77,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_print_reference_comparison();
             Can_round_trip_new_expression_kinds_through_system_expressions();
 
-            return 57;
+            return 58;
         }
 
         private static int _sideEffectCalls;
@@ -536,6 +538,49 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                 nameof(AndInts), BindingFlags.Static | BindingFlags.NonPublic);
             Asserts.IsNotNull(incompatibleMethod);
             Asserts.Throws<InvalidOperationException>(() => And(left, right, incompatibleMethod));
+        }
+
+        public void Nullable_boolean_logic_emits_the_same_IL_shape_as_system()
+        {
+            var l = Parameter(typeof(bool?), "l");
+            var r = Parameter(typeof(bool?), "r");
+
+            Delegate Fast(Expression body) =>
+                Lambda<Func<bool?, bool?, bool?>>(body, l, r).CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
+
+            Fast(And(l, r)).AssertOpCodes(
+                OpCodes.Ldarg_1, OpCodes.Stloc_0, OpCodes.Ldarg_2, OpCodes.Stloc_1,
+                OpCodes.Ldloca_S, OpCodes.Ldfld, OpCodes.Brtrue,
+                OpCodes.Ldloca_S, OpCodes.Call, OpCodes.Ldloca_S, OpCodes.Ldfld, OpCodes.Or, OpCodes.Brfalse,
+                OpCodes.Ldloc_0, OpCodes.Br, OpCodes.Ldloc_1, OpCodes.Ret);
+
+            Fast(Or(l, r)).AssertOpCodes(
+                OpCodes.Ldarg_1, OpCodes.Stloc_0, OpCodes.Ldarg_2, OpCodes.Stloc_1,
+                OpCodes.Ldloca_S, OpCodes.Ldfld, OpCodes.Brtrue,
+                OpCodes.Ldloca_S, OpCodes.Call, OpCodes.Ldloca_S, OpCodes.Ldfld, OpCodes.Or, OpCodes.Brfalse,
+                OpCodes.Ldloc_1, OpCodes.Br, OpCodes.Ldloc_0, OpCodes.Ret);
+
+            Fast(AndAlso(l, r)).AssertOpCodes(
+                OpCodes.Ldarg_1, OpCodes.Stloc_0,
+                OpCodes.Ldloca_S, OpCodes.Ldfld, OpCodes.Brtrue,
+                OpCodes.Ldloca_S, OpCodes.Call, OpCodes.Brtrue,
+                OpCodes.Ldarg_2, OpCodes.Stloc_1,
+                OpCodes.Ldloca_S, OpCodes.Ldfld, OpCodes.Brtrue,
+                OpCodes.Ldloca_S, OpCodes.Ldfld, OpCodes.Brtrue,
+                OpCodes.Ldloc_1, OpCodes.Br, OpCodes.Ldloc_0, OpCodes.Ret);
+
+            Fast(OrElse(l, r)).AssertOpCodes(
+                OpCodes.Ldarg_1, OpCodes.Stloc_0,
+                OpCodes.Ldloca_S, OpCodes.Ldfld, OpCodes.Brtrue,
+                OpCodes.Ldarg_2, OpCodes.Stloc_1,
+                OpCodes.Ldloca_S, OpCodes.Ldfld, OpCodes.Ldloca_S, OpCodes.Call, OpCodes.Or, OpCodes.Brfalse,
+                OpCodes.Ldloc_1, OpCodes.Br, OpCodes.Ldloc_0, OpCodes.Ret);
+
+            Fast(Not(l)).AssertOpCodes(
+                OpCodes.Ldarg_1, OpCodes.Stloc_0,
+                OpCodes.Ldloca_S, OpCodes.Call, OpCodes.Brfalse,
+                OpCodes.Ldloca_S, OpCodes.Ldfld, OpCodes.Ldc_I4_0, OpCodes.Ceq, OpCodes.Newobj, OpCodes.Br,
+                OpCodes.Ldloc_0, OpCodes.Ret);
         }
 
         public void Can_compile_nullable_boolean_or()
@@ -1146,8 +1191,8 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
         /// <summary>
         /// An outer lambda parameter captured in a nested lambda body creates
-        /// a ref node in the nested lambda scope. All three occurrences —
-        /// the outer params list, the inner body, and any outer body usage —
+        /// a ref node in the nested lambda scope. All three occurrences -
+        /// the outer params list, the inner body, and any outer body usage -
         /// must resolve to the exact same SysParameterExpression.
         /// </summary>
         public void Flat_nested_lambda_captures_outer_parameter_identity()
@@ -1259,9 +1304,9 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             fe.RootIdx = fe.Lambda<Func<int, int>>(block, p);
 
             var func = (Func<int, int>)((System.Linq.Expressions.LambdaExpression)fe.ToExpression()).Compile();
-            // p=3 → v1 = 3*2=6, v2 = 6+3=9
+            // p=3 -> v1 = 3*2=6, v2 = 6+3=9
             Asserts.AreEqual(9, func(3));
-            // p=0 → v1 = 0, v2 = 0
+            // p=0 -> v1 = 0, v2 = 0
             Asserts.AreEqual(0, func(0));
         }
 
@@ -1274,7 +1319,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
         public void Flat_enum_constant_stored_inline_roundtrip()
         {
-            // Verify that enum constants with ≤32-bit underlying types are stored inline
+            // Verify that enum constants with <=32-bit underlying types are stored inline
             // (no ClosureConstants entry, no boxing) and round-trip correctly.
             void Check<TEnum>(TEnum enumValue) where TEnum : Enum
             {
