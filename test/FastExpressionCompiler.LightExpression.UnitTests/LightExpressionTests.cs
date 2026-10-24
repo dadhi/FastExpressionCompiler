@@ -66,12 +66,117 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_compile_nullable_boolean_and_also();
             Can_compile_nullable_boolean_or_else();
             Can_compile_nullable_boolean_not();
+            Can_make_goto_of_all_kinds_with_value_and_type();
+            Can_compile_goto_with_value_of_all_kinds();
+            Can_compile_loop_with_break_and_continue_with_value();
 
-            return 49;
+            return 52;
         }
 
         private static int _sideEffectCalls;
         private static bool? SideEffect(bool? value) { ++_sideEffectCalls; return value; }
+
+        public void Can_make_goto_of_all_kinds_with_value_and_type()
+        {
+            var label = Label(typeof(int), "label");
+            var voidLabel = Label("voidLabel");
+            var value = Constant(42);
+            var kinds = new[] { GotoExpressionKind.Goto, GotoExpressionKind.Return, GotoExpressionKind.Break, GotoExpressionKind.Continue };
+
+            foreach (var kind in kinds)
+            {
+                var plain = MakeGoto(kind, voidLabel, null, null);
+                Asserts.AreEqual(kind, plain.Kind);
+                Asserts.AreEqual(null, plain.Value);
+                Asserts.AreEqual(typeof(void), plain.Type);
+
+                var typed = MakeGoto(kind, voidLabel, null, typeof(string));
+                Asserts.AreEqual(kind, typed.Kind);
+                Asserts.AreEqual(null, typed.Value);
+                Asserts.AreEqual(typeof(string), typed.Type);
+
+                var valued = MakeGoto(kind, label, value, null);
+                Asserts.AreEqual(kind, valued.Kind);
+                Asserts.IsNotNull(valued.Value);
+
+                var typedValued = MakeGoto(kind, label, value, typeof(string));
+                Asserts.AreEqual(kind, typedValued.Kind);
+                Asserts.IsNotNull(typedValued.Value);
+                Asserts.AreEqual(typeof(string), typedValued.Type);
+
+                // converting to System expressions validates and preserves the kind, value and type
+                foreach (var g in new[] { plain, typed, valued, typedValued })
+                {
+                    var sys = (System.Linq.Expressions.GotoExpression)g.ToExpression();
+                    Asserts.AreEqual(kind, sys.Kind);
+                    Asserts.AreEqual(g.Value != null, sys.Value != null);
+                    Asserts.AreEqual(g.Type, sys.Type);
+                }
+            }
+
+            // the public factories agree with MakeGoto
+            Asserts.AreEqual(GotoExpressionKind.Continue, Continue(label).Kind);
+            Asserts.AreEqual(typeof(string), Continue(label, typeof(string)).Type);
+            Asserts.AreEqual(GotoExpressionKind.Continue, Continue(label, value).Kind);
+            Asserts.IsNotNull(Continue(label, value).Value);
+            Asserts.AreEqual(null, Continue(label, (Expression)null).Value);
+            Asserts.AreEqual(GotoExpressionKind.Continue, Continue(label, value, typeof(string)).Kind);
+            Asserts.AreEqual(typeof(string), Continue(label, value, typeof(string)).Type);
+            Asserts.AreEqual(GotoExpressionKind.Break, Break(label, value).Kind);
+            Asserts.AreEqual(GotoExpressionKind.Break, Break(label, value, typeof(string)).Kind);
+            Asserts.AreEqual(GotoExpressionKind.Return, Return(label, value).Kind);
+            Asserts.AreEqual(GotoExpressionKind.Return, Return(label, value, typeof(string)).Kind);
+            Asserts.AreEqual(GotoExpressionKind.Goto, Goto(label, value).Kind);
+            Asserts.AreEqual(GotoExpressionKind.Goto, Goto(label, value, typeof(string)).Kind);
+        }
+
+        public void Can_compile_goto_with_value_of_all_kinds()
+        {
+            foreach (var kind in new[] { GotoExpressionKind.Goto, GotoExpressionKind.Return, GotoExpressionKind.Break, GotoExpressionKind.Continue })
+                foreach (var withType in new[] { false, true })
+                {
+                    var label = Label(typeof(int), "label");
+                    var @goto = MakeGoto(kind, label, Constant(42), withType ? typeof(void) : null);
+                    var lambda = Lambda<Func<int>>(Block(@goto, Label(label, Constant(0))));
+
+                    var sys = lambda.CompileSys();
+                    Asserts.AreEqual(42, sys());
+
+                    var fast = lambda.CompileFast(true);
+                    Asserts.IsNotNull(fast);
+                    Asserts.AreEqual(42, fast());
+                }
+        }
+
+        public void Can_compile_loop_with_break_and_continue_with_value()
+        {
+            // sum of odd numbers below the limit, the loop result is provided by the `Break` with value
+            foreach (var continueKind in new[] { GotoExpressionKind.Continue, GotoExpressionKind.Goto })
+            {
+                var limit = Parameter(typeof(int), "limit");
+                var i = Parameter(typeof(int), "i");
+                var sum = Parameter(typeof(int), "sum");
+                var breakLabel = Label(typeof(int), "break");
+                var continueLabel = Label("continue");
+
+                var body = Block(
+                    IfThen(GreaterThanOrEqual(PreIncrementAssign(i), limit), Break(breakLabel, sum)),
+                    IfThen(Equal(Modulo(i, Constant(2)), Constant(0)), MakeGoto(continueKind, continueLabel, null, null)),
+                    AddAssign(sum, i));
+
+                var lambda = Lambda<Func<int, int>>(
+                    Block(new[] { i, sum }, Loop(body, breakLabel, continueLabel)),
+                    limit);
+
+                var sys = lambda.CompileSys();
+                Asserts.AreEqual(1 + 3 + 5 + 7, sys(9));
+
+                var fast = lambda.CompileFast(true);
+                Asserts.IsNotNull(fast);
+                Asserts.AreEqual(sys(9), fast(9));
+                Asserts.AreEqual(sys(1), fast(1));
+            }
+        }
 
         private static int AndInts(int left, int right) => left & right;
 

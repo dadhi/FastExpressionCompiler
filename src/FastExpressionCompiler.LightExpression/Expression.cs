@@ -2023,7 +2023,7 @@ public abstract class Expression
         switch (kind)
         {
             case GotoExpressionKind.Return:
-                if (value == null && type == null)
+                if (value == null & type == null)
                     return new ReturnGotoExpression(target);
                 if (value == null)
                     return new ReturnTypedGotoExpression(target, type);
@@ -2031,7 +2031,7 @@ public abstract class Expression
                     return new ReturnValueGotoExpression(target, value);
                 return new ReturnTypedValueGotoExpression(target, value, type);
             case GotoExpressionKind.Break:
-                if (value == null && type == null)
+                if (value == null & type == null)
                     return new BreakGotoExpression(target);
                 if (value == null)
                     return new BreakTypedGotoExpression(target, type);
@@ -2039,12 +2039,16 @@ public abstract class Expression
                     return new BreakValueGotoExpression(target, value);
                 return new BreakTypedValueGotoExpression(target, value, type);
             case GotoExpressionKind.Continue:
-                return type == null
-                    ? new ContinueGotoExpression(target)
-                    : new ContinueTypedGotoExpression(target, type);
+                if (value == null & type == null)
+                    return new ContinueGotoExpression(target);
+                if (value == null)
+                    return new ContinueTypedGotoExpression(target, type);
+                if (type == null)
+                    return new ContinueValueGotoExpression(target, value);
+                return new ContinueTypedValueGotoExpression(target, value, type);
             case GotoExpressionKind.Goto:
             default:
-                if (value == null && type == null)
+                if (value == null & type == null)
                     return new GotoExpression(target);
                 if (value == null)
                     return new TypedGotoExpression(target, type);
@@ -2085,6 +2089,14 @@ public abstract class Expression
 
     public static GotoExpression Continue(LabelTarget target, Type type) =>
         type == null ? new ContinueGotoExpression(target) : new ContinueTypedGotoExpression(target, type);
+
+    public static GotoExpression Continue(LabelTarget target, Expression value) =>
+        value == null
+            ? new ContinueGotoExpression(target)
+            : (GotoExpression)new ContinueValueGotoExpression(target, value);
+
+    public static GotoExpression Continue(LabelTarget target, Expression value, Type type) =>
+        MakeGoto(GotoExpressionKind.Continue, target, value, type);
 
     public static GotoExpression Return(LabelTarget target) =>
         new ReturnGotoExpression(target);
@@ -5497,6 +5509,18 @@ public sealed class ContinueTypedGotoExpression : TypedGotoExpression
 {
     public override GotoExpressionKind Kind => GotoExpressionKind.Continue;
     internal ContinueTypedGotoExpression(LabelTarget target, Type type) : base(target, type) { }
+}
+
+public sealed class ContinueValueGotoExpression : ValueGotoExpression
+{
+    public override GotoExpressionKind Kind => GotoExpressionKind.Continue;
+    internal ContinueValueGotoExpression(LabelTarget target, Expression value) : base(target, value) { }
+}
+
+public sealed class ContinueTypedValueGotoExpression : TypedValueGotoExpression
+{
+    public override GotoExpressionKind Kind => GotoExpressionKind.Continue;
+    internal ContinueTypedValueGotoExpression(LabelTarget target, Expression value, Type type) : base(target, value, type) { }
 }
 
 public struct SwitchCase

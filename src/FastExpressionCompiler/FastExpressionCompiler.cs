@@ -626,6 +626,8 @@ namespace FastExpressionCompiler
             public short ReturnVariableIndexPlusOneAndIsDefined;
             public Label Label;
             public Label ReturnLabel;
+            /// <summary>Loop break label has no default value, so `Break` with a value may keep the value on the stack and jump to it</summary>
+            public bool IsLoopBreakLabel;
         }
 
         /// <summary>Track the info required to build a closure object + some context information not directly related to closure.</summary>
@@ -2400,6 +2402,14 @@ namespace FastExpressionCompiler
                     il.DmarkLabel(continueLabel);
                 }
 
+                var breakLabelInfoBeforeBody = loopExpr.BreakLabel;
+                if (breakLabelInfoBeforeBody != null)
+                {
+                    ref var loopBreakInfo = ref context.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(breakLabelInfoBeforeBody, out var loopBreakFound);
+                    if (loopBreakFound)
+                        loopBreakInfo.IsLoopBreakLabel = true;
+                }
+
                 if (!TryEmit(loopExpr.Body, il, ref context, parent))
                     return false;
 
@@ -2509,6 +2519,11 @@ namespace FastExpressionCompiler
                 {
                     case GotoExpressionKind.Break:
                     case GotoExpressionKind.Continue:
+                        if (gotoValue != null && !labelInfo.IsLoopBreakLabel)
+                        {
+                            EmitGotoToReturnLabel(ref labelInfo, il, gotoValue, (parent & ParentFlags.TryCatch) != 0 ? OpCodes.Leave : OpCodes.Br);
+                            return true;
+                        }
                         il.Demit(OpCodes.Br, labelInfo.GetOrDefineLabel(il));
                         return true;
 
