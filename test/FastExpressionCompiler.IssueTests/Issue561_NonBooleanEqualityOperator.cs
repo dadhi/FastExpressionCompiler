@@ -30,6 +30,7 @@ public struct Issue561_NonBooleanEqualityOperator : ITestX
         Selected_methods_keep_non_boolean_value_results(t);
         Boolean_method_is_not_replaced_by_constant_comparison(t);
         Converted_simple_right_operands_reach_the_selected_method(t);
+        Converted_simple_right_operands_inside_try(t);
 #if LIGHT_EXPRESSION
         Converted_intrinsic_right_operand_can_emit_exception_regions(t);
 #endif
@@ -241,6 +242,32 @@ public struct Issue561_NonBooleanEqualityOperator : ITestX
         }
     }
 
+    public void Converted_simple_right_operands_inside_try(TestContext t)
+    {
+        var parameter = System.Linq.Expressions.Expression.Parameter(typeof(int));
+        var method = typeof(Issue561_NonBooleanEqualityOperator).GetMethod(nameof(CompareValue));
+        foreach (var right in new System.Linq.Expressions.Expression[] { parameter,
+            System.Linq.Expressions.Expression.Constant(2), System.Linq.Expressions.Expression.Default(typeof(int)) })
+        {
+            var converted = System.Linq.Expressions.Expression.Convert(
+                System.Linq.Expressions.Expression.Convert(right, typeof(long)), typeof(int));
+            foreach (var kind in new[] { ExpressionType.Equal, ExpressionType.Add })
+            {
+                var binary = System.Linq.Expressions.Expression.MakeBinary(kind,
+                    System.Linq.Expressions.Expression.Constant(3), converted, false,
+                    kind == ExpressionType.Equal ? method : null);
+                var body = System.Linq.Expressions.Expression.TryFinally(binary, System.Linq.Expressions.Expression.Empty());
+                var expression = System.Linq.Expressions.Expression.Lambda<Func<int, int>>(body, parameter);
+                var fast = Compile(expression);
+                if (!t.IsNotNull(fast)) return;
+                var expected = expression.Compile()(4);
+                CustomObject.OperatorCalls = 0;
+                t.AreEqual(expected, fast(4));
+                t.AreEqual(kind == ExpressionType.Equal ? 1 : 0, CustomObject.OperatorCalls);
+            }
+        }
+    }
+
 #if LIGHT_EXPRESSION
     private sealed class TryFinallyConversion : UnaryExpression
     {
@@ -274,6 +301,14 @@ public struct Issue561_NonBooleanEqualityOperator : ITestX
         t.AreEqual(22, fast(4));
         t.AreEqual("AAF", Trace);
         t.AreEqual(1, CustomObject.OperatorCalls);
+
+        var arithmetic = Expression.Lambda<Func<int, int>>(Expression.Add(read, right), parameter).CompileFast(true);
+        if (!t.IsNotNull(arithmetic)) return;
+        Trace = "";
+        CustomObject.OperatorCalls = 0;
+        t.AreEqual(4, arithmetic(4));
+        t.AreEqual("AAF", Trace);
+        t.AreEqual(0, CustomObject.OperatorCalls);
     }
 #endif
 

@@ -627,11 +627,11 @@ public abstract class Expression
 
     /// <summary>Returns whether the expression evaluates to false.</summary>
     public static UnaryExpression IsFalse(Expression expression) =>
-        new TypedUnaryExpression<bool>(ExpressionType.IsFalse, expression);
+        Nullable.GetUnderlyingType(expression.Type) != null ? new TypedUnaryExpression<bool?>(ExpressionType.IsFalse, expression) : new TypedUnaryExpression<bool>(ExpressionType.IsFalse, expression);
 
     /// <summary>Returns whether the expression evaluates to true.</summary>
     public static UnaryExpression IsTrue(Expression expression) =>
-        new TypedUnaryExpression<bool>(ExpressionType.IsTrue, expression);
+        Nullable.GetUnderlyingType(expression.Type) != null ? new TypedUnaryExpression<bool?>(ExpressionType.IsTrue, expression) : new TypedUnaryExpression<bool>(ExpressionType.IsTrue, expression);
 
     /// <summary>Creates a UnaryExpression, given an operand and its type</summary>
     public static UnaryExpression MakeUnary(ExpressionType unaryType, Expression operand, Type type = null) =>
@@ -696,7 +696,8 @@ public abstract class Expression
 
     /// <summary>Creates a UnaryExpression that represents an expression that has a constant value of type Expression.</summary>
     public static UnaryExpression Quote(Expression expression) =>
-        new NodeTypedUnaryExpression(ExpressionType.Quote, expression);
+        new TypedUnaryExpression(ExpressionType.Quote, expression,
+            typeof(System.Linq.Expressions.Expression<>).MakeGenericType(expression.Type));
 
     /// <summary>Creates a UnaryExpression that represents a unary plus operation.</summary>
     public static UnaryExpression UnaryPlus(Expression expression) =>
@@ -1244,6 +1245,12 @@ public abstract class Expression
     public static ElementInit ElementInit(MethodInfo addMethod, IEnumerable<Expression> arguments) =>
         ElementInit(addMethod, arguments.AsReadOnlyList());
 
+    [RequiresUnreferencedCode(Trimming.Message)]
+    private static Type GetInvocationReturnType(Expression expression) =>
+        expression is UnaryExpression quote && quote.NodeType == ExpressionType.Quote && quote.Operand is LambdaExpression lambda
+            ? lambda.ReturnType
+            : (expression.Type.FindExpressionCompileMethod()?.ReturnType ?? expression.Type).FindDelegateInvokeMethod().ReturnType;
+
     public static InvocationExpression Invoke(LambdaExpression expression) =>
         new NotNullExpressionInvocationExpression(expression);
 
@@ -1254,7 +1261,7 @@ public abstract class Expression
     public static InvocationExpression Invoke(Expression expression, Expression a0) =>
         expression is LambdaExpression
             ? new OneArgumentInvocationExpression(expression, a0)
-            : new TypedOneArgumentInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0);
+            : new TypedOneArgumentInvocationExpression(expression, GetInvocationReturnType(expression), a0);
 
     public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0) =>
         expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
@@ -1268,7 +1275,7 @@ public abstract class Expression
     public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1) =>
         expression is LambdaExpression
             ? new TwoArgumentsInvocationExpression(expression, a0, a1)
-            : new TypedTwoArgumentsInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0, a1);
+            : new TypedTwoArgumentsInvocationExpression(expression, GetInvocationReturnType(expression), a0, a1);
 
     public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0, Expression a1) =>
         expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
@@ -1282,7 +1289,7 @@ public abstract class Expression
     public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1, Expression a2) =>
         expression is LambdaExpression
             ? new ThreeArgumentsInvocationExpression(expression, a0, a1, a2)
-            : new TypedThreeArgumentsInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0, a1, a2);
+            : new TypedThreeArgumentsInvocationExpression(expression, GetInvocationReturnType(expression), a0, a1, a2);
 
     public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0, Expression a1, Expression a2) =>
         expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
@@ -1296,7 +1303,7 @@ public abstract class Expression
     public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1, Expression a2, Expression a3) =>
         expression is LambdaExpression
             ? new FourArgumentsInvocationExpression(expression, a0, a1, a2, a3)
-            : new TypedFourArgumentsInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0, a1, a2, a3);
+            : new TypedFourArgumentsInvocationExpression(expression, GetInvocationReturnType(expression), a0, a1, a2, a3);
 
     public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0, Expression a1, Expression a2, Expression a3) =>
         expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
@@ -1310,7 +1317,7 @@ public abstract class Expression
     public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4) =>
         expression is LambdaExpression
             ? new FiveArgumentsInvocationExpression(expression, a0, a1, a2, a3, a4)
-            : new TypedFiveArgumentsInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0, a1, a2, a3, a4);
+            : new TypedFiveArgumentsInvocationExpression(expression, GetInvocationReturnType(expression), a0, a1, a2, a3, a4);
 
     public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4) =>
         expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
@@ -1324,7 +1331,7 @@ public abstract class Expression
     public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4, Expression a5) =>
         expression is LambdaExpression
             ? new SixArgumentsInvocationExpression(expression, a0, a1, a2, a3, a4, a5)
-            : new TypedSixArgumentsInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0, a1, a2, a3, a4, a5);
+            : new TypedSixArgumentsInvocationExpression(expression, GetInvocationReturnType(expression), a0, a1, a2, a3, a4, a5);
 
     public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4, Expression a5) =>
         expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
@@ -1335,7 +1342,7 @@ public abstract class Expression
     public static InvocationExpression Invoke(Expression expression, IReadOnlyList<Expression> args) =>
         expression is LambdaExpression
             ? new ManyArgumentsInvocationExpression(expression, args)
-            : new TypedManyArgumentsInvocationExpression(expression, args, expression.Type.FindDelegateInvokeMethod().ReturnType);
+            : new TypedManyArgumentsInvocationExpression(expression, args, GetInvocationReturnType(expression));
 
     [RequiresUnreferencedCode(Trimming.Message)]
     public static InvocationExpression Invoke(Expression expression, params Expression[] args) =>
@@ -1428,11 +1435,18 @@ public abstract class Expression
     public static BinaryExpression ExclusiveOr(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.ExclusiveOr, left, right, method);
 
     /// <summary>Creates a BinaryExpression that represents a bitwise left-shift operation.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression LeftShift(Expression left, Expression right) =>
-        new LeftTypedBinaryExpression(ExpressionType.LeftShift, left, right);
+        GetShiftBinary(ExpressionType.LeftShift, left, right);
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public static BinaryExpression LeftShift(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.LeftShift, left, right, method);
+    public static BinaryExpression LeftShift(Expression left, Expression right, MethodInfo method) => GetShiftBinary(ExpressionType.LeftShift, left, right, method);
+
+    [RequiresUnreferencedCode(Trimming.Message)]
+    private static BinaryExpression GetShiftBinary(ExpressionType nodeType, Expression left, Expression right, MethodInfo method = null) =>
+        method == null && left.Type.IsNumeric() && !left.Type.IsNullable() && right.Type.IsNullable()
+            ? new MethodBinaryExpression(nodeType, left, right, left.Type.GetNullable(), null)
+            : GetLeftTypedBinary(nodeType, left, right, method);
 
     /// <summary>Creates a BinaryExpression that represents an arithmetic remainder operation.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
@@ -1444,11 +1458,12 @@ public abstract class Expression
         GetArithmeticBinary(ExpressionType.Modulo, left, right, method);
 
     /// <summary>Creates a BinaryExpression that represents a bitwise right-shift operation.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression RightShift(Expression left, Expression right) =>
-        new LeftTypedBinaryExpression(ExpressionType.RightShift, left, right);
+        GetShiftBinary(ExpressionType.RightShift, left, right);
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public static BinaryExpression RightShift(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.RightShift, left, right, method);
+    public static BinaryExpression RightShift(Expression left, Expression right, MethodInfo method) => GetShiftBinary(ExpressionType.RightShift, left, right, method);
 
     /// <summary>Creates a BinaryExpression that represents an arithmetic subtraction operation that does not have overflow checking.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
@@ -1504,14 +1519,18 @@ public abstract class Expression
 
     /// <summary>Creates a BinaryExpression that represents a bitwise AND operation.</summary>
     public static BinaryExpression And(Expression left, Expression right) =>
-        new LogicalBinaryExpression(ExpressionType.And, left, right);
+        left.Type == typeof(bool?)
+            ? new LeftTypedBinaryExpression(ExpressionType.And, left, right)
+            : new LogicalBinaryExpression(ExpressionType.And, left, right);
 
     [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression And(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.And, left, right, method);
 
     /// <summary>Creates a BinaryExpression that represents a conditional AND operation that evaluates the second operand only if the first operand evaluates to true.</summary>
     public static BinaryExpression AndAlso(Expression left, Expression right) =>
-        new LogicalBinaryExpression(ExpressionType.AndAlso, left, right);
+        left.Type == typeof(bool)
+            ? new LogicalBinaryExpression(ExpressionType.AndAlso, left, right)
+            : new LeftTypedBinaryExpression(ExpressionType.AndAlso, left, right);
 
     [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression AndAlso(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.AndAlso, left, right, method);
@@ -1532,7 +1551,9 @@ public abstract class Expression
 
     /// <summary>Creates a BinaryExpression that represents a conditional OR operation that evaluates the second operand only if the first operand evaluates to false.</summary>
     public static BinaryExpression OrElse(Expression left, Expression right) =>
-        new LogicalBinaryExpression(ExpressionType.OrElse, left, right);
+        left.Type == typeof(bool)
+            ? new LogicalBinaryExpression(ExpressionType.OrElse, left, right)
+            : new LeftTypedBinaryExpression(ExpressionType.OrElse, left, right);
 
     [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression OrElse(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.OrElse, left, right, method);
@@ -1984,6 +2005,10 @@ public abstract class Expression
                     return new BreakValueGotoExpression(target, value);
                 return new BreakTypedValueGotoExpression(target, value, type);
             case GotoExpressionKind.Continue:
+                if (value != null)
+                    return type == null
+                        ? new ContinueValueGotoExpression(target, value)
+                        : new ContinueTypedValueGotoExpression(target, value, type);
                 return type == null
                     ? new ContinueGotoExpression(target)
                     : new ContinueTypedGotoExpression(target, type);
@@ -2085,11 +2110,11 @@ public abstract class Expression
 
     /// <summary>Creates a BinaryExpression that represents a reference equality comparison.</summary>
     public static BinaryExpression ReferenceEqual(Expression left, Expression right) =>
-        new LogicalBinaryExpression(ExpressionType.Equal, left, right);
+        new LogicalBinaryExpression(ExpressionType.Equal, left, right, referenceComparison: true);
 
     /// <summary>Creates a BinaryExpression that represents a reference inequality comparison.</summary>
     public static BinaryExpression ReferenceNotEqual(Expression left, Expression right) =>
-        new LogicalBinaryExpression(ExpressionType.NotEqual, left, right);
+        new LogicalBinaryExpression(ExpressionType.NotEqual, left, right, referenceComparison: true);
 
     /// <summary>Creates a BinaryExpression that represents a coalescing operation.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
@@ -2112,7 +2137,7 @@ public abstract class Expression
 
         if (right.IsImplicitlyConvertibleTo(left))
             return left;
-        if (left.IsImplicitlyConvertibleTo(right))
+        if ((underlyingLeft ?? left).IsImplicitlyConvertibleTo(right))
             return right;
         throw new ArgumentException($"Unable to coalesce arguments of left type of {left} and right type of {right}.");
     }
@@ -2842,6 +2867,13 @@ public static class FromSysExpressionConverter
                         vars[i] = (ParameterExpression)sysVars[i].ToLightExpression(ref exprsConverted);
                     return new RuntimeVariablesExpression(vars);
                 }
+            case ExpressionType.TypeIs:
+            case ExpressionType.TypeEqual:
+                var typeTest = (System.Linq.Expressions.TypeBinaryExpression)sysExpr;
+                var tested = typeTest.Expression.ToLightExpression(ref exprsConverted);
+                return nodeType == ExpressionType.TypeIs
+                    ? Expression.TypeIs(tested, typeTest.TypeOperand)
+                    : Expression.TypeEqual(tested, typeTest.TypeOperand);
             case ExpressionType.DebugInfo:
                 {
                     var die = (System.Linq.Expressions.DebugInfoExpression)sysExpr;
@@ -2860,6 +2892,13 @@ public static class FromSysExpressionConverter
                     var left = be.Left.ToLightExpression(ref exprsConverted);
                     var raft = be.Right.ToLightExpression(ref exprsConverted);
                     var conv = be.Conversion?.ToLightExpression(ref exprsConverted) as LambdaExpression;
+                    if (be.Method == null && !be.Left.Type.IsValueType && !be.Right.Type.IsValueType)
+                    {
+                        if (nodeType == ExpressionType.Equal)
+                            return Expression.ReferenceEqual(left, raft);
+                        if (nodeType == ExpressionType.NotEqual)
+                            return Expression.ReferenceNotEqual(left, raft);
+                    }
                     return Expression.MakeBinary(nodeType, left, raft, be.IsLiftedToNull, be.Method, conv);
                 }
 
@@ -3440,7 +3479,8 @@ public abstract class BinaryExpression : Expression
         [RequiresUnreferencedCode(Trimming.Message)]
         get =>
             NodeType != ExpressionType.Coalesce & NodeType != ExpressionType.Assign &&
-            Left.Type.IsNullable() &&
+            (Left.Type.IsNullable() ||
+                (NodeType == ExpressionType.LeftShift || NodeType == ExpressionType.RightShift) && Right.Type.IsNullable()) &&
             (Method == null || !Method.GetParameters()[0].ParameterType.GetNonRef().IsEquivalentTo(Left.Type));
     }
 
@@ -3496,8 +3536,12 @@ internal sealed class LogicalBinaryExpression : BinaryExpression
 {
     public override ExpressionType NodeType { get; }
     public override Type Type => typeof(bool);
-    internal LogicalBinaryExpression(ExpressionType nodeType, Expression left, Expression right) : base(left, right) =>
+    internal readonly bool IsReferenceComparison;
+    internal LogicalBinaryExpression(ExpressionType nodeType, Expression left, Expression right, bool referenceComparison = false) : base(left, right)
+    {
         NodeType = nodeType;
+        IsReferenceComparison = referenceComparison;
+    }
 
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted)
     {
@@ -3506,6 +3550,8 @@ internal sealed class LogicalBinaryExpression : BinaryExpression
         {
             var left = Left.ToExpression(ref exprsConverted);
             var right = Right.ToExpression(ref exprsConverted);
+            if (IsReferenceComparison)
+                return NodeType == ExpressionType.Equal ? SysExpr.ReferenceEqual(left, right) : SysExpr.ReferenceNotEqual(left, right);
             if (left.Type.IsPrimitive)
             {
                 left = TryConvertSysExprToInt(left);
@@ -5421,6 +5467,18 @@ public sealed class BreakTypedValueGotoExpression : TypedValueGotoExpression
     internal BreakTypedValueGotoExpression(LabelTarget target, Expression value, Type type) : base(target, value, type) { }
 }
 
+public sealed class ContinueValueGotoExpression : ValueGotoExpression
+{
+    public override GotoExpressionKind Kind => GotoExpressionKind.Continue;
+    internal ContinueValueGotoExpression(LabelTarget target, Expression value) : base(target, value) { }
+}
+
+public sealed class ContinueTypedValueGotoExpression : TypedValueGotoExpression
+{
+    public override GotoExpressionKind Kind => GotoExpressionKind.Continue;
+    internal ContinueTypedValueGotoExpression(LabelTarget target, Expression value, Type type) : base(target, value, type) { }
+}
+
 public sealed class ContinueGotoExpression : GotoExpression
 {
     public override GotoExpressionKind Kind => GotoExpressionKind.Continue;
@@ -5846,18 +5904,19 @@ public sealed class TypedReturnManyParametersExpression<TDelegate> : ManyParamet
         : base(body, parameters) => ReturnType = returnType;
 }
 
-// todo: @feature is not supported yet
 public sealed class DynamicExpression : Expression
 {
     public override ExpressionType NodeType => ExpressionType.Dynamic;
-    public override Type Type => typeof(object);
+    public override Type Type { get; }
     public Type DelegateType { get; }
     public CallSiteBinder Binder { get; }
     public IReadOnlyList<Expression> Arguments { get; }
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public DynamicExpression(Type delegateType, CallSiteBinder binder, IReadOnlyList<Expression> arguments)
     {
         DelegateType = delegateType;
+        Type = delegateType.FindDelegateInvokeMethod().ReturnType;
         Binder = binder;
         Arguments = arguments;
     }

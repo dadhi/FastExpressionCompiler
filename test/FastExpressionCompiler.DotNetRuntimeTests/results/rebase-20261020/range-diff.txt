@@ -1,0 +1,438 @@
+  1:  9952f0df =   1:  2821cc4a fix: preserve numeric conversion signedness and overflow checks
+  2:  c747288e =   2:  87a0442a fix: emit nullable Boolean operators with three-valued logic
+  3:  6acf6a99 =   3:  937cde68 fix: reject extension reductions that make no progress
+  4:  7bd9d97f =   4:  0998225b fix: box value operands before emitting type tests
+  5:  b1fbd154 =   5:  919f614b test: run compatibility regressions on .NET Framework
+  6:  f7b6cfdd =   6:  17628a18 docs: record compatibility fixes and fresh full-suite outcomes
+  7:  c9e5e702 =   7:  fe60a99b fix: box constants declared as reference base types and interfaces
+  8:  95f8f01c =   8:  abb63bf3 fix: unbox values converted from ValueType and nullable interfaces
+  9:  e3a1b653 =   9:  b6c07296 fix: load nullable arithmetic locals as values
+ 10:  172d7f97 =  10:  dafe156b fix: preserve null when boxing nullable values to reference types
+ 11:  2188ecb4 =  11:  71ebb47d fix: normalize nullable and wide array bounds before allocation
+ 12:  989fea1d =  12:  0b983544 fix: resolve lifted arithmetic operators on underlying operand types
+ 13:  d933190e =  13:  ee84697d fix: emit unsigned division for unsigned arithmetic results
+ 14:  3029fc0f =  14:  03dc1600 fix: emit lifted and method-based ones complement safely
+ 15:  01f1455a =  15:  73dcdf7a fix: dereference by-ref operands when emitting conversions
+ 16:  cebb5e6b =  16:  ddd36185 fix: emit typed and lifted increment and decrement operations
+ 17:  3dde6d9f =  17:  cdf3802a fix: honor explicit methods for increment and decrement assignments
+ 18:  d2e26dfb =  18:  ca419dea fix: emit valid instance calls and index access on struct receivers
+ 19:  71e6a2b1 =  19:  ce77ab63 fix: preserve nullable and unsigned numeric comparison semantics
+ 20:  76dd92b0 =  20:  f7434a48 fix: convert both nullable coalesce branches to the result type
+ 21:  da9cb6b8 =  21:  c7d39575 fix: discard values and preserve control flow for void label targets
+ 22:  0f114f15 =  22:  cb954f86 test: use a portable explicit conversion oracle for coalesce
+ 23:  b12baa1c =  23:  368d5f09 fix: reuse lifted operator emission for unary increment and decrement
+ 24:  7a0dec97 =  24:  8d36f74a fix: route typed jumps through their actual label targets
+ 25:  3b8cecd9 =  25:  6a654256 fix: preserve reference identity in equality expressions
+ 26:  d267064c =  26:  59fd4132 fix: emit user-defined conditional logical operators
+ 27:  76a96e2d =  27:  f8b59329 fix: invoke coalesce conversion callbacks on non-null operands
+ 28:  533dadba =  28:  3b483013 fix: honor custom Not methods in conditionals and interpretation
+ 29:  5197b237 =  29:  ef8aeabd fix: lift method-based Not and OnesComplement operands
+ 30:  b6a745ea =  30:  537ccc99 fix: preserve original boxed constant identity in reference contexts
+ 31:  23377d0d =  31:  8a1af00b fix: honor explicit binary methods in arithmetic and compound assignment
+ 32:  1be4d838 =  32:  ffdc7bfd feat: compile exact runtime TypeEqual tests in the existing emitter
+ 33:  4bf73bde =  33:  c99a3930 fix: apply compound assignment conversions before nullable writeback
+ 34:  21cf1fe6 =  34:  e813b6ab refactor: reuse comparison operand emission for reference identity
+ 35:  286e36f1 =  35:  b1e09ec4 test: skip compiler-layout assertions only after strict behavior validation
+ 36:  c6b107c0 =  36:  76058b64 fix: spill compound assignment targets around complex right operands
+ 37:  92d8e8da =  37:  8f1d776e fix: preserve checked overflow and nullable negation semantics
+ 38:  f5876161 =  38:  520d1ece fix: evaluate nullable arithmetic right operands before null propagation
+ 39:  177d037d !  39:  78ba9df2 fix: preserve pending arithmetic values around nested exception blocks
+    @@ Commit message
+     
+      ## src/FastExpressionCompiler/FastExpressionCompiler.cs ##
+     @@ src/FastExpressionCompiler/FastExpressionCompiler.cs: namespace FastExpressionCompiler
+    -             internal SmallMap4<Expression, NoValue, RefEq<Expression>> ArgsContainingComplexExpression;
+    +             internal SmallSet4<Expression, RefEq<Expression>> ArgsContainingComplexExpression;
+      
+                  internal bool HasComplexExpression;
+     +            internal bool HasExceptionBlock;
+ 40:  677081b2 =  40:  b063ac07 fix: honor truth operator methods and nullable IsFalse semantics
+ 41:  5a12cd63 =  41:  152a5ebc fix: narrow checked short arithmetic results with overflow detection
+ 42:  75d9e735 =  42:  3431b215 fix: constrain integer switch tables to valid unique 32-bit indices
+ 43:  4e027b83 =  43:  e37ba300 fix: preserve comparison methods and identity through conditional reductions
+ 44:  ac26916b =  44:  70efe1bb fix: lift shifts with nullable counts and nonnullable left operands
+ 45:  fea3afc6 =  45:  d2b1c0cb fix: resolve nonpublic delegate Invoke methods
+ 46:  d40efbb3 =  46:  991f781d fix: check null reference receivers for nonvirtual instance calls
+ 47:  25eb7ab3 =  47:  7c9ff1e1 fix: copy readonly value fields before calling mutating members
+ 48:  6faf8891 =  48:  4e09e59c fix: address multidimensional array elements for value member access
+ 49:  89012bd8 =  49:  fdc39efe fix: invoke custom unary-plus methods instead of returning the operand
+ 50:  6e6fa763 =  50:  5f48b443 fix: pass addresses to explicit ref-parameter conversion methods
+ 51:  6cc1876a =  51:  3edb9b54 fix: make invocation results addressable for ref arguments
+ 52:  66e3af8b =  52:  103ef2be fix: preserve direct value-type calls through ref receivers
+ 53:  0a8c33d5 =  53:  76efab38 fix: preserve decimal constant sign and scale
+ 54:  9a713fd3 =  54:  1734690c fix: lift user-defined conditional logical operators
+ 55:  8de23f5d =  55:  1849eaa2 feat: emit guarded exception filters in the existing try emitter
+ 56:  01852648 =  56:  ba4c1eb6 fix: spill delegate targets and arguments around exception regions
+ 57:  7c50c51b =  57:  ea7c04e8 fix: spill index receivers and arguments around exception regions
+ 58:  ffd3cfa9 =  58:  274ba193 docs: record full compatibility checkpoint at 7c50c51b
+ 59:  119bda8d =  59:  5d1c0463 fix: discard unused list initializer Add results
+ 60:  68c03a81 =  60:  07a4f91e fix: preserve strict filter rejection on .NET Framework
+ 61:  a35253b1 =  61:  42223d86 test: make regression oracles portable to .NET Framework
+ 62:  fb3fdc53 =  62:  067370b2 fix: load writable boxed capture addresses for ref arguments
+ 63:  8436e668 =  63:  3d3b4129 fix: initialize static members without instance operands
+ 64:  e01e364d =  64:  171309ac fix: spill array bounds and initializer values around exception regions
+ 65:  44c5181f =  65:  f592540e fix: spill list initializer operands around exception regions
+ 66:  08d3461c =  66:  bc560eed fix: spill member initializer receivers and binding values around exception regions
+ 67:  2c9c4b98 !  67:  6ee24eb0 fix: share constructor argument spilling for intrinsic expression nodes
+    @@ src/FastExpressionCompiler/FastExpressionCompiler.cs: namespace FastExpressionCo
+                          }
+                          else
+                          {
+    --                        if (!context.ArgsContainingComplexExpression.Map.ContainsKey(newExpr))
+    -+                        if (!context.HasExceptionBlock && !context.ArgsContainingComplexExpression.Map.ContainsKey(newExpr))
+    +-                        if (!context.ArgsContainingComplexExpression.Set.ContainsKey(newExpr))
+    ++                        if (!context.HasExceptionBlock && !context.ArgsContainingComplexExpression.Set.ContainsKey(newExpr))
+                              {
+                                  for (var i = 0; i < argCount; ++i)
+                                      if (!TryEmit(argExprs.GetArgument(i), il, ref context, flags, pars[i].ParameterType.IsByRef ? i : -1))
+ 68:  6232b047 =  68:  848f3533 test: exclude proven system compiler layout assertions with reasons
+ 69:  b4d9fc2b =  69:  b1ea0bec docs: report validated compatibility results at 6232b047
+ 70:  684f1296 =  70:  b28b0dcd fix: emit actual array accessors for rank-one non-vector arrays
+ 71:  baf75516 =  71:  8ce10085 feat: emit capture-free quotes and empty runtime-variable views
+ 72:  946e9c22 =  72:  fe751312 fix: compile direct quoted lambda invocations through existing emitters
+ 73:  0d6cba40 =  73:  0ceae56b feat: emit nested member and list initializer bindings
+ 74:  6a39519c =  74:  7c16a555 fix: preserve typed ref arguments and property copyback across calls
+ 75:  16fe2ebc =  75:  58b4b90f fix: preserve readonly copies and typed static field addresses
+ 76:  46a54c14 =  76:  30485130 fix: preserve non-runtime Type constant identities
+ 77:  d15b6b83 =  77:  f1c3d58b fix: reduce custom expression node types through the standard contract
+ 78:  7a0bcc3e =  78:  9a61439e test: cover quoted lambda indexer arguments
+ 79:  6dc2d46a =  79:  7979dd2a fix: preserve runtime switch test evaluation and void results
+ 80:  1158c932 =  80:  735bd4f0 test: temporarily defer the known deep-expression stack crash
+ 81:  7ce406f2 =  81:  31a7f6eb test: exclude the now-verified inline-ref IL layout oracle
+ 82:  ec6da89a =  82:  8f726aa5 fix: reject abstract constructor calls before returning a delegate
+ 83:  f41d0443 =  83:  876c8768 fix: preserve quotation identity across nested Light compilation
+ 84:  3fecc464 =  84:  89fc4eae test: retain Framework FEC behavior checks when its system oracle is invalid
+ 85:  e86133f3 =  85:  aa9dd946 test: verify Framework ref-call semantics without invalid system oracles
+ 86:  c8171b51 =  86:  abd70dfc test: verify nested initializer behavior before excluding system IL oracles
+ 87:  4a23fd27 =  87:  9d7211f1 fix: preserve writable Unbox and runtime array receiver storage
+ 88:  ac403d05 =  88:  731cdb83 docs: describe partial quotation and runtime-variable support
+ 89:  cbb68ede !  89:  711a4c02 fix: prepare ref arguments using their formal storage types
+    @@ src/FastExpressionCompiler/FastExpressionCompiler.cs: namespace FastExpressionCo
+                          }
+                          else
+     @@ src/FastExpressionCompiler/FastExpressionCompiler.cs: namespace FastExpressionCompiler
+    -                         if (!context.HasExceptionBlock && !context.ArgsContainingComplexExpression.Map.ContainsKey(newExpr))
+    +                         if (!context.HasExceptionBlock && !context.ArgsContainingComplexExpression.Set.ContainsKey(newExpr))
+                              {
+                                  for (var i = 0; i < argCount; ++i)
+     -                                if (!TryEmit(argExprs.GetArgument(i), il, ref context, flags, pars[i].ParameterType.IsByRef ? i : -1))
+ 90:  3f682768 =  90:  0d9e9f8c docs: report 34945 passing runtime cases and classified remaining differences
+ 91:  2a460026 =  91:  122e7ed8 fix: reject lambda signatures that exceed the method parameter limit
+ 92:  90930908 =  92:  7102be97 Report duplicate label definitions with InvalidOperationException
+ 93:  683055d2 =  93:  aa2dab5d test: separate verified FEC behavior from System representation assertions
+ 94:  5ce778b6 =  94:  8a29cc72 fix: preserve the full character width through managed references
+ 95:  b939a9b6 =  95:  ae38d812 Preserve value payloads on Light continue gotos
+ 96:  af319eeb =  96:  c11fab29 fix: validate abstract constructors in nested Light lambdas
+ 97:  25f62830 =  97:  30e1a9fd test: verify behavior before excluding interpreter representation assertions
+ 98:  4e967361 =  98:  363df63c Validate rethrow and catch filter scopes during collection
+ 99:  6fffee01 =  99:  1a7ca6cd Validate jumps across exception region boundaries
+100:  e3d34bd0 = 100:  7348d633 Support invoking runtime expression-tree values
+101:  e81fe091 = 101:  27ff2206 Load invocation receivers by value before calling them
+102:  535d902c = 102:  e228165b test: register remaining compatibility regressions in both runners
+103:  6be85625 ! 103:  16a0242d fix: spill invocation operands across argument jumps
+    @@ src/FastExpressionCompiler/FastExpressionCompiler.cs
+     @@ src/FastExpressionCompiler/FastExpressionCompiler.cs: namespace FastExpressionCompiler
+      
+                  /// New or Call expressions containing the complex expression, e.g. inlined Lambda Invoke or Try with Finally
+    -             internal SmallMap4<Expression, NoValue, RefEq<Expression>> ArgsContainingComplexExpression;
+    -+            internal SmallMap4<Expression, NoValue, RefEq<Expression>> InvocationArgumentsWithJumps;
+    +             internal SmallSet4<Expression, RefEq<Expression>> ArgsContainingComplexExpression;
+    ++            internal SmallSet4<Expression, RefEq<Expression>> InvocationArgumentsWithJumps;
+      
+                  internal bool HasComplexExpression;
+                  internal bool HasExceptionBlock;
+    @@ src/FastExpressionCompiler/FastExpressionCompiler.cs: namespace FastExpressionCo
+                                          context.ArgsContainingComplexExpression.Map.AddOrGetEntryRef(invokeExpr, out _);
+                                      context.HasExceptionBlock |= outerHasExceptionBlock;
+     +                                if (context.ExceptionGotos.Count != argumentJumpCount)
+    -+                                    context.InvocationArgumentsWithJumps.Map.AddOrGetEntryRef(invokeExpr, out _);
+    ++                                    context.InvocationArgumentsWithJumps.Set.AddOrGetEntryRef(invokeExpr, out _);
+                                      return r;
+                                  }
+      
+    @@ src/FastExpressionCompiler/FastExpressionCompiler.cs: namespace FastExpressionCo
+     -                            expr = invokeArgs.GetArgument(lastArgIndex);
+     -                            continue;
+     +                            if (context.ExceptionGotos.Count != jumpCount)
+    -+                                context.InvocationArgumentsWithJumps.Map.AddOrGetEntryRef(invokeExpr, out _);
+    ++                                context.InvocationArgumentsWithJumps.Set.AddOrGetEntryRef(invokeExpr, out _);
+     +                            return r;
+                              }
+                          case ExpressionType.Conditional:
+    @@ src/FastExpressionCompiler/FastExpressionCompiler.cs: namespace FastExpressionCo
+                      var compileMethod = invokedExpr.Type.FindExpressionCompileMethod();
+     -                var deferCompile = compileMethod != null && context.ArgsContainingComplexExpression.Map.ContainsKey(expr);
+     +                var deferCompile = compileMethod != null && (context.ArgsContainingComplexExpression.Map.ContainsKey(expr) ||
+    -+                    context.InvocationArgumentsWithJumps.Map.ContainsKey(expr));
+    ++                    context.InvocationArgumentsWithJumps.Set.ContainsKey(expr));
+                      var delegateType = compileMethod?.ReturnType ?? invokedExpr.Type;
+                      var delegateInvokeMethod = delegateType.FindDelegateInvokeMethod();
+                      if (delegateInvokeMethod == null)
+    @@ src/FastExpressionCompiler/FastExpressionCompiler.cs: namespace FastExpressionCo
+                          // A try argument requires an empty evaluation stack. Preserve the receiver and
+                          // preceding arguments with the same local storage used for ordinary calls.
+     -                    var receiverVar = context.HasExceptionBlock ? EmitStoreLocalVariable(il, deferCompile ? invokedExpr.Type : delegateType) : -1;
+    -+                    var spillArguments = context.HasExceptionBlock || context.InvocationArgumentsWithJumps.Map.ContainsKey(expr);
+    ++                    var spillArguments = context.HasExceptionBlock || context.InvocationArgumentsWithJumps.Set.ContainsKey(expr);
+     +                    var receiverVar = spillArguments ? EmitStoreLocalVariable(il, deferCompile ? invokedExpr.Type : delegateType) : -1;
+                          SmallList<int, Stack8<int>, NoArrayPool<int>> argVars = default;
+                          for (var i = 0; i < args.Length; ++i)
+104:  62aae704 = 104:  cebb052a Bind reused label targets within sibling block scopes
+105:  3c1249b0 = 105:  6577f574 Reject label redefinition inside an active default expression
+106:  2a15c195 = 106:  fe3255a7 test: register scoped labels and exercise both invocation modes
+107:  05ab6956 ! 107:  be43dd2f Compile dynamic expressions through per-occurrence DLR call sites
+    @@ src/FastExpressionCompiler/FastExpressionCompiler.cs: namespace FastExpressionCo
+                          var args = delegateInvokeMethod.GetParameters(); // todo: @perf avoid this if possible
+                          // A try argument requires an empty evaluation stack. Preserve the receiver and
+                          // preceding arguments with the same local storage used for ordinary calls.
+    --                    var spillArguments = context.HasExceptionBlock || context.InvocationArgumentsWithJumps.Map.ContainsKey(expr);
+    +-                    var spillArguments = context.HasExceptionBlock || context.InvocationArgumentsWithJumps.Set.ContainsKey(expr);
+     -                    var receiverVar = spillArguments ? EmitStoreLocalVariable(il, deferCompile ? invokedExpr.Type : delegateType) : -1;
+     +                    var spillArguments = context.HasExceptionBlock || deferCompile || argumentsBeforeReceiver ||
+    -+                        context.InvocationArgumentsWithJumps.Map.ContainsKey(expr);
+    ++                        context.InvocationArgumentsWithJumps.Set.ContainsKey(expr);
+     +                    var receiverVar = spillArguments && !argumentsBeforeReceiver ? EmitStoreLocalVariable(il, deferCompile ? invokedExpr.Type : delegateType) : -1;
+                          SmallList<int, Stack8<int>, NoArrayPool<int>> argVars = default;
+                          for (var i = 0; i < args.Length; ++i)
+108:  fe4cf018 = 108:  8fc9bccf Keep rethrow validation inside inlined lambda boundaries
+109:  18e9a8e7 ! 109:  bb74409f Propagate argument jumps through enclosing calls and constructors
+    @@ src/FastExpressionCompiler/FastExpressionCompiler.cs: namespace FastExpressionCo
+                                  {
+     @@ src/FastExpressionCompiler/FastExpressionCompiler.cs: namespace FastExpressionCompiler
+                                      context.HasComplexExpression = true;
+    -                                 context.ArgsContainingComplexExpression.Map.AddOrGetValueRef(callExpr, out _);
+    +                                 context.ArgsContainingComplexExpression.Set.AddOrGetEntryRef(callExpr, out _);
+                                  }
+     +                            context.HasComplexExpression |= outerHasComplexExpression;
+                                  return r;
+    @@ src/FastExpressionCompiler/FastExpressionCompiler.cs: namespace FastExpressionCo
+                                  for (var i = 0; i < argCount; i++)
+                                  {
+     @@ src/FastExpressionCompiler/FastExpressionCompiler.cs: namespace FastExpressionCompiler
+    -                                 context.ArgsContainingComplexExpression.Map.AddOrGetEntryRef(newExpr, out _);
+    +                                 context.ArgsContainingComplexExpression.Set.AddOrGetEntryRef(newExpr, out _);
+                                  }
+      
+     +                            context.HasComplexExpression |= outerHasComplexExpression;
+110:  b0b78162 = 110:  619d7391 Defer runtime expression compilation for structural argument spills
+111:  835d819b = 111:  0fe5feb5 Keep argument-local returns inside inlined invocation wrappers
+112:  71d17dee = 112:  716d7f2f Keep stateful dynamic sites distinct across nested lambda occurrences
+113:  e2750594 = 113:  8e60d07b Preserve argument-local returns in computed delegate invocations
+114:  ba22e531 ! 114:  e22682c0 test: register final dynamic and invocation compatibility regressions
+    @@ src/FastExpressionCompiler/FastExpressionCompiler.cs: namespace FastExpressionCo
+     +                    // Jumps and exception-region arguments require an empty evaluation stack.
+     +                    // Preserve evaluated operands in the same locals used for ordinary calls.
+                          var spillArguments = context.HasExceptionBlock || deferCompile || argumentsBeforeReceiver ||
+    -                         context.InvocationArgumentsWithJumps.Map.ContainsKey(expr);
+    +                         context.InvocationArgumentsWithJumps.Set.ContainsKey(expr);
+                          var receiverVar = spillArguments && !argumentsBeforeReceiver ? EmitStoreLocalVariable(il, deferCompile ? invokedExpr.Type : delegateType) : -1;
+     
+      ## test/FastExpressionCompiler.TestsRunner.Net472/Program.cs ##
+115:  b28a984b = 115:  828da79d fix: propagate the trimming contract to argument spill metadata
+116:  789c6d35 = 116:  c6f91918 Preserve physical method tail returns across scoped label definitions
+117:  22b6fe16 = 117:  363102b5 test: run method-tail return regressions in every native runner
+118:  18080093 = 118:  57affe1e test: keep by-ref spill behavior checks on Framework
+119:  6d87ca5c = 119:  093aa72e Make exception validation test oracles portable to Framework
+120:  05110348 = 120:  f1eb06e3 docs: record remaining compatibility fixes and verified results
+121:  76e6500a = 121:  de5261a2 fix: restore the declaring variable scope when leaving nested blocks
+122:  13d5cdaa = 122:  0821765f fix: duplicate only the final assignment field address
+123:  cdb0b13b = 123:  8d6e73ea feat: bind captured quotes and runtime variables to shared typed cells
+124:  0e59bb2c = 124:  056541e9 test: verify shared struct-cell IL after executing its behavior
+125:  69bfb732 = 125:  28b38aa6 test: retain Framework filter rejection while checking catch quote cells
+126:  a057bef4 = 126:  deec7cb2 fix: preserve explicit block types when binding quoted captures
+127:  6631f514 = 127:  54021d3e Revert "fix: preserve explicit block types when binding quoted captures"
+128:  e9b97427 = 128:  91c00d6d fix: keep struct operator operands separate from receiver addresses
+129:  de486914 = 129:  eac1c970 test: account for Framework System quote block typing
+130:  0c07d7b2 = 130:  0acd5cd7 fix: validate lexical scope of label jumps
+131:  aca7dc1d = 131:  7d27224a Verify runtime-variable spill behavior before excluding IL snapshots
+132:  3cf56a5c = 132:  91735107 Keep unary and conversion operands in value contexts
+133:  92e814fc = 133:  9d8a4f8d docs: report captured quote, runtime variable and scope compatibility results
+134:  79ac2c74 = 134:  9395b26c docs: prepare compatibility results for PR publication
+135:  931fa0fc = 135:  d00fa75a Test FEC rejection contracts for irreducible expression nodes
+136:  6774772f = 136:  266f946e Classify interpreter-specific runtime assertions with compiled behavior proofs
+137:  63fa42d4 = 137:  545f9933 Fix non-Exception catch policy for generated methods
+138:  2043b6f7 = 138:  47b1cc37 Preserve original string constant reference identity
+139:  d01d4c2e = 139:  02a7f2a5 Keep Framework boxed receivers verifiable during argument spills
+140:  b8f8b38b = 140:  ae1e9920 docs: report final compatibility fixes and verified exclusions
+141:  498255c8 = 141:  41a0f381 Reuse collected delegate invocation parameters
+142:  a87e445f = 142:  6a39332f Avoid eager scope and exception metadata allocations on label-free paths
+143:  4a96eebc <   -:  -------- Preserve upstream null conversion handling in Light round trips
+144:  66570cf4 = 143:  4638bf57 Reuse collected reductions for dynamic and quoted extension nodes
+145:  c6fdd3ed = 144:  3ce90dce Reuse hoisted capture reflection metadata within each compilation
+146:  9baa364c = 145:  d508378c Keep lazy JIT with anonymous catch policy on modern runtimes
+147:  47140b9a = 146:  a9ac800c Keep provably readonly captures in existing value closure slots
+148:  42bc504b = 147:  cc8dac12 Fold immutable constant string lengths without capturing string storage
+149:  4b2852b9 = 148:  75f5f81e Reuse transient scope buffers and skip terminal-node scope tracking
+150:  9170b8de = 149:  67a552e7 Analyze capture storage mutations once per compilation root
+151:  748c90ca = 150:  2835c026 Reuse capture call signatures and avoid cells for value arguments
+152:  fc018b2e = 151:  41f3f4da Collect switch test values without enumerator allocations
+153:  8e0d5e95 = 152:  7ce44a3f Allocate hoisted type cache only for actual shared cells
+154:  6eb3704e = 153:  6a019895 Identify vector arrays directly on modern runtimes
+155:  2d7690aa = 154:  933d280e Keep lexical and exception ancestry in inline indexed metadata
+156:  94da30bf = 155:  93556cd3 Collect terminal expression nodes before tracking lexical scopes
+157:  85b93bea = 156:  107cc835 Keep quote and dynamic emission maps off ordinary compiler contexts
+158:  4750498d ! 157:  fa2b2bc3 Allocate invocation spill metadata only for arguments with jumps
+    @@ src/FastExpressionCompiler/FastExpressionCompiler.cs
+     @@ src/FastExpressionCompiler/FastExpressionCompiler.cs: namespace FastExpressionCompiler
+      
+                  /// New or Call expressions containing the complex expression, e.g. inlined Lambda Invoke or Try with Finally
+    -             internal SmallMap4<Expression, NoValue, RefEq<Expression>> ArgsContainingComplexExpression;
+    --            internal SmallMap4<Expression, NoValue, RefEq<Expression>> InvocationArgumentsWithJumps;
+    +             internal SmallSet4<Expression, RefEq<Expression>> ArgsContainingComplexExpression;
+    +-            internal SmallSet4<Expression, RefEq<Expression>> InvocationArgumentsWithJumps;
+      
+                  internal bool HasComplexExpression;
+                  internal bool HasExceptionBlock;
+    @@ src/FastExpressionCompiler/FastExpressionCompiler.cs: namespace FastExpressionCo
+     +            internal void MarkInvocationArgumentsWithJumps(Expression expression)
+     +            {
+     +                ExpressionFeatures ??= new ExpressionFeatureCache();
+    -+                ExpressionFeatures.InvocationArgumentsWithJumps.Map.AddOrGetEntryRef(expression, out _);
+    ++                ExpressionFeatures.InvocationArgumentsWithJumps.Set.AddOrGetEntryRef(expression, out _);
+     +            }
+     +
+     +            internal bool InvocationArgumentsHaveJumps(Expression expression) =>
+    -+                ExpressionFeatures != null && ExpressionFeatures.InvocationArgumentsWithJumps.Map.ContainsKey(expression);
+    ++                ExpressionFeatures != null && ExpressionFeatures.InvocationArgumentsWithJumps.Set.ContainsKey(expression);
+      #if LIGHT_EXPRESSION
+                  internal QuoteConversionCache QuoteConversions;
+      #endif
+    @@ src/FastExpressionCompiler/FastExpressionCompiler.cs: namespace FastExpressionCo
+     +        internal sealed class ExpressionFeatureCache
+              {
+                  internal SmallMap4<Expression, DynamicExpressionOccurrences, RefEq<Expression>> Expressions;
+    -+            internal SmallMap4<Expression, NoValue, RefEq<Expression>> InvocationArgumentsWithJumps;
+    ++            internal SmallSet4<Expression, RefEq<Expression>> InvocationArgumentsWithJumps;
+                  internal SmallMap4<Expression, int, RefEq<Expression>> LambdaEmissionIndexes;
+                  internal SmallMap4<Expression, ReducedExtensionOccurrences, RefEq<Expression>> Extensions;
+              }
+    @@ src/FastExpressionCompiler/FastExpressionCompiler.cs: namespace FastExpressionCo
+                          return occurrences.Reduced.Items[occurrences.Emitted++];
+                  }
+     @@ src/FastExpressionCompiler/FastExpressionCompiler.cs: namespace FastExpressionCompiler
+    -                                     context.ArgsContainingComplexExpression.Map.AddOrGetEntryRef(invokeExpr, out _);
+    +                                     if ((r = TryCollectInfo(ref context, invokeArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas)) != Result.OK)
+    +                                         return r;
+    +                                 if (argumentScope.RequiresSpill || context.HasExceptionBlock)
+    +-                                    context.ArgsContainingComplexExpression.Map.AddOrGetEntryRef(invokeExpr, out _);
+    ++                                    context.ArgsContainingComplexExpression.Set.AddOrGetEntryRef(invokeExpr, out _);
+                                      context.HasExceptionBlock |= outerHasExceptionBlock;
+                                      if (context.ExceptionGotos.Count != argumentJumpCount)
+    --                                    context.InvocationArgumentsWithJumps.Map.AddOrGetEntryRef(invokeExpr, out _);
+    +-                                    context.InvocationArgumentsWithJumps.Set.AddOrGetEntryRef(invokeExpr, out _);
+     +                                    context.MarkInvocationArgumentsWithJumps(invokeExpr);
+                                      return r;
+                                  }
+    @@ src/FastExpressionCompiler/FastExpressionCompiler.cs: namespace FastExpressionCo
+                                      if ((r = TryCollectInfo(ref context, invokeArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                                          return r;
+                                  if (context.ExceptionGotos.Count != jumpCount)
+    --                                context.InvocationArgumentsWithJumps.Map.AddOrGetEntryRef(invokeExpr, out _);
+    +-                                context.InvocationArgumentsWithJumps.Set.AddOrGetEntryRef(invokeExpr, out _);
+     +                                context.MarkInvocationArgumentsWithJumps(invokeExpr);
+                                  return r;
+                              }
+    @@ src/FastExpressionCompiler/FastExpressionCompiler.cs: namespace FastExpressionCo
+                                  if (!foundDynamic || dynamicOccurrences.Emitted >= dynamicOccurrences.Reduced.Count)
+                                      return false;
+                                  var dynamicOccurrence = dynamicOccurrences.Reduced.Items[dynamicOccurrences.Emitted++];
+    +@@ src/FastExpressionCompiler/FastExpressionCompiler.cs: namespace FastExpressionCompiler
+    + 
+    + #if NETFRAMEWORK
+    +                 if (objExpr?.NodeType == ExpressionType.Unbox && objExpr.Type.IsValueType && !objExpr.Type.IsNullable() &&
+    +-                    context.ArgsContainingComplexExpression.Map.ContainsKey(callExpr))
+    ++                    context.ArgsContainingComplexExpression.Set.ContainsKey(callExpr))
+    +                     return TryEmitCallWithWritebacks(objExpr, callArguments, method, null, il, ref context, parent, byRefIndex);
+    + #endif
+    + 
+     @@ src/FastExpressionCompiler/FastExpressionCompiler.cs: namespace FastExpressionCompiler
+                      // shared by different delegate signatures cannot select each other's entries.
+                      if (outerNestedLambdas[i].HasDynamicExpressions)
+    @@ src/FastExpressionCompiler/FastExpressionCompiler.cs: namespace FastExpressionCo
+                          while (i < outerNestedLambdasCount && !ReferenceEquals(outerNestedLambdas[i].LambdaExpression, lambdaExpr)) ++i;
+                          if (i == outerNestedLambdasCount) return false;
+     @@ src/FastExpressionCompiler/FastExpressionCompiler.cs: namespace FastExpressionCompiler
+    +                 // Invoking runtime Expression<TDelegate> data intrinsically compiles that value.
+                      // This is part of Invoke semantics, not a fallback from outer FEC compilation.
+                      var compileMethod = invokedExpr.Type.FindExpressionCompileMethod();
+    -                 var deferCompile = compileMethod != null && (context.ArgsContainingComplexExpression.Map.ContainsKey(expr) ||
+    --                    context.InvocationArgumentsWithJumps.Map.ContainsKey(expr));
+    +-                var deferCompile = compileMethod != null && (context.ArgsContainingComplexExpression.Map.ContainsKey(expr) ||
+    +-                    context.InvocationArgumentsWithJumps.Set.ContainsKey(expr));
+    ++                var deferCompile = compileMethod != null && (context.ArgsContainingComplexExpression.Set.ContainsKey(expr) ||
+     +                    context.InvocationArgumentsHaveJumps(expr));
+                      var delegateType = compileMethod?.ReturnType ?? invokedExpr.Type;
+                      var delegateInvokeMethod = delegateType.FindDelegateInvokeMethod();
+    @@ src/FastExpressionCompiler/FastExpressionCompiler.cs: namespace FastExpressionCo
+                          // Jumps and exception-region arguments require an empty evaluation stack.
+                          // Preserve evaluated operands in the same locals used for ordinary calls.
+                          var spillArguments = context.HasExceptionBlock || deferCompile || argumentsBeforeReceiver ||
+    --                        context.InvocationArgumentsWithJumps.Map.ContainsKey(expr);
+    +-                        context.InvocationArgumentsWithJumps.Set.ContainsKey(expr);
+     +                        context.InvocationArgumentsHaveJumps(expr);
+                          var receiverVar = spillArguments && !argumentsBeforeReceiver ? EmitStoreLocalVariable(il, deferCompile ? invokedExpr.Type : delegateType) : -1;
+                          SmallList<int, Stack8<int>, NoArrayPool<int>> argVars = default;
+159:  5dc6cde1 = 158:  dd8d342b Preserve readonly capture layout through control flow and initializers
+160:  5a74d332 = 159:  cdeefdf5 Keep primitive arithmetic emission outside lifted-operation handling
+161:  17322968 = 160:  9dd08189 Track capture slot writes precisely and scan simple initializers once
+162:  c902f0aa = 161:  bb11d3e6 Reuse cleared capture metadata rentals and resolve constructor handles
+163:  135ac531 = 162:  e6adf121 Cover captures alongside static indexed property access
+164:  ac819914 = 163:  84c4c575 Skip scoped label helpers while emitting label-free blocks
+165:  c7f9d423 = 164:  2212fb1c Share root capture analysis before propagating nested parameters
+166:  de72c4cc ! 165:  667e2125 Remove exception cleanup regions from internal collector recursion
+    @@ src/FastExpressionCompiler/FastExpressionCompiler.cs: namespace FastExpressionCo
+                                      // because we cannot just store and restore a single argument, it should be done for all arguments
+                                      hasComplexExpression |= context.HasComplexExpression;
+     @@ src/FastExpressionCompiler/FastExpressionCompiler.cs: namespace FastExpressionCompiler
+    -                                 context.ArgsContainingComplexExpression.Map.AddOrGetValueRef(callExpr, out _);
+    +                                 context.ArgsContainingComplexExpression.Set.AddOrGetEntryRef(callExpr, out _);
+                                  }
+                                  context.HasComplexExpression |= outerHasComplexExpression;
+     -                            return r;
+    @@ src/FastExpressionCompiler/FastExpressionCompiler.cs: namespace FastExpressionCo
+     +                                    if ((r = TryCollectInfo(ref context, invokeArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas, false, false)) != Result.OK)
+     +                                        return RestoreScopeAndReturn(ref context, scopeDepth, r);
+                                      if (argumentScope.RequiresSpill || context.HasExceptionBlock)
+    -                                     context.ArgsContainingComplexExpression.Map.AddOrGetEntryRef(invokeExpr, out _);
+    +                                     context.ArgsContainingComplexExpression.Set.AddOrGetEntryRef(invokeExpr, out _);
+                                      context.HasExceptionBlock |= outerHasExceptionBlock;
+                                      if (context.ExceptionGotos.Count != argumentJumpCount)
+                                          context.MarkInvocationArgumentsWithJumps(invokeExpr);
+167:  02b76c49 = 166:  41ef5973 Keep common scope compression and unchanged-depth returns inline
+168:  528e3f1c = 167:  c2cdd824 Avoid primitive arithmetic spills for atomic operands after EH
+169:  17053de5 = 168:  5678808b Inline the empty capture-parameter cache path
+170:  6afcf12f = 169:  6ff7f498 Reuse operand types in scalar arithmetic emission
+171:  9cc6cac4 = 170:  f3fcb7f2 Keep private mutable reference captures in their sole child value slot
+172:  aa1ba44d = 171:  5940caa9 Use native boxed storage for live nonnullable value captures
+173:  db495433 = 172:  2913d69d Recognize only known intrinsic storage shapes before capture emission
+174:  c909484a = 173:  8ad1484b Cover live boxed struct receivers with exception-block call arguments
+175:  1794d6a4 = 174:  a3db1404 Keep Framework mutable captures in verifiable typed cells
+176:  95a5123b = 175:  8609a119 Exercise hoisted metadata overflow clearing with native boxed captures
+177:  242dfcf5 = 176:  5b9b917f Batch collection of consecutive single-expression block scopes
+178:  0d337dcc = 177:  bfa55fd3 Reuse the initial node type during collection
+179:  52f0e97c = 178:  efa7def9 Avoid root capture scans when typed storage is already required
+180:  09050fe0 = 179:  4ca699d2 Reuse private reference slots through constructor and array containers
+181:  20d3174b = 180:  b070c050 Establish the actual capture-analysis root before intrinsic collection
+182:  0fa003b9 = 181:  09cd25fa Avoid materializing Light array operands during private capture analysis
+183:  14abbb46 = 182:  23fc4b81 Restore typed reference loads for verified Framework closure slots
+184:  0ec7a135 = 183:  fa036dc0 Defer quote and runtime-variable metadata on unrelated compilation paths
+185:  127a7c26 = 184:  d5158f59 Declare trimming requirement for lazy quote metadata holder
+186:  6676ab49 = 185:  c16436c0 Keep scope overflow arrays in compact geometric pool buckets
+187:  6487c9b2 = 186:  922153d7 Record verified regression repairs and remaining performance costs
+188:  36506817 = 187:  bb41f2e6 Skip empty jump validators on jump-free expression trees
+189:  3ca5ad44 = 188:  e356278c Reduce Framework capture constructor metadata allocations
+190:  0197699d = 189:  a7d7c8c3 Type Framework capture parameters in existing rented signatures
+191:  1b03d6f0 = 190:  7a2b780b Avoid the full collector for terminal binary roots
+192:  23deab6f = 191:  b49760f9 Use boxed Framework value cells in proven owned roots
+193:  4eac9c2a = 192:  1292b5f9 Avoid redundant Framework delegate casts in proven owned roots
+194:  db640cba = 193:  93857755 Restore owned Framework capture slot loads without extra casts
+195:  42f98478 = 194:  9e86b36f Record per-commit allocation repairs and final round-two measurements
+196:  44ee17d7 = 195:  53eb57b0 Avoid arithmetic operand spills when the right side cannot enter EH
+197:  6d397bc6 = 196:  ee12d2cd Materialize try results before using struct receiver addresses
+198:  3be541d3 = 197:  908eed5d Size promoted SmallMap hash tables for inline entries plus the new key
+199:  70f297cb = 198:  84d989ae Use the supported anonymous DynamicMethod constructor for exception-aware methods
+200:  8f12292f = 199:  9ea46748 Record final runtime, System compiler and allocation comparisons
+201:  ed431c7f = 200:  9d9b51b7 Explain scope pool buckets and outlined frame growth
+202:  35622f32 = 201:  637ef632 Cover opaque quotes and pruned invocation spill ordering
+203:  187b9b8f = 202:  04f24c4d Record maintainer review experiments and full validation
+  -:  -------- > 203:  5ce56174 Adapt map regression test to upstream helper rename

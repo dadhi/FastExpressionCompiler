@@ -1,0 +1,942 @@
+{
+  "partition": "combined-final",
+  "finalState": {
+    "status": "Final70f297cb validated; bounded combined and map measurements complete. Universal performance/allocation parity not established.",
+    "final_code_head": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "accepted_arithmetic_commit": "44ee17d7f3fd5d363b7088158cc97b2cc60f7da7",
+    "try_value_commit": "6d397bc6255ddf406f5586c405ddd04cff7d4cdd",
+    "final_validation": {
+      "codeHead": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+      "codes": {
+        "FastExpressionCompiler": 0,
+        "FastExpressionCompiler.LightExpression": 0,
+        "native-net10.0": 0,
+        "native-net8.0": 0,
+        "framework-build": 0,
+        "framework-run": 0,
+        "imported-build": 0,
+        "imported-full": 0
+      },
+      "imported": {
+        "batches": 21,
+        "crashes": 0,
+        "counters": {
+          "total": 35122,
+          "executed": 35064,
+          "passed": 35064,
+          "failed": 0,
+          "error": 0,
+          "timeout": 0,
+          "aborted": 0,
+          "notExecuted": 0
+        },
+        "originalDenominator": 35133,
+        "exclusions": 69,
+        "newExclusions": 0
+      },
+      "native": {
+        "net10": "All runner suites pass; legacy1712",
+        "net8": "All runner suites pass; legacy1711",
+        "framework": "TestX1037 plus legacy1595 pass"
+      },
+      "priorAttempt": {
+        "head": "6d397bc6",
+        "result": "Interrupted after managed stack proved preexisting SmallMap16 promotion hang; fixed3be541d3; no Trycontrolflow regression"
+      },
+      "snapshot": {
+        "commit": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+        "compilerSha256": "4239ac0a6f673fba71eead86d2eae40e7eec79f0a52241f2c9d8ac2669ada237",
+        "assemblySha256": "6ddb580a9826a3494ff3bdc863d3af73d58ba836d2a7754ecc9f7afd698521d1"
+      }
+    },
+    "notes": "Historical42f/isolated snapshots retain their exact sources. Old6d validation was interrupted by unchanged-prePR SmallMap capacity bug, not a Try-value regression;70f includes its fix and supported EH-host correction.",
+    "combined_expected": true,
+    "validation_path": "pr558-repair/validation-70f297cb",
+    "candidate_code_head": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "combined_snapshot_head": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "combined_measurements_state": "Complete:12474 raw rows/198 groups,0 errors;21 rotated samples, all short samples retained. Compile independently calibrated; FEC other phases use common counts, System independently calibrated.",
+    "map_capacity_commit": "3be541d3aeba0d58560b0a49d78206bb108edbfc",
+    "supported_host_commit": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "combined_path": "pr558-round4/combined-final-bounded",
+    "historical_combined_path": "pr558-round4/combined-final",
+    "map_capacity_path": "pr558-round4/map-capacity",
+    "supported_host_path": "pr558-round4/supported-eh-host",
+    "review_reply_paths": [
+      "pr558-round4/dadhi-host-reply.json",
+      "pr558-round4/dadhi-host-reply-published.json"
+    ],
+    "official_source_urls": [
+      "https://github.com/dotnet/runtime/blob/v10.0.9/src/libraries/System.Private.CoreLib/src/System/Reflection/Emit/DynamicMethod.cs#L228-L240",
+      "https://github.com/dotnet/runtime/blob/v10.0.9/src/coreclr/System.Private.CoreLib/src/System/Reflection/Emit/DynamicMethod.CoreCLR.cs#L41-L56"
+    ],
+    "allocation_confirmation_path": "allocation-confirmation-round4",
+    "allocation_confirmation_state": "Complete:2970 raw rows/198 groups;5 samples x200 operations after40warmups;164 unchanged,26 decreased,8 increased. Six FrameworkLight approximately192B residual plus two FrameworkStandard0.8B groups retained. No elapsed claims.",
+    "validation_reproduction_paths": [
+      "pr558-repair/validate.py",
+      "pr558-repair/summarize-validation.py",
+      "fec-round12/Run-Full.py",
+      "pr558-repair/frozen-70f297cb",
+      "fec-fixes/FrameworkRunner/Program.cs",
+      "fec-fixes/FrameworkRunner/FrameworkRunner.csproj"
+    ],
+    "allocation_confirmation_summary": {
+      "complete": true,
+      "counts": {
+        "unchanged": 164,
+        "decreased": 26,
+        "increased": 8
+      },
+      "primaryPositiveReconfirmation": {
+        "primary_positive": 28,
+        "positive_again": 6,
+        "now_equal": 21,
+        "now_decreased": 1
+      },
+      "errors": []
+    }
+  },
+  "files": {
+    "pr558-round4/combined-final-bounded/Analyze.py": {
+      "bytes": 6302,
+      "sha256": "15e00375b2ffa1e2c75591f227858e74301dc8d991ec71d8786c80cc8f759317"
+    },
+    "pr558-round4/combined-final-bounded/Bench.csproj": {
+      "bytes": 1084,
+      "sha256": "31a4c1c3dd4f17f55d0202fde950e44300ae897aaaf0d74dff06c920e2c1dd79"
+    },
+    "pr558-round4/combined-final-bounded/Build.py": {
+      "bytes": 1002,
+      "sha256": "07dd804be29efb46a4d0ad704ca139fa8f90d305957351bde9dbdb9a477d1005"
+    },
+    "pr558-round4/combined-final-bounded/Canonical.cs": {
+      "bytes": 12579,
+      "sha256": "66dc934384bf30111e1b4ec512508be10ca6f8630b3aa4247cbb100f87a6e6cc"
+    },
+    "pr558-round4/combined-final-bounded/Check.py": {
+      "bytes": 606,
+      "sha256": "9e12a81fb63ee0591806425a5fd31e1d82c461275419e473551f630bb516a286"
+    },
+    "pr558-round4/combined-final-bounded/Compare-Canonical.py": {
+      "bytes": 1111,
+      "sha256": "3661c33d96384263b88cf20eee4bff7b0628b5a86dcac7c257a5bad645d798f2"
+    },
+    "pr558-round4/combined-final-bounded/Current.cs": {
+      "bytes": 5275,
+      "sha256": "ee49556b7c712bd2a337f3244da3ab1b9641ab79da39e0b58d17f58e0c6ac102"
+    },
+    "pr558-round4/combined-final-bounded/Fixed.cs": {
+      "bytes": 5263,
+      "sha256": "0a10a7b268f6d0107ce539c724895435d00760c13dca6fa900bbeb6f4b98de80"
+    },
+    "pr558-round4/combined-final-bounded/PLAN.md": {
+      "bytes": 3461,
+      "sha256": "5e0819be97b47db542e7f0cb32c6dafbe5e4daf0c4e1f98258a5da8f003a7086"
+    },
+    "pr558-round4/combined-final-bounded/Prepare-Controls.py": {
+      "bytes": 1383,
+      "sha256": "59ed775e7a801672bbcd54ae70c9843e6f74b7fb333d1a4b49640e7edddeeac6"
+    },
+    "pr558-round4/combined-final-bounded/Prepare.py": {
+      "bytes": 6441,
+      "sha256": "57cf25b64def6918eb82bc507b268e05f9e85f07fe73545bad73fcef2989c4e1"
+    },
+    "pr558-round4/combined-final-bounded/REPORT.txt": {
+      "bytes": 53400,
+      "sha256": "4d65b878d9445e410399c531cd87805196e322743e89a46931a6117de7d904f8"
+    },
+    "pr558-round4/combined-final-bounded/Run.py": {
+      "bytes": 1961,
+      "sha256": "2bf4abbe462b1222c2c07bd9db8f3e20bc1fee4c30c3b3471f1858f0dfe47828"
+    },
+    "pr558-round4/combined-final-bounded/Runner.cs": {
+      "bytes": 3112,
+      "sha256": "6dee7707bb49cec7ed6c4e5968a8e6a45fed56dab7b7aafa0f63840836d878a1"
+    },
+    "pr558-round4/combined-final-bounded/SharedShapes.cs": {
+      "bytes": 1944,
+      "sha256": "dc6a24d00c537cd164671cec3f18bc8e5d3cb5cc2903f0dbcac508741a6df184"
+    },
+    "pr558-round4/combined-final-bounded/System.cs": {
+      "bytes": 4929,
+      "sha256": "ee020e49a6e6b63c3388a836a9b548c8bfac37e7e920b74bc7eab22a21283254"
+    },
+    "pr558-round4/combined-final-bounded/Templates/Bench.csproj": {
+      "bytes": 1007,
+      "sha256": "029270e3af6a4fcccea8063668731084249c7ba5262eec5b34ab3675cfc1b3fe"
+    },
+    "pr558-round4/combined-final-bounded/Templates/Build-Bench.py": {
+      "bytes": 1065,
+      "sha256": "0663c1a9d3f98e63ff1efc538e6d9d5ca1b1e6081c653ab61923f3fa937610ec"
+    },
+    "pr558-round4/combined-final-bounded/Templates/Current.cs": {
+      "bytes": 5088,
+      "sha256": "213843876e7e194d7b235b9b11948c71bce68a653d6a799c7553f3c38055e71f"
+    },
+    "pr558-round4/combined-final-bounded/Templates/Fixed.cs": {
+      "bytes": 5076,
+      "sha256": "8fb7fbdd4233fb040a4c547a6cbc8e92eeedaec9da7af3eaa40278ac7fd0a272"
+    },
+    "pr558-round4/combined-final-bounded/Templates/System.cs": {
+      "bytes": 4742,
+      "sha256": "c80162f8f6f7967aecbc2d3e4f8fd02dab5f1d017c32607df7b9eab79e9e4b61"
+    },
+    "pr558-round4/combined-final-bounded/analysis.json": {
+      "bytes": 6348033,
+      "sha256": "b47b1807543447ff7abd83bf3cf4c77b3f2e6dd6e8ebf67d7e26c8c33576ac21"
+    },
+    "pr558-round4/combined-final-bounded/bench-build-false-net10.0.log": {
+      "bytes": 117,
+      "sha256": "253ec8c1f24f1507babe88f056d7fc24ce19cf1e90b27da39d79ec47815afd71"
+    },
+    "pr558-round4/combined-final-bounded/bench-build-false-net472.log": {
+      "bytes": 117,
+      "sha256": "e1d470f353a11908943dc4ea8bb340d7bf56123b24baad17d39475e6760302be"
+    },
+    "pr558-round4/combined-final-bounded/bench-build-false-net8.0.log": {
+      "bytes": 117,
+      "sha256": "aabfaf8a347160db70fb714f1774e3556020a091d07e530fa0db6b2b78694368"
+    },
+    "pr558-round4/combined-final-bounded/bench-build-true-net10.0.log": {
+      "bytes": 117,
+      "sha256": "ce287a93155fa839bf6261ef131a2fe5f3094587c1634d986bec3812016f4843"
+    },
+    "pr558-round4/combined-final-bounded/bench-build-true-net472.log": {
+      "bytes": 117,
+      "sha256": "22e919aa0ffd357b9ac7f1cc85f19c450005025f72a0823c72790a456e1bbfd1"
+    },
+    "pr558-round4/combined-final-bounded/bench-build-true-net8.0.log": {
+      "bytes": 117,
+      "sha256": "5a1bc04aa444a5f41f745cef51051f1a952d59bbb9d4e0107fefe88a530eb94d"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/false-net10.0/Combined.current.dll": {
+      "bytes": 291840,
+      "sha256": "027df32609b9328a0b5146fcf49629166614dda88d095f1e11f6ee738666c347"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/false-net10.0/Combined.current.pdb": {
+      "bytes": 122236,
+      "sha256": "cc2666a3320490f5cda5cf3c1b7fa290321ba65f79c78b75081c08aafe93ea28"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/false-net10.0/Combined.fixed.dll": {
+      "bytes": 291840,
+      "sha256": "1fd4d49ebefaf1a6b929bd784d557eb2ed00096c1cebe08c596f52cce293083e"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/false-net10.0/Combined.fixed.pdb": {
+      "bytes": 122304,
+      "sha256": "6ae4b78b303e05bb56aa9386bc32fa4b1dfc1a6244d8890d9f3d31239ee2961a"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/false-net10.0/CombinedBench.false.deps.json": {
+      "bytes": 1923,
+      "sha256": "1d4b640e6108c97387cb593c1a41998f5e96e56bbe7a29e71d8e23197b72e41f"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/false-net10.0/CombinedBench.false.dll": {
+      "bytes": 44032,
+      "sha256": "5157bdb71776e52fb27e11c6f5b5fa95bb7f0e4e5f1e46080d8bbf81119f502f"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/false-net10.0/CombinedBench.false.exe": {
+      "bytes": 139776,
+      "sha256": "263eb8607781e0cef78038ec8ed5d51a2c89e747c063c4bb1276a0d63e6faf95"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/false-net10.0/CombinedBench.false.pdb": {
+      "bytes": 20444,
+      "sha256": "212653c3961c4f9364431b9958f8b5f02449f928af4c5c23bf717ebea94ee2b6"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/false-net10.0/CombinedBench.false.runtimeconfig.json": {
+      "bytes": 342,
+      "sha256": "c230a317a54dd960bcbeb5f347f52e18dc665a26f7efda2159fced9a5ac7e097"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/false-net472/Combined.current.dll": {
+      "bytes": 289792,
+      "sha256": "f4fdb8263801617cefe62136ad67983c28551bfbdea1306b2708e8ef3f45eba4"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/false-net472/Combined.current.pdb": {
+      "bytes": 111708,
+      "sha256": "d5d33c3dba4b9168ef6f191e97a8dd80a3f25b43e1128c758bd73138fa5f3353"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/false-net472/Combined.fixed.dll": {
+      "bytes": 289792,
+      "sha256": "8a2aa5e81c4f06e7701614eab20eaecf463e6282048faef545b4cb59d72a5afa"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/false-net472/Combined.fixed.pdb": {
+      "bytes": 111800,
+      "sha256": "484a7df72693b2c7950213d37707317738c7b3a85a01f133502235eaee48f38b"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/false-net472/CombinedBench.false.exe": {
+      "bytes": 44032,
+      "sha256": "0b9a10c63d350d726d7a91bdab1fb4c790ae599128488670f068158520954056"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/false-net472/CombinedBench.false.exe.config": {
+      "bytes": 176,
+      "sha256": "ad8267122c40d37dcd9d99e1412d763187a1825732f378db8867f3ecf675cf70"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/false-net472/CombinedBench.false.pdb": {
+      "bytes": 11560,
+      "sha256": "6342647a9ecb496906cde88b1660b3c10378f7a1818697d2fc1eeb6dcbd1121a"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/false-net8.0/Combined.current.dll": {
+      "bytes": 291328,
+      "sha256": "26b2f19c64f8f14f728391707a52465959f7fba3eb1072070a2a50cd01e54406"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/false-net8.0/Combined.current.pdb": {
+      "bytes": 122160,
+      "sha256": "e7633f9213038a4d7f4b77b026199ada1b4f3537e3e6986ac0beea097824316e"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/false-net8.0/Combined.fixed.dll": {
+      "bytes": 291328,
+      "sha256": "ddd1b21103ece9c4b6fa016d5e6ce189283db427bb70dd4654ef000efc501e27"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/false-net8.0/Combined.fixed.pdb": {
+      "bytes": 122224,
+      "sha256": "5d33c998045cb7c9f4d9f3383e063ddca55af9a1ce6435d75d1d4714400bfaa1"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/false-net8.0/CombinedBench.false.deps.json": {
+      "bytes": 1921,
+      "sha256": "3ded6d05739b2b5cc5f21e7659b6ab8e9883cdc7e1410f542ac1a28262f310f2"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/false-net8.0/CombinedBench.false.dll": {
+      "bytes": 44032,
+      "sha256": "45ecd7e0a2044954274bcda6f7824c6050b2fea98da98952c3cf3b5f76131c52"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/false-net8.0/CombinedBench.false.exe": {
+      "bytes": 132608,
+      "sha256": "d5f2f60a56d5c15945a2e1e7c71289d92348a06873572c928d93ee8522b236bd"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/false-net8.0/CombinedBench.false.pdb": {
+      "bytes": 20180,
+      "sha256": "b15431662d9cfaf97466cb0e2a8d59ac961bf647334af4bb0c85dd361f7e7044"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/false-net8.0/CombinedBench.false.runtimeconfig.json": {
+      "bytes": 340,
+      "sha256": "28329cf08f6505e73806b17558b187c02f0c1c516fe47ebfb7a013d082aaa306"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/true-net10.0/Combined.current.Light.dll": {
+      "bytes": 440832,
+      "sha256": "bf53394cf0291a3721af5a73b33b9749c0b899f845539aca41c74f1e80e18aa6"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/true-net10.0/Combined.current.Light.pdb": {
+      "bytes": 190296,
+      "sha256": "613f134504b0467160bcf3a6c607d286b082bb5acd8e610fba5ba86d7f79cb03"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/true-net10.0/Combined.fixed.Light.dll": {
+      "bytes": 440832,
+      "sha256": "951d402cd0e84440e0213161e6b8d6c6f73eec66877a877dabc52b6a1f2ae5c0"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/true-net10.0/Combined.fixed.Light.pdb": {
+      "bytes": 190356,
+      "sha256": "dffe2848594aa12962a5c7688025a40bdfcf69904379c1f01da7af34bb9466dc"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/true-net10.0/CombinedBench.true.deps.json": {
+      "bytes": 2016,
+      "sha256": "42837c8a2467b598d0564ede3ce74907a1f5bfc5ae8c1bd1f54f662bd720d321"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/true-net10.0/CombinedBench.true.dll": {
+      "bytes": 44032,
+      "sha256": "ade5b6090072dea4e593603a496ac5a0c6272f897ea510ca6ea8f063b48766c7"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/true-net10.0/CombinedBench.true.exe": {
+      "bytes": 139776,
+      "sha256": "f6682b1a54c42e5901d08766482f01e2ab5ff7274b47497cc91e526ef2ec387b"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/true-net10.0/CombinedBench.true.pdb": {
+      "bytes": 20480,
+      "sha256": "6c0202c1ef98cec6e4d0dbdb58c8cf94389ae22a1a4c01d553c669b94f1086ca"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/true-net10.0/CombinedBench.true.runtimeconfig.json": {
+      "bytes": 342,
+      "sha256": "c230a317a54dd960bcbeb5f347f52e18dc665a26f7efda2159fced9a5ac7e097"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/true-net472/Combined.current.Light.dll": {
+      "bytes": 437760,
+      "sha256": "d2a3400022fcd666608873904353758a3e60a5bc10e0c67f8cbb2c09912c30c8"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/true-net472/Combined.current.Light.pdb": {
+      "bytes": 182020,
+      "sha256": "07ca6583a400c01d34a0d6f7b42612e500d621e50995073d47120f0ff94dabdf"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/true-net472/Combined.fixed.Light.dll": {
+      "bytes": 437760,
+      "sha256": "d4a44bab75f05dbc9a7bdb17693c21c2575c966ccc3494efe52828e59c49987f"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/true-net472/Combined.fixed.Light.pdb": {
+      "bytes": 182112,
+      "sha256": "0e97c9f7e3a939edbdf6d475b262b4824a42029cd883f1c0d65ccad86bf90562"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/true-net472/CombinedBench.true.exe": {
+      "bytes": 44032,
+      "sha256": "5ddbf10d47756cae9bfdef5d63b9c6566287e8a1abcd291aca47307e2f063e32"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/true-net472/CombinedBench.true.exe.config": {
+      "bytes": 176,
+      "sha256": "ad8267122c40d37dcd9d99e1412d763187a1825732f378db8867f3ecf675cf70"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/true-net472/CombinedBench.true.pdb": {
+      "bytes": 11596,
+      "sha256": "01caa335ceccbb7d4d46cff6a8f62fb8dd679f75be6acab8de02811bd60928b2"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/true-net8.0/Combined.current.Light.dll": {
+      "bytes": 439808,
+      "sha256": "4f6d180d11cbbb854505fd7f445b81eb88feb6b7325000420213c5420fa2cd7c"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/true-net8.0/Combined.current.Light.pdb": {
+      "bytes": 190232,
+      "sha256": "3246996b97101e0f5841245c96289f6f86f9fa86aed7bdd738b03d7e4849e2d8"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/true-net8.0/Combined.fixed.Light.dll": {
+      "bytes": 439808,
+      "sha256": "96a111ed95b2f8a91a900fa0c0a2ef049185bb5dbd1909dd9ca172fe4d593030"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/true-net8.0/Combined.fixed.Light.pdb": {
+      "bytes": 190292,
+      "sha256": "2b4d74f121dc4871c4c60e6663a54a4f25fb778b5898ca8950569e61b80868a6"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/true-net8.0/CombinedBench.true.deps.json": {
+      "bytes": 2014,
+      "sha256": "3d4afa936186176a36d0e3fc53b0d8e8d737a88c4e2cc249e0af8fcf15b3f6e0"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/true-net8.0/CombinedBench.true.dll": {
+      "bytes": 44032,
+      "sha256": "5c5d2a1530e23c9827821253773c862ca080e94b0be904f997996cc9b65ce90a"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/true-net8.0/CombinedBench.true.exe": {
+      "bytes": 132608,
+      "sha256": "525aac4762b95d7e4f77dc197bfaef149ebfade70988b9f534d79820b31864e7"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/true-net8.0/CombinedBench.true.pdb": {
+      "bytes": 20216,
+      "sha256": "629d4c42db67f102432aeaf9912795fa5cac390c9305ab536df7c6a5c7443c8f"
+    },
+    "pr558-round4/combined-final-bounded/bench-runners/true-net8.0/CombinedBench.true.runtimeconfig.json": {
+      "bytes": 340,
+      "sha256": "28329cf08f6505e73806b17558b187c02f0c1c516fe47ebfb7a013d082aaa306"
+    },
+    "pr558-round4/combined-final-bounded/benchmark-hashes.json": {
+      "bytes": 5219,
+      "sha256": "4826a0e8a19f6040bc12be132b7784e244c079aa55a63ad05f75b32d40f3a064"
+    },
+    "pr558-round4/combined-final-bounded/bin/Release/net10.0/Combined.current.Light.dll": {
+      "bytes": 440832,
+      "sha256": "bf53394cf0291a3721af5a73b33b9749c0b899f845539aca41c74f1e80e18aa6"
+    },
+    "pr558-round4/combined-final-bounded/bin/Release/net10.0/Combined.current.Light.pdb": {
+      "bytes": 190296,
+      "sha256": "613f134504b0467160bcf3a6c607d286b082bb5acd8e610fba5ba86d7f79cb03"
+    },
+    "pr558-round4/combined-final-bounded/bin/Release/net10.0/Combined.fixed.Light.dll": {
+      "bytes": 440832,
+      "sha256": "951d402cd0e84440e0213161e6b8d6c6f73eec66877a877dabc52b6a1f2ae5c0"
+    },
+    "pr558-round4/combined-final-bounded/bin/Release/net10.0/Combined.fixed.Light.pdb": {
+      "bytes": 190356,
+      "sha256": "dffe2848594aa12962a5c7688025a40bdfcf69904379c1f01da7af34bb9466dc"
+    },
+    "pr558-round4/combined-final-bounded/bin/Release/net10.0/CombinedBench.true.deps.json": {
+      "bytes": 2016,
+      "sha256": "42837c8a2467b598d0564ede3ce74907a1f5bfc5ae8c1bd1f54f662bd720d321"
+    },
+    "pr558-round4/combined-final-bounded/bin/Release/net10.0/CombinedBench.true.dll": {
+      "bytes": 44032,
+      "sha256": "ade5b6090072dea4e593603a496ac5a0c6272f897ea510ca6ea8f063b48766c7"
+    },
+    "pr558-round4/combined-final-bounded/bin/Release/net10.0/CombinedBench.true.exe": {
+      "bytes": 139776,
+      "sha256": "f6682b1a54c42e5901d08766482f01e2ab5ff7274b47497cc91e526ef2ec387b"
+    },
+    "pr558-round4/combined-final-bounded/bin/Release/net10.0/CombinedBench.true.pdb": {
+      "bytes": 20480,
+      "sha256": "6c0202c1ef98cec6e4d0dbdb58c8cf94389ae22a1a4c01d553c669b94f1086ca"
+    },
+    "pr558-round4/combined-final-bounded/bin/Release/net10.0/CombinedBench.true.runtimeconfig.json": {
+      "bytes": 342,
+      "sha256": "c230a317a54dd960bcbeb5f347f52e18dc665a26f7efda2159fced9a5ac7e097"
+    },
+    "pr558-round4/combined-final-bounded/bin/Release/net472/Combined.current.Light.dll": {
+      "bytes": 437760,
+      "sha256": "d2a3400022fcd666608873904353758a3e60a5bc10e0c67f8cbb2c09912c30c8"
+    },
+    "pr558-round4/combined-final-bounded/bin/Release/net472/Combined.current.Light.pdb": {
+      "bytes": 182020,
+      "sha256": "07ca6583a400c01d34a0d6f7b42612e500d621e50995073d47120f0ff94dabdf"
+    },
+    "pr558-round4/combined-final-bounded/bin/Release/net472/Combined.fixed.Light.dll": {
+      "bytes": 437760,
+      "sha256": "d4a44bab75f05dbc9a7bdb17693c21c2575c966ccc3494efe52828e59c49987f"
+    },
+    "pr558-round4/combined-final-bounded/bin/Release/net472/Combined.fixed.Light.pdb": {
+      "bytes": 182112,
+      "sha256": "0e97c9f7e3a939edbdf6d475b262b4824a42029cd883f1c0d65ccad86bf90562"
+    },
+    "pr558-round4/combined-final-bounded/bin/Release/net472/CombinedBench.true.exe": {
+      "bytes": 44032,
+      "sha256": "5ddbf10d47756cae9bfdef5d63b9c6566287e8a1abcd291aca47307e2f063e32"
+    },
+    "pr558-round4/combined-final-bounded/bin/Release/net472/CombinedBench.true.exe.config": {
+      "bytes": 176,
+      "sha256": "ad8267122c40d37dcd9d99e1412d763187a1825732f378db8867f3ecf675cf70"
+    },
+    "pr558-round4/combined-final-bounded/bin/Release/net472/CombinedBench.true.pdb": {
+      "bytes": 11596,
+      "sha256": "01caa335ceccbb7d4d46cff6a8f62fb8dd679f75be6acab8de02811bd60928b2"
+    },
+    "pr558-round4/combined-final-bounded/bin/Release/net8.0/Combined.current.Light.dll": {
+      "bytes": 439808,
+      "sha256": "4f6d180d11cbbb854505fd7f445b81eb88feb6b7325000420213c5420fa2cd7c"
+    },
+    "pr558-round4/combined-final-bounded/bin/Release/net8.0/Combined.current.Light.pdb": {
+      "bytes": 190232,
+      "sha256": "3246996b97101e0f5841245c96289f6f86f9fa86aed7bdd738b03d7e4849e2d8"
+    },
+    "pr558-round4/combined-final-bounded/bin/Release/net8.0/Combined.fixed.Light.dll": {
+      "bytes": 439808,
+      "sha256": "96a111ed95b2f8a91a900fa0c0a2ef049185bb5dbd1909dd9ca172fe4d593030"
+    },
+    "pr558-round4/combined-final-bounded/bin/Release/net8.0/Combined.fixed.Light.pdb": {
+      "bytes": 190292,
+      "sha256": "2b4d74f121dc4871c4c60e6663a54a4f25fb778b5898ca8950569e61b80868a6"
+    },
+    "pr558-round4/combined-final-bounded/bin/Release/net8.0/CombinedBench.true.deps.json": {
+      "bytes": 2014,
+      "sha256": "3d4afa936186176a36d0e3fc53b0d8e8d737a88c4e2cc249e0af8fcf15b3f6e0"
+    },
+    "pr558-round4/combined-final-bounded/bin/Release/net8.0/CombinedBench.true.dll": {
+      "bytes": 44032,
+      "sha256": "5c5d2a1530e23c9827821253773c862ca080e94b0be904f997996cc9b65ce90a"
+    },
+    "pr558-round4/combined-final-bounded/bin/Release/net8.0/CombinedBench.true.exe": {
+      "bytes": 132608,
+      "sha256": "525aac4762b95d7e4f77dc197bfaef149ebfade70988b9f534d79820b31864e7"
+    },
+    "pr558-round4/combined-final-bounded/bin/Release/net8.0/CombinedBench.true.pdb": {
+      "bytes": 20216,
+      "sha256": "629d4c42db67f102432aeaf9912795fa5cac390c9305ab536df7c6a5c7443c8f"
+    },
+    "pr558-round4/combined-final-bounded/bin/Release/net8.0/CombinedBench.true.runtimeconfig.json": {
+      "bytes": 340,
+      "sha256": "28329cf08f6505e73806b17558b187c02f0c1c516fe47ebfb7a013d082aaa306"
+    },
+    "pr558-round4/combined-final-bounded/build-summary.log": {
+      "bytes": 161,
+      "sha256": "233c7e89148f3f3762647fce7db6bf21ad66b9e4d4e76ee1c942957e6178148c"
+    },
+    "pr558-round4/combined-final-bounded/canonical-analysis.json": {
+      "bytes": 16256,
+      "sha256": "ad6c6289973f95d76e7f4c35ebaafacaf90ee31f51f1c7e4d16a35d4fe25354e"
+    },
+    "pr558-round4/combined-final-bounded/canonical-false-net10.0.jsonl": {
+      "bytes": 248710,
+      "sha256": "e1518476ba5b596f81fc5761ab1b730ed202a821785537a353bf48ed33168a9c"
+    },
+    "pr558-round4/combined-final-bounded/canonical-false-net472.jsonl": {
+      "bytes": 215358,
+      "sha256": "52cce62f9b060b5456fce6a9c73a55bfab5ca0b4b7e54b455f123b99a5442ee2"
+    },
+    "pr558-round4/combined-final-bounded/canonical-false-net8.0.jsonl": {
+      "bytes": 247123,
+      "sha256": "da36e0961fcdc7b29b6c8efdb27464f63b98d0fd43303a9712c2f8be2ea0740d"
+    },
+    "pr558-round4/combined-final-bounded/canonical-summary.log": {
+      "bytes": 1455,
+      "sha256": "02ea65c2a73ccd5f525b14331eed60cd70c155070a3168d5e7593a37fd686a3e"
+    },
+    "pr558-round4/combined-final-bounded/canonical-true-net10.0.jsonl": {
+      "bytes": 253337,
+      "sha256": "c5bec2570bedf0fc6f34c340a1427f44cafb4b69e5f4a50b9cf3c41bba93b09e"
+    },
+    "pr558-round4/combined-final-bounded/canonical-true-net472.jsonl": {
+      "bytes": 219992,
+      "sha256": "e90f580b9e653afa06b88b813a85b0b58658038cb3053230a991ae3310314069"
+    },
+    "pr558-round4/combined-final-bounded/canonical-true-net8.0.jsonl": {
+      "bytes": 251750,
+      "sha256": "24e27e363463618b53cf2de6ec192adb491141e488be177450d01653b5075506"
+    },
+    "pr558-round4/combined-final-bounded/check-false-net10.0.log": {
+      "bytes": 161,
+      "sha256": "2fc8304423f23cb80e01568038d6bed48bb8088156841e5844603b19e073620f"
+    },
+    "pr558-round4/combined-final-bounded/check-false-net472.log": {
+      "bytes": 161,
+      "sha256": "2fc8304423f23cb80e01568038d6bed48bb8088156841e5844603b19e073620f"
+    },
+    "pr558-round4/combined-final-bounded/check-false-net8.0.log": {
+      "bytes": 161,
+      "sha256": "2fc8304423f23cb80e01568038d6bed48bb8088156841e5844603b19e073620f"
+    },
+    "pr558-round4/combined-final-bounded/check-summary.log": {
+      "bytes": 179,
+      "sha256": "d13e9bf88cb2378f0d1bcc12fdcb934d4a38ee1e2cad23f856e2772f07f6338a"
+    },
+    "pr558-round4/combined-final-bounded/check-true-net10.0.log": {
+      "bytes": 161,
+      "sha256": "2fc8304423f23cb80e01568038d6bed48bb8088156841e5844603b19e073620f"
+    },
+    "pr558-round4/combined-final-bounded/check-true-net472.log": {
+      "bytes": 161,
+      "sha256": "2fc8304423f23cb80e01568038d6bed48bb8088156841e5844603b19e073620f"
+    },
+    "pr558-round4/combined-final-bounded/check-true-net8.0.log": {
+      "bytes": 161,
+      "sha256": "2fc8304423f23cb80e01568038d6bed48bb8088156841e5844603b19e073620f"
+    },
+    "pr558-round4/combined-final-bounded/current-light/Expression.cs": {
+      "bytes": 321197,
+      "sha256": "9a360ff6496ac26b82eb2a7c67a07215c569b5d86eed1c1bdc2e25aa70f141c2"
+    },
+    "pr558-round4/combined-final-bounded/current-light/ExpressionVisitor.cs": {
+      "bytes": 20224,
+      "sha256": "a6162cdb8af3aa2274dc2a8c929e4f822e7d7f179d2d931f85d5eae0d8a9685b"
+    },
+    "pr558-round4/combined-final-bounded/current-light/FastExpressionCompiler.cs": {
+      "bytes": 893892,
+      "sha256": "e2af56a875f89786ea881cbb463b445381707f0caacf9111efc364e767c2e7e7"
+    },
+    "pr558-round4/combined-final-bounded/current-light/FlatExpression.cs": {
+      "bytes": 119743,
+      "sha256": "d47822bd4bc9d9c07aa976647e249e5eb39c6b8e216d21512b115aa23e4f6548"
+    },
+    "pr558-round4/combined-final-bounded/current-light/ILReader.cs": {
+      "bytes": 37615,
+      "sha256": "ceb16ba300543d6104d81e8b9b5ae687aef20dbdc9536c640bb4c00da915995d"
+    },
+    "pr558-round4/combined-final-bounded/current-light/ImTools.cs": {
+      "bytes": 78461,
+      "sha256": "a5d5c4f0630490d2d27d76a715517de7b7c18dace82f1a76de35f5c4a9a23fb0"
+    },
+    "pr558-round4/combined-final-bounded/current-light/Library.csproj": {
+      "bytes": 292,
+      "sha256": "0a0d508732024c2a7e0b4b64575af60b294a5c28293c3466d925fa742d443f92"
+    },
+    "pr558-round4/combined-final-bounded/current-light/TestTools.cs": {
+      "bytes": 54790,
+      "sha256": "c47c93ca62e6c5606c6d891e1ef1ebab529fb5fff2e8b81742eac5c65a570190"
+    },
+    "pr558-round4/combined-final-bounded/current-light/bin/Release/net10.0/Combined.current.Light.deps.json": {
+      "bytes": 460,
+      "sha256": "46a7811e291ba84084cbf7817211478bfc6b30b9c4a9105ce15f7a4da012fdc1"
+    },
+    "pr558-round4/combined-final-bounded/current-light/bin/Release/net10.0/Combined.current.Light.dll": {
+      "bytes": 440832,
+      "sha256": "bf53394cf0291a3721af5a73b33b9749c0b899f845539aca41c74f1e80e18aa6"
+    },
+    "pr558-round4/combined-final-bounded/current-light/bin/Release/net10.0/Combined.current.Light.pdb": {
+      "bytes": 190296,
+      "sha256": "613f134504b0467160bcf3a6c607d286b082bb5acd8e610fba5ba86d7f79cb03"
+    },
+    "pr558-round4/combined-final-bounded/current-light/bin/Release/net472/Combined.current.Light.dll": {
+      "bytes": 437760,
+      "sha256": "d2a3400022fcd666608873904353758a3e60a5bc10e0c67f8cbb2c09912c30c8"
+    },
+    "pr558-round4/combined-final-bounded/current-light/bin/Release/net472/Combined.current.Light.pdb": {
+      "bytes": 182020,
+      "sha256": "07ca6583a400c01d34a0d6f7b42612e500d621e50995073d47120f0ff94dabdf"
+    },
+    "pr558-round4/combined-final-bounded/current-light/bin/Release/net8.0/Combined.current.Light.deps.json": {
+      "bytes": 458,
+      "sha256": "65fa9c5b744ea3d0505366834d9621affe5affe44d6b47940a7f8189a1c5fa39"
+    },
+    "pr558-round4/combined-final-bounded/current-light/bin/Release/net8.0/Combined.current.Light.dll": {
+      "bytes": 439808,
+      "sha256": "4f6d180d11cbbb854505fd7f445b81eb88feb6b7325000420213c5420fa2cd7c"
+    },
+    "pr558-round4/combined-final-bounded/current-light/bin/Release/net8.0/Combined.current.Light.pdb": {
+      "bytes": 190232,
+      "sha256": "3246996b97101e0f5841245c96289f6f86f9fa86aed7bdd738b03d7e4849e2d8"
+    },
+    "pr558-round4/combined-final-bounded/current/FastExpressionCompiler.cs": {
+      "bytes": 893892,
+      "sha256": "e2af56a875f89786ea881cbb463b445381707f0caacf9111efc364e767c2e7e7"
+    },
+    "pr558-round4/combined-final-bounded/current/ILReader.cs": {
+      "bytes": 37615,
+      "sha256": "ceb16ba300543d6104d81e8b9b5ae687aef20dbdc9536c640bb4c00da915995d"
+    },
+    "pr558-round4/combined-final-bounded/current/ImTools.cs": {
+      "bytes": 78461,
+      "sha256": "a5d5c4f0630490d2d27d76a715517de7b7c18dace82f1a76de35f5c4a9a23fb0"
+    },
+    "pr558-round4/combined-final-bounded/current/Library.csproj": {
+      "bytes": 235,
+      "sha256": "006e66e0d3b242d45857fd095569978c10ebb37dd97cca7964d587257c0f656e"
+    },
+    "pr558-round4/combined-final-bounded/current/TestTools.cs": {
+      "bytes": 54790,
+      "sha256": "c47c93ca62e6c5606c6d891e1ef1ebab529fb5fff2e8b81742eac5c65a570190"
+    },
+    "pr558-round4/combined-final-bounded/current/bin/Release/net10.0/Combined.current.deps.json": {
+      "bytes": 442,
+      "sha256": "93e2e34790cdf2d55a93e983619e2da706182362ce67b97e5e9ab96a2727551a"
+    },
+    "pr558-round4/combined-final-bounded/current/bin/Release/net10.0/Combined.current.dll": {
+      "bytes": 291840,
+      "sha256": "027df32609b9328a0b5146fcf49629166614dda88d095f1e11f6ee738666c347"
+    },
+    "pr558-round4/combined-final-bounded/current/bin/Release/net10.0/Combined.current.pdb": {
+      "bytes": 122236,
+      "sha256": "cc2666a3320490f5cda5cf3c1b7fa290321ba65f79c78b75081c08aafe93ea28"
+    },
+    "pr558-round4/combined-final-bounded/current/bin/Release/net472/Combined.current.dll": {
+      "bytes": 289792,
+      "sha256": "f4fdb8263801617cefe62136ad67983c28551bfbdea1306b2708e8ef3f45eba4"
+    },
+    "pr558-round4/combined-final-bounded/current/bin/Release/net472/Combined.current.pdb": {
+      "bytes": 111708,
+      "sha256": "d5d33c3dba4b9168ef6f191e97a8dd80a3f25b43e1128c758bd73138fa5f3353"
+    },
+    "pr558-round4/combined-final-bounded/current/bin/Release/net8.0/Combined.current.deps.json": {
+      "bytes": 440,
+      "sha256": "05045aac3eefcadba8a7ce87a549092add05a85996ebf3c563ba0cd7da2dfb84"
+    },
+    "pr558-round4/combined-final-bounded/current/bin/Release/net8.0/Combined.current.dll": {
+      "bytes": 291328,
+      "sha256": "26b2f19c64f8f14f728391707a52465959f7fba3eb1072070a2a50cd01e54406"
+    },
+    "pr558-round4/combined-final-bounded/current/bin/Release/net8.0/Combined.current.pdb": {
+      "bytes": 122160,
+      "sha256": "e7633f9213038a4d7f4b77b026199ada1b4f3537e3e6986ac0beea097824316e"
+    },
+    "pr558-round4/combined-final-bounded/execution-status.json": {
+      "bytes": 133,
+      "sha256": "2bc348ae89db9373b75da4330379c89b70e70dfe71683a454733ff7e08e10640"
+    },
+    "pr558-round4/combined-final-bounded/fixed-light/Expression.cs": {
+      "bytes": 321197,
+      "sha256": "9a360ff6496ac26b82eb2a7c67a07215c569b5d86eed1c1bdc2e25aa70f141c2"
+    },
+    "pr558-round4/combined-final-bounded/fixed-light/ExpressionVisitor.cs": {
+      "bytes": 20224,
+      "sha256": "a6162cdb8af3aa2274dc2a8c929e4f822e7d7f179d2d931f85d5eae0d8a9685b"
+    },
+    "pr558-round4/combined-final-bounded/fixed-light/FastExpressionCompiler.cs": {
+      "bytes": 894053,
+      "sha256": "e1f5913b9cd1f4ce5c50879aedb1a48385eace8491b23ae759a94e6339715c03"
+    },
+    "pr558-round4/combined-final-bounded/fixed-light/FlatExpression.cs": {
+      "bytes": 119743,
+      "sha256": "d47822bd4bc9d9c07aa976647e249e5eb39c6b8e216d21512b115aa23e4f6548"
+    },
+    "pr558-round4/combined-final-bounded/fixed-light/ILReader.cs": {
+      "bytes": 37615,
+      "sha256": "ceb16ba300543d6104d81e8b9b5ae687aef20dbdc9536c640bb4c00da915995d"
+    },
+    "pr558-round4/combined-final-bounded/fixed-light/ImTools.cs": {
+      "bytes": 78854,
+      "sha256": "e1a4e6b4f24d2f8dba9f8a7dd22e99be5af33027b5d379e3ff2c48c5bd1234f1"
+    },
+    "pr558-round4/combined-final-bounded/fixed-light/Library.csproj": {
+      "bytes": 290,
+      "sha256": "f698420f14c90eee24c6add71c00266456b0816035f33c41db3ef8d9e7481fd1"
+    },
+    "pr558-round4/combined-final-bounded/fixed-light/TestTools.cs": {
+      "bytes": 54790,
+      "sha256": "c47c93ca62e6c5606c6d891e1ef1ebab529fb5fff2e8b81742eac5c65a570190"
+    },
+    "pr558-round4/combined-final-bounded/fixed-light/bin/Release/net10.0/Combined.fixed.Light.deps.json": {
+      "bytes": 454,
+      "sha256": "1e2be29117d64794582e3efc0a44b6ecdad53e36f6f8e3fb9f6d568a61e9d590"
+    },
+    "pr558-round4/combined-final-bounded/fixed-light/bin/Release/net10.0/Combined.fixed.Light.dll": {
+      "bytes": 440832,
+      "sha256": "951d402cd0e84440e0213161e6b8d6c6f73eec66877a877dabc52b6a1f2ae5c0"
+    },
+    "pr558-round4/combined-final-bounded/fixed-light/bin/Release/net10.0/Combined.fixed.Light.pdb": {
+      "bytes": 190356,
+      "sha256": "dffe2848594aa12962a5c7688025a40bdfcf69904379c1f01da7af34bb9466dc"
+    },
+    "pr558-round4/combined-final-bounded/fixed-light/bin/Release/net472/Combined.fixed.Light.dll": {
+      "bytes": 437760,
+      "sha256": "d4a44bab75f05dbc9a7bdb17693c21c2575c966ccc3494efe52828e59c49987f"
+    },
+    "pr558-round4/combined-final-bounded/fixed-light/bin/Release/net472/Combined.fixed.Light.pdb": {
+      "bytes": 182112,
+      "sha256": "0e97c9f7e3a939edbdf6d475b262b4824a42029cd883f1c0d65ccad86bf90562"
+    },
+    "pr558-round4/combined-final-bounded/fixed-light/bin/Release/net8.0/Combined.fixed.Light.deps.json": {
+      "bytes": 452,
+      "sha256": "030068af6c845000229f57b697d661732f2b5d02af798276eb742185601ad803"
+    },
+    "pr558-round4/combined-final-bounded/fixed-light/bin/Release/net8.0/Combined.fixed.Light.dll": {
+      "bytes": 439808,
+      "sha256": "96a111ed95b2f8a91a900fa0c0a2ef049185bb5dbd1909dd9ca172fe4d593030"
+    },
+    "pr558-round4/combined-final-bounded/fixed-light/bin/Release/net8.0/Combined.fixed.Light.pdb": {
+      "bytes": 190292,
+      "sha256": "2b4d74f121dc4871c4c60e6663a54a4f25fb778b5898ca8950569e61b80868a6"
+    },
+    "pr558-round4/combined-final-bounded/fixed/FastExpressionCompiler.cs": {
+      "bytes": 894053,
+      "sha256": "e1f5913b9cd1f4ce5c50879aedb1a48385eace8491b23ae759a94e6339715c03"
+    },
+    "pr558-round4/combined-final-bounded/fixed/ILReader.cs": {
+      "bytes": 37615,
+      "sha256": "ceb16ba300543d6104d81e8b9b5ae687aef20dbdc9536c640bb4c00da915995d"
+    },
+    "pr558-round4/combined-final-bounded/fixed/ImTools.cs": {
+      "bytes": 78854,
+      "sha256": "e1a4e6b4f24d2f8dba9f8a7dd22e99be5af33027b5d379e3ff2c48c5bd1234f1"
+    },
+    "pr558-round4/combined-final-bounded/fixed/Library.csproj": {
+      "bytes": 233,
+      "sha256": "ddb0d52d8293d6a2556de82da7831a2fac5bfe30af76aeeb5f856db69e95a6e7"
+    },
+    "pr558-round4/combined-final-bounded/fixed/TestTools.cs": {
+      "bytes": 54790,
+      "sha256": "c47c93ca62e6c5606c6d891e1ef1ebab529fb5fff2e8b81742eac5c65a570190"
+    },
+    "pr558-round4/combined-final-bounded/fixed/bin/Release/net10.0/Combined.fixed.deps.json": {
+      "bytes": 436,
+      "sha256": "0ac434a5609f54ebd31428ebdb9d4546142752b5d328fa47263faa038974e9ef"
+    },
+    "pr558-round4/combined-final-bounded/fixed/bin/Release/net10.0/Combined.fixed.dll": {
+      "bytes": 291840,
+      "sha256": "1fd4d49ebefaf1a6b929bd784d557eb2ed00096c1cebe08c596f52cce293083e"
+    },
+    "pr558-round4/combined-final-bounded/fixed/bin/Release/net10.0/Combined.fixed.pdb": {
+      "bytes": 122304,
+      "sha256": "6ae4b78b303e05bb56aa9386bc32fa4b1dfc1a6244d8890d9f3d31239ee2961a"
+    },
+    "pr558-round4/combined-final-bounded/fixed/bin/Release/net472/Combined.fixed.dll": {
+      "bytes": 289792,
+      "sha256": "8a2aa5e81c4f06e7701614eab20eaecf463e6282048faef545b4cb59d72a5afa"
+    },
+    "pr558-round4/combined-final-bounded/fixed/bin/Release/net472/Combined.fixed.pdb": {
+      "bytes": 111800,
+      "sha256": "484a7df72693b2c7950213d37707317738c7b3a85a01f133502235eaee48f38b"
+    },
+    "pr558-round4/combined-final-bounded/fixed/bin/Release/net8.0/Combined.fixed.deps.json": {
+      "bytes": 434,
+      "sha256": "1e8842f84f414c325dac6d68db771b18bac41e776340dba094056e9528f55152"
+    },
+    "pr558-round4/combined-final-bounded/fixed/bin/Release/net8.0/Combined.fixed.dll": {
+      "bytes": 291328,
+      "sha256": "ddd1b21103ece9c4b6fa016d5e6ce189283db427bb70dd4654ef000efc501e27"
+    },
+    "pr558-round4/combined-final-bounded/fixed/bin/Release/net8.0/Combined.fixed.pdb": {
+      "bytes": 122224,
+      "sha256": "5d33c998045cb7c9f4d9f3383e063ddca55af9a1ce6435d75d1d4714400bfaa1"
+    },
+    "pr558-round4/combined-final-bounded/manifest.json": {
+      "bytes": 4717,
+      "sha256": "5e70bccc32c4ab5d3e045332523541d15a7be35afd2bda4e15774202b06e9d76"
+    },
+    "pr558-round4/combined-final-bounded/paired-false-net10.0.csv": {
+      "bytes": 209270,
+      "sha256": "ecc1b99673256a67a67990593f38588fc81db6be98ce6c3d071d21f80e7bfeb9"
+    },
+    "pr558-round4/combined-final-bounded/paired-false-net10.0.log": {
+      "bytes": 4324,
+      "sha256": "72cb4dab43b88f6f5a7392efcaadcaadd8c6d195f559f680445a1f7b58c77394"
+    },
+    "pr558-round4/combined-final-bounded/paired-false-net472.csv": {
+      "bytes": 207884,
+      "sha256": "9eecc5f9a5a163c32b6904dda5b713d9fd349df5770f6bf91f33704c252fabc8"
+    },
+    "pr558-round4/combined-final-bounded/paired-false-net472.log": {
+      "bytes": 4250,
+      "sha256": "173f1e3fd5ccb982959a458edcd3878f1c4757f65766fd9d039d0e553a1c2a74"
+    },
+    "pr558-round4/combined-final-bounded/paired-false-net8.0.csv": {
+      "bytes": 209645,
+      "sha256": "adbba892b70397e24e6a399b5b55ea8e1df81ec158aedf02e6a36436807817e1"
+    },
+    "pr558-round4/combined-final-bounded/paired-false-net8.0.log": {
+      "bytes": 4326,
+      "sha256": "f250ec3dc6a9db7ed074e5f752c5bdc69a49686589ecddb37456cc61e4cd2458"
+    },
+    "pr558-round4/combined-final-bounded/paired-true-net10.0.csv": {
+      "bytes": 209523,
+      "sha256": "6cf6865c029f6a69989a792e7cd4f4a09f4c22e96b09f3bb8dd0a1422336137b"
+    },
+    "pr558-round4/combined-final-bounded/paired-true-net10.0.log": {
+      "bytes": 4324,
+      "sha256": "6295db07bc1c9b42672fb97b1a8c078eae272be500a3d08e554ca36266f46fa2"
+    },
+    "pr558-round4/combined-final-bounded/paired-true-net472.csv": {
+      "bytes": 207776,
+      "sha256": "dac6f9d9b2612f9f06327915f92fe6ee1c78d316586690a69e652033ccd7b4f7"
+    },
+    "pr558-round4/combined-final-bounded/paired-true-net472.log": {
+      "bytes": 4253,
+      "sha256": "8471e92333cbb67b9d56bbb0c4e06330e095b7513a6873ba390c3b5af7505d2b"
+    },
+    "pr558-round4/combined-final-bounded/paired-true-net8.0.csv": {
+      "bytes": 209133,
+      "sha256": "a38694b47ef5c3ed49705946ce34e81e868f9c89256a2b8cb61ac3f17786d3fe"
+    },
+    "pr558-round4/combined-final-bounded/paired-true-net8.0.log": {
+      "bytes": 4324,
+      "sha256": "51cf7227a1c4d9c2f44b355404d5d001a80b0ee3547fc8aa6484bfdc8fc3327d"
+    },
+    "pr558-round4/publication/GenerateReport.py": {
+      "bytes": 33793,
+      "sha256": "95d107ecfd559477a5f4af597b4297c323993aa208af4d73128ff8bca0eb5af4"
+    },
+    "pr558-round4/publication/Package.py": {
+      "bytes": 8038,
+      "sha256": "4a8b631f9d346eefbe3c5aa952517beefecf8a01c24ab4e0d7fb0ea8a5d82490"
+    },
+    "pr558-round4/publication/README.txt": {
+      "bytes": 2583,
+      "sha256": "6491550dd0b48eff5f9b8d152ae814176fcf7c91f6dd2a927b19e8df7ad8308c"
+    },
+    "pr558-round4/publication/REPORT.txt": {
+      "bytes": 6503,
+      "sha256": "6c732c1649241113b54ec192d54cdc0dcd289b42f035d803ae42c0f44a3f542d"
+    },
+    "pr558-round4/publication/VALIDATION-REPRODUCTION.txt": {
+      "bytes": 1707,
+      "sha256": "bfa2e93c4896474aa4dda6a5dae1a94299d50ec730840ff34f72dc5b8857ba54"
+    },
+    "pr558-round4/publication/final-state.json": {
+      "bytes": 4265,
+      "sha256": "9d4a134f2cdd83497c6fb1c265d4de36c12b0523cf547199c86b8d60dcac09ef"
+    },
+    "pr558-round4/publication/hash-inventory.json": {
+      "bytes": 572127,
+      "sha256": "a75f6299dcb71d845cba6f614e06138eebf69ac80680fb71ce5af0353c84708e"
+    },
+    "pr558-round4/publication/inventory-summary.log": {
+      "bytes": 1573,
+      "sha256": "535a8cf1c0237b4eab6e13b36f17cb255285d7d0a3b1c6758180227b24e94794"
+    },
+    "pr558-round4/publication/package-inventory.json": {
+      "bytes": 3587,
+      "sha256": "80e458624c6549ed3805b8642ba0cc2561af679febf32cff8456f84d337f8ba3"
+    },
+    "pr558-round4/publication/pr558-before-body.txt": {
+      "bytes": 18099,
+      "sha256": "f1fe5d161ef8a5b33d9ca8ba8c39ee97c1cb9c0effa3ba531a2458168beea4e0"
+    },
+    "pr558-round4/publication/pr558-before.json": {
+      "bytes": 18467,
+      "sha256": "fd708e3a12c5c77b93753ac2b095e3f47cffdc6ade91e6448e0c17be3f965eca"
+    },
+    "pr558-round4/publication/pr558-description-draft.txt": {
+      "bytes": 24637,
+      "sha256": "0941981bde2e3e0fb8617fe4a9f2e41cb09d1e65e822947a1b068c8c186d0223"
+    },
+    "pr558-round4/publication/pr558-measurement-comment-draft.txt": {
+      "bytes": 6188,
+      "sha256": "33f31e71147a8390e19f6a7ad0b8363c9512b91f234335bea43d6e4f11503b11"
+    },
+    "pr558-round4/publication/report-data.json": {
+      "bytes": 4820,
+      "sha256": "f6d2e64403644476282f77c2236905ae0f45846e7316d353dbcf39de5259cd19"
+    },
+    "pr558-round4/publication/report.html": {
+      "bytes": 755166,
+      "sha256": "6b135b317407aac32edfc55d81bbea8e31b5132b4303d7fada84169155c533c6"
+    }
+  },
+  "excludedDirectories": [
+    ".git",
+    ".vs",
+    "__pycache__",
+    "artifacts",
+    "node_modules",
+    "obj"
+  ],
+  "excludedSuffixes": [
+    ".dmp",
+    ".etlx",
+    ".zip"
+  ],
+  "scope": "Archives preserve measured snapshots, raw rows, binaries and relative layouts. Frozen42f evidence is not relabeled as final combined code performance."
+}
