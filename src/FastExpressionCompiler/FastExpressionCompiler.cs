@@ -3122,7 +3122,11 @@ namespace FastExpressionCompiler
                             if (binaryExpr.Conversion != null &&
                                 (r = TryCollectInfo(ref context, binaryExpr.Conversion, nestedLambda, ref rootNestedLambdas, false, false)) != Result.OK)
                                 return RestoreScopeAndReturn(ref context, scopeDepth, r);
-                            if ((r = TryCollectInfo(ref context, binaryExpr.Left, nestedLambda, ref rootNestedLambdas, false, false)) != Result.OK)
+                            var left = binaryExpr.Left;
+                            r = left is ParameterExpression || left is ConstantExpression
+                                ? TryCollectTerminalInfo(ref context, left, left.NodeType, nestedLambda, ref rootNestedLambdas)
+                                : TryCollectInfo(ref context, left, nestedLambda, ref rootNestedLambdas, false, false);
+                            if (r != Result.OK)
                                 return RestoreScopeAndReturn(ref context, scopeDepth, r);
                             expr = binaryExpr.Right;
                             continue;
