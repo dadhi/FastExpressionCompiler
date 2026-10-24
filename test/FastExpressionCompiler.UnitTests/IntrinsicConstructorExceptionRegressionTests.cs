@@ -17,6 +17,7 @@ public struct IntrinsicConstructorExceptionRegressionTests : ITestX
         Intrinsic_constructor_arguments_keep_exception_stack_empty(t);
         Intrinsic_list_constructor_preserves_effects_when_ignored(t);
         Constructor_ref_parameters_keep_the_original_storage(t);
+        No_argument_constructors_keep_alternating_unused_parameter_signatures(t);
     }
     public class Items : IEnumerable
     {
@@ -72,4 +73,30 @@ public struct IntrinsicConstructorExceptionRegressionTests : ITestX
         t.AreEqual(45, fast(ref actual));
         t.AreEqual(42, actual);
     }
+    public sealed class EmptyItem { }
+    public void No_argument_constructors_keep_alternating_unused_parameter_signatures(TestContext t)
+    {
+        foreach (var flags in new[] { CompilerFlags.Default, CompilerFlags.NoInvocationLambdaInlining,
+            CompilerFlags.EnableDelegateDebugInfo })
+        {
+            for (var i = 0; i < 8; ++i)
+            {
+                var number = E.Parameter(typeof(int));
+                var text = E.Parameter(typeof(string));
+                var one = E.Lambda<Func<int, EmptyItem>>(E.New(typeof(EmptyItem)), number).CompileFast(true, flags);
+                var other = E.Lambda<Func<string, EmptyItem>>(E.New(typeof(EmptyItem)), text).CompileFast(true, flags);
+                var two = E.Lambda<Func<int, string, EmptyItem>>(E.New(typeof(EmptyItem)), number, text).CompileFast(true, flags);
+                var ignored = E.Lambda<Action<string>>(E.New(typeof(EmptyItem)), text).CompileFast(true, flags);
+                if (!t.IsNotNull(one) || !t.IsNotNull(other) || !t.IsNotNull(two) || !t.IsNotNull(ignored)) return;
+                t.IsNotNull(one(3));
+                t.IsNotNull(other("text"));
+                t.IsNotNull(two(4, "value"));
+                ignored("ignored");
+                // Earlier delegates must retain their own signature after later rentals.
+                t.IsNotNull(one(5));
+                t.IsNotNull(other("again"));
+            }
+        }
+    }
+
 }
