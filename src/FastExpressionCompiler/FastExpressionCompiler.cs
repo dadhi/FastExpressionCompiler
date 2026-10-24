@@ -407,7 +407,11 @@ namespace FastExpressionCompiler
             var closureAndParamTypes = RentPooledOrNewClosureTypeToParamTypes(paramExprs);
 #if LIGHT_EXPRESSION
             if (bodyExpr is NoArgsNewClassIntrinsicExpression newExpr)
-                return CompileNoArgsNew(newExpr, delegateType, closureAndParamTypes, returnType, flags);
+            {
+                var lambdaNew = CompileNoArgsNew(newExpr, delegateType, closureAndParamTypes, returnType, flags);
+                FreePooledClosureTypeAndParamTypes(closureAndParamTypes); // fixes #563
+                return lambdaNew;
+            }
 #endif
             // Try to avoid compilation altogether for Func<bool> delegates via Interpreter, see #468
             if (closureAndParamTypes.Length == 1 & returnType == typeof(bool) 
