@@ -8,6 +8,8 @@ using System.Reflection;
 
 #if LIGHT_EXPRESSION
 using FastExpressionCompiler.LightExpression.ILDecoder;
+using FastExpressionCompiler.LightExpression.ImTools;
+using static FastExpressionCompiler.LightExpression.ExpressionCompiler;
 namespace FastExpressionCompiler.LightExpression.IssueTests;
 #else
 using FastExpressionCompiler.ILDecoder;
@@ -27,6 +29,10 @@ public struct Issue561_NonBooleanEqualityOperator : ITestX
         Non_lifted_nullable_parameters_reach_the_selected_method(t);
         Selected_methods_keep_non_boolean_value_results(t);
         Boolean_method_is_not_replaced_by_constant_comparison(t);
+        Converted_simple_right_operands_reach_the_selected_method(t);
+#if LIGHT_EXPRESSION
+        Converted_intrinsic_right_operand_can_emit_exception_regions(t);
+#endif
     }
 
     public interface ICustomObject { void Ping(); }
@@ -214,5 +220,62 @@ public struct Issue561_NonBooleanEqualityOperator : ITestX
         t.AreEqual(expected, fast());
         t.AreEqual(1, CustomObject.OperatorCalls);
     }
+    public void Converted_simple_right_operands_reach_the_selected_method(TestContext t)
+    {
+        var parameter = System.Linq.Expressions.Expression.Parameter(typeof(int));
+        var method = typeof(Issue561_NonBooleanEqualityOperator).GetMethod(nameof(CompareValue));
+        foreach (var right in new System.Linq.Expressions.Expression[] { parameter,
+            System.Linq.Expressions.Expression.Constant(2), System.Linq.Expressions.Expression.Default(typeof(int)) })
+        {
+            var converted = System.Linq.Expressions.Expression.Convert(
+                System.Linq.Expressions.Expression.Convert(right, typeof(long)), typeof(int));
+            var body = System.Linq.Expressions.Expression.Equal(
+                System.Linq.Expressions.Expression.Constant(3), converted, false, method);
+            var expression = System.Linq.Expressions.Expression.Lambda<Func<int, int>>(body, parameter);
+            var fast = Compile(expression);
+            if (!t.IsNotNull(fast) || !CheckSelectedCall(t, fast, method)) return;
+            var expected = expression.Compile()(4);
+            CustomObject.OperatorCalls = 0;
+            t.AreEqual(expected, fast(4));
+            t.AreEqual(1, CustomObject.OperatorCalls);
+        }
+    }
+
+#if LIGHT_EXPRESSION
+    private sealed class TryFinallyConversion : UnaryExpression
+    {
+        private readonly Expression _body;
+        public TryFinallyConversion(Expression operand, Expression body) : base(operand) => _body = body;
+        public override ExpressionType NodeType => ExpressionType.Convert;
+        public override bool IsIntrinsic => true;
+        public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda,
+            ref SmallList<NestedLambdaInfo> rootNestedLambdas) =>
+            ExpressionCompiler.TryCollectInfo(ref context, _body, nestedLambda, ref rootNestedLambdas);
+        public override bool TryEmit(ref CompilerContext context, System.Reflection.Emit.ILGenerator il,
+            ParentFlags parent, int byRefIndex = -1) =>
+            EmittingVisitor.TryEmit(_body, il, ref context, parent, byRefIndex);
+    }
+
+    public void Converted_intrinsic_right_operand_can_emit_exception_regions(TestContext t)
+    {
+        var owner = typeof(Issue561_NonBooleanEqualityOperator);
+        var parameter = Expression.Parameter(typeof(int));
+        var read = Expression.Call(owner.GetMethod(nameof(ReadArgument)));
+        var intrinsic = new TryFinallyConversion(parameter,
+            Expression.TryFinally(read, Expression.Call(owner.GetMethod(nameof(FinishArgument)))));
+        // The intrinsic is hidden inside two ordinary conversion wrappers.
+        var right = Expression.Convert(Expression.Convert(intrinsic, typeof(long)), typeof(int));
+        var method = owner.GetMethod(nameof(CompareValue));
+        var body = Expression.Equal(read, right, false, method);
+        var fast = Expression.Lambda<Func<int, int>>(body, parameter).CompileFast(true);
+        if (!t.IsNotNull(fast) || !CheckSelectedCall(t, fast, method)) return;
+        Trace = "";
+        CustomObject.OperatorCalls = 0;
+        t.AreEqual(22, fast(4));
+        t.AreEqual("AAF", Trace);
+        t.AreEqual(1, CustomObject.OperatorCalls);
+    }
+#endif
+
 }
 #endif

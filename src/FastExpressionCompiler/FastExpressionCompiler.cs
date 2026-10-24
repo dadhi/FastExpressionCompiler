@@ -5534,10 +5534,16 @@ namespace FastExpressionCompiler
                 // Keep the evaluation stack empty while a nontrivial right operand
                 // may emit exception regions or jumps, just as for call arguments.
                 var right = expr.Right;
-                var spillLeft = right.NodeType != ExpressionType.Parameter &&
-                    right.NodeType != ExpressionType.Constant && right.NodeType != ExpressionType.Default;
+                var spillLeft = !right.IsParamOrConstantOrDefault();
 #if LIGHT_EXPRESSION
-                spillLeft |= right.IsIntrinsic;
+                // A conversion chain may contain a custom IL emitter.
+                for (var operand = right; !spillLeft;)
+                {
+                    spillLeft = operand.IsIntrinsic;
+                    if (operand is not UnaryExpression convert || convert.NodeType != ExpressionType.Convert)
+                        break;
+                    operand = convert.Operand;
+                }
 #endif
                 var leftVar = spillLeft ? EmitStoreLocalVariable(il, parameters[0].ParameterType) : -1;
 
