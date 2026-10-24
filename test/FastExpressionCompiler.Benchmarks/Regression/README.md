@@ -17,7 +17,7 @@ Each of the eight workload/backend combinations measures:
 - `CompileAndFirstInvoke`: compile and invoke each new delegate, including deferred JIT work. Closure factories invoke both the outer and resulting inner delegate.
 - `Invoke`: warmed delegate execution in a consumed 256-operation batch. Closure factories include activation and inner invocation.
 
-MemoryDiagnoser measures managed B/op for every phase. Shared adapter/loop overhead is present in both revisions; these are relative regression probes, not minimum delegate-call latency claims. Compilation and first invocation stay separate because dynamic-method hosting can move JIT work across the `CreateDelegate` boundary.
+MemoryDiagnoser measures managed B/op for every phase. Invocation calls typed compiled delegates directly, with the workload branch outside the batch. Loop/checksum overhead is shared; these are relative regression probes, not minimum delegate-call latency claims. Compilation and first invocation stay separate because dynamic-method hosting can move JIT work across the `CreateDelegate` boundary.
 
 There are 32 cases, five requested measurement iterations after two warmups per case, and two process rounds in opposite order: **base, PR; PR, base**. Builds, correctness checks and outputs are isolated. SDK/source/library hashes, runtime/environment logs and complete BDN JSON are uploaded. The intended hosted-runner budget is roughly 5-15 minutes; the job has a 30-minute cap. Observe actual CI costs before expanding the suite.
 

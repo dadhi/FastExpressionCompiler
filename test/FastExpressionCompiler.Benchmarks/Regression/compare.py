@@ -87,7 +87,7 @@ def render(report, artifact_url=None, warning=3.0, regression=5.0):
         delta, status, _ = classify(r, warning, regression)
         lines.append(f"| {r['backend']} / {r['method']} / {r['shape']} | {means['baseline']:.2f} | {means['candidate']:.2f} | {delta:+.1f}% | {allocations['baseline']:.2f} Ã¢â€ â€™ {allocations['candidate']:.2f} | {status} |")
     lines += ["", f"Two opposite-order process rounds on one GitHub-hosted runner; BDN confidence intervals must be separated in both rounds to classify a >{regression:g}% time regression. A Ã¢â€°Â¥3% change without that evidence is a warning, not proof. Five measurement iterations/round; hosted-runner noise remains.", "",
-              "Compile excludes delegate invocation; CompileAndFirstInvoke includes the first call/JIT of a new delegate. Invoke is warmed; closure invocation includes creating and calling the returned delegate. MemoryDiagnoser reports managed B/op. Adapter/loop overhead is shared by both revisions."]
+              "Compile excludes delegate invocation; CompileAndFirstInvoke includes the first call/JIT of a new delegate. Invoke is warmed; closure invocation includes creating and calling the returned delegate. MemoryDiagnoser reports managed B/op. Loop/checksum overhead is shared by both revisions."]
     if artifact_url: lines += ["", f"[Workflow run and complete raw artifacts]({artifact_url})"]
     return "\n".join(lines) + "\n"
 
