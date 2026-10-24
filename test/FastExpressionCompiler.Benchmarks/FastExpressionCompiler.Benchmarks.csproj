@@ -17,6 +17,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Compile Remove="Regression/**/*.cs" />
         <PackageReference Include="BenchmarkDotNet" Version="0.15.8"/>
         <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.15.8" />
     </ItemGroup>

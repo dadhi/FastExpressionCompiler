@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFrameworks>net8.0;net10.0</TargetFrameworks><TieredCompilation>false</TieredCompilation></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <PackageReference Include="BenchmarkDotNet" Version="0.15.8" />
+    <ProjectReference Include="Adapter.Standard.csproj" />
+    <ProjectReference Include="Adapter.Light.csproj" />
+  </ItemGroup>
+</Project>
