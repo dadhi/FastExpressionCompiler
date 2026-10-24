@@ -5527,35 +5527,33 @@ namespace FastExpressionCompiler
             private static bool TryEmitComparisonMethod(BinaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var method = expr.Method;
-                var parameters = method.GetParameters();
-                if (!TryEmit(expr.Left, il, ref context, ParentFlags.Call, parameters[0].ParameterType.IsByRef ? 0 : -1))
+                var pars = method.GetParameters();
+                var leftParamType = pars[0].ParameterType;
+                if (!TryEmit(expr.Left, il, ref context, ParentFlags.Call, leftParamType.IsByRef ? 0 : -1))
                     return false;
 
-                // Keep the evaluation stack empty while a nontrivial right operand
-                // may emit exception regions or jumps, just as for call arguments.
                 var right = expr.Right;
-                var spillLeft = !right.IsParamOrConstantOrDefault();
-#if LIGHT_EXPRESSION
-                // A conversion chain may contain a custom IL emitter.
-                for (var operand = right; !spillLeft;)
-                {
-                    if (operand.IsIntrinsic)
-                    {
-                        spillLeft = true;
-                        break;
-                    }
-                    if (operand is not UnaryExpression convert || convert.NodeType != ExpressionType.Convert)
-                        break;
-                    operand = convert.Operand;
-                }
-#endif
-                var leftVar = spillLeft ? EmitStoreLocalVariable(il, parameters[0].ParameterType) : -1;
 
-                if (!TryEmit(expr.Right, il, ref context, ParentFlags.Call, parameters[1].ParameterType.IsByRef ? 1 : -1))
+                // Keep the evaluation stack empty while a nontrivial right operand may emit exception regions or jumps, just as for call arguments.
+#if LIGHT_EXPRESSION
+                var rightMayBeComplex = false;
+                var rightOper = right;
+                while (!(rightMayBeComplex = rightOper.IsIntrinsic) && rightOper is UnaryExpression unExpr && unExpr.NodeType == ExpressionType.Convert)
+                    rightOper = unExpr.Operand;
+                if (!rightMayBeComplex)
+                    rightMayBeComplex = !rightOper.NodeType.IsParamOrConstantOrDefault();
+#else
+                var rightMayBeComplex = !right.IsParamOrConstantOrDefault();
+#endif
+                // Storing left here for the complex right so that we restore left and right later after emitting the right (otherwise left may be lost on the evaluation stack)
+                var leftVar = rightMayBeComplex ? EmitStoreLocalVariable(il, leftParamType) : -1;
+
+                var rightParamType = pars[1].ParameterType;
+                if (!TryEmit(right, il, ref context, ParentFlags.Call, rightParamType.IsByRef ? 1 : -1))
                     return false;
                 if (leftVar != -1)
                 {
-                    var rightVar = EmitStoreLocalVariable(il, parameters[1].ParameterType);
+                    var rightVar = EmitStoreLocalVariable(il, rightParamType);
                     EmitLoadLocalVariable(il, leftVar);
                     EmitLoadLocalVariable(il, rightVar);
                 }
@@ -8043,10 +8041,13 @@ namespace FastExpressionCompiler
                 !IsBracedBlockLike(nodeType);
         }
 
-        internal static Expression StripConvertRecursively(this Expression expr) =>
-            expr is UnaryExpression convert && convert.NodeType == ExpressionType.Convert
-                ? StripConvertRecursively(convert.Operand)
-                : expr;
+        [MethodImpl((MethodImplOptions)256)]
+        internal static Expression StripConvertRecursively(this Expression expr)
+        {
+            while (expr is UnaryExpression unExpr && unExpr.NodeType == ExpressionType.Convert)
+                expr = unExpr.Operand;
+            return expr;
+        }
 
         internal static bool IsComplexExpression(this Expression expr)
         {
@@ -8062,13 +8063,14 @@ namespace FastExpressionCompiler
                 | nodeType == ExpressionType.Default;
         }
 
-        internal static bool IsParamOrConstantOrDefault(this Expression expr)
-        {
-            var nodeType = StripConvertRecursively(expr).NodeType;
-            return nodeType == ExpressionType.Parameter
-                | nodeType == ExpressionType.Constant
-                | nodeType == ExpressionType.Default;
-        }
+        [MethodImpl((MethodImplOptions)256)]
+        internal static bool IsParamOrConstantOrDefault(this ExpressionType nodeType) =>
+            nodeType == ExpressionType.Parameter |
+            nodeType == ExpressionType.Constant |
+            nodeType == ExpressionType.Default;
+
+        internal static bool IsParamOrConstantOrDefault(this Expression expr) =>
+            StripConvertRecursively(expr).NodeType.IsParamOrConstantOrDefault();
 
         internal static string GetCSharpName(this MemberInfo m)
         {

@@ -43,6 +43,7 @@
         "NETSTANDARD",
         "Newarr",
         "Newobj",
+        "Oper",
         "outparameter",
         "shortcircuit",
         "stackchange",
