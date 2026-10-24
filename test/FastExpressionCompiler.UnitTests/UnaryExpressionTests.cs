@@ -33,7 +33,9 @@ namespace FastExpressionCompiler.UnitTests
             Decrement_compiles();
             Increment_compiles();
             IsFalse_compiles();
+            IsFalse_nullable_compiles();
             IsTrue_compiles();
+            IsTrue_nullable_compiles();
             MakeUnary_compiles();
             Negate_compiles();
             NegateChecked_compiles();
@@ -53,7 +55,7 @@ namespace FastExpressionCompiler.UnitTests
             UnaryPlus_compiles();
             Unbox_compiles();
 
-            return 28;
+            return 30;
         }
 
 
@@ -173,6 +175,21 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsTrue(result);
         }
 
+        public void IsFalse_nullable_compiles()
+        {
+            var param = Parameter(typeof(bool?), "b");
+            var expression = Lambda<Func<bool?, bool?>>(IsFalse(param), param);
+            var sys = expression.CompileSys();
+            var fast = expression.CompileFast(true);
+
+            Asserts.AreEqual(false, sys(true));
+            Asserts.AreEqual(true, sys(false));
+            Asserts.AreEqual(null, sys(null));
+
+            Asserts.AreEqual(false, fast(true));
+            Asserts.AreEqual(true, fast(false));
+            Asserts.AreEqual(null, fast(null));
+        }
 
         public void IsTrue_compiles()
         {
@@ -184,6 +201,22 @@ namespace FastExpressionCompiler.UnitTests
             bool result = expression.CompileFast(true)(true);
 
             Asserts.IsTrue(result);
+        }
+
+        public void IsTrue_nullable_compiles()
+        {
+            var param = Parameter(typeof(bool?), "b");
+            var expression = Lambda<Func<bool?, bool?>>(IsTrue(param), param);
+            var sys = expression.CompileSys();
+            var fast = expression.CompileFast(true);
+
+            Asserts.AreEqual(true, sys(true));
+            Asserts.AreEqual(false, sys(false));
+            Asserts.AreEqual(null, sys(null));
+
+            Asserts.AreEqual(true, fast(true));
+            Asserts.AreEqual(false, fast(false));
+            Asserts.AreEqual(null, fast(null));
         }
 
 

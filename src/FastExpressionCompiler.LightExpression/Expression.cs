@@ -627,11 +627,15 @@ public abstract class Expression
 
     /// <summary>Returns whether the expression evaluates to false.</summary>
     public static UnaryExpression IsFalse(Expression expression) =>
-        new TypedUnaryExpression<bool>(ExpressionType.IsFalse, expression);
+       Nullable.GetUnderlyingType(expression.Type) != null
+        ? new TypedUnaryExpression<bool?>(ExpressionType.IsFalse, expression) 
+        : new TypedUnaryExpression<bool>(ExpressionType.IsFalse, expression);
 
     /// <summary>Returns whether the expression evaluates to true.</summary>
     public static UnaryExpression IsTrue(Expression expression) =>
-        new TypedUnaryExpression<bool>(ExpressionType.IsTrue, expression);
+       Nullable.GetUnderlyingType(expression.Type) != null 
+        ? new TypedUnaryExpression<bool?>(ExpressionType.IsTrue, expression) 
+        : new TypedUnaryExpression<bool>(ExpressionType.IsTrue, expression);
 
     /// <summary>Creates a UnaryExpression, given an operand and its type</summary>
     public static UnaryExpression MakeUnary(ExpressionType unaryType, Expression operand, Type type = null) =>
@@ -696,7 +700,8 @@ public abstract class Expression
 
     /// <summary>Creates a UnaryExpression that represents an expression that has a constant value of type Expression.</summary>
     public static UnaryExpression Quote(Expression expression) =>
-        new NodeTypedUnaryExpression(ExpressionType.Quote, expression);
+        new TypedUnaryExpression(ExpressionType.Quote, expression,
+            typeof(System.Linq.Expressions.Expression<>).MakeGenericType(expression.Type));
 
     /// <summary>Creates a UnaryExpression that represents a unary plus operation.</summary>
     public static UnaryExpression UnaryPlus(Expression expression) =>
@@ -1017,7 +1022,7 @@ public abstract class Expression
     public static Expression<TDelegate> Lambda<TDelegate>(Expression body, string name, params ParameterExpression[] parameters) where TDelegate : System.Delegate =>
         Lambda<TDelegate>(body, parameters, GetDelegateReturnType(typeof(TDelegate)));
 
-    // todo: @perf for now it's the fastest method until UnsafeAccessAttribute supports generics
+    // todo: @perf for now it's the fastest method until UnsafeAccessorAttribute supports generics
     [RequiresUnreferencedCode(Trimming.Message)]
     [MethodImpl((MethodImplOptions)256)]
     private static Type GetDelegateReturnType(Type delegateType) => delegateType.FindDelegateInvokeMethod().ReturnType;
@@ -1250,11 +1255,20 @@ public abstract class Expression
     public static InvocationExpression Invoke(LambdaExpression expression, Expression a0) =>
         new OneArgumentInvocationExpression(expression, a0);
 
+    [MethodImpl((MethodImplOptions)256)]
+    [RequiresUnreferencedCode(Trimming.Message)]
+    private static Type GetInvocationReturnType(Expression expression) =>
+        expression is LambdaExpression lambda
+            ? lambda.ReturnType
+            : expression is UnaryExpression unExpr && unExpr.NodeType == ExpressionType.Quote && unExpr.Operand is LambdaExpression quotedLambda
+                ? quotedLambda.ReturnType
+                : expression.Type.FindDelegateInvokeMethod().ReturnType;
+
     [RequiresUnreferencedCode(Trimming.Message)]
     public static InvocationExpression Invoke(Expression expression, Expression a0) =>
         expression is LambdaExpression
             ? new OneArgumentInvocationExpression(expression, a0)
-            : new TypedOneArgumentInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0);
+            : new TypedOneArgumentInvocationExpression(expression, GetInvocationReturnType(expression), a0);
 
     public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0) =>
         expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
@@ -1268,7 +1282,7 @@ public abstract class Expression
     public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1) =>
         expression is LambdaExpression
             ? new TwoArgumentsInvocationExpression(expression, a0, a1)
-            : new TypedTwoArgumentsInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0, a1);
+            : new TypedTwoArgumentsInvocationExpression(expression, GetInvocationReturnType(expression), a0, a1);
 
     public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0, Expression a1) =>
         expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
@@ -1282,7 +1296,7 @@ public abstract class Expression
     public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1, Expression a2) =>
         expression is LambdaExpression
             ? new ThreeArgumentsInvocationExpression(expression, a0, a1, a2)
-            : new TypedThreeArgumentsInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0, a1, a2);
+            : new TypedThreeArgumentsInvocationExpression(expression, GetInvocationReturnType(expression), a0, a1, a2);
 
     public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0, Expression a1, Expression a2) =>
         expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
@@ -1296,7 +1310,7 @@ public abstract class Expression
     public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1, Expression a2, Expression a3) =>
         expression is LambdaExpression
             ? new FourArgumentsInvocationExpression(expression, a0, a1, a2, a3)
-            : new TypedFourArgumentsInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0, a1, a2, a3);
+            : new TypedFourArgumentsInvocationExpression(expression, GetInvocationReturnType(expression), a0, a1, a2, a3);
 
     public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0, Expression a1, Expression a2, Expression a3) =>
         expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
@@ -1310,7 +1324,7 @@ public abstract class Expression
     public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4) =>
         expression is LambdaExpression
             ? new FiveArgumentsInvocationExpression(expression, a0, a1, a2, a3, a4)
-            : new TypedFiveArgumentsInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0, a1, a2, a3, a4);
+            : new TypedFiveArgumentsInvocationExpression(expression, GetInvocationReturnType(expression), a0, a1, a2, a3, a4);
 
     public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4) =>
         expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
@@ -1324,7 +1338,7 @@ public abstract class Expression
     public static InvocationExpression Invoke(Expression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4, Expression a5) =>
         expression is LambdaExpression
             ? new SixArgumentsInvocationExpression(expression, a0, a1, a2, a3, a4, a5)
-            : new TypedSixArgumentsInvocationExpression(expression, expression.Type.FindDelegateInvokeMethod().ReturnType, a0, a1, a2, a3, a4, a5);
+            : new TypedSixArgumentsInvocationExpression(expression, GetInvocationReturnType(expression), a0, a1, a2, a3, a4, a5);
 
     public static InvocationExpression Invoke(Type returnType, Expression expression, Expression a0, Expression a1, Expression a2, Expression a3, Expression a4, Expression a5) =>
         expression is LambdaExpression lambdaExpr && lambdaExpr.ReturnType == returnType
@@ -1335,7 +1349,7 @@ public abstract class Expression
     public static InvocationExpression Invoke(Expression expression, IReadOnlyList<Expression> args) =>
         expression is LambdaExpression
             ? new ManyArgumentsInvocationExpression(expression, args)
-            : new TypedManyArgumentsInvocationExpression(expression, args, expression.Type.FindDelegateInvokeMethod().ReturnType);
+            : new TypedManyArgumentsInvocationExpression(expression, args, GetInvocationReturnType(expression));
 
     [RequiresUnreferencedCode(Trimming.Message)]
     public static InvocationExpression Invoke(Expression expression, params Expression[] args) =>

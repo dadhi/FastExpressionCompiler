@@ -2949,13 +2949,45 @@ namespace FastExpressionCompiler
                 ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var exprType = expr.Type;
+                var exprOper = expr.Operand;
+                if ((nodeType == ExpressionType.IsTrue | nodeType == ExpressionType.IsFalse) &&
+                    exprOper.Type == typeof(bool?))
+                {
+                    if (!TryEmit(exprOper, il, ref context, parent & ~ParentFlags.IgnoreResult))
+                        return false;
 
-                if (!TryEmit(expr.Operand, il, ref context, parent))
+                    var valueVar = EmitStoreLocalVariable(il, typeof(bool?));
+                    var nullLabel = il.DefineLabel();
+                    var endLabel = il.DefineLabel();
+
+                    EmitLoadLocalVariableAddress(il, valueVar);
+                    il.Demit(OpCodes.Call, typeof(bool?).GetNullableHasValueGetterMethod());
+                    il.Demit(OpCodes.Brfalse, nullLabel);
+
+                    EmitLoadLocalVariableAddress(il, valueVar);
+                    il.Demit(OpCodes.Ldfld, typeof(bool?).GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                    if (nodeType == ExpressionType.IsFalse)
+                    {
+                        il.Demit(OpCodes.Ldc_I4_0);
+                        il.Demit(OpCodes.Ceq);
+                    }
+                    il.Demit(OpCodes.Newobj, typeof(bool?).GetNullableConstructor());
+                    il.Demit(OpCodes.Br, endLabel);
+
+                    il.DmarkLabel(nullLabel);
+                    InitValueTypeVariable(il, typeof(bool?), valueVar);
+                    EmitLoadLocalVariable(il, valueVar);
+                    il.DmarkLabel(endLabel);
+
+                    return il.EmitPopIfIgnoreResult(parent);
+                }
+
+                if (!TryEmit(exprOper, il, ref context, parent))
                     return false;
 
                 if (nodeType == ExpressionType.TypeAs)
                 {
-                    il.TryEmitBoxOf(expr.Operand.Type);
+                    il.TryEmitBoxOf(exprOper.Type);
                     il.Demit(OpCodes.Isinst, exprType);
                     if (exprType.IsValueType)
                         il.Demit(OpCodes.Unbox_Any, exprType);
@@ -8103,8 +8135,8 @@ namespace FastExpressionCompiler
 
         [MethodImpl((MethodImplOptions)256)]
         internal static MethodInfo FindDelegateInvokeMethod(
-            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods)] this Type type) =>
-            type.GetMethod("Invoke");
+            [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)] this Type type) =>
+            type.GetMethod("Invoke", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
         [RequiresUnreferencedCode(Trimming.Message)]
         internal static class NullableReflected<T> where T : struct
