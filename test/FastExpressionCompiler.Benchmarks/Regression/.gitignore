@@ -1,5 +1,5 @@
 /compiler/
 /bin/
 /obj/
-/__pycache__/
+__pycache__/
 /BenchmarkDotNet.Artifacts/

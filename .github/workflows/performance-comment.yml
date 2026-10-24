@@ -1,0 +1,46 @@
+name: Publish PR performance
+
+on:
+  workflow_run:
+    workflows: [PR performance]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: write
+
+concurrency:
+  group: performance-comment-${{ github.event.workflow_run.head_repository.full_name }}-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  comment:
+    if: github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      # Only trusted default-branch code. Never check out/build the PR in this job.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+          path: trusted
+      - name: Resolve current PR and download bounded data
+        id: prepare
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const publisher = require('./trusted/test/FastExpressionCompiler.Benchmarks/Regression/publish.cjs');
+            await publisher.prepare({github, context, core, directory: require("node:path").join(process.env.RUNNER_TEMP, "performance-comment")});
+      - name: Validate and render data without extracting it
+        if: steps.prepare.outputs.publish == 'true'
+        shell: bash
+        run: python3 trusted/test/FastExpressionCompiler.Benchmarks/Regression/publish.py --directory "$RUNNER_TEMP/performance-comment"
+      - name: Publish current report and outdate older comments
+        if: steps.prepare.outputs.publish == 'true'
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const publisher = require('./trusted/test/FastExpressionCompiler.Benchmarks/Regression/publish.cjs');
+            await publisher.post({github, context, directory: require("node:path").join(process.env.RUNNER_TEMP, "performance-comment")});
