@@ -1409,17 +1409,12 @@ public abstract class Expression
         return GetMethodBasedBinaryOperator(nodeType, left, right, method, liftToNull: true);
     }
 
-    [RequiresUnreferencedCode(Trimming.Message)]
-    public static BinaryExpression GetLeftTypedBinary(ExpressionType nodeType, Expression left, Expression right, MethodInfo method = null) =>
-        method == null
-             ? new LeftTypedBinaryExpression(nodeType, left, right)
-             : GetMethodBasedBinaryOperator(nodeType, left, right, method, liftToNull: true);
-
     /// <summary>Creates a BinaryExpression that represents an arithmetic addition operation that does not have overflow checking.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression Add(Expression left, Expression right) =>
         GetArithmeticBinary(ExpressionType.Add, left, right, null);
 
+    /// <summary>Creates a BinaryExpression that represents an arithmetic addition operation that does not have overflow checking.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression Add(Expression left, Expression right, MethodInfo method) =>
         GetArithmeticBinary(ExpressionType.Add, left, right, method);
@@ -1429,6 +1424,7 @@ public abstract class Expression
     public static BinaryExpression AddChecked(Expression left, Expression right) =>
         GetArithmeticBinary(ExpressionType.AddChecked, left, right);
 
+    /// <summary>Creates a BinaryExpression that represents an arithmetic addition operation that has overflow checking.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression AddChecked(Expression left, Expression right, MethodInfo method) =>
         GetArithmeticBinary(ExpressionType.AddChecked, left, right, method);
@@ -1438,14 +1434,33 @@ public abstract class Expression
         new LeftTypedBinaryExpression(ExpressionType.ExclusiveOr, left, right);
 
     [RequiresUnreferencedCode(Trimming.Message)]
+    public static BinaryExpression GetLeftTypedBinary(ExpressionType nodeType, Expression left, Expression right, MethodInfo method = null) =>
+        method == null
+            ? new LeftTypedBinaryExpression(nodeType, left, right)
+            : GetMethodBasedBinaryOperator(nodeType, left, right, method, liftToNull: true);
+
+    /// <summary>Creates a BinaryExpression that represents a bitwise XOR operation.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression ExclusiveOr(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.ExclusiveOr, left, right, method);
 
-    /// <summary>Creates a BinaryExpression that represents a bitwise left-shift operation.</summary>
-    public static BinaryExpression LeftShift(Expression left, Expression right) =>
-        new LeftTypedBinaryExpression(ExpressionType.LeftShift, left, right);
-
     [RequiresUnreferencedCode(Trimming.Message)]
-    public static BinaryExpression LeftShift(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.LeftShift, left, right, method);
+    private static BinaryExpression GetShiftBinary(ExpressionType nodeType, Expression left, Expression right, MethodInfo method = null)
+    {
+        var leftType = left.Type;
+        return method == null
+            ? leftType.IsNumeric() && !leftType.IsNullable() && right.Type.IsNullable()
+                ? new TypedBinaryExpression(nodeType, left, right, leftType.GetNullable())
+                : new LeftTypedBinaryExpression(nodeType, left, right)
+            : GetMethodBasedBinaryOperator(nodeType, left, right, method, liftToNull: true);
+    }
+
+    /// <summary>Creates a BinaryExpression that represents a bitwise left-shift operation.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
+    public static BinaryExpression LeftShift(Expression left, Expression right) => GetShiftBinary(ExpressionType.LeftShift, left, right);
+
+    /// <summary>Creates a BinaryExpression that represents a bitwise left-shift operation.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
+    public static BinaryExpression LeftShift(Expression left, Expression right, MethodInfo method) => GetShiftBinary(ExpressionType.LeftShift, left, right, method);
 
     /// <summary>Creates a BinaryExpression that represents an arithmetic remainder operation.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
@@ -1460,6 +1475,7 @@ public abstract class Expression
     public static BinaryExpression RightShift(Expression left, Expression right) =>
         new LeftTypedBinaryExpression(ExpressionType.RightShift, left, right);
 
+    /// <summary>Creates a BinaryExpression that represents a bitwise right-shift operation.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression RightShift(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.RightShift, left, right, method);
 
@@ -1468,6 +1484,7 @@ public abstract class Expression
     public static BinaryExpression Subtract(Expression left, Expression right) =>
         GetArithmeticBinary(ExpressionType.Subtract, left, right);
 
+    /// <summary>Creates a BinaryExpression that represents an arithmetic subtraction operation that does not have overflow checking.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression Subtract(Expression left, Expression right, MethodInfo method) =>
         GetArithmeticBinary(ExpressionType.Subtract, left, right, method);
@@ -1477,6 +1494,7 @@ public abstract class Expression
     public static BinaryExpression SubtractChecked(Expression left, Expression right) =>
         GetArithmeticBinary(ExpressionType.SubtractChecked, left, right);
 
+    /// <summary>Creates a BinaryExpression that represents an arithmetic subtraction operation that has overflow checking.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression SubtractChecked(Expression left, Expression right, MethodInfo method) =>
         GetArithmeticBinary(ExpressionType.SubtractChecked, left, right, method);
@@ -1486,6 +1504,7 @@ public abstract class Expression
     public static BinaryExpression Multiply(Expression left, Expression right) =>
         GetArithmeticBinary(ExpressionType.Multiply, left, right);
 
+    /// <summary>Creates a BinaryExpression that represents an arithmetic multiplication operation that does not have overflow checking.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression Multiply(Expression left, Expression right, MethodInfo method) =>
         GetArithmeticBinary(ExpressionType.Multiply, left, right, method);
@@ -1495,6 +1514,7 @@ public abstract class Expression
     public static BinaryExpression MultiplyChecked(Expression left, Expression right) =>
         GetArithmeticBinary(ExpressionType.MultiplyChecked, left, right);
 
+    /// <summary>Creates a BinaryExpression that represents an arithmetic multiplication operation that has overflow checking.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression MultiplyChecked(Expression left, Expression right, MethodInfo method) =>
         GetArithmeticBinary(ExpressionType.MultiplyChecked, left, right, method);
@@ -1504,6 +1524,7 @@ public abstract class Expression
     public static BinaryExpression Divide(Expression left, Expression right) =>
         GetArithmeticBinary(ExpressionType.Divide, left, right);
 
+    /// <summary>Creates a BinaryExpression that represents an arithmetic division operation.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression Divide(Expression left, Expression right, MethodInfo method) =>
         GetArithmeticBinary(ExpressionType.Divide, left, right, method);
@@ -1512,6 +1533,7 @@ public abstract class Expression
     public static BinaryExpression Power(Expression left, Expression right) =>
         new LeftTypedBinaryExpression(ExpressionType.Power, left, right);
 
+    /// <summary>Creates a BinaryExpression that represents raising a number to a power.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression Power(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.Power, left, right, method);
 
@@ -1519,6 +1541,7 @@ public abstract class Expression
     public static BinaryExpression And(Expression left, Expression right) =>
         new LogicalBinaryExpression(ExpressionType.And, left, right);
 
+    /// <summary>Creates a BinaryExpression that represents a bitwise AND operation.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression And(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.And, left, right, method);
 
@@ -1526,6 +1549,7 @@ public abstract class Expression
     public static BinaryExpression AndAlso(Expression left, Expression right) =>
         new LogicalBinaryExpression(ExpressionType.AndAlso, left, right);
 
+    /// <summary>Creates a BinaryExpression that represents a conditional AND operation that evaluates the second operand only if the first operand evaluates to true.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression AndAlso(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.AndAlso, left, right, method);
 
@@ -1534,12 +1558,14 @@ public abstract class Expression
     public static BinaryExpression Or(Expression left, Expression right) =>
         new LeftTypedBinaryExpression(ExpressionType.Or, left, right);
 
+    /// <summary>Creates a BinaryExpression that represents a bitwise OR operation.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression Or(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.Or, left, right, method);
 
+    /// <summary>Creates a BinaryExpression that represents a logical binary operation.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression GetLogicalBinary(ExpressionType nodeType, Expression left, Expression right, bool liftToNull, MethodInfo method) =>
-        !liftToNull && method == null
+        !liftToNull & method == null
             ? new LogicalBinaryExpression(nodeType, left, right)
             : GetMethodBasedBinaryOperator(nodeType, left, right, method, liftToNull);
 
@@ -1547,6 +1573,7 @@ public abstract class Expression
     public static BinaryExpression OrElse(Expression left, Expression right) =>
         new LogicalBinaryExpression(ExpressionType.OrElse, left, right);
 
+    /// <summary>Creates a BinaryExpression that represents a conditional OR operation that evaluates the second operand only if the first operand evaluates to false.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression OrElse(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.OrElse, left, right, method);
 
@@ -1554,6 +1581,7 @@ public abstract class Expression
     public static BinaryExpression Equal(Expression left, Expression right) =>
         new LogicalBinaryExpression(ExpressionType.Equal, left, right);
 
+    /// <summary>Creates a BinaryExpression that represents an equality comparison.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression Equal(Expression left, Expression right, bool liftToNull, MethodInfo method) =>
         GetLogicalBinary(ExpressionType.Equal, left, right, liftToNull, method);
@@ -1562,6 +1590,7 @@ public abstract class Expression
     public static BinaryExpression NotEqual(Expression left, Expression right) =>
         new LogicalBinaryExpression(ExpressionType.NotEqual, left, right);
 
+    /// <summary>Creates a BinaryExpression that represents an inequality comparison.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression NotEqual(Expression left, Expression right, bool liftToNull, MethodInfo method) =>
         GetLogicalBinary(ExpressionType.NotEqual, left, right, liftToNull, method);
@@ -1570,6 +1599,7 @@ public abstract class Expression
     public static BinaryExpression GreaterThan(Expression left, Expression right) =>
         new LogicalBinaryExpression(ExpressionType.GreaterThan, left, right);
 
+    /// <summary>Creates a BinaryExpression that represents a "greater than" numeric comparison.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression GreaterThan(Expression left, Expression right, bool liftToNull, MethodInfo method) =>
         GetLogicalBinary(ExpressionType.GreaterThan, left, right, liftToNull, method);
@@ -1578,6 +1608,7 @@ public abstract class Expression
     public static BinaryExpression GreaterThanOrEqual(Expression left, Expression right) =>
         new LogicalBinaryExpression(ExpressionType.GreaterThanOrEqual, left, right);
 
+    /// <summary>Creates a BinaryExpression that represents a "greater than or equal" numeric comparison.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression GreaterThanOrEqual(Expression left, Expression right, bool liftToNull, MethodInfo method) =>
         GetLogicalBinary(ExpressionType.GreaterThanOrEqual, left, right, liftToNull, method);
@@ -1586,14 +1617,16 @@ public abstract class Expression
     public static BinaryExpression LessThan(Expression left, Expression right) =>
         new LogicalBinaryExpression(ExpressionType.LessThan, left, right);
 
+    /// <summary>Creates a BinaryExpression that represents a "less than" numeric comparison.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression LessThan(Expression left, Expression right, bool liftToNull, MethodInfo method) =>
         GetLogicalBinary(ExpressionType.LessThan, left, right, liftToNull, method);
 
-    /// <summary>Creates a BinaryExpression that represents a " less than or equal" numeric comparison.</summary>
+    /// <summary>Creates a BinaryExpression that represents a "less than or equal" numeric comparison.</summary>
     public static BinaryExpression LessThanOrEqual(Expression left, Expression right) =>
         new LogicalBinaryExpression(ExpressionType.LessThanOrEqual, left, right);
 
+    /// <summary>Creates a BinaryExpression that represents a "less than or equal" numeric comparison.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression LessThanOrEqual(Expression left, Expression right, bool liftToNull, MethodInfo method) =>
         GetLogicalBinary(ExpressionType.LessThanOrEqual, left, right, liftToNull, method);
@@ -3547,6 +3580,17 @@ internal sealed class LeftTypedBinaryExpression : BinaryExpression
     public override Type Type => Left.Type;
     internal LeftTypedBinaryExpression(ExpressionType nodeType, Expression left, Expression right) : base(left, right) =>
         NodeType = nodeType;
+}
+
+internal sealed class TypedBinaryExpression : BinaryExpression
+{
+    public override ExpressionType NodeType { get; }
+    public override Type Type { get; }
+    internal TypedBinaryExpression(ExpressionType nodeType, Expression left, Expression right, Type type) : base(left, right)
+    {
+        NodeType = nodeType;
+        Type = type;
+    }
 }
 
 internal sealed class LiftedToNullBinaryExpression : BinaryExpression

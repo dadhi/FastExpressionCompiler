@@ -5928,6 +5928,13 @@ namespace FastExpressionCompiler
                     rightIsNullable = rightType.IsNullable();
                     if (rightIsNullable)
                     {
+                        if (!leftIsNullable)
+                        {
+                            noNullableValueLabel = il.DefineLabel();
+                            if (leftValueVar == -1)
+                                leftValueVar = EmitStoreLocalVariable(il, leftType);
+                        }
+
                         if (!TryEmit(right, il, ref context, flags | ParentFlags.InstanceCall))
                             return false;
 

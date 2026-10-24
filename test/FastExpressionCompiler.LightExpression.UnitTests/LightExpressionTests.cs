@@ -61,8 +61,21 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Flat_equal_nested_lambdas_with_captures_are_structurally_equal_and_hash_equal();
             Flat_standalone_parameters_use_name_in_structural_equality();
             Flat_structural_hash_supports_dictionary_lookup();
+            Can_compile_shifts_with_nullable_shift_count();
 
-            return 44;
+            return 45;
+        }
+
+        public void Can_compile_shifts_with_nullable_shift_count()
+        {
+            var shift = Parameter(typeof(int?), "shift");
+
+            var leftShift = LeftShift(Constant(16), shift);
+            Asserts.AreEqual(typeof(int?), leftShift.Type);
+            var leftShiftFunc = Lambda<Func<int?, int?>>(leftShift, shift).CompileFast(true);
+            Asserts.IsNotNull(leftShiftFunc);
+            Asserts.AreEqual(64, leftShiftFunc(2));
+            Asserts.AreEqual(null, leftShiftFunc(null));
         }
 
         public void Can_compile_lambda_without_converting_to_expression()
