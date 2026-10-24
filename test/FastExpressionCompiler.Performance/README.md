@@ -1,3 +1,7 @@
+# Current rebased comparison
+
+The current report compares upstream master without #558, current #558, and rebased #559. System is shown separately as an unchanged reference, with no before/after claim. See [three-stage results and full evidence](Measurements/Rebase-20261024/README.md). The retained production increment is named LightExpression field lookup; the modern array classification optimization is already in #558. The BenchmarkDotNet workflow below describes the historical screening harness.
+
 # Focused compiler performance measurements
 
 Measure expression-tree construction (the API has no text parser), compilation of an

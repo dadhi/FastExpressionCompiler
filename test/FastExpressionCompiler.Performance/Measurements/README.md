@@ -1,3 +1,7 @@
+# Historical screening results (original stack)
+
+These measurements belong to the original revisions below. For current three-stage FEC results after rebasing onto #558, see [Rebase-20261024](Rebase-20261024/README.md). System rows in these historical runs are unchanged reference controls; their variation does not mean System was modified. The original array optimization is already present in #558 and is no longer a #559 production change.
+
 # Local performance work, 2026-10-18
 
 Base: compatibility fixes `3f682768d6b23e445ae46595e456658899e371e4`.

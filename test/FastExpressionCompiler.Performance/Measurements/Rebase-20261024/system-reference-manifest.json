@@ -1,0 +1,19 @@
+{
+  "harnessSha256": "f0bd09a3d016c6883f94d7c9f4fea5c06f123028a37474db5488c7de10779e68",
+  "runtimeVersions": [
+    "Microsoft.AspNetCore.App 8.0.28 [C:\\Program Files\\dotnet\\shared\\Microsoft.AspNetCore.App]\nMicrosoft.AspNetCore.App 9.0.9 [C:\\Program Files\\dotnet\\shared\\Microsoft.AspNetCore.App]\nMicrosoft.AspNetCore.App 9.0.17 [C:\\Program Files\\dotnet\\shared\\Microsoft.AspNetCore.App]\nMicrosoft.AspNetCore.App 10.0.9 [C:\\Program Files\\dotnet\\shared\\Microsoft.AspNetCore.App]\nMicrosoft.NETCore.App 8.0.28 [C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App]\nMicrosoft.NETCore.App 9.0.9 [C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App]\nMicrosoft.NETCore.App 9.0.17 [C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App]\nMicrosoft.NETCore.App 10.0.9 [C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App]\nMicrosoft.WindowsDesktop.App 8.0.28 [C:\\Program Files\\dotnet\\shared\\Microsoft.WindowsDesktop.App]\nMicrosoft.WindowsDesktop.App 9.0.9 [C:\\Program Files\\dotnet\\shared\\Microsoft.WindowsDesktop.App]\nMicrosoft.WindowsDesktop.App 9.0.17 [C:\\Program Files\\dotnet\\shared\\Microsoft.WindowsDesktop.App]\nMicrosoft.WindowsDesktop.App 10.0.9 [C:\\Program Files\\dotnet\\shared\\Microsoft.WindowsDesktop.App]\n"
+  ],
+  "binaries": {
+    "system-reference\\bin\\Release\\net10.0\\Reference.deps.json": "435fbc9f390713f425cdc45ca5d350f15973f46698f8729111df8296a35d632a",
+    "system-reference\\bin\\Release\\net10.0\\Reference.dll": "7596ef23cf1c806317c7b02e3292461fd550541d0b61e73f50ff96980ccb8b2c",
+    "system-reference\\bin\\Release\\net10.0\\Reference.exe": "c4ff795c90c5a737b2a14a849e5d77de3259e01f086718d73688085eb5c472e8",
+    "system-reference\\bin\\Release\\net10.0\\Reference.pdb": "05cf6c58658d0e586c4f8d52b915c3138a18092098e4ad18dfc58271d6c1366f",
+    "system-reference\\bin\\Release\\net10.0\\Reference.runtimeconfig.json": "c230a317a54dd960bcbeb5f347f52e18dc665a26f7efda2159fced9a5ac7e097",
+    "system-reference\\bin\\Release\\net8.0\\Reference.deps.json": "9079ab8a9c7a4e6d026eac3279c95338f140e6a75193c987dc12e01752105365",
+    "system-reference\\bin\\Release\\net8.0\\Reference.dll": "1150553008cb0d2775a38cd92116d58c5d55e80eb6624dadb6c83c4ed618b075",
+    "system-reference\\bin\\Release\\net8.0\\Reference.exe": "5c6466b20734242f1f7b747153eaf779ba87eed702d001c21683de6b40a20630",
+    "system-reference\\bin\\Release\\net8.0\\Reference.pdb": "06e73daf74b883deda6e6fefdc3444bd38e0e5b4ac779f1a32a4f0109ac728a5",
+    "system-reference\\bin\\Release\\net8.0\\Reference.runtimeconfig.json": "28329cf08f6505e73806b17558b187c02f0c1c516fe47ebfb7a013d082aaa306"
+  },
+  "meaning": "Unchanged System compiler, separately measured reference; no before/after intervention applies."
+}

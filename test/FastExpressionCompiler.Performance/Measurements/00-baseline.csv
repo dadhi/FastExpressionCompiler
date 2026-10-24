@@ -1,4 +1,4 @@
-phase,method,workload,mean_ns,standard_error_ns,confidence99_halfwidth_ns,samples,allocated_bytes
+phase,method,workload,mean_ns,standard_error_ns,confidence999_halfwidth_ns,samples,allocated_bytes
 Compilation,SystemCompile,Arithmetic,21057.400173611113,480.06713333032013,2596.146657766782,8,4447
 Compilation,FastCompile,Arithmetic,2136.472993116752,29.83925431808885,161.36718177467185,8,943
 Compilation,LightCompile,Arithmetic,1861.2931854812869,14.306173933474842,85.2478605594403,7,943
