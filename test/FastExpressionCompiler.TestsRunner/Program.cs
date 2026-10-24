@@ -160,6 +160,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new ExplicitIncrementOperatorRegressionTests());
 
             st.Run(new Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
+            st.Run(new Issue561_NonBooleanEqualityOperator());
             st.Run(new Issue498_InvalidProgramException_when_using_loop());
             st.Run(new Issue495_Incomplete_pattern_detection_for_NotSupported_1007_Return_goto_from_TryCatch_with_Assign_generates_invalid_IL());
             st.Run(new Issue480_CLR_detected_an_invalid_program_exception());
@@ -283,6 +284,7 @@ namespace FastExpressionCompiler.UnitTests
             lt.Run(new LightExpression.IssueTests.Issue473_InvalidProgramException_when_using_Expression_Condition_with_converted_decimal_expression());
             lt.Run(new LightExpression.IssueTests.Issue476_System_ExecutionEngineException_with_nullables_on_repeated_calls_to_ConcurrentDictionary());
             lt.Run(new LightExpression.IssueTests.Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
+            lt.Run(new LightExpression.IssueTests.Issue561_NonBooleanEqualityOperator());
 
             RunAllTests();
 

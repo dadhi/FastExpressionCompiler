@@ -49,6 +49,7 @@ using System.Diagnostics.CodeAnalysis;
 
 #if NET8_0_OR_GREATER
 using System.Runtime.Intrinsics;
+using System.Numerics;
 #endif
 
 using static SmallMap;
@@ -1113,6 +1114,45 @@ public struct SmallListEnumerator<T, TStack> : IEnumerator<T>, IEnumerator
     public void Dispose() { }
 }
 
+internal static class BitOps
+{
+    /// <summary>Gets the next power of two greater than or equal to the specified capacity.</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public static uint NextPowerOfTwo(uint value)
+    {
+#if NET8_0_OR_GREATER
+        return BitOperations.RoundUpToPowerOf2(value);
+#else
+        --value;
+        value |= value >> 1;
+        value |= value >> 2;
+        value |= value >> 4;
+        value |= value >> 8;
+        value |= value >> 16;
+        return value + 1;
+#endif
+    }
+
+    /// <summary>Counts the number of leading zero bits in the specified value.
+    /// Useful to get Log2(value) and the number of bits needed to represent the value.</summary>
+    [MethodImpl((MethodImplOptions)256)]
+    public static byte LeadingZeroCount(uint value)
+    {
+#if NET8_0_OR_GREATER
+        return (byte)BitOperations.LeadingZeroCount(value);
+#else
+        if (value == 0) return 32;
+        var count = 0;
+        if (value <= 0x0000FFFF) { count += 16; value <<= 16; }
+        if (value <= 0x00FFFFFF) { count += 8; value <<= 8; }
+        if (value <= 0x0FFFFFFF) { count += 4; value <<= 4; }
+        if (value <= 0x3FFFFFFF) { count += 2; value <<= 2; }
+        if (value <= 0x7FFFFFFF) { count += 1; }
+        return (byte)count;
+#endif
+    }
+}
+
 /// <summary>Printable thing via provided printer </summary>
 public interface IPrintable
 {
@@ -1259,8 +1299,6 @@ public static class SmallMap
 {
     internal const byte MinFreeCapacityShift = 3; // e.g. for the capacity 16: 16 >> 3 => 2, 12.5% of the free hash slots (it does not mean the entries free slot)
     internal const byte MinHashesCapacityBitShift = 3; // 1 << 3 == 8
-    internal const byte DefaultHashesCapacityBitShift = 4; // 1 << 4 == 16, means the default capacity is 16 int hashes
-    internal const int IndexMask = (1 << DefaultHashesCapacityBitShift) - 1; // 0b00000000000000000000000000001111
     /// <summary>Upper hash bits spent on storing the probes, e.g. 5 bits mean 31 probes max.</summary>
     public const byte ProbeBits = 5;
     internal const byte NotShiftedProbeCountMask = (1 << ProbeBits) - 1; // 0b00000000000000000000000000011111
@@ -1268,8 +1306,6 @@ public static class SmallMap
     internal const byte ProbeCountShift = 32 - ProbeBits;
     // ~0b11111000000000000000000000000000 -> 0b00000111111111111111111111111111
     internal const int HashAndIndexMask = ~(NotShiftedProbeCountMask << ProbeCountShift);
-    // Window with the hash mask without the lead ProbeMask and closing IndexMask 0b00000111111111111111111111110000
-    internal const int HashMask = HashAndIndexMask & ~IndexMask;
 
     /// <summary>Represent a keyed entry stored in the SmallMap.
     /// Its implementation struct may include the additional Value for the Map or just the Key for the Set.
@@ -1388,7 +1424,7 @@ public static class SmallMap
                 var matches = Vector256.ExtractMostSignificantBits(vMatches);
                 while (matches != 0)
                 {
-                    var matchIndex = System.Numerics.BitOperations.TrailingZeroCount(matches);
+                    var matchIndex = BitOperations.TrailingZeroCount(matches);
 
                     ref var entry = ref entries.GetSurePresentRef(i + matchIndex);
                     if (found = eq.Equals(entry.Key, key))
@@ -1429,7 +1465,7 @@ public static class SmallMap
     public static ref V AddOrGetValueRef<K, V, TEq, TStackCap, TStackHashes, TStackEntries, TEntries>(
         this ref SmallMap<K, Entry<K, V>, TEq, TStackCap, TStackHashes, TStackEntries, TEntries> map, K key, out bool found)
         where TEq : struct, IEq<K>
-        where TStackCap : struct, ISize2Plus
+        where TStackCap : struct, ISize4Plus
         where TStackHashes : struct, IStack<int, TStackCap, TStackHashes>
         where TStackEntries : struct, IStack<Entry<K, V>, TStackCap, TStackEntries>
         where TEntries : struct, IEntries<K, Entry<K, V>, TEq> =>
@@ -1440,7 +1476,7 @@ public static class SmallMap
     public static ref V AddSureAbsentDefaultAndGetValueRef<K, V, TEq, TStackCap, TStackHashes, TStackEntries, TEntries>(
         this ref SmallMap<K, Entry<K, V>, TEq, TStackCap, TStackHashes, TStackEntries, TEntries> map, K key)
         where TEq : struct, IEq<K>
-        where TStackCap : struct, ISize2Plus
+        where TStackCap : struct, ISize4Plus
         where TStackHashes : struct, IStack<int, TStackCap, TStackHashes>
         where TStackEntries : struct, IStack<Entry<K, V>, TStackCap, TStackEntries>
         where TEntries : struct, IEntries<K, Entry<K, V>, TEq>
@@ -1451,7 +1487,7 @@ public static class SmallMap
     public static ref V TryGetValueRef<K, V, TEq, TStackCap, TStackHashes, TStackEntries, TEntries>(
         this ref SmallMap<K, Entry<K, V>, TEq, TStackCap, TStackHashes, TStackEntries, TEntries> map, K key, out bool found)
         where TEq : struct, IEq<K>
-        where TStackCap : struct, ISize2Plus
+        where TStackCap : struct, ISize4Plus
         where TStackHashes : struct, IStack<int, TStackCap, TStackHashes>
         where TStackEntries : struct, IStack<Entry<K, V>, TStackCap, TStackEntries>
         where TEntries : struct, IEntries<K, Entry<K, V>, TEq>
@@ -1480,7 +1516,7 @@ public static class SmallMap
 public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, TEntries>
     where TEntry : struct, IEntry<K>
     where TEq : struct, IEq<K>
-    where TStackCap : struct, ISize2Plus // todo: @simplify Can we combine TStackCap, TStackHashes and TStackEntries together in struct to simplify the generics
+    where TStackCap : struct, ISize4Plus // todo: @simplify Can we combine TStackCap, TStackHashes and TStackEntries together in struct to simplify the generics
     where TStackHashes : struct, IStack<int, TStackCap, TStackHashes>
     where TStackEntries : struct, IStack<TEntry, TStackCap, TStackEntries>
     where TEntries : struct, IEntries<K, TEntry, TEq>
@@ -1515,18 +1551,6 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
 
     /// <summary>Access to the key-value entries</summary>
     public TEntries Entries => _entries;
-
-    /// <summary>Capacity calculates as `1 leftShift capacityBitShift`</summary>
-    public SmallMap(byte capacityBitShift)
-    {
-        // Keep the capacity at least 8 for SIMD Vector256, etc., etc, if you need less space use Stack for that
-        _capacityBitShift = capacityBitShift < MinHashesCapacityBitShift ? MinHashesCapacityBitShift : capacityBitShift;
-
-        // The overflow tail to the hashes is the size of log2N where N==capacityBitShift, 
-        // it is probably fine to have the check for the overflow of capacity because it will be mis-predicted only once at the end of loop (it even rarely for the lookup)
-        _packedHashesAndIndexes = new int[1 << capacityBitShift];
-        _entries.Init(capacityBitShift);
-    }
 
     ///<summary>Get the value ref by the entry index. Also the index corresponds to entry adding order.
     /// Important: it does not check the index bounds, so you need to check that the index is from 0 to map.Count-1</summary>
@@ -1603,6 +1627,7 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
     {
         var indexMask = (1 << _capacityBitShift) - 1;
         var hashIndex = hash & indexMask;
+        var hashMiddleMask = HashAndIndexMask & ~indexMask;
 
 #if NET7_0_OR_GREATER
         ref var hashesAndIndexes = ref MemoryMarshal.GetArrayDataReference(_packedHashesAndIndexes);
@@ -1620,7 +1645,7 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
 
         // 3. We did not find the hash and therefore the key, so insert the new entry
         var hRobinHooded = h;
-        h = (probe << ProbeCountShift) | (hash & HashAndIndexMask & ~indexMask) | index;
+        h = (probe << ProbeCountShift) | (hash & hashMiddleMask) | index;
 
         // 4. If the robin hooded hash is empty then we stop
         // 5. Otherwise we steal the slot with the smaller probes
@@ -1643,7 +1668,8 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
     [UnscopedRef]
     public ref TEntry AddOrGetEntryRef(K key, out bool found)
     {
-        if (_count > StackEntries.Capacity)
+        var stackCap = _stackHashes.Capacity;
+        if (_count > stackCap)
             return ref AddOrGetRefInEntries(key, out found);
 
         ref var e = ref StackEntries.TryGetEntryRef(ref _stackHashes, _count, key, out found,
@@ -1652,7 +1678,7 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
             return ref e;
 
         // Add the new entry to the stack if there is still space in stack
-        if (_count < StackEntries.Capacity)
+        if (_count < stackCap)
         {
             var newIndex = _count++;
             _stackHashes.GetSurePresentRef(newIndex) = default(TEq).GetHashCode(key);
@@ -1665,24 +1691,23 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
         // To avoid double work always going linearly through the Stack with the comparison,
         // let's calculate the hash of the keys stored on stack and put them 
         // to the usual HashMap packed hashes and indexes array for the promised O(1) lookup.
-        // But the values are remaining on the Stack, and for the found index of the entry we use the GetSurePresentRef(index) 
-        // to get the value reference either from the Stack or the Entries.
-        // So the values on the stack are guarantied to be stable from the beginning of the map creation, 
+        // But the entries are remaining on the Stack, and for the found index of the entry we use the GetSurePresentRef(index) 
+        // to get the entry reference either from the Stack or the Entries.
+        // So the entries on the stack are guarantied to be stable from the beginning of the map creation, 
         // because they are not copied when the Entries need to Resize (depending on the TEntries implementation). 
 
-        _capacityBitShift = DefaultHashesCapacityBitShift;
-        // Promotion also inserts one entry beyond the inline capacity.
-        while ((1 << _capacityBitShift) <= StackEntries.Capacity)
-            ++_capacityBitShift;
-        _packedHashesAndIndexes = new int[1 << _capacityBitShift];
+        // say for stackCap 16, 0x0...10000 -> leading zero count = 27, 32 - 27 = 5 -> new capacity bit shift is 5 -> 1 << 5 = 32
+        _capacityBitShift = (byte)(32 - BitOps.LeadingZeroCount((uint)stackCap));
+        _packedHashesAndIndexes = new int[stackCap << 1]; // say 16 << 1 = 32
+        Debug.Assert(_packedHashesAndIndexes.Length == (1 << _capacityBitShift), "Packed hashes and indexes array length should match the capacity bit shift.");
 
-        for (var i = 0; i < StackEntries.Capacity; ++i)
+        for (var i = 0; i < stackCap; ++i)
             AddJustHashAndEntryIndexWithoutResizing(default(TEq).GetHashCode(GetSurePresentEntryRef(i).Key), i);
 
-        AddJustHashAndEntryIndexWithoutResizing(default(TEq).GetHashCode(key), StackEntries.Capacity);
+        AddJustHashAndEntryIndexWithoutResizing(default(TEq).GetHashCode(key), stackCap);
 
-        _count = StackEntries.Capacity + 1; // +1 because we added the new key
-        _entries.Init(StackEntries.Capacity); // Give the heap entries the same initial capacity as Stack, effectively doubling the capacity
+        _count = stackCap + 1; // +1 because we added the new key
+        _entries.Init(stackCap); // Give the heap entries the same initial capacity as stack N -> now we have N on stack and N on heap
         return ref _entries.AddKeyAndGetEntryRef(key, 0); // add the new key to the entries with the 0 index in the entries
     }
 
@@ -1772,11 +1797,12 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
     [UnscopedRef]
     public ref TEntry AddSureAbsentDefaultEntryAndGetRef(K key)
     {
-        if (_count > StackEntries.Capacity)
+        var stackCap = _stackHashes.Capacity;
+        if (_count > stackCap)
             return ref AddSureAbsentDefaultAndGetRefInEntries(key);
 
         // Add the new entry to the stack if there is still space in stack
-        if (_count < StackEntries.Capacity)
+        if (_count < stackCap)
         {
             var newIndex = _count++;
             _stackHashes.GetSurePresentRef(newIndex) = default(TEq).GetHashCode(key);
@@ -1785,19 +1811,18 @@ public struct SmallMap<K, TEntry, TEq, TStackCap, TStackHashes, TStackEntries, T
             return ref newEntry;
         }
 
-        _capacityBitShift = DefaultHashesCapacityBitShift;
-        // Promotion also inserts one entry beyond the inline capacity.
-        while ((1 << _capacityBitShift) <= StackEntries.Capacity)
-            ++_capacityBitShift;
-        _packedHashesAndIndexes = new int[1 << _capacityBitShift];
+        // say for stackCap 16, 0x0...10000 -> leading zero count = 27, 32 - 27 = 5 -> new capacity bit shift is 5 -> 1 << 5 = 32
+        _capacityBitShift = (byte)(32 - BitOps.LeadingZeroCount((uint)stackCap));
+        _packedHashesAndIndexes = new int[stackCap << 1]; // say 16 << 1 = 32
+        Debug.Assert(_packedHashesAndIndexes.Length == (1 << _capacityBitShift), "Packed hashes and indexes array length should match the capacity bit shift.");
 
-        for (var i = 0; i < StackEntries.Capacity; ++i)
+        for (var i = 0; i < stackCap; ++i)
             AddJustHashAndEntryIndexWithoutResizing(default(TEq).GetHashCode(GetSurePresentEntryRef(i).Key), i);
 
-        AddJustHashAndEntryIndexWithoutResizing(default(TEq).GetHashCode(key), StackEntries.Capacity);
+        AddJustHashAndEntryIndexWithoutResizing(default(TEq).GetHashCode(key), stackCap);
 
-        _count = StackEntries.Capacity + 1; // +1 because we added the new key
-        _entries.Init(StackEntries.Capacity); // Give the heap entries the same initial capacity as Stack, effectively doubling the capacity
+        _count = stackCap + 1; // +1 because we added the new key
+        _entries.Init(stackCap); // Give the heap entries the same initial capacity as Stack, effectively doubling the capacity
         return ref _entries.AddKeyAndGetEntryRef(key, 0); // add the new key to the entries with the 0 index in the entries
     }
 
