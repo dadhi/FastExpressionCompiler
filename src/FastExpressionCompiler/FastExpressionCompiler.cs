@@ -415,7 +415,7 @@ namespace FastExpressionCompiler
 #endif
             // Try to avoid compilation altogether for Func<bool> delegates via Interpreter, see #468
             if (closureAndParamTypes.Length == 1 & returnType == typeof(bool) 
-                && bodyExpr.Type.IsPrimitive // todo: @feat #496 nullable is not supported yet
+                && bodyExpr.Type.IsPrimitive // the interpreter folds only primitives, nullable constant folding is not supported, see #496
                 && Interpreter.IsCandidateForInterpretation(bodyExpr)
                 && Interpreter.TryInterpretBool(out var result, bodyExpr, flags))
                 return result ? Interpreter.TrueFunc : Interpreter.FalseFunc;
@@ -2063,9 +2063,9 @@ namespace FastExpressionCompiler
                                     logical.Left.Type == typeof(bool?) && logical.Right.Type == typeof(bool?))
                                     return TryEmitNullableBooleanShortCircuit(logical.Left, logical.Right, nodeType == ExpressionType.AndAlso, il, ref context, parent);
 
-                                if (!exprType.IsPrimitive) // todo: @feat #496
+                                if (!exprType.IsPrimitive)
                                 {
-                                    Debug.WriteLine("Unsupported: Nullable<bool> in || or && (is invalid C# but valid expression) is not supported yet, see #480: " + expr);
+                                    Debug.WriteLine("Unsupported: non-primitive result in || or && (other than `bool?` operands without a method), see #480: " + expr);
                                     return false;
                                 }
                                 if (Interpreter.TryInterpretBool(out var resultBool, expr, context.CompilerFlags))
@@ -2078,9 +2078,13 @@ namespace FastExpressionCompiler
                             }
                         case ExpressionType.Not:
                             {
-                                if (!exprType.IsPrimitive) // todo: @feat #496
+                                var notExpr = (UnaryExpression)expr;
+                                if (exprType == typeof(bool?) && notExpr.Method == null && notExpr.Operand.Type == typeof(bool?))
+                                    return TryEmitNullableBooleanNot(notExpr.Operand, il, ref context, parent);
+
+                                if (!exprType.IsPrimitive)
                                 {
-                                    Debug.WriteLine("Unsupported: Nullable<bool> in !x (is invalid C# but valid expression) is not supported yet, see #480: " + expr);
+                                    Debug.WriteLine("Unsupported: non-primitive result in !x (other than `bool?` operand without a method), see #480: " + expr);
                                     return false;
                                 }
 
@@ -6050,6 +6054,39 @@ namespace FastExpressionCompiler
 
                 il.DmarkLabel(falseLabel);
                 il.Demit(OpCodes.Ldc_I4_0);
+                il.Demit(OpCodes.Newobj, typeof(bool?).GetNullableConstructor());
+                il.Demit(OpCodes.Br, doneLabel);
+
+                il.DmarkLabel(nullLabel);
+                EmitLoadLocalVariable(il, InitValueTypeVariable(il, typeof(bool?)));
+
+                il.DmarkLabel(doneLabel);
+                return il.EmitPopIfIgnoreResult(parent);
+            }
+
+            // Lifted `!` for `bool?`: null stays null
+            private static bool TryEmitNullableBooleanNot(Expression operand, ILGenerator il,
+                ref CompilerContext context, ParentFlags parent)
+            {
+                var flags = (parent
+                    & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
+                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
+                    | ParentFlags.Arithmetic;
+
+                if (!TryEmit(operand, il, ref context, flags))
+                    return false;
+                var opVar = EmitStoreLocalVariable(il, typeof(bool?));
+
+                var nullLabel = il.DefineLabel();
+                var doneLabel = il.DefineLabel();
+
+                EmitLoadLocalVariableAddress(il, opVar);
+                EmitMethodCall(il, typeof(bool?).GetNullableHasValueGetterMethod());
+                il.Demit(OpCodes.Brfalse, nullLabel);
+                EmitLoadLocalVariableAddress(il, opVar);
+                il.Demit(OpCodes.Ldfld, typeof(bool?).GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                il.Demit(OpCodes.Ldc_I4_0);
+                il.Demit(OpCodes.Ceq);
                 il.Demit(OpCodes.Newobj, typeof(bool?).GetNullableConstructor());
                 il.Demit(OpCodes.Br, doneLabel);
 

@@ -65,14 +65,33 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_compile_shifts_with_nullable_shift_count();
             Can_compile_nullable_boolean_and_also();
             Can_compile_nullable_boolean_or_else();
+            Can_compile_nullable_boolean_not();
 
-            return 48;
+            return 49;
         }
 
         private static int _sideEffectCalls;
         private static bool? SideEffect(bool? value) { ++_sideEffectCalls; return value; }
 
         private static int AndInts(int left, int right) => left & right;
+
+        public void Can_compile_nullable_boolean_not()
+        {
+            var p = Parameter(typeof(bool?), "p");
+            var not = Not(p);
+            Asserts.AreEqual(typeof(bool?), not.Type);
+
+            var lambda = Lambda<Func<bool?, bool?>>(not, p);
+            var fast = lambda.CompileFast(true);
+            Asserts.IsNotNull(fast);
+            var sys = lambda.CompileSys();
+
+            Asserts.AreEqual(false, sys(true));
+            Asserts.AreEqual(true, sys(false));
+            Asserts.AreEqual(null, sys(null));
+            foreach (var v in new bool?[] { true, false, null })
+                Asserts.AreEqual(sys(v), fast(v));
+        }
 
         public void Can_compile_nullable_boolean_and_also() => CheckNullableShortCircuit(true);
 
