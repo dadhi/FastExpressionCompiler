@@ -69,8 +69,9 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_make_goto_of_all_kinds_with_value_and_type();
             Can_compile_goto_with_value_of_all_kinds();
             Can_compile_loop_with_break_and_continue_with_value();
+            Can_print_new_expression_kinds();
 
-            return 52;
+            return 53;
         }
 
         private static int _sideEffectCalls;
@@ -176,6 +177,58 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                 Asserts.AreEqual(sys(9), fast(9));
                 Asserts.AreEqual(sys(1), fast(1));
             }
+        }
+
+        public void Can_print_new_expression_kinds()
+        {
+            var intLabel = Label(typeof(int), "intLabel");
+            var voidLabel = Label("voidLabel");
+            var nl = Parameter(typeof(int?), "nl");
+            var l = Parameter(typeof(bool?), "l");
+            var r = Parameter(typeof(bool?), "r");
+
+            // Continue with the value and Continue with the value and type
+            var continueValue = Continue(intLabel, Constant(42));
+            var continueTypedValue = Continue(intLabel, Constant(42), typeof(void));
+            foreach (var c in new[] { continueValue, continueTypedValue })
+            {
+                var es = c.ToExpressionString();
+                Asserts.Contains("MakeGoto(System.Linq.Expressions.GotoExpressionKind.Continue,", es);
+                Asserts.Contains("Label(typeof(int), \"intLabel\")", es);
+                Asserts.Contains("Constant(42)", es);
+                // a value goto is printed as the return of the value, the same way as for the Break with value
+                Asserts.AreEqual("return 42;", c.ToCSharpString());
+            }
+            Asserts.Contains("typeof(int));", continueValue.ToExpressionString());
+            Asserts.Contains("typeof(void));", continueTypedValue.ToExpressionString());
+            Asserts.AreEqual(Break(intLabel, Constant(42)).ToCSharpString(), continueValue.ToCSharpString());
+
+            // typed Continue without the value is printed as goto
+            var continueTyped = Continue(voidLabel, typeof(string));
+            var typedEs = continueTyped.ToExpressionString();
+            Asserts.Contains("MakeGoto(System.Linq.Expressions.GotoExpressionKind.Continue,", typedEs);
+            Asserts.Contains("typeof(string));", typedEs);
+            Asserts.Contains("goto voidLabel", continueTyped.ToCSharpString());
+
+            // nullable shift via the TypedBinaryExpression
+            var shift = LeftShift(Constant(16), nl);
+            Asserts.AreEqual(typeof(int?), shift.Type);
+            Asserts.Contains("MakeBinary(ExpressionType.LeftShift,", shift.ToExpressionString());
+            Asserts.Contains("Parameter(typeof(int?), \"nl\")", shift.ToExpressionString());
+            Asserts.AreEqual("16 << nl", shift.ToCSharpString());
+
+            // nullable And, AndAlso, OrElse
+            Asserts.Contains("MakeBinary(ExpressionType.And,", And(l, r).ToExpressionString());
+            Asserts.Contains("MakeBinary(ExpressionType.AndAlso,", AndAlso(l, r).ToExpressionString());
+            Asserts.Contains("MakeBinary(ExpressionType.OrElse,", OrElse(l, r).ToExpressionString());
+            Asserts.AreEqual("l & r", And(l, r).ToCSharpString());
+            Asserts.AreEqual("l && r", AndAlso(l, r).ToCSharpString());
+            Asserts.AreEqual("l || r", OrElse(l, r).ToCSharpString());
+
+            // nullable boolean Not is the logical `!` and not the bitwise `~`
+            Asserts.AreEqual("!(l)", Not(l).ToCSharpString());
+            Asserts.AreEqual("~(nl)", Not(nl).ToCSharpString());
+            Asserts.AreEqual("!(b)", Not(Parameter(typeof(bool), "b")).ToCSharpString());
         }
 
         private static int AndInts(int left, int right) => left & right;

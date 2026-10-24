@@ -11454,7 +11454,7 @@ namespace FastExpressionCompiler
 
                                 case ExpressionType.Not: // either the bool not or the binary not
                                     return op.ToCSharpString(
-                                        e.Type == typeof(bool) ? sb.Append("!(") : sb.Append("~("), enclosedIn, ref ctx,
+                                        e.Type == typeof(bool) || e.Type == typeof(bool?) ? sb.Append("!(") : sb.Append("~("), enclosedIn, ref ctx,
                                         lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode)
                                         .Append(')');
 
