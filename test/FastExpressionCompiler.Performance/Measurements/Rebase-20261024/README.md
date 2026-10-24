@@ -2,7 +2,7 @@
 
 ## Exact revisions and retained scope
 
-- Before #558: current upstream master without #558, `233ed5adaa9d9ceea67d71e153d0d2457f2cce00`. This includes merged #557/#562 and upstream SmallMap/conversion-helper repairs. It is not the historical original parent of #558; choosing this matched base isolates the current PR's incremental cost.
+- Before #558: upstream master snapshot at measurement start, without #558, `233ed5adaa9d9ceea67d71e153d0d2457f2cce00`. This includes merged #557/#562 and upstream SmallMap/conversion-helper repairs. It is not the historical original parent of #558; choosing this matched base isolates the current PR's incremental cost.
 - After #558: `aaa79fe73f0978e9be8150116d4175f04cb5c971`.
 - After #559: rebased production/test source `e300f4e2`.
 
@@ -76,3 +76,7 @@ Validated source `e300f4e2`: all production targets build; full .NET 10/.NET 8 A
 - `source-manifest.json`, `binary-manifest.json`, `system-reference-manifest.json`: immutable snapshot identities.
 - `range-diff.txt`: old/rebased performance-layer mapping.
 - `evidence.zip` and `evidence-manifest.json`: complete sources, harnesses/scripts, project files, native/imported validation logs, raw measurements, confirmation data and manifests. Binaries are hashed and retained locally, not committed. Runners refuse to mix existing output with a new run; preserve/relocate archived output before replaying in a fresh directory. The initial System-reference build error is retained; the corrected reference project was then built and measured successfully.
+
+## Upstream advanced after measurement
+
+After the measurement snapshots were frozen, dadhi/master advanced to `f49acef0` through `c89a3b2c` (nullable truth operators, Quote, and literal-lambda invocation changes). The requested parent #558 remains at `aaa79fe7`; this performance layer remains rebased onto exactly that head. The new master creates conflicts in the parent compatibility changes, so GitHub currently reports #559 as conflicting against its nominal master base. `git merge-tree` confirms conflicts in both compiler source files. No working-tree merge was started, and #558 was not changed. Integrating the new upstream semantics belongs in the parent layer first; the pinned measurements here do not claim to include that subsequent upstream work.
