@@ -5539,7 +5539,11 @@ namespace FastExpressionCompiler
                 // A conversion chain may contain a custom IL emitter.
                 for (var operand = right; !spillLeft;)
                 {
-                    spillLeft = operand.IsIntrinsic;
+                    if (operand.IsIntrinsic)
+                    {
+                        spillLeft = true;
+                        break;
+                    }
                     if (operand is not UnaryExpression convert || convert.NodeType != ExpressionType.Convert)
                         break;
                     operand = convert.Operand;
