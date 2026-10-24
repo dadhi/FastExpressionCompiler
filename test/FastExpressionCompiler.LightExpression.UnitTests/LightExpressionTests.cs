@@ -63,11 +63,82 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Flat_structural_hash_supports_dictionary_lookup();
             Can_compile_nullable_boolean_and();
             Can_compile_shifts_with_nullable_shift_count();
+            Can_compile_nullable_boolean_and_also();
+            Can_compile_nullable_boolean_or_else();
 
-            return 46;
+            return 48;
         }
 
+        private static int _sideEffectCalls;
+        private static bool? SideEffect(bool? value) { ++_sideEffectCalls; return value; }
+
         private static int AndInts(int left, int right) => left & right;
+
+        public void Can_compile_nullable_boolean_and_also() => CheckNullableShortCircuit(true);
+
+        public void Can_compile_nullable_boolean_or_else() => CheckNullableShortCircuit(false);
+
+        private void CheckNullableShortCircuit(bool isAnd)
+        {
+            Func<Expression, Expression, BinaryExpression> make = isAnd ? AndAlso : OrElse;
+            Func<Expression, Expression, MethodInfo, BinaryExpression> makeWithMethod = isAnd ? AndAlso : OrElse;
+            var expectedShortValue = !isAnd;
+
+            var left = Parameter(typeof(bool?), "left");
+            var right = Parameter(typeof(bool?), "right");
+            var expr = make(left, right);
+            Asserts.AreEqual(typeof(bool?), expr.Type);
+
+            var lambda = Lambda<Func<bool?, bool?, bool?>>(expr, left, right);
+            var fast = lambda.CompileFast(true);
+            Asserts.IsNotNull(fast);
+            var sys = lambda.CompileSys();
+
+            bool? Expected(bool? l, bool? r) => isAnd
+                ? (l == false || r == false ? false : l == null || r == null ? null : (bool?)true)
+                : (l == true || r == true ? true : l == null || r == null ? null : (bool?)false);
+
+            bool?[] values = { true, false, null };
+            foreach (var l in values)
+                foreach (var r in values)
+                {
+                    var sysResult = sys(l, r);
+                    Asserts.AreEqual(Expected(l, r), sysResult);
+                    Asserts.AreEqual(sysResult, fast(l, r));
+                }
+
+            // the right operand must not be evaluated when the left one decides the result
+            var sideEffect = typeof(LightExpressionTests).GetMethod(nameof(SideEffect), BindingFlags.Static | BindingFlags.NonPublic);
+            var sideEffectLambda = Lambda<Func<bool?, bool?>>(make(left, Call(sideEffect, Constant(null, typeof(bool?)))), left);
+            var sideEffectFast = sideEffectLambda.CompileFast(true);
+            Asserts.IsNotNull(sideEffectFast);
+            _sideEffectCalls = 0;
+            Asserts.AreEqual(expectedShortValue, sideEffectFast(expectedShortValue));
+            Asserts.AreEqual(0, _sideEffectCalls);
+            Asserts.AreEqual(null, sideEffectFast(null));
+            Asserts.AreEqual(1, _sideEffectCalls);
+            Asserts.AreEqual(null, sideEffectFast(!expectedShortValue));
+            Asserts.AreEqual(2, _sideEffectCalls);
+
+            var withNullMethod = makeWithMethod(left, right, null);
+            Asserts.AreEqual(typeof(bool?), withNullMethod.Type);
+            var nullMethodLambda = Lambda<Func<bool?, bool?, bool?>>(withNullMethod, left, right);
+            var nullMethodFast = nullMethodLambda.CompileFast(true);
+            Asserts.IsNotNull(nullMethodFast);
+            var nullMethodSys = nullMethodLambda.CompileSys();
+            foreach (var l in values)
+                foreach (var r in values)
+                    Asserts.AreEqual(nullMethodSys(l, r), nullMethodFast(l, r));
+
+            Asserts.Throws<InvalidOperationException>(() =>
+                makeWithMethod(Parameter(typeof(bool), "nonNullableLeft"), right, null));
+            Asserts.Throws<InvalidOperationException>(() =>
+                makeWithMethod(left, Parameter(typeof(int?), "unrelatedRight"), null));
+
+            var incompatibleMethod = typeof(LightExpressionTests).GetMethod(
+                nameof(AndInts), BindingFlags.Static | BindingFlags.NonPublic);
+            Asserts.Throws<InvalidOperationException>(() => makeWithMethod(left, right, incompatibleMethod));
+        }
 
         public void Can_compile_nullable_boolean_and()
         {

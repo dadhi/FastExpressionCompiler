@@ -2058,6 +2058,11 @@ namespace FastExpressionCompiler
                         case ExpressionType.AndAlso:
                         case ExpressionType.OrElse:
                             {
+                                var logical = (BinaryExpression)expr;
+                                if (exprType == typeof(bool?) && logical.Method == null &&
+                                    logical.Left.Type == typeof(bool?) && logical.Right.Type == typeof(bool?))
+                                    return TryEmitNullableBooleanShortCircuit(logical.Left, logical.Right, nodeType == ExpressionType.AndAlso, il, ref context, parent);
+
                                 if (!exprType.IsPrimitive) // todo: @feat #496
                                 {
                                     Debug.WriteLine("Unsupported: Nullable<bool> in || or && (is invalid C# but valid expression) is not supported yet, see #480: " + expr);
@@ -6050,6 +6055,67 @@ namespace FastExpressionCompiler
 
                 il.DmarkLabel(nullLabel);
                 EmitLoadLocalVariable(il, InitValueTypeVariable(il, typeof(bool?)));
+
+                il.DmarkLabel(doneLabel);
+                return il.EmitPopIfIgnoreResult(parent);
+            }
+
+            // Short-circuiting `bool?` && and ||: the right operand is emitted once and only evaluated when the left does not decide the result
+            private static bool TryEmitNullableBooleanShortCircuit(Expression left, Expression right, bool isAnd, ILGenerator il,
+                ref CompilerContext context, ParentFlags parent)
+            {
+                var flags = (parent
+                    & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
+                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
+                    | ParentFlags.Arithmetic;
+
+                if (!TryEmit(left, il, ref context, flags))
+                    return false;
+                var leftVar = EmitStoreLocalVariable(il, typeof(bool?));
+
+                var hasValueGetter = typeof(bool?).GetNullableHasValueGetterMethod();
+                var valueField = typeof(bool?).GetNullableValueUnsafeAkaGetValueOrDefaultMethod();
+                var shortLabel = il.DefineLabel();
+                var leftNullLabel = il.DefineLabel();
+                var nullResultLabel = il.DefineLabel();
+                var doneLabel = il.DefineLabel();
+                var decidingOp = isAnd ? OpCodes.Brfalse : OpCodes.Brtrue;
+
+                EmitLoadLocalVariableAddress(il, leftVar);
+                EmitMethodCall(il, hasValueGetter);
+                il.Demit(OpCodes.Brfalse, leftNullLabel);
+                EmitLoadLocalVariableAddress(il, leftVar);
+                il.Demit(OpCodes.Ldfld, valueField);
+                il.Demit(decidingOp, shortLabel);
+
+                il.DmarkLabel(leftNullLabel);
+                if (!TryEmit(right, il, ref context, flags))
+                    return false;
+                var rightVar = EmitStoreLocalVariable(il, typeof(bool?));
+
+                // left is either null or the non-deciding value, so the result is the right one
+                EmitLoadLocalVariableAddress(il, leftVar);
+                EmitMethodCall(il, hasValueGetter);
+                var leftNullBranch = il.DefineLabel();
+                il.Demit(OpCodes.Brfalse, leftNullBranch);
+                EmitLoadLocalVariable(il, rightVar);
+                il.Demit(OpCodes.Br, doneLabel);
+
+                il.DmarkLabel(leftNullBranch);
+                EmitLoadLocalVariableAddress(il, rightVar);
+                EmitMethodCall(il, hasValueGetter);
+                il.Demit(OpCodes.Brfalse, nullResultLabel);
+                EmitLoadLocalVariableAddress(il, rightVar);
+                il.Demit(OpCodes.Ldfld, valueField);
+                il.Demit(decidingOp, shortLabel);
+
+                il.DmarkLabel(nullResultLabel);
+                EmitLoadLocalVariable(il, InitValueTypeVariable(il, typeof(bool?)));
+                il.Demit(OpCodes.Br, doneLabel);
+
+                il.DmarkLabel(shortLabel);
+                il.Demit(isAnd ? OpCodes.Ldc_I4_0 : OpCodes.Ldc_I4_1);
+                il.Demit(OpCodes.Newobj, typeof(bool?).GetNullableConstructor());
 
                 il.DmarkLabel(doneLabel);
                 return il.EmitPopIfIgnoreResult(parent);
