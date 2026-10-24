@@ -1,0 +1,4 @@
+* -text
+*.json linguist-generated=true
+*.csv linguist-generated=true
+*.txt linguist-generated=true

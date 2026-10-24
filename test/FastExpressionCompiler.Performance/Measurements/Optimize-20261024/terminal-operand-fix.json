@@ -1,0 +1,7382 @@
+[
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "constant",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 847.6284584980237,
+      "bytes": 872.0442687747036
+    },
+    "candidate-left": {
+      "ns": 845.9705753184014,
+      "bytes": 872.0442687747036
+    },
+    "ratio": 0.9980440921219658
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "constant",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2048022345447242,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2161735829647284,
+      "bytes": 0
+    },
+    "ratio": 1.009438352697197
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "constant",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 111.05779338944835,
+      "bytes": 392.0164430041107
+    },
+    "candidate-left": {
+      "ns": 110.46148074037019,
+      "bytes": 392.0164430041107
+    },
+    "ratio": 0.9946306096053336
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "add",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1079.4625,
+      "bytes": 872.0504
+    },
+    "candidate-left": {
+      "ns": 1086.275,
+      "bytes": 872.0504
+    },
+    "ratio": 1.0063110112671816
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "add",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2070896963225615,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2036951926692991,
+      "bytes": 0
+    },
+    "ratio": 0.9971878612968003
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "add",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 130.59670024686815,
+      "bytes": 440.0193201159207
+    },
+    "candidate-left": {
+      "ns": 129.8918418510511,
+      "bytes": 440.0193201159207
+    },
+    "ratio": 0.9946027855643776
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "arithmetic64",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 20419.507575757576,
+      "bytes": 1056.3471074380166
+    },
+    "candidate-left": {
+      "ns": 20358.384986225898,
+      "bytes": 1056.3471074380166
+    },
+    "ratio": 0.9970066570261349
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "arithmetic64",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2437551738166668,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2153892760780907,
+      "bytes": 0
+    },
+    "ratio": 0.9771933429217177
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "arithmetic64",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 1569.7772713907675,
+      "bytes": 6488.2716847985885
+    },
+    "candidate-left": {
+      "ns": 1622.3169655983534,
+      "bytes": 6488.2716847985885
+    },
+    "ratio": 1.033469521546224
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "balanced256",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 24516.839378238343,
+      "bytes": 1376.4352331606217
+    },
+    "candidate-left": {
+      "ns": 23877.698618307426,
+      "bytes": 1376.4352331606217
+    },
+    "ratio": 0.9739305401454711
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "balanced256",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 10.109920953121458,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 10.046951955770414,
+      "bytes": 0
+    },
+    "ratio": 0.9937715638289336
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "balanced256",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 5074.111675126904,
+      "bytes": 12584.511675126903
+    },
+    "candidate-left": {
+      "ns": 5078.278341793571,
+      "bytes": 12584.511675126903
+    },
+    "ratio": 1.0008211617980527
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "conditional",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1350.0847155341537,
+      "bytes": 1064.0539325842697
+    },
+    "candidate-left": {
+      "ns": 1336.2760834670946,
+      "bytes": 1064.0539325842697
+    },
+    "ratio": 0.9897720254824188
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "conditional",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.196719675393606,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.200666369992794,
+      "bytes": 0
+    },
+    "ratio": 1.003297927392971
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "conditional",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 165.76538218706395,
+      "bytes": 520.0213920766549
+    },
+    "candidate-left": {
+      "ns": 166.3947559700978,
+      "bytes": 520.0213920766549
+    },
+    "ratio": 1.0037967745420067
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nullable",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1271.6154984279638,
+      "bytes": 1368.062141668208
+    },
+    "candidate-left": {
+      "ns": 1277.4335737624067,
+      "bytes": 1368.062141668208
+    },
+    "ratio": 1.004575341635609
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nullable",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2439645487737767,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2482891183877804,
+      "bytes": 0
+    },
+    "ratio": 1.0034764412042663
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nullable",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 226.63316485376438,
+      "bytes": 552.0234784431556
+    },
+    "candidate-left": {
+      "ns": 227.79485865573488,
+      "bytes": 552.0234784431556
+    },
+    "ratio": 1.0051258773300902
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "new_member",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1256.5041666666666,
+      "bytes": 968
+    },
+    "candidate-left": {
+      "ns": 1226.7125,
+      "bytes": 968
+    },
+    "ratio": 0.9762900375048499
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "new_member",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2202641605066575,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2192704937658385,
+      "bytes": 0
+    },
+    "ratio": 0.9991856953822142
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "new_member",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 264.87955468383103,
+      "bytes": 664.0278460730959
+    },
+    "candidate-left": {
+      "ns": 263.7411714872418,
+      "bytes": 664.0278460730959
+    },
+    "ratio": 0.9957022609844386
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "constant_object",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1322.845187524961,
+      "bytes": 1056
+    },
+    "candidate-left": {
+      "ns": 1315.9196529063647,
+      "bytes": 1056
+    },
+    "ratio": 0.9947646673368077
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "constant_object",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.0128855569056332,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.0080570825767146,
+      "bytes": 0
+    },
+    "ratio": 0.995232951742673
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "constant_object",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 170.86738713382766,
+      "bytes": 464.021217096361
+    },
+    "candidate-left": {
+      "ns": 172.8286755552348,
+      "bytes": 464.021217096361
+    },
+    "ratio": 1.01147842460932
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "array",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1319.061441702951,
+      "bytes": 992.0522496371553
+    },
+    "candidate-left": {
+      "ns": 1274.9844495127513,
+      "bytes": 992.0522496371553
+    },
+    "ratio": 0.9665845799166907
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "array",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.0255006806658111,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.0245060104375676,
+      "bytes": 0
+    },
+    "ratio": 0.9990300638049331
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "array",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 151.8560682591735,
+      "bytes": 552.0234990597268
+    },
+    "candidate-left": {
+      "ns": 151.60869610265817,
+      "bytes": 552.0234990597268
+    },
+    "ratio": 0.9983710090788527
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "new_array",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1504.2791666666667,
+      "bytes": 1320
+    },
+    "candidate-left": {
+      "ns": 1506.3458333333333,
+      "bytes": 1320
+    },
+    "ratio": 1.0013738584648793
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "new_array",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2296834723388044,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2423279100363738,
+      "bytes": 0
+    },
+    "ratio": 1.0102826767879707
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "new_array",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 180.86288140755738,
+      "bytes": 544.0240804113737
+    },
+    "candidate-left": {
+      "ns": 180.85541600224562,
+      "bytes": 544.0240804113737
+    },
+    "ratio": 0.9999587233972297
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "interned_string",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1051.5291666666667,
+      "bytes": 872
+    },
+    "candidate-left": {
+      "ns": 998.9666666666666,
+      "bytes": 872
+    },
+    "ratio": 0.9500132743187499
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "interned_string",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2086360574740236,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2045451198323747,
+      "bytes": 0
+    },
+    "ratio": 0.9966152444184077
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "interned_string",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 165.69013095453622,
+      "bytes": 440.01935515726063
+    },
+    "candidate-left": {
+      "ns": 165.57835053243141,
+      "bytes": 440.01935515726063
+    },
+    "ratio": 0.9993253646342071
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "noninterned_string",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1023.775,
+      "bytes": 872
+    },
+    "candidate-left": {
+      "ns": 1048.1125,
+      "bytes": 872
+    },
+    "ratio": 1.0237723132524237
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "noninterned_string",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2107962799586547,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.198267889663976,
+      "bytes": 0
+    },
+    "ratio": 0.9896527677677482
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "noninterned_string",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 175.44313599214928,
+      "bytes": 536.0231841391048
+    },
+    "candidate-left": {
+      "ns": 175.47891398459504,
+      "bytes": 536.0231841391048
+    },
+    "ratio": 1.000203929280239
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "try_catch",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 16044.691969196921,
+      "bytes": 1504.2772277227723
+    },
+    "candidate-left": {
+      "ns": 16669.829482948295,
+      "bytes": 1504.2772277227723
+    },
+    "ratio": 1.0389622633423896
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "try_catch",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 0.865238573763865,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 0.8657948758656028,
+      "bytes": 0
+    },
+    "ratio": 1.0006429464873692
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "try_catch",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 201.8094993860835,
+      "bytes": 712.0313330535739
+    },
+    "candidate-left": {
+      "ns": 201.14312802101304,
+      "bytes": 712.0313330535739
+    },
+    "ratio": 0.9966980178480319
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "try_finally",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 10551.377481177275,
+      "bytes": 1472.1724845995893
+    },
+    "candidate-left": {
+      "ns": 10397.416153319644,
+      "bytes": 1472.1724845995893
+    },
+    "ratio": 0.9854084143864359
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "try_finally",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2093021460387534,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.1989856404732113,
+      "bytes": 0
+    },
+    "ratio": 0.9914690422080741
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "try_finally",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 150.74128843893376,
+      "bytes": 520.0254806051644
+    },
+    "candidate-left": {
+      "ns": 149.99083658792452,
+      "bytes": 520.0254806051644
+    },
+    "ratio": 0.9950215905756089
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "switch",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1577.447467508806,
+      "bytes": 1144.061217053322
+    },
+    "candidate-left": {
+      "ns": 1603.7592615085632,
+      "bytes": 1144.061217053322
+    },
+    "ratio": 1.0166799811351628
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "switch",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2042409219051753,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.0395072547429387,
+      "bytes": 0
+    },
+    "ratio": 0.8632053900795708
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "switch",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 302.97753192651777,
+      "bytes": 1056.0458922351977
+    },
+    "candidate-left": {
+      "ns": 300.5104828245578,
+      "bytes": 1056.0458922351977
+    },
+    "ratio": 0.9918573199594275
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "goto",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1204.2083333333335,
+      "bytes": 872
+    },
+    "candidate-left": {
+      "ns": 1233.4,
+      "bytes": 872
+    },
+    "ratio": 1.0242413757309434
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "goto",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2052547083785092,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.197603891612515,
+      "bytes": 0
+    },
+    "ratio": 0.9936521162599005
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "goto",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 150.65015092200824,
+      "bytes": 536.0265728182213
+    },
+    "candidate-left": {
+      "ns": 150.50680796657306,
+      "bytes": 536.0265728182213
+    },
+    "ratio": 0.9990485044020342
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "loop",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1781.1946678808113,
+      "bytes": 1072.050994081044
+    },
+    "candidate-left": {
+      "ns": 1777.2803156776445,
+      "bytes": 1072.050994081044
+    },
+    "ratio": 0.9978024006731258
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "loop",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 2.7071834311764564,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 2.5688411764792316,
+      "bytes": 0
+    },
+    "ratio": 0.948898086068329
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "loop",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 343.0753454231434,
+      "bytes": 1200.0544041450778
+    },
+    "candidate-left": {
+      "ns": 340.7309207685665,
+      "bytes": 1200.0544041450778
+    },
+    "ratio": 0.9931664437976873
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "blocks32",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 17130.252697331063,
+      "bytes": 4328.286201022146
+    },
+    "candidate-left": {
+      "ns": 15254.897785349234,
+      "bytes": 4328.286201022146
+    },
+    "ratio": 0.890523803406939
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "blocks32",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.1998721010603357,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.205734976350548,
+      "bytes": 0
+    },
+    "ratio": 1.0048862501970262
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "blocks32",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 5763.388961605585,
+      "bytes": 19944.879581151832
+    },
+    "candidate-left": {
+      "ns": 5781.222731239093,
+      "bytes": 19944.879581151832
+    },
+    "ratio": 1.0030943199829672
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "blocks128",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 81273.5655737705,
+      "bytes": 15033.377049180328
+    },
+    "candidate-left": {
+      "ns": 76354.5081967213,
+      "bytes": 15033.377049180328
+    },
+    "ratio": 0.9394753098092608
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "blocks128",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2164502837851816,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2018443444411817,
+      "bytes": 0
+    },
+    "ratio": 0.9879929829120915
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "blocks128",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 23207.70989193682,
+      "bytes": 78363.35162094764
+    },
+    "candidate-left": {
+      "ns": 23286.05569409809,
+      "bytes": 78363.35162094764
+    },
+    "ratio": 1.003375852357948
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "invoke_literal",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1672.8846262182412,
+      "bytes": 1376.0567855332094
+    },
+    "candidate-left": {
+      "ns": 1610.4233564306237,
+      "bytes": 1376.0567855332094
+    },
+    "ratio": 0.9626625358326002
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "invoke_literal",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2232654545463815,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.20646219715315,
+      "bytes": 0
+    },
+    "ratio": 0.9862636050656212
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "invoke_literal",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 302.49343832021,
+      "bytes": 832.0416640833282
+    },
+    "candidate-left": {
+      "ns": 303.91427449521564,
+      "bytes": 832.0416640833282
+    },
+    "ratio": 1.004697080977676
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "invoke_delegate",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1298.0458333333333,
+      "bytes": 1064
+    },
+    "candidate-left": {
+      "ns": 1302.2625,
+      "bytes": 1064
+    },
+    "ratio": 1.0032484728646587
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "invoke_delegate",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.657301923990265,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.6542762259492927,
+      "bytes": 0
+    },
+    "ratio": 0.9981743229781044
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "invoke_delegate",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 171.96250991839406,
+      "bytes": 440.02043333970425
+    },
+    "candidate-left": {
+      "ns": 172.28033291053464,
+      "bytes": 440.02043333970425
+    },
+    "ratio": 1.00184821094023
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "invoke_try_argument",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 11729.372484449324,
+      "bytes": 1976.1844127332602
+    },
+    "candidate-left": {
+      "ns": 11981.75082327113,
+      "bytes": 1976.1844127332602
+    },
+    "ratio": 1.0215167809835015
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "invoke_try_argument",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2055944054780887,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2022833325349334,
+      "bytes": 0
+    },
+    "ratio": 0.9972535763867929
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "invoke_try_argument",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 321.3748553798689,
+      "bytes": 912.0388738912457
+    },
+    "candidate-left": {
+      "ns": 322.7471397351845,
+      "bytes": 912.0388738912457
+    },
+    "ratio": 1.004270042700427
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture1",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 3074.284511784512,
+      "bytes": 2808.121212121212
+    },
+    "candidate-left": {
+      "ns": 3035.4938271604938,
+      "bytes": 2808.121212121212
+    },
+    "ratio": 0.9873822073151254
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture1",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 17.165227161013974,
+      "bytes": 184
+    },
+    "candidate-left": {
+      "ns": 17.06819618132026,
+      "bytes": 184
+    },
+    "ratio": 0.9943472359099277
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture1",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 174.42530890818068,
+      "bytes": 464.0189001181257
+    },
+    "candidate-left": {
+      "ns": 172.75029843936522,
+      "bytes": 464.0189001181257
+    },
+    "ratio": 0.9903969757640091
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture8",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 7178.165257648953,
+      "bytes": 4776.202898550725
+    },
+    "candidate-left": {
+      "ns": 6849.562198067633,
+      "bytes": 4776.202898550725
+    },
+    "ratio": 0.954221859237475
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture8",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 40.644328362018356,
+      "bytes": 440
+    },
+    "candidate-left": {
+      "ns": 40.78541388394971,
+      "bytes": 440
+    },
+    "ratio": 1.0034712228647182
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture8",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 1097.7222091932458,
+      "bytes": 2856.1181988742965
+    },
+    "candidate-left": {
+      "ns": 1113.4204971857412,
+      "bytes": 2856.1181988742965
+    },
+    "ratio": 1.0143007838057978
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture_reference",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 3394.2110346492814,
+      "bytes": 2832
+    },
+    "candidate-left": {
+      "ns": 3312.311360618133,
+      "bytes": 2832
+    },
+    "ratio": 0.9758707772748695
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture_reference",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 15.620289039416294,
+      "bytes": 160
+    },
+    "candidate-left": {
+      "ns": 15.693989400548062,
+      "bytes": 160
+    },
+    "ratio": 1.0047182456704733
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture_reference",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 346.66661006780544,
+      "bytes": 944.0399361564845
+    },
+    "candidate-left": {
+      "ns": 347.84103643834686,
+      "bytes": 944.0399361564845
+    },
+    "ratio": 1.003387768929669
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nested_blocks8",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1374.0019960079842,
+      "bytes": 872
+    },
+    "candidate-left": {
+      "ns": 1332.45465590558,
+      "bytes": 872
+    },
+    "ratio": 0.9697618051333874
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nested_blocks8",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.203977749016375,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2168413184688591,
+      "bytes": 0
+    },
+    "ratio": 1.0106842252383763
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nested_blocks8",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 424.4439608084119,
+      "bytes": 1072.0516181892667
+    },
+    "candidate-left": {
+      "ns": 425.61962310528475,
+      "bytes": 1072.0516181892667
+    },
+    "ratio": 1.0027698881487999
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nested_blocks32",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 2338.890951084715,
+      "bytes": 872
+    },
+    "candidate-left": {
+      "ns": 2418.924771096263,
+      "bytes": 872
+    },
+    "ratio": 1.0342187052262657
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nested_blocks32",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2941824171923493,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2932818963199935,
+      "bytes": 0
+    },
+    "ratio": 0.9993041777879277
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nested_blocks32",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 1244.6378551420569,
+      "bytes": 3192.141176470588
+    },
+    "candidate-left": {
+      "ns": 1247.173869547819,
+      "bytes": 3192.141176470588
+    },
+    "ratio": 1.0020375520439821
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nested_blocks128",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 6996.260683760684,
+      "bytes": 872
+    },
+    "candidate-left": {
+      "ns": 6888.29534662868,
+      "bytes": 872
+    },
+    "ratio": 0.9845681368930969
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nested_blocks128",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2923337915104678,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2906322217736368,
+      "bytes": 0
+    },
+    "ratio": 0.9986833357233179
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nested_blocks128",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 4390.560754288956,
+      "bytes": 11640.500212675457
+    },
+    "candidate-left": {
+      "ns": 4435.470721678718,
+      "bytes": 11640.500212675457
+    },
+    "ratio": 1.0102287543443949
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nested_mixed32",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 14880.333835341364,
+      "bytes": 4032.253012048193
+    },
+    "candidate-left": {
+      "ns": 14627.761044176708,
+      "bytes": 4032.253012048193
+    },
+    "ratio": 0.9830264029046992
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nested_mixed32",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.19462252351843,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.1101219692803326,
+      "bytes": 0
+    },
+    "ratio": 0.9292658956494271
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nested_mixed32",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 9824.966865473823,
+      "bytes": 8824.500994035785
+    },
+    "candidate-left": {
+      "ns": 9803.719350563286,
+      "bytes": 8824.500994035785
+    },
+    "ratio": 0.9978373957692209
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nested_mixed128",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 107641.48351648351,
+      "bytes": 13345.846153846154
+    },
+    "candidate-left": {
+      "ns": 106176.73992673993,
+      "bytes": 13345.846153846154
+    },
+    "ratio": 0.9863923875638589
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nested_mixed128",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2192615641171187,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2175272619722177,
+      "bytes": 0
+    },
+    "ratio": 0.9985775799090683
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nested_mixed128",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 113325.28409090909,
+      "bytes": 34169.90909090909
+    },
+    "candidate-left": {
+      "ns": 112754.73484848485,
+      "bytes": 34169.90909090909
+    },
+    "ratio": 0.9949653844064794
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nested_eh8",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 16743.949142156864,
+      "bytes": 4256
+    },
+    "candidate-left": {
+      "ns": 16970.74142156863,
+      "bytes": 4256
+    },
+    "ratio": 1.0135447305463179
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nested_eh8",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.1967996489964396,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2003921596883826,
+      "bytes": 0
+    },
+    "ratio": 1.003001764493293
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nested_eh8",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 330.5208264059764,
+      "bytes": 1008.0446897652457
+    },
+    "candidate-left": {
+      "ns": 333.5023608432533,
+      "bytes": 1008.0446897652457
+    },
+    "ratio": 1.0090207157887676
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nested_eh32",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 67427.15419501133,
+      "bytes": 14400
+    },
+    "candidate-left": {
+      "ns": 67039.39909297052,
+      "bytes": 14400
+    },
+    "ratio": 0.9942492738026677
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nested_eh32",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2123902767055519,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.191382331196705,
+      "bytes": 0
+    },
+    "ratio": 0.9826722913302042
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nested_eh32",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 911.9314042602792,
+      "bytes": 2936.13217938631
+    },
+    "candidate-left": {
+      "ns": 924.975230935105,
+      "bytes": 2936.13217938631
+    },
+    "ratio": 1.0143035173631358
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture_call",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 3960.9853455818024,
+      "bytes": 2856
+    },
+    "candidate-left": {
+      "ns": 3840.318788276465,
+      "bytes": 2856
+    },
+    "ratio": 0.9695362272824533
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture_call",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 15.361022007437231,
+      "bytes": 160
+    },
+    "candidate-left": {
+      "ns": 15.421288188363494,
+      "bytes": 160
+    },
+    "ratio": 1.0039233184417733
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture_call",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 379.470049688955,
+      "bytes": 976.0394381626825
+    },
+    "candidate-left": {
+      "ns": 381.55672496315714,
+      "bytes": 976.0394381626825
+    },
+    "ratio": 1.0054989195482293
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture_ctor",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 4014.752142314785,
+      "bytes": 3016
+    },
+    "candidate-left": {
+      "ns": 3947.9336153595837,
+      "bytes": 3016
+    },
+    "ratio": 0.9833567491624338
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture_ctor",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 14.97341037918599,
+      "bytes": 160
+    },
+    "candidate-left": {
+      "ns": 15.298757003007493,
+      "bytes": 160
+    },
+    "ratio": 1.0217282913900334
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture_ctor",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 541.8140509360035,
+      "bytes": 1328.0548541575968
+    },
+    "candidate-left": {
+      "ns": 539.2042156435931,
+      "bytes": 1328.0548541575968
+    },
+    "ratio": 0.9951831531723813
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture_invoke",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 3992.6863121930382,
+      "bytes": 3096
+    },
+    "candidate-left": {
+      "ns": 3955.5172966047407,
+      "bytes": 3096
+    },
+    "ratio": 0.9906907248198314
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture_invoke",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 17.268677370800383,
+      "bytes": 160
+    },
+    "candidate-left": {
+      "ns": 16.883666772520378,
+      "bytes": 160
+    },
+    "ratio": 0.9777046851931451
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture_invoke",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 415.0264251450245,
+      "bytes": 1040.0421686746988
+    },
+    "candidate-left": {
+      "ns": 409.8616688978135,
+      "bytes": 1040.0421686746988
+    },
+    "ratio": 0.9875555966215736
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture_try",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 21286.779324055668,
+      "bytes": 3432
+    },
+    "candidate-left": {
+      "ns": 21578.61166335321,
+      "bytes": 3432
+    },
+    "ratio": 1.0137095581654172
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture_try",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 15.859773061899388,
+      "bytes": 160
+    },
+    "candidate-left": {
+      "ns": 15.84235558590067,
+      "bytes": 160
+    },
+    "ratio": 0.9989017827726324
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture_try",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 389.7435897435897,
+      "bytes": 1024.0438070404173
+    },
+    "candidate-left": {
+      "ns": 384.8590674861861,
+      "bytes": 1024.0438070404173
+    },
+    "ratio": 0.9874673442079775
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture_array",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 4421.316500415628,
+      "bytes": 2960.209476309227
+    },
+    "candidate-left": {
+      "ns": 4471.711346633417,
+      "bytes": 2960.209476309227
+    },
+    "ratio": 1.011398153969084
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture_array",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 20.15714608480793,
+      "bytes": 192
+    },
+    "candidate-left": {
+      "ns": 20.293188733938074,
+      "bytes": 192
+    },
+    "ratio": 1.0067491027032183
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture_array",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 501.6666666666667,
+      "bytes": 1224.052012383901
+    },
+    "candidate-left": {
+      "ns": 486.3106295149639,
+      "bytes": 1224.052012383901
+    },
+    "ratio": 0.969389959166041
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture_mutable",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 3730.120807789398,
+      "bytes": 3016
+    },
+    "candidate-left": {
+      "ns": 3746.9497535761507,
+      "bytes": 3016
+    },
+    "ratio": 1.0045116355887482
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture_mutable",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 17.64773108394323,
+      "bytes": 184
+    },
+    "candidate-left": {
+      "ns": 17.76345108633229,
+      "bytes": 184
+    },
+    "ratio": 1.0065572170064596
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture_mutable",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 165.1413255360624,
+      "bytes": 416.01684210526315
+    },
+    "candidate-left": {
+      "ns": 165.03341687552214,
+      "bytes": 416.01684210526315
+    },
+    "ratio": 0.9993465677946451
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture_mutable_reference",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 5726.099934576382,
+      "bytes": 3384
+    },
+    "candidate-left": {
+      "ns": 5632.87127903173,
+      "bytes": 3384
+    },
+    "ratio": 0.9837186467910382
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture_mutable_reference",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 17.92471168637913,
+      "bytes": 160
+    },
+    "candidate-left": {
+      "ns": 17.82332851833108,
+      "bytes": 160
+    },
+    "ratio": 0.9943439442808395
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture_mutable_reference",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 576.3313013711169,
+      "bytes": 1296.0553572409249
+    },
+    "candidate-left": {
+      "ns": 583.4591868489941,
+      "bytes": 1296.0553572409249
+    },
+    "ratio": 1.0123676875799037
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture_mutable_reference_ctor",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 6414.519427402863,
+      "bytes": 3640
+    },
+    "candidate-left": {
+      "ns": 6292.944785276074,
+      "bytes": 3640
+    },
+    "ratio": 0.9810469601810822
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture_mutable_reference_ctor",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 17.598796326193806,
+      "bytes": 160
+    },
+    "candidate-left": {
+      "ns": 18.151775712856328,
+      "bytes": 160
+    },
+    "ratio": 1.0314214322623574
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture_mutable_reference_ctor",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 679.3304843304844,
+      "bytes": 1528.068923076923
+    },
+    "candidate-left": {
+      "ns": 675.019943019943,
+      "bytes": 1528.068923076923
+    },
+    "ratio": 0.9936547212145357
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture_mutable_reference_array",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 6398.599481658693,
+      "bytes": 3576.200956937799
+    },
+    "candidate-left": {
+      "ns": 6140.450558213716,
+      "bytes": 3576.200956937799
+    },
+    "ratio": 0.9596554020633814
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture_mutable_reference_array",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 18.464567991152112,
+      "bytes": 160
+    },
+    "candidate-left": {
+      "ns": 18.784649476430115,
+      "bytes": 160
+    },
+    "ratio": 1.0173349024700378
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "capture_mutable_reference_array",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 669.1930237774787,
+      "bytes": 1512.0678331090176
+    },
+    "candidate-left": {
+      "ns": 664.1206819201436,
+      "bytes": 1512.0678331090176
+    },
+    "ratio": 0.9924202110943975
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "constant",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 987.9799301919721,
+      "bytes": 872
+    },
+    "candidate-left": {
+      "ns": 984.869109947644,
+      "bytes": 872
+    },
+    "ratio": 0.9968513325531586
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "constant",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.219906887199069,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2230676684806767,
+      "bytes": 0
+    },
+    "ratio": 1.0025910020795643
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "constant",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 38.87845401527344,
+      "bytes": 152.00623002128592
+    },
+    "candidate-left": {
+      "ns": 38.58688531074703,
+      "bytes": 152.00623002128592
+    },
+    "ratio": 0.9925005067225187
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "add",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1024.0333333333333,
+      "bytes": 872.0504
+    },
+    "candidate-left": {
+      "ns": 1015.8916666666667,
+      "bytes": 872.0504
+    },
+    "ratio": 0.9920494124540217
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "add",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2189923295722789,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2147449871359564,
+      "bytes": 0
+    },
+    "ratio": 0.9965156938782274
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "add",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 45.68049820020758,
+      "bytes": 144.00593600247333
+    },
+    "candidate-left": {
+      "ns": 44.59749427673373,
+      "bytes": 144.00593600247333
+    },
+    "ratio": 0.9762917663741913
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "arithmetic64",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 25035.39426523297,
+      "bytes": 1056.4516129032259
+    },
+    "candidate-left": {
+      "ns": 25300.739247311827,
+      "bytes": 1056.4516129032259
+    },
+    "ratio": 1.0105987938223664
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "arithmetic64",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2278660715420462,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2285633980070598,
+      "bytes": 0
+    },
+    "ratio": 1.0005679173658881
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "arithmetic64",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 5156.658713326264,
+      "bytes": 7152.356309650053
+    },
+    "candidate-left": {
+      "ns": 5283.514492753624,
+      "bytes": 7152.356309650053
+    },
+    "ratio": 1.0246003830153678
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "balanced256",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 22794.313725490196,
+      "bytes": 1376.3952941176472
+    },
+    "candidate-left": {
+      "ns": 21284.509803921566,
+      "bytes": 1376.3952941176472
+    },
+    "ratio": 0.9337640106321665
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "balanced256",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 8.178861998490024,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 10.293720215985791,
+      "bytes": 0
+    },
+    "ratio": 1.258576097492073
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "balanced256",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 3256.0052482842148,
+      "bytes": 10280.474767864353
+    },
+    "candidate-left": {
+      "ns": 3253.5324989907144,
+      "bytes": 10280.474767864353
+    },
+    "ratio": 0.9992405573379209
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "conditional",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1353.6375165219877,
+      "bytes": 1064.054013503376
+    },
+    "candidate-left": {
+      "ns": 1309.4568284928375,
+      "bytes": 1064.054013503376
+    },
+    "ratio": 0.9673615074272859
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "conditional",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2294018698831704,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.227111355880901,
+      "bytes": 0
+    },
+    "ratio": 0.9981368874910798
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "conditional",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 46.86745766814979,
+      "bytes": 216.00882001653753
+    },
+    "candidate-left": {
+      "ns": 45.75766392061985,
+      "bytes": 216.00882001653753
+    },
+    "ratio": 0.9763205899626995
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nullable",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1537.6787173202615,
+      "bytes": 1368
+    },
+    "candidate-left": {
+      "ns": 1550.4595588235295,
+      "bytes": 1368
+    },
+    "ratio": 1.0083117762893548
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nullable",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.225279141643375,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2086804035706866,
+      "bytes": 0
+    },
+    "ratio": 0.9864530966793201
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nullable",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 83.8638035421264,
+      "bytes": 256.0108640298761
+    },
+    "candidate-left": {
+      "ns": 80.1909288583877,
+      "bytes": 256.0108640298761
+    },
+    "ratio": 0.9562042916179713
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "new_member",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1157.8708333333334,
+      "bytes": 968
+    },
+    "candidate-left": {
+      "ns": 1152.9958333333334,
+      "bytes": 968
+    },
+    "ratio": 0.9957896858098018
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "new_member",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2579586293001674,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2597511605958769,
+      "bytes": 0
+    },
+    "ratio": 1.0014249525015833
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "new_member",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 106.7968888888889,
+      "bytes": 272.012544
+    },
+    "candidate-left": {
+      "ns": 106.88666666666667,
+      "bytes": 272.012544
+    },
+    "ratio": 1.0008406403848633
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "constant_object",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1231.3208333333334,
+      "bytes": 1056
+    },
+    "candidate-left": {
+      "ns": 1223.4875,
+      "bytes": 1056
+    },
+    "ratio": 0.9936382678492268
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "constant_object",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.017416860973158,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.0149346734057252,
+      "bytes": 0
+    },
+    "ratio": 0.9975603042738465
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "constant_object",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 55.17071769169587,
+      "bytes": 168.00767202109805
+    },
+    "candidate-left": {
+      "ns": 55.062021212225,
+      "bytes": 168.00767202109805
+    },
+    "ratio": 0.9980298157425052
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "array",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1210.575,
+      "bytes": 992.0504
+    },
+    "candidate-left": {
+      "ns": 1186.2125,
+      "bytes": 992.0504
+    },
+    "ratio": 0.9798752658860459
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "array",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.0198046992581355,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.0194749093249003,
+      "bytes": 0
+    },
+    "ratio": 0.9996766146170192
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "array",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 55.984401899359355,
+      "bytes": 288.01244602489203
+    },
+    "candidate-left": {
+      "ns": 54.98824365704287,
+      "bytes": 288.01244602489203
+    },
+    "ratio": 0.9822065038024835
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "new_array",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1435.025,
+      "bytes": 1320
+    },
+    "candidate-left": {
+      "ns": 1428.4333333333334,
+      "bytes": 1320
+    },
+    "ratio": 0.9954065840897081
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "new_array",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2547662118560816,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2522212239911503,
+      "bytes": 0
+    },
+    "ratio": 0.9979717433886216
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "new_array",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 47.60676287737456,
+      "bytes": 160.00683201081736
+    },
+    "candidate-left": {
+      "ns": 47.02747376572235,
+      "bytes": 160.00683201081736
+    },
+    "ratio": 0.9878317895055301
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "interned_string",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1011.575,
+      "bytes": 872
+    },
+    "candidate-left": {
+      "ns": 1032.8375,
+      "bytes": 872
+    },
+    "ratio": 1.0210192027284186
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "interned_string",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2009490676060355,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2086305316911659,
+      "bytes": 0
+    },
+    "ratio": 1.006396161412942
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "interned_string",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 72.14845440006222,
+      "bytes": 176.00735004593778
+    },
+    "candidate-left": {
+      "ns": 71.64927593297458,
+      "bytes": 176.00735004593778
+    },
+    "ratio": 0.993081231313429
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "noninterned_string",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1023.0375,
+      "bytes": 872
+    },
+    "candidate-left": {
+      "ns": 1002.9791666666666,
+      "bytes": 872
+    },
+    "ratio": 0.9803933547564646
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "noninterned_string",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2003174633068254,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.194670744435421,
+      "bytes": 0
+    },
+    "ratio": 0.9952956454904456
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "noninterned_string",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 76.8436705936706,
+      "bytes": 272.011088011088
+    },
+    "candidate-left": {
+      "ns": 75.76670076670077,
+      "bytes": 272.011088011088
+    },
+    "ratio": 0.9859849247355118
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "try_catch",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 15458.205717202656,
+      "bytes": 1504.2572741194488
+    },
+    "candidate-left": {
+      "ns": 15209.609494640123,
+      "bytes": 1504.2572741194488
+    },
+    "ratio": 0.9839181708983286
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "try_catch",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 0.8666758905201455,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 0.8755340821655903,
+      "bytes": 0
+    },
+    "ratio": 1.0102208815802276
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "try_catch",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 60.86730394480434,
+      "bytes": 328.0132722389003
+    },
+    "candidate-left": {
+      "ns": 60.157114078053404,
+      "bytes": 328.0132722389003
+    },
+    "ratio": 0.9883321615921259
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "try_finally",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 10241.690985732816,
+      "bytes": 1472.1634241245135
+    },
+    "candidate-left": {
+      "ns": 10344.682230869003,
+      "bytes": 1472.1634241245135
+    },
+    "ratio": 1.0100560781690893
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "try_finally",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.191165850471079,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.183021405149749,
+      "bytes": 0
+    },
+    "ratio": 0.9931626269187376
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "try_finally",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 50.532,
+      "bytes": 184.00896
+    },
+    "candidate-left": {
+      "ns": 49.17333333333333,
+      "bytes": 184.00896
+    },
+    "ratio": 0.9731127470381805
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "switch",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1303.7375,
+      "bytes": 1144.0504
+    },
+    "candidate-left": {
+      "ns": 1289.3291666666667,
+      "bytes": 1144.0504
+    },
+    "ratio": 0.9889484399019486
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "switch",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.1631980204601964,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.1960921257946038,
+      "bytes": 0
+    },
+    "ratio": 1.0282790245132927
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "switch",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 76.36802229296205,
+      "bytes": 512.0249903311219
+    },
+    "candidate-left": {
+      "ns": 74.72555261357213,
+      "bytes": 512.0249903311219
+    },
+    "ratio": 0.9784927037511971
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "goto",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1145.8625,
+      "bytes": 872
+    },
+    "candidate-left": {
+      "ns": 1142.0875,
+      "bytes": 872
+    },
+    "ratio": 0.9967055384044771
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "goto",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.1987208453205418,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.1991872342140946,
+      "bytes": 0
+    },
+    "ratio": 1.000389072147509
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "goto",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 50.832422636915716,
+      "bytes": 240.0116200251767
+    },
+    "candidate-left": {
+      "ns": 50.20934489802506,
+      "bytes": 240.0116200251767
+    },
+    "ratio": 0.9877425134083977
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "loop",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1600.298834922076,
+      "bytes": 1072.0508397639583
+    },
+    "candidate-left": {
+      "ns": 1531.1822262571243,
+      "bytes": 1072.0508397639583
+    },
+    "ratio": 0.9568101862248015
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "loop",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 2.5347519193379746,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 2.6111614044969116,
+      "bytes": 0
+    },
+    "ratio": 1.030144758773432
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "loop",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 84.15648482762576,
+      "bytes": 576.0289106866288
+    },
+    "candidate-left": {
+      "ns": 85.11874032008261,
+      "bytes": 576.0289106866288
+    },
+    "ratio": 1.0114341217367597
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "blocks32",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 13236.400462962964,
+      "bytes": 4328.233333333334
+    },
+    "candidate-left": {
+      "ns": 12017.30324074074,
+      "bytes": 4328.233333333334
+    },
+    "ratio": 0.9078981309432724
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "blocks32",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2162013385509023,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2064163037308298,
+      "bytes": 0
+    },
+    "ratio": 0.9919544285062772
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "blocks32",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 1802.9013696409756,
+      "bytes": 10120.408460977389
+    },
+    "candidate-left": {
+      "ns": 1790.7650538941568,
+      "bytes": 10120.408460977389
+    },
+    "ratio": 0.9932684527555516
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "blocks128",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 63065.04796163069,
+      "bytes": 15033.208633093525
+    },
+    "candidate-left": {
+      "ns": 60596.522781774576,
+      "bytes": 15033.208633093525
+    },
+    "ratio": 0.9608574755804834
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "blocks128",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.1954321927700677,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2051735128233445,
+      "bytes": 0
+    },
+    "ratio": 1.0081487851106838
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "blocks128",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 7385.094169246646,
+      "bytes": 40121.69040247678
+    },
+    "candidate-left": {
+      "ns": 7376.547987616099,
+      "bytes": 40121.69040247678
+    },
+    "ratio": 0.9988427795997328
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "invoke_literal",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1407.6742433027948,
+      "bytes": 992.058448335846
+    },
+    "candidate-left": {
+      "ns": 1351.6032703235533,
+      "bytes": 992.058448335846
+    },
+    "ratio": 0.9601676501179112
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "invoke_literal",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2702019339551702,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2807337402874466,
+      "bytes": 0
+    },
+    "ratio": 1.0082914425263725
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "invoke_literal",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 81.07407032252368,
+      "bytes": 280.0117810225803
+    },
+    "candidate-left": {
+      "ns": 81.16627188813223,
+      "bytes": 280.0117810225803
+    },
+    "ratio": 1.0011372509760736
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "invoke_delegate",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1480.6557467460843,
+      "bytes": 1064
+    },
+    "candidate-left": {
+      "ns": 1471.5879844106184,
+      "bytes": 1064
+    },
+    "ratio": 0.9938758469986063
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "invoke_delegate",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.7397979198612745,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.7379277113752074,
+      "bytes": 0
+    },
+    "ratio": 0.9989250426933398
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "invoke_delegate",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 67.38001541420712,
+      "bytes": 144.0066780175298
+    },
+    "candidate-left": {
+      "ns": 65.87751667848129,
+      "bytes": 144.0066780175298
+    },
+    "ratio": 0.9777011221132931
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "invoke_try_argument",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 11250.84388185654,
+      "bytes": 1592.4253164556962
+    },
+    "candidate-left": {
+      "ns": 11591.45569620253,
+      "bytes": 1592.4253164556962
+    },
+    "ratio": 1.0302743347897017
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "invoke_try_argument",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.6460954686906002,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.5714570132237766,
+      "bytes": 0
+    },
+    "ratio": 0.9546572742064618
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "invoke_try_argument",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 121.52717215259263,
+      "bytes": 320.01674432511896
+    },
+    "candidate-left": {
+      "ns": 147.99749167351888,
+      "bytes": 320.01674432511896
+    },
+    "ratio": 1.2178140003758948
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture1",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 3421.000361141206,
+      "bytes": 2808.182015167931
+    },
+    "candidate-left": {
+      "ns": 2951.0653665583245,
+      "bytes": 2808.182015167931
+    },
+    "ratio": 0.8626322873505582
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture1",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 29.075513011800723,
+      "bytes": 184
+    },
+    "candidate-left": {
+      "ns": 24.768926695990853,
+      "bytes": 184
+    },
+    "ratio": 0.8518827057647451
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture1",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 107.72707217078123,
+      "bytes": 168.0074480347575
+    },
+    "candidate-left": {
+      "ns": 120.87249462719716,
+      "bytes": 168.0074480347575
+    },
+    "ratio": 1.1220252457578752
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture8",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 20850.691619202604,
+      "bytes": 4776.273393002441
+    },
+    "candidate-left": {
+      "ns": 16834.07919717928,
+      "bytes": 4776.273393002441
+    },
+    "ratio": 0.8073631083621132
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture8",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 96.51648915524738,
+      "bytes": 440
+    },
+    "candidate-left": {
+      "ns": 139.5306637545584,
+      "bytes": 440
+    },
+    "ratio": 1.4456665899867371
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture8",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 1102.5298958467276,
+      "bytes": 2000.0864086408642
+    },
+    "candidate-left": {
+      "ns": 1275.7516823110884,
+      "bytes": 2000.0864086408642
+    },
+    "ratio": 1.1571130062929758
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture_reference",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 4747.894780723695,
+      "bytes": 2832
+    },
+    "candidate-left": {
+      "ns": 5005.565282641321,
+      "bytes": 2832
+    },
+    "ratio": 1.0542704743508133
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture_reference",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 20.625791831317304,
+      "bytes": 160
+    },
+    "candidate-left": {
+      "ns": 20.428776658321016,
+      "bytes": 160
+    },
+    "ratio": 0.9904481159022875
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture_reference",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 112.27924886405327,
+      "bytes": 336.01422402844804
+    },
+    "candidate-left": {
+      "ns": 111.50269522761268,
+      "bytes": 336.01422402844804
+    },
+    "ratio": 0.9930837296802649
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nested_blocks8",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1540.0233992767496,
+      "bytes": 872
+    },
+    "candidate-left": {
+      "ns": 1634.4022548393957,
+      "bytes": 872
+    },
+    "ratio": 1.061284039974308
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nested_blocks8",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.6777433965948585,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.6711116253055909,
+      "bytes": 0
+    },
+    "ratio": 0.9960472076345361
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nested_blocks8",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 98.7976001586672,
+      "bytes": 488.0199920666402
+    },
+    "candidate-left": {
+      "ns": 100.7578011371149,
+      "bytes": 488.0199920666402
+    },
+    "ratio": 1.019840572800348
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nested_blocks32",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 2094.7031221801117,
+      "bytes": 872
+    },
+    "candidate-left": {
+      "ns": 2127.504060638874,
+      "bytes": 872
+    },
+    "ratio": 1.0156589915350982
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nested_blocks32",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.4013366080434397,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.5243316120407773,
+      "bytes": 0
+    },
+    "ratio": 1.0877697787179517
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nested_blocks32",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 249.18398216702494,
+      "bytes": 1648.0802483878672
+    },
+    "candidate-left": {
+      "ns": 250.07961149590002,
+      "bytes": 1648.0802483878672
+    },
+    "ratio": 1.003594249201278
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nested_blocks128",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 6929.126541645548,
+      "bytes": 872
+    },
+    "candidate-left": {
+      "ns": 6821.169116404798,
+      "bytes": 872
+    },
+    "ratio": 0.984419764223975
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nested_blocks128",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.815495145908979,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.7709870209071246,
+      "bytes": 0
+    },
+    "ratio": 0.975484305148296
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nested_blocks128",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 1357.9463364293085,
+      "bytes": 6256.277399380805
+    },
+    "candidate-left": {
+      "ns": 1365.5400756793947,
+      "bytes": 6256.277399380805
+    },
+    "ratio": 1.005592076097833
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nested_mixed32",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 14997.781065088757,
+      "bytes": 4032.248520710059
+    },
+    "candidate-left": {
+      "ns": 15172.58382642998,
+      "bytes": 4032.248520710059
+    },
+    "ratio": 1.0116552415709097
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nested_mixed32",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.7628484401789801,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.5069639415828378,
+      "bytes": 0
+    },
+    "ratio": 0.8548460022064275
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nested_mixed32",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 1111.3939393939395,
+      "bytes": 7280.305454545454
+    },
+    "candidate-left": {
+      "ns": 1108.949494949495,
+      "bytes": 7280.305454545454
+    },
+    "ratio": 0.9978005598574907
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nested_mixed128",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 79252.37127371274,
+      "bytes": 13345.365853658537
+    },
+    "candidate-left": {
+      "ns": 73433.60433604337,
+      "bytes": 13345.365853658537
+    },
+    "ratio": 0.9265792701952957
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nested_mixed128",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.7526618270393122,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.7177509657769208,
+      "bytes": 0
+    },
+    "ratio": 0.9800812337418424
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nested_mixed128",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 6028.361933602513,
+      "bytes": 28785.187079407806
+    },
+    "candidate-left": {
+      "ns": 5643.11350381337,
+      "bytes": 28785.187079407806
+    },
+    "ratio": 0.9360940112700034
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nested_eh8",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 28285.12084592145,
+      "bytes": 4256
+    },
+    "candidate-left": {
+      "ns": 26971.928499496476,
+      "bytes": 4256
+    },
+    "ratio": 0.9535730339078848
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nested_eh8",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.4963844220842086,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.577242712632912,
+      "bytes": 0
+    },
+    "ratio": 1.0540357740667212
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nested_eh8",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 115.35868609538515,
+      "bytes": 424.01756304683477
+    },
+    "candidate-left": {
+      "ns": 121.14535083204666,
+      "bytes": 424.01756304683477
+    },
+    "ratio": 1.0501623668969042
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nested_eh32",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 106002.74725274726,
+      "bytes": 14400
+    },
+    "candidate-left": {
+      "ns": 105553.11355311357,
+      "bytes": 14400
+    },
+    "ratio": 0.9957582825795863
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nested_eh32",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.6528114846093405,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.6517848004239668,
+      "bytes": 0
+    },
+    "ratio": 0.9993788255981194
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nested_eh32",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 288.98278606090787,
+      "bytes": 1392.0590526963297
+    },
+    "candidate-left": {
+      "ns": 291.12476444340297,
+      "bytes": 1392.0590526963297
+    },
+    "ratio": 1.0074121313995625
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture_call",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 5142.619311875694,
+      "bytes": 2856
+    },
+    "candidate-left": {
+      "ns": 5296.491552595881,
+      "bytes": 2856
+    },
+    "ratio": 1.0299209860556575
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture_call",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 22.674593597133025,
+      "bytes": 160
+    },
+    "candidate-left": {
+      "ns": 22.390484307884456,
+      "bytes": 160
+    },
+    "ratio": 0.9874701485593774
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture_call",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 154.8635246557215,
+      "bytes": 368.0171012258787
+    },
+    "candidate-left": {
+      "ns": 150.7275776656439,
+      "bytes": 368.0171012258787
+    },
+    "ratio": 0.9732929558508224
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture_ctor",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 4806.01696103168,
+      "bytes": 3016
+    },
+    "candidate-left": {
+      "ns": 4888.474208017942,
+      "bytes": 3016
+    },
+    "ratio": 1.0171570861390722
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture_ctor",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 29.911534719469568,
+      "bytes": 160
+    },
+    "candidate-left": {
+      "ns": 31.604867091876567,
+      "bytes": 160
+    },
+    "ratio": 1.0566113503799857
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture_ctor",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 411.2837330506603,
+      "bytes": 560.0278256260766
+    },
+    "candidate-left": {
+      "ns": 405.8842365619893,
+      "bytes": 560.0278256260766
+    },
+    "ratio": 0.9868716021209477
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture_invoke",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 8428.459119496854,
+      "bytes": 3096
+    },
+    "candidate-left": {
+      "ns": 8231.476022012579,
+      "bytes": 3096
+    },
+    "ratio": 0.9766288126107641
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture_invoke",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 40.54707546549115,
+      "bytes": 160
+    },
+    "candidate-left": {
+      "ns": 40.36641665021822,
+      "bytes": 160
+    },
+    "ratio": 0.9955444674320179
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture_invoke",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 273.33961413341063,
+      "bytes": 400.0162334525075
+    },
+    "candidate-left": {
+      "ns": 264.5089165888277,
+      "bytes": 400.0162334525075
+    },
+    "ratio": 0.9676933123192568
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture_try",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 28213.175675675677,
+      "bytes": 3432
+    },
+    "candidate-left": {
+      "ns": 28304.054054054053,
+      "bytes": 3432
+    },
+    "ratio": 1.003221132545413
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture_try",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 17.372793169737662,
+      "bytes": 160
+    },
+    "candidate-left": {
+      "ns": 17.323475771841938,
+      "bytes": 160
+    },
+    "ratio": 0.9971612280527444
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture_try",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 106.76804143685659,
+      "bytes": 376.01519006962116
+    },
+    "candidate-left": {
+      "ns": 106.94672281136843,
+      "bytes": 376.01519006962116
+    },
+    "ratio": 1.001673547365927
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture_array",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 4545.346167432002,
+      "bytes": 2960
+    },
+    "candidate-left": {
+      "ns": 4642.264217590957,
+      "bytes": 2960
+    },
+    "ratio": 1.0213224794303644
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture_array",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 20.90911991831004,
+      "bytes": 192
+    },
+    "candidate-left": {
+      "ns": 20.856872680334995,
+      "bytes": 192
+    },
+    "ratio": 0.9975012225201648
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture_array",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 146.77483620623298,
+      "bytes": 456.02053817628604
+    },
+    "candidate-left": {
+      "ns": 146.13528210561586,
+      "bytes": 456.02053817628604
+    },
+    "ratio": 0.9956426175143641
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture_mutable",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 3628.225965327029,
+      "bytes": 3016
+    },
+    "candidate-left": {
+      "ns": 3710.401891252955,
+      "bytes": 3016
+    },
+    "ratio": 1.0226490650558253
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture_mutable",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 18.103471712475873,
+      "bytes": 184
+    },
+    "candidate-left": {
+      "ns": 18.06473098985945,
+      "bytes": 184
+    },
+    "ratio": 0.9978600390449017
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture_mutable",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 52.93272569444445,
+      "bytes": 136.006125
+    },
+    "candidate-left": {
+      "ns": 52.94249131944445,
+      "bytes": 136.006125
+    },
+    "ratio": 1.0001844912551145
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture_mutable_reference",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 7934.667471171895,
+      "bytes": 7048
+    },
+    "candidate-left": {
+      "ns": 7948.109412711183,
+      "bytes": 7048
+    },
+    "ratio": 1.0016940774882028
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture_mutable_reference",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 20.0050341344205,
+      "bytes": 160
+    },
+    "candidate-left": {
+      "ns": 19.834981729846692,
+      "bytes": 160
+    },
+    "ratio": 0.9914995193994086
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture_mutable_reference",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 149.94968734277293,
+      "bytes": 576.024150075469
+    },
+    "candidate-left": {
+      "ns": 149.8628381130358,
+      "bytes": 576.024150075469
+    },
+    "ratio": 0.9994208108647895
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture_mutable_reference_ctor",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 9077.899900645802,
+      "bytes": 7304
+    },
+    "candidate-left": {
+      "ns": 8894.311972180823,
+      "bytes": 7304
+    },
+    "ratio": 0.9797763876585687
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture_mutable_reference_ctor",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 19.916120102857636,
+      "bytes": 160
+    },
+    "candidate-left": {
+      "ns": 20.151658705890323,
+      "bytes": 160
+    },
+    "ratio": 1.0118265305599805
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture_mutable_reference_ctor",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 188.66395375607448,
+      "bytes": 672.0282242257938
+    },
+    "candidate-left": {
+      "ns": 188.6896206280761,
+      "bytes": 672.0282242257938
+    },
+    "ratio": 1.0001360454474246
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture_mutable_reference_array",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 8935.60894991101,
+      "bytes": 7240
+    },
+    "candidate-left": {
+      "ns": 8752.002288329519,
+      "bytes": 7240
+    },
+    "ratio": 0.9794522496887782
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture_mutable_reference_array",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 22.2862599707898,
+      "bytes": 160
+    },
+    "candidate-left": {
+      "ns": 22.43830281241808,
+      "bytes": 160
+    },
+    "ratio": 1.0068222681521062
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "capture_mutable_reference_array",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 169.36790381319622,
+      "bytes": 664.0269922879178
+    },
+    "candidate-left": {
+      "ns": 169.78714786846615,
+      "bytes": 664.0269922879178
+    },
+    "ratio": 1.0024753453625566
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "constant",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 874.5523780703082,
+      "bytes": 872.0484188228173
+    },
+    "candidate-left": {
+      "ns": 878.1396580420638,
+      "bytes": 872.0484188228173
+    },
+    "ratio": 1.004101846912441
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "constant",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2116269111749436,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2184837047431416,
+      "bytes": 0
+    },
+    "ratio": 1.0056591624904971
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "constant",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 126.12656625861356,
+      "bytes": 392.0156335059533
+    },
+    "candidate-left": {
+      "ns": 124.29276996877952,
+      "bytes": 392.0156335059533
+    },
+    "ratio": 0.9854606658673798
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "add",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1255.8583333333333,
+      "bytes": 872.048
+    },
+    "candidate-left": {
+      "ns": 1210.9625,
+      "bytes": 872.048
+    },
+    "ratio": 0.9642508775538643
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "add",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.1988043670291688,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.1965517348256716,
+      "bytes": 0
+    },
+    "ratio": 0.9981209342696343
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "add",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 140.2612796210736,
+      "bytes": 440.0178668639466
+    },
+    "candidate-left": {
+      "ns": 140.4660041037953,
+      "bytes": 440.0178668639466
+    },
+    "ratio": 1.001459593718771
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "arithmetic64",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 20331.51455026455,
+      "bytes": 1056.3174603174602
+    },
+    "candidate-left": {
+      "ns": 20248.759920634922,
+      "bytes": 1056.3174603174602
+    },
+    "ratio": 0.9959297361037694
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "arithmetic64",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.1958495574668724,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2068530872379686,
+      "bytes": 0
+    },
+    "ratio": 1.0092014331588703
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "arithmetic64",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 1469.5313968791124,
+      "bytes": 6488.270727580372
+    },
+    "candidate-left": {
+      "ns": 1478.8552829479224,
+      "bytes": 6488.270727580372
+    },
+    "ratio": 1.0063448022196813
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "balanced256",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 25819.628647214853,
+      "bytes": 1376.424403183024
+    },
+    "candidate-left": {
+      "ns": 24036.25110521662,
+      "bytes": 1376.424403183024
+    },
+    "ratio": 0.9309293883980548
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "balanced256",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 10.192060722629462,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 10.107370862850726,
+      "bytes": 0
+    },
+    "ratio": 0.9916906048655402
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "balanced256",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 4395.6716954022995,
+      "bytes": 12584.48275862069
+    },
+    "candidate-left": {
+      "ns": 4354.292385057472,
+      "bytes": 12584.48275862069
+    },
+    "ratio": 0.9905863510261449
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "conditional",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1362.3523303714294,
+      "bytes": 1064.0490246144418
+    },
+    "candidate-left": {
+      "ns": 1337.3974398256903,
+      "bytes": 1064.0490246144418
+    },
+    "ratio": 0.9816824987270837
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "conditional",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.1827854495426657,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.1875047431043264,
+      "bytes": 0
+    },
+    "ratio": 1.0039899827677838
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "conditional",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 173.36100048067019,
+      "bytes": 520.0219734944723
+    },
+    "candidate-left": {
+      "ns": 172.83455217560484,
+      "bytes": 520.0219734944723
+    },
+    "ratio": 0.9969632829551878
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nullable",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1414.630665601096,
+      "bytes": 1368.0548007763443
+    },
+    "candidate-left": {
+      "ns": 1431.9128895992694,
+      "bytes": 1368.0548007763443
+    },
+    "ratio": 1.0122167746100923
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nullable",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.1926699111934351,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.1830284937289413,
+      "bytes": 0
+    },
+    "ratio": 0.9919161057271527
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nullable",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 229.15430621193835,
+      "bytes": 552.0229137257309
+    },
+    "candidate-left": {
+      "ns": 229.43390822234497,
+      "bytes": 552.0229137257309
+    },
+    "ratio": 1.0012201473104678
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "new_member",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1240.8958333333335,
+      "bytes": 968
+    },
+    "candidate-left": {
+      "ns": 1246.4833333333333,
+      "bytes": 968
+    },
+    "ratio": 1.0045027953595351
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "new_member",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 3.482591919413823,
+      "bytes": 24
+    },
+    "candidate-left": {
+      "ns": 3.502928327646623,
+      "bytes": 24
+    },
+    "ratio": 1.0058394462237834
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "new_member",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 293.3306020355356,
+      "bytes": 664.0276004830084
+    },
+    "candidate-left": {
+      "ns": 293.25153815191766,
+      "bytes": 664.0276004830084
+    },
+    "ratio": 0.9997304615233825
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "constant_object",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1434.213687534322,
+      "bytes": 1056
+    },
+    "candidate-left": {
+      "ns": 1391.7790705656234,
+      "bytes": 1056
+    },
+    "ratio": 0.9704126258607589
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "constant_object",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.0241754713104387,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.0351328775878321,
+      "bytes": 0
+    },
+    "ratio": 1.0106987587423601
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "constant_object",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 200.36545083983415,
+      "bytes": 464.0202403542062
+    },
+    "candidate-left": {
+      "ns": 197.60172886358845,
+      "bytes": 464.0202403542062
+    },
+    "ratio": 0.9862065941774816
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "array",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1613.3305800293685,
+      "bytes": 992.0528634361234
+    },
+    "candidate-left": {
+      "ns": 1565.6066446402351,
+      "bytes": 992.0528634361234
+    },
+    "ratio": 0.9704189978297785
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "array",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.0341676311925074,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.044847766691055,
+      "bytes": 0
+    },
+    "ratio": 1.0103272769098683
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "array",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 172.752184861502,
+      "bytes": 552.0237001925641
+    },
+    "candidate-left": {
+      "ns": 170.87866269468995,
+      "bytes": 552.0237001925641
+    },
+    "ratio": 0.9891548568933349
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "new_array",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1602.6953314782916,
+      "bytes": 1320
+    },
+    "candidate-left": {
+      "ns": 1604.8650677973587,
+      "bytes": 1320
+    },
+    "ratio": 1.0013538046043136
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "new_array",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 3.018430489817384,
+      "bytes": 40
+    },
+    "candidate-left": {
+      "ns": 3.0242392506755165,
+      "bytes": 40
+    },
+    "ratio": 1.0019244308847688
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "new_array",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 213.29052238011604,
+      "bytes": 544.0223535047102
+    },
+    "candidate-left": {
+      "ns": 210.75163659588057,
+      "bytes": 544.0223535047102
+    },
+    "ratio": 0.9880965841524323
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "interned_string",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1203.35,
+      "bytes": 872
+    },
+    "candidate-left": {
+      "ns": 1194.0375,
+      "bytes": 872
+    },
+    "ratio": 0.9922611875181784
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "interned_string",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2507908991432262,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2533691735987513,
+      "bytes": 0
+    },
+    "ratio": 1.0020613153303972
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "interned_string",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 178.86166234749786,
+      "bytes": 440.01704000852
+    },
+    "candidate-left": {
+      "ns": 177.86914101790384,
+      "bytes": 440.01704000852
+    },
+    "ratio": 0.9944508995579739
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "noninterned_string",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1053.3708333333334,
+      "bytes": 872
+    },
+    "candidate-left": {
+      "ns": 1008.3416666666666,
+      "bytes": 872
+    },
+    "ratio": 0.9572523130110082
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "noninterned_string",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.219217778791446,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2122182054104742,
+      "bytes": 0
+    },
+    "ratio": 0.9942589638186624
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "noninterned_string",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 187.89321180641713,
+      "bytes": 536.0211734736076
+    },
+    "candidate-left": {
+      "ns": 187.8732238267745,
+      "bytes": 536.0211734736076
+    },
+    "ratio": 0.9998936205334378
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "try_catch",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 15829.373781676411,
+      "bytes": 1504.233918128655
+    },
+    "candidate-left": {
+      "ns": 15300.438596491229,
+      "bytes": 1504.233918128655
+    },
+    "ratio": 0.9665852109830484
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "try_catch",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 0.7524620184350136,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 0.7511920010662294,
+      "bytes": 0
+    },
+    "ratio": 0.998312184086812
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "try_catch",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 224.00893227128321,
+      "bytes": 712.0294672867075
+    },
+    "candidate-left": {
+      "ns": 226.64487315253925,
+      "bytes": 712.0294672867075
+    },
+    "ratio": 1.0117671239915729
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "try_finally",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 8602.933640789137,
+      "bytes": 1472.1229823212914
+    },
+    "candidate-left": {
+      "ns": 8621.861388675377,
+      "bytes": 1472.1229823212914
+    },
+    "ratio": 1.002200150399452
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "try_finally",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.1781929403101168,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.1662213929831908,
+      "bytes": 0
+    },
+    "ratio": 0.9898390603802337
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "try_finally",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 172.0533414667209,
+      "bytes": 520.0260268401789
+    },
+    "candidate-left": {
+      "ns": 172.319371018029,
+      "bytes": 520.0260268401789
+    },
+    "ratio": 1.0015462039216456
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "switch",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1491.6088621029492,
+      "bytes": 1144.0545826700022
+    },
+    "candidate-left": {
+      "ns": 1491.1919111515426,
+      "bytes": 1144.0545826700022
+    },
+    "ratio": 0.999720468976821
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "switch",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.0153058332550784,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.0135589997785046,
+      "bytes": 0
+    },
+    "ratio": 0.9982795002063827
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "switch",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 329.9124096533137,
+      "bytes": 1056.0470415288496
+    },
+    "candidate-left": {
+      "ns": 327.29694965086367,
+      "bytes": 1056.0470415288496
+    },
+    "ratio": 0.9920722594060694
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "goto",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1246.9775752129071,
+      "bytes": 872
+    },
+    "candidate-left": {
+      "ns": 1205.7067659519835,
+      "bytes": 872
+    },
+    "ratio": 0.9669033268269662
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "goto",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2153823549014626,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.1969005820505356,
+      "bytes": 0
+    },
+    "ratio": 0.9847934497515184
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "goto",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 163.5931040604631,
+      "bytes": 536.0243475614395
+    },
+    "candidate-left": {
+      "ns": 162.9574678536103,
+      "bytes": 536.0243475614395
+    },
+    "ratio": 0.9961145293348191
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "loop",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1869.894894894895,
+      "bytes": 1072.052416052416
+    },
+    "candidate-left": {
+      "ns": 1821.7376467376469,
+      "bytes": 1072.052416052416
+    },
+    "ratio": 0.9742460133514856
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "loop",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 2.495624315889354,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 2.51475137295482,
+      "bytes": 0
+    },
+    "ratio": 1.0076642373388038
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "loop",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 370.9368486282463,
+      "bytes": 1200.0540814601993
+    },
+    "candidate-left": {
+      "ns": 371.48611345839674,
+      "bytes": 1200.0540814601993
+    },
+    "ratio": 1.0014807502467917
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "blocks32",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 16689.604377104377,
+      "bytes": 4328.26936026936
+    },
+    "candidate-left": {
+      "ns": 15507.926487093155,
+      "bytes": 4328.26936026936
+    },
+    "ratio": 0.9291967704379915
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "blocks32",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2027126633714187,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2000446771135684,
+      "bytes": 0
+    },
+    "ratio": 0.997781692719214
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "blocks32",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 6280.474290780142,
+      "bytes": 19944.85106382979
+    },
+    "candidate-left": {
+      "ns": 6241.46719858156,
+      "bytes": 19944.85106382979
+    },
+    "ratio": 0.9937891486546097
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "blocks128",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 76210.31746031746,
+      "bytes": 15033.269841269841
+    },
+    "candidate-left": {
+      "ns": 72331.67989417989,
+      "bytes": 15033.269841269841
+    },
+    "ratio": 0.949106135554977
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "blocks128",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.1918996621496154,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.199839766575328,
+      "bytes": 0
+    },
+    "ratio": 1.0066617221884202
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "blocks128",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 25663.316582914573,
+      "bytes": 78363.21608040201
+    },
+    "candidate-left": {
+      "ns": 26106.888609715243,
+      "bytes": 78363.21608040201
+    },
+    "ratio": 1.0172842830102473
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "invoke_literal",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 2048.0958819221455,
+      "bytes": 1432.081122190299
+    },
+    "candidate-left": {
+      "ns": 1927.828009689595,
+      "bytes": 1432.081122190299
+    },
+    "ratio": 0.9412782022101043
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "invoke_literal",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2224499512855207,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2341957086293207,
+      "bytes": 0
+    },
+    "ratio": 1.0096083748307636
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "invoke_literal",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 361.05465419163426,
+      "bytes": 832.0336405368469
+    },
+    "candidate-left": {
+      "ns": 355.1368982957797,
+      "bytes": 832.0336405368469
+    },
+    "ratio": 0.9836098058087526
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "invoke_delegate",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1347.7104810996564,
+      "bytes": 1064
+    },
+    "candidate-left": {
+      "ns": 1347.8178694158075,
+      "bytes": 1064
+    },
+    "ratio": 1.0000796820368003
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "invoke_delegate",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.4877845264049128,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.4866146253301966,
+      "bytes": 0
+    },
+    "ratio": 0.9992136622918487
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "invoke_delegate",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 202.49162908295747,
+      "bytes": 440.01968019680197
+    },
+    "candidate-left": {
+      "ns": 203.50553505535055,
+      "bytes": 440.01968019680197
+    },
+    "ratio": 1.005007150058424
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "invoke_try_argument",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 9865.778380006022,
+      "bytes": 2032.1445347786812
+    },
+    "candidate-left": {
+      "ns": 9924.495633845227,
+      "bytes": 2032.1445347786812
+    },
+    "ratio": 1.0059516088419542
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "invoke_try_argument",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.1760855847826672,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.187962574643625,
+      "bytes": 0
+    },
+    "ratio": 1.010098746226154
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "invoke_try_argument",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 376.5061675477449,
+      "bytes": 912.0457208172596
+    },
+    "candidate-left": {
+      "ns": 379.03033766728583,
+      "bytes": 912.0457208172596
+    },
+    "ratio": 1.0067041932831575
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture1",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 3243.069815195072,
+      "bytes": 2808.123203285421
+    },
+    "candidate-left": {
+      "ns": 3278.9185489390825,
+      "bytes": 2808.123203285421
+    },
+    "ratio": 1.011053950666139
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture1",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 17.76987553975108,
+      "bytes": 184
+    },
+    "candidate-left": {
+      "ns": 18.071853921485623,
+      "bytes": 184
+    },
+    "ratio": 1.0169938377485548
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture1",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 195.17995559662228,
+      "bytes": 464.01848001848003
+    },
+    "candidate-left": {
+      "ns": 193.68086034752702,
+      "bytes": 464.01848001848003
+    },
+    "ratio": 0.9923194200730662
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture8",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 7357.595285305133,
+      "bytes": 4776.211500330469
+    },
+    "candidate-left": {
+      "ns": 7312.073143864287,
+      "bytes": 4776.211500330469
+    },
+    "ratio": 0.9938129049403187
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture8",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 41.96078373021778,
+      "bytes": 440
+    },
+    "candidate-left": {
+      "ns": 42.48553221797001,
+      "bytes": 440
+    },
+    "ratio": 1.0125056884334203
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture8",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 1204.7195416164052,
+      "bytes": 2912.115802171291
+    },
+    "candidate-left": {
+      "ns": 1201.8244873341375,
+      "bytes": 2912.115802171291
+    },
+    "ratio": 0.9975969060164963
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture_reference",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 3701.075562847507,
+      "bytes": 2832
+    },
+    "candidate-left": {
+      "ns": 3737.968280010938,
+      "bytes": 2832
+    },
+    "ratio": 1.0099681069832163
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture_reference",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 16.126507427644594,
+      "bytes": 160
+    },
+    "candidate-left": {
+      "ns": 16.07358083934288,
+      "bytes": 160
+    },
+    "ratio": 0.9967180377686129
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture_reference",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 377.3539100720309,
+      "bytes": 944.0413009808983
+    },
+    "candidate-left": {
+      "ns": 376.87145069695407,
+      "bytes": 944.0413009808983
+    },
+    "ratio": 0.9987214671368193
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nested_blocks8",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1374.7580957295834,
+      "bytes": 872
+    },
+    "candidate-left": {
+      "ns": 1351.8040682922635,
+      "bytes": 872
+    },
+    "ratio": 0.9833032243937155
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nested_blocks8",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.1985778105968894,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.209582050290265,
+      "bytes": 0
+    },
+    "ratio": 1.0091810807743016
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nested_blocks8",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 458.45442584077966,
+      "bytes": 1072.0416413637547
+    },
+    "candidate-left": {
+      "ns": 458.06765275729447,
+      "bytes": 1072.0416413637547
+    },
+    "ratio": 0.9991563543469433
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nested_blocks32",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 2458.1241190979563,
+      "bytes": 872
+    },
+    "candidate-left": {
+      "ns": 2423.890063424947,
+      "bytes": 872
+    },
+    "ratio": 0.9860730972016287
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nested_blocks32",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.300297496547448,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2941269734835905,
+      "bytes": 0
+    },
+    "ratio": 0.9952545297670405
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nested_blocks32",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 1342.7260449876017,
+      "bytes": 3192.127523910733
+    },
+    "candidate-left": {
+      "ns": 1345.1392578816863,
+      "bytes": 3192.127523910733
+    },
+    "ratio": 1.0017972488901166
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nested_blocks128",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 6898.144834168456,
+      "bytes": 872
+    },
+    "candidate-left": {
+      "ns": 6824.117155810069,
+      "bytes": 872
+    },
+    "ratio": 0.9892684656327151
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nested_blocks128",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.3020354959288427,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2880729328022729,
+      "bytes": 0
+    },
+    "ratio": 0.989276357541536
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nested_blocks128",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 4828.113004759712,
+      "bytes": 11640.515891294335
+    },
+    "candidate-left": {
+      "ns": 4837.594042683862,
+      "bytes": 11640.515891294335
+    },
+    "ratio": 1.0019637149989662
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nested_mixed32",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 17038.493038493038,
+      "bytes": 4032.39312039312
+    },
+    "candidate-left": {
+      "ns": 16824.631449631448,
+      "bytes": 4032.39312039312
+    },
+    "ratio": 0.9874483272447606
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nested_mixed32",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.230653158000428,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.0776166324246597,
+      "bytes": 0
+    },
+    "ratio": 0.8756460952617853
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nested_mixed32",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 10237.565876152832,
+      "bytes": 8824.474308300396
+    },
+    "candidate-left": {
+      "ns": 10081.357048748354,
+      "bytes": 8824.474308300396
+    },
+    "ratio": 0.9847416046651922
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nested_mixed128",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 114869.25287356322,
+      "bytes": 13345.83908045977
+    },
+    "candidate-left": {
+      "ns": 111739.94252873563,
+      "bytes": 13345.83908045977
+    },
+    "ratio": 0.9727576329910317
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nested_mixed128",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2250837442691231,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2159622578904485,
+      "bytes": 0
+    },
+    "ratio": 0.9925543976717147
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nested_mixed128",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 114986.81434599157,
+      "bytes": 34170.0253164557
+    },
+    "candidate-left": {
+      "ns": 115125,
+      "bytes": 34170.0253164557
+    },
+    "ratio": 1.0012017521730154
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nested_eh8",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 16921.619496855346,
+      "bytes": 4256
+    },
+    "candidate-left": {
+      "ns": 17004.95283018868,
+      "bytes": 4256
+    },
+    "ratio": 1.0049246665396783
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nested_eh8",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.26393058129852,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2594447998092784,
+      "bytes": 0
+    },
+    "ratio": 0.996450927324954
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nested_eh8",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 383.8671862623958,
+      "bytes": 1008.045623039635
+    },
+    "candidate-left": {
+      "ns": 391.7680511991889,
+      "bytes": 1008.045623039635
+    },
+    "ratio": 1.02058228788379
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nested_eh32",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 64990.485564304465,
+      "bytes": 14400
+    },
+    "candidate-left": {
+      "ns": 64255.24934383202,
+      "bytes": 14400
+    },
+    "ratio": 0.9886870175828281
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nested_eh32",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2780403922519514,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.3132040496931205,
+      "bytes": 0
+    },
+    "ratio": 1.0275137293424736
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nested_eh32",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 1133.8616838487974,
+      "bytes": 2936.1154639175256
+    },
+    "candidate-left": {
+      "ns": 1092.5816151202748,
+      "bytes": 2936.1154639175256
+    },
+    "ratio": 0.9635933824058673
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture_call",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 4537.963275881491,
+      "bytes": 2856
+    },
+    "candidate-left": {
+      "ns": 4609.257068829559,
+      "bytes": 2856
+    },
+    "ratio": 1.0157105266424218
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture_call",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 17.30912892384096,
+      "bytes": 160
+    },
+    "candidate-left": {
+      "ns": 16.863835729273763,
+      "bytes": 160
+    },
+    "ratio": 0.9742740841248305
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture_call",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 487.2046748274646,
+      "bytes": 976.0403002367639
+    },
+    "candidate-left": {
+      "ns": 488.1240239786409,
+      "bytes": 976.0403002367639
+    },
+    "ratio": 1.0018869875407124
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture_ctor",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 4326.130669831224,
+      "bytes": 3016
+    },
+    "candidate-left": {
+      "ns": 4364.6822257383965,
+      "bytes": 3016
+    },
+    "ratio": 1.0089113248880845
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture_ctor",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 21.533322976541868,
+      "bytes": 184
+    },
+    "candidate-left": {
+      "ns": 22.00507482781834,
+      "bytes": 184
+    },
+    "ratio": 1.0219079912464226
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture_ctor",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 714.1826698439398,
+      "bytes": 1328.0560695262125
+    },
+    "candidate-left": {
+      "ns": 775.8649892533408,
+      "bytes": 1328.0560695262125
+    },
+    "ratio": 1.0863677067701454
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture_invoke",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 4309.776483846732,
+      "bytes": 3096
+    },
+    "candidate-left": {
+      "ns": 4386.880165289256,
+      "bytes": 3096
+    },
+    "ratio": 1.0178904130484523
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture_invoke",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 18.536299068238407,
+      "bytes": 160
+    },
+    "candidate-left": {
+      "ns": 18.657267594537814,
+      "bytes": 160
+    },
+    "ratio": 1.0065260344502471
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture_invoke",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 479.05549997220834,
+      "bytes": 1040.040020010005
+    },
+    "candidate-left": {
+      "ns": 483.13045411594686,
+      "bytes": 1040.040020010005
+    },
+    "ratio": 1.0085062255708888
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture_try",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 20086.471408647143,
+      "bytes": 3432
+    },
+    "candidate-left": {
+      "ns": 20129.358437935844,
+      "bytes": 3432
+    },
+    "ratio": 1.002135120122205
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture_try",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 16.555238949342428,
+      "bytes": 160
+    },
+    "candidate-left": {
+      "ns": 16.30344576474739,
+      "bytes": 160
+    },
+    "ratio": 0.9847907248354734
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture_try",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 437.15968767274734,
+      "bytes": 1024.039800995025
+    },
+    "candidate-left": {
+      "ns": 437.7401188501934,
+      "bytes": 1024.039800995025
+    },
+    "ratio": 1.0013277326199403
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture_array",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 4279.378255208333,
+      "bytes": 2960.15625
+    },
+    "candidate-left": {
+      "ns": 4350.206163194444,
+      "bytes": 2960.15625
+    },
+    "ratio": 1.0165509809514754
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture_array",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 21.34515853144483,
+      "bytes": 192
+    },
+    "candidate-left": {
+      "ns": 21.626800277511,
+      "bytes": 192
+    },
+    "ratio": 1.013194642974952
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture_array",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 511.78719476085973,
+      "bytes": 1224.0501619813983
+    },
+    "candidate-left": {
+      "ns": 516.1371790852405,
+      "bytes": 1224.0501619813983
+    },
+    "ratio": 1.0084995958650613
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture_mutable",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 3619.383666486584,
+      "bytes": 3016
+    },
+    "candidate-left": {
+      "ns": 3586.068341437061,
+      "bytes": 3016
+    },
+    "ratio": 0.9907953043613464
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture_mutable",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 18.448038247600646,
+      "bytes": 184
+    },
+    "candidate-left": {
+      "ns": 19.116992382210793,
+      "bytes": 184
+    },
+    "ratio": 1.0362615322904132
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture_mutable",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 188.88373980108392,
+      "bytes": 416.01786671431125
+    },
+    "candidate-left": {
+      "ns": 186.178607587398,
+      "bytes": 416.01786671431125
+    },
+    "ratio": 0.9856783214027066
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture_mutable_reference",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 5833.997088043851,
+      "bytes": 3384
+    },
+    "candidate-left": {
+      "ns": 5849.4775608084965,
+      "bytes": 3384
+    },
+    "ratio": 1.0026534933992974
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture_mutable_reference",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 18.867368921493068,
+      "bytes": 160
+    },
+    "candidate-left": {
+      "ns": 18.763970745777996,
+      "bytes": 160
+    },
+    "ratio": 0.9945197353088653
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture_mutable_reference",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 604.3911383312541,
+      "bytes": 1296.0544402858116
+    },
+    "candidate-left": {
+      "ns": 607.8976220180712,
+      "bytes": 1296.0544402858116
+    },
+    "ratio": 1.005801679515849
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture_mutable_reference_ctor",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 6473.866150442478,
+      "bytes": 3640
+    },
+    "candidate-left": {
+      "ns": 6448.2853982300885,
+      "bytes": 3640
+    },
+    "ratio": 0.9960486127426899
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture_mutable_reference_ctor",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 21.45259644953872,
+      "bytes": 184
+    },
+    "candidate-left": {
+      "ns": 21.208414872798436,
+      "bytes": 184
+    },
+    "ratio": 0.9886176213068355
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture_mutable_reference_ctor",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 743.04354094579,
+      "bytes": 1528.069204152249
+    },
+    "candidate-left": {
+      "ns": 742.9834678969627,
+      "bytes": 1528.069204152249
+    },
+    "ratio": 0.999919152720511
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture_mutable_reference_array",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 6404.761904761905,
+      "bytes": 3576.182128628344
+    },
+    "candidate-left": {
+      "ns": 6422.761335609941,
+      "bytes": 3576.182128628344
+    },
+    "ratio": 1.0028103200580578
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture_mutable_reference_array",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 21.717809416314246,
+      "bytes": 192
+    },
+    "candidate-left": {
+      "ns": 21.75129538613937,
+      "bytes": 192
+    },
+    "ratio": 1.0015418668238227
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "capture_mutable_reference_array",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 708.344959077381,
+      "bytes": 1512.0669642857142
+    },
+    "candidate-left": {
+      "ns": 709.7952706473214,
+      "bytes": 1512.0669642857142
+    },
+    "ratio": 1.002047465082309
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "constant",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 788.4217400040185,
+      "bytes": 872
+    },
+    "candidate-left": {
+      "ns": 777.2403054048623,
+      "bytes": 872
+    },
+    "ratio": 0.9858179524589222
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "constant",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2098006122490974,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2026925368858081,
+      "bytes": 0
+    },
+    "ratio": 0.9941245893816545
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "constant",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 39.57114148797562,
+      "bytes": 152.00636000265
+    },
+    "candidate-left": {
+      "ns": 39.41158933816222,
+      "bytes": 152.00636000265
+    },
+    "ratio": 0.9959679669624419
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "add",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1028.6541666666667,
+      "bytes": 872.048
+    },
+    "candidate-left": {
+      "ns": 1047.1416666666667,
+      "bytes": 872.048
+    },
+    "ratio": 1.0179725126277457
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "add",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.1981382689258273,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.1919951508088402,
+      "bytes": 0
+    },
+    "ratio": 0.9948727803156687
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "add",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 45.19094851338077,
+      "bytes": 144.00613335250006
+    },
+    "candidate-left": {
+      "ns": 46.20139437935744,
+      "bytes": 144.00613335250006
+    },
+    "ratio": 1.0223594746119897
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "arithmetic64",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 25091.090425531915,
+      "bytes": 1056.4255319148936
+    },
+    "candidate-left": {
+      "ns": 25076.0195035461,
+      "bytes": 1056.4255319148936
+    },
+    "ratio": 0.999399351653108
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "arithmetic64",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.210036066656818,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2187301294611101,
+      "bytes": 0
+    },
+    "ratio": 1.0071849617080528
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "arithmetic64",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 5303.071364046973,
+      "bytes": 7152.346883468835
+    },
+    "candidate-left": {
+      "ns": 5260.275519421862,
+      "bytes": 7152.346883468835
+    },
+    "ratio": 0.9919299889276896
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "balanced256",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 22660.8118657299,
+      "bytes": 1376.374707259953
+    },
+    "candidate-left": {
+      "ns": 21391.97892271663,
+      "bytes": 1376.374707259953
+    },
+    "ratio": 0.9440076132077098
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "balanced256",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 10.316196243186914,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 10.741728779806454,
+      "bytes": 0
+    },
+    "ratio": 1.0412489765208348
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "balanced256",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 6453.651866151867,
+      "bytes": 10280.432432432432
+    },
+    "candidate-left": {
+      "ns": 3139.4144144144143,
+      "bytes": 10280.432432432432
+    },
+    "ratio": 0.48645549520265025
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "conditional",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1296.6838685015289,
+      "bytes": 1064.0500417014177
+    },
+    "candidate-left": {
+      "ns": 1273.2398526549903,
+      "bytes": 1064.0500417014177
+    },
+    "ratio": 0.9819200219760342
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "conditional",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2539588577634306,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2463659471363864,
+      "bytes": 0
+    },
+    "ratio": 0.9939448486845995
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "conditional",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 47.66907119514577,
+      "bytes": 216.00856000249667
+    },
+    "candidate-left": {
+      "ns": 48.41881446937644,
+      "bytes": 216.00856000249667
+    },
+    "ratio": 1.0157280864810938
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nullable",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1356.4616454316533,
+      "bytes": 1368
+    },
+    "candidate-left": {
+      "ns": 1372.218777013568,
+      "bytes": 1368
+    },
+    "ratio": 1.0116163487813916
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nullable",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.198763993522981,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2046847060168193,
+      "bytes": 0
+    },
+    "ratio": 1.0049390142895753
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nullable",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 78.91525195478533,
+      "bytes": 256.01077341323617
+    },
+    "candidate-left": {
+      "ns": 80.80515833270208,
+      "bytes": 256.01077341323617
+    },
+    "ratio": 1.0239485565984072
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "new_member",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1401.8458333333333,
+      "bytes": 968
+    },
+    "candidate-left": {
+      "ns": 1441.1333333333334,
+      "bytes": 968
+    },
+    "ratio": 1.02802554964734
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "new_member",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 3.2001436476631295,
+      "bytes": 24
+    },
+    "candidate-left": {
+      "ns": 3.193029983268254,
+      "bytes": 24
+    },
+    "ratio": 0.9977770796632613
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "new_member",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 108.21626083970747,
+      "bytes": 272.01052008679073
+    },
+    "candidate-left": {
+      "ns": 107.07886777565915,
+      "bytes": 272.01052008679073
+    },
+    "ratio": 0.9894896288670234
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "constant_object",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1394.8603776189982,
+      "bytes": 1056
+    },
+    "candidate-left": {
+      "ns": 1368.1569500535018,
+      "bytes": 1056
+    },
+    "ratio": 0.9808558419222727
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "constant_object",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 0.9905868462727665,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 0.9900938618705908,
+      "bytes": 0
+    },
+    "ratio": 0.9995023309626706
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "constant_object",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 58.952469910881085,
+      "bytes": 168.00686001286252
+    },
+    "candidate-left": {
+      "ns": 58.20598413622025,
+      "bytes": 168.00686001286252
+    },
+    "ratio": 0.9873374978895829
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "array",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1373.3458333333333,
+      "bytes": 992.048
+    },
+    "candidate-left": {
+      "ns": 1308.4666666666667,
+      "bytes": 992.048
+    },
+    "ratio": 0.9527583183405491
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "array",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.013415315780852,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.0282812017549896,
+      "bytes": 0
+    },
+    "ratio": 1.0146690954267679
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "array",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 58.687484749939,
+      "bytes": 288.0115200460802
+    },
+    "candidate-left": {
+      "ns": 58.47573390293561,
+      "bytes": 288.0115200460802
+    },
+    "ratio": 0.9963918909132732
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "new_array",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1595.0627736726874,
+      "bytes": 1320
+    },
+    "candidate-left": {
+      "ns": 1549.735734811166,
+      "bytes": 1320
+    },
+    "ratio": 0.9715829122153266
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "new_array",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 3.144145229027742,
+      "bytes": 40
+    },
+    "candidate-left": {
+      "ns": 3.12443799728575,
+      "bytes": 40
+    },
+    "ratio": 0.9937320860499544
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "new_array",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 50.678666666666665,
+      "bytes": 160.00682666666665
+    },
+    "candidate-left": {
+      "ns": 50.41644444444445,
+      "bytes": 160.00682666666665
+    },
+    "ratio": 0.9948257868750385
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "interned_string",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1083.25,
+      "bytes": 872
+    },
+    "candidate-left": {
+      "ns": 1078.7041666666667,
+      "bytes": 872
+    },
+    "ratio": 0.9958035233479499
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "interned_string",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2493854955725325,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2534721362000867,
+      "bytes": 0
+    },
+    "ratio": 1.0032709204981458
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "interned_string",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 72.70162509748994,
+      "bytes": 176.00764002737677
+    },
+    "candidate-left": {
+      "ns": 72.23539773239743,
+      "bytes": 176.00764002737677
+    },
+    "ratio": 0.993587112193609
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "noninterned_string",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1014.8916666666667,
+      "bytes": 872
+    },
+    "candidate-left": {
+      "ns": 1064.05,
+      "bytes": 872
+    },
+    "ratio": 1.0484370252982667
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "noninterned_string",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.204752564758241,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2213459246759515,
+      "bytes": 0
+    },
+    "ratio": 1.0137732513738538
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "noninterned_string",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 85.3057486440656,
+      "bytes": 272.0108733641412
+    },
+    "candidate-left": {
+      "ns": 84.66823294888223,
+      "bytes": 272.0108733641412
+    },
+    "ratio": 0.9925266971415564
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "try_catch",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 15528.371320037986,
+      "bytes": 1504.4558404558404
+    },
+    "candidate-left": {
+      "ns": 15589.150047483381,
+      "bytes": 1504.4558404558404
+    },
+    "ratio": 1.0039140439259695
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "try_catch",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 0.7512300940048439,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 0.7510214655306223,
+      "bytes": 0
+    },
+    "ratio": 0.9997222841897756
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "try_catch",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 64.03075003259391,
+      "bytes": 328.0129133995145
+    },
+    "candidate-left": {
+      "ns": 63.98496333960378,
+      "bytes": 328.0129133995145
+    },
+    "ratio": 0.9992849264928675
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "try_finally",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 8497.812097812097,
+      "bytes": 1472.1235521235521
+    },
+    "candidate-left": {
+      "ns": 8841.119691119691,
+      "bytes": 1472.1235521235521
+    },
+    "ratio": 1.0403995274731934
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "try_finally",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2123021472794913,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.215399086847491,
+      "bytes": 0
+    },
+    "ratio": 1.002554593815535
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "try_finally",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 53.02259717984004,
+      "bytes": 184.0071800394902
+    },
+    "candidate-left": {
+      "ns": 53.64150162548116,
+      "bytes": 184.0071800394902
+    },
+    "ratio": 1.0116724656761331
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "switch",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1428.7287027422021,
+      "bytes": 1144.055382485289
+    },
+    "candidate-left": {
+      "ns": 1419.983846775124,
+      "bytes": 1144.055382485289
+    },
+    "ratio": 0.9938792746654463
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "switch",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.018963724500316,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.009057904156093,
+      "bytes": 0
+    },
+    "ratio": 0.9902785348427583
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "switch",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 82.43118737763446,
+      "bytes": 512.0230335137625
+    },
+    "candidate-left": {
+      "ns": 81.56982993589006,
+      "bytes": 512.0230335137625
+    },
+    "ratio": 0.989550587961346
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "goto",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1190.2625,
+      "bytes": 872
+    },
+    "candidate-left": {
+      "ns": 1180.025,
+      "bytes": 872
+    },
+    "ratio": 0.9913989561126223
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "goto",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.211647654438367,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.21062191484187,
+      "bytes": 0
+    },
+    "ratio": 0.9991534340922135
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "goto",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 52.50112875310407,
+      "bytes": 240.00946002601506
+    },
+    "candidate-left": {
+      "ns": 52.92620283872448,
+      "bytes": 240.00946002601506
+    },
+    "ratio": 1.0080964751752175
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "loop",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1641.8099731141888,
+      "bytes": 1072.0486988281843
+    },
+    "candidate-left": {
+      "ns": 1611.0751788160098,
+      "bytes": 1072.0486988281843
+    },
+    "ratio": 0.9812799320253359
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "loop",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 2.563047384348621,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 2.542386001531788,
+      "bytes": 0
+    },
+    "ratio": 0.9919387433322525
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "loop",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 89.05582286520058,
+      "bytes": 576.0258339522718
+    },
+    "candidate-left": {
+      "ns": 89.75683792424194,
+      "bytes": 576.0258339522718
+    },
+    "ratio": 1.0078716364240712
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "blocks32",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 13687.732774674114,
+      "bytes": 4328.223463687151
+    },
+    "candidate-left": {
+      "ns": 12327.572160148975,
+      "bytes": 4328.223463687151
+    },
+    "ratio": 0.900629224947919
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "blocks32",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2017315398023773,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2029531648746057,
+      "bytes": 0
+    },
+    "ratio": 1.0010165540570144
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "blocks32",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 1877.3065476190477,
+      "bytes": 10120.392857142857
+    },
+    "candidate-left": {
+      "ns": 1847.8515625,
+      "bytes": 10120.392857142857
+    },
+    "ratio": 0.9843099758233919
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "blocks128",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 66156.75990675991,
+      "bytes": 15033.11888111888
+    },
+    "candidate-left": {
+      "ns": 62022.14452214452,
+      "bytes": 15033.11888111888
+    },
+    "ratio": 0.9375027526976436
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "blocks128",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.1919743338879631,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.1967724732822562,
+      "bytes": 0
+    },
+    "ratio": 1.004025371400945
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "blocks128",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 7690.558258988916,
+      "bytes": 40121.55717761557
+    },
+    "candidate-left": {
+      "ns": 7549.70938091376,
+      "bytes": 40121.55717761557
+    },
+    "ratio": 0.9816854806462809
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "invoke_literal",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1395.3008828996283,
+      "bytes": 992.0557620817843
+    },
+    "candidate-left": {
+      "ns": 1417.1894361833952,
+      "bytes": 992.0557620817843
+    },
+    "ratio": 1.0156873356507017
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "invoke_literal",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.229221846579187,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2144622681700652,
+      "bytes": 0
+    },
+    "ratio": 0.9879927464271836
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "invoke_literal",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 81.24924348532794,
+      "bytes": 280.0116200653629
+    },
+    "candidate-left": {
+      "ns": 81.48614065120783,
+      "bytes": 280.0116200653629
+    },
+    "ratio": 1.0029156845740068
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "invoke_delegate",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1342.7124366910523,
+      "bytes": 1064
+    },
+    "candidate-left": {
+      "ns": 1363.1026073907333,
+      "bytes": 1064
+    },
+    "ratio": 1.0151858060910868
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "invoke_delegate",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.4959644540599897,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.4960085443443956,
+      "bytes": 0
+    },
+    "ratio": 1.000029472815538
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "invoke_delegate",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 70.00056090467083,
+      "bytes": 144.00656668882925
+    },
+    "candidate-left": {
+      "ns": 69.10071932603884,
+      "bytes": 144.00656668882925
+    },
+    "ratio": 0.9871452233096042
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "invoke_try_argument",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 8559.817596566523,
+      "bytes": 1592.343347639485
+    },
+    "candidate-left": {
+      "ns": 8461.105150214593,
+      "bytes": 1592.343347639485
+    },
+    "ratio": 0.9884679264203567
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "invoke_try_argument",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2055439824127965,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.1997325759630295,
+      "bytes": 0
+    },
+    "ratio": 0.9951794322442422
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "invoke_try_argument",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 89.59846986402418,
+      "bytes": 320.0125335370033
+    },
+    "candidate-left": {
+      "ns": 90.05215779200856,
+      "bytes": 320.0125335370033
+    },
+    "ratio": 1.0050635678117372
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture1",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 3000.5563503417584,
+      "bytes": 2808.1144492131616
+    },
+    "candidate-left": {
+      "ns": 3012.607296137339,
+      "bytes": 2808.1144492131616
+    },
+    "ratio": 1.0040162371202286
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture1",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 17.611353338462855,
+      "bytes": 184
+    },
+    "candidate-left": {
+      "ns": 17.68027352486021,
+      "bytes": 184
+    },
+    "ratio": 1.0039133952441255
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture1",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 63.624360797071304,
+      "bytes": 168.00695336896936
+    },
+    "candidate-left": {
+      "ns": 64.68133496406391,
+      "bytes": 168.00695336896936
+    },
+    "ratio": 1.0166127274797119
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture8",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 6986.237462094706,
+      "bytes": 4776.223932820154
+    },
+    "candidate-left": {
+      "ns": 6969.879869372522,
+      "bytes": 4776.223932820154
+    },
+    "ratio": 0.9976585976627712
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture8",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 42.364425162689805,
+      "bytes": 440
+    },
+    "candidate-left": {
+      "ns": 41.94384188961196,
+      "bytes": 440
+    },
+    "ratio": 0.9900722535131138
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture8",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 676.5571610884689,
+      "bytes": 2000.079041620353
+    },
+    "candidate-left": {
+      "ns": 633.3287019883908,
+      "bytes": 2000.079041620353
+    },
+    "ratio": 0.93610523753746
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture_reference",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 3463.3901815617837,
+      "bytes": 2832
+    },
+    "candidate-left": {
+      "ns": 3450.3679710911333,
+      "bytes": 2832
+    },
+    "ratio": 0.9962400394445947
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture_reference",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 16.239112904471625,
+      "bytes": 160
+    },
+    "candidate-left": {
+      "ns": 16.39887269577719,
+      "bytes": 160
+    },
+    "ratio": 1.0098379629629628
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture_reference",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 95.21651779960303,
+      "bytes": 336.0139200371201
+    },
+    "candidate-left": {
+      "ns": 95.03244786430541,
+      "bytes": 336.0139200371201
+    },
+    "ratio": 0.9980668276938565
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nested_blocks8",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1322.4958333333334,
+      "bytes": 872
+    },
+    "candidate-left": {
+      "ns": 1300.8583333333333,
+      "bytes": 872
+    },
+    "ratio": 0.9836388898515748
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nested_blocks8",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2040195800033064,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.211982757753556,
+      "bytes": 0
+    },
+    "ratio": 1.0066138274514005
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nested_blocks8",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 77.31551481551482,
+      "bytes": 488.0189000189
+    },
+    "candidate-left": {
+      "ns": 77.62428074928074,
+      "bytes": 488.0189000189
+    },
+    "ratio": 1.003993583105573
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nested_blocks32",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 1941.5260855982503,
+      "bytes": 872
+    },
+    "candidate-left": {
+      "ns": 1957.3648859731334,
+      "bytes": 872
+    },
+    "ratio": 1.0081579127328606
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nested_blocks32",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2230550960512219,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2275678671620904,
+      "bytes": 0
+    },
+    "ratio": 1.0036897529190947
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nested_blocks32",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 231.74819428225422,
+      "bytes": 1648.0657411011634
+    },
+    "candidate-left": {
+      "ns": 237.43926877441862,
+      "bytes": 1648.0657411011634
+    },
+    "ratio": 1.0245571470784927
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nested_blocks128",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 4486.28587196468,
+      "bytes": 872
+    },
+    "candidate-left": {
+      "ns": 4452.179911699779,
+      "bytes": 872
+    },
+    "ratio": 0.9923977291598751
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nested_blocks128",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.2446139851528837,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.2382803913989253,
+      "bytes": 0
+    },
+    "ratio": 0.9949111983076582
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nested_blocks128",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 883.5257280820883,
+      "bytes": 6256.25350837483
+    },
+    "candidate-left": {
+      "ns": 876.763618530255,
+      "bytes": 6256.25350837483
+    },
+    "ratio": 0.9923464486240687
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nested_mixed32",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 11045.029080334423,
+      "bytes": 4032.1744820065433
+    },
+    "candidate-left": {
+      "ns": 11508.087968011632,
+      "bytes": 4032.1744820065433
+    },
+    "ratio": 1.041924641783124
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nested_mixed32",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.1184948775120593,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.0230024998409386,
+      "bytes": 0
+    },
+    "ratio": 0.9146242154603956
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nested_mixed32",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 843.7644924571024,
+      "bytes": 7280.2880759472955
+    },
+    "candidate-left": {
+      "ns": 841.691218593993,
+      "bytes": 7280.2880759472955
+    },
+    "ratio": 0.9975428287375878
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nested_mixed128",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 57605.04694835681,
+      "bytes": 13345.12676056338
+    },
+    "candidate-left": {
+      "ns": 58108.56807511737,
+      "bytes": 13345.12676056338
+    },
+    "ratio": 1.0087409203435242
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nested_mixed128",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.1775899088734736,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.1896893447356702,
+      "bytes": 0
+    },
+    "ratio": 1.0102747448589904
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nested_mixed128",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 3526.838840359539,
+      "bytes": 28785.154576528676
+    },
+    "candidate-left": {
+      "ns": 3439.4385365236103,
+      "bytes": 28785.154576528676
+    },
+    "ratio": 0.9752185149954232
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nested_eh8",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 15916.602067183463,
+      "bytes": 4256
+    },
+    "candidate-left": {
+      "ns": 15877.906976744185,
+      "bytes": 4256
+    },
+    "ratio": 0.9975688849745726
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nested_eh8",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.180023695344125,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.1881304982685392,
+      "bytes": 0
+    },
+    "ratio": 1.0068700340140628
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nested_eh8",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 101.06077399094856,
+      "bytes": 424.01773344416733
+    },
+    "candidate-left": {
+      "ns": 105.43640897755611,
+      "bytes": 424.01773344416733
+    },
+    "ratio": 1.0432970658526666
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nested_eh32",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 61185.101010101,
+      "bytes": 14400
+    },
+    "candidate-left": {
+      "ns": 60891.666666666664,
+      "bytes": 14400
+    },
+    "ratio": 0.9952041536486816
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nested_eh32",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 1.1900340034264374,
+      "bytes": 0
+    },
+    "candidate-left": {
+      "ns": 1.1825662248754334,
+      "bytes": 0
+    },
+    "ratio": 0.9937247351508426
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nested_eh32",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 298.76402209484894,
+      "bytes": 1392.0544804494637
+    },
+    "candidate-left": {
+      "ns": 275.12508749030513,
+      "bytes": 1392.0544804494637
+    },
+    "ratio": 0.9208775727452245
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture_call",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 3373.4171490593344,
+      "bytes": 2856
+    },
+    "candidate-left": {
+      "ns": 3335.594548962856,
+      "bytes": 2856
+    },
+    "ratio": 0.9887880453483124
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture_call",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 16.87213968370977,
+      "bytes": 160
+    },
+    "candidate-left": {
+      "ns": 16.59683565230117,
+      "bytes": 160
+    },
+    "ratio": 0.9836829212791305
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture_call",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 118.22462003010791,
+      "bytes": 368.0147467379426
+    },
+    "candidate-left": {
+      "ns": 119.92696853590348,
+      "bytes": 368.0147467379426
+    },
+    "ratio": 1.014399272379662
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture_ctor",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 4235.861881457314,
+      "bytes": 3016
+    },
+    "candidate-left": {
+      "ns": 3962.8058727569332,
+      "bytes": 3016
+    },
+    "ratio": 0.9355370839885747
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture_ctor",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 18.95120643112616,
+      "bytes": 184
+    },
+    "candidate-left": {
+      "ns": 18.722673833516925,
+      "bytes": 184
+    },
+    "ratio": 0.9879410000392437
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture_ctor",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 187.70698691360406,
+      "bytes": 560.0216070222823
+    },
+    "candidate-left": {
+      "ns": 186.75605286003665,
+      "bytes": 560.0216070222823
+    },
+    "ratio": 0.9949339442862343
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture_invoke",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 3870.6634753963353,
+      "bytes": 3096
+    },
+    "candidate-left": {
+      "ns": 3887.1731521515335,
+      "bytes": 3096
+    },
+    "ratio": 1.0042653350931026
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture_invoke",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 17.872057974464422,
+      "bytes": 160
+    },
+    "candidate-left": {
+      "ns": 18.2986862615512,
+      "bytes": 160
+    },
+    "ratio": 1.0238712457007662
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture_invoke",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 137.10935639083417,
+      "bytes": 400.0160068600829
+    },
+    "candidate-left": {
+      "ns": 130.4987851936544,
+      "bytes": 400.0160068600829
+    },
+    "ratio": 0.9517861408499642
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture_try",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 19234.974009096815,
+      "bytes": 3432
+    },
+    "candidate-left": {
+      "ns": 18772.9044834308,
+      "bytes": 3432
+    },
+    "ratio": 0.97597763711833
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture_try",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 16.18085473189215,
+      "bytes": 160
+    },
+    "candidate-left": {
+      "ns": 15.923287977742197,
+      "bytes": 160
+    },
+    "ratio": 0.9840820056531195
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture_try",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 103.23305316386497,
+      "bytes": 376.01476014760146
+    },
+    "candidate-left": {
+      "ns": 102.0589893398934,
+      "bytes": 376.01476014760146
+    },
+    "ratio": 0.9886270551147225
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture_array",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 3878.6827551533434,
+      "bytes": 2960
+    },
+    "candidate-left": {
+      "ns": 3817.094017094017,
+      "bytes": 2960
+    },
+    "ratio": 0.9841212231194991
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture_array",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 20.39975261504463,
+      "bytes": 192
+    },
+    "candidate-left": {
+      "ns": 20.489642152964873,
+      "bytes": 192
+    },
+    "ratio": 1.0044064033332418
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture_array",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 152.25176844857083,
+      "bytes": 456.0184533763912
+    },
+    "candidate-left": {
+      "ns": 151.2317869019472,
+      "bytes": 456.0184533763912
+    },
+    "ratio": 0.9933006916305989
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture_mutable",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 3122.7235619191156,
+      "bytes": 3016
+    },
+    "candidate-left": {
+      "ns": 3086.1278573222808,
+      "bytes": 3016
+    },
+    "ratio": 0.9882808375857822
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture_mutable",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 19.499033430383065,
+      "bytes": 184
+    },
+    "candidate-left": {
+      "ns": 19.955984840532082,
+      "bytes": 184
+    },
+    "ratio": 1.0234345672456258
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture_mutable",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 58.7850744224703,
+      "bytes": 136.0056666855556
+    },
+    "candidate-left": {
+      "ns": 57.167412780264826,
+      "bytes": 136.0056666855556
+    },
+    "ratio": 0.972481762452492
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture_mutable_reference",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 6892.962598425197,
+      "bytes": 6832
+    },
+    "candidate-left": {
+      "ns": 6869.668635170603,
+      "bytes": 6832
+    },
+    "ratio": 0.9966206166184747
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture_mutable_reference",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 19.03734917734821,
+      "bytes": 160
+    },
+    "candidate-left": {
+      "ns": 18.807664002318635,
+      "bytes": 160
+    },
+    "ratio": 0.987935023259285
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture_mutable_reference",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 139.7548920669704,
+      "bytes": 576.023066720489
+    },
+    "candidate-left": {
+      "ns": 139.6359542894489,
+      "bytes": 576.023066720489
+    },
+    "ratio": 0.9991489544604671
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture_mutable_reference_ctor",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 7945.342730790492,
+      "bytes": 7088
+    },
+    "candidate-left": {
+      "ns": 7878.524046434494,
+      "bytes": 7088
+    },
+    "ratio": 0.9915902074183589
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture_mutable_reference_ctor",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 21.110962888681374,
+      "bytes": 184
+    },
+    "candidate-left": {
+      "ns": 21.09198786211634,
+      "bytes": 184
+    },
+    "ratio": 0.9991011766414877
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture_mutable_reference_ctor",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 177.26795845641675,
+      "bytes": 672.028133352089
+    },
+    "candidate-left": {
+      "ns": 176.86866999578,
+      "bytes": 672.028133352089
+    },
+    "ratio": 0.9977475429620017
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture_mutable_reference_array",
+    "phase": "compile",
+    "pool-fixed": {
+      "ns": 7955.985915492958,
+      "bytes": 7024
+    },
+    "candidate-left": {
+      "ns": 7865.945674044266,
+      "bytes": 7024
+    },
+    "ratio": 0.9886827047703347
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture_mutable_reference_array",
+    "phase": "invoke",
+    "pool-fixed": {
+      "ns": 21.833193035185644,
+      "bytes": 192
+    },
+    "candidate-left": {
+      "ns": 21.809182278366592,
+      "bytes": 192
+    },
+    "ratio": 0.9989002636132811
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "capture_mutable_reference_array",
+    "phase": "construct",
+    "pool-fixed": {
+      "ns": 172.53127217377371,
+      "bytes": 664.0274668680904
+    },
+    "candidate-left": {
+      "ns": 170.2616791412026,
+      "bytes": 664.0274668680904
+    },
+    "ratio": 0.9868453237260942
+  }
+]

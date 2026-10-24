@@ -1,5 +1,7 @@
 # Three-stage comparison after rebasing #559 onto #558
 
+Historical snapshots. The [current-master optimization report](../Optimize-20261024/README.md) supersedes these timing comparisons with master `f49acef0`, current #558 and optimized #559.
+
 ## Exact revisions and retained scope
 
 - Before #558: upstream master snapshot at measurement start, without #558, `233ed5adaa9d9ceea67d71e153d0d2457f2cce00`. This includes merged #557/#562 and upstream SmallMap/conversion-helper repairs. It is not the historical original parent of #558; choosing this matched base isolates the current PR's incremental cost.
@@ -42,7 +44,7 @@ These affected workloads save approximately **32 B per lookup** on this host/run
 
 ## Generated delegate execution
 
-After #558 vs after #559, all **82 root delegate IL bodies** match for 41 workloads in both flavors on .NET 10. This checks root IL, not every nested delegate body or JIT-generated machine code. The compiler source is unchanged. No delegate runtime speedup is claimed. Broad runtime medians (after559/after558) range about 0.994–1.039x; the raw samples and each workload's allocation results are in the phase files. For factory workloads, `invoke` includes outer activation plus invocation of the resulting inner delegate, rather than only a scalar call. All generated delegates pass an untimed System behavior oracle for the tested inputs.
+Correction: the original `Inspect.cs` serialized the `StringBuilder` returned by `ToILString()` rather than its instruction text. The 82 equality results in this historical archive therefore compared builder metadata and **do not establish IL identity**. Raw evidence remains unchanged. The [current-master report](../Optimize-20261024/README.md) fixes this by calling `ToString()` and comparing actual instruction text for root and returned nested delegates on both .NET 8 and .NET 10. No delegate runtime speedup is claimed from the historical timing samples. Broad runtime medians (after559/after558) range about 0.994-1.039x; each workload's raw timing and allocation results remain in the phase files. For factory workloads, `invoke` includes outer activation plus invocation of the resulting inner delegate. All generated delegates passed the untimed System behavior oracle for the tested inputs.
 
 ## System: separate unchanged reference
 
@@ -77,6 +79,6 @@ Validated source `e300f4e2`: all production targets build; full .NET 10/.NET 8 A
 - `range-diff.txt`: old/rebased performance-layer mapping.
 - `evidence.zip` and `evidence-manifest.json`: complete sources, harnesses/scripts, project files, native/imported validation logs, raw measurements, confirmation data and manifests. Binaries are hashed and retained locally, not committed. Runners refuse to mix existing output with a new run; preserve/relocate archived output before replaying in a fresh directory. The initial System-reference build error is retained; the corrected reference project was then built and measured successfully.
 
-## Upstream advanced after measurement
+## Upstream advanced after measurement (historical publication status)
 
 After the measurement snapshots were frozen, dadhi/master advanced to `f49acef0` through `c89a3b2c` (nullable truth operators, Quote, and literal-lambda invocation changes). The requested parent #558 remains at `aaa79fe7`; this performance layer remains rebased onto exactly that head. The new master creates conflicts in the parent compatibility changes, so GitHub currently reports #559 as conflicting against its nominal master base. `git merge-tree` confirms conflicts in both compiler source files. No working-tree merge was started, and #558 was not changed. Integrating the new upstream semantics belongs in the parent layer first; the pinned measurements here do not claim to include that subsequent upstream work.
