@@ -2,6 +2,8 @@
 
 The report compares only current upstream master, current #558, and final #559, with System as a separate unchanged reference. It covers Standard/Light tree construction, compilation, compilation plus first invocation, warm invocation and managed allocations. See [current results and evidence](Measurements/Rebase-20261025/README.md). Previous-branch measurement reports are removed from this PR's increment.
 
+The current report uses its documented frozen-snapshot replay protocol. The BenchmarkDotNet project below is a separate reusable focused harness.
+
 # Focused compiler performance measurements
 
 Measure expression-tree construction (the API has no text parser), compilation of an

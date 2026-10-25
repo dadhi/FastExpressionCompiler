@@ -1,0 +1,382 @@
+[
+  {
+    "configuration": "net10.0-light-0",
+    "shape": "constant",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-light-0",
+    "shape": "add",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-light-0",
+    "shape": "arithmetic64",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-light-0",
+    "shape": "balanced256",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-light-0",
+    "shape": "nullable",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-light-0",
+    "shape": "new_member",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-light-0",
+    "shape": "capture_reference",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-light-0",
+    "shape": "capture_mutable_reference_ctor",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-light-0",
+    "shape": "blocks32",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-light-0",
+    "shape": "blocks128",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-light-0",
+    "shape": "try_catch",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-light-0",
+    "shape": "nested_eh32",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-light-0",
+    "shape": "ctor1",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-light-0",
+    "shape": "ctor2",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-light-0",
+    "shape": "constant_object",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-light-0",
+    "shape": "capture_call",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-light-0",
+    "shape": "capture_ctor",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-light-0",
+    "shape": "calls32",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-light-0",
+    "shape": "constructors32",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-standard-0",
+    "shape": "constant",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-standard-0",
+    "shape": "add",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-standard-0",
+    "shape": "arithmetic64",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-standard-0",
+    "shape": "balanced256",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-standard-0",
+    "shape": "nullable",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-standard-0",
+    "shape": "new_member",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-standard-0",
+    "shape": "capture_reference",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-standard-0",
+    "shape": "capture_mutable_reference_ctor",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-standard-0",
+    "shape": "blocks32",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-standard-0",
+    "shape": "blocks128",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-standard-0",
+    "shape": "try_catch",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-standard-0",
+    "shape": "nested_eh32",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-standard-0",
+    "shape": "ctor1",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-standard-0",
+    "shape": "ctor2",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-standard-0",
+    "shape": "constant_object",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-standard-0",
+    "shape": "capture_call",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-standard-0",
+    "shape": "capture_ctor",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-standard-0",
+    "shape": "calls32",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-standard-0",
+    "shape": "constructors32",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-light-0",
+    "shape": "constant",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-light-0",
+    "shape": "add",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-light-0",
+    "shape": "arithmetic64",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-light-0",
+    "shape": "balanced256",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-light-0",
+    "shape": "nullable",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-light-0",
+    "shape": "new_member",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-light-0",
+    "shape": "capture_reference",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-light-0",
+    "shape": "capture_mutable_reference_ctor",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-light-0",
+    "shape": "blocks32",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-light-0",
+    "shape": "blocks128",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-light-0",
+    "shape": "try_catch",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-light-0",
+    "shape": "nested_eh32",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-light-0",
+    "shape": "ctor1",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-light-0",
+    "shape": "ctor2",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-light-0",
+    "shape": "constant_object",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-light-0",
+    "shape": "capture_call",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-light-0",
+    "shape": "capture_ctor",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-light-0",
+    "shape": "calls32",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-light-0",
+    "shape": "constructors32",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-standard-0",
+    "shape": "constant",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-standard-0",
+    "shape": "add",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-standard-0",
+    "shape": "arithmetic64",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-standard-0",
+    "shape": "balanced256",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-standard-0",
+    "shape": "nullable",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-standard-0",
+    "shape": "new_member",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-standard-0",
+    "shape": "capture_reference",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-standard-0",
+    "shape": "capture_mutable_reference_ctor",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-standard-0",
+    "shape": "blocks32",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-standard-0",
+    "shape": "blocks128",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-standard-0",
+    "shape": "try_catch",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-standard-0",
+    "shape": "nested_eh32",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-standard-0",
+    "shape": "ctor1",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-standard-0",
+    "shape": "ctor2",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-standard-0",
+    "shape": "constant_object",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-standard-0",
+    "shape": "capture_call",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-standard-0",
+    "shape": "capture_ctor",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-standard-0",
+    "shape": "calls32",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-standard-0",
+    "shape": "constructors32",
+    "rootAndNestedInstructionsEqual": true
+  }
+]

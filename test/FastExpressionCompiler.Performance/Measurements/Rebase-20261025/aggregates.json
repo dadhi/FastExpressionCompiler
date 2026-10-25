@@ -1,0 +1,178 @@
+[
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "phase": "construct",
+    "workloads": 19,
+    "after558/master": 0.9838102815578617,
+    "after559/master": 0.9652267654037381,
+    "after559/after558": 0.9811106709266176,
+    "allocationLower": 1,
+    "allocationHigher": 0
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "phase": "compile",
+    "workloads": 19,
+    "after558/master": 1.4378563867268412,
+    "after559/master": 1.4105003414482016,
+    "after559/after558": 0.9809744244757896,
+    "allocationLower": 0,
+    "allocationHigher": 0
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "phase": "compile_first",
+    "workloads": 19,
+    "after558/master": 1.0269595901070707,
+    "after559/master": 1.0155589184542386,
+    "after559/after558": 0.9888986170803046,
+    "allocationLower": 0,
+    "allocationHigher": 0
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "phase": "invoke",
+    "workloads": 19,
+    "after558/master": 0.9946584657803251,
+    "after559/master": 0.9834300732559342,
+    "after559/after558": 0.988711308543901,
+    "allocationLower": 0,
+    "allocationHigher": 0
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "phase": "construct",
+    "workloads": 19,
+    "after558/master": 0.9650070515895082,
+    "after559/master": 0.9320709878439596,
+    "after559/after558": 0.965869613396816,
+    "allocationLower": 6,
+    "allocationHigher": 0
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "phase": "compile",
+    "workloads": 19,
+    "after558/master": 1.4582969258870984,
+    "after559/master": 1.4470344744273502,
+    "after559/after558": 0.9922769833359574,
+    "allocationLower": 0,
+    "allocationHigher": 0
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "phase": "compile_first",
+    "workloads": 19,
+    "after558/master": 1.040139335703666,
+    "after559/master": 1.0294880044598027,
+    "after559/after558": 0.9897597073024283,
+    "allocationLower": 0,
+    "allocationHigher": 0
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "phase": "invoke",
+    "workloads": 19,
+    "after558/master": 0.9682659869417651,
+    "after559/master": 0.970964873506817,
+    "after559/after558": 1.002787340050616,
+    "allocationLower": 0,
+    "allocationHigher": 0
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "phase": "construct",
+    "workloads": 19,
+    "after558/master": 1.0146755090551358,
+    "after559/master": 1.0169590587465205,
+    "after559/after558": 1.0022505221334368,
+    "allocationLower": 0,
+    "allocationHigher": 0
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "phase": "compile",
+    "workloads": 19,
+    "after558/master": 1.5120429145859693,
+    "after559/master": 1.4999383024874322,
+    "after559/after558": 0.9919945313841496,
+    "allocationLower": 0,
+    "allocationHigher": 0
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "phase": "compile_first",
+    "workloads": 19,
+    "after558/master": 1.036727811495345,
+    "after559/master": 1.0284871257672163,
+    "after559/after558": 0.9920512543053681,
+    "allocationLower": 0,
+    "allocationHigher": 0
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "phase": "invoke",
+    "workloads": 19,
+    "after558/master": 0.9573216994083473,
+    "after559/master": 0.9489456394363325,
+    "after559/after558": 0.9912505274066269,
+    "allocationLower": 0,
+    "allocationHigher": 0
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "phase": "construct",
+    "workloads": 19,
+    "after558/master": 0.9920953297619273,
+    "after559/master": 0.9323710294404228,
+    "after559/after558": 0.9397998372436281,
+    "allocationLower": 6,
+    "allocationHigher": 0
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "phase": "compile",
+    "workloads": 19,
+    "after558/master": 1.4775525814150063,
+    "after559/master": 1.4715071188208,
+    "after559/after558": 0.9959084619591563,
+    "allocationLower": 0,
+    "allocationHigher": 0
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "phase": "compile_first",
+    "workloads": 19,
+    "after558/master": 1.0529059234604399,
+    "after559/master": 1.0249210195829548,
+    "after559/after558": 0.9734212684590937,
+    "allocationLower": 0,
+    "allocationHigher": 0
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "phase": "invoke",
+    "workloads": 19,
+    "after558/master": 0.9628917948812763,
+    "after559/master": 0.9219010416205613,
+    "after559/after558": 0.9574295331223908,
+    "allocationLower": 0,
+    "allocationHigher": 0
+  }
+]
