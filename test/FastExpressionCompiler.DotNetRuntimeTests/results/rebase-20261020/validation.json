@@ -1,0 +1,51 @@
+{
+  "previousPublishedHead": "187b9b8f5505b9b69708170a4da13f440ca7a12f",
+  "upstreamMaster": "3aefb5e58cd3bdd92d5f2fb00e72692ab3c08c67",
+  "validatedCodeHead": "5ce561748e4eaf53f63242e50050bdf8429a518b",
+  "codes": {
+    "FastExpressionCompiler": 0,
+    "FastExpressionCompiler.LightExpression": 0,
+    "native-net10.0": 0,
+    "native-net8.0": 0,
+    "framework-build": 0,
+    "framework-run": 0,
+    "imported-build": 0,
+    "imported-full": 0
+  },
+  "imported": {
+    "batches": 21,
+    "crashes": 0,
+    "counters": {
+      "total": 35122,
+      "executed": 35064,
+      "passed": 35064,
+      "failed": 0,
+      "error": 0,
+      "timeout": 0,
+      "aborted": 0,
+      "notExecuted": 0
+    },
+    "originalDenominator": 35133,
+    "exclusions": 69,
+    "newExclusions": 0
+  },
+  "native": {
+    "native-net10.0": {
+      "legacyPassed": 1714
+    },
+    "native-net8.0": {
+      "legacyPassed": 1713
+    },
+    "framework-run": {
+      "legacyPassed": 1597,
+      "testXPassed": 1041
+    }
+  },
+  "snapshot": {
+    "commit": "5ce561748e4eaf53f63242e50050bdf8429a518b",
+    "compilerSha256": "21dbc86f03b792f0467e6308b9eeb4d23d696f9895644a43c48d0d7042cd5aa2",
+    "assemblySha256": "ef191dde7579389bd2bbc22b9a500e695619d3e8f2aae3e806c3e6abd00b6a1c"
+  },
+  "preservation": "Upstream SmallSet4 and helper rename retained; compatibility fixes preserved; duplicate upstream Light conversion patch dropped.",
+  "performance": "Existing performance data remains tied to original source hashes; no new timing or performance-parity claim."
+}

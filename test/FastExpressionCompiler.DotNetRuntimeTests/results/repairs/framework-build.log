@@ -1,0 +1,13 @@
+  FastExpressionCompiler -> C:\Data\Git\Github\FastExpressionCompiler\src\FastExpressionCompiler\bin\Release\net472\FastExpressionCompiler.dll
+  FastExpressionCompiler.UnitTests -> C:\Data\Git\Github\FastExpressionCompiler\test\FastExpressionCompiler.UnitTests\bin\Release\net472\FastExpressionCompiler.UnitTests.dll
+  FastExpressionCompiler.LightExpression -> C:\Data\Git\Github\FastExpressionCompiler\src\FastExpressionCompiler.LightExpression\bin\Release\net472\FastExpressionCompiler.LightExpression.dll
+  FastExpressionCompiler.LightExpression.UnitTests -> C:\Data\Git\Github\FastExpressionCompiler\test\FastExpressionCompiler.LightExpression.UnitTests\bin\Release\net472\FastExpressionCompiler.LightExpression.UnitTests.dll
+  FastExpressionCompiler.IssueTests -> C:\Data\Git\Github\FastExpressionCompiler\test\FastExpressionCompiler.IssueTests\bin\Release\net472\FastExpressionCompiler.IssueTests.dll
+  FastExpressionCompiler.LightExpression.IssueTests -> C:\Data\Git\Github\FastExpressionCompiler\test\FastExpressionCompiler.LightExpression.IssueTests\bin\Release\net472\FastExpressionCompiler.LightExpression.IssueTests.dll
+  FastExpressionCompiler.TestsRunner.Net472 -> C:\Data\Git\Github\FastExpressionCompiler\test\FastExpressionCompiler.TestsRunner.Net472\bin\Release\net472\FastExpressionCompiler.TestsRunner.Net472.exe
+
+Der Buildvorgang wurde erfolgreich ausgeführt.
+    0 Warnung(en)
+    0 Fehler
+
+Verstrichene Zeit 00:01:51.45

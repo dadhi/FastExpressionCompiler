@@ -1,0 +1,342 @@
+{
+  "partition": "review-and-supported-host",
+  "finalState": {
+    "status": "Final70f297cb validated; bounded combined and map measurements complete. Universal performance/allocation parity not established.",
+    "final_code_head": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "accepted_arithmetic_commit": "44ee17d7f3fd5d363b7088158cc97b2cc60f7da7",
+    "try_value_commit": "6d397bc6255ddf406f5586c405ddd04cff7d4cdd",
+    "final_validation": {
+      "codeHead": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+      "codes": {
+        "FastExpressionCompiler": 0,
+        "FastExpressionCompiler.LightExpression": 0,
+        "native-net10.0": 0,
+        "native-net8.0": 0,
+        "framework-build": 0,
+        "framework-run": 0,
+        "imported-build": 0,
+        "imported-full": 0
+      },
+      "imported": {
+        "batches": 21,
+        "crashes": 0,
+        "counters": {
+          "total": 35122,
+          "executed": 35064,
+          "passed": 35064,
+          "failed": 0,
+          "error": 0,
+          "timeout": 0,
+          "aborted": 0,
+          "notExecuted": 0
+        },
+        "originalDenominator": 35133,
+        "exclusions": 69,
+        "newExclusions": 0
+      },
+      "native": {
+        "net10": "All runner suites pass; legacy1712",
+        "net8": "All runner suites pass; legacy1711",
+        "framework": "TestX1037 plus legacy1595 pass"
+      },
+      "priorAttempt": {
+        "head": "6d397bc6",
+        "result": "Interrupted after managed stack proved preexisting SmallMap16 promotion hang; fixed3be541d3; no Trycontrolflow regression"
+      },
+      "snapshot": {
+        "commit": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+        "compilerSha256": "4239ac0a6f673fba71eead86d2eae40e7eec79f0a52241f2c9d8ac2669ada237",
+        "assemblySha256": "6ddb580a9826a3494ff3bdc863d3af73d58ba836d2a7754ecc9f7afd698521d1"
+      }
+    },
+    "notes": "Historical42f/isolated snapshots retain their exact sources. Old6d validation was interrupted by unchanged-prePR SmallMap capacity bug, not a Try-value regression;70f includes its fix and supported EH-host correction.",
+    "combined_expected": true,
+    "validation_path": "pr558-repair/validation-70f297cb",
+    "candidate_code_head": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "combined_snapshot_head": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "combined_measurements_state": "Complete:12474 raw rows/198 groups,0 errors;21 rotated samples, all short samples retained. Compile independently calibrated; FEC other phases use common counts, System independently calibrated.",
+    "map_capacity_commit": "3be541d3aeba0d58560b0a49d78206bb108edbfc",
+    "supported_host_commit": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "combined_path": "pr558-round4/combined-final-bounded",
+    "historical_combined_path": "pr558-round4/combined-final",
+    "map_capacity_path": "pr558-round4/map-capacity",
+    "supported_host_path": "pr558-round4/supported-eh-host",
+    "review_reply_paths": [
+      "pr558-round4/dadhi-host-reply.json",
+      "pr558-round4/dadhi-host-reply-published.json"
+    ],
+    "official_source_urls": [
+      "https://github.com/dotnet/runtime/blob/v10.0.9/src/libraries/System.Private.CoreLib/src/System/Reflection/Emit/DynamicMethod.cs#L228-L240",
+      "https://github.com/dotnet/runtime/blob/v10.0.9/src/coreclr/System.Private.CoreLib/src/System/Reflection/Emit/DynamicMethod.CoreCLR.cs#L41-L56"
+    ],
+    "allocation_confirmation_path": "allocation-confirmation-round4",
+    "allocation_confirmation_state": "Complete:2970 raw rows/198 groups;5 samples x200 operations after40warmups;164 unchanged,26 decreased,8 increased. Six FrameworkLight approximately192B residual plus two FrameworkStandard0.8B groups retained. No elapsed claims.",
+    "validation_reproduction_paths": [
+      "pr558-repair/validate.py",
+      "pr558-repair/summarize-validation.py",
+      "fec-round12/Run-Full.py",
+      "pr558-repair/frozen-70f297cb",
+      "fec-fixes/FrameworkRunner/Program.cs",
+      "fec-fixes/FrameworkRunner/FrameworkRunner.csproj"
+    ],
+    "allocation_confirmation_summary": {
+      "complete": true,
+      "counts": {
+        "unchanged": 164,
+        "decreased": 26,
+        "increased": 8
+      },
+      "primaryPositiveReconfirmation": {
+        "primary_positive": 28,
+        "positive_again": 6,
+        "now_equal": 21,
+        "now_decreased": 1
+      },
+      "errors": []
+    }
+  },
+  "files": {
+    "pr558-round4/dadhi-host-reply-published.json": {
+      "bytes": 12111,
+      "sha256": "09302048fe7f981c4b8d2e55f66619fc8dfdd6c3d878132392a3eaad10a5ca2a"
+    },
+    "pr558-round4/dadhi-host-reply.json": {
+      "bytes": 2123,
+      "sha256": "2fca12977e4e0ffec0e96230a7ad561d700e08f421827fbc741bf80f4a4e609a"
+    },
+    "pr558-round4/publication/GenerateReport.py": {
+      "bytes": 33793,
+      "sha256": "95d107ecfd559477a5f4af597b4297c323993aa208af4d73128ff8bca0eb5af4"
+    },
+    "pr558-round4/publication/Package.py": {
+      "bytes": 8038,
+      "sha256": "4a8b631f9d346eefbe3c5aa952517beefecf8a01c24ab4e0d7fb0ea8a5d82490"
+    },
+    "pr558-round4/publication/README.txt": {
+      "bytes": 2583,
+      "sha256": "6491550dd0b48eff5f9b8d152ae814176fcf7c91f6dd2a927b19e8df7ad8308c"
+    },
+    "pr558-round4/publication/REPORT.txt": {
+      "bytes": 6503,
+      "sha256": "6c732c1649241113b54ec192d54cdc0dcd289b42f035d803ae42c0f44a3f542d"
+    },
+    "pr558-round4/publication/VALIDATION-REPRODUCTION.txt": {
+      "bytes": 1707,
+      "sha256": "bfa2e93c4896474aa4dda6a5dae1a94299d50ec730840ff34f72dc5b8857ba54"
+    },
+    "pr558-round4/publication/final-state.json": {
+      "bytes": 4265,
+      "sha256": "9d4a134f2cdd83497c6fb1c265d4de36c12b0523cf547199c86b8d60dcac09ef"
+    },
+    "pr558-round4/publication/hash-inventory.json": {
+      "bytes": 572127,
+      "sha256": "a75f6299dcb71d845cba6f614e06138eebf69ac80680fb71ce5af0353c84708e"
+    },
+    "pr558-round4/publication/inventory-summary.log": {
+      "bytes": 1573,
+      "sha256": "535a8cf1c0237b4eab6e13b36f17cb255285d7d0a3b1c6758180227b24e94794"
+    },
+    "pr558-round4/publication/package-inventory.json": {
+      "bytes": 3587,
+      "sha256": "80e458624c6549ed3805b8642ba0cc2561af679febf32cff8456f84d337f8ba3"
+    },
+    "pr558-round4/publication/pr558-before-body.txt": {
+      "bytes": 18099,
+      "sha256": "f1fe5d161ef8a5b33d9ca8ba8c39ee97c1cb9c0effa3ba531a2458168beea4e0"
+    },
+    "pr558-round4/publication/pr558-before.json": {
+      "bytes": 18467,
+      "sha256": "fd708e3a12c5c77b93753ac2b095e3f47cffdc6ade91e6448e0c17be3f965eca"
+    },
+    "pr558-round4/publication/pr558-description-draft.txt": {
+      "bytes": 24637,
+      "sha256": "0941981bde2e3e0fb8617fe4a9f2e41cb09d1e65e822947a1b068c8c186d0223"
+    },
+    "pr558-round4/publication/pr558-measurement-comment-draft.txt": {
+      "bytes": 6188,
+      "sha256": "33f31e71147a8390e19f6a7ad0b8363c9512b91f234335bea43d6e4f11503b11"
+    },
+    "pr558-round4/publication/report-data.json": {
+      "bytes": 4820,
+      "sha256": "f6d2e64403644476282f77c2236905ae0f45846e7316d353dbcf39de5259cd19"
+    },
+    "pr558-round4/publication/report.html": {
+      "bytes": 755166,
+      "sha256": "6b135b317407aac32edfc55d81bbea8e31b5132b4303d7fada84169155c533c6"
+    },
+    "pr558-round4/supported-eh-host/Fixture.csproj": {
+      "bytes": 1206,
+      "sha256": "b28918614c6770bbbcb7437bb242ea1484da9e646671ca4afe1f2bc00f3c3cd4"
+    },
+    "pr558-round4/supported-eh-host/Program.cs": {
+      "bytes": 715,
+      "sha256": "5927b189e158ae6bac8ccd1c0d66b334bd0ed57b392da07d36a6db0116198d84"
+    },
+    "pr558-round4/supported-eh-host/Run.py": {
+      "bytes": 1128,
+      "sha256": "1a5ea8ba095402d0670a7687a186b6649c17dddba3fe2f893bf32206af49d792"
+    },
+    "pr558-round4/supported-eh-host/bin/Release/net10.0/FastExpressionCompiler.LightExpression.dll": {
+      "bytes": 441856,
+      "sha256": "38e1b7d69b305fe984e2177b40963d84c6e1b2ed82de40842e86eaa7c7eacab1"
+    },
+    "pr558-round4/supported-eh-host/bin/Release/net10.0/FastExpressionCompiler.LightExpression.dll.config": {
+      "bytes": 28302,
+      "sha256": "50dcfb121cbcd12f8311e0086467856efc5a5624482d3bed1745d101130a3cb9"
+    },
+    "pr558-round4/supported-eh-host/bin/Release/net10.0/FastExpressionCompiler.LightExpression.pdb": {
+      "bytes": 191248,
+      "sha256": "9d86e93ec59df1c517cce32347a04b4ca97868bac6b26ff541478f57301ac852"
+    },
+    "pr558-round4/supported-eh-host/bin/Release/net10.0/FastExpressionCompiler.LightExpression.xml": {
+      "bytes": 175426,
+      "sha256": "efb67e335f3cf26c91be2df5c97abc04fd6fa30814bc31fc8f15bb1e8a772520"
+    },
+    "pr558-round4/supported-eh-host/bin/Release/net10.0/Fixture.deps.json": {
+      "bytes": 906,
+      "sha256": "3edb00c8e7ce8eb8d8e557c17e0872c771693bcfa7f33b18fd4b1627040260ae"
+    },
+    "pr558-round4/supported-eh-host/bin/Release/net10.0/Fixture.dll": {
+      "bytes": 28160,
+      "sha256": "9b2f76ea2670810b2fa54f95c17d1e4d62108b6dfdfb132c06b96f3fe90eb7ef"
+    },
+    "pr558-round4/supported-eh-host/bin/Release/net10.0/Fixture.exe": {
+      "bytes": 139776,
+      "sha256": "82697f1ff4939600cb01cb00bdf3276ae915208ccbf6397c7c8b4512c91c5a94"
+    },
+    "pr558-round4/supported-eh-host/bin/Release/net10.0/Fixture.pdb": {
+      "bytes": 16648,
+      "sha256": "c81c442cf9107c3130774eda2ef5eaf1509cf814335aec165a434eaea17f2846"
+    },
+    "pr558-round4/supported-eh-host/bin/Release/net10.0/Fixture.runtimeconfig.json": {
+      "bytes": 342,
+      "sha256": "c230a317a54dd960bcbeb5f347f52e18dc665a26f7efda2159fced9a5ac7e097"
+    },
+    "pr558-round4/supported-eh-host/bin/Release/net472/FastExpressionCompiler.LightExpression.dll": {
+      "bytes": 439296,
+      "sha256": "6b967b2f5f675fce1099367b866c4701f2cf0876504a4876a682b1cc049a6401"
+    },
+    "pr558-round4/supported-eh-host/bin/Release/net472/FastExpressionCompiler.LightExpression.pdb": {
+      "bytes": 183200,
+      "sha256": "d55291729e4db82b6395dd24daf205b852eb463dcdd39fab229bc5e91fb14ce3"
+    },
+    "pr558-round4/supported-eh-host/bin/Release/net472/FastExpressionCompiler.LightExpression.xml": {
+      "bytes": 172586,
+      "sha256": "a493b0e8e1c1241ddf359fa7e45743f8eb122571348700343d30277d3302abc8"
+    },
+    "pr558-round4/supported-eh-host/bin/Release/net472/Fixture.exe": {
+      "bytes": 25600,
+      "sha256": "91dabd152d70e519950972aa9ae87da5050b902573a568423a2aa939cf8b5847"
+    },
+    "pr558-round4/supported-eh-host/bin/Release/net472/Fixture.exe.config": {
+      "bytes": 176,
+      "sha256": "ad8267122c40d37dcd9d99e1412d763187a1825732f378db8867f3ecf675cf70"
+    },
+    "pr558-round4/supported-eh-host/bin/Release/net472/Fixture.pdb": {
+      "bytes": 7964,
+      "sha256": "e4cc8b29d7971fc77c15c749de77844ef8a6f7cae94b1259e783c6ed6ea36ac2"
+    },
+    "pr558-round4/supported-eh-host/bin/Release/net8.0/FastExpressionCompiler.LightExpression.dll": {
+      "bytes": 441344,
+      "sha256": "9f66476a6667890512aea2cc91b7df58750cdbdefdaa113bab943b4aa681e3b3"
+    },
+    "pr558-round4/supported-eh-host/bin/Release/net8.0/FastExpressionCompiler.LightExpression.dll.config": {
+      "bytes": 28133,
+      "sha256": "a38c02fac714354d256edbc894697ae0f6d8c27ffb8ed054dbbada8200b4f834"
+    },
+    "pr558-round4/supported-eh-host/bin/Release/net8.0/FastExpressionCompiler.LightExpression.pdb": {
+      "bytes": 191228,
+      "sha256": "8acf9d93f83b28f0be867fad8bf8376c4e054ca32631933451936225bc4629ff"
+    },
+    "pr558-round4/supported-eh-host/bin/Release/net8.0/FastExpressionCompiler.LightExpression.xml": {
+      "bytes": 173660,
+      "sha256": "eb39aad123030ef8de9c583059862848848d79c0433c5a0c547d70db6e61a152"
+    },
+    "pr558-round4/supported-eh-host/bin/Release/net8.0/Fixture.deps.json": {
+      "bytes": 904,
+      "sha256": "fd1921132398c08e82df0095985d48a197c923ada68c147ac691897968f8cd6f"
+    },
+    "pr558-round4/supported-eh-host/bin/Release/net8.0/Fixture.dll": {
+      "bytes": 28160,
+      "sha256": "f37c363efdace242d2acbe8ce75c263f73760452f844dfcb4dfcff219c64010c"
+    },
+    "pr558-round4/supported-eh-host/bin/Release/net8.0/Fixture.exe": {
+      "bytes": 132608,
+      "sha256": "d9019477b14dfc80591ff1e456a5c9ac9f89fe7435804bf4c8ca4fc7f9da231f"
+    },
+    "pr558-round4/supported-eh-host/bin/Release/net8.0/Fixture.pdb": {
+      "bytes": 16380,
+      "sha256": "e1c58b794dcf803a364b514661877217da497b60527b783c7e3c00e74b3b2410"
+    },
+    "pr558-round4/supported-eh-host/bin/Release/net8.0/Fixture.runtimeconfig.json": {
+      "bytes": 340,
+      "sha256": "28329cf08f6505e73806b17558b187c02f0c1c516fe47ebfb7a013d082aaa306"
+    },
+    "pr558-round4/supported-eh-host/build-false-net10.0.log": {
+      "bytes": 117,
+      "sha256": "295b521bb752862d390f76977a83aab9f84a050ce1e8ee1ecd59e295f86df372"
+    },
+    "pr558-round4/supported-eh-host/build-false-net472.log": {
+      "bytes": 117,
+      "sha256": "3cdcb3cd50f6786c16aff9c59a371406c89347ebc726a4f40f7d45db84036dd4"
+    },
+    "pr558-round4/supported-eh-host/build-false-net8.0.log": {
+      "bytes": 117,
+      "sha256": "ac6f38526b03314e52a44500c72cc3a509ad06fd10392ae526bc376068da4247"
+    },
+    "pr558-round4/supported-eh-host/build-true-net10.0.log": {
+      "bytes": 117,
+      "sha256": "183f23b01edf6ef2ba2c1a0b64d2eb98d13f9528cf5b8ce531953bb553f79226"
+    },
+    "pr558-round4/supported-eh-host/build-true-net472.log": {
+      "bytes": 117,
+      "sha256": "4203fb667ae4c05303435143f8e6b71ea2860005f9f25f4373c73ace72fed1a5"
+    },
+    "pr558-round4/supported-eh-host/build-true-net8.0.log": {
+      "bytes": 117,
+      "sha256": "269208ebdd2c84498d0d092babe6bbdbdf590719ae265889df8863505965d3cb"
+    },
+    "pr558-round4/supported-eh-host/check-false-net10.0.log": {
+      "bytes": 113,
+      "sha256": "aefa633341dc4df5cf9f2abdceb8e6ad54ba95ac93d535cc4774e4fb719194ab"
+    },
+    "pr558-round4/supported-eh-host/check-false-net472.log": {
+      "bytes": 113,
+      "sha256": "aefa633341dc4df5cf9f2abdceb8e6ad54ba95ac93d535cc4774e4fb719194ab"
+    },
+    "pr558-round4/supported-eh-host/check-false-net8.0.log": {
+      "bytes": 113,
+      "sha256": "aefa633341dc4df5cf9f2abdceb8e6ad54ba95ac93d535cc4774e4fb719194ab"
+    },
+    "pr558-round4/supported-eh-host/check-true-net10.0.log": {
+      "bytes": 113,
+      "sha256": "aefa633341dc4df5cf9f2abdceb8e6ad54ba95ac93d535cc4774e4fb719194ab"
+    },
+    "pr558-round4/supported-eh-host/check-true-net472.log": {
+      "bytes": 113,
+      "sha256": "aefa633341dc4df5cf9f2abdceb8e6ad54ba95ac93d535cc4774e4fb719194ab"
+    },
+    "pr558-round4/supported-eh-host/check-true-net8.0.log": {
+      "bytes": 113,
+      "sha256": "aefa633341dc4df5cf9f2abdceb8e6ad54ba95ac93d535cc4774e4fb719194ab"
+    },
+    "pr558-round4/supported-eh-host/source-manifest.json": {
+      "bytes": 321,
+      "sha256": "56f480c82d91097ee035b7cb466946eddc8487af391690cdd74db1ccd173233d"
+    }
+  },
+  "excludedDirectories": [
+    ".git",
+    ".vs",
+    "__pycache__",
+    "artifacts",
+    "node_modules",
+    "obj"
+  ],
+  "excludedSuffixes": [
+    ".dmp",
+    ".etlx",
+    ".zip"
+  ],
+  "scope": "Archives preserve measured snapshots, raw rows, binaries and relative layouts. Frozen42f evidence is not relabeled as final combined code performance."
+}

@@ -1,0 +1,110 @@
+{
+  "finalCodeHead": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+  "archives": [
+    {
+      "path": "runtime-audit-42f.zip",
+      "bytes": 9169012,
+      "sha256": "3371ec9c71e9f1acea9d9059a4879ceb4f9ffde3f96923c9ed433e87312f4f15",
+      "crc": "PASS",
+      "manifestEntryHashesVerified": 295,
+      "files": 296,
+      "frozenCSharpFiles": 22
+    },
+    {
+      "path": "accepted-arithmetic-44ee.zip",
+      "bytes": 17541739,
+      "sha256": "1297310ce5377a2af88a9fe51896fdfbe67276e983695a4acb16cdbbacb456f7",
+      "crc": "PASS",
+      "manifestEntryHashesVerified": 400,
+      "files": 401,
+      "frozenCSharpFiles": 29
+    },
+    {
+      "path": "held-followups-01.zip",
+      "bytes": 24362762,
+      "sha256": "728529cf2f1a57e8afe19a89d02dd20aba6fcfa1097d7d7f071d2a8036b22c9b",
+      "crc": "PASS",
+      "manifestEntryHashesVerified": 1146,
+      "files": 1147,
+      "frozenCSharpFiles": 56
+    },
+    {
+      "path": "held-followups-02.zip",
+      "bytes": 894734,
+      "sha256": "a0f5bc4ca949ca915e229a197a65ed8eeb0f28b561b8c30cdb9c231968ed084a",
+      "crc": "PASS",
+      "manifestEntryHashesVerified": 44,
+      "files": 45,
+      "frozenCSharpFiles": 0
+    },
+    {
+      "path": "try-value-repair.zip",
+      "bytes": 18960740,
+      "sha256": "d1429cd6d7c68559e78a8f4cc745e57ce6038ca4fc504dd27e0da0c1c5c6b28b",
+      "crc": "PASS",
+      "manifestEntryHashesVerified": 846,
+      "files": 847,
+      "frozenCSharpFiles": 40
+    },
+    {
+      "path": "combined-final.zip",
+      "bytes": 9271362,
+      "sha256": "4c7269c9516db99ebc312471cec9a687b56d5b2577a9e105601714cb4f1a90a8",
+      "crc": "PASS",
+      "manifestEntryHashesVerified": 207,
+      "files": 208,
+      "frozenCSharpFiles": 31
+    },
+    {
+      "path": "historical-prepared-6d.zip",
+      "bytes": 8591432,
+      "sha256": "d58ef6b900406091bca6a0494e09f3fbc0afa538ca1bcd7852f819ed0f7d335c",
+      "crc": "PASS",
+      "manifestEntryHashesVerified": 190,
+      "files": 191,
+      "frozenCSharpFiles": 31
+    },
+    {
+      "path": "map-capacity.zip",
+      "bytes": 4479096,
+      "sha256": "d1167f5c802291d57e41d5ac8ccf58f01ff841f38fe52e6597dbbd3f79dee54f",
+      "crc": "PASS",
+      "manifestEntryHashesVerified": 147,
+      "files": 148,
+      "frozenCSharpFiles": 13
+    },
+    {
+      "path": "review-and-supported-host.zip",
+      "bytes": 1294030,
+      "sha256": "7f4b6e9372378537853178eefc4b86a91cfc2688ae8f5370840a034c9e652051",
+      "crc": "PASS",
+      "manifestEntryHashesVerified": 57,
+      "files": 58,
+      "frozenCSharpFiles": 1
+    },
+    {
+      "path": "final-validation.zip",
+      "bytes": 8688334,
+      "sha256": "e23eb70b014d6e7ffb45944e3ad209b29514c21e504e866ab7a38a7e9d3df307",
+      "crc": "PASS",
+      "manifestEntryHashesVerified": 233,
+      "files": 234,
+      "frozenCSharpFiles": 1
+    },
+    {
+      "path": "allocation-confirmation.zip",
+      "bytes": 5480700,
+      "sha256": "12bd87b017214c5bed73c491c883c2a810ba581ad5add778f125e0c8f6f16204",
+      "crc": "PASS",
+      "manifestEntryHashesVerified": 120,
+      "files": 121,
+      "frozenCSharpFiles": 5
+    }
+  ],
+  "allCRCAndManifestHashesPass": true,
+  "noTraversalOrDuplicateEntries": true,
+  "noDerivedObjDirectories": true,
+  "loosePublicationCSharp": [],
+  "separateOriginalHeldSHA256": "7e18a65f079f6a936e718a41cf02db322ce91f4cb6c52533ad4b6444b14a4421",
+  "note": "CSharp sources inside archives are frozen benchmark/library/test repro inputs; publication top level has no loose CSharp file. No production file was copied or modified."
+}
