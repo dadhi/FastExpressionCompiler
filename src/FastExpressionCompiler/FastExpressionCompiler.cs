@@ -319,7 +319,8 @@ namespace FastExpressionCompiler
         /// with the provided closure object and constant expressions (or lack there of) -
         /// Constant expression should be the in order of Fields in closure object!
         /// Note 1: Use it on your own risk - FEC won't verify the expression is compile-able with passed closure, it is up to you!
-        /// Note 2: The expression with NESTED LAMBDA IS NOT SUPPORTED!
+        /// Note 2: Nested lambdas may share the supplied constants. Capturing outer
+        /// parameters or block variables requires the ordinary CompileFast path.
         /// Note 3: `Label` and `GoTo` are not supported in this case, because they need first round to collect out-of-order labels</summary>
         public static TDelegate TryCompileWithPreCreatedClosure<TDelegate>(this LambdaExpression lambdaExpr,
             params ConstantExpression[] closureConstantsExprs) where TDelegate : class =>
@@ -335,40 +336,42 @@ namespace FastExpressionCompiler
             for (var i = 0; i < closureConstants.Length; i++)
                 closureConstants[i] = closureConstantsExprs[i].Value;
 
-            var context = new CompilerContext(ClosureStatus.UserProvided | ClosureStatus.HasClosure, closureConstants, lambdaExpr.GetParamExprs(), flags);
+            var context = new CompilerContext(ClosureStatus.UserProvided | ClosureStatus.HasClosure | ClosureStatus.PreCreatedConstants, closureConstants, lambdaExpr.GetParamExprs(), flags);
             return TryCompileWithPreCreatedClosure<TDelegate>(lambdaExpr, ref context, flags);
         }
 
         internal static TDelegate TryCompileWithPreCreatedClosure<TDelegate>(
             LambdaExpression lambdaExpr, ref CompilerContext context, CompilerFlags flags) where TDelegate : class
         {
+            var isRoot = context.PreCreatedClosures == null;
+            Type[] closurePlusParamTypes = null;
             try
             {
-                var closurePlusParamTypes = RentPooledOrNewClosureTypeToParamTypes(lambdaExpr.GetParamExprs());
-
-                // Without collection, the method's exception regions are not known before emission.
-                // Anonymous hosting preserves System's non-Exception catch policy.
+                closurePlusParamTypes = RentPooledOrNewClosureTypeToParamTypes(lambdaExpr.GetParamExprs());
+                // Collection is skipped, so exception policy must be chosen conservatively.
                 var method = CreateExceptionAwareDynamicMethod(lambdaExpr.ReturnType, closurePlusParamTypes);
-
                 var il = method.GetILGenerator();
                 EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref context);
-
                 var bodyExpr = lambdaExpr.Body;
                 var returnType = lambdaExpr.ReturnType;
                 var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
+                if (returnType.IsByRef) parent |= ParentFlags.ReturnByRef;
                 if (!EmittingVisitor.TryEmitLambdaBody(bodyExpr, returnType, il, ref context, parent))
                     return null;
-
-                if (bodyExpr.Type.IsByRef && !returnType.IsByRef) // don't forget to de-ref the reference if the lambda should return de-ref value of the body and not itself by-ref return, see #414
+                if (bodyExpr.Type.IsByRef && !returnType.IsByRef)
                     EmittingVisitor.EmitLoadIndirectlyByRef(il, bodyExpr.Type);
                 il.Demit(OpCodes.Ret);
-
+                var shared = context.PreCreatedClosures;
+                if (isRoot && shared != null) shared.Seal();
                 var delegateType = typeof(TDelegate) != typeof(Delegate) ? typeof(TDelegate) : lambdaExpr.Type;
-                var dlg = (TDelegate)(object)method.CreateDelegate(delegateType, new ArrayClosure(context.Constants.Items));
-                FreePooledClosureTypeAndParamTypes(closurePlusParamTypes);
-                return dlg;
+                return (TDelegate)(object)method.CreateDelegate(delegateType,
+                    shared != null ? shared.Closure : new ArrayClosure(context.Constants.Items));
             }
-            finally { FreeHoistedTypes(ref context); }
+            finally
+            {
+                if (closurePlusParamTypes != null) FreePooledClosureTypeAndParamTypes(closurePlusParamTypes);
+                FreeHoistedTypes(ref context);
+            }
         }
 
         /// <summary>Tries to compile expression to "static" delegate, skipping the step of collecting the closure object.</summary>
@@ -667,7 +670,8 @@ namespace FastExpressionCompiler
             HasClosure = 1 << 2,
             ShouldBeStaticMethod = 1 << 3,
             TypedNonPassedClosure = 1 << 4,
-            OwnedValueCaptureRoot = 1 << 5
+            OwnedValueCaptureRoot = 1 << 5,
+            PreCreatedConstants = 1 << 6
         }
 
         [DebuggerDisplay("Target:{Target}, InlinedLambdaInvokeIndex:{InlinedLambdaInvokeIndex}, ReturnVariableIndexPlusOneAndIsDefined:{ReturnVariableIndexPlusOneAndIsDefined}")]
@@ -1052,6 +1056,7 @@ namespace FastExpressionCompiler
             }
 
             internal Expression CaptureAnalysisRoot;
+            internal PreCreatedClosureState PreCreatedClosures;
             internal SmallSet4<ParameterExpression, RefEq<ParameterExpression>> CaptureCellVariables;
             internal bool CaptureStorageAnalyzed, CaptureStorageRequiresCells, CaptureStorageQuoteReferences, CaptureStorageRequiresTypedCells;
             internal SmallList<ParameterExpression, Stack2<ParameterExpression>, NoArrayPool<ParameterExpression>> HoistedVariables;
@@ -1138,7 +1143,7 @@ namespace FastExpressionCompiler
                 Status = status;
 
                 Constants = new SmallList<object>(constValues ?? Tools.Empty<object>());
-                if (constValues != null)
+                if (constValues != null && (status & ClosureStatus.PreCreatedConstants) == 0)
                     ConstantUsageThenVarIndex.InitCount(constValues.Length);
 
                 LastEmitIsAddress = false;
@@ -2195,6 +2200,29 @@ namespace FastExpressionCompiler
             // todo: @feature split into two to reduce copying
             public readonly object[] ConstantsAndNestedLambdas;
             public ArrayClosure(object[] constantsAndNestedLambdas) => ConstantsAndNestedLambdas = constantsAndNestedLambdas;
+        }
+
+        // Only the explicit precreated-constants path uses this split layout.
+        // All nested delegates bind to the same target and constant indexes.
+        internal sealed class SharedPreCreatedClosure : ArrayClosure
+        {
+            public object[] NestedDelegates;
+            internal SharedPreCreatedClosure(object[] constants) : base(constants) { }
+            internal static readonly FieldInfo NestedDelegatesField =
+                typeof(SharedPreCreatedClosure).GetField(nameof(NestedDelegates));
+        }
+
+        internal sealed class PreCreatedClosureState
+        {
+            internal readonly SharedPreCreatedClosure Closure;
+            internal SmallList<NestedLambdaInfo> Lambdas;
+            internal PreCreatedClosureState(object[] constants) => Closure = new SharedPreCreatedClosure(constants);
+            internal void Seal()
+            {
+                var delegates = new object[Lambdas.Count];
+                for (var i = 0; i < delegates.Length; ++i) delegates[i] = Lambdas.Items[i].Lambda;
+                Closure.NestedDelegates = delegates;
+            }
         }
 
         internal static IEnumerable<IDelegateDebugInfo> EnumerateNestedLambdas(object[] constantsAndNestedLambdas)
@@ -6128,7 +6156,8 @@ namespace FastExpressionCompiler
                     if (constIndex == -1)
                         return false; // todo: @check should we throw an exception instead?
 
-                    var varIndex = closure.ConstantUsageThenVarIndex[constIndex] - 1;
+                    var varIndex = (closure.Status & ClosureStatus.PreCreatedConstants) != 0
+                        ? -1 : closure.ConstantUsageThenVarIndex[constIndex] - 1;
                     if (varIndex > 0)
                         EmitLoadLocalVariable(il, varIndex);
                     else
@@ -6294,6 +6323,11 @@ namespace FastExpressionCompiler
                 il.Demit(OpCodes.Ldarg_0);
                 il.Demit(OpCodes.Ldfld, ArrayClosureArrayField);
                 EmitStoreLocalVariable(il, il.GetNextLocalVarIndex(typeof(object[]))); // always does Stloc_0, because it is done at start of the lambda emit
+
+                // This path does not count uses: supplied constants retain their stable
+                // array indexes and nested delegates have a separate shared table.
+                if ((context.Status & ClosureStatus.PreCreatedConstants) != 0)
+                    return;
 
                 // important that the constant will contain the nested lambdas as well in the same array after the actual constants,
                 // so the Count indicates where the constants end
@@ -8214,6 +8248,9 @@ namespace FastExpressionCompiler
             // ReSharper disable once FunctionComplexityOverflow
             private static bool TryEmitNestedLambda(LambdaExpression lambdaExpr, ILGenerator il, ref CompilerContext context)
             {
+                if ((context.Status & ClosureStatus.PreCreatedConstants) != 0)
+                    return TryEmitPreCreatedNestedLambda(lambdaExpr, il, ref context);
+
                 var outerParamExprs = context.ParamExprs;
                 var outerParamExprCount = outerParamExprs.GetParamCount();
 
@@ -8325,6 +8362,33 @@ namespace FastExpressionCompiler
                 }
 
                 return ok;
+            }
+
+            private static bool TryEmitPreCreatedNestedLambda(LambdaExpression lambda, ILGenerator il, ref CompilerContext context)
+            {
+                var shared = context.PreCreatedClosures ??= new PreCreatedClosureState(context.Constants.Items);
+                var index = shared.Lambdas.Count - 1;
+                while (index >= 0 && !ReferenceEquals(shared.Lambdas.Items[index].LambdaExpression, lambda)) --index;
+                if (index < 0)
+                {
+                    index = shared.Lambdas.Count;
+                    var info = new NestedLambdaInfo(lambda);
+                    shared.Lambdas.Add(info);
+                    var nested = new CompilerContext(ClosureStatus.UserProvided | ClosureStatus.HasClosure | ClosureStatus.PreCreatedConstants,
+                        context.Constants.Items, lambda.GetParamExprs(), context.CompilerFlags);
+                    nested.PreCreatedClosures = shared;
+                    info.Lambda = TryCompileWithPreCreatedClosure<Delegate>(lambda, ref nested, context.CompilerFlags);
+                    if (info.Lambda == null) return false; // Outer-variable captures need normal collection.
+                }
+                else if (shared.Lambdas.Items[index].Lambda == null)
+                    return false; // An unfinished recursive graph cannot be emitted.
+                il.Demit(OpCodes.Ldarg_0);
+                il.Demit(OpCodes.Castclass, typeof(SharedPreCreatedClosure));
+                il.Demit(OpCodes.Ldfld, SharedPreCreatedClosure.NestedDelegatesField);
+                EmitLoadConstantInt(il, index);
+                il.Demit(OpCodes.Ldelem_Ref);
+                il.Demit(OpCodes.Castclass, lambda.Type);
+                return true;
             }
 
             private static bool TryEmitInlinedWrapper(BlockExpression wrapper, Expression body,

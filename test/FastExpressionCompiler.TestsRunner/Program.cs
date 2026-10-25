@@ -144,6 +144,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new BoxedConstantIdentityRegressionTests());
             st.Run(new CapturedValueRefRegressionTests());
             st.Run(new CapturedLambdaTargetTests());
+            st.Run(new SharedPreCreatedClosureTests());
             st.Run(new UserDefinedLogicalRegressionTests());
             st.Run(new LiftedUserDefinedLogicalRegressionTests());
             st.Run(new ExplicitBinaryMethodRegressionTests());
@@ -264,6 +265,7 @@ namespace FastExpressionCompiler.UnitTests
             lt.Run(new LightExpression.UnitTests.BoxedConstantIdentityRegressionTests());
             lt.Run(new LightExpression.UnitTests.CapturedValueRefRegressionTests());
             lt.Run(new LightExpression.UnitTests.CapturedLambdaTargetTests());
+            lt.Run(new LightExpression.UnitTests.SharedPreCreatedClosureTests());
             lt.Run(new LightExpression.UnitTests.UserDefinedLogicalRegressionTests());
             lt.Run(new LightExpression.UnitTests.LiftedUserDefinedLogicalRegressionTests());
             lt.Run(new LightExpression.UnitTests.ExplicitBinaryMethodRegressionTests());
