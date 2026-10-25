@@ -68,6 +68,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Coalesce_type_is_the_same_as_in_system_expressions();
             Coalesce_with_nullable_left_emits_the_same_IL_shape_as_system();
             Can_compile_shifts_with_nullable_shift_count();
+            Can_compile_right_shift_with_nullable_shift_count();
             Can_compile_nullable_boolean_and_also();
             Can_compile_nullable_boolean_or_else();
             Can_compile_nullable_boolean_not();
@@ -79,7 +80,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_print_reference_comparison();
             Can_round_trip_new_expression_kinds_through_system_expressions();
 
-            return 60;
+            return 61;
         }
 
         private static int _sideEffectCalls;
@@ -720,6 +721,64 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var nullMethodFast = Lambda<Func<bool?, bool?, bool?>>(withNullMethod, left, right).CompileFast(true);
             Asserts.AreEqual(true, nullMethodFast(null, true));
             Asserts.AreEqual(null, nullMethodFast(null, false));
+        }
+
+        public void Can_compile_right_shift_with_nullable_shift_count()
+        {
+            var value = Parameter(typeof(int), "value");
+            var count = Parameter(typeof(int?), "count");
+            var nullableValue = Parameter(typeof(int?), "nullableValue");
+            var plainCount = Parameter(typeof(int), "plainCount");
+
+            // the non-nullable left with the nullable count is the `TypedBinaryExpression` path, the result is nullable
+            foreach (var nodeType in new[] { ExpressionType.RightShift, ExpressionType.LeftShift })
+            {
+                var shift = nodeType == ExpressionType.RightShift ? RightShift(value, count) : LeftShift(value, count);
+                Asserts.AreEqual(typeof(int?), shift.Type);
+                Asserts.AreEqual(typeof(int?), shift.ToExpression().Type);
+
+                var lambda = Lambda<Func<int, int?, int?>>(shift, value, count);
+                var fast = lambda.CompileFast(true);
+                Asserts.IsNotNull(fast);
+                var sys = lambda.CompileSys();
+                foreach (var v in new[] { 64, -64, 1 })
+                    foreach (int? c in new int?[] { null, 0, 2, 5 })
+                        Asserts.AreEqual(sys(v, c), fast(v, c));
+
+                // the nullable left keeps the left typed path
+                var nullableLeft = nodeType == ExpressionType.RightShift ? RightShift(nullableValue, count) : LeftShift(nullableValue, count);
+                var nullableLambda = Lambda<Func<int?, int?, int?>>(nullableLeft, nullableValue, count);
+                var nullableFast = nullableLambda.CompileFast(true);
+                Asserts.IsNotNull(nullableFast);
+                var nullableSys = nullableLambda.CompileSys();
+                foreach (int? v in new int?[] { null, 64, -64 })
+                    foreach (int? c in new int?[] { null, 2 })
+                        Asserts.AreEqual(nullableSys(v, c), nullableFast(v, c));
+
+                // the plain operands keep the left typed path with the plain result
+                var plain = nodeType == ExpressionType.RightShift ? RightShift(value, plainCount) : LeftShift(value, plainCount);
+                Asserts.AreEqual(typeof(int), plain.Type);
+                var plainLambda = Lambda<Func<int, int, int>>(plain, value, plainCount);
+                Asserts.AreEqual(plainLambda.CompileSys()(64, 2), plainLambda.CompileFast(true)(64, 2));
+            }
+
+            // the unsigned value is shifted logically
+            var uvalue = Parameter(typeof(uint), "uvalue");
+            var ushift = RightShift(uvalue, count);
+            Asserts.AreEqual(typeof(uint?), ushift.Type);
+            var ulambda = Lambda<Func<uint, int?, uint?>>(ushift, uvalue, count);
+            var ufast = ulambda.CompileFast(true);
+            Asserts.IsNotNull(ufast);
+            var usys = ulambda.CompileSys();
+            Asserts.AreEqual(usys(0x80000000u, 4), ufast(0x80000000u, 4));
+            Asserts.AreEqual(usys(0x80000000u, null), ufast(0x80000000u, null));
+
+            // the shift with a compatible method is built by the method based operator, an incompatible one is rejected
+            var shiftMethod = typeof(LightExpressionTests).GetMethod(nameof(AndInts), BindingFlags.Static | BindingFlags.NonPublic);
+            var withMethod = RightShift(value, plainCount, shiftMethod);
+            Asserts.AreEqual(shiftMethod, withMethod.Method);
+            Asserts.AreEqual(typeof(int), withMethod.Type);
+            Asserts.Throws<InvalidOperationException>(() => RightShift(Constant("a"), plainCount, shiftMethod));
         }
 
         public void Can_compile_shifts_with_nullable_shift_count()
