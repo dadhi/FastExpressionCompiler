@@ -1,0 +1,594 @@
+{
+  "partition": "allocation-confirmation",
+  "finalState": {
+    "status": "Final70f297cb validated; bounded combined and map measurements complete. Universal performance/allocation parity not established.",
+    "final_code_head": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "accepted_arithmetic_commit": "44ee17d7f3fd5d363b7088158cc97b2cc60f7da7",
+    "try_value_commit": "6d397bc6255ddf406f5586c405ddd04cff7d4cdd",
+    "final_validation": {
+      "codeHead": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+      "codes": {
+        "FastExpressionCompiler": 0,
+        "FastExpressionCompiler.LightExpression": 0,
+        "native-net10.0": 0,
+        "native-net8.0": 0,
+        "framework-build": 0,
+        "framework-run": 0,
+        "imported-build": 0,
+        "imported-full": 0
+      },
+      "imported": {
+        "batches": 21,
+        "crashes": 0,
+        "counters": {
+          "total": 35122,
+          "executed": 35064,
+          "passed": 35064,
+          "failed": 0,
+          "error": 0,
+          "timeout": 0,
+          "aborted": 0,
+          "notExecuted": 0
+        },
+        "originalDenominator": 35133,
+        "exclusions": 69,
+        "newExclusions": 0
+      },
+      "native": {
+        "net10": "All runner suites pass; legacy1712",
+        "net8": "All runner suites pass; legacy1711",
+        "framework": "TestX1037 plus legacy1595 pass"
+      },
+      "priorAttempt": {
+        "head": "6d397bc6",
+        "result": "Interrupted after managed stack proved preexisting SmallMap16 promotion hang; fixed3be541d3; no Trycontrolflow regression"
+      },
+      "snapshot": {
+        "commit": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+        "compilerSha256": "4239ac0a6f673fba71eead86d2eae40e7eec79f0a52241f2c9d8ac2669ada237",
+        "assemblySha256": "6ddb580a9826a3494ff3bdc863d3af73d58ba836d2a7754ecc9f7afd698521d1"
+      }
+    },
+    "notes": "Historical42f/isolated snapshots retain their exact sources. Old6d validation was interrupted by unchanged-prePR SmallMap capacity bug, not a Try-value regression;70f includes its fix and supported EH-host correction.",
+    "combined_expected": true,
+    "validation_path": "pr558-repair/validation-70f297cb",
+    "candidate_code_head": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "combined_snapshot_head": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "combined_measurements_state": "Complete:12474 raw rows/198 groups,0 errors;21 rotated samples, all short samples retained. Compile independently calibrated; FEC other phases use common counts, System independently calibrated.",
+    "map_capacity_commit": "3be541d3aeba0d58560b0a49d78206bb108edbfc",
+    "supported_host_commit": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "combined_path": "pr558-round4/combined-final-bounded",
+    "historical_combined_path": "pr558-round4/combined-final",
+    "map_capacity_path": "pr558-round4/map-capacity",
+    "supported_host_path": "pr558-round4/supported-eh-host",
+    "review_reply_paths": [
+      "pr558-round4/dadhi-host-reply.json",
+      "pr558-round4/dadhi-host-reply-published.json"
+    ],
+    "official_source_urls": [
+      "https://github.com/dotnet/runtime/blob/v10.0.9/src/libraries/System.Private.CoreLib/src/System/Reflection/Emit/DynamicMethod.cs#L228-L240",
+      "https://github.com/dotnet/runtime/blob/v10.0.9/src/coreclr/System.Private.CoreLib/src/System/Reflection/Emit/DynamicMethod.CoreCLR.cs#L41-L56"
+    ],
+    "allocation_confirmation_path": "allocation-confirmation-round4",
+    "allocation_confirmation_state": "Complete:2970 raw rows/198 groups;5 samples x200 operations after40warmups;164 unchanged,26 decreased,8 increased. Six FrameworkLight approximately192B residual plus two FrameworkStandard0.8B groups retained. No elapsed claims.",
+    "validation_reproduction_paths": [
+      "pr558-repair/validate.py",
+      "pr558-repair/summarize-validation.py",
+      "fec-round12/Run-Full.py",
+      "pr558-repair/frozen-70f297cb",
+      "fec-fixes/FrameworkRunner/Program.cs",
+      "fec-fixes/FrameworkRunner/FrameworkRunner.csproj"
+    ],
+    "allocation_confirmation_summary": {
+      "complete": true,
+      "counts": {
+        "unchanged": 164,
+        "decreased": 26,
+        "increased": 8
+      },
+      "primaryPositiveReconfirmation": {
+        "primary_positive": 28,
+        "positive_again": 6,
+        "now_equal": 21,
+        "now_decreased": 1
+      },
+      "errors": []
+    }
+  },
+  "files": {
+    "allocation-confirmation-round4/Analyze.py": {
+      "bytes": 3805,
+      "sha256": "766600ebd71e2bbf3e333eb515ba67193e792ec1573286bf0823cfacbea9f4c4"
+    },
+    "allocation-confirmation-round4/Bench.csproj": {
+      "bytes": 1237,
+      "sha256": "0873878e5de3a56cdc1be3998bbb6cb7d4188d6dc97441ec7049e04230597778"
+    },
+    "allocation-confirmation-round4/Current.cs": {
+      "bytes": 5275,
+      "sha256": "ee49556b7c712bd2a337f3244da3ab1b9641ab79da39e0b58d17f58e0c6ac102"
+    },
+    "allocation-confirmation-round4/Fixed.cs": {
+      "bytes": 5263,
+      "sha256": "0a10a7b268f6d0107ce539c724895435d00760c13dca6fa900bbeb6f4b98de80"
+    },
+    "allocation-confirmation-round4/Prepare.py": {
+      "bytes": 1099,
+      "sha256": "570db35d8683cb780acdf00f0f2470f35c4528f16b37a1ab7d537b423eef865c"
+    },
+    "allocation-confirmation-round4/REPORT.txt": {
+      "bytes": 16591,
+      "sha256": "44515beb4d0c4ba8b1441be1451498d983cbc812a7c5ee5ec2241c723f3d16e2"
+    },
+    "allocation-confirmation-round4/Run.py": {
+      "bytes": 1539,
+      "sha256": "7d31dee1e181325fc9e76929867876d226e6dca7396200605fecc7c39c036821"
+    },
+    "allocation-confirmation-round4/Runner.cs": {
+      "bytes": 1390,
+      "sha256": "5fec4f3eea93dcc71202301f50c9893f8c54c394df4c898668dc5346ec26dca1"
+    },
+    "allocation-confirmation-round4/Set-Reference-Order.py": {
+      "bytes": 267,
+      "sha256": "145da156e6fd51bdf8239978d850402a8fb48b2c891fed3698ef778d5111826f"
+    },
+    "allocation-confirmation-round4/SharedShapes.cs": {
+      "bytes": 1944,
+      "sha256": "dc6a24d00c537cd164671cec3f18bc8e5d3cb5cc2903f0dbcac508741a6df184"
+    },
+    "allocation-confirmation-round4/System.cs": {
+      "bytes": 4929,
+      "sha256": "ee020e49a6e6b63c3388a836a9b548c8bfac37e7e920b74bc7eab22a21283254"
+    },
+    "allocation-confirmation-round4/allocated-false-net10.0.csv": {
+      "bytes": 23124,
+      "sha256": "a8fd86fded667ff618a1ba26ef143197ba96945f15770ed58c2058323d352f96"
+    },
+    "allocation-confirmation-round4/allocated-false-net472.csv": {
+      "bytes": 23156,
+      "sha256": "6b4fcc439817a18c8ad169fd87dcc865afc0ed02934ad314fbb2f5a53b0d8008"
+    },
+    "allocation-confirmation-round4/allocated-false-net8.0.csv": {
+      "bytes": 23072,
+      "sha256": "bba9216a6b3956c2ab92dadcbfa48213cac3f81cd1ff890a4b7dc51f22d42e70"
+    },
+    "allocation-confirmation-round4/allocated-true-net10.0.csv": {
+      "bytes": 23124,
+      "sha256": "a8fd86fded667ff618a1ba26ef143197ba96945f15770ed58c2058323d352f96"
+    },
+    "allocation-confirmation-round4/allocated-true-net472.csv": {
+      "bytes": 23154,
+      "sha256": "2b4bedb080a91824b773f9e785ccfeedaa2ee483bb02e035199e24e4e8bd748f"
+    },
+    "allocation-confirmation-round4/allocated-true-net8.0.csv": {
+      "bytes": 23072,
+      "sha256": "bba9216a6b3956c2ab92dadcbfa48213cac3f81cd1ff890a4b7dc51f22d42e70"
+    },
+    "allocation-confirmation-round4/analysis.json": {
+      "bytes": 1126381,
+      "sha256": "ea345759836e4f6cb29b8814739f3622dce47d9916c20ee187b0765b42f1e787"
+    },
+    "allocation-confirmation-round4/bin/Release/net10.0/Combined.current.Light.dll": {
+      "bytes": 440832,
+      "sha256": "bf53394cf0291a3721af5a73b33b9749c0b899f845539aca41c74f1e80e18aa6"
+    },
+    "allocation-confirmation-round4/bin/Release/net10.0/Combined.fixed.Light.dll": {
+      "bytes": 440832,
+      "sha256": "951d402cd0e84440e0213161e6b8d6c6f73eec66877a877dabc52b6a1f2ae5c0"
+    },
+    "allocation-confirmation-round4/bin/Release/net10.0/CombinedBench.true.deps.json": {
+      "bytes": 1272,
+      "sha256": "0083b945d5a3e16f034b68046d7a2d4dfa409991b154ad90fdddab8d5e63f445"
+    },
+    "allocation-confirmation-round4/bin/Release/net10.0/CombinedBench.true.dll": {
+      "bytes": 19968,
+      "sha256": "573ef9e0f5590de58ad400d57f133cd2ef4b184ded083f93706acd8f8f5e4659"
+    },
+    "allocation-confirmation-round4/bin/Release/net10.0/CombinedBench.true.exe": {
+      "bytes": 139776,
+      "sha256": "f6682b1a54c42e5901d08766482f01e2ab5ff7274b47497cc91e526ef2ec387b"
+    },
+    "allocation-confirmation-round4/bin/Release/net10.0/CombinedBench.true.pdb": {
+      "bytes": 15964,
+      "sha256": "4ce433411a877e65b4af7b4ad7aeb122926d6c8f9a3d5b8090cde3895d12da9f"
+    },
+    "allocation-confirmation-round4/bin/Release/net10.0/CombinedBench.true.runtimeconfig.json": {
+      "bytes": 342,
+      "sha256": "c230a317a54dd960bcbeb5f347f52e18dc665a26f7efda2159fced9a5ac7e097"
+    },
+    "allocation-confirmation-round4/bin/Release/net472/Combined.current.Light.dll": {
+      "bytes": 437760,
+      "sha256": "d2a3400022fcd666608873904353758a3e60a5bc10e0c67f8cbb2c09912c30c8"
+    },
+    "allocation-confirmation-round4/bin/Release/net472/Combined.fixed.Light.dll": {
+      "bytes": 437760,
+      "sha256": "d4a44bab75f05dbc9a7bdb17693c21c2575c966ccc3494efe52828e59c49987f"
+    },
+    "allocation-confirmation-round4/bin/Release/net472/CombinedBench.true.exe": {
+      "bytes": 19968,
+      "sha256": "222253895f11d0e0eca3c8bc240f80181d32c7f57fb7819d76209ea09d075154"
+    },
+    "allocation-confirmation-round4/bin/Release/net472/CombinedBench.true.exe.config": {
+      "bytes": 176,
+      "sha256": "ad8267122c40d37dcd9d99e1412d763187a1825732f378db8867f3ecf675cf70"
+    },
+    "allocation-confirmation-round4/bin/Release/net472/CombinedBench.true.pdb": {
+      "bytes": 7080,
+      "sha256": "174644b73510466f0e778bae0b689d6a9bf2d494a2256504dff3a7b7e0d1798c"
+    },
+    "allocation-confirmation-round4/bin/Release/net8.0/Combined.current.Light.dll": {
+      "bytes": 439808,
+      "sha256": "4f6d180d11cbbb854505fd7f445b81eb88feb6b7325000420213c5420fa2cd7c"
+    },
+    "allocation-confirmation-round4/bin/Release/net8.0/Combined.fixed.Light.dll": {
+      "bytes": 439808,
+      "sha256": "96a111ed95b2f8a91a900fa0c0a2ef049185bb5dbd1909dd9ca172fe4d593030"
+    },
+    "allocation-confirmation-round4/bin/Release/net8.0/CombinedBench.true.deps.json": {
+      "bytes": 1270,
+      "sha256": "c6f9b09c5f96d8b448974248bd960c669d04dad733479b05da4e286332442123"
+    },
+    "allocation-confirmation-round4/bin/Release/net8.0/CombinedBench.true.dll": {
+      "bytes": 19968,
+      "sha256": "ae0c212ddd28bf2f2b311a2737618e261bfb5504871b2302a88bfb4884eb1ebd"
+    },
+    "allocation-confirmation-round4/bin/Release/net8.0/CombinedBench.true.exe": {
+      "bytes": 132608,
+      "sha256": "525aac4762b95d7e4f77dc197bfaef149ebfade70988b9f534d79820b31864e7"
+    },
+    "allocation-confirmation-round4/bin/Release/net8.0/CombinedBench.true.pdb": {
+      "bytes": 15700,
+      "sha256": "d579f06430087a767c2e592cbc548df65bc756bc362e09bf022c1d9142c7c080"
+    },
+    "allocation-confirmation-round4/bin/Release/net8.0/CombinedBench.true.runtimeconfig.json": {
+      "bytes": 340,
+      "sha256": "28329cf08f6505e73806b17558b187c02f0c1c516fe47ebfb7a013d082aaa306"
+    },
+    "allocation-confirmation-round4/build-failed-false-net8.0-0.log": {
+      "bytes": 408259,
+      "sha256": "b22d1684cf059f12a49d651a336d3b43fcb6355fd2476712dd8a056b59fc03bc"
+    },
+    "allocation-confirmation-round4/build-failed-false-net8.0-1.log": {
+      "bytes": 412971,
+      "sha256": "59d5798fc9bb70108233cbf172f19833853b57df54a624c65c4d6fd71e994794"
+    },
+    "allocation-confirmation-round4/build-false-net10.0.log": {
+      "bytes": 117,
+      "sha256": "a5fbf3322e0a66d532b73abf0bb92cb9e2ecc317e922c4448cab53592114ea0b"
+    },
+    "allocation-confirmation-round4/build-false-net472.log": {
+      "bytes": 117,
+      "sha256": "f53ff6c7045308dc2fc8a80d031af1d7876f63ac3e4ab8a07cdf04163c0b9a24"
+    },
+    "allocation-confirmation-round4/build-false-net8.0.log": {
+      "bytes": 117,
+      "sha256": "d3fb85b2c03a4b780c8f910f149124651240e51f861633dfb0a88ef4c950b1ea"
+    },
+    "allocation-confirmation-round4/build-initial-failed-false-net8.0.log": {
+      "bytes": 119996,
+      "sha256": "3d18b16b2ff2bdf55512c20b8b61f55a528b754ee16009b508df58d950943e44"
+    },
+    "allocation-confirmation-round4/build-true-net10.0.log": {
+      "bytes": 117,
+      "sha256": "6577d8fb988c1457d6eb5d41f19d98a6c19553e0983d59582654b50a53974949"
+    },
+    "allocation-confirmation-round4/build-true-net472.log": {
+      "bytes": 117,
+      "sha256": "f61ad238a3ff162bb61e155d6de424b6885668bb228e2024e2c6f758d87ffabf"
+    },
+    "allocation-confirmation-round4/build-true-net8.0.log": {
+      "bytes": 117,
+      "sha256": "d5befd7fa296e685e52a60b1639da61c4280b6c36aa91c1d794a4b1a92b87fb5"
+    },
+    "allocation-confirmation-round4/check-false-net10.0.log": {
+      "bytes": 161,
+      "sha256": "2fc8304423f23cb80e01568038d6bed48bb8088156841e5844603b19e073620f"
+    },
+    "allocation-confirmation-round4/check-false-net472.log": {
+      "bytes": 161,
+      "sha256": "2fc8304423f23cb80e01568038d6bed48bb8088156841e5844603b19e073620f"
+    },
+    "allocation-confirmation-round4/check-false-net8.0.log": {
+      "bytes": 161,
+      "sha256": "2fc8304423f23cb80e01568038d6bed48bb8088156841e5844603b19e073620f"
+    },
+    "allocation-confirmation-round4/check-true-net10.0.log": {
+      "bytes": 161,
+      "sha256": "2fc8304423f23cb80e01568038d6bed48bb8088156841e5844603b19e073620f"
+    },
+    "allocation-confirmation-round4/check-true-net472.log": {
+      "bytes": 161,
+      "sha256": "2fc8304423f23cb80e01568038d6bed48bb8088156841e5844603b19e073620f"
+    },
+    "allocation-confirmation-round4/check-true-net8.0.log": {
+      "bytes": 161,
+      "sha256": "2fc8304423f23cb80e01568038d6bed48bb8088156841e5844603b19e073620f"
+    },
+    "allocation-confirmation-round4/frozen/false-net10.0/Combined.current.dll": {
+      "bytes": 291840,
+      "sha256": "027df32609b9328a0b5146fcf49629166614dda88d095f1e11f6ee738666c347"
+    },
+    "allocation-confirmation-round4/frozen/false-net10.0/Combined.fixed.dll": {
+      "bytes": 291840,
+      "sha256": "1fd4d49ebefaf1a6b929bd784d557eb2ed00096c1cebe08c596f52cce293083e"
+    },
+    "allocation-confirmation-round4/frozen/false-net472/Combined.current.dll": {
+      "bytes": 289792,
+      "sha256": "f4fdb8263801617cefe62136ad67983c28551bfbdea1306b2708e8ef3f45eba4"
+    },
+    "allocation-confirmation-round4/frozen/false-net472/Combined.fixed.dll": {
+      "bytes": 289792,
+      "sha256": "8a2aa5e81c4f06e7701614eab20eaecf463e6282048faef545b4cb59d72a5afa"
+    },
+    "allocation-confirmation-round4/frozen/false-net8.0/Combined.current.dll": {
+      "bytes": 291328,
+      "sha256": "26b2f19c64f8f14f728391707a52465959f7fba3eb1072070a2a50cd01e54406"
+    },
+    "allocation-confirmation-round4/frozen/false-net8.0/Combined.fixed.dll": {
+      "bytes": 291328,
+      "sha256": "ddd1b21103ece9c4b6fa016d5e6ce189283db427bb70dd4654ef000efc501e27"
+    },
+    "allocation-confirmation-round4/frozen/true-net10.0/Combined.current.Light.dll": {
+      "bytes": 440832,
+      "sha256": "bf53394cf0291a3721af5a73b33b9749c0b899f845539aca41c74f1e80e18aa6"
+    },
+    "allocation-confirmation-round4/frozen/true-net10.0/Combined.fixed.Light.dll": {
+      "bytes": 440832,
+      "sha256": "951d402cd0e84440e0213161e6b8d6c6f73eec66877a877dabc52b6a1f2ae5c0"
+    },
+    "allocation-confirmation-round4/frozen/true-net472/Combined.current.Light.dll": {
+      "bytes": 437760,
+      "sha256": "d2a3400022fcd666608873904353758a3e60a5bc10e0c67f8cbb2c09912c30c8"
+    },
+    "allocation-confirmation-round4/frozen/true-net472/Combined.fixed.Light.dll": {
+      "bytes": 437760,
+      "sha256": "d4a44bab75f05dbc9a7bdb17693c21c2575c966ccc3494efe52828e59c49987f"
+    },
+    "allocation-confirmation-round4/frozen/true-net8.0/Combined.current.Light.dll": {
+      "bytes": 439808,
+      "sha256": "4f6d180d11cbbb854505fd7f445b81eb88feb6b7325000420213c5420fa2cd7c"
+    },
+    "allocation-confirmation-round4/frozen/true-net8.0/Combined.fixed.Light.dll": {
+      "bytes": 439808,
+      "sha256": "96a111ed95b2f8a91a900fa0c0a2ef049185bb5dbd1909dd9ca172fe4d593030"
+    },
+    "allocation-confirmation-round4/manifest.json": {
+      "bytes": 6861,
+      "sha256": "b9ba515e04e3d239de91ecdb453e19cc3d27bd4b4c40d3121011f8972e9503a5"
+    },
+    "allocation-confirmation-round4/runner-hashes.json": {
+      "bytes": 4031,
+      "sha256": "28646784b27f78005764742da9cf27d484870c5578cade33743f8fd3bba7e80c"
+    },
+    "allocation-confirmation-round4/runners/false-net10.0/Combined.current.dll": {
+      "bytes": 291840,
+      "sha256": "027df32609b9328a0b5146fcf49629166614dda88d095f1e11f6ee738666c347"
+    },
+    "allocation-confirmation-round4/runners/false-net10.0/Combined.fixed.dll": {
+      "bytes": 291840,
+      "sha256": "1fd4d49ebefaf1a6b929bd784d557eb2ed00096c1cebe08c596f52cce293083e"
+    },
+    "allocation-confirmation-round4/runners/false-net10.0/CombinedBench.false.deps.json": {
+      "bytes": 1227,
+      "sha256": "756b085e9292f7d7d56d6bf2919ca2dde2599230b8609dc6e66c7bde144551ac"
+    },
+    "allocation-confirmation-round4/runners/false-net10.0/CombinedBench.false.dll": {
+      "bytes": 19968,
+      "sha256": "1c8d797d261a9258d4b698f930ae42d87d9dccca4974cba4aabec775e0632a77"
+    },
+    "allocation-confirmation-round4/runners/false-net10.0/CombinedBench.false.exe": {
+      "bytes": 139776,
+      "sha256": "263eb8607781e0cef78038ec8ed5d51a2c89e747c063c4bb1276a0d63e6faf95"
+    },
+    "allocation-confirmation-round4/runners/false-net10.0/CombinedBench.false.pdb": {
+      "bytes": 15932,
+      "sha256": "99b00e58c6d69a37399281a74cab2a1b89268d0719a33c8e07da3ec15a102c00"
+    },
+    "allocation-confirmation-round4/runners/false-net10.0/CombinedBench.false.runtimeconfig.json": {
+      "bytes": 342,
+      "sha256": "c230a317a54dd960bcbeb5f347f52e18dc665a26f7efda2159fced9a5ac7e097"
+    },
+    "allocation-confirmation-round4/runners/false-net472/Combined.current.dll": {
+      "bytes": 289792,
+      "sha256": "f4fdb8263801617cefe62136ad67983c28551bfbdea1306b2708e8ef3f45eba4"
+    },
+    "allocation-confirmation-round4/runners/false-net472/Combined.fixed.dll": {
+      "bytes": 289792,
+      "sha256": "8a2aa5e81c4f06e7701614eab20eaecf463e6282048faef545b4cb59d72a5afa"
+    },
+    "allocation-confirmation-round4/runners/false-net472/CombinedBench.false.exe": {
+      "bytes": 19968,
+      "sha256": "2710361402b6d33e81d1a1ec0f563d93138ac70352c430dfa0b4bd4b60771c9e"
+    },
+    "allocation-confirmation-round4/runners/false-net472/CombinedBench.false.exe.config": {
+      "bytes": 176,
+      "sha256": "ad8267122c40d37dcd9d99e1412d763187a1825732f378db8867f3ecf675cf70"
+    },
+    "allocation-confirmation-round4/runners/false-net472/CombinedBench.false.pdb": {
+      "bytes": 7044,
+      "sha256": "c8f96ba7a8761a3187f28ed9e6f3fcef96b42d9d86c32933dc144414557b1894"
+    },
+    "allocation-confirmation-round4/runners/false-net8.0/Combined.current.dll": {
+      "bytes": 291328,
+      "sha256": "26b2f19c64f8f14f728391707a52465959f7fba3eb1072070a2a50cd01e54406"
+    },
+    "allocation-confirmation-round4/runners/false-net8.0/Combined.fixed.dll": {
+      "bytes": 291328,
+      "sha256": "ddd1b21103ece9c4b6fa016d5e6ce189283db427bb70dd4654ef000efc501e27"
+    },
+    "allocation-confirmation-round4/runners/false-net8.0/CombinedBench.false.deps.json": {
+      "bytes": 1225,
+      "sha256": "f83532eb3a75fd1be6f044f10245862f65e172381b0db86ebce234771f1cbd7f"
+    },
+    "allocation-confirmation-round4/runners/false-net8.0/CombinedBench.false.dll": {
+      "bytes": 19968,
+      "sha256": "3bfd18c392636db64434aea5ead107ca0792b86a557ef879f50afc2c9b0a478d"
+    },
+    "allocation-confirmation-round4/runners/false-net8.0/CombinedBench.false.exe": {
+      "bytes": 132608,
+      "sha256": "d5f2f60a56d5c15945a2e1e7c71289d92348a06873572c928d93ee8522b236bd"
+    },
+    "allocation-confirmation-round4/runners/false-net8.0/CombinedBench.false.pdb": {
+      "bytes": 15664,
+      "sha256": "80f47e0ee1ffa4668ce572b515e5451b767dfc337fff445173677e591cdf5aba"
+    },
+    "allocation-confirmation-round4/runners/false-net8.0/CombinedBench.false.runtimeconfig.json": {
+      "bytes": 340,
+      "sha256": "28329cf08f6505e73806b17558b187c02f0c1c516fe47ebfb7a013d082aaa306"
+    },
+    "allocation-confirmation-round4/runners/true-net10.0/Combined.current.Light.dll": {
+      "bytes": 440832,
+      "sha256": "bf53394cf0291a3721af5a73b33b9749c0b899f845539aca41c74f1e80e18aa6"
+    },
+    "allocation-confirmation-round4/runners/true-net10.0/Combined.fixed.Light.dll": {
+      "bytes": 440832,
+      "sha256": "951d402cd0e84440e0213161e6b8d6c6f73eec66877a877dabc52b6a1f2ae5c0"
+    },
+    "allocation-confirmation-round4/runners/true-net10.0/CombinedBench.true.deps.json": {
+      "bytes": 1272,
+      "sha256": "0083b945d5a3e16f034b68046d7a2d4dfa409991b154ad90fdddab8d5e63f445"
+    },
+    "allocation-confirmation-round4/runners/true-net10.0/CombinedBench.true.dll": {
+      "bytes": 19968,
+      "sha256": "573ef9e0f5590de58ad400d57f133cd2ef4b184ded083f93706acd8f8f5e4659"
+    },
+    "allocation-confirmation-round4/runners/true-net10.0/CombinedBench.true.exe": {
+      "bytes": 139776,
+      "sha256": "f6682b1a54c42e5901d08766482f01e2ab5ff7274b47497cc91e526ef2ec387b"
+    },
+    "allocation-confirmation-round4/runners/true-net10.0/CombinedBench.true.pdb": {
+      "bytes": 15964,
+      "sha256": "4ce433411a877e65b4af7b4ad7aeb122926d6c8f9a3d5b8090cde3895d12da9f"
+    },
+    "allocation-confirmation-round4/runners/true-net10.0/CombinedBench.true.runtimeconfig.json": {
+      "bytes": 342,
+      "sha256": "c230a317a54dd960bcbeb5f347f52e18dc665a26f7efda2159fced9a5ac7e097"
+    },
+    "allocation-confirmation-round4/runners/true-net472/Combined.current.Light.dll": {
+      "bytes": 437760,
+      "sha256": "d2a3400022fcd666608873904353758a3e60a5bc10e0c67f8cbb2c09912c30c8"
+    },
+    "allocation-confirmation-round4/runners/true-net472/Combined.fixed.Light.dll": {
+      "bytes": 437760,
+      "sha256": "d4a44bab75f05dbc9a7bdb17693c21c2575c966ccc3494efe52828e59c49987f"
+    },
+    "allocation-confirmation-round4/runners/true-net472/CombinedBench.true.exe": {
+      "bytes": 19968,
+      "sha256": "222253895f11d0e0eca3c8bc240f80181d32c7f57fb7819d76209ea09d075154"
+    },
+    "allocation-confirmation-round4/runners/true-net472/CombinedBench.true.exe.config": {
+      "bytes": 176,
+      "sha256": "ad8267122c40d37dcd9d99e1412d763187a1825732f378db8867f3ecf675cf70"
+    },
+    "allocation-confirmation-round4/runners/true-net472/CombinedBench.true.pdb": {
+      "bytes": 7080,
+      "sha256": "174644b73510466f0e778bae0b689d6a9bf2d494a2256504dff3a7b7e0d1798c"
+    },
+    "allocation-confirmation-round4/runners/true-net8.0/Combined.current.Light.dll": {
+      "bytes": 439808,
+      "sha256": "4f6d180d11cbbb854505fd7f445b81eb88feb6b7325000420213c5420fa2cd7c"
+    },
+    "allocation-confirmation-round4/runners/true-net8.0/Combined.fixed.Light.dll": {
+      "bytes": 439808,
+      "sha256": "96a111ed95b2f8a91a900fa0c0a2ef049185bb5dbd1909dd9ca172fe4d593030"
+    },
+    "allocation-confirmation-round4/runners/true-net8.0/CombinedBench.true.deps.json": {
+      "bytes": 1270,
+      "sha256": "c6f9b09c5f96d8b448974248bd960c669d04dad733479b05da4e286332442123"
+    },
+    "allocation-confirmation-round4/runners/true-net8.0/CombinedBench.true.dll": {
+      "bytes": 19968,
+      "sha256": "ae0c212ddd28bf2f2b311a2737618e261bfb5504871b2302a88bfb4884eb1ebd"
+    },
+    "allocation-confirmation-round4/runners/true-net8.0/CombinedBench.true.exe": {
+      "bytes": 132608,
+      "sha256": "525aac4762b95d7e4f77dc197bfaef149ebfade70988b9f534d79820b31864e7"
+    },
+    "allocation-confirmation-round4/runners/true-net8.0/CombinedBench.true.pdb": {
+      "bytes": 15700,
+      "sha256": "d579f06430087a767c2e592cbc548df65bc756bc362e09bf022c1d9142c7c080"
+    },
+    "allocation-confirmation-round4/runners/true-net8.0/CombinedBench.true.runtimeconfig.json": {
+      "bytes": 340,
+      "sha256": "28329cf08f6505e73806b17558b187c02f0c1c516fe47ebfb7a013d082aaa306"
+    },
+    "allocation-confirmation-round4/source-hashes.json": {
+      "bytes": 864,
+      "sha256": "be804b8d7f6ea6c624502182e3ff2f7f7405d5cb5e758a556b9b6543fa21d3ac"
+    },
+    "pr558-round4/publication/GenerateReport.py": {
+      "bytes": 33793,
+      "sha256": "95d107ecfd559477a5f4af597b4297c323993aa208af4d73128ff8bca0eb5af4"
+    },
+    "pr558-round4/publication/Package.py": {
+      "bytes": 8038,
+      "sha256": "4a8b631f9d346eefbe3c5aa952517beefecf8a01c24ab4e0d7fb0ea8a5d82490"
+    },
+    "pr558-round4/publication/README.txt": {
+      "bytes": 2583,
+      "sha256": "6491550dd0b48eff5f9b8d152ae814176fcf7c91f6dd2a927b19e8df7ad8308c"
+    },
+    "pr558-round4/publication/REPORT.txt": {
+      "bytes": 6503,
+      "sha256": "6c732c1649241113b54ec192d54cdc0dcd289b42f035d803ae42c0f44a3f542d"
+    },
+    "pr558-round4/publication/VALIDATION-REPRODUCTION.txt": {
+      "bytes": 1707,
+      "sha256": "bfa2e93c4896474aa4dda6a5dae1a94299d50ec730840ff34f72dc5b8857ba54"
+    },
+    "pr558-round4/publication/final-state.json": {
+      "bytes": 4265,
+      "sha256": "9d4a134f2cdd83497c6fb1c265d4de36c12b0523cf547199c86b8d60dcac09ef"
+    },
+    "pr558-round4/publication/hash-inventory.json": {
+      "bytes": 572127,
+      "sha256": "a75f6299dcb71d845cba6f614e06138eebf69ac80680fb71ce5af0353c84708e"
+    },
+    "pr558-round4/publication/inventory-summary.log": {
+      "bytes": 1573,
+      "sha256": "535a8cf1c0237b4eab6e13b36f17cb255285d7d0a3b1c6758180227b24e94794"
+    },
+    "pr558-round4/publication/package-inventory.json": {
+      "bytes": 3587,
+      "sha256": "80e458624c6549ed3805b8642ba0cc2561af679febf32cff8456f84d337f8ba3"
+    },
+    "pr558-round4/publication/pr558-before-body.txt": {
+      "bytes": 18099,
+      "sha256": "f1fe5d161ef8a5b33d9ca8ba8c39ee97c1cb9c0effa3ba531a2458168beea4e0"
+    },
+    "pr558-round4/publication/pr558-before.json": {
+      "bytes": 18467,
+      "sha256": "fd708e3a12c5c77b93753ac2b095e3f47cffdc6ade91e6448e0c17be3f965eca"
+    },
+    "pr558-round4/publication/pr558-description-draft.txt": {
+      "bytes": 24637,
+      "sha256": "0941981bde2e3e0fb8617fe4a9f2e41cb09d1e65e822947a1b068c8c186d0223"
+    },
+    "pr558-round4/publication/pr558-measurement-comment-draft.txt": {
+      "bytes": 6188,
+      "sha256": "33f31e71147a8390e19f6a7ad0b8363c9512b91f234335bea43d6e4f11503b11"
+    },
+    "pr558-round4/publication/report-data.json": {
+      "bytes": 4820,
+      "sha256": "f6d2e64403644476282f77c2236905ae0f45846e7316d353dbcf39de5259cd19"
+    },
+    "pr558-round4/publication/report.html": {
+      "bytes": 755166,
+      "sha256": "6b135b317407aac32edfc55d81bbea8e31b5132b4303d7fada84169155c533c6"
+    }
+  },
+  "excludedDirectories": [
+    ".git",
+    ".vs",
+    "__pycache__",
+    "artifacts",
+    "node_modules",
+    "obj"
+  ],
+  "excludedSuffixes": [
+    ".dmp",
+    ".etlx",
+    ".zip"
+  ],
+  "scope": "Archives preserve measured snapshots, raw rows, binaries and relative layouts. Frozen42f evidence is not relabeled as final combined code performance."
+}

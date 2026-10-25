@@ -1,0 +1,835 @@
+{
+  "source": {
+    "commit": "6676ab49b27c9fc13220eb20980282b5597b438f",
+    "compilerSha256": "8f53248923c565431579e82b8c0330aaca4a6608a6f5c9b23a7e3590144206e5",
+    "assemblySha256": "cc4ecfddd35f458a87cbb5f8c112040ae7c51f8cbb14db5d93352194697e4493"
+  },
+  "codes": {
+    "FastExpressionCompiler": 0,
+    "FastExpressionCompiler.LightExpression": 0,
+    "native-net10.0": 0,
+    "native-net8.0": 0,
+    "framework-build": 0,
+    "framework-run": 0,
+    "imported-build": 0,
+    "imported-full": 0
+  },
+  "imported": {
+    "passed": 35064,
+    "failed": 0,
+    "crashes": 0,
+    "batches": 21
+  },
+  "native": {
+    "native-net10.0": {
+      "legacy_passed": 1712,
+      "registered_TestX_passed": []
+    },
+    "native-net8.0": {
+      "legacy_passed": 1711,
+      "registered_TestX_passed": []
+    },
+    "framework-run": {
+      "legacy_passed": 1595,
+      "registered_TestX_passed": [
+        1001
+      ]
+    }
+  },
+  "importedRun": {
+    "mode": "fec",
+    "batches": [
+      {
+        "batch": 1,
+        "status": "Complete",
+        "attempt": 1,
+        "classes": [
+          "System.Dynamic.Tests.BinaryOperationTests",
+          "System.Dynamic.Tests.BindingRestrictionsProxyTests",
+          "System.Dynamic.Tests.BindingRestrictionsTests",
+          "System.Dynamic.Tests.CallInfoTests",
+          "System.Dynamic.Tests.ConvertBinderTests",
+          "System.Dynamic.Tests.DynamicObjectDefaultBehaviorTests",
+          "System.Dynamic.Tests.DynamicObjectTests",
+          "System.Dynamic.Tests.ExpandoObjectProxyTests",
+          "System.Dynamic.Tests.ExpandoObjectTests",
+          "System.Dynamic.Tests.GetIndexBinderTests"
+        ],
+        "excluded": [
+          "System.Linq.Expressions.Tests.CompilerTests.CompileDeepTree_NoStackOverflow"
+        ],
+        "counters": {
+          "total": "2469",
+          "executed": "2469",
+          "passed": "2469",
+          "failed": "0",
+          "error": "0",
+          "timeout": "0",
+          "aborted": "0",
+          "inconclusive": "0",
+          "passedButRunAborted": "0",
+          "notRunnable": "0",
+          "notExecuted": "0",
+          "disconnected": "0",
+          "warning": "0",
+          "completed": "0",
+          "inProgress": "0",
+          "pending": "0"
+        }
+      },
+      {
+        "batch": 2,
+        "status": "Complete",
+        "attempt": 1,
+        "classes": [
+          "System.Dynamic.Tests.GetMemberBinderTests",
+          "System.Dynamic.Tests.InvokeBinderTests",
+          "System.Dynamic.Tests.InvokeMemberBindingTests",
+          "System.Dynamic.Tests.SetIndexBinderTests",
+          "System.Dynamic.Tests.SetMemberBinderTests",
+          "System.Dynamic.Tests.UnaryOperationTests",
+          "System.Linq.Expressions.Tests.ActionTypeTests",
+          "System.Linq.Expressions.Tests.ArrayAccessTests",
+          "System.Linq.Expressions.Tests.ArrayArrayIndexTests",
+          "System.Linq.Expressions.Tests.ArrayArrayLengthTests"
+        ],
+        "excluded": [
+          "System.Linq.Expressions.Tests.CompilerTests.CompileDeepTree_NoStackOverflow"
+        ],
+        "counters": {
+          "total": "759",
+          "executed": "759",
+          "passed": "759",
+          "failed": "0",
+          "error": "0",
+          "timeout": "0",
+          "aborted": "0",
+          "inconclusive": "0",
+          "passedButRunAborted": "0",
+          "notRunnable": "0",
+          "notExecuted": "0",
+          "disconnected": "0",
+          "warning": "0",
+          "completed": "0",
+          "inProgress": "0",
+          "pending": "0"
+        }
+      },
+      {
+        "batch": 3,
+        "status": "Complete",
+        "attempt": 1,
+        "classes": [
+          "System.Linq.Expressions.Tests.ArrayBoundsOneOffTests",
+          "System.Linq.Expressions.Tests.ArrayBoundsTests",
+          "System.Linq.Expressions.Tests.ArrayIndexTests",
+          "System.Linq.Expressions.Tests.ArrayLengthTests",
+          "System.Linq.Expressions.Tests.AsNullableTests",
+          "System.Linq.Expressions.Tests.AsTests",
+          "System.Linq.Expressions.Tests.Assign",
+          "System.Linq.Expressions.Tests.BinaryAddTests",
+          "System.Linq.Expressions.Tests.BinaryAndTests",
+          "System.Linq.Expressions.Tests.BinaryCoalesceTests"
+        ],
+        "excluded": [
+          "System.Linq.Expressions.Tests.CompilerTests.CompileDeepTree_NoStackOverflow"
+        ],
+        "counters": {
+          "total": "5114",
+          "executed": "5111",
+          "passed": "5111",
+          "failed": "0",
+          "error": "0",
+          "timeout": "0",
+          "aborted": "0",
+          "inconclusive": "0",
+          "passedButRunAborted": "0",
+          "notRunnable": "0",
+          "notExecuted": "0",
+          "disconnected": "0",
+          "warning": "0",
+          "completed": "0",
+          "inProgress": "0",
+          "pending": "0"
+        }
+      },
+      {
+        "batch": 4,
+        "status": "Complete",
+        "attempt": 1,
+        "classes": [
+          "System.Linq.Expressions.Tests.BinaryDivideTests",
+          "System.Linq.Expressions.Tests.BinaryEqualTests",
+          "System.Linq.Expressions.Tests.BinaryExclusiveOrTests",
+          "System.Linq.Expressions.Tests.BinaryGreaterThanOrEqualTests",
+          "System.Linq.Expressions.Tests.BinaryLogicalTests",
+          "System.Linq.Expressions.Tests.BinaryModuloTests",
+          "System.Linq.Expressions.Tests.BinaryMultiplyTests",
+          "System.Linq.Expressions.Tests.BinaryNullableAddTests",
+          "System.Linq.Expressions.Tests.BinaryNullableAndTests",
+          "System.Linq.Expressions.Tests.BinaryNullableDivideTests"
+        ],
+        "excluded": [
+          "System.Linq.Expressions.Tests.CompilerTests.CompileDeepTree_NoStackOverflow"
+        ],
+        "counters": {
+          "total": "646",
+          "executed": "646",
+          "passed": "646",
+          "failed": "0",
+          "error": "0",
+          "timeout": "0",
+          "aborted": "0",
+          "inconclusive": "0",
+          "passedButRunAborted": "0",
+          "notRunnable": "0",
+          "notExecuted": "0",
+          "disconnected": "0",
+          "warning": "0",
+          "completed": "0",
+          "inProgress": "0",
+          "pending": "0"
+        }
+      },
+      {
+        "batch": 5,
+        "status": "Complete",
+        "attempt": 1,
+        "classes": [
+          "System.Linq.Expressions.Tests.BinaryNullableExclusiveOrTests",
+          "System.Linq.Expressions.Tests.BinaryNullableLogicalTests",
+          "System.Linq.Expressions.Tests.BinaryNullableModuloTests",
+          "System.Linq.Expressions.Tests.BinaryNullableMultiplyTests",
+          "System.Linq.Expressions.Tests.BinaryNullableOrTests",
+          "System.Linq.Expressions.Tests.BinaryNullablePowerTests",
+          "System.Linq.Expressions.Tests.BinaryNullableSubtractTests",
+          "System.Linq.Expressions.Tests.BinaryOrTests",
+          "System.Linq.Expressions.Tests.BinaryPowerTests",
+          "System.Linq.Expressions.Tests.BinaryShiftTests"
+        ],
+        "excluded": [
+          "System.Linq.Expressions.Tests.CompilerTests.CompileDeepTree_NoStackOverflow"
+        ],
+        "counters": {
+          "total": "226",
+          "executed": "226",
+          "passed": "226",
+          "failed": "0",
+          "error": "0",
+          "timeout": "0",
+          "aborted": "0",
+          "inconclusive": "0",
+          "passedButRunAborted": "0",
+          "notRunnable": "0",
+          "notExecuted": "0",
+          "disconnected": "0",
+          "warning": "0",
+          "completed": "0",
+          "inProgress": "0",
+          "pending": "0"
+        }
+      },
+      {
+        "batch": 6,
+        "status": "Complete",
+        "attempt": 1,
+        "classes": [
+          "System.Linq.Expressions.Tests.BinarySubtractTests",
+          "System.Linq.Expressions.Tests.BindTests",
+          "System.Linq.Expressions.Tests.BlockFactoryTests",
+          "System.Linq.Expressions.Tests.BlockTests",
+          "System.Linq.Expressions.Tests.Break",
+          "System.Linq.Expressions.Tests.CallFactoryTests",
+          "System.Linq.Expressions.Tests.CallTests",
+          "System.Linq.Expressions.Tests.CastNullableTests",
+          "System.Linq.Expressions.Tests.CastTests",
+          "System.Linq.Expressions.Tests.CompilerTests"
+        ],
+        "excluded": [
+          "System.Linq.Expressions.Tests.CompilerTests.CompileDeepTree_NoStackOverflow"
+        ],
+        "counters": {
+          "total": "1294",
+          "executed": "1280",
+          "passed": "1280",
+          "failed": "0",
+          "error": "0",
+          "timeout": "0",
+          "aborted": "0",
+          "inconclusive": "0",
+          "passedButRunAborted": "0",
+          "notRunnable": "0",
+          "notExecuted": "0",
+          "disconnected": "0",
+          "warning": "0",
+          "completed": "0",
+          "inProgress": "0",
+          "pending": "0"
+        }
+      },
+      {
+        "batch": 8,
+        "status": "Complete",
+        "attempt": 1,
+        "classes": [
+          "System.Linq.Expressions.Tests.DefaultTests",
+          "System.Linq.Expressions.Tests.DynamicExpressionTests",
+          "System.Linq.Expressions.Tests.ElementInitTests",
+          "System.Linq.Expressions.Tests.ExceptionHandlingExpressions",
+          "System.Linq.Expressions.Tests.ExpressionDebuggerTypeProxyTests",
+          "System.Linq.Expressions.Tests.ExpressionTests",
+          "System.Linq.Expressions.Tests.Expression_Tests",
+          "System.Linq.Expressions.Tests.FuncTypeTests",
+          "System.Linq.Expressions.Tests.GeneralBinaryTests",
+          "System.Linq.Expressions.Tests.GetDelegateTypeTests"
+        ],
+        "excluded": [
+          "System.Linq.Expressions.Tests.CompilerTests.CompileDeepTree_NoStackOverflow"
+        ],
+        "counters": {
+          "total": "1097",
+          "executed": "1091",
+          "passed": "1091",
+          "failed": "0",
+          "error": "0",
+          "timeout": "0",
+          "aborted": "0",
+          "inconclusive": "0",
+          "passedButRunAborted": "0",
+          "notRunnable": "0",
+          "notExecuted": "0",
+          "disconnected": "0",
+          "warning": "0",
+          "completed": "0",
+          "inProgress": "0",
+          "pending": "0"
+        }
+      },
+      {
+        "batch": 7,
+        "status": "Complete",
+        "attempt": 1,
+        "classes": [
+          "System.Linq.Expressions.Tests.Compiler_Tests",
+          "System.Linq.Expressions.Tests.ConditionalTests",
+          "System.Linq.Expressions.Tests.ConstantArrayTests",
+          "System.Linq.Expressions.Tests.ConstantNullableTests",
+          "System.Linq.Expressions.Tests.ConstantTests",
+          "System.Linq.Expressions.Tests.Continue",
+          "System.Linq.Expressions.Tests.ConvertCheckedTests",
+          "System.Linq.Expressions.Tests.ConvertTests",
+          "System.Linq.Expressions.Tests.DebugInfoExpressionTests",
+          "System.Linq.Expressions.Tests.DebugViewTests"
+        ],
+        "excluded": [
+          "System.Linq.Expressions.Tests.CompilerTests.CompileDeepTree_NoStackOverflow"
+        ],
+        "counters": {
+          "total": "3766",
+          "executed": "3766",
+          "passed": "3766",
+          "failed": "0",
+          "error": "0",
+          "timeout": "0",
+          "aborted": "0",
+          "inconclusive": "0",
+          "passedButRunAborted": "0",
+          "notRunnable": "0",
+          "notExecuted": "0",
+          "disconnected": "0",
+          "warning": "0",
+          "completed": "0",
+          "inProgress": "0",
+          "pending": "0"
+        }
+      },
+      {
+        "batch": 9,
+        "status": "Complete",
+        "attempt": 1,
+        "classes": [
+          "System.Linq.Expressions.Tests.Goto",
+          "System.Linq.Expressions.Tests.IndexExpressionTests",
+          "System.Linq.Expressions.Tests.IndexExpressionVisitorTests",
+          "System.Linq.Expressions.Tests.InterpreterTests",
+          "System.Linq.Expressions.Tests.InvocationTests",
+          "System.Linq.Expressions.Tests.InvokeFactoryTests",
+          "System.Linq.Expressions.Tests.IsNullableTests",
+          "System.Linq.Expressions.Tests.IsTests",
+          "System.Linq.Expressions.Tests.LabelTargetTests",
+          "System.Linq.Expressions.Tests.LabelTests"
+        ],
+        "excluded": [
+          "System.Linq.Expressions.Tests.CompilerTests.CompileDeepTree_NoStackOverflow"
+        ],
+        "counters": {
+          "total": "454",
+          "executed": "451",
+          "passed": "451",
+          "failed": "0",
+          "error": "0",
+          "timeout": "0",
+          "aborted": "0",
+          "inconclusive": "0",
+          "passedButRunAborted": "0",
+          "notRunnable": "0",
+          "notExecuted": "0",
+          "disconnected": "0",
+          "warning": "0",
+          "completed": "0",
+          "inProgress": "0",
+          "pending": "0"
+        }
+      },
+      {
+        "batch": 11,
+        "status": "Complete",
+        "attempt": 1,
+        "classes": [
+          "System.Linq.Expressions.Tests.LambdaSubtractNullableTests",
+          "System.Linq.Expressions.Tests.LambdaSubtractTests",
+          "System.Linq.Expressions.Tests.LambdaTests",
+          "System.Linq.Expressions.Tests.LambdaUnaryNotNullableTests",
+          "System.Linq.Expressions.Tests.LambdaUnaryNotTests",
+          "System.Linq.Expressions.Tests.LiftedAddCheckedNullableTests",
+          "System.Linq.Expressions.Tests.LiftedAddNullableTests",
+          "System.Linq.Expressions.Tests.LiftedBitwiseAndNullableTests",
+          "System.Linq.Expressions.Tests.LiftedBitwiseExclusiveOrNullableTests",
+          "System.Linq.Expressions.Tests.LiftedBitwiseOrNullableTests"
+        ],
+        "excluded": [
+          "System.Linq.Expressions.Tests.CompilerTests.CompileDeepTree_NoStackOverflow"
+        ],
+        "counters": {
+          "total": "254",
+          "executed": "251",
+          "passed": "251",
+          "failed": "0",
+          "error": "0",
+          "timeout": "0",
+          "aborted": "0",
+          "inconclusive": "0",
+          "passedButRunAborted": "0",
+          "notRunnable": "0",
+          "notExecuted": "0",
+          "disconnected": "0",
+          "warning": "0",
+          "completed": "0",
+          "inProgress": "0",
+          "pending": "0"
+        }
+      },
+      {
+        "batch": 10,
+        "status": "Complete",
+        "attempt": 1,
+        "classes": [
+          "System.Linq.Expressions.Tests.LambdaAddNullableTests",
+          "System.Linq.Expressions.Tests.LambdaAddTests",
+          "System.Linq.Expressions.Tests.LambdaDivideNullableTests",
+          "System.Linq.Expressions.Tests.LambdaDivideTests",
+          "System.Linq.Expressions.Tests.LambdaIdentityNullableTests",
+          "System.Linq.Expressions.Tests.LambdaIdentityTests",
+          "System.Linq.Expressions.Tests.LambdaModuloNullableTests",
+          "System.Linq.Expressions.Tests.LambdaModuloTests",
+          "System.Linq.Expressions.Tests.LambdaMultiplyNullableTests",
+          "System.Linq.Expressions.Tests.LambdaMultiplyTests"
+        ],
+        "excluded": [
+          "System.Linq.Expressions.Tests.CompilerTests.CompileDeepTree_NoStackOverflow"
+        ],
+        "counters": {
+          "total": "278",
+          "executed": "278",
+          "passed": "278",
+          "failed": "0",
+          "error": "0",
+          "timeout": "0",
+          "aborted": "0",
+          "inconclusive": "0",
+          "passedButRunAborted": "0",
+          "notRunnable": "0",
+          "notExecuted": "0",
+          "disconnected": "0",
+          "warning": "0",
+          "completed": "0",
+          "inProgress": "0",
+          "pending": "0"
+        }
+      },
+      {
+        "batch": 12,
+        "status": "Complete",
+        "attempt": 1,
+        "classes": [
+          "System.Linq.Expressions.Tests.LiftedComparisonEqualNullableTests",
+          "System.Linq.Expressions.Tests.LiftedComparisonGreaterThanNullableTests",
+          "System.Linq.Expressions.Tests.LiftedComparisonGreaterThanOrEqualNullableTests",
+          "System.Linq.Expressions.Tests.LiftedComparisonLessThanNullableTests",
+          "System.Linq.Expressions.Tests.LiftedComparisonLessThanOrEqualNullableTests",
+          "System.Linq.Expressions.Tests.LiftedComparisonNotEqualNullableTests",
+          "System.Linq.Expressions.Tests.LiftedDivideNullableTests",
+          "System.Linq.Expressions.Tests.LiftedModuloNullableTests",
+          "System.Linq.Expressions.Tests.LiftedMultiplyCheckedNullableTests",
+          "System.Linq.Expressions.Tests.LiftedMultiplyNullableTests"
+        ],
+        "excluded": [
+          "System.Linq.Expressions.Tests.CompilerTests.CompileDeepTree_NoStackOverflow"
+        ],
+        "counters": {
+          "total": "252",
+          "executed": "252",
+          "passed": "252",
+          "failed": "0",
+          "error": "0",
+          "timeout": "0",
+          "aborted": "0",
+          "inconclusive": "0",
+          "passedButRunAborted": "0",
+          "notRunnable": "0",
+          "notExecuted": "0",
+          "disconnected": "0",
+          "warning": "0",
+          "completed": "0",
+          "inProgress": "0",
+          "pending": "0"
+        }
+      },
+      {
+        "batch": 13,
+        "status": "Complete",
+        "attempt": 1,
+        "classes": [
+          "System.Linq.Expressions.Tests.LiftedNullableTests",
+          "System.Linq.Expressions.Tests.LiftedSubtractCheckedNullableTests",
+          "System.Linq.Expressions.Tests.LiftedSubtractNullableTests",
+          "System.Linq.Expressions.Tests.ListBindTests",
+          "System.Linq.Expressions.Tests.ListInitExpressionTests",
+          "System.Linq.Expressions.Tests.LoopTests",
+          "System.Linq.Expressions.Tests.MakeGoto",
+          "System.Linq.Expressions.Tests.MakeUnaryTests",
+          "System.Linq.Expressions.Tests.MemberAccessTests",
+          "System.Linq.Expressions.Tests.MemberBindTests"
+        ],
+        "excluded": [
+          "System.Linq.Expressions.Tests.CompilerTests.CompileDeepTree_NoStackOverflow"
+        ],
+        "counters": {
+          "total": "372",
+          "executed": "366",
+          "passed": "366",
+          "failed": "0",
+          "error": "0",
+          "timeout": "0",
+          "aborted": "0",
+          "inconclusive": "0",
+          "passedButRunAborted": "0",
+          "notRunnable": "0",
+          "notExecuted": "0",
+          "disconnected": "0",
+          "warning": "0",
+          "completed": "0",
+          "inProgress": "0",
+          "pending": "0"
+        }
+      },
+      {
+        "batch": 14,
+        "status": "Complete",
+        "attempt": 1,
+        "classes": [
+          "System.Linq.Expressions.Tests.MemberInitTests",
+          "System.Linq.Expressions.Tests.NewArrayListTests",
+          "System.Linq.Expressions.Tests.NewTests",
+          "System.Linq.Expressions.Tests.NewWithByRefParameterTests",
+          "System.Linq.Expressions.Tests.NewWithParameterTests",
+          "System.Linq.Expressions.Tests.NewWithTwoParametersTests",
+          "System.Linq.Expressions.Tests.NoParameterBlockTests",
+          "System.Linq.Expressions.Tests.NonLiftedComparisonEqualNullableTests",
+          "System.Linq.Expressions.Tests.NonLiftedComparisonGreaterThanNullableTests",
+          "System.Linq.Expressions.Tests.NonLiftedComparisonGreaterThanOrEqualNullableTests"
+        ],
+        "excluded": [
+          "System.Linq.Expressions.Tests.CompilerTests.CompileDeepTree_NoStackOverflow"
+        ],
+        "counters": {
+          "total": "854",
+          "executed": "854",
+          "passed": "854",
+          "failed": "0",
+          "error": "0",
+          "timeout": "0",
+          "aborted": "0",
+          "inconclusive": "0",
+          "passedButRunAborted": "0",
+          "notRunnable": "0",
+          "notExecuted": "0",
+          "disconnected": "0",
+          "warning": "0",
+          "completed": "0",
+          "inProgress": "0",
+          "pending": "0"
+        }
+      },
+      {
+        "batch": 15,
+        "status": "Complete",
+        "attempt": 1,
+        "classes": [
+          "System.Linq.Expressions.Tests.NonLiftedComparisonLessThanNullableTests",
+          "System.Linq.Expressions.Tests.NonLiftedComparisonLessThanOrEqualNullableTests",
+          "System.Linq.Expressions.Tests.NonLiftedComparisonNotEqualNullableTests",
+          "System.Linq.Expressions.Tests.NullableArrayIndexTests",
+          "System.Linq.Expressions.Tests.NullableArrayLengthTests",
+          "System.Linq.Expressions.Tests.NullableNewArrayListTests",
+          "System.Linq.Expressions.Tests.OnesComplementNullableTests",
+          "System.Linq.Expressions.Tests.OnesComplementTests",
+          "System.Linq.Expressions.Tests.OpAssign",
+          "System.Linq.Expressions.Tests.ParameterBlockTests"
+        ],
+        "excluded": [
+          "System.Linq.Expressions.Tests.CompilerTests.CompileDeepTree_NoStackOverflow"
+        ],
+        "counters": {
+          "total": "1484",
+          "executed": "1484",
+          "passed": "1484",
+          "failed": "0",
+          "error": "0",
+          "timeout": "0",
+          "aborted": "0",
+          "inconclusive": "0",
+          "passedButRunAborted": "0",
+          "notRunnable": "0",
+          "notExecuted": "0",
+          "disconnected": "0",
+          "warning": "0",
+          "completed": "0",
+          "inProgress": "0",
+          "pending": "0"
+        }
+      },
+      {
+        "batch": 16,
+        "status": "Complete",
+        "attempt": 1,
+        "classes": [
+          "System.Linq.Expressions.Tests.ParameterTests",
+          "System.Linq.Expressions.Tests.PostDecrementAssignTests",
+          "System.Linq.Expressions.Tests.PostIncrementAssignTests",
+          "System.Linq.Expressions.Tests.PreDecrementAssignTests",
+          "System.Linq.Expressions.Tests.PreIncrementAssignTests",
+          "System.Linq.Expressions.Tests.ReadOnlyCollectionBuilderTests",
+          "System.Linq.Expressions.Tests.ReferenceEqual",
+          "System.Linq.Expressions.Tests.ReferenceNotEqual",
+          "System.Linq.Expressions.Tests.Return",
+          "System.Linq.Expressions.Tests.RuntimeVariablesTests"
+        ],
+        "excluded": [
+          "System.Linq.Expressions.Tests.CompilerTests.CompileDeepTree_NoStackOverflow"
+        ],
+        "counters": {
+          "total": "2698",
+          "executed": "2698",
+          "passed": "2698",
+          "failed": "0",
+          "error": "0",
+          "timeout": "0",
+          "aborted": "0",
+          "inconclusive": "0",
+          "passedButRunAborted": "0",
+          "notRunnable": "0",
+          "notExecuted": "0",
+          "disconnected": "0",
+          "warning": "0",
+          "completed": "0",
+          "inProgress": "0",
+          "pending": "0"
+        }
+      },
+      {
+        "batch": 17,
+        "status": "Complete",
+        "attempt": 1,
+        "classes": [
+          "System.Linq.Expressions.Tests.StackSpillerTests",
+          "System.Linq.Expressions.Tests.SwitchTests",
+          "System.Linq.Expressions.Tests.SymbolDocumentInfoTests",
+          "System.Linq.Expressions.Tests.TernaryArrayNullableTests",
+          "System.Linq.Expressions.Tests.TernaryArrayTests",
+          "System.Linq.Expressions.Tests.TernaryNullableTests",
+          "System.Linq.Expressions.Tests.TernaryTests",
+          "System.Linq.Expressions.Tests.TrimCompatibilityTests",
+          "System.Linq.Expressions.Tests.Trimming.BinaryOperatorTests.EntryPointTests",
+          "System.Linq.Expressions.Tests.Trimming.ConvertOperatorTests.EntryPointTests"
+        ],
+        "excluded": [
+          "System.Linq.Expressions.Tests.CompilerTests.CompileDeepTree_NoStackOverflow"
+        ],
+        "counters": {
+          "total": "423",
+          "executed": "402",
+          "passed": "402",
+          "failed": "0",
+          "error": "0",
+          "timeout": "0",
+          "aborted": "0",
+          "inconclusive": "0",
+          "passedButRunAborted": "0",
+          "notRunnable": "0",
+          "notExecuted": "0",
+          "disconnected": "0",
+          "warning": "0",
+          "completed": "0",
+          "inProgress": "0",
+          "pending": "0"
+        }
+      },
+      {
+        "batch": 18,
+        "status": "Complete",
+        "attempt": 1,
+        "classes": [
+          "System.Linq.Expressions.Tests.Trimming.EqualOperatorTests.EntryPointTests",
+          "System.Linq.Expressions.Tests.Trimming.ExpressionPropertyTests.EntryPointTests",
+          "System.Linq.Expressions.Tests.Trimming.GetHelperTypeTests.EntryPointTests",
+          "System.Linq.Expressions.Tests.TypeEqual",
+          "System.Linq.Expressions.Tests.TypeIs",
+          "System.Linq.Expressions.Tests.UnaryArithmeticNegateCheckedNullableTests",
+          "System.Linq.Expressions.Tests.UnaryArithmeticNegateCheckedTests",
+          "System.Linq.Expressions.Tests.UnaryArithmeticNegateNullableOneOffTests",
+          "System.Linq.Expressions.Tests.UnaryArithmeticNegateNullableTests",
+          "System.Linq.Expressions.Tests.UnaryArithmeticNegateTests"
+        ],
+        "excluded": [
+          "System.Linq.Expressions.Tests.CompilerTests.CompileDeepTree_NoStackOverflow"
+        ],
+        "counters": {
+          "total": "11907",
+          "executed": "11905",
+          "passed": "11905",
+          "failed": "0",
+          "error": "0",
+          "timeout": "0",
+          "aborted": "0",
+          "inconclusive": "0",
+          "passedButRunAborted": "0",
+          "notRunnable": "0",
+          "notExecuted": "0",
+          "disconnected": "0",
+          "warning": "0",
+          "completed": "0",
+          "inProgress": "0",
+          "pending": "0"
+        }
+      },
+      {
+        "batch": 19,
+        "status": "Complete",
+        "attempt": 1,
+        "classes": [
+          "System.Linq.Expressions.Tests.UnaryBitwiseNotNullableTests",
+          "System.Linq.Expressions.Tests.UnaryBitwiseNotTests",
+          "System.Linq.Expressions.Tests.UnaryConvertTests",
+          "System.Linq.Expressions.Tests.UnaryDecrementNullableTests",
+          "System.Linq.Expressions.Tests.UnaryDecrementTests",
+          "System.Linq.Expressions.Tests.UnaryIncrementNullableTests",
+          "System.Linq.Expressions.Tests.UnaryIncrementTests",
+          "System.Linq.Expressions.Tests.UnaryIsFalseNullableTests",
+          "System.Linq.Expressions.Tests.UnaryIsFalseTests",
+          "System.Linq.Expressions.Tests.UnaryIsTrueNullableTests"
+        ],
+        "excluded": [
+          "System.Linq.Expressions.Tests.CompilerTests.CompileDeepTree_NoStackOverflow"
+        ],
+        "counters": {
+          "total": "281",
+          "executed": "281",
+          "passed": "281",
+          "failed": "0",
+          "error": "0",
+          "timeout": "0",
+          "aborted": "0",
+          "inconclusive": "0",
+          "passedButRunAborted": "0",
+          "notRunnable": "0",
+          "notExecuted": "0",
+          "disconnected": "0",
+          "warning": "0",
+          "completed": "0",
+          "inProgress": "0",
+          "pending": "0"
+        }
+      },
+      {
+        "batch": 20,
+        "status": "Complete",
+        "attempt": 1,
+        "classes": [
+          "System.Linq.Expressions.Tests.UnaryIsTrueTests",
+          "System.Linq.Expressions.Tests.UnaryPlusNullableTests",
+          "System.Linq.Expressions.Tests.UnaryPlusTests",
+          "System.Linq.Expressions.Tests.UnaryQuoteTests",
+          "System.Linq.Expressions.Tests.UnaryUnboxTests",
+          "System.Linq.Expressions.Tests.UnboxTests",
+          "System.Linq.Expressions.Tests.VariableTests",
+          "System.Linq.Expressions.Tests.VisitorTests",
+          "System.Runtime.CompilerServices.Tests.CallSiteBinderDefaultBehaviourTests",
+          "System.Runtime.CompilerServices.Tests.CallSiteCachingTests"
+        ],
+        "excluded": [
+          "System.Linq.Expressions.Tests.CompilerTests.CompileDeepTree_NoStackOverflow"
+        ],
+        "counters": {
+          "total": "481",
+          "executed": "481",
+          "passed": "481",
+          "failed": "0",
+          "error": "0",
+          "timeout": "0",
+          "aborted": "0",
+          "inconclusive": "0",
+          "passedButRunAborted": "0",
+          "notRunnable": "0",
+          "notExecuted": "0",
+          "disconnected": "0",
+          "warning": "0",
+          "completed": "0",
+          "inProgress": "0",
+          "pending": "0"
+        }
+      },
+      {
+        "batch": 21,
+        "status": "Complete",
+        "attempt": 1,
+        "classes": [
+          "System.Runtime.CompilerServices.Tests.CallSiteTests",
+          "System.Runtime.CompilerServices.Tests.DynamicAttributeTests"
+        ],
+        "excluded": [
+          "System.Linq.Expressions.Tests.CompilerTests.CompileDeepTree_NoStackOverflow"
+        ],
+        "counters": {
+          "total": "13",
+          "executed": "13",
+          "passed": "13",
+          "failed": "0",
+          "error": "0",
+          "timeout": "0",
+          "aborted": "0",
+          "inconclusive": "0",
+          "passedButRunAborted": "0",
+          "notRunnable": "0",
+          "notExecuted": "0",
+          "disconnected": "0",
+          "warning": "0",
+          "completed": "0",
+          "inProgress": "0",
+          "pending": "0"
+        }
+      }
+    ],
+    "crashes": []
+  }
+}

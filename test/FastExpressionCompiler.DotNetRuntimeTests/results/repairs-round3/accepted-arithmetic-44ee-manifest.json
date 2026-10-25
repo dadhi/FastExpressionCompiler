@@ -1,0 +1,1714 @@
+{
+  "partition": "accepted-arithmetic-44ee",
+  "finalState": {
+    "status": "Final70f297cb validated; bounded combined and map measurements complete. Universal performance/allocation parity not established.",
+    "final_code_head": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "accepted_arithmetic_commit": "44ee17d7f3fd5d363b7088158cc97b2cc60f7da7",
+    "try_value_commit": "6d397bc6255ddf406f5586c405ddd04cff7d4cdd",
+    "final_validation": {
+      "codeHead": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+      "codes": {
+        "FastExpressionCompiler": 0,
+        "FastExpressionCompiler.LightExpression": 0,
+        "native-net10.0": 0,
+        "native-net8.0": 0,
+        "framework-build": 0,
+        "framework-run": 0,
+        "imported-build": 0,
+        "imported-full": 0
+      },
+      "imported": {
+        "batches": 21,
+        "crashes": 0,
+        "counters": {
+          "total": 35122,
+          "executed": 35064,
+          "passed": 35064,
+          "failed": 0,
+          "error": 0,
+          "timeout": 0,
+          "aborted": 0,
+          "notExecuted": 0
+        },
+        "originalDenominator": 35133,
+        "exclusions": 69,
+        "newExclusions": 0
+      },
+      "native": {
+        "net10": "All runner suites pass; legacy1712",
+        "net8": "All runner suites pass; legacy1711",
+        "framework": "TestX1037 plus legacy1595 pass"
+      },
+      "priorAttempt": {
+        "head": "6d397bc6",
+        "result": "Interrupted after managed stack proved preexisting SmallMap16 promotion hang; fixed3be541d3; no Trycontrolflow regression"
+      },
+      "snapshot": {
+        "commit": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+        "compilerSha256": "4239ac0a6f673fba71eead86d2eae40e7eec79f0a52241f2c9d8ac2669ada237",
+        "assemblySha256": "6ddb580a9826a3494ff3bdc863d3af73d58ba836d2a7754ecc9f7afd698521d1"
+      }
+    },
+    "notes": "Historical42f/isolated snapshots retain their exact sources. Old6d validation was interrupted by unchanged-prePR SmallMap capacity bug, not a Try-value regression;70f includes its fix and supported EH-host correction.",
+    "combined_expected": true,
+    "validation_path": "pr558-repair/validation-70f297cb",
+    "candidate_code_head": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "combined_snapshot_head": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "combined_measurements_state": "Complete:12474 raw rows/198 groups,0 errors;21 rotated samples, all short samples retained. Compile independently calibrated; FEC other phases use common counts, System independently calibrated.",
+    "map_capacity_commit": "3be541d3aeba0d58560b0a49d78206bb108edbfc",
+    "supported_host_commit": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "combined_path": "pr558-round4/combined-final-bounded",
+    "historical_combined_path": "pr558-round4/combined-final",
+    "map_capacity_path": "pr558-round4/map-capacity",
+    "supported_host_path": "pr558-round4/supported-eh-host",
+    "review_reply_paths": [
+      "pr558-round4/dadhi-host-reply.json",
+      "pr558-round4/dadhi-host-reply-published.json"
+    ],
+    "official_source_urls": [
+      "https://github.com/dotnet/runtime/blob/v10.0.9/src/libraries/System.Private.CoreLib/src/System/Reflection/Emit/DynamicMethod.cs#L228-L240",
+      "https://github.com/dotnet/runtime/blob/v10.0.9/src/coreclr/System.Private.CoreLib/src/System/Reflection/Emit/DynamicMethod.CoreCLR.cs#L41-L56"
+    ],
+    "allocation_confirmation_path": "allocation-confirmation-round4",
+    "allocation_confirmation_state": "Complete:2970 raw rows/198 groups;5 samples x200 operations after40warmups;164 unchanged,26 decreased,8 increased. Six FrameworkLight approximately192B residual plus two FrameworkStandard0.8B groups retained. No elapsed claims.",
+    "validation_reproduction_paths": [
+      "pr558-repair/validate.py",
+      "pr558-repair/summarize-validation.py",
+      "fec-round12/Run-Full.py",
+      "pr558-repair/frozen-70f297cb",
+      "fec-fixes/FrameworkRunner/Program.cs",
+      "fec-fixes/FrameworkRunner/FrameworkRunner.csproj"
+    ],
+    "allocation_confirmation_summary": {
+      "complete": true,
+      "counts": {
+        "unchanged": 164,
+        "decreased": 26,
+        "increased": 8
+      },
+      "primaryPositiveReconfirmation": {
+        "primary_positive": 28,
+        "positive_again": 6,
+        "now_equal": 21,
+        "now_decreased": 1
+      },
+      "errors": []
+    }
+  },
+  "files": {
+    "pr558-round4/atomic-right-arithmetic/Analyze-Cold.py": {
+      "bytes": 1478,
+      "sha256": "604cfa95d5cdae6135c8f7f89277cf18056f29657f0caeaf43bed912c97d7fcb"
+    },
+    "pr558-round4/atomic-right-arithmetic/Analyze-Warm.py": {
+      "bytes": 1662,
+      "sha256": "a11e21f2bf26158ebd0912a2c2bd7efbc8499e7f62dcc1ea695c9b3c6f7fd9b7"
+    },
+    "pr558-round4/atomic-right-arithmetic/Arithmetic.cs": {
+      "bytes": 7652,
+      "sha256": "97f88ca4ee5b67aa0f3bd4d098c8a643afb58b660292389aa176d39ce12f7d49"
+    },
+    "pr558-round4/atomic-right-arithmetic/CONTROL-RATIOS.txt": {
+      "bytes": 1901,
+      "sha256": "80e15e66cd5bf01f12255765745fbf8b764bf7691bd35d0a4f11794a2cd941cc"
+    },
+    "pr558-round4/atomic-right-arithmetic/Checks.cs": {
+      "bytes": 15103,
+      "sha256": "bf965f2de51e6769fc37d7bba8bb48ed64c3488811c447d2020284fa0aa81710"
+    },
+    "pr558-round4/atomic-right-arithmetic/Checks.csproj": {
+      "bytes": 759,
+      "sha256": "6fa910a11465bc0ff5c18009ff664dd91fc39f6e5d33a867b3d5d8fa64f9cbca"
+    },
+    "pr558-round4/atomic-right-arithmetic/Cold.cs": {
+      "bytes": 5796,
+      "sha256": "b287c03c5c43af15555de5ea4a7b477c6d15a74b3de0e6cd65110268bf7084be"
+    },
+    "pr558-round4/atomic-right-arithmetic/ColdLight.cs": {
+      "bytes": 5957,
+      "sha256": "d36188448fb9ca1a8c3a9804dd35f1a3397eda5d120e73d977c95a24f6c21bf2"
+    },
+    "pr558-round4/atomic-right-arithmetic/ColdLightbefore.csproj": {
+      "bytes": 506,
+      "sha256": "18de1e20b10516e1f1a7da8853fbfdd026d4cbed72d3965c84352673c5c36fbd"
+    },
+    "pr558-round4/atomic-right-arithmetic/ColdLightfixed.csproj": {
+      "bytes": 503,
+      "sha256": "705771159faead5d5a9767b386637bcc6ed7a4da0265678b712e7a01fa0c2e3b"
+    },
+    "pr558-round4/atomic-right-arithmetic/Coldbefore.csproj": {
+      "bytes": 485,
+      "sha256": "86abe253d753697e18679d9beeeb23a9454ceb5e8242a4e25726d1f64a790f24"
+    },
+    "pr558-round4/atomic-right-arithmetic/Coldfixed.csproj": {
+      "bytes": 482,
+      "sha256": "5c07969b9d1298864965cc45658f561bc9e38a72e218f024be995cd8ffce47bf"
+    },
+    "pr558-round4/atomic-right-arithmetic/Collection.cs": {
+      "bytes": 3232,
+      "sha256": "e5662c463af3599e99da3a54e9e60df385bdd711b671970f18fd444e0f5c8309"
+    },
+    "pr558-round4/atomic-right-arithmetic/Collection.csproj": {
+      "bytes": 574,
+      "sha256": "8a15c03b808e8a2af22f14026ab79545a16126059caed43c0ffb747b52614c55"
+    },
+    "pr558-round4/atomic-right-arithmetic/DECISION.txt": {
+      "bytes": 302,
+      "sha256": "0f2041f008f635849e3d91dc779cc0658491f488ddcc668db69cbbc23f2f323d"
+    },
+    "pr558-round4/atomic-right-arithmetic/LegacyRef-net10.0.csproj": {
+      "bytes": 1174,
+      "sha256": "a7cd91dc0032e59448a81fd091dbd4598c64ccba7260b56e237778ddf4d71270"
+    },
+    "pr558-round4/atomic-right-arithmetic/LegacyRef-net472.csproj": {
+      "bytes": 1167,
+      "sha256": "3d098e13f1e5daa7c361bba41132fb1c45e06c183da34cac4d45ef1e0a300b20"
+    },
+    "pr558-round4/atomic-right-arithmetic/LegacyRef-net8.0.csproj": {
+      "bytes": 1167,
+      "sha256": "f2ff9e1e9a1197543af390d6b17e958f7e57924f6cce36c7009275a399f9cb0d"
+    },
+    "pr558-round4/atomic-right-arithmetic/LegacyRef.cs": {
+      "bytes": 334,
+      "sha256": "a1575edd1cc21b54c3b532e75d495e480e44b4c8c66bcd95d74aa2c6c73b02b7"
+    },
+    "pr558-round4/atomic-right-arithmetic/LegacyRef.csproj": {
+      "bytes": 1218,
+      "sha256": "19deafaa5a4fc2596324b57d25a2585ff9507ce56bd8989dbc84b31357ced24f"
+    },
+    "pr558-round4/atomic-right-arithmetic/Program.cs": {
+      "bytes": 13852,
+      "sha256": "bf0886522d805ac517d612b7f176dc423eabb463a53e9ae60852d450f7686dd7"
+    },
+    "pr558-round4/atomic-right-arithmetic/ProgramLight.cs": {
+      "bytes": 14585,
+      "sha256": "62823aa75779f3c4b91cebee43b78e22626d9f5656ab134a789b0749361143c4"
+    },
+    "pr558-round4/atomic-right-arithmetic/Proposed-LiftedArithmeticOperatorRegressionTests.cs": {
+      "bytes": 7685,
+      "sha256": "ad79008dba1cd0daa950b2db6d19cd96a1a228bb049fd1eedf2f1221367d1654"
+    },
+    "pr558-round4/atomic-right-arithmetic/REPRODUCTION.txt": {
+      "bytes": 821,
+      "sha256": "e9d7ac335a0421cc0761e9429c7604f2f7410b0f07a83c2a7395eb04a22333e3"
+    },
+    "pr558-round4/atomic-right-arithmetic/Reproduce-Edit.py": {
+      "bytes": 587,
+      "sha256": "c8fefe07f6ed0806c9052df7e29f2a87ad5b9943d0588714f167b961eee656b5"
+    },
+    "pr558-round4/atomic-right-arithmetic/Reproduce.ps1": {
+      "bytes": 3960,
+      "sha256": "9eeefc085b05fc6067ad4af07ddc409162f6cc2951b0fdf516a545f4f7254f67"
+    },
+    "pr558-round4/atomic-right-arithmetic/Run-Cold.py": {
+      "bytes": 1426,
+      "sha256": "c78dfd764ef0baedb10d6241a778832a190eaa1c1a699826e84c2cf785463fb4"
+    },
+    "pr558-round4/atomic-right-arithmetic/Run-Warm.py": {
+      "bytes": 904,
+      "sha256": "bbf584cec32328f6aaa2d247d2ab7986805e0f748269c2cd6f95c1254ac6618f"
+    },
+    "pr558-round4/atomic-right-arithmetic/Runner.csproj": {
+      "bytes": 563,
+      "sha256": "2b7d9eadced2ba9c3e7b80cdf4a97b8cf32e4996b65db549b2b087569478ea2a"
+    },
+    "pr558-round4/atomic-right-arithmetic/RunnerLight.csproj": {
+      "bytes": 590,
+      "sha256": "65b7a47e0b96184d31822bfc414294155da3cf8f9af9ff00bd122944c523c74e"
+    },
+    "pr558-round4/atomic-right-arithmetic/before-light/Expression.cs": {
+      "bytes": 321197,
+      "sha256": "9a360ff6496ac26b82eb2a7c67a07215c569b5d86eed1c1bdc2e25aa70f141c2"
+    },
+    "pr558-round4/atomic-right-arithmetic/before-light/ExpressionVisitor.cs": {
+      "bytes": 20224,
+      "sha256": "a6162cdb8af3aa2274dc2a8c929e4f822e7d7f179d2d931f85d5eae0d8a9685b"
+    },
+    "pr558-round4/atomic-right-arithmetic/before-light/FlatExpression.cs": {
+      "bytes": 119743,
+      "sha256": "d47822bd4bc9d9c07aa976647e249e5eb39c6b8e216d21512b115aa23e4f6548"
+    },
+    "pr558-round4/atomic-right-arithmetic/before-light/Library.csproj": {
+      "bytes": 497,
+      "sha256": "15d51da85b6c9815f2a7160064fd9ad173c194d357d7f6edc3b913a98938efb0"
+    },
+    "pr558-round4/atomic-right-arithmetic/before-light/bin/Release/net10.0/FecAtomic.Light.before.deps.json": {
+      "bytes": 460,
+      "sha256": "1a0016fcee01dc031bedc060641eb7d0e13486fa32ecd11e036a6cbe17201475"
+    },
+    "pr558-round4/atomic-right-arithmetic/before-light/bin/Release/net10.0/FecAtomic.Light.before.dll": {
+      "bytes": 440832,
+      "sha256": "902aab52a6fddcfcb06059a0343a4aa2551b959076e5faee8466dcdd464b2ce5"
+    },
+    "pr558-round4/atomic-right-arithmetic/before-light/bin/Release/net10.0/FecAtomic.Light.before.pdb": {
+      "bytes": 190308,
+      "sha256": "63324e66012db0e49598db152ea2c05ab1441d1f497f9980d3b12e25d355c827"
+    },
+    "pr558-round4/atomic-right-arithmetic/before-light/bin/Release/net472/FecAtomic.Light.before.dll": {
+      "bytes": 437760,
+      "sha256": "11b446e2cdecdcf662e4ff827b0c2dbb999cd51d5b0cd335d048f900ba9d6eff"
+    },
+    "pr558-round4/atomic-right-arithmetic/before-light/bin/Release/net472/FecAtomic.Light.before.pdb": {
+      "bytes": 182032,
+      "sha256": "780189d34351e35a069f091074ab7849a7c282d41250c38951e7c37a55022ff0"
+    },
+    "pr558-round4/atomic-right-arithmetic/before-light/bin/Release/net8.0/FecAtomic.Light.before.deps.json": {
+      "bytes": 458,
+      "sha256": "5fe86f9d38227274c15d0651d3cfee91e895ea3d4ba9922f5ca4f43b1f77d2b8"
+    },
+    "pr558-round4/atomic-right-arithmetic/before-light/bin/Release/net8.0/FecAtomic.Light.before.dll": {
+      "bytes": 439808,
+      "sha256": "526ba6a0c6197e2a573281f7e8c7e36de830f09f216cb9f37da986a2440ba448"
+    },
+    "pr558-round4/atomic-right-arithmetic/before-light/bin/Release/net8.0/FecAtomic.Light.before.pdb": {
+      "bytes": 190240,
+      "sha256": "c411e9fa5ff2e27f6bedb2042070c6503054adbad697bd9f16a00b984e911a2f"
+    },
+    "pr558-round4/atomic-right-arithmetic/before/FastExpressionCompiler.cs": {
+      "bytes": 893892,
+      "sha256": "e2af56a875f89786ea881cbb463b445381707f0caacf9111efc364e767c2e7e7"
+    },
+    "pr558-round4/atomic-right-arithmetic/before/ILReader.cs": {
+      "bytes": 37615,
+      "sha256": "ceb16ba300543d6104d81e8b9b5ae687aef20dbdc9536c640bb4c00da915995d"
+    },
+    "pr558-round4/atomic-right-arithmetic/before/ImTools.cs": {
+      "bytes": 78461,
+      "sha256": "a5d5c4f0630490d2d27d76a715517de7b7c18dace82f1a76de35f5c4a9a23fb0"
+    },
+    "pr558-round4/atomic-right-arithmetic/before/Library.csproj": {
+      "bytes": 235,
+      "sha256": "3076d8ecd52f58f844770269f1069fd3d9f8425ff62fe3cebabcdafb5160b3ad"
+    },
+    "pr558-round4/atomic-right-arithmetic/before/TestTools.cs": {
+      "bytes": 54790,
+      "sha256": "c47c93ca62e6c5606c6d891e1ef1ebab529fb5fff2e8b81742eac5c65a570190"
+    },
+    "pr558-round4/atomic-right-arithmetic/before/bin/Release/net10.0/FecAtomic.before.deps.json": {
+      "bytes": 442,
+      "sha256": "96d3404713605c0f0737147e5ccb120fdd252127259a698f29c2f209a9c42d4e"
+    },
+    "pr558-round4/atomic-right-arithmetic/before/bin/Release/net10.0/FecAtomic.before.dll": {
+      "bytes": 291840,
+      "sha256": "a6d201e0f6494d69a6ce114da67f4e3ee5ea9d4a65c89c2b3d595d78b02ff8e9"
+    },
+    "pr558-round4/atomic-right-arithmetic/before/bin/Release/net10.0/FecAtomic.before.pdb": {
+      "bytes": 122236,
+      "sha256": "c5facaa2134ac1a48318daecf53ebaf8b8ad068d0634738da7fa5b2d4ad0d1e2"
+    },
+    "pr558-round4/atomic-right-arithmetic/before/bin/Release/net472/FecAtomic.before.dll": {
+      "bytes": 289792,
+      "sha256": "c5c9a45b62c6bdd4d0321c11bdf7780152732605d195c3215cc7e2ed78d8cf3a"
+    },
+    "pr558-round4/atomic-right-arithmetic/before/bin/Release/net472/FecAtomic.before.pdb": {
+      "bytes": 111708,
+      "sha256": "e0d160698f05bac9e40be31ac1ff5b2d26f45245e27f65dee6ee424bb70689c2"
+    },
+    "pr558-round4/atomic-right-arithmetic/before/bin/Release/net8.0/FecAtomic.before.deps.json": {
+      "bytes": 440,
+      "sha256": "2cce82717cc93f8c47b47d21736ef40444b731d7b1fcdc5f720292f3f39d2641"
+    },
+    "pr558-round4/atomic-right-arithmetic/before/bin/Release/net8.0/FecAtomic.before.dll": {
+      "bytes": 291328,
+      "sha256": "7236ac08a6ddf958b9138888062d60e79878f90ae5f413d4ea7e42a5814b5f29"
+    },
+    "pr558-round4/atomic-right-arithmetic/before/bin/Release/net8.0/FecAtomic.before.pdb": {
+      "bytes": 122160,
+      "sha256": "73f0252e2a6a0ebfcee34bb93633dd6a1efecad0a02b41cbd151b45417bc1f79"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net10.0/Checks.deps.json": {
+      "bytes": 3430,
+      "sha256": "ad54499c68e9ea5819e70183f4c25a1289360081ef99b72d5541d18c20e3e46d"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net10.0/Checks.dll": {
+      "bytes": 21504,
+      "sha256": "8c007f952d45490522de467a0a229a588289eca5c1e5c177b7cf36648632acfc"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net10.0/Checks.exe": {
+      "bytes": 139776,
+      "sha256": "3f807f3403d08e812f1b8fa31b50fd62d1493fb39c3191a41f52bfcd82fb7c91"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net10.0/Checks.pdb": {
+      "bytes": 15192,
+      "sha256": "994c0781182d13cdf6f101d8f5763debb68a0773754f87118b00dfa394fe1252"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net10.0/Checks.runtimeconfig.json": {
+      "bytes": 342,
+      "sha256": "c230a317a54dd960bcbeb5f347f52e18dc665a26f7efda2159fced9a5ac7e097"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net10.0/FecAtomic.Light.before.dll": {
+      "bytes": 440832,
+      "sha256": "902aab52a6fddcfcb06059a0343a4aa2551b959076e5faee8466dcdd464b2ce5"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net10.0/FecAtomic.Light.before.pdb": {
+      "bytes": 190308,
+      "sha256": "63324e66012db0e49598db152ea2c05ab1441d1f497f9980d3b12e25d355c827"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net10.0/FecAtomic.Light.fixed.dll": {
+      "bytes": 440832,
+      "sha256": "647bc7b985b242e5a5d00e3901ff39ef195ad9b3bac74f365148961d8163e302"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net10.0/FecAtomic.Light.fixed.pdb": {
+      "bytes": 190304,
+      "sha256": "98ef068d66b1fe091db50096f1b436fd7af4ff9e7bb8a9bd847e32da327ab1c9"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net10.0/FecAtomic.before.dll": {
+      "bytes": 291840,
+      "sha256": "a6d201e0f6494d69a6ce114da67f4e3ee5ea9d4a65c89c2b3d595d78b02ff8e9"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net10.0/FecAtomic.before.pdb": {
+      "bytes": 122236,
+      "sha256": "c5facaa2134ac1a48318daecf53ebaf8b8ad068d0634738da7fa5b2d4ad0d1e2"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net10.0/FecAtomic.fixed.dll": {
+      "bytes": 291840,
+      "sha256": "e47d5d232b958fc434d834a66e30c68a883e8d8b43612238821bc3a143fe5e9b"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net10.0/FecAtomic.fixed.pdb": {
+      "bytes": 122236,
+      "sha256": "fa8eea479a8148f521fdf3199571cd813987191b8a0e403ba2f467decbff7505"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net472/Checks.exe": {
+      "bytes": 21504,
+      "sha256": "deec6b437a446f7878582cfa17c835a0cdfe2cb636290206fbd280bfff76e730"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net472/Checks.exe.config": {
+      "bytes": 176,
+      "sha256": "ad8267122c40d37dcd9d99e1412d763187a1825732f378db8867f3ecf675cf70"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net472/Checks.pdb": {
+      "bytes": 6304,
+      "sha256": "2a84dded47a5c4833017614e12df3f9e880a401a7f45a51f16aa0adb128009ba"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net472/FecAtomic.Light.before.dll": {
+      "bytes": 437760,
+      "sha256": "11b446e2cdecdcf662e4ff827b0c2dbb999cd51d5b0cd335d048f900ba9d6eff"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net472/FecAtomic.Light.before.pdb": {
+      "bytes": 182032,
+      "sha256": "780189d34351e35a069f091074ab7849a7c282d41250c38951e7c37a55022ff0"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net472/FecAtomic.Light.fixed.dll": {
+      "bytes": 437760,
+      "sha256": "66c49e679fe973ccc7d705edaa1e37840ea963cd51a3abfb5c7d3b1d2fbdfcdc"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net472/FecAtomic.Light.fixed.pdb": {
+      "bytes": 182028,
+      "sha256": "7435e67effcfb88eb988bb9566dea63a7e96434e0797f51c41e0e9fd03c0898d"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net472/FecAtomic.before.dll": {
+      "bytes": 289792,
+      "sha256": "c5c9a45b62c6bdd4d0321c11bdf7780152732605d195c3215cc7e2ed78d8cf3a"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net472/FecAtomic.before.pdb": {
+      "bytes": 111708,
+      "sha256": "e0d160698f05bac9e40be31ac1ff5b2d26f45245e27f65dee6ee424bb70689c2"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net472/FecAtomic.fixed.dll": {
+      "bytes": 289792,
+      "sha256": "dbff29eec470a3b00565f57bcca290773fa6f72f3dd68773b0d18c6039e6f24d"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net472/FecAtomic.fixed.pdb": {
+      "bytes": 111708,
+      "sha256": "668454d81d5620002aeb81a40a10f84603572d19ef9354f82b9a1d7be0678d3b"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net8.0/Checks.deps.json": {
+      "bytes": 3428,
+      "sha256": "dbc3dcf6ff24dbaff2133df6f1c3cc27a18c909d6ceb0145c146204127e56966"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net8.0/Checks.dll": {
+      "bytes": 21504,
+      "sha256": "ba726fd5ebc8865f56b8781ce86837bf6c84ea936863c6fefe2a5777d6a56809"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net8.0/Checks.exe": {
+      "bytes": 132608,
+      "sha256": "3be0c94f045de80312d571bedd53936af99d58288b7cdb51a703d1fecad694b8"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net8.0/Checks.pdb": {
+      "bytes": 14924,
+      "sha256": "3aa27f4c5a221c0d23b0055bbca8ebb0f4832fdea4d587b49cc87db6cc4c1a1c"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net8.0/Checks.runtimeconfig.json": {
+      "bytes": 340,
+      "sha256": "28329cf08f6505e73806b17558b187c02f0c1c516fe47ebfb7a013d082aaa306"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net8.0/FecAtomic.Light.before.dll": {
+      "bytes": 439808,
+      "sha256": "526ba6a0c6197e2a573281f7e8c7e36de830f09f216cb9f37da986a2440ba448"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net8.0/FecAtomic.Light.before.pdb": {
+      "bytes": 190240,
+      "sha256": "c411e9fa5ff2e27f6bedb2042070c6503054adbad697bd9f16a00b984e911a2f"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net8.0/FecAtomic.Light.fixed.dll": {
+      "bytes": 439808,
+      "sha256": "ac97025eb928eed6a8cbb38f0e636daa125eef65ed6ce83e6066f6754652a44f"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net8.0/FecAtomic.Light.fixed.pdb": {
+      "bytes": 190240,
+      "sha256": "7c3487b2e6bb085cedaeb5b7f5da8192a0becb0db82979f259bab73fe0b3e34f"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net8.0/FecAtomic.before.dll": {
+      "bytes": 291328,
+      "sha256": "7236ac08a6ddf958b9138888062d60e79878f90ae5f413d4ea7e42a5814b5f29"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net8.0/FecAtomic.before.pdb": {
+      "bytes": 122160,
+      "sha256": "73f0252e2a6a0ebfcee34bb93633dd6a1efecad0a02b41cbd151b45417bc1f79"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net8.0/FecAtomic.fixed.dll": {
+      "bytes": 291328,
+      "sha256": "50645708ea148e2ba6dc3e85671e381126d018874b034d9c050e4b4dd0d62d47"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Checks/net8.0/FecAtomic.fixed.pdb": {
+      "bytes": 122160,
+      "sha256": "4622f444f1511b95503b9ead9642f5dce4066d3e1e9a0935b7434b1c3d89ee39"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/ColdLightbefore/net10.0/ColdLightbefore.deps.json": {
+      "bytes": 1250,
+      "sha256": "1a4798205bd77d7626761d814c12e0bbe7370b1c8ad1d364fb5ceb54e51a3418"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/ColdLightbefore/net10.0/ColdLightbefore.dll": {
+      "bytes": 18432,
+      "sha256": "9ef954fee398144833a43eeac7e9e3d7f22f56b4f89a759ac2914ee3f3c6ddff"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/ColdLightbefore/net10.0/ColdLightbefore.exe": {
+      "bytes": 139776,
+      "sha256": "274eb97f691a65c31ec4385c5cefa790af01d15e8acba5088de72fba09c3ebfc"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/ColdLightbefore/net10.0/ColdLightbefore.pdb": {
+      "bytes": 12468,
+      "sha256": "edd421c588184dbfeec74d993b787182326ceb93d899859a2eb7d6058d7ca237"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/ColdLightbefore/net10.0/ColdLightbefore.runtimeconfig.json": {
+      "bytes": 342,
+      "sha256": "c230a317a54dd960bcbeb5f347f52e18dc665a26f7efda2159fced9a5ac7e097"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/ColdLightbefore/net10.0/FecAtomic.Light.before.dll": {
+      "bytes": 440832,
+      "sha256": "902aab52a6fddcfcb06059a0343a4aa2551b959076e5faee8466dcdd464b2ce5"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/ColdLightbefore/net10.0/FecAtomic.Light.before.pdb": {
+      "bytes": 190308,
+      "sha256": "63324e66012db0e49598db152ea2c05ab1441d1f497f9980d3b12e25d355c827"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/ColdLightbefore/net8.0/ColdLightbefore.deps.json": {
+      "bytes": 1248,
+      "sha256": "ed7aa93031a2c58e2fef0ee3d2bdd5f27d904e7feecfd0538889c2ddbdbefe3e"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/ColdLightbefore/net8.0/ColdLightbefore.dll": {
+      "bytes": 18432,
+      "sha256": "3987465b59b4cd02c3f53faf86c1794e864304dce8a72379ad4d8814b54c80da"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/ColdLightbefore/net8.0/ColdLightbefore.exe": {
+      "bytes": 132608,
+      "sha256": "9bb5769e02d793502dbb895ad03cf1c92bc233593b0a0873cb1805d2b147b3f1"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/ColdLightbefore/net8.0/ColdLightbefore.pdb": {
+      "bytes": 12200,
+      "sha256": "daee7b2d4bca867ef009dc7d5966a4102e5cc46f6c314cc125252a6ac369b42a"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/ColdLightbefore/net8.0/ColdLightbefore.runtimeconfig.json": {
+      "bytes": 340,
+      "sha256": "28329cf08f6505e73806b17558b187c02f0c1c516fe47ebfb7a013d082aaa306"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/ColdLightbefore/net8.0/FecAtomic.Light.before.dll": {
+      "bytes": 439808,
+      "sha256": "526ba6a0c6197e2a573281f7e8c7e36de830f09f216cb9f37da986a2440ba448"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/ColdLightbefore/net8.0/FecAtomic.Light.before.pdb": {
+      "bytes": 190240,
+      "sha256": "c411e9fa5ff2e27f6bedb2042070c6503054adbad697bd9f16a00b984e911a2f"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/ColdLightfixed/net10.0/ColdLightfixed.deps.json": {
+      "bytes": 1239,
+      "sha256": "131349be24456ee913139a604d751caf82b7a2ad3c0c9cbe4c5d18fbcb0f8f50"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/ColdLightfixed/net10.0/ColdLightfixed.dll": {
+      "bytes": 18432,
+      "sha256": "244a1c4c1f1ad13730476de1174987021021293fbd8f7073c7beb2a48f24b9ab"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/ColdLightfixed/net10.0/ColdLightfixed.exe": {
+      "bytes": 139776,
+      "sha256": "d9d4af6c8c62c174624f5053abcc0701f70a6b32b6a5ba553000cfd6c2404416"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/ColdLightfixed/net10.0/ColdLightfixed.pdb": {
+      "bytes": 12464,
+      "sha256": "886c134041d5cb014bf395bf0e05e76f8ca43274e599b1f2fc98f9bb83eaabb4"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/ColdLightfixed/net10.0/ColdLightfixed.runtimeconfig.json": {
+      "bytes": 342,
+      "sha256": "c230a317a54dd960bcbeb5f347f52e18dc665a26f7efda2159fced9a5ac7e097"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/ColdLightfixed/net10.0/FecAtomic.Light.fixed.dll": {
+      "bytes": 440832,
+      "sha256": "647bc7b985b242e5a5d00e3901ff39ef195ad9b3bac74f365148961d8163e302"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/ColdLightfixed/net10.0/FecAtomic.Light.fixed.pdb": {
+      "bytes": 190304,
+      "sha256": "98ef068d66b1fe091db50096f1b436fd7af4ff9e7bb8a9bd847e32da327ab1c9"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/ColdLightfixed/net8.0/ColdLightfixed.deps.json": {
+      "bytes": 1237,
+      "sha256": "70c4fa15c3f714c279ad53226f6f170cc27c880b1ebe2a6147edeedfe505bfbb"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/ColdLightfixed/net8.0/ColdLightfixed.dll": {
+      "bytes": 18432,
+      "sha256": "c38c4b6439f0d1c6761497a3cbc95dfcb81040fb1a79fe8db46c02d06e05ef38"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/ColdLightfixed/net8.0/ColdLightfixed.exe": {
+      "bytes": 132608,
+      "sha256": "ed741cf8b5594e62821048955eb66af8f1c7659fbd76bef4ca126b10ef38267f"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/ColdLightfixed/net8.0/ColdLightfixed.pdb": {
+      "bytes": 12200,
+      "sha256": "f4383340450720b35f91b0d58333c97977e698d8620567d937a49bb6842bdb45"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/ColdLightfixed/net8.0/ColdLightfixed.runtimeconfig.json": {
+      "bytes": 340,
+      "sha256": "28329cf08f6505e73806b17558b187c02f0c1c516fe47ebfb7a013d082aaa306"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/ColdLightfixed/net8.0/FecAtomic.Light.fixed.dll": {
+      "bytes": 439808,
+      "sha256": "ac97025eb928eed6a8cbb38f0e636daa125eef65ed6ce83e6066f6754652a44f"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/ColdLightfixed/net8.0/FecAtomic.Light.fixed.pdb": {
+      "bytes": 190240,
+      "sha256": "7c3487b2e6bb085cedaeb5b7f5da8192a0becb0db82979f259bab73fe0b3e34f"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Coldbefore/net10.0/Coldbefore.deps.json": {
+      "bytes": 1187,
+      "sha256": "0c79052219056405b5f43012e02339d8afc93be2843b47ce514c4f8213a2a7cb"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Coldbefore/net10.0/Coldbefore.dll": {
+      "bytes": 18432,
+      "sha256": "579488e0ba5cdb0e38570dfcd80418ac1d94ffea197da7a90ccfd8c408636a52"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Coldbefore/net10.0/Coldbefore.exe": {
+      "bytes": 139776,
+      "sha256": "0f5ee34a8c019b0e4325892383c6c2b7fa970b3c78f0ea0b3b9cb947b462359f"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Coldbefore/net10.0/Coldbefore.pdb": {
+      "bytes": 12428,
+      "sha256": "72c5056ad0b37b1012d5f5eb0b19f44508a10cdefa0a6f1778957ec8b5df2242"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Coldbefore/net10.0/Coldbefore.runtimeconfig.json": {
+      "bytes": 342,
+      "sha256": "c230a317a54dd960bcbeb5f347f52e18dc665a26f7efda2159fced9a5ac7e097"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Coldbefore/net10.0/FecAtomic.before.dll": {
+      "bytes": 291840,
+      "sha256": "a6d201e0f6494d69a6ce114da67f4e3ee5ea9d4a65c89c2b3d595d78b02ff8e9"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Coldbefore/net10.0/FecAtomic.before.pdb": {
+      "bytes": 122236,
+      "sha256": "c5facaa2134ac1a48318daecf53ebaf8b8ad068d0634738da7fa5b2d4ad0d1e2"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Coldbefore/net8.0/Coldbefore.deps.json": {
+      "bytes": 1185,
+      "sha256": "ac141ad2254347d422f751d97b3cbfd948cf1eb8484041a337919b0061e4dc71"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Coldbefore/net8.0/Coldbefore.dll": {
+      "bytes": 18432,
+      "sha256": "bcd27b19576bc12188f7b7664e0a223d1fc54d80ceafc176e7b842fc0565a1f5"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Coldbefore/net8.0/Coldbefore.exe": {
+      "bytes": 132608,
+      "sha256": "6fe3ee10746098dd3b479d3ed85b4666a35887ee8bcd8ad0da1719c14cc9aa9d"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Coldbefore/net8.0/Coldbefore.pdb": {
+      "bytes": 12164,
+      "sha256": "049143a249f12777a0ccaf0a93b2c240d1622faa4a4839ce8e433f2d889575c0"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Coldbefore/net8.0/Coldbefore.runtimeconfig.json": {
+      "bytes": 340,
+      "sha256": "28329cf08f6505e73806b17558b187c02f0c1c516fe47ebfb7a013d082aaa306"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Coldbefore/net8.0/FecAtomic.before.dll": {
+      "bytes": 291328,
+      "sha256": "7236ac08a6ddf958b9138888062d60e79878f90ae5f413d4ea7e42a5814b5f29"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Coldbefore/net8.0/FecAtomic.before.pdb": {
+      "bytes": 122160,
+      "sha256": "73f0252e2a6a0ebfcee34bb93633dd6a1efecad0a02b41cbd151b45417bc1f79"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Coldfixed/net10.0/Coldfixed.deps.json": {
+      "bytes": 1176,
+      "sha256": "726215e57504c79503e9d4bc6508d07f1a0e3f47d878cff82146ac60a1f13435"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Coldfixed/net10.0/Coldfixed.dll": {
+      "bytes": 18432,
+      "sha256": "50048c523437138e6b5d88b719110c3587947d39b8072a6cf26a9405d0d47734"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Coldfixed/net10.0/Coldfixed.exe": {
+      "bytes": 139776,
+      "sha256": "dc5ecd8cc6f7a8ca5fcbca65ad270f0dbac3639cffb56e3c8d0dc4502425a384"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Coldfixed/net10.0/Coldfixed.pdb": {
+      "bytes": 12428,
+      "sha256": "e7c7eeccf09ed2c46ebece6657f07233b16dd2b560b0fb7acc046fa95b387114"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Coldfixed/net10.0/Coldfixed.runtimeconfig.json": {
+      "bytes": 342,
+      "sha256": "c230a317a54dd960bcbeb5f347f52e18dc665a26f7efda2159fced9a5ac7e097"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Coldfixed/net10.0/FecAtomic.fixed.dll": {
+      "bytes": 291840,
+      "sha256": "e47d5d232b958fc434d834a66e30c68a883e8d8b43612238821bc3a143fe5e9b"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Coldfixed/net10.0/FecAtomic.fixed.pdb": {
+      "bytes": 122236,
+      "sha256": "fa8eea479a8148f521fdf3199571cd813987191b8a0e403ba2f467decbff7505"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Coldfixed/net8.0/Coldfixed.deps.json": {
+      "bytes": 1174,
+      "sha256": "07547dc80aeec38389180935869b6742d8799f721ace1e9b65817d902fdc05e0"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Coldfixed/net8.0/Coldfixed.dll": {
+      "bytes": 18432,
+      "sha256": "0f421a50e385b89b283cee0297ef7494b883dbb6250f6de4e8c1c6a36fdcd88d"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Coldfixed/net8.0/Coldfixed.exe": {
+      "bytes": 132608,
+      "sha256": "641a934fbfda4d1017a7bcfe4845e6dc6fc700e6289afefea73d763af32bd52b"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Coldfixed/net8.0/Coldfixed.pdb": {
+      "bytes": 12160,
+      "sha256": "280387d06ae413fa1e836a24b61ad0bd4ce153457c421b2cf82967d691288d21"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Coldfixed/net8.0/Coldfixed.runtimeconfig.json": {
+      "bytes": 340,
+      "sha256": "28329cf08f6505e73806b17558b187c02f0c1c516fe47ebfb7a013d082aaa306"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Coldfixed/net8.0/FecAtomic.fixed.dll": {
+      "bytes": 291328,
+      "sha256": "50645708ea148e2ba6dc3e85671e381126d018874b034d9c050e4b4dd0d62d47"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Coldfixed/net8.0/FecAtomic.fixed.pdb": {
+      "bytes": 122160,
+      "sha256": "4622f444f1511b95503b9ead9642f5dce4066d3e1e9a0935b7434b1c3d89ee39"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/LegacyRef/net10.0/FecAtomic.Light.fixed.dll": {
+      "bytes": 440832,
+      "sha256": "647bc7b985b242e5a5d00e3901ff39ef195ad9b3bac74f365148961d8163e302"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/LegacyRef/net10.0/FecAtomic.Light.fixed.pdb": {
+      "bytes": 190304,
+      "sha256": "98ef068d66b1fe091db50096f1b436fd7af4ff9e7bb8a9bd847e32da327ab1c9"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/LegacyRef/net10.0/FecAtomic.fixed.dll": {
+      "bytes": 291840,
+      "sha256": "e47d5d232b958fc434d834a66e30c68a883e8d8b43612238821bc3a143fe5e9b"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/LegacyRef/net10.0/FecAtomic.fixed.pdb": {
+      "bytes": 122236,
+      "sha256": "fa8eea479a8148f521fdf3199571cd813987191b8a0e403ba2f467decbff7505"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/LegacyRef/net10.0/LegacyRef.deps.json": {
+      "bytes": 2059,
+      "sha256": "b659130a285c6261644d7c71decff03bdf29d0c3410d2a6253ea34f00bb18891"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/LegacyRef/net10.0/LegacyRef.dll": {
+      "bytes": 12288,
+      "sha256": "b44343f604e6dc98ea7c1dcf2ca6436ccae5e449a52273f4803bd447fd00a3a0"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/LegacyRef/net10.0/LegacyRef.exe": {
+      "bytes": 139776,
+      "sha256": "beb238aa1920fb9ad4f5ca730c0eb4b77f70802541833fc2393f54f9f379c35a"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/LegacyRef/net10.0/LegacyRef.pdb": {
+      "bytes": 12548,
+      "sha256": "6c9a8c79a50de05f18ecd45062fd016d42c4fc95cb814873a340a24804bf94b2"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/LegacyRef/net10.0/LegacyRef.runtimeconfig.json": {
+      "bytes": 342,
+      "sha256": "c230a317a54dd960bcbeb5f347f52e18dc665a26f7efda2159fced9a5ac7e097"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/LegacyRef/net10.0/RuntimeParity.before.light.dll": {
+      "bytes": 359424,
+      "sha256": "8db7e020969c075c554897ade0b1d47428b4ed939b764c036dbbac65691c6c8f"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/LegacyRef/net10.0/RuntimeParity.before.light.pdb": {
+      "bytes": 159380,
+      "sha256": "0e735d0712c988839cf3c5e87c0ab2d199786f1b96dd75e8edb130262713440f"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/LegacyRef/net10.0/RuntimeParity.before.standard.dll": {
+      "bytes": 210944,
+      "sha256": "50a9b719fec13be6e779e37ac04eb3dde19e29dfbc1c496961facb0b2c11ad86"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/LegacyRef/net10.0/RuntimeParity.before.standard.pdb": {
+      "bytes": 89944,
+      "sha256": "854877be78854264ffc50e70bcad1fd36d8c6ed9d688bf8cdc501bf3ef4014d9"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/LegacyRef/net472/FecAtomic.Light.fixed.dll": {
+      "bytes": 440832,
+      "sha256": "647bc7b985b242e5a5d00e3901ff39ef195ad9b3bac74f365148961d8163e302"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/LegacyRef/net472/FecAtomic.Light.fixed.pdb": {
+      "bytes": 190304,
+      "sha256": "98ef068d66b1fe091db50096f1b436fd7af4ff9e7bb8a9bd847e32da327ab1c9"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/LegacyRef/net472/FecAtomic.fixed.dll": {
+      "bytes": 291840,
+      "sha256": "e47d5d232b958fc434d834a66e30c68a883e8d8b43612238821bc3a143fe5e9b"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/LegacyRef/net472/FecAtomic.fixed.pdb": {
+      "bytes": 122236,
+      "sha256": "fa8eea479a8148f521fdf3199571cd813987191b8a0e403ba2f467decbff7505"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/LegacyRef/net472/LegacyRef.exe": {
+      "bytes": 12288,
+      "sha256": "39507d3552ac1e51001deee58b98af4ec2f4cb8043317c1c26b3ad543ec8cfae"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/LegacyRef/net472/LegacyRef.exe.config": {
+      "bytes": 176,
+      "sha256": "ad8267122c40d37dcd9d99e1412d763187a1825732f378db8867f3ecf675cf70"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/LegacyRef/net472/LegacyRef.pdb": {
+      "bytes": 9612,
+      "sha256": "3542c8cf70b2aed2f644fd04b26fadbc7712e667808ab479ed4790406fce279a"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/LegacyRef/net472/RuntimeParity.before.light.dll": {
+      "bytes": 357888,
+      "sha256": "477c68d64cc715e654e054085d15352d07ef794b0e8fe616f96b1c26c9ec5608"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/LegacyRef/net472/RuntimeParity.before.light.pdb": {
+      "bytes": 150820,
+      "sha256": "41fa8fa734010294b88c2f30599a3925faaabc3066cd38e9b1eb88dc95796a2b"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/LegacyRef/net472/RuntimeParity.before.standard.dll": {
+      "bytes": 210944,
+      "sha256": "cefafedd6fbc3491abad1aa207a77e173bc358dd0f740e0dc5ee829d8b2d4134"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/LegacyRef/net472/RuntimeParity.before.standard.pdb": {
+      "bytes": 81364,
+      "sha256": "b78ba353c3c487bde92630aa41decedfc938fbc4555a82fb107f3b2c8abe367f"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Runner/net10.0/FecAtomic.before.dll": {
+      "bytes": 291840,
+      "sha256": "a6d201e0f6494d69a6ce114da67f4e3ee5ea9d4a65c89c2b3d595d78b02ff8e9"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Runner/net10.0/FecAtomic.before.pdb": {
+      "bytes": 122236,
+      "sha256": "c5facaa2134ac1a48318daecf53ebaf8b8ad068d0634738da7fa5b2d4ad0d1e2"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Runner/net10.0/FecAtomic.fixed.dll": {
+      "bytes": 291840,
+      "sha256": "e47d5d232b958fc434d834a66e30c68a883e8d8b43612238821bc3a143fe5e9b"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Runner/net10.0/FecAtomic.fixed.pdb": {
+      "bytes": 122236,
+      "sha256": "fa8eea479a8148f521fdf3199571cd813987191b8a0e403ba2f467decbff7505"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Runner/net10.0/Runner.deps.json": {
+      "bytes": 1892,
+      "sha256": "6d53d806ee36286a19459749ba17f09ac9cbc17ca4a186ea099fcc1b1a5e6438"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Runner/net10.0/Runner.dll": {
+      "bytes": 27136,
+      "sha256": "15d41273c283b4977cb19484a00607b75264f6afa634b1e8597003105f8f7ee2"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Runner/net10.0/Runner.exe": {
+      "bytes": 139776,
+      "sha256": "69fc4b388836d91744f9967a82c65c1a49fb3570f8968d48f3b85e8eb2d1a182"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Runner/net10.0/Runner.pdb": {
+      "bytes": 16040,
+      "sha256": "9f0d45922a6db08f69c43cca0f4e7902a7f93589e2f0dc87158da1ededcfe742"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Runner/net10.0/Runner.runtimeconfig.json": {
+      "bytes": 342,
+      "sha256": "c230a317a54dd960bcbeb5f347f52e18dc665a26f7efda2159fced9a5ac7e097"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Runner/net8.0/FecAtomic.before.dll": {
+      "bytes": 291328,
+      "sha256": "7236ac08a6ddf958b9138888062d60e79878f90ae5f413d4ea7e42a5814b5f29"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Runner/net8.0/FecAtomic.before.pdb": {
+      "bytes": 122160,
+      "sha256": "73f0252e2a6a0ebfcee34bb93633dd6a1efecad0a02b41cbd151b45417bc1f79"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Runner/net8.0/FecAtomic.fixed.dll": {
+      "bytes": 291328,
+      "sha256": "50645708ea148e2ba6dc3e85671e381126d018874b034d9c050e4b4dd0d62d47"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Runner/net8.0/FecAtomic.fixed.pdb": {
+      "bytes": 122160,
+      "sha256": "4622f444f1511b95503b9ead9642f5dce4066d3e1e9a0935b7434b1c3d89ee39"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Runner/net8.0/Runner.deps.json": {
+      "bytes": 1890,
+      "sha256": "22aec017af3121f081093a4beae9755277d3abd4fbfbe7f8e0cb5427c04469d0"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Runner/net8.0/Runner.dll": {
+      "bytes": 27136,
+      "sha256": "661fb99d7ee07c4f2161f4975ce8dd4c3b7df83c5858169c704bb9c04eb70790"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Runner/net8.0/Runner.exe": {
+      "bytes": 132608,
+      "sha256": "a4df27975428e2a4c619fca6cdf4bd77701e43f26da12a415d259cb0a4dfebfc"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Runner/net8.0/Runner.pdb": {
+      "bytes": 15772,
+      "sha256": "226aefc123e9c7d46ffd566b3e83f8feae60ec3e7bd20fcd8b348ec63af56043"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/Runner/net8.0/Runner.runtimeconfig.json": {
+      "bytes": 340,
+      "sha256": "28329cf08f6505e73806b17558b187c02f0c1c516fe47ebfb7a013d082aaa306"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/RunnerLight/net10.0/FecAtomic.Light.before.dll": {
+      "bytes": 440832,
+      "sha256": "902aab52a6fddcfcb06059a0343a4aa2551b959076e5faee8466dcdd464b2ce5"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/RunnerLight/net10.0/FecAtomic.Light.before.pdb": {
+      "bytes": 190308,
+      "sha256": "63324e66012db0e49598db152ea2c05ab1441d1f497f9980d3b12e25d355c827"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/RunnerLight/net10.0/FecAtomic.Light.fixed.dll": {
+      "bytes": 440832,
+      "sha256": "647bc7b985b242e5a5d00e3901ff39ef195ad9b3bac74f365148961d8163e302"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/RunnerLight/net10.0/FecAtomic.Light.fixed.pdb": {
+      "bytes": 190304,
+      "sha256": "98ef068d66b1fe091db50096f1b436fd7af4ff9e7bb8a9bd847e32da327ab1c9"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/RunnerLight/net10.0/RunnerLight.deps.json": {
+      "bytes": 2003,
+      "sha256": "3c69115c4733a0c6869065574ca8f2833212a4314f1d6e4a2239fda90e71f79a"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/RunnerLight/net10.0/RunnerLight.dll": {
+      "bytes": 27136,
+      "sha256": "ee2f4566b4fcc8c88ce6c355ea70fb6b386af39e5d2600e186ca82f30051d62c"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/RunnerLight/net10.0/RunnerLight.exe": {
+      "bytes": 139776,
+      "sha256": "3d0dd12855a46543d65a0d92f645f7e9be1d56d7b3bc229bf653ae5d706836c2"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/RunnerLight/net10.0/RunnerLight.pdb": {
+      "bytes": 16096,
+      "sha256": "e0cd3865ed1b0241a7db5f41462b3e056dc0f873cd4940be9fecdb3f5fa4e8f2"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/RunnerLight/net10.0/RunnerLight.runtimeconfig.json": {
+      "bytes": 342,
+      "sha256": "c230a317a54dd960bcbeb5f347f52e18dc665a26f7efda2159fced9a5ac7e097"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/RunnerLight/net8.0/FecAtomic.Light.before.dll": {
+      "bytes": 439808,
+      "sha256": "526ba6a0c6197e2a573281f7e8c7e36de830f09f216cb9f37da986a2440ba448"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/RunnerLight/net8.0/FecAtomic.Light.before.pdb": {
+      "bytes": 190240,
+      "sha256": "c411e9fa5ff2e27f6bedb2042070c6503054adbad697bd9f16a00b984e911a2f"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/RunnerLight/net8.0/FecAtomic.Light.fixed.dll": {
+      "bytes": 439808,
+      "sha256": "ac97025eb928eed6a8cbb38f0e636daa125eef65ed6ce83e6066f6754652a44f"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/RunnerLight/net8.0/FecAtomic.Light.fixed.pdb": {
+      "bytes": 190240,
+      "sha256": "7c3487b2e6bb085cedaeb5b7f5da8192a0becb0db82979f259bab73fe0b3e34f"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/RunnerLight/net8.0/RunnerLight.deps.json": {
+      "bytes": 2001,
+      "sha256": "b0df73707633785524a8a19e87fbe5bfa880fe4bc12c154437c4ae7f79abbc06"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/RunnerLight/net8.0/RunnerLight.dll": {
+      "bytes": 27136,
+      "sha256": "a586249afce75a9e696e11e7a29f40cc16f0a85901ed3d52ec2590fbc69bf7f4"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/RunnerLight/net8.0/RunnerLight.exe": {
+      "bytes": 132608,
+      "sha256": "d15b401b553018274b6a5b5951e9386c8fe6d7c4fb955a1602e8990f802c42de"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/RunnerLight/net8.0/RunnerLight.pdb": {
+      "bytes": 15828,
+      "sha256": "b469dce923976e97eafee5297c888208350d88e4bd94f04f54872b3337840bf5"
+    },
+    "pr558-round4/atomic-right-arithmetic/bin/RunnerLight/net8.0/RunnerLight.runtimeconfig.json": {
+      "bytes": 340,
+      "sha256": "28329cf08f6505e73806b17558b187c02f0c1c516fe47ebfb7a013d082aaa306"
+    },
+    "pr558-round4/atomic-right-arithmetic/build-Checks.log": {
+      "bytes": 7065,
+      "sha256": "c9c9ce6efbcf9a813e3825ae93afae20a8acb3938ce9bf43880690bf0711ddfd"
+    },
+    "pr558-round4/atomic-right-arithmetic/build-ColdLightbefore.log": {
+      "bytes": 4021,
+      "sha256": "6a5ae6b404d3753951d3705136b8ac4850adbe56e2adbc3defff2a85e6943cb3"
+    },
+    "pr558-round4/atomic-right-arithmetic/build-ColdLightfixed.log": {
+      "bytes": 4007,
+      "sha256": "07c7ae2a71133752e590c3eeed1876dcd3a2d86ee4fc1d019b555615862bb511"
+    },
+    "pr558-round4/atomic-right-arithmetic/build-Coldbefore.log": {
+      "bytes": 3942,
+      "sha256": "95b1a204ffe50bc23ddc47c1ac50b506e3b71d6ea2327f8f0d72c047d31e84c7"
+    },
+    "pr558-round4/atomic-right-arithmetic/build-Coldfixed.log": {
+      "bytes": 3928,
+      "sha256": "581e6941bc7b87ec615ccb83af7fb172beee1501c9221f0193bd2f957e12343d"
+    },
+    "pr558-round4/atomic-right-arithmetic/build-LegacyRef-net8.0.log": {
+      "bytes": 162070,
+      "sha256": "3004f965c9a0e08cb04a12643fbe75e5faffc01f66496864042458ced5274d79"
+    },
+    "pr558-round4/atomic-right-arithmetic/build-LegacyRef.log": {
+      "bytes": 5281,
+      "sha256": "6f615ba27b7e0c65cfce660eda71988683559025d2c7d72c0030d9573d39a3b5"
+    },
+    "pr558-round4/atomic-right-arithmetic/build-Runner.log": {
+      "bytes": 4195,
+      "sha256": "a04872579467ac1904effbc63c917986bb2d36358bbb4dd55ebaef3ce5321c98"
+    },
+    "pr558-round4/atomic-right-arithmetic/build-RunnerLight.log": {
+      "bytes": 4299,
+      "sha256": "ab49a6ea28e5e8e555eef07dabb3b4671c7d074650af01157c223008bbdcd017"
+    },
+    "pr558-round4/atomic-right-arithmetic/candidate.diff": {
+      "bytes": 923,
+      "sha256": "2c87afbdff69b16c601f870b4420e387b37a02cb995dcec9c206eeb3355c2c8d"
+    },
+    "pr558-round4/atomic-right-arithmetic/checks-net10.0.log": {
+      "bytes": 6936,
+      "sha256": "036696e9d64cceba6545dd21e67344e79947e3c6c7f479a5077d8d5835f8753c"
+    },
+    "pr558-round4/atomic-right-arithmetic/checks-net472.log": {
+      "bytes": 7048,
+      "sha256": "f449aa72cb9ef942e5dcdcec1c8425301a106c2cf138570a0dd0512efd07b127"
+    },
+    "pr558-round4/atomic-right-arithmetic/checks-net8.0.log": {
+      "bytes": 6936,
+      "sha256": "036696e9d64cceba6545dd21e67344e79947e3c6c7f479a5077d8d5835f8753c"
+    },
+    "pr558-round4/atomic-right-arithmetic/cold-analysis.json": {
+      "bytes": 31911,
+      "sha256": "d77dcb3389b173f16a1dd7a855b33eb5a1fd1a500c4cfbc077341c3ef2472c01"
+    },
+    "pr558-round4/atomic-right-arithmetic/cold-five.jsonl": {
+      "bytes": 83092,
+      "sha256": "4bf3282eb9b20d2fd6cac5e42774727cf989e83af56fd0efb65e408ace69a47b"
+    },
+    "pr558-round4/atomic-right-arithmetic/cold-summary.log": {
+      "bytes": 557,
+      "sha256": "ced400c9ddf6e6b270650d7c2b8045d96aa22db2a52fc97d1d0e12b84c53815b"
+    },
+    "pr558-round4/atomic-right-arithmetic/fixed-light/Expression.cs": {
+      "bytes": 321197,
+      "sha256": "9a360ff6496ac26b82eb2a7c67a07215c569b5d86eed1c1bdc2e25aa70f141c2"
+    },
+    "pr558-round4/atomic-right-arithmetic/fixed-light/ExpressionVisitor.cs": {
+      "bytes": 20224,
+      "sha256": "a6162cdb8af3aa2274dc2a8c929e4f822e7d7f179d2d931f85d5eae0d8a9685b"
+    },
+    "pr558-round4/atomic-right-arithmetic/fixed-light/FlatExpression.cs": {
+      "bytes": 119743,
+      "sha256": "d47822bd4bc9d9c07aa976647e249e5eb39c6b8e216d21512b115aa23e4f6548"
+    },
+    "pr558-round4/atomic-right-arithmetic/fixed-light/Library.csproj": {
+      "bytes": 492,
+      "sha256": "1feff71b1e81c8143edf9e4a85d7d4cc017149809c22af038c726886700b53b7"
+    },
+    "pr558-round4/atomic-right-arithmetic/fixed-light/bin/Release/net10.0/FecAtomic.Light.fixed.deps.json": {
+      "bytes": 457,
+      "sha256": "5397b1c613243c3cb95917d07c24946365eb525e896aeedc346eaf19acd739ca"
+    },
+    "pr558-round4/atomic-right-arithmetic/fixed-light/bin/Release/net10.0/FecAtomic.Light.fixed.dll": {
+      "bytes": 440832,
+      "sha256": "647bc7b985b242e5a5d00e3901ff39ef195ad9b3bac74f365148961d8163e302"
+    },
+    "pr558-round4/atomic-right-arithmetic/fixed-light/bin/Release/net10.0/FecAtomic.Light.fixed.pdb": {
+      "bytes": 190304,
+      "sha256": "98ef068d66b1fe091db50096f1b436fd7af4ff9e7bb8a9bd847e32da327ab1c9"
+    },
+    "pr558-round4/atomic-right-arithmetic/fixed-light/bin/Release/net472/FecAtomic.Light.fixed.dll": {
+      "bytes": 437760,
+      "sha256": "66c49e679fe973ccc7d705edaa1e37840ea963cd51a3abfb5c7d3b1d2fbdfcdc"
+    },
+    "pr558-round4/atomic-right-arithmetic/fixed-light/bin/Release/net472/FecAtomic.Light.fixed.pdb": {
+      "bytes": 182028,
+      "sha256": "7435e67effcfb88eb988bb9566dea63a7e96434e0797f51c41e0e9fd03c0898d"
+    },
+    "pr558-round4/atomic-right-arithmetic/fixed-light/bin/Release/net8.0/FecAtomic.Light.fixed.deps.json": {
+      "bytes": 455,
+      "sha256": "134859c958cbaecad8c18f9304544a9d59be316cc323349266f2784f0848a766"
+    },
+    "pr558-round4/atomic-right-arithmetic/fixed-light/bin/Release/net8.0/FecAtomic.Light.fixed.dll": {
+      "bytes": 439808,
+      "sha256": "ac97025eb928eed6a8cbb38f0e636daa125eef65ed6ce83e6066f6754652a44f"
+    },
+    "pr558-round4/atomic-right-arithmetic/fixed-light/bin/Release/net8.0/FecAtomic.Light.fixed.pdb": {
+      "bytes": 190240,
+      "sha256": "7c3487b2e6bb085cedaeb5b7f5da8192a0becb0db82979f259bab73fe0b3e34f"
+    },
+    "pr558-round4/atomic-right-arithmetic/fixed/FastExpressionCompiler.cs": {
+      "bytes": 893997,
+      "sha256": "c09516d5cb7ec09f973cd9983ca28c9d1b482fe7c162df10c25a593297183526"
+    },
+    "pr558-round4/atomic-right-arithmetic/fixed/ILReader.cs": {
+      "bytes": 37615,
+      "sha256": "ceb16ba300543d6104d81e8b9b5ae687aef20dbdc9536c640bb4c00da915995d"
+    },
+    "pr558-round4/atomic-right-arithmetic/fixed/ImTools.cs": {
+      "bytes": 78461,
+      "sha256": "a5d5c4f0630490d2d27d76a715517de7b7c18dace82f1a76de35f5c4a9a23fb0"
+    },
+    "pr558-round4/atomic-right-arithmetic/fixed/Library.csproj": {
+      "bytes": 234,
+      "sha256": "472abc8b9c67b14c617829ea7e82029a59772a92d67a44c76cab5611873fe5dc"
+    },
+    "pr558-round4/atomic-right-arithmetic/fixed/TestTools.cs": {
+      "bytes": 54790,
+      "sha256": "c47c93ca62e6c5606c6d891e1ef1ebab529fb5fff2e8b81742eac5c65a570190"
+    },
+    "pr558-round4/atomic-right-arithmetic/fixed/bin/Release/net10.0/FecAtomic.fixed.deps.json": {
+      "bytes": 439,
+      "sha256": "b445dbda2511511bd9d270c8d8de51e968223fb30de39a1d9e7560638488e76c"
+    },
+    "pr558-round4/atomic-right-arithmetic/fixed/bin/Release/net10.0/FecAtomic.fixed.dll": {
+      "bytes": 291840,
+      "sha256": "e47d5d232b958fc434d834a66e30c68a883e8d8b43612238821bc3a143fe5e9b"
+    },
+    "pr558-round4/atomic-right-arithmetic/fixed/bin/Release/net10.0/FecAtomic.fixed.pdb": {
+      "bytes": 122236,
+      "sha256": "fa8eea479a8148f521fdf3199571cd813987191b8a0e403ba2f467decbff7505"
+    },
+    "pr558-round4/atomic-right-arithmetic/fixed/bin/Release/net472/FecAtomic.fixed.dll": {
+      "bytes": 289792,
+      "sha256": "dbff29eec470a3b00565f57bcca290773fa6f72f3dd68773b0d18c6039e6f24d"
+    },
+    "pr558-round4/atomic-right-arithmetic/fixed/bin/Release/net472/FecAtomic.fixed.pdb": {
+      "bytes": 111708,
+      "sha256": "668454d81d5620002aeb81a40a10f84603572d19ef9354f82b9a1d7be0678d3b"
+    },
+    "pr558-round4/atomic-right-arithmetic/fixed/bin/Release/net8.0/FecAtomic.fixed.deps.json": {
+      "bytes": 437,
+      "sha256": "d51b93fb58fa3943ce9fd4802f58d07a3072cbe81d1803b3f98b20ebb9c46108"
+    },
+    "pr558-round4/atomic-right-arithmetic/fixed/bin/Release/net8.0/FecAtomic.fixed.dll": {
+      "bytes": 291328,
+      "sha256": "50645708ea148e2ba6dc3e85671e381126d018874b034d9c050e4b4dd0d62d47"
+    },
+    "pr558-round4/atomic-right-arithmetic/fixed/bin/Release/net8.0/FecAtomic.fixed.pdb": {
+      "bytes": 122160,
+      "sha256": "4622f444f1511b95503b9ead9642f5dce4066d3e1e9a0935b7434b1c3d89ee39"
+    },
+    "pr558-round4/atomic-right-arithmetic/frame/Measured-Warm-Program-light.cs": {
+      "bytes": 15820,
+      "sha256": "534b3d42ca525658b90d55abf066708d6d30eb56a356d0a8a301d282aeab8a92"
+    },
+    "pr558-round4/atomic-right-arithmetic/frame/Measured-Warm-Program-standard.cs": {
+      "bytes": 15087,
+      "sha256": "8c030502490cf0fee21282cacafaaadcda70385e4b8c0f5fb43994a885b8ae6e"
+    },
+    "pr558-round4/atomic-right-arithmetic/frame/Program-light.cs": {
+      "bytes": 17343,
+      "sha256": "d576e42f69eeb045b742f616df4eedcb5b9019bfb45f919e866f7214cc46254c"
+    },
+    "pr558-round4/atomic-right-arithmetic/frame/Program-standard.cs": {
+      "bytes": 16339,
+      "sha256": "73ece4e782492a4d39bc829723f537999e939416e3ed60518f7c22d59dee4476"
+    },
+    "pr558-round4/atomic-right-arithmetic/frame/bin/light/net472/FecAtomic.Light.before.dll": {
+      "bytes": 437760,
+      "sha256": "11b446e2cdecdcf662e4ff827b0c2dbb999cd51d5b0cd335d048f900ba9d6eff"
+    },
+    "pr558-round4/atomic-right-arithmetic/frame/bin/light/net472/FecAtomic.Light.before.pdb": {
+      "bytes": 182032,
+      "sha256": "780189d34351e35a069f091074ab7849a7c282d41250c38951e7c37a55022ff0"
+    },
+    "pr558-round4/atomic-right-arithmetic/frame/bin/light/net472/FecAtomic.Light.fixed.dll": {
+      "bytes": 437760,
+      "sha256": "66c49e679fe973ccc7d705edaa1e37840ea963cd51a3abfb5c7d3b1d2fbdfcdc"
+    },
+    "pr558-round4/atomic-right-arithmetic/frame/bin/light/net472/FecAtomic.Light.fixed.pdb": {
+      "bytes": 182028,
+      "sha256": "7435e67effcfb88eb988bb9566dea63a7e96434e0797f51c41e0e9fd03c0898d"
+    },
+    "pr558-round4/atomic-right-arithmetic/frame/bin/light/net472/light.exe": {
+      "bytes": 29696,
+      "sha256": "4800f376bdbb52b774b113cef0cd06a8770b6d5b4e1df7ea5a9712f304111515"
+    },
+    "pr558-round4/atomic-right-arithmetic/frame/bin/light/net472/light.exe.config": {
+      "bytes": 176,
+      "sha256": "ad8267122c40d37dcd9d99e1412d763187a1825732f378db8867f3ecf675cf70"
+    },
+    "pr558-round4/atomic-right-arithmetic/frame/bin/light/net472/light.pdb": {
+      "bytes": 8004,
+      "sha256": "7b167b381429c94b0830d739706a75ff2036a7308623d4cda4f741f21d1713a6"
+    },
+    "pr558-round4/atomic-right-arithmetic/frame/bin/standard/net472/FecAtomic.before.dll": {
+      "bytes": 289792,
+      "sha256": "c5c9a45b62c6bdd4d0321c11bdf7780152732605d195c3215cc7e2ed78d8cf3a"
+    },
+    "pr558-round4/atomic-right-arithmetic/frame/bin/standard/net472/FecAtomic.before.pdb": {
+      "bytes": 111708,
+      "sha256": "e0d160698f05bac9e40be31ac1ff5b2d26f45245e27f65dee6ee424bb70689c2"
+    },
+    "pr558-round4/atomic-right-arithmetic/frame/bin/standard/net472/FecAtomic.fixed.dll": {
+      "bytes": 289792,
+      "sha256": "dbff29eec470a3b00565f57bcca290773fa6f72f3dd68773b0d18c6039e6f24d"
+    },
+    "pr558-round4/atomic-right-arithmetic/frame/bin/standard/net472/FecAtomic.fixed.pdb": {
+      "bytes": 111708,
+      "sha256": "668454d81d5620002aeb81a40a10f84603572d19ef9354f82b9a1d7be0678d3b"
+    },
+    "pr558-round4/atomic-right-arithmetic/frame/bin/standard/net472/standard.exe": {
+      "bytes": 29696,
+      "sha256": "201f76ed856ccd3b266901cf3c5f5f5550a1536869ca1538b4ba679df119f5d1"
+    },
+    "pr558-round4/atomic-right-arithmetic/frame/bin/standard/net472/standard.exe.config": {
+      "bytes": 176,
+      "sha256": "ad8267122c40d37dcd9d99e1412d763187a1825732f378db8867f3ecf675cf70"
+    },
+    "pr558-round4/atomic-right-arithmetic/frame/bin/standard/net472/standard.pdb": {
+      "bytes": 7956,
+      "sha256": "6bb7743b59cf887754bf17f5fc66e38a5d4b5ebb9185357442bdcd038a362663"
+    },
+    "pr558-round4/atomic-right-arithmetic/frame/build-light.log": {
+      "bytes": 1884,
+      "sha256": "551c1216bc7ac8db54598f27fb2cc954448c582097b3a99fd9a368200b6d6753"
+    },
+    "pr558-round4/atomic-right-arithmetic/frame/build-standard.log": {
+      "bytes": 1902,
+      "sha256": "11fe863e45c07f2376a622f910b4a5c6d6cbbe0fd017bbb9ea67796df8ca80a8"
+    },
+    "pr558-round4/atomic-right-arithmetic/frame/il-light-decimal64.log": {
+      "bytes": 135,
+      "sha256": "16fb9de3564d5cffe19e52cfcd07a8b64da5855da355df87655ee8ceda843b64"
+    },
+    "pr558-round4/atomic-right-arithmetic/frame/il-standard-decimal64.log": {
+      "bytes": 135,
+      "sha256": "16fb9de3564d5cffe19e52cfcd07a8b64da5855da355df87655ee8ceda843b64"
+    },
+    "pr558-round4/atomic-right-arithmetic/frame/light.csproj": {
+      "bytes": 745,
+      "sha256": "3dd3a33212de4efc1bc0c230643099867e8a21b085b3699fff9847919e2d4a4d"
+    },
+    "pr558-round4/atomic-right-arithmetic/frame/standard.csproj": {
+      "bytes": 718,
+      "sha256": "d666580de40859e8046795004eb942c9020dda808db11eeb2d2dc88c06255d52"
+    },
+    "pr558-round4/atomic-right-arithmetic/il-net10.0-light-decimal_eh1.log": {
+      "bytes": 853,
+      "sha256": "2728f6cb8d536b9c1f1bac16574bac473a895fb7e4bd9f5e59385a40955c1488"
+    },
+    "pr558-round4/atomic-right-arithmetic/il-net10.0-light-decimal_eh64.log": {
+      "bytes": 18415,
+      "sha256": "6c13baf613a634daa15a10813547fd6980fd118dc4efc5b4fce45cdae75ef126"
+    },
+    "pr558-round4/atomic-right-arithmetic/il-net8.0-light-decimal_eh1.log": {
+      "bytes": 853,
+      "sha256": "2728f6cb8d536b9c1f1bac16574bac473a895fb7e4bd9f5e59385a40955c1488"
+    },
+    "pr558-round4/atomic-right-arithmetic/il-net8.0-light-decimal_eh64.log": {
+      "bytes": 18415,
+      "sha256": "6c13baf613a634daa15a10813547fd6980fd118dc4efc5b4fce45cdae75ef126"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref-net10.0.log": {
+      "bytes": 791,
+      "sha256": "26c5cb3491b73b657e478fed98c9a6f924a581ab29083ac694ed4615f0ae7192"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref-net472.log": {
+      "bytes": 847,
+      "sha256": "7b24a9552ed987d84f149cbfba79cfab51474449cd3207968c28dd2a0d1481e2"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref-net8.0.log": {
+      "bytes": 791,
+      "sha256": "26c5cb3491b73b657e478fed98c9a6f924a581ab29083ac694ed4615f0ae7192"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/LegacyRef.csproj": {
+      "bytes": 1236,
+      "sha256": "f3de508a7478ede7ef5d51bfd02d7b79813cacfb9c0860a0255f671c96c5b0c6"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net10.0/FecAtomic.Light.fixed.dll": {
+      "bytes": 440832,
+      "sha256": "647bc7b985b242e5a5d00e3901ff39ef195ad9b3bac74f365148961d8163e302"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net10.0/FecAtomic.Light.fixed.pdb": {
+      "bytes": 190304,
+      "sha256": "98ef068d66b1fe091db50096f1b436fd7af4ff9e7bb8a9bd847e32da327ab1c9"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net10.0/FecAtomic.fixed.dll": {
+      "bytes": 291840,
+      "sha256": "e47d5d232b958fc434d834a66e30c68a883e8d8b43612238821bc3a143fe5e9b"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net10.0/FecAtomic.fixed.pdb": {
+      "bytes": 122236,
+      "sha256": "fa8eea479a8148f521fdf3199571cd813987191b8a0e403ba2f467decbff7505"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net10.0/LegacyRef.deps.json": {
+      "bytes": 2059,
+      "sha256": "b659130a285c6261644d7c71decff03bdf29d0c3410d2a6253ea34f00bb18891"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net10.0/LegacyRef.dll": {
+      "bytes": 12288,
+      "sha256": "1a6bf10424f9e78ace5319422264c5ff53fef620bbe73dbc3a1aa677cbb20c77"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net10.0/LegacyRef.exe": {
+      "bytes": 139776,
+      "sha256": "beb238aa1920fb9ad4f5ca730c0eb4b77f70802541833fc2393f54f9f379c35a"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net10.0/LegacyRef.pdb": {
+      "bytes": 12564,
+      "sha256": "8f8245c508ac23959ed0c6e881e3f1500a0910b18946d7e476d788d939147cf9"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net10.0/LegacyRef.runtimeconfig.json": {
+      "bytes": 342,
+      "sha256": "c230a317a54dd960bcbeb5f347f52e18dc665a26f7efda2159fced9a5ac7e097"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net10.0/RuntimeParity.before.light.dll": {
+      "bytes": 359424,
+      "sha256": "8db7e020969c075c554897ade0b1d47428b4ed939b764c036dbbac65691c6c8f"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net10.0/RuntimeParity.before.light.pdb": {
+      "bytes": 159380,
+      "sha256": "0e735d0712c988839cf3c5e87c0ab2d199786f1b96dd75e8edb130262713440f"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net10.0/RuntimeParity.before.standard.dll": {
+      "bytes": 210944,
+      "sha256": "50a9b719fec13be6e779e37ac04eb3dde19e29dfbc1c496961facb0b2c11ad86"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net10.0/RuntimeParity.before.standard.pdb": {
+      "bytes": 89944,
+      "sha256": "854877be78854264ffc50e70bcad1fd36d8c6ed9d688bf8cdc501bf3ef4014d9"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net472/FecAtomic.Light.fixed.dll": {
+      "bytes": 437760,
+      "sha256": "66c49e679fe973ccc7d705edaa1e37840ea963cd51a3abfb5c7d3b1d2fbdfcdc"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net472/FecAtomic.Light.fixed.pdb": {
+      "bytes": 182028,
+      "sha256": "7435e67effcfb88eb988bb9566dea63a7e96434e0797f51c41e0e9fd03c0898d"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net472/FecAtomic.fixed.dll": {
+      "bytes": 289792,
+      "sha256": "dbff29eec470a3b00565f57bcca290773fa6f72f3dd68773b0d18c6039e6f24d"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net472/FecAtomic.fixed.pdb": {
+      "bytes": 111708,
+      "sha256": "668454d81d5620002aeb81a40a10f84603572d19ef9354f82b9a1d7be0678d3b"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net472/LegacyRef.exe": {
+      "bytes": 12288,
+      "sha256": "00e7b996d85a9996c0e9708167fc25ca9a453be2c5e28e7807acbf1ee2719d98"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net472/LegacyRef.exe.config": {
+      "bytes": 176,
+      "sha256": "ad8267122c40d37dcd9d99e1412d763187a1825732f378db8867f3ecf675cf70"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net472/LegacyRef.pdb": {
+      "bytes": 3676,
+      "sha256": "9db4c501130a4267f642c709ccfbeddb6eae8b7ed42cf95ca870bdf8e713c09a"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net472/RuntimeParity.before.light.dll": {
+      "bytes": 357888,
+      "sha256": "477c68d64cc715e654e054085d15352d07ef794b0e8fe616f96b1c26c9ec5608"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net472/RuntimeParity.before.light.pdb": {
+      "bytes": 150820,
+      "sha256": "41fa8fa734010294b88c2f30599a3925faaabc3066cd38e9b1eb88dc95796a2b"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net472/RuntimeParity.before.standard.dll": {
+      "bytes": 210944,
+      "sha256": "cefafedd6fbc3491abad1aa207a77e173bc358dd0f740e0dc5ee829d8b2d4134"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net472/RuntimeParity.before.standard.pdb": {
+      "bytes": 81364,
+      "sha256": "b78ba353c3c487bde92630aa41decedfc938fbc4555a82fb107f3b2c8abe367f"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net8.0/FecAtomic.Light.fixed.dll": {
+      "bytes": 439808,
+      "sha256": "ac97025eb928eed6a8cbb38f0e636daa125eef65ed6ce83e6066f6754652a44f"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net8.0/FecAtomic.Light.fixed.pdb": {
+      "bytes": 190240,
+      "sha256": "7c3487b2e6bb085cedaeb5b7f5da8192a0becb0db82979f259bab73fe0b3e34f"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net8.0/FecAtomic.fixed.dll": {
+      "bytes": 291328,
+      "sha256": "50645708ea148e2ba6dc3e85671e381126d018874b034d9c050e4b4dd0d62d47"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net8.0/FecAtomic.fixed.pdb": {
+      "bytes": 122160,
+      "sha256": "4622f444f1511b95503b9ead9642f5dce4066d3e1e9a0935b7434b1c3d89ee39"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net8.0/LegacyRef.deps.json": {
+      "bytes": 2057,
+      "sha256": "d5c6b906c49aa1a028d348e7351406a424575775cb4a820df47a606d1840d2dc"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net8.0/LegacyRef.dll": {
+      "bytes": 12288,
+      "sha256": "a59d59b957da476442b47f2e674898aa4bd6f5f8e35b9ad7780c55840194c589"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net8.0/LegacyRef.exe": {
+      "bytes": 132608,
+      "sha256": "14e192a197981a745be2d09380d17322ef84f47b07daf39f5f6f810cc34d58ee"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net8.0/LegacyRef.pdb": {
+      "bytes": 12296,
+      "sha256": "40208a236fbc3842e6ba1008efc3a2879c34f158cb050ee7c31ec8e6fabf8411"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net8.0/LegacyRef.runtimeconfig.json": {
+      "bytes": 340,
+      "sha256": "28329cf08f6505e73806b17558b187c02f0c1c516fe47ebfb7a013d082aaa306"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net8.0/RuntimeParity.before.light.dll": {
+      "bytes": 358400,
+      "sha256": "d28553737b89b89bb04b50efab16fd5ed58b2144d70aa3f07878da3742cd2dc9"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net8.0/RuntimeParity.before.light.pdb": {
+      "bytes": 159316,
+      "sha256": "dae962a5c03445d71d5e6cdc8d5258067b9eb57776e91bc47ca60b750d19fcaf"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net8.0/RuntimeParity.before.standard.dll": {
+      "bytes": 210432,
+      "sha256": "a4a5f8b5a491b11ccffdacb1e9da25e759a606f91afc63b37388501c3d5ef205"
+    },
+    "pr558-round4/atomic-right-arithmetic/legacy-ref/bin/LegacyRef/net8.0/RuntimeParity.before.standard.pdb": {
+      "bytes": 89884,
+      "sha256": "e9aa28ae3b60d78297d5e07d94d10305cf5b4a379b96ac1c12efd878e920d287"
+    },
+    "pr558-round4/atomic-right-arithmetic/manifest.json": {
+      "bytes": 3161,
+      "sha256": "13401c3329c52052243c4b112b6ae0cc6c7bddca879d2aa036951df580418e7b"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/build-light.log": {
+      "bytes": 790,
+      "sha256": "73cfb83c606e2afa0a2e3383a4e7f342f99a60df1f5919cdd34588aebc5858dc"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/build-standard.log": {
+      "bytes": 803,
+      "sha256": "6d31f43c8b34b244254751986d6c36938a1692e4118b504e9419bbc24dc0745f"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/light-net10.0.log": {
+      "bytes": 31,
+      "sha256": "8983b8d99c5c7d7dbe90816012761ace7c36fe66dfea44d7e00fea395bf66be7"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/light-net472.log": {
+      "bytes": 31,
+      "sha256": "8983b8d99c5c7d7dbe90816012761ace7c36fe66dfea44d7e00fea395bf66be7"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/light-net8.0.log": {
+      "bytes": 31,
+      "sha256": "8983b8d99c5c7d7dbe90816012761ace7c36fe66dfea44d7e00fea395bf66be7"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/light/Native.csproj": {
+      "bytes": 586,
+      "sha256": "9f5beaec478657aeb9c63523ace9c3bad95f14e206d6ab840b9ca0d4c2685f5a"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/light/Program.cs": {
+      "bytes": 395,
+      "sha256": "e450dbe375bb3310859ea72d62cdb60227fb935c49ef6ab0790d7e223a07603d"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/light/bin/Release/net10.0/FecAtomic.Light.fixed.dll": {
+      "bytes": 440832,
+      "sha256": "647bc7b985b242e5a5d00e3901ff39ef195ad9b3bac74f365148961d8163e302"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/light/bin/Release/net10.0/FecAtomic.Light.fixed.pdb": {
+      "bytes": 190304,
+      "sha256": "98ef068d66b1fe091db50096f1b436fd7af4ff9e7bb8a9bd847e32da327ab1c9"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/light/bin/Release/net10.0/Native.deps.json": {
+      "bytes": 843,
+      "sha256": "f1412d394bbadce3c61bf8c11040a7af21d450c30657f8b8239fa70300ed6728"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/light/bin/Release/net10.0/Native.dll": {
+      "bytes": 12288,
+      "sha256": "899f852ba8e9e51f18701492e0997ea32e7ec238adeadf314ec787418c028e3c"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/light/bin/Release/net10.0/Native.exe": {
+      "bytes": 139776,
+      "sha256": "1fc41241828a4ed1f586e1eb7284be047cda597ed9cf7a6d428686005c3af62e"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/light/bin/Release/net10.0/Native.pdb": {
+      "bytes": 12540,
+      "sha256": "54f2959072001ce02266407b4c2e2e5cfc79533f4d10dff4d52bbeda8e95016e"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/light/bin/Release/net10.0/Native.runtimeconfig.json": {
+      "bytes": 342,
+      "sha256": "c230a317a54dd960bcbeb5f347f52e18dc665a26f7efda2159fced9a5ac7e097"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/light/bin/Release/net472/FecAtomic.Light.fixed.dll": {
+      "bytes": 437760,
+      "sha256": "66c49e679fe973ccc7d705edaa1e37840ea963cd51a3abfb5c7d3b1d2fbdfcdc"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/light/bin/Release/net472/FecAtomic.Light.fixed.pdb": {
+      "bytes": 182028,
+      "sha256": "7435e67effcfb88eb988bb9566dea63a7e96434e0797f51c41e0e9fd03c0898d"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/light/bin/Release/net472/Native.exe": {
+      "bytes": 11776,
+      "sha256": "b696ae1bda70bfc2cdb2d133c93445844beeef89549583a983c7bbc07821d339"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/light/bin/Release/net472/Native.exe.config": {
+      "bytes": 176,
+      "sha256": "ad8267122c40d37dcd9d99e1412d763187a1825732f378db8867f3ecf675cf70"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/light/bin/Release/net472/Native.pdb": {
+      "bytes": 3652,
+      "sha256": "4ee80f02bfea22ea7eb30b680eed5ac6c1023d50a0a9d625f17cb4e23d8f7ca3"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/light/bin/Release/net8.0/FecAtomic.Light.fixed.dll": {
+      "bytes": 439808,
+      "sha256": "ac97025eb928eed6a8cbb38f0e636daa125eef65ed6ce83e6066f6754652a44f"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/light/bin/Release/net8.0/FecAtomic.Light.fixed.pdb": {
+      "bytes": 190240,
+      "sha256": "7c3487b2e6bb085cedaeb5b7f5da8192a0becb0db82979f259bab73fe0b3e34f"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/light/bin/Release/net8.0/Native.deps.json": {
+      "bytes": 841,
+      "sha256": "560fea17086f80e7d88325a98c4aeae6accc4f710a91f01fc9bd48c8f3f3b2cc"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/light/bin/Release/net8.0/Native.dll": {
+      "bytes": 12288,
+      "sha256": "38cd5b8305c4ea4813c359f564008bff5a0068b130421c22de56037779880e2e"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/light/bin/Release/net8.0/Native.exe": {
+      "bytes": 132608,
+      "sha256": "622f4cf5af42118ea25b19c64f7b2594559014870315104b03db51ef4a2093ca"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/light/bin/Release/net8.0/Native.pdb": {
+      "bytes": 12272,
+      "sha256": "8a4aa4b4c50e532baff9713ee955ee319c184f721789bb2630c144f39e6dfedc"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/light/bin/Release/net8.0/Native.runtimeconfig.json": {
+      "bytes": 340,
+      "sha256": "28329cf08f6505e73806b17558b187c02f0c1c516fe47ebfb7a013d082aaa306"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/standard-net10.0.log": {
+      "bytes": 31,
+      "sha256": "17ffa705c2c2a210cf7c0132435042cab54f5c1509f89fa8cc8ba4263e3f29ec"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/standard-net472.log": {
+      "bytes": 31,
+      "sha256": "17ffa705c2c2a210cf7c0132435042cab54f5c1509f89fa8cc8ba4263e3f29ec"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/standard-net8.0.log": {
+      "bytes": 31,
+      "sha256": "17ffa705c2c2a210cf7c0132435042cab54f5c1509f89fa8cc8ba4263e3f29ec"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/standard/Native.csproj": {
+      "bytes": 517,
+      "sha256": "3832d99188a69137894f72868546e4877590f7e5b6da865897dce122142a982b"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/standard/Program.cs": {
+      "bytes": 363,
+      "sha256": "ed67f6997b533902f11eeb34ed02f6f4a1d9f60326d4d5c0a847b19e9552ae3d"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/standard/bin/Release/net10.0/FecAtomic.fixed.dll": {
+      "bytes": 291840,
+      "sha256": "e47d5d232b958fc434d834a66e30c68a883e8d8b43612238821bc3a143fe5e9b"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/standard/bin/Release/net10.0/FecAtomic.fixed.pdb": {
+      "bytes": 122236,
+      "sha256": "fa8eea479a8148f521fdf3199571cd813987191b8a0e403ba2f467decbff7505"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/standard/bin/Release/net10.0/Native.deps.json": {
+      "bytes": 819,
+      "sha256": "6cd9cc6f11be260f0fd58b6bd2b3c45ba812ffc96bcba36b7b8f4e6fdc5812f4"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/standard/bin/Release/net10.0/Native.dll": {
+      "bytes": 10240,
+      "sha256": "2cb1df87702ff13d25b1a3fae2f5023715c43d70da07869fb0b27d69d09f879c"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/standard/bin/Release/net10.0/Native.exe": {
+      "bytes": 139776,
+      "sha256": "1fc41241828a4ed1f586e1eb7284be047cda597ed9cf7a6d428686005c3af62e"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/standard/bin/Release/net10.0/Native.pdb": {
+      "bytes": 12164,
+      "sha256": "01dece22bf028ea7e86a96fdec3e0b306b862acae548db635b88c1f4e3c8220c"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/standard/bin/Release/net10.0/Native.runtimeconfig.json": {
+      "bytes": 342,
+      "sha256": "c230a317a54dd960bcbeb5f347f52e18dc665a26f7efda2159fced9a5ac7e097"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/standard/bin/Release/net472/FecAtomic.fixed.dll": {
+      "bytes": 289792,
+      "sha256": "dbff29eec470a3b00565f57bcca290773fa6f72f3dd68773b0d18c6039e6f24d"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/standard/bin/Release/net472/FecAtomic.fixed.pdb": {
+      "bytes": 111708,
+      "sha256": "668454d81d5620002aeb81a40a10f84603572d19ef9354f82b9a1d7be0678d3b"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/standard/bin/Release/net472/Native.exe": {
+      "bytes": 10240,
+      "sha256": "e72955efb7a5ccbb1160672ff2c4e337790d57374a65afb3423f9c05eef9b65a"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/standard/bin/Release/net472/Native.exe.config": {
+      "bytes": 176,
+      "sha256": "ad8267122c40d37dcd9d99e1412d763187a1825732f378db8867f3ecf675cf70"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/standard/bin/Release/net472/Native.pdb": {
+      "bytes": 3276,
+      "sha256": "acf708de8a74777e8f89eea3ec4c89add53dcf965ba1954edfd4c692532d21d1"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/standard/bin/Release/net8.0/FecAtomic.fixed.dll": {
+      "bytes": 291328,
+      "sha256": "50645708ea148e2ba6dc3e85671e381126d018874b034d9c050e4b4dd0d62d47"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/standard/bin/Release/net8.0/FecAtomic.fixed.pdb": {
+      "bytes": 122160,
+      "sha256": "4622f444f1511b95503b9ead9642f5dce4066d3e1e9a0935b7434b1c3d89ee39"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/standard/bin/Release/net8.0/Native.deps.json": {
+      "bytes": 817,
+      "sha256": "cc0f2652689198459280ea32cfe7fbadb038677175fa667f60c882525efe2e00"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/standard/bin/Release/net8.0/Native.dll": {
+      "bytes": 10240,
+      "sha256": "ca1b441d542102c0cbb9af74f3134b278a3e17708a3df20a3dd516d33e384d60"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/standard/bin/Release/net8.0/Native.exe": {
+      "bytes": 132608,
+      "sha256": "622f4cf5af42118ea25b19c64f7b2594559014870315104b03db51ef4a2093ca"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/standard/bin/Release/net8.0/Native.pdb": {
+      "bytes": 11896,
+      "sha256": "8f17fc23660df204d30c872835b9515c92bfa355fc63b99b0afbb9bf1aec4fd1"
+    },
+    "pr558-round4/atomic-right-arithmetic/native-fixture/standard/bin/Release/net8.0/Native.runtimeconfig.json": {
+      "bytes": 340,
+      "sha256": "28329cf08f6505e73806b17558b187c02f0c1c516fe47ebfb7a013d082aaa306"
+    },
+    "pr558-round4/atomic-right-arithmetic/proposed-native-tests.diff": {
+      "bytes": 5987,
+      "sha256": "23f512f56b0415604fbdea23df04cf47d25a158946b787e465d7e0145964a30c"
+    },
+    "pr558-round4/atomic-right-arithmetic/repro-manifest.json": {
+      "bytes": 18992,
+      "sha256": "9a4d8fba367e1a6dc5580352e09a12b0239d376a90cd7dc0b312465041f116f2"
+    },
+    "pr558-round4/atomic-right-arithmetic/warm-analysis.json": {
+      "bytes": 40145,
+      "sha256": "c574704c66d58a350ff930c122aa662002bfa5487ea64c7280c2ee8ad51d7c9b"
+    },
+    "pr558-round4/atomic-right-arithmetic/warm-net10.0-light.jsonl": {
+      "bytes": 157060,
+      "sha256": "1db2faf2e50f1e368f25389bc22abb2bb9d5c747fe0c17730952abcd465a457e"
+    },
+    "pr558-round4/atomic-right-arithmetic/warm-net10.0-light.log": {
+      "bytes": 131,
+      "sha256": "61db6ccdc4888114149869b9643354902fbde895dbdd0152c62418c67136debf"
+    },
+    "pr558-round4/atomic-right-arithmetic/warm-net10.0-standard.jsonl": {
+      "bytes": 157225,
+      "sha256": "575d8663f014c4242cb16cfa03b5a275f7012b40001c642e8882af1da6d67a4b"
+    },
+    "pr558-round4/atomic-right-arithmetic/warm-net10.0-standard.log": {
+      "bytes": 131,
+      "sha256": "61db6ccdc4888114149869b9643354902fbde895dbdd0152c62418c67136debf"
+    },
+    "pr558-round4/atomic-right-arithmetic/warm-net472-light.csv": {
+      "bytes": 89921,
+      "sha256": "079efd79f772fcca247d5abdab1258c426660f78d92722a5e2ba24b35d0355e9"
+    },
+    "pr558-round4/atomic-right-arithmetic/warm-net472-light.log": {
+      "bytes": 131,
+      "sha256": "61db6ccdc4888114149869b9643354902fbde895dbdd0152c62418c67136debf"
+    },
+    "pr558-round4/atomic-right-arithmetic/warm-net472-standard.csv": {
+      "bytes": 89977,
+      "sha256": "e7d044f0bc16294010d331767f2816deb1bcad3074a3feafc5a03bb839b86a96"
+    },
+    "pr558-round4/atomic-right-arithmetic/warm-net472-standard.log": {
+      "bytes": 131,
+      "sha256": "61db6ccdc4888114149869b9643354902fbde895dbdd0152c62418c67136debf"
+    },
+    "pr558-round4/atomic-right-arithmetic/warm-net8.0-light.jsonl": {
+      "bytes": 156984,
+      "sha256": "de6426d811f1f4242c7687231a351ad1d9b375dc968908fc9843a2c7b082ebb2"
+    },
+    "pr558-round4/atomic-right-arithmetic/warm-net8.0-light.log": {
+      "bytes": 131,
+      "sha256": "61db6ccdc4888114149869b9643354902fbde895dbdd0152c62418c67136debf"
+    },
+    "pr558-round4/atomic-right-arithmetic/warm-net8.0-standard.jsonl": {
+      "bytes": 156599,
+      "sha256": "1598b12fb8aa2a906dd349997a4783f50af83da649b8ebc8bececa4a5dc0d675"
+    },
+    "pr558-round4/atomic-right-arithmetic/warm-net8.0-standard.log": {
+      "bytes": 131,
+      "sha256": "61db6ccdc4888114149869b9643354902fbde895dbdd0152c62418c67136debf"
+    },
+    "pr558-round4/atomic-right-arithmetic/warm-summary.log": {
+      "bytes": 331,
+      "sha256": "55dd68bcc43ecf06fb397590bb4872abe2a0fb87a549e431416aaba235b7dca4"
+    },
+    "pr558-round4/publication/GenerateReport.py": {
+      "bytes": 33793,
+      "sha256": "95d107ecfd559477a5f4af597b4297c323993aa208af4d73128ff8bca0eb5af4"
+    },
+    "pr558-round4/publication/Package.py": {
+      "bytes": 8038,
+      "sha256": "4a8b631f9d346eefbe3c5aa952517beefecf8a01c24ab4e0d7fb0ea8a5d82490"
+    },
+    "pr558-round4/publication/README.txt": {
+      "bytes": 2583,
+      "sha256": "6491550dd0b48eff5f9b8d152ae814176fcf7c91f6dd2a927b19e8df7ad8308c"
+    },
+    "pr558-round4/publication/REPORT.txt": {
+      "bytes": 6503,
+      "sha256": "6c732c1649241113b54ec192d54cdc0dcd289b42f035d803ae42c0f44a3f542d"
+    },
+    "pr558-round4/publication/VALIDATION-REPRODUCTION.txt": {
+      "bytes": 1707,
+      "sha256": "bfa2e93c4896474aa4dda6a5dae1a94299d50ec730840ff34f72dc5b8857ba54"
+    },
+    "pr558-round4/publication/final-state.json": {
+      "bytes": 4265,
+      "sha256": "9d4a134f2cdd83497c6fb1c265d4de36c12b0523cf547199c86b8d60dcac09ef"
+    },
+    "pr558-round4/publication/hash-inventory.json": {
+      "bytes": 572127,
+      "sha256": "a75f6299dcb71d845cba6f614e06138eebf69ac80680fb71ce5af0353c84708e"
+    },
+    "pr558-round4/publication/inventory-summary.log": {
+      "bytes": 1573,
+      "sha256": "535a8cf1c0237b4eab6e13b36f17cb255285d7d0a3b1c6758180227b24e94794"
+    },
+    "pr558-round4/publication/package-inventory.json": {
+      "bytes": 3587,
+      "sha256": "80e458624c6549ed3805b8642ba0cc2561af679febf32cff8456f84d337f8ba3"
+    },
+    "pr558-round4/publication/pr558-before-body.txt": {
+      "bytes": 18099,
+      "sha256": "f1fe5d161ef8a5b33d9ca8ba8c39ee97c1cb9c0effa3ba531a2458168beea4e0"
+    },
+    "pr558-round4/publication/pr558-before.json": {
+      "bytes": 18467,
+      "sha256": "fd708e3a12c5c77b93753ac2b095e3f47cffdc6ade91e6448e0c17be3f965eca"
+    },
+    "pr558-round4/publication/pr558-description-draft.txt": {
+      "bytes": 24637,
+      "sha256": "0941981bde2e3e0fb8617fe4a9f2e41cb09d1e65e822947a1b068c8c186d0223"
+    },
+    "pr558-round4/publication/pr558-measurement-comment-draft.txt": {
+      "bytes": 6188,
+      "sha256": "33f31e71147a8390e19f6a7ad0b8363c9512b91f234335bea43d6e4f11503b11"
+    },
+    "pr558-round4/publication/report-data.json": {
+      "bytes": 4820,
+      "sha256": "f6d2e64403644476282f77c2236905ae0f45846e7316d353dbcf39de5259cd19"
+    },
+    "pr558-round4/publication/report.html": {
+      "bytes": 755166,
+      "sha256": "6b135b317407aac32edfc55d81bbea8e31b5132b4303d7fada84169155c533c6"
+    }
+  },
+  "excludedDirectories": [
+    ".git",
+    ".vs",
+    "__pycache__",
+    "artifacts",
+    "node_modules",
+    "obj"
+  ],
+  "excludedSuffixes": [
+    ".dmp",
+    ".etlx",
+    ".zip"
+  ],
+  "scope": "Archives preserve measured snapshots, raw rows, binaries and relative layouts. Frozen42f evidence is not relabeled as final combined code performance."
+}

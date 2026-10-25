@@ -1,0 +1,215 @@
+{
+  "finalState": {
+    "status": "Final70f297cb validated; bounded combined and map measurements complete. Universal performance/allocation parity not established.",
+    "final_code_head": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "accepted_arithmetic_commit": "44ee17d7f3fd5d363b7088158cc97b2cc60f7da7",
+    "try_value_commit": "6d397bc6255ddf406f5586c405ddd04cff7d4cdd",
+    "final_validation": {
+      "codeHead": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+      "codes": {
+        "FastExpressionCompiler": 0,
+        "FastExpressionCompiler.LightExpression": 0,
+        "native-net10.0": 0,
+        "native-net8.0": 0,
+        "framework-build": 0,
+        "framework-run": 0,
+        "imported-build": 0,
+        "imported-full": 0
+      },
+      "imported": {
+        "batches": 21,
+        "crashes": 0,
+        "counters": {
+          "total": 35122,
+          "executed": 35064,
+          "passed": 35064,
+          "failed": 0,
+          "error": 0,
+          "timeout": 0,
+          "aborted": 0,
+          "notExecuted": 0
+        },
+        "originalDenominator": 35133,
+        "exclusions": 69,
+        "newExclusions": 0
+      },
+      "native": {
+        "net10": "All runner suites pass; legacy1712",
+        "net8": "All runner suites pass; legacy1711",
+        "framework": "TestX1037 plus legacy1595 pass"
+      },
+      "priorAttempt": {
+        "head": "6d397bc6",
+        "result": "Interrupted after managed stack proved preexisting SmallMap16 promotion hang; fixed3be541d3; no Trycontrolflow regression"
+      },
+      "snapshot": {
+        "commit": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+        "compilerSha256": "4239ac0a6f673fba71eead86d2eae40e7eec79f0a52241f2c9d8ac2669ada237",
+        "assemblySha256": "6ddb580a9826a3494ff3bdc863d3af73d58ba836d2a7754ecc9f7afd698521d1"
+      }
+    },
+    "notes": "Historical42f/isolated snapshots retain their exact sources. Old6d validation was interrupted by unchanged-prePR SmallMap capacity bug, not a Try-value regression;70f includes its fix and supported EH-host correction.",
+    "combined_expected": true,
+    "validation_path": "pr558-repair/validation-70f297cb",
+    "candidate_code_head": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "combined_snapshot_head": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "combined_measurements_state": "Complete:12474 raw rows/198 groups,0 errors;21 rotated samples, all short samples retained. Compile independently calibrated; FEC other phases use common counts, System independently calibrated.",
+    "map_capacity_commit": "3be541d3aeba0d58560b0a49d78206bb108edbfc",
+    "supported_host_commit": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "combined_path": "pr558-round4/combined-final-bounded",
+    "historical_combined_path": "pr558-round4/combined-final",
+    "map_capacity_path": "pr558-round4/map-capacity",
+    "supported_host_path": "pr558-round4/supported-eh-host",
+    "review_reply_paths": [
+      "pr558-round4/dadhi-host-reply.json",
+      "pr558-round4/dadhi-host-reply-published.json"
+    ],
+    "official_source_urls": [
+      "https://github.com/dotnet/runtime/blob/v10.0.9/src/libraries/System.Private.CoreLib/src/System/Reflection/Emit/DynamicMethod.cs#L228-L240",
+      "https://github.com/dotnet/runtime/blob/v10.0.9/src/coreclr/System.Private.CoreLib/src/System/Reflection/Emit/DynamicMethod.CoreCLR.cs#L41-L56"
+    ],
+    "allocation_confirmation_path": "allocation-confirmation-round4",
+    "allocation_confirmation_state": "Complete:2970 raw rows/198 groups;5 samples x200 operations after40warmups;164 unchanged,26 decreased,8 increased. Six FrameworkLight approximately192B residual plus two FrameworkStandard0.8B groups retained. No elapsed claims.",
+    "validation_reproduction_paths": [
+      "pr558-repair/validate.py",
+      "pr558-repair/summarize-validation.py",
+      "fec-round12/Run-Full.py",
+      "pr558-repair/frozen-70f297cb",
+      "fec-fixes/FrameworkRunner/Program.cs",
+      "fec-fixes/FrameworkRunner/FrameworkRunner.csproj"
+    ],
+    "allocation_confirmation_summary": {
+      "complete": true,
+      "counts": {
+        "unchanged": 164,
+        "decreased": 26,
+        "increased": 8
+      },
+      "primaryPositiveReconfirmation": {
+        "primary_positive": 28,
+        "positive_again": 6,
+        "now_equal": 21,
+        "now_decreased": 1
+      },
+      "errors": []
+    }
+  },
+  "archives": [
+    {
+      "partition": "runtime-audit-42f",
+      "part": 1,
+      "parts": 1,
+      "path": "runtime-audit-42f.zip",
+      "bytes": 9169012,
+      "sha256": "3371ec9c71e9f1acea9d9059a4879ceb4f9ffde3f96923c9ed433e87312f4f15",
+      "manifest": "runtime-audit-42f-manifest.json",
+      "files": 296
+    },
+    {
+      "partition": "accepted-arithmetic-44ee",
+      "part": 1,
+      "parts": 1,
+      "path": "accepted-arithmetic-44ee.zip",
+      "bytes": 17541739,
+      "sha256": "1297310ce5377a2af88a9fe51896fdfbe67276e983695a4acb16cdbbacb456f7",
+      "manifest": "accepted-arithmetic-44ee-manifest.json",
+      "files": 401
+    },
+    {
+      "partition": "held-followups",
+      "part": 1,
+      "parts": 2,
+      "path": "held-followups-01.zip",
+      "bytes": 24362762,
+      "sha256": "728529cf2f1a57e8afe19a89d02dd20aba6fcfa1097d7d7f071d2a8036b22c9b",
+      "manifest": "held-followups-manifest.json",
+      "files": 1147
+    },
+    {
+      "partition": "held-followups",
+      "part": 2,
+      "parts": 2,
+      "path": "held-followups-02.zip",
+      "bytes": 894734,
+      "sha256": "a0f5bc4ca949ca915e229a197a65ed8eeb0f28b561b8c30cdb9c231968ed084a",
+      "manifest": "held-followups-manifest.json",
+      "files": 45
+    },
+    {
+      "partition": "try-value-repair",
+      "part": 1,
+      "parts": 1,
+      "path": "try-value-repair.zip",
+      "bytes": 18960740,
+      "sha256": "d1429cd6d7c68559e78a8f4cc745e57ce6038ca4fc504dd27e0da0c1c5c6b28b",
+      "manifest": "try-value-repair-manifest.json",
+      "files": 847
+    },
+    {
+      "partition": "combined-final",
+      "part": 1,
+      "parts": 1,
+      "path": "combined-final.zip",
+      "bytes": 9271362,
+      "sha256": "4c7269c9516db99ebc312471cec9a687b56d5b2577a9e105601714cb4f1a90a8",
+      "manifest": "combined-final-manifest.json",
+      "files": 208
+    },
+    {
+      "partition": "historical-prepared-6d",
+      "part": 1,
+      "parts": 1,
+      "path": "historical-prepared-6d.zip",
+      "bytes": 8591432,
+      "sha256": "d58ef6b900406091bca6a0494e09f3fbc0afa538ca1bcd7852f819ed0f7d335c",
+      "manifest": "historical-prepared-6d-manifest.json",
+      "files": 191
+    },
+    {
+      "partition": "map-capacity",
+      "part": 1,
+      "parts": 1,
+      "path": "map-capacity.zip",
+      "bytes": 4479096,
+      "sha256": "d1167f5c802291d57e41d5ac8ccf58f01ff841f38fe52e6597dbbd3f79dee54f",
+      "manifest": "map-capacity-manifest.json",
+      "files": 148
+    },
+    {
+      "partition": "review-and-supported-host",
+      "part": 1,
+      "parts": 1,
+      "path": "review-and-supported-host.zip",
+      "bytes": 1294030,
+      "sha256": "7f4b6e9372378537853178eefc4b86a91cfc2688ae8f5370840a034c9e652051",
+      "manifest": "review-and-supported-host-manifest.json",
+      "files": 58
+    },
+    {
+      "partition": "final-validation",
+      "part": 1,
+      "parts": 1,
+      "path": "final-validation.zip",
+      "bytes": 8688334,
+      "sha256": "e23eb70b014d6e7ffb45944e3ad209b29514c21e504e866ab7a38a7e9d3df307",
+      "manifest": "final-validation-manifest.json",
+      "files": 234
+    },
+    {
+      "partition": "allocation-confirmation",
+      "part": 1,
+      "parts": 1,
+      "path": "allocation-confirmation.zip",
+      "bytes": 5480700,
+      "sha256": "12bd87b017214c5bed73c491c883c2a810ba581ad5add778f125e0c8f6f16204",
+      "manifest": "allocation-confirmation-manifest.json",
+      "files": 121
+    }
+  ],
+  "separateUnchangedArtifact": {
+    "path": "pr558-round3/held-experiments.zip",
+    "bytes": 52418017,
+    "sha256": "7e18a65f079f6a936e718a41cf02db322ce91f4cb6c52533ad4b6444b14a4421"
+  },
+  "note": "No prior round2 evidence was replaced. Extract all supplement parts under one common root to preserve cross-folder links. Sources with historical absolute references retain those references; reproduction notes identify them."
+}

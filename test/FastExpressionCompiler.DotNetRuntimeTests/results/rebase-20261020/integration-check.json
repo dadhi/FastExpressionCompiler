@@ -1,0 +1,23 @@
+{
+  "coreEqualsOldSourcePlusUpstreamSetMigration": true,
+  "beforeSha256": "fa64f1e7bc5bb9a13b85f613348c70e489845d78fe71768c352ee154b3f31cde",
+  "afterSha256": "34b360796a78b2ba2cb148ce31dd229a277fab9d677fd8f188f8d06a113137bf",
+  "replacements": [
+    {
+      "old": "SmallMap4<Expression, NoValue, RefEq<Expression>>",
+      "occurrences": 2
+    },
+    {
+      "old": "ArgsContainingComplexExpression.Map.AddOrGetValueRef",
+      "occurrences": 1
+    },
+    {
+      "old": "ArgsContainingComplexExpression.Map.",
+      "occurrences": 6
+    },
+    {
+      "old": "InvocationArgumentsWithJumps.Map.",
+      "occurrences": 2
+    }
+  ]
+}

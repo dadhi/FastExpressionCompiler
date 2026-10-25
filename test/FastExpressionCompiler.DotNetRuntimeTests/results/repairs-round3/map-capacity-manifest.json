@@ -1,0 +1,702 @@
+{
+  "partition": "map-capacity",
+  "finalState": {
+    "status": "Final70f297cb validated; bounded combined and map measurements complete. Universal performance/allocation parity not established.",
+    "final_code_head": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "accepted_arithmetic_commit": "44ee17d7f3fd5d363b7088158cc97b2cc60f7da7",
+    "try_value_commit": "6d397bc6255ddf406f5586c405ddd04cff7d4cdd",
+    "final_validation": {
+      "codeHead": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+      "codes": {
+        "FastExpressionCompiler": 0,
+        "FastExpressionCompiler.LightExpression": 0,
+        "native-net10.0": 0,
+        "native-net8.0": 0,
+        "framework-build": 0,
+        "framework-run": 0,
+        "imported-build": 0,
+        "imported-full": 0
+      },
+      "imported": {
+        "batches": 21,
+        "crashes": 0,
+        "counters": {
+          "total": 35122,
+          "executed": 35064,
+          "passed": 35064,
+          "failed": 0,
+          "error": 0,
+          "timeout": 0,
+          "aborted": 0,
+          "notExecuted": 0
+        },
+        "originalDenominator": 35133,
+        "exclusions": 69,
+        "newExclusions": 0
+      },
+      "native": {
+        "net10": "All runner suites pass; legacy1712",
+        "net8": "All runner suites pass; legacy1711",
+        "framework": "TestX1037 plus legacy1595 pass"
+      },
+      "priorAttempt": {
+        "head": "6d397bc6",
+        "result": "Interrupted after managed stack proved preexisting SmallMap16 promotion hang; fixed3be541d3; no Trycontrolflow regression"
+      },
+      "snapshot": {
+        "commit": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+        "compilerSha256": "4239ac0a6f673fba71eead86d2eae40e7eec79f0a52241f2c9d8ac2669ada237",
+        "assemblySha256": "6ddb580a9826a3494ff3bdc863d3af73d58ba836d2a7754ecc9f7afd698521d1"
+      }
+    },
+    "notes": "Historical42f/isolated snapshots retain their exact sources. Old6d validation was interrupted by unchanged-prePR SmallMap capacity bug, not a Try-value regression;70f includes its fix and supported EH-host correction.",
+    "combined_expected": true,
+    "validation_path": "pr558-repair/validation-70f297cb",
+    "candidate_code_head": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "combined_snapshot_head": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "combined_measurements_state": "Complete:12474 raw rows/198 groups,0 errors;21 rotated samples, all short samples retained. Compile independently calibrated; FEC other phases use common counts, System independently calibrated.",
+    "map_capacity_commit": "3be541d3aeba0d58560b0a49d78206bb108edbfc",
+    "supported_host_commit": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "combined_path": "pr558-round4/combined-final-bounded",
+    "historical_combined_path": "pr558-round4/combined-final",
+    "map_capacity_path": "pr558-round4/map-capacity",
+    "supported_host_path": "pr558-round4/supported-eh-host",
+    "review_reply_paths": [
+      "pr558-round4/dadhi-host-reply.json",
+      "pr558-round4/dadhi-host-reply-published.json"
+    ],
+    "official_source_urls": [
+      "https://github.com/dotnet/runtime/blob/v10.0.9/src/libraries/System.Private.CoreLib/src/System/Reflection/Emit/DynamicMethod.cs#L228-L240",
+      "https://github.com/dotnet/runtime/blob/v10.0.9/src/coreclr/System.Private.CoreLib/src/System/Reflection/Emit/DynamicMethod.CoreCLR.cs#L41-L56"
+    ],
+    "allocation_confirmation_path": "allocation-confirmation-round4",
+    "allocation_confirmation_state": "Complete:2970 raw rows/198 groups;5 samples x200 operations after40warmups;164 unchanged,26 decreased,8 increased. Six FrameworkLight approximately192B residual plus two FrameworkStandard0.8B groups retained. No elapsed claims.",
+    "validation_reproduction_paths": [
+      "pr558-repair/validate.py",
+      "pr558-repair/summarize-validation.py",
+      "fec-round12/Run-Full.py",
+      "pr558-repair/frozen-70f297cb",
+      "fec-fixes/FrameworkRunner/Program.cs",
+      "fec-fixes/FrameworkRunner/FrameworkRunner.csproj"
+    ],
+    "allocation_confirmation_summary": {
+      "complete": true,
+      "counts": {
+        "unchanged": 164,
+        "decreased": 26,
+        "increased": 8
+      },
+      "primaryPositiveReconfirmation": {
+        "primary_positive": 28,
+        "positive_again": 6,
+        "now_equal": 21,
+        "now_decreased": 1
+      },
+      "errors": []
+    }
+  },
+  "files": {
+    "pr558-round4/map-capacity/Before.cs": {
+      "bytes": 2014,
+      "sha256": "2ec634ad1324d72c241ce69e387fcd0c120cfdd0b91695fb7790a366857c7c28"
+    },
+    "pr558-round4/map-capacity/Before/FastExpressionCompiler.cs": {
+      "bytes": 894695,
+      "sha256": "be3d04ab29d83ac80204257eb7dbb6268c593eee898a52a5ca9a793e4d02b412"
+    },
+    "pr558-round4/map-capacity/Before/ILReader.cs": {
+      "bytes": 37615,
+      "sha256": "ceb16ba300543d6104d81e8b9b5ae687aef20dbdc9536c640bb4c00da915995d"
+    },
+    "pr558-round4/map-capacity/Before/ImTools.cs": {
+      "bytes": 78461,
+      "sha256": "a5d5c4f0630490d2d27d76a715517de7b7c18dace82f1a76de35f5c4a9a23fb0"
+    },
+    "pr558-round4/map-capacity/Before/Library.csproj": {
+      "bytes": 237,
+      "sha256": "177d3083003ff8302d536dbb105dfc86b676cc67012baf795de6566c7faa66bf"
+    },
+    "pr558-round4/map-capacity/Before/TestTools.cs": {
+      "bytes": 54790,
+      "sha256": "c47c93ca62e6c5606c6d891e1ef1ebab529fb5fff2e8b81742eac5c65a570190"
+    },
+    "pr558-round4/map-capacity/Before/bin/Release/net10.0/MapCapacity.Before.deps.json": {
+      "bytes": 448,
+      "sha256": "1a10a8ca52bcc6f069ba773a96ab347eab910ee8cf456b7080b24d3a2707466a"
+    },
+    "pr558-round4/map-capacity/Before/bin/Release/net10.0/MapCapacity.Before.dll": {
+      "bytes": 291840,
+      "sha256": "78aa58e69908f7fc95c6eb982d7fa44a54f237b46a1c1e6988e355693c96e5fc"
+    },
+    "pr558-round4/map-capacity/Before/bin/Release/net10.0/MapCapacity.Before.pdb": {
+      "bytes": 122288,
+      "sha256": "2f66ff8a9ab3fc74e8c929f7aa7c33382a6236badc67f8e4fbb137aebb8d7c78"
+    },
+    "pr558-round4/map-capacity/Before/bin/Release/net472/MapCapacity.Before.dll": {
+      "bytes": 289792,
+      "sha256": "860a8b12a411f224bde9c64deeac080219772932741a9ae866c16a4ec999f3b4"
+    },
+    "pr558-round4/map-capacity/Before/bin/Release/net472/MapCapacity.Before.pdb": {
+      "bytes": 111756,
+      "sha256": "9466d38b319569232d2e1bc7d459604d6f7d8abb1bcdef46256c0e7f802c7300"
+    },
+    "pr558-round4/map-capacity/Before/bin/Release/net8.0/MapCapacity.Before.deps.json": {
+      "bytes": 446,
+      "sha256": "a7e3dd0a632997beb248e11f3b583bade61b84a73bda0f327882df5393fdbccd"
+    },
+    "pr558-round4/map-capacity/Before/bin/Release/net8.0/MapCapacity.Before.dll": {
+      "bytes": 291328,
+      "sha256": "077508abcc4206c7bb5df6d7bfda5009802f0f0722036db2823df4a30ea74fa8"
+    },
+    "pr558-round4/map-capacity/Before/bin/Release/net8.0/MapCapacity.Before.pdb": {
+      "bytes": 122208,
+      "sha256": "d4edb3bae3c636145112d8fd1cba0e1f4d955835cb1bedc633679a5e8812c21c"
+    },
+    "pr558-round4/map-capacity/Fixed.cs": {
+      "bytes": 2011,
+      "sha256": "735a9525b74ff905ff337bf183b648dba9a64521249517157359554159472bca"
+    },
+    "pr558-round4/map-capacity/Fixed/FastExpressionCompiler.cs": {
+      "bytes": 894695,
+      "sha256": "be3d04ab29d83ac80204257eb7dbb6268c593eee898a52a5ca9a793e4d02b412"
+    },
+    "pr558-round4/map-capacity/Fixed/ILReader.cs": {
+      "bytes": 37615,
+      "sha256": "ceb16ba300543d6104d81e8b9b5ae687aef20dbdc9536c640bb4c00da915995d"
+    },
+    "pr558-round4/map-capacity/Fixed/ImTools.cs": {
+      "bytes": 78854,
+      "sha256": "e1a4e6b4f24d2f8dba9f8a7dd22e99be5af33027b5d379e3ff2c48c5bd1234f1"
+    },
+    "pr558-round4/map-capacity/Fixed/Library.csproj": {
+      "bytes": 236,
+      "sha256": "16603de74dfae61488d594267132ecce84e146177b84a91bb4433522c23e031a"
+    },
+    "pr558-round4/map-capacity/Fixed/TestTools.cs": {
+      "bytes": 54790,
+      "sha256": "c47c93ca62e6c5606c6d891e1ef1ebab529fb5fff2e8b81742eac5c65a570190"
+    },
+    "pr558-round4/map-capacity/Fixed/bin/Release/net10.0/MapCapacity.Fixed.deps.json": {
+      "bytes": 445,
+      "sha256": "c1f9475192d7ddf5e7803bb23f2b5cb80416c22d3472314636c20d830a26953d"
+    },
+    "pr558-round4/map-capacity/Fixed/bin/Release/net10.0/MapCapacity.Fixed.dll": {
+      "bytes": 291840,
+      "sha256": "edc32b649667561b9cb4333b0194e822befe89080c6b08f7149a7351b90d6fc6"
+    },
+    "pr558-round4/map-capacity/Fixed/bin/Release/net10.0/MapCapacity.Fixed.pdb": {
+      "bytes": 122320,
+      "sha256": "ef3bd8225ac96e676e1dbecca44f85ac2cd9f9861ed2dc80f9bb196260d9baa9"
+    },
+    "pr558-round4/map-capacity/Fixed/bin/Release/net472/MapCapacity.Fixed.dll": {
+      "bytes": 289792,
+      "sha256": "a5a7e86b5e160a8336b4fadb522b9feb0fcb397a5e5905eee537d0f5a48a9ad7"
+    },
+    "pr558-round4/map-capacity/Fixed/bin/Release/net472/MapCapacity.Fixed.pdb": {
+      "bytes": 111788,
+      "sha256": "763967e49e289643087a6d5eb5e4300c1a436826375e4eaedfd6edd77d10a9a3"
+    },
+    "pr558-round4/map-capacity/Fixed/bin/Release/net8.0/MapCapacity.Fixed.deps.json": {
+      "bytes": 443,
+      "sha256": "e697ff361f0a86940052d55f0d61f161d805fa9644610a0df5d955765453e883"
+    },
+    "pr558-round4/map-capacity/Fixed/bin/Release/net8.0/MapCapacity.Fixed.dll": {
+      "bytes": 291328,
+      "sha256": "f963f06ee3a72eb521ad9707b93e774f490b190215a85fa80deb46cc83b42b94"
+    },
+    "pr558-round4/map-capacity/Fixed/bin/Release/net8.0/MapCapacity.Fixed.pdb": {
+      "bytes": 122244,
+      "sha256": "dc58d8c0ea3c9cffc111885d816818dee5810fe52a0fb37716533ad29f77c5be"
+    },
+    "pr558-round4/map-capacity/Fixture.csproj": {
+      "bytes": 989,
+      "sha256": "acd5acfc5da7c91f52c0cb32ef86f5a9ab4791f8c59414e192abd7229676c3e0"
+    },
+    "pr558-round4/map-capacity/Program.cs": {
+      "bytes": 523,
+      "sha256": "db2b922a75d01c3cb3316089b91d4edd9459bf29ca050edd59f84d85d96cf5cf"
+    },
+    "pr558-round4/map-capacity/README.txt": {
+      "bytes": 992,
+      "sha256": "e74ce4e81caeff529d9a614287fd324329175366f98ec003ade0fe6754443f51"
+    },
+    "pr558-round4/map-capacity/Run.py": {
+      "bytes": 687,
+      "sha256": "e863b95fcd2d43749e7f4295c8a4d0f86b300050d28e9716731bfcb2490ed7ed"
+    },
+    "pr558-round4/map-capacity/Runner-before-culture.cs.txt": {
+      "bytes": 1954,
+      "sha256": "6998a7c925dcdd268b24577cf9ecd9a45667e675cb86a37ede880057312d6af7"
+    },
+    "pr558-round4/map-capacity/Runner.cs": {
+      "bytes": 2190,
+      "sha256": "9139733eb8d642b8d3cc915f42b39130d5ee7065756a0bcaf5cf3813aa75e75a"
+    },
+    "pr558-round4/map-capacity/Runner.csproj": {
+      "bytes": 804,
+      "sha256": "b641612e3d22ff298788c748f3ce8374662456e1cbaf0b553be65689a15f762c"
+    },
+    "pr558-round4/map-capacity/analysis.json": {
+      "bytes": 356216,
+      "sha256": "82126bd714d62d3a8b7c4de948ebd7c9fd0da736a460263a94de6384ebe6a792"
+    },
+    "pr558-round4/map-capacity/analyze.py": {
+      "bytes": 2679,
+      "sha256": "2f5675fd793d01339b9777b77dc335c93a59d4970b388200b66ea697c55c44d8"
+    },
+    "pr558-round4/map-capacity/artifact-hashes.json": {
+      "bytes": 3755,
+      "sha256": "16f32febd88546f112895a6522a204212e34527f8b37ee02c1dc2b4d9e91809f"
+    },
+    "pr558-round4/map-capacity/bin/Release/net10.0/FastExpressionCompiler.LightExpression.dll": {
+      "bytes": 442368,
+      "sha256": "321d2f299ab9e77401d0b2d3728d7077be6abc40258101badac0aab65dedbd24"
+    },
+    "pr558-round4/map-capacity/bin/Release/net10.0/FastExpressionCompiler.LightExpression.dll.config": {
+      "bytes": 28302,
+      "sha256": "50dcfb121cbcd12f8311e0086467856efc5a5624482d3bed1745d101130a3cb9"
+    },
+    "pr558-round4/map-capacity/bin/Release/net10.0/FastExpressionCompiler.LightExpression.pdb": {
+      "bytes": 191280,
+      "sha256": "bf8ea93b68b401c9a063dbb8aa65730751d186c69ebd68d6da1994abd52e0248"
+    },
+    "pr558-round4/map-capacity/bin/Release/net10.0/FastExpressionCompiler.LightExpression.xml": {
+      "bytes": 175426,
+      "sha256": "efb67e335f3cf26c91be2df5c97abc04fd6fa30814bc31fc8f15bb1e8a772520"
+    },
+    "pr558-round4/map-capacity/bin/Release/net10.0/Fixture.deps.json": {
+      "bytes": 906,
+      "sha256": "3edb00c8e7ce8eb8d8e557c17e0872c771693bcfa7f33b18fd4b1627040260ae"
+    },
+    "pr558-round4/map-capacity/bin/Release/net10.0/Fixture.dll": {
+      "bytes": 10752,
+      "sha256": "90e9077f0c3334ec3fdcbafdc731054a4e5cd27476085ba848b48b32b4615585"
+    },
+    "pr558-round4/map-capacity/bin/Release/net10.0/Fixture.exe": {
+      "bytes": 139776,
+      "sha256": "82697f1ff4939600cb01cb00bdf3276ae915208ccbf6397c7c8b4512c91c5a94"
+    },
+    "pr558-round4/map-capacity/bin/Release/net10.0/Fixture.pdb": {
+      "bytes": 12332,
+      "sha256": "b495aa66211e1ec7a09254eb7b56cb93062012f42f6bf74f2269cb6fa042aac8"
+    },
+    "pr558-round4/map-capacity/bin/Release/net10.0/Fixture.runtimeconfig.json": {
+      "bytes": 342,
+      "sha256": "c230a317a54dd960bcbeb5f347f52e18dc665a26f7efda2159fced9a5ac7e097"
+    },
+    "pr558-round4/map-capacity/bin/Release/net10.0/MapCapacity.Before.dll": {
+      "bytes": 291840,
+      "sha256": "78aa58e69908f7fc95c6eb982d7fa44a54f237b46a1c1e6988e355693c96e5fc"
+    },
+    "pr558-round4/map-capacity/bin/Release/net10.0/MapCapacity.Before.pdb": {
+      "bytes": 122288,
+      "sha256": "2f66ff8a9ab3fc74e8c929f7aa7c33382a6236badc67f8e4fbb137aebb8d7c78"
+    },
+    "pr558-round4/map-capacity/bin/Release/net10.0/MapCapacity.Fixed.dll": {
+      "bytes": 291840,
+      "sha256": "edc32b649667561b9cb4333b0194e822befe89080c6b08f7149a7351b90d6fc6"
+    },
+    "pr558-round4/map-capacity/bin/Release/net10.0/MapCapacity.Fixed.pdb": {
+      "bytes": 122320,
+      "sha256": "ef3bd8225ac96e676e1dbecca44f85ac2cd9f9861ed2dc80f9bb196260d9baa9"
+    },
+    "pr558-round4/map-capacity/bin/Release/net10.0/Runner.deps.json": {
+      "bytes": 1208,
+      "sha256": "8262ab9942d7ef0f803aa43269a38256324bd953abb4c2f743bdbdaac0fd5b84"
+    },
+    "pr558-round4/map-capacity/bin/Release/net10.0/Runner.dll": {
+      "bytes": 11264,
+      "sha256": "9a39a1b1e9ba4810341a5a11286eff2d1be6b30b3d48faa161b4f7d1ff937198"
+    },
+    "pr558-round4/map-capacity/bin/Release/net10.0/Runner.exe": {
+      "bytes": 139776,
+      "sha256": "69fc4b388836d91744f9967a82c65c1a49fb3570f8968d48f3b85e8eb2d1a182"
+    },
+    "pr558-round4/map-capacity/bin/Release/net10.0/Runner.pdb": {
+      "bytes": 13540,
+      "sha256": "8f8311265f52c4236bc29878153afa8fa7f74dcb84c4bda9539f127a61d0e056"
+    },
+    "pr558-round4/map-capacity/bin/Release/net10.0/Runner.runtimeconfig.json": {
+      "bytes": 342,
+      "sha256": "c230a317a54dd960bcbeb5f347f52e18dc665a26f7efda2159fced9a5ac7e097"
+    },
+    "pr558-round4/map-capacity/bin/Release/net472/FastExpressionCompiler.LightExpression.dll": {
+      "bytes": 439296,
+      "sha256": "480d34f386651b74ddd75de9a879df5116c1e27acca111a6872d4dafcd4031ac"
+    },
+    "pr558-round4/map-capacity/bin/Release/net472/FastExpressionCompiler.LightExpression.pdb": {
+      "bytes": 183200,
+      "sha256": "d4f8c8d675752f00ebdd42f99082af362681e0972cc6123547898426b289a972"
+    },
+    "pr558-round4/map-capacity/bin/Release/net472/FastExpressionCompiler.LightExpression.xml": {
+      "bytes": 172586,
+      "sha256": "a493b0e8e1c1241ddf359fa7e45743f8eb122571348700343d30277d3302abc8"
+    },
+    "pr558-round4/map-capacity/bin/Release/net472/Fixture.exe": {
+      "bytes": 10240,
+      "sha256": "a602e1d657d420773c39debb5191502b9991dccf07e3a41a0d46959f90070d61"
+    },
+    "pr558-round4/map-capacity/bin/Release/net472/Fixture.exe.config": {
+      "bytes": 176,
+      "sha256": "ad8267122c40d37dcd9d99e1412d763187a1825732f378db8867f3ecf675cf70"
+    },
+    "pr558-round4/map-capacity/bin/Release/net472/Fixture.pdb": {
+      "bytes": 3448,
+      "sha256": "fa20a660c180ae9516c1c2a5d888c3be0de241c7f63538b3221b9bb261452f4d"
+    },
+    "pr558-round4/map-capacity/bin/Release/net472/MapCapacity.Before.dll": {
+      "bytes": 289792,
+      "sha256": "860a8b12a411f224bde9c64deeac080219772932741a9ae866c16a4ec999f3b4"
+    },
+    "pr558-round4/map-capacity/bin/Release/net472/MapCapacity.Before.pdb": {
+      "bytes": 111756,
+      "sha256": "9466d38b319569232d2e1bc7d459604d6f7d8abb1bcdef46256c0e7f802c7300"
+    },
+    "pr558-round4/map-capacity/bin/Release/net472/MapCapacity.Fixed.dll": {
+      "bytes": 289792,
+      "sha256": "a5a7e86b5e160a8336b4fadb522b9feb0fcb397a5e5905eee537d0f5a48a9ad7"
+    },
+    "pr558-round4/map-capacity/bin/Release/net472/MapCapacity.Fixed.pdb": {
+      "bytes": 111788,
+      "sha256": "763967e49e289643087a6d5eb5e4300c1a436826375e4eaedfd6edd77d10a9a3"
+    },
+    "pr558-round4/map-capacity/bin/Release/net472/Runner.exe": {
+      "bytes": 10752,
+      "sha256": "8159a31724b5dee3da8e0ccaca2ec6498472c029a4872affd2e7d5b3be46a569"
+    },
+    "pr558-round4/map-capacity/bin/Release/net472/Runner.exe.config": {
+      "bytes": 176,
+      "sha256": "ad8267122c40d37dcd9d99e1412d763187a1825732f378db8867f3ecf675cf70"
+    },
+    "pr558-round4/map-capacity/bin/Release/net472/Runner.pdb": {
+      "bytes": 4640,
+      "sha256": "7151763ab445893d54811e277955d41c36c6d8ca5a1f61f99934fe8cd60d187a"
+    },
+    "pr558-round4/map-capacity/bin/Release/net8.0/FastExpressionCompiler.LightExpression.dll": {
+      "bytes": 441344,
+      "sha256": "da6c832b5f8e74b6b868efccdf9ec1b1fc8e04c5fba138a34f94e8e2766509f8"
+    },
+    "pr558-round4/map-capacity/bin/Release/net8.0/FastExpressionCompiler.LightExpression.dll.config": {
+      "bytes": 28133,
+      "sha256": "a38c02fac714354d256edbc894697ae0f6d8c27ffb8ed054dbbada8200b4f834"
+    },
+    "pr558-round4/map-capacity/bin/Release/net8.0/FastExpressionCompiler.LightExpression.pdb": {
+      "bytes": 191260,
+      "sha256": "a02a64e38cd60c5879bfb5580714e97d796ee482449af8974cacfcc1131ce63d"
+    },
+    "pr558-round4/map-capacity/bin/Release/net8.0/FastExpressionCompiler.LightExpression.xml": {
+      "bytes": 173660,
+      "sha256": "eb39aad123030ef8de9c583059862848848d79c0433c5a0c547d70db6e61a152"
+    },
+    "pr558-round4/map-capacity/bin/Release/net8.0/Fixture.deps.json": {
+      "bytes": 904,
+      "sha256": "fd1921132398c08e82df0095985d48a197c923ada68c147ac691897968f8cd6f"
+    },
+    "pr558-round4/map-capacity/bin/Release/net8.0/Fixture.dll": {
+      "bytes": 10752,
+      "sha256": "010f657f0ba2f91365643c4dd4b2413d8ddf2f40ec85aea37e0f54591e71a6b8"
+    },
+    "pr558-round4/map-capacity/bin/Release/net8.0/Fixture.exe": {
+      "bytes": 132608,
+      "sha256": "d9019477b14dfc80591ff1e456a5c9ac9f89fe7435804bf4c8ca4fc7f9da231f"
+    },
+    "pr558-round4/map-capacity/bin/Release/net8.0/Fixture.pdb": {
+      "bytes": 12068,
+      "sha256": "ca0f89c942b35d31a75fdfe632d75bbb9a209dbe56ec9e0b9e1ec73707e747a6"
+    },
+    "pr558-round4/map-capacity/bin/Release/net8.0/Fixture.runtimeconfig.json": {
+      "bytes": 340,
+      "sha256": "28329cf08f6505e73806b17558b187c02f0c1c516fe47ebfb7a013d082aaa306"
+    },
+    "pr558-round4/map-capacity/bin/Release/net8.0/MapCapacity.Before.dll": {
+      "bytes": 291328,
+      "sha256": "077508abcc4206c7bb5df6d7bfda5009802f0f0722036db2823df4a30ea74fa8"
+    },
+    "pr558-round4/map-capacity/bin/Release/net8.0/MapCapacity.Before.pdb": {
+      "bytes": 122208,
+      "sha256": "d4edb3bae3c636145112d8fd1cba0e1f4d955835cb1bedc633679a5e8812c21c"
+    },
+    "pr558-round4/map-capacity/bin/Release/net8.0/MapCapacity.Fixed.dll": {
+      "bytes": 291328,
+      "sha256": "f963f06ee3a72eb521ad9707b93e774f490b190215a85fa80deb46cc83b42b94"
+    },
+    "pr558-round4/map-capacity/bin/Release/net8.0/MapCapacity.Fixed.pdb": {
+      "bytes": 122244,
+      "sha256": "dc58d8c0ea3c9cffc111885d816818dee5810fe52a0fb37716533ad29f77c5be"
+    },
+    "pr558-round4/map-capacity/bin/Release/net8.0/Runner.deps.json": {
+      "bytes": 1206,
+      "sha256": "d7a836f1b4a191d7502e200f6778ead74faa72c08ae2631548d3e69f8a96066c"
+    },
+    "pr558-round4/map-capacity/bin/Release/net8.0/Runner.dll": {
+      "bytes": 10240,
+      "sha256": "7209598f27fb51c9afc4bd803e50a18f2186814d0d99498aab0f3fb89d87c172"
+    },
+    "pr558-round4/map-capacity/bin/Release/net8.0/Runner.exe": {
+      "bytes": 132608,
+      "sha256": "a4df27975428e2a4c619fca6cdf4bd77701e43f26da12a415d259cb0a4dfebfc"
+    },
+    "pr558-round4/map-capacity/bin/Release/net8.0/Runner.pdb": {
+      "bytes": 13260,
+      "sha256": "6f804606e98f7acfc5621bd23f8fe77e650a38468884d8d96b46b53b9a38fc57"
+    },
+    "pr558-round4/map-capacity/bin/Release/net8.0/Runner.runtimeconfig.json": {
+      "bytes": 340,
+      "sha256": "28329cf08f6505e73806b17558b187c02f0c1c516fe47ebfb7a013d082aaa306"
+    },
+    "pr558-round4/map-capacity/build-before.log": {
+      "bytes": 117,
+      "sha256": "8cd3920d47d89e19a8f4acb4c28e2773ceb1e7b153087c2d4560b1eb1570b6a1"
+    },
+    "pr558-round4/map-capacity/build-false-net10.0.log": {
+      "bytes": 117,
+      "sha256": "6c9fa2c9cd3097aeeb37f5de34eb98aff7e7545c0e4d584d429eae07576891bb"
+    },
+    "pr558-round4/map-capacity/build-false-net472.log": {
+      "bytes": 117,
+      "sha256": "df5e71a950c8abe11996da16c0ce90b3f90244e345805ae059d5af2b54b2f9a3"
+    },
+    "pr558-round4/map-capacity/build-false-net8.0.log": {
+      "bytes": 117,
+      "sha256": "0d02e76a9918652685ebde22c04808980f597d288536742897d8d5e2ce4195d8"
+    },
+    "pr558-round4/map-capacity/build-fixed.log": {
+      "bytes": 117,
+      "sha256": "ee355f46d7383b859030e4f1b4720f3a931c456ee3846ce265d3b686f5d15eea"
+    },
+    "pr558-round4/map-capacity/build-runner-culture.log": {
+      "bytes": 117,
+      "sha256": "12b35bf8138480c9dca660bba890d210a5be1b50b0d9fa61f0882d1e38eabaa3"
+    },
+    "pr558-round4/map-capacity/build-runner.log": {
+      "bytes": 117,
+      "sha256": "59b5054163681210e872ca7dbdc28bfae9b24661293c636597c54f35f4102496"
+    },
+    "pr558-round4/map-capacity/build-true-net10.0.log": {
+      "bytes": 117,
+      "sha256": "9757750051147e30e11399c36d20d05699ae2b0ecda61a18ab54828a57d8123d"
+    },
+    "pr558-round4/map-capacity/build-true-net472.log": {
+      "bytes": 117,
+      "sha256": "dffb24d5fbcdb28c1b283d9334080d8db96e649f8a579fabb90ef7b3ac81df48"
+    },
+    "pr558-round4/map-capacity/build-true-net8.0.log": {
+      "bytes": 117,
+      "sha256": "64a9db63df1e71740d114887123ccd84fdb0c79ae5bad63c387f2583e62d632f"
+    },
+    "pr558-round4/map-capacity/check-false-net10.0.log": {
+      "bytes": 18,
+      "sha256": "165858d450fb100ae320a3e7550dab02bc630f66faf274d96271244d98a94de4"
+    },
+    "pr558-round4/map-capacity/check-false-net472.log": {
+      "bytes": 18,
+      "sha256": "165858d450fb100ae320a3e7550dab02bc630f66faf274d96271244d98a94de4"
+    },
+    "pr558-round4/map-capacity/check-false-net8.0.log": {
+      "bytes": 18,
+      "sha256": "165858d450fb100ae320a3e7550dab02bc630f66faf274d96271244d98a94de4"
+    },
+    "pr558-round4/map-capacity/check-true-net10.0.log": {
+      "bytes": 18,
+      "sha256": "165858d450fb100ae320a3e7550dab02bc630f66faf274d96271244d98a94de4"
+    },
+    "pr558-round4/map-capacity/check-true-net472.log": {
+      "bytes": 18,
+      "sha256": "165858d450fb100ae320a3e7550dab02bc630f66faf274d96271244d98a94de4"
+    },
+    "pr558-round4/map-capacity/check-true-net8.0.log": {
+      "bytes": 18,
+      "sha256": "165858d450fb100ae320a3e7550dab02bc630f66faf274d96271244d98a94de4"
+    },
+    "pr558-round4/map-capacity/freeze-harness.py": {
+      "bytes": 918,
+      "sha256": "af2777b414a75d295842d759b9f0e0694c486e5ed566482cabc3b4dcd822b85d"
+    },
+    "pr558-round4/map-capacity/harness-hashes-before-culture.json": {
+      "bytes": 245,
+      "sha256": "935a27c92c90a905ead990cf27345045d656a076ae642925d1b2e5d1706b7f95"
+    },
+    "pr558-round4/map-capacity/harness-hashes.json": {
+      "bytes": 944,
+      "sha256": "ef004bb528ce2efe231a1c19bc87925c84fe4635cd1333a7b9dacf0adc2b4a06"
+    },
+    "pr558-round4/map-capacity/manifest.json": {
+      "bytes": 857,
+      "sha256": "cd55e687a16e25d7e26a37c5047ad6e545e59346eaf52d05ab91560f7d3d6e41"
+    },
+    "pr558-round4/map-capacity/measure.py": {
+      "bytes": 694,
+      "sha256": "67acab594d50dfe8c9810b15f2e3ca6fc69f9cca08c655005ea8c9fe0eb90ad4"
+    },
+    "pr558-round4/map-capacity/net10.0.csv": {
+      "bytes": 23430,
+      "sha256": "33fcc3a4ecb9470066b4469f52a8e628fdb443af9ad384825cd938f12f131f76"
+    },
+    "pr558-round4/map-capacity/net10.0.stderr.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "pr558-round4/map-capacity/net472.csv": {
+      "bytes": 23025,
+      "sha256": "46a38d4234923184f57bd4815b3d8bd10065a882730d734bae64db63cc621ed0"
+    },
+    "pr558-round4/map-capacity/net472.stderr.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "pr558-round4/map-capacity/net8.0.csv": {
+      "bytes": 23417,
+      "sha256": "6c33d808dec2fb597730b354d48e1606e4af040ae246a61a26ae6af90b95afdc"
+    },
+    "pr558-round4/map-capacity/net8.0.stderr.log": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "pr558-round4/map-capacity/prepare.py": {
+      "bytes": 3153,
+      "sha256": "990d587f5b41004caaac885655fcb01fbdc006ae09a87a877144ea2237ef88da"
+    },
+    "pr558-round4/map-capacity/proof-culture.json": {
+      "bytes": 523,
+      "sha256": "d960f1170476fd0e32b0d94d75d2e8a881585b32be10b7ba826667fe939d32fa"
+    },
+    "pr558-round4/map-capacity/proof.json": {
+      "bytes": 523,
+      "sha256": "aebb20bda251e2719ec88ee958fd0b16609c5ba4d347a259209e852cfba2042d"
+    },
+    "pr558-round4/publication/GenerateReport.py": {
+      "bytes": 33793,
+      "sha256": "95d107ecfd559477a5f4af597b4297c323993aa208af4d73128ff8bca0eb5af4"
+    },
+    "pr558-round4/publication/Package.py": {
+      "bytes": 8038,
+      "sha256": "4a8b631f9d346eefbe3c5aa952517beefecf8a01c24ab4e0d7fb0ea8a5d82490"
+    },
+    "pr558-round4/publication/README.txt": {
+      "bytes": 2583,
+      "sha256": "6491550dd0b48eff5f9b8d152ae814176fcf7c91f6dd2a927b19e8df7ad8308c"
+    },
+    "pr558-round4/publication/REPORT.txt": {
+      "bytes": 6503,
+      "sha256": "6c732c1649241113b54ec192d54cdc0dcd289b42f035d803ae42c0f44a3f542d"
+    },
+    "pr558-round4/publication/VALIDATION-REPRODUCTION.txt": {
+      "bytes": 1707,
+      "sha256": "bfa2e93c4896474aa4dda6a5dae1a94299d50ec730840ff34f72dc5b8857ba54"
+    },
+    "pr558-round4/publication/final-state.json": {
+      "bytes": 4265,
+      "sha256": "9d4a134f2cdd83497c6fb1c265d4de36c12b0523cf547199c86b8d60dcac09ef"
+    },
+    "pr558-round4/publication/hash-inventory.json": {
+      "bytes": 572127,
+      "sha256": "a75f6299dcb71d845cba6f614e06138eebf69ac80680fb71ce5af0353c84708e"
+    },
+    "pr558-round4/publication/inventory-summary.log": {
+      "bytes": 1573,
+      "sha256": "535a8cf1c0237b4eab6e13b36f17cb255285d7d0a3b1c6758180227b24e94794"
+    },
+    "pr558-round4/publication/package-inventory.json": {
+      "bytes": 3587,
+      "sha256": "80e458624c6549ed3805b8642ba0cc2561af679febf32cff8456f84d337f8ba3"
+    },
+    "pr558-round4/publication/pr558-before-body.txt": {
+      "bytes": 18099,
+      "sha256": "f1fe5d161ef8a5b33d9ca8ba8c39ee97c1cb9c0effa3ba531a2458168beea4e0"
+    },
+    "pr558-round4/publication/pr558-before.json": {
+      "bytes": 18467,
+      "sha256": "fd708e3a12c5c77b93753ac2b095e3f47cffdc6ade91e6448e0c17be3f965eca"
+    },
+    "pr558-round4/publication/pr558-description-draft.txt": {
+      "bytes": 24637,
+      "sha256": "0941981bde2e3e0fb8617fe4a9f2e41cb09d1e65e822947a1b068c8c186d0223"
+    },
+    "pr558-round4/publication/pr558-measurement-comment-draft.txt": {
+      "bytes": 6188,
+      "sha256": "33f31e71147a8390e19f6a7ad0b8363c9512b91f234335bea43d6e4f11503b11"
+    },
+    "pr558-round4/publication/report-data.json": {
+      "bytes": 4820,
+      "sha256": "f6d2e64403644476282f77c2236905ae0f45846e7316d353dbcf39de5259cd19"
+    },
+    "pr558-round4/publication/report.html": {
+      "bytes": 755166,
+      "sha256": "6b135b317407aac32edfc55d81bbea8e31b5132b4303d7fada84169155c533c6"
+    },
+    "pr558-round4/try-result-value/Map17Probe.cs": {
+      "bytes": 1365,
+      "sha256": "24fc4fdb2458a08e7bcd02c0d69b289311a014c1068bc4a01f4eff76165e8584"
+    },
+    "pr558-round4/try-result-value/Map17Probe.csproj": {
+      "bytes": 870,
+      "sha256": "345580af02a6c49a10caadd8090ea01afe0c10ec4fd72b7cfd35f7dda9672283"
+    },
+    "pr558-round4/try-result-value/bin-map17/net10.0/Map17Probe.deps.json": {
+      "bytes": 1292,
+      "sha256": "2f6e529334848497a6744b850821f58ff1cbf723b6ba589eddf28e1590e6b988"
+    },
+    "pr558-round4/try-result-value/bin-map17/net10.0/Map17Probe.dll": {
+      "bytes": 5632,
+      "sha256": "95c2f3c103758dd950afe113b2c3729b4fea219ab68047029cd8577649f41dd3"
+    },
+    "pr558-round4/try-result-value/bin-map17/net10.0/Map17Probe.exe": {
+      "bytes": 139776,
+      "sha256": "3b581bfeb2715d083bd96d72753a5460902aa7acb77ed232703d8a6c59c7bd2b"
+    },
+    "pr558-round4/try-result-value/bin-map17/net10.0/Map17Probe.pdb": {
+      "bytes": 11072,
+      "sha256": "38c8cc090bb114e91c621c429c0e3922fe93faa3f9d211722710968e3488ae13"
+    },
+    "pr558-round4/try-result-value/bin-map17/net10.0/Map17Probe.runtimeconfig.json": {
+      "bytes": 342,
+      "sha256": "c230a317a54dd960bcbeb5f347f52e18dc665a26f7efda2159fced9a5ac7e097"
+    },
+    "pr558-round4/try-result-value/bin-map17/net10.0/RuntimeParity.before.light.dll": {
+      "bytes": 359424,
+      "sha256": "8db7e020969c075c554897ade0b1d47428b4ed939b764c036dbbac65691c6c8f"
+    },
+    "pr558-round4/try-result-value/bin-map17/net10.0/RuntimeParity.before.light.pdb": {
+      "bytes": 159380,
+      "sha256": "0e735d0712c988839cf3c5e87c0ab2d199786f1b96dd75e8edb130262713440f"
+    },
+    "pr558-round4/try-result-value/bin-map17/net10.0/RuntimeParity.current.light.dll": {
+      "bytes": 410112,
+      "sha256": "78cceaede89d236730e35b4ccb1417faf4a19a5ec182ac4dac3ad5a7d819bb92"
+    },
+    "pr558-round4/try-result-value/bin-map17/net10.0/RuntimeParity.current.light.pdb": {
+      "bytes": 183740,
+      "sha256": "99d2714ce47dcb7b58bfc20a0ba852f3f9a37616744fe8e8aee52b24865132ca"
+    },
+    "pr558-round4/try-result-value/map17-build.log": {
+      "bytes": 1537,
+      "sha256": "23a848ffed0ef1a1026a14290b345320d7b687e8e7688633479f52d063f7e87e"
+    },
+    "pr558-round4/try-result-value/map17-classification.json": {
+      "bytes": 1074,
+      "sha256": "915d6416ff4b5fb4101a097ea4596e8a2670a4d7ff5cc5f153beeffc06e60e56"
+    },
+    "pr558-round4/try-result-value/map17-repro.json": {
+      "bytes": 1617,
+      "sha256": "0f824aec8186e815a0a361ad9f6609ec1407bb897af30a569f9b5196f75719cf"
+    },
+    "pr558-round4/try-result-value/map17-repro.log": {
+      "bytes": 652,
+      "sha256": "82598008f1a474c0b8db20347ef5f067193d8da2b7aff60bbe01aad31f671ddb"
+    }
+  },
+  "excludedDirectories": [
+    ".git",
+    ".vs",
+    "__pycache__",
+    "artifacts",
+    "node_modules",
+    "obj"
+  ],
+  "excludedSuffixes": [
+    ".dmp",
+    ".etlx",
+    ".zip"
+  ],
+  "scope": "Archives preserve measured snapshots, raw rows, binaries and relative layouts. Frozen42f evidence is not relabeled as final combined code performance."
+}

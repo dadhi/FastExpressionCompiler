@@ -1,0 +1,102 @@
+{
+  "previousHead": "ae4d9a551a1f0cb1e605081ede8991c28847c84f",
+  "upstreamMaster": "5473b427f834c8e267610cda7bb2f70bab3370ed",
+  "mergeCommit": "700053a1",
+  "validatedCodeHead": "884ed766c06c2b81b0931294e71dbab7f4c8e1cf",
+  "codes": {
+    "FastExpressionCompiler": 0,
+    "FastExpressionCompiler.LightExpression": 0,
+    "native-net10.0": 0,
+    "native-net8.0": 0,
+    "framework-build": 0,
+    "framework-run": 0,
+    "imported-build": 0,
+    "imported-full": 0
+  },
+  "imported": {
+    "passed": 35064,
+    "failed": 0,
+    "executed": 35064,
+    "error": 0,
+    "timeout": 0,
+    "aborted": 0
+  },
+  "batches": 21,
+  "executedCrashes": 0,
+  "exclusions": 69,
+  "newExclusions": 0,
+  "snapshot": {
+    "commit": "884ed766c06c2b81b0931294e71dbab7f4c8e1cf",
+    "compilerSha256": "e5248bc1a67575628997e6af337c43e16eafb39e4a3bb800f3f58e829b18c793",
+    "assemblySha256": "de32bf7a4b3bd472fb5c92fbb3d60d9242d13008e0d3d6edca204bfccf60339e"
+  },
+  "targeted": [
+    {
+      "flavor": "Std",
+      "tfm": "net8.0",
+      "arch": "arm64",
+      "exit": 0,
+      "stdout": "Runtime=8.0.28;64Bit=True\nNative regression fixture: total=11;failed=0\n",
+      "stderr": ""
+    },
+    {
+      "flavor": "Std",
+      "tfm": "net8.0",
+      "arch": "x64",
+      "exit": 0,
+      "stdout": "Runtime=8.0.31;64Bit=True\nNative regression fixture: total=11;failed=0\n",
+      "stderr": ""
+    },
+    {
+      "flavor": "Std",
+      "tfm": "net10.0",
+      "arch": "arm64",
+      "exit": 0,
+      "stdout": "Runtime=10.0.9;64Bit=True\nNative regression fixture: total=11;failed=0\n",
+      "stderr": ""
+    },
+    {
+      "flavor": "Std",
+      "tfm": "net10.0",
+      "arch": "x64",
+      "exit": 0,
+      "stdout": "Runtime=10.0.9;64Bit=True\nNative regression fixture: total=11;failed=0\n",
+      "stderr": ""
+    },
+    {
+      "flavor": "Light",
+      "tfm": "net8.0",
+      "arch": "arm64",
+      "exit": 0,
+      "stdout": "Runtime=8.0.28;64Bit=True\nNative regression fixture: total=12;failed=0\n",
+      "stderr": ""
+    },
+    {
+      "flavor": "Light",
+      "tfm": "net8.0",
+      "arch": "x64",
+      "exit": 0,
+      "stdout": "Runtime=8.0.31;64Bit=True\nNative regression fixture: total=12;failed=0\n",
+      "stderr": ""
+    },
+    {
+      "flavor": "Light",
+      "tfm": "net10.0",
+      "arch": "arm64",
+      "exit": 0,
+      "stdout": "Runtime=10.0.9;64Bit=True\nNative regression fixture: total=12;failed=0\n",
+      "stderr": ""
+    },
+    {
+      "flavor": "Light",
+      "tfm": "net10.0",
+      "arch": "x64",
+      "exit": 0,
+      "stdout": "Runtime=10.0.9;64Bit=True\nNative regression fixture: total=12;failed=0\n",
+      "stderr": ""
+    }
+  ],
+  "measurementBaseline": "700053a1",
+  "measurementAfter": "884ed766c06c2b81b0931294e71dbab7f4c8e1cf",
+  "performanceScope": "Warmed prebuilt-tree compilation and warmed delegate execution; tree construction, cold/first-use, Framework, x64 timing and application workloads were not measured. Historical results remain source-specific."
+}

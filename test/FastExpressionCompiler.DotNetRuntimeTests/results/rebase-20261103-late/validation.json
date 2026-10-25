@@ -1,0 +1,55 @@
+{
+  "date": "2026-11-03",
+  "base": "750e1e8ea602a7e72a90072ee80b0c1376f5b72d",
+  "validatedCodeRevision": "47e512f698601b4785b6e8a9a01aa19501d1016a",
+  "previousPublishedHead": "901d1e0e2565997d549936b22320aa2cc03e75c0",
+  "commits": 114,
+  "mergeCommits": 0,
+  "native": {
+    "native-net10.0": {
+      "testX": 1175,
+      "legacy": 1756
+    },
+    "native-net8.0": {
+      "testX": 1175,
+      "legacy": 1755
+    },
+    "framework": {
+      "testX": 1135,
+      "legacy": 1639
+    }
+  },
+  "runtime": {
+    "counters": {
+      "total": "35147",
+      "executed": "35088",
+      "passed": "35088",
+      "failed": "0",
+      "error": "0",
+      "timeout": "0",
+      "aborted": "0",
+      "inconclusive": "0",
+      "passedButRunAborted": "0",
+      "notRunnable": "0",
+      "notExecuted": "0",
+      "disconnected": "0",
+      "warning": "0",
+      "completed": "0",
+      "inProgress": "0",
+      "pending": "0"
+    },
+    "skippedResults": 59
+  },
+  "logsSha256": {
+    "build.log": "fe59a308de2af8206eba82e347448ff4c3484703ab34f2ee3f2475c7e365f334",
+    "native-net10.0.log": "ac3018439398da65c029480d422b3e44af372094f1e04fb197b291797e968dbc",
+    "native-net8.0.log": "e07a95efa8eb60d28b11d2eec9cdd19f498d8e6d0df231ed41e3aa7058ab72ed",
+    "framework.log": "1077b56b0f3714e2ab9b7b1b3d5a7a6071bd78d6a642ebea34dec9ca0e5469e6",
+    "imported-build.log": "4adeaf6647f807012cb0b6f25144960fc70eb6a050ba27167b964abb1bfa5406",
+    "runtime.log": "89bb38408bd6dc710ca7c108606e6a26ddbe69d84cf717428e0f4c5c4c168870",
+    "runtime.trx": "fb1509f712477693a66c6357229592c178b7301cca9e02a5bdb8384c427eadea"
+  },
+  "newSkips": 0,
+  "performanceMeasured": false,
+  "notes": "Documentation-only amendment follows this validated revision. #559 and standalone PRs untouched. Removed duplicate #578 commit and tests; kept upstream reduction tests. Rebase integration changes belong to the affected commits."
+}

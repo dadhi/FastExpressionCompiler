@@ -1,0 +1,16 @@
+
+//## TestX runs on FEC tests (UnitTests and IssueTests) and FEC.LightExpression tests in ||
+FEC tests are passing in 79480 ms.
+Just LightExpression tests are passing in 80738 ms.
+LightExpression tests + Thread New, Start, Join: 81457 ms.
+--> waited for the LightExpression tests to finish after FEC tests complete for 1972 ms.
+
+//TestX: 1001 tests are passing in 81466 ms.
+
+//## .NET Framework 4.72: Running UnitTests and IssueTests in parallel...
+
+//UnitTests are passing in 4257 ms.
+
+//IssueTests are passing in 6733 ms.
+
+//ALL 1595 tests are passing in 6734 ms.

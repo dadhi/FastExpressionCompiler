@@ -1,0 +1,48 @@
+Further repair decisions and limits
+
+The direct emitter and object[] closure layout are preserved. Ordinary Light
+nodes are trusted as the user requested; explicit intrinsic callbacks retain
+their collection scopes. The rejected generic-provenance check added cold bytes.
+No new excluded tests, System fallback, hosting/security-policy changes, or
+deep-tree refactor is introduced. The two known deep-tree crash modes remain
+deferred under the existing exclusions.
+
+Keep this PR a draft: universal pre-PR performance parity is NOT established.
+Every measured construction/compilation/first-use/runtime/activation phase is
+included, with System controls. Time ratios on this shared VM have substantial
+variation, including identical-IL controls. Source equivalence does not erase
+observed timing residuals. Read remaining-costs.json and the full CSV tables.
+Only managed allocation counters are measured; no total native/JIT/retained
+memory claim is made. Compile-only EH timings can include eager JIT work, so
+compile+first execution is reported separately.
+
+Equal-operation follow-ups found no higher allocations in100 targeted
+current-versus-published phase comparisons (52 modern,48 Framework). Small
+fractional adaptive-count residuals did not reproduce at equal counts. Original
+observations are preserved in full; no subtraction or replacement is performed.
+Empty observer windows allocate0, so fractions are not called counter overhead.
+See allocation-confirmation.json and allocation-confirmation-framework.json.
+
+Individual Framework stages use exact isolated baselines described by their
+manifests. The combined matrix is measured on the source commit in manifest.json.
+Mutable Framework warm compilation was4376B pre-PR and4520B after the seven
+initial round2 repairs (+144B), while nested mutation invocation improved24B->0B
+and factory+one invocation208B->184B. Consult the final matrix for combined values.
+
+Rejected experiments retain their evidence: terminal split/forced inlining;
+unchecked scope indexing; Quote/Dynamic/RuntimeVariables outlining (held);
+Volatile.Read pool guard; terminal Constant/Parameter helper split; generic Light
+provenance checks; zero-argument typed signature arrays; wrapper ldloc/pop cleanup.
+The latter hit a systematically higher .NET10 cold capture8 allocation mode in
+the sample; its cause is unknown and cold parity was not claimed.
+The binary-region extension is also held: balanced warm compilation improved
+roughly12-15%, but Standard .NET10 cold scalar add remained5.75% slower in the
+last9-pair trial (prior variants7.3-8.0%). Traces did not substantiate accidental
+region-helper inlining as the cause. All8 correctness controls passed; neither
+the extension nor its NoInlining gate is in the accepted source.
+
+The deep mixed128 cold scope allocation excess of10328B is explained by seven
+LabelScopeFrame growth arrays plus the compact pool table. Removing it generally
+requires a capacity/layout tradeoff; no larger allocation in shallow cases is
+hidden to improve that one shape. Small EH examples use inline scope buffers,
+so their cold excess is not attributed to those overflow arrays.

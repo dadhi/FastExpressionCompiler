@@ -1,0 +1,8 @@
+{
+  "src/FastExpressionCompiler/FastExpressionCompiler.cs": "d88b946d64dd1c4097201a3da11b15e5dc82246207be829b8ddf9d60a7063d64",
+  "src/FastExpressionCompiler.LightExpression/Expression.cs": "908da8afc7736e9906abd6dbed331741262067fec40b1662a008995d1f3d7dcd",
+  "test/FastExpressionCompiler.UnitTests/DynamicQuotedReductionRegressionTests.cs": "b92cbef9240367ca7d528c3e3b71de90cf88a1462a9610ea9768fecb4b031f45",
+  "test/FastExpressionCompiler.TestsRunner/Program.cs": "5d90bb4235af730d0ad73ee52535e1929abc7305fd58be94a131d590e528ec74",
+  "test/FastExpressionCompiler.TestsRunner.Net472/Program.cs": "be3242247e5b18d18476d65898ea0d61b69882d734a397b571d3797e6ee7044f",
+  "test/FastExpressionCompiler.DotNetRuntimeTests/RuntimeTestCompatibility.cs": "53ea6f1d532c911fecd3ca897e30bcdede5c126930bbf28c815ea824ccd38a76"
+}

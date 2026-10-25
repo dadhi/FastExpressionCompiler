@@ -1,0 +1,173 @@
+36506817b7a2b947c46617750777ddc215715b72
+Skip empty jump validators on jump-free expression trees
+Guard the post-collection validators with their existing goto-list counts.
+ValidateLexicalJumps only traverses ScopedGotos and ValidateExceptionJumps only
+traverses ExceptionGotos; when both lists are empty neither has work or side
+effects. Preserve the existing scope-info cleanup and all validation for trees
+with jumps. This adds no prescan, cache, visitor or closure layout change.
+
+EventPipe JIT controls confirm the two unused validators are no longer compiled
+on the first ordinary addition. Nine alternating fresh-process controls for
+five shapes per runtime keep all managed allocation medians identical. Cold
+compile-plus-first ratios versus 6487c9b2 are 0.907-0.974 on .NET 8 and
+0.964-1.013 on .NET 10; these include host/process variability and are not a
+universal speedup claim. Warm compilation controls are mostly within a few
+percent with unchanged allocation medians. Runtime controls and their variability
+are retained alongside the cold samples, not treated as an emitter change.
+
+Full native Standard/Light suites pass: .NET 10 1712, .NET 8 1711, including
+lexical/exception jump rejection and valid control-flow regressions.
+
+3ca5ad44a42276d5aa5228a2d86c443c7c9d5136
+Reduce Framework capture constructor metadata allocations
+CLR 4 allocates 144 bytes for each closed generic constructor resolved with
+GetMethodFromHandle. Its ordinary empty constructor lookup allocates nothing,
+and value constructor lookup needs 96 bytes with the existing rented Type array.
+Use those APIs for Framework only, and avoid initializing unused open handles.
+Keep modern constructor handles and all closure representations unchanged.
+
+Allocation-only causal probe: per-type constructor lookups 288 -> 96 bytes.
+Separate-process warmed mutable-capture compilation: 5272 -> 5080 bytes (-192).
+Activation stays 184 bytes, nested invocation 0, factory/invoke 184. Readonly
+capture8/reference bytes stay unchanged. Forward/reverse fresh-process timing
+medians observe mutable compilation ratio 0.927; unchanged-path timing variation
+is retained and is not attributed to this metadata-only change.
+
+Validation: normal Standard and Light production builds pass every configured
+target with zero warnings/errors. CapturedValueRefRegressionTests passes 29
+Standard and 32 Light cases on net472, net8.0 and net10.0. Parsing/compilation,
+activation, nested runtime and factory/runtime measurements captured separately
+for Framework baseline/current/candidate and modern current/candidate controls.
+Scratch reproduction and raw data: work/pr558-repair/frame-capture-round2/.
+
+0197699d0caae42da6df07f18c059a2cd8ebe587
+Type Framework capture parameters in existing rented signatures
+For Framework nested lambdas with user parameters, declare the hidden argument
+as ArrayClosureWithNonPassedParams. Existing Curry<C,...> already supports this
+type, so capture accesses no longer need repeated closure casts. Record the
+private method's exact signature in a status bit; public manual emitter contexts
+keep their original cast behavior. Keep zero-user-argument signatures unchanged:
+a separate cached array caused a measured cold allocation regression and was
+rejected. No closure fields or runtime allocation layout changes.
+
+Add regression coverage for private reference captures under exception handling,
+zero-argument parent signature reuse, Action<T> currying and shared mutation,
+debug flags, ordinary parent signature rentals and concurrent compilation.
+
+Framework warmed and first-use allocation: Func<T> and EH Func<T> compile -120 B;
+Action<T> -64 B; constant-folded dead capture unchanged. Runtime activation,
+nested invocation and factory/invoke allocation unchanged. Modern control bytes
+unchanged. Parsing/runtime timings are captured independently; mixed compiler
+ratios and VM variability do not establish a CPU guarantee. No extra first-use
+signature array is allocated by this conservative version.
+
+Validation: normal Standard and Light production builds pass all configured
+targets without warnings/errors. CapturedValueRefRegressionTests: Standard30,
+Light33 on net472/net8/net10. The broader typed prototype also passed full
+Framework1003 TestX and1595 legacy tests before zero-argument paths were narrowed
+back to the existing implementation. Scratch source/raw measurements and the
+rejected no-argument cold tradeoff remain under work/pr558-repair/frame-capture-*.
+
+1b03d6f0e94914c440d880a581e77f2639006745
+Avoid the full collector for terminal binary roots
+Collect eligible root binary operands directly through the existing terminal
+collector. This avoids JIT-compiling the large scoped visitor for a simple root,
+without adding a prepass, changing closure storage, or bypassing jump checks on
+complex trees. Preserve left-to-right failures, constant identity and public
+cleanup. Trust ordinary Light nodes as requested; explicit intrinsic roots or
+operands retain their existing collection callbacks and scopes.
+
+Measured Standard add warm compile ratios: 0.961 (.NET 8), 0.927 (.NET 10).
+Nine fresh-process add compile+first medians: -21% / -34%, identical bytes.
+Framework add cold compile+first: 156.40 -> 118.90 ms; 27080 -> 27040 B.
+Trusted Light paired add warm compile ratios: 0.961 / 0.920, 872 B unchanged.
+All measured warmed allocation medians are unchanged, including invocation.
+Cold and fallback timing controls varied substantially with host load; retain
+all raw results rather than claim universal CPU parity or speedups. The rejected
+Light generic-type-provenance prototype added 160/168 B cold and is not included.
+
+Add public collector error-order and bound-constant identity regressions, plus
+Light intrinsic callback/scope regressions. Full native Standard/Light suites:
+1712 passing on .NET 10, 1711 on .NET 8. Separate Framework harness checks agree
+with System results. Evidence: workspace work/pr558-round2/trivial-binary*, to be
+published with the integrated round-2 report after final validation.
+
+23deab6fb04ab620602bac5750874f0b5499720e
+Use boxed Framework value cells in proven owned roots
+Enable the existing native boxed value-cell representation for nonnullable
+Framework captures only in the normal fully collecting root entry. Carry
+that root eligibility through nested contexts and require completed capture
+analysis. Any exception region anywhere in the root, quote, runtime variables,
+or unknown node retains the StrongBox representation throughout the root.
+Manual and collection-skipping APIs never establish owned-root eligibility,
+including their privately compiled children. Hosting/security policy and
+the existing object[] closure layout are unchanged.
+
+Add controls for sibling order, outer exception regions, flags/debug mode,
+shared identity, and manual default/UserProvided collection. Reuse existing
+struct, byref, enum, nullable, quote, runtime-variable and unknown-node tests.
+
+Framework measurements against 7a871c4d, separate one-compiler processes:
+- Mutable capture compile: 5080 -> 4760 B (-320 B). Pre-PR e4c232da is
+  4376 B, so the remaining compile allocation residual is explicitly +384 B.
+- Activation/invoke stay 184 B, nested invocation stays 0 B.
+- Fresh first compile+invoke: 40272 -> 37888 B (-2384 B).
+- Capture8/reference/protected capture compile and runtime bytes unchanged.
+- All 32 modern runtime/scenario/phase allocation controls unchanged.
+- Descriptive two-order warm medians: mutable compile 43.92 -> 41.92 us,
+  activation 31.80 -> 30.23 ns, nested invocation 6.064 -> 5.993 ns.
+  Three fresh cold medians: compile+first 246.84 -> 221.64 ms.
+  Unchanged controls show substantial host timing variation; these timing
+  observations do not establish universal CPU parity or causal speedups.
+
+Validation: normal Standard/Light production builds all configured targets,
+zero warnings/errors; focused Standard/Light fixture 32/35 on Framework,
+31/34 on net8 and net10, all passing; full Framework en-US runner passes
+1007 TestX and 1595 legacy tests. Initial German-culture run had only existing
+English-message assertion failures. Independent source review found no
+actionable correctness defect. Raw evidence: work/pr558-repair/frame-owned-boxed.
+
+4eac9c2a6b64050a42876fff81623b156cfb6cbf
+Avoid redundant Framework delegate casts in proven owned roots
+Restore FEC's original nested-delegate slot load only when the normal root
+has completed capture analysis and proves owned hosting throughout without
+Try, Quote, runtime variables or unknown nodes. Manual/UserProvided and
+anonymous exception-hosted methods retain the exact verifier cast. Hosting,
+closure layout and delegate/Curry construction are unchanged.
+
+Against 25955bb5, four-shape one-compiler Framework probes show -32 B compile
+for mutable, capture8 and reference captures, warm and cold; protected
+capture_try and all runtime allocations are unchanged. Mutable compile is
+4728 B versus pre-PR 4376 B, leaving +352 B explicitly unresolved.
+Two opposite process-order warm rounds and three fresh cold reps measure
+mutable compile 40.81 -> 36.21 us, activation 26.02 -> 24.88 ns,
+nested invocation 5.467 -> 5.483 ns, compile+first 185.55 -> 183.44 ms.
+Host timing variation in unchanged controls prevents universal CPU claims.
+
+Normal Standard/Light builds all targets: zero warnings/errors. Focused
+fixtures pass on Framework/net8/net10 (32/31/31 Standard, 35/34/34 Light).
+Full Framework en-US runner: 1007 TestX +1595 legacy passing. Independent
+source audit confirms the conservative owned-host guard. Evidence:
+work/pr558-repair/frame-owned-delegate/measurements.json and raw logs.
+
+db640cba760028d1c49ad5e4abf67f38fe683bbf
+Restore owned Framework capture slot loads without extra casts
+Omit the hidden closure cast only under the same completed ordinary owned-root
+proof as the nested delegate cast. Typed signatures keep their existing fast
+path; all anonymous/manual/UserProvided/EH/Quote/RV/unknown cases keep exact
+typing. No signature arrays, metadata caches, hosting or layout changes.
+
+Against 3320b13e, Framework warm/cold compilation saves 208 B for mutable,
+120 B for readonly reference and 264 B for capture8; protected capture_try
+and runtime allocations are unchanged. Mutable compile is now 4520 B versus
+pre-PR 4376 (+144 B); reference is 4256 versus 4264 (-8 B).
+Two opposite process-order warm rounds and three fresh cold repetitions:
+mutable compile 42.83 -> 38.82 us, nested invocation 5.730 -> 4.963 ns,
+compile+first 239.07 -> 204.11 ms. Activation 25.67 -> 28.55 ns despite its
+unchanged emitted code illustrates host noise; no universal CPU claim.
+
+Normal Standard/Light builds all targets pass with zero warnings/errors.
+Focused fixtures pass on Framework/net8/net10 (32/31/31 Standard,
+35/34/34 Light), including protected siblings, manual contexts and shared
+mutation. Combined final full suite is scheduled by the parent task.
+Evidence: work/pr558-repair/frame-owned-closure/measurements.json and raw logs.

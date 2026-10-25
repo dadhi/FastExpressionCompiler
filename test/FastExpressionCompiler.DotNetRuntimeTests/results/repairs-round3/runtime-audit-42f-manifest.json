@@ -1,0 +1,1294 @@
+{
+  "partition": "runtime-audit-42f",
+  "finalState": {
+    "status": "Final70f297cb validated; bounded combined and map measurements complete. Universal performance/allocation parity not established.",
+    "final_code_head": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "accepted_arithmetic_commit": "44ee17d7f3fd5d363b7088158cc97b2cc60f7da7",
+    "try_value_commit": "6d397bc6255ddf406f5586c405ddd04cff7d4cdd",
+    "final_validation": {
+      "codeHead": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+      "codes": {
+        "FastExpressionCompiler": 0,
+        "FastExpressionCompiler.LightExpression": 0,
+        "native-net10.0": 0,
+        "native-net8.0": 0,
+        "framework-build": 0,
+        "framework-run": 0,
+        "imported-build": 0,
+        "imported-full": 0
+      },
+      "imported": {
+        "batches": 21,
+        "crashes": 0,
+        "counters": {
+          "total": 35122,
+          "executed": 35064,
+          "passed": 35064,
+          "failed": 0,
+          "error": 0,
+          "timeout": 0,
+          "aborted": 0,
+          "notExecuted": 0
+        },
+        "originalDenominator": 35133,
+        "exclusions": 69,
+        "newExclusions": 0
+      },
+      "native": {
+        "net10": "All runner suites pass; legacy1712",
+        "net8": "All runner suites pass; legacy1711",
+        "framework": "TestX1037 plus legacy1595 pass"
+      },
+      "priorAttempt": {
+        "head": "6d397bc6",
+        "result": "Interrupted after managed stack proved preexisting SmallMap16 promotion hang; fixed3be541d3; no Trycontrolflow regression"
+      },
+      "snapshot": {
+        "commit": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+        "compilerSha256": "4239ac0a6f673fba71eead86d2eae40e7eec79f0a52241f2c9d8ac2669ada237",
+        "assemblySha256": "6ddb580a9826a3494ff3bdc863d3af73d58ba836d2a7754ecc9f7afd698521d1"
+      }
+    },
+    "notes": "Historical42f/isolated snapshots retain their exact sources. Old6d validation was interrupted by unchanged-prePR SmallMap capacity bug, not a Try-value regression;70f includes its fix and supported EH-host correction.",
+    "combined_expected": true,
+    "validation_path": "pr558-repair/validation-70f297cb",
+    "candidate_code_head": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "combined_snapshot_head": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "combined_measurements_state": "Complete:12474 raw rows/198 groups,0 errors;21 rotated samples, all short samples retained. Compile independently calibrated; FEC other phases use common counts, System independently calibrated.",
+    "map_capacity_commit": "3be541d3aeba0d58560b0a49d78206bb108edbfc",
+    "supported_host_commit": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "combined_path": "pr558-round4/combined-final-bounded",
+    "historical_combined_path": "pr558-round4/combined-final",
+    "map_capacity_path": "pr558-round4/map-capacity",
+    "supported_host_path": "pr558-round4/supported-eh-host",
+    "review_reply_paths": [
+      "pr558-round4/dadhi-host-reply.json",
+      "pr558-round4/dadhi-host-reply-published.json"
+    ],
+    "official_source_urls": [
+      "https://github.com/dotnet/runtime/blob/v10.0.9/src/libraries/System.Private.CoreLib/src/System/Reflection/Emit/DynamicMethod.cs#L228-L240",
+      "https://github.com/dotnet/runtime/blob/v10.0.9/src/coreclr/System.Private.CoreLib/src/System/Reflection/Emit/DynamicMethod.CoreCLR.cs#L41-L56"
+    ],
+    "allocation_confirmation_path": "allocation-confirmation-round4",
+    "allocation_confirmation_state": "Complete:2970 raw rows/198 groups;5 samples x200 operations after40warmups;164 unchanged,26 decreased,8 increased. Six FrameworkLight approximately192B residual plus two FrameworkStandard0.8B groups retained. No elapsed claims.",
+    "validation_reproduction_paths": [
+      "pr558-repair/validate.py",
+      "pr558-repair/summarize-validation.py",
+      "fec-round12/Run-Full.py",
+      "pr558-repair/frozen-70f297cb",
+      "fec-fixes/FrameworkRunner/Program.cs",
+      "fec-fixes/FrameworkRunner/FrameworkRunner.csproj"
+    ],
+    "allocation_confirmation_summary": {
+      "complete": true,
+      "counts": {
+        "unchanged": 164,
+        "decreased": 26,
+        "increased": 8
+      },
+      "primaryPositiveReconfirmation": {
+        "primary_positive": 28,
+        "positive_again": 6,
+        "now_equal": 21,
+        "now_decreased": 1
+      },
+      "errors": []
+    }
+  },
+  "files": {
+    "pr558-round3/runtime-aa/Analyze.py": {
+      "bytes": 4642,
+      "sha256": "a13f2381a4b196f0975a9896d096c59eb046495646fe5ed2079e8ecf2b31a586"
+    },
+    "pr558-round3/runtime-aa/Build.ps1": {
+      "bytes": 405,
+      "sha256": "65f60ac75fca8b3777d8a3889662ddb74dd1c034d706f910b87b111665dd48fb"
+    },
+    "pr558-round3/runtime-aa/Prepare.py": {
+      "bytes": 3027,
+      "sha256": "e3539131e5eb8c0141d1a8d13b82c2d2304ef45c7b2817340fa7f6ef137c4f2f"
+    },
+    "pr558-round3/runtime-aa/Program.cs": {
+      "bytes": 7088,
+      "sha256": "948232c350593abb212ef57a7f9ddaea95eb2108e94a24c6e09d2d096fd31c95"
+    },
+    "pr558-round3/runtime-aa/README.md": {
+      "bytes": 1397,
+      "sha256": "4f99c1a222311111d81f139b8c916fccf86bc60b83cec3572e173e09b32ef57a"
+    },
+    "pr558-round3/runtime-aa/REPORT.md": {
+      "bytes": 6038,
+      "sha256": "5896c4be853774192ad0c6a64fe16b28116b4b4d702830ffc06df4f0d6e66c71"
+    },
+    "pr558-round3/runtime-aa/Run.py": {
+      "bytes": 860,
+      "sha256": "4d1d5026deb6310cc79a3e3baee264fcf655b66228a0b9ab00b61c7b60830e18"
+    },
+    "pr558-round3/runtime-aa/analysis.json": {
+      "bytes": 200401,
+      "sha256": "b4e65b63a7bc8e946cbe4a656441c2acf062571faef90ad428f7be75e41acf2a"
+    },
+    "pr558-round3/runtime-aa/bin/light/net10.0/RuntimeAA.light.deps.json": {
+      "bytes": 2095,
+      "sha256": "a7853ec06c644964eb50cd66bd265ef61b426fe0eec8b10361a2d81dfdbbc9b8"
+    },
+    "pr558-round3/runtime-aa/bin/light/net10.0/RuntimeAA.light.dll": {
+      "bytes": 48640,
+      "sha256": "f9d1b130378ec3246fd136583f213348364ad65f3aeea7a058a5036ca65080ae"
+    },
+    "pr558-round3/runtime-aa/bin/light/net10.0/RuntimeAA.light.exe": {
+      "bytes": 139776,
+      "sha256": "51fc112e24fa703c56ec54b4e54cdf2bf5b7b76ba289537e97fc66a5d155f971"
+    },
+    "pr558-round3/runtime-aa/bin/light/net10.0/RuntimeAA.light.pdb": {
+      "bytes": 18884,
+      "sha256": "713850397aa6e307e807fd8cc87dea9f7d7639549ff1ed658d8688bab19213c2"
+    },
+    "pr558-round3/runtime-aa/bin/light/net10.0/RuntimeAA.light.runtimeconfig.json": {
+      "bytes": 342,
+      "sha256": "c230a317a54dd960bcbeb5f347f52e18dc665a26f7efda2159fced9a5ac7e097"
+    },
+    "pr558-round3/runtime-aa/bin/light/net10.0/RuntimeParity.before.light.dll": {
+      "bytes": 359424,
+      "sha256": "8db7e020969c075c554897ade0b1d47428b4ed939b764c036dbbac65691c6c8f"
+    },
+    "pr558-round3/runtime-aa/bin/light/net10.0/RuntimeParity.before.light.pdb": {
+      "bytes": 159380,
+      "sha256": "0e735d0712c988839cf3c5e87c0ab2d199786f1b96dd75e8edb130262713440f"
+    },
+    "pr558-round3/runtime-aa/bin/light/net10.0/RuntimeParity.current.light.dll": {
+      "bytes": 410112,
+      "sha256": "78cceaede89d236730e35b4ccb1417faf4a19a5ec182ac4dac3ad5a7d819bb92"
+    },
+    "pr558-round3/runtime-aa/bin/light/net10.0/RuntimeParity.current.light.pdb": {
+      "bytes": 183740,
+      "sha256": "99d2714ce47dcb7b58bfc20a0ba852f3f9a37616744fe8e8aee52b24865132ca"
+    },
+    "pr558-round3/runtime-aa/bin/light/net472/RuntimeAA.light.exe": {
+      "bytes": 48640,
+      "sha256": "d4593492f354381c111bee5aaaf63d01c65ca88792ee1c9a2a2f122953113def"
+    },
+    "pr558-round3/runtime-aa/bin/light/net472/RuntimeAA.light.exe.config": {
+      "bytes": 176,
+      "sha256": "ad8267122c40d37dcd9d99e1412d763187a1825732f378db8867f3ecf675cf70"
+    },
+    "pr558-round3/runtime-aa/bin/light/net472/RuntimeAA.light.pdb": {
+      "bytes": 10036,
+      "sha256": "e60266d76034615e2e194a6031c36605011dbcabdc4469e0be0a87bb72f14f5c"
+    },
+    "pr558-round3/runtime-aa/bin/light/net472/RuntimeParity.before.light.dll": {
+      "bytes": 357888,
+      "sha256": "477c68d64cc715e654e054085d15352d07ef794b0e8fe616f96b1c26c9ec5608"
+    },
+    "pr558-round3/runtime-aa/bin/light/net472/RuntimeParity.before.light.pdb": {
+      "bytes": 150820,
+      "sha256": "41fa8fa734010294b88c2f30599a3925faaabc3066cd38e9b1eb88dc95796a2b"
+    },
+    "pr558-round3/runtime-aa/bin/light/net472/RuntimeParity.current.light.dll": {
+      "bytes": 409600,
+      "sha256": "6faf71045411109036e1fc26e1cf04da5a26d508be1d82ec915cb7830d28c0c6"
+    },
+    "pr558-round3/runtime-aa/bin/light/net472/RuntimeParity.current.light.pdb": {
+      "bytes": 175412,
+      "sha256": "d92854ff425aa698cbaadd497de5f4d684c46137091046b11cb20edcbfead0a5"
+    },
+    "pr558-round3/runtime-aa/bin/light/net8.0/RuntimeAA.light.deps.json": {
+      "bytes": 2093,
+      "sha256": "ad0f22f7827f6faf7930baeda4ec0e1a801edeb41f851b257f80f0dc69e765d1"
+    },
+    "pr558-round3/runtime-aa/bin/light/net8.0/RuntimeAA.light.dll": {
+      "bytes": 48640,
+      "sha256": "4c2d50ac5a7810e99d26168b1d0fe18f19b522e1f441b03edb6200340f361e4e"
+    },
+    "pr558-round3/runtime-aa/bin/light/net8.0/RuntimeAA.light.exe": {
+      "bytes": 132608,
+      "sha256": "b4452194f5c3fdb69dd5b55a1910162dca531290bc53cc4b562319da83751fb9"
+    },
+    "pr558-round3/runtime-aa/bin/light/net8.0/RuntimeAA.light.pdb": {
+      "bytes": 18616,
+      "sha256": "ae540c03b38136966e21c648aaae338dc9ad23e1fa7611bbd36bd2c30ed85445"
+    },
+    "pr558-round3/runtime-aa/bin/light/net8.0/RuntimeAA.light.runtimeconfig.json": {
+      "bytes": 340,
+      "sha256": "28329cf08f6505e73806b17558b187c02f0c1c516fe47ebfb7a013d082aaa306"
+    },
+    "pr558-round3/runtime-aa/bin/light/net8.0/RuntimeParity.before.light.dll": {
+      "bytes": 358400,
+      "sha256": "d28553737b89b89bb04b50efab16fd5ed58b2144d70aa3f07878da3742cd2dc9"
+    },
+    "pr558-round3/runtime-aa/bin/light/net8.0/RuntimeParity.before.light.pdb": {
+      "bytes": 159316,
+      "sha256": "dae962a5c03445d71d5e6cdc8d5258067b9eb57776e91bc47ca60b750d19fcaf"
+    },
+    "pr558-round3/runtime-aa/bin/light/net8.0/RuntimeParity.current.light.dll": {
+      "bytes": 409088,
+      "sha256": "62d82e01c3c772e49241c209029a158045c8d2203ec85c7be98c1181d83805c9"
+    },
+    "pr558-round3/runtime-aa/bin/light/net8.0/RuntimeParity.current.light.pdb": {
+      "bytes": 183676,
+      "sha256": "39eb30d29ef60982e124df1082588e18a2643181133202b5e913f782e78e26fd"
+    },
+    "pr558-round3/runtime-aa/bin/standard/net10.0/RuntimeAA.standard.deps.json": {
+      "bytes": 2152,
+      "sha256": "f1eeb7fc01d07da6104b09994aaa2148da8e9a464147eb07ff336b6371101e47"
+    },
+    "pr558-round3/runtime-aa/bin/standard/net10.0/RuntimeAA.standard.dll": {
+      "bytes": 48640,
+      "sha256": "8040136f6b03bb403d2a49f8ab35200559c25adbc2b153e4e7b10950465a5db3"
+    },
+    "pr558-round3/runtime-aa/bin/standard/net10.0/RuntimeAA.standard.exe": {
+      "bytes": 139776,
+      "sha256": "3784837bc5df9265c6cadb1af0a652871fbac81582e1b225075998f314469557"
+    },
+    "pr558-round3/runtime-aa/bin/standard/net10.0/RuntimeAA.standard.pdb": {
+      "bytes": 18880,
+      "sha256": "1395c8568d155ce1291f99bdc1b4575b87ad51233655569e7b294e0929dab299"
+    },
+    "pr558-round3/runtime-aa/bin/standard/net10.0/RuntimeAA.standard.runtimeconfig.json": {
+      "bytes": 342,
+      "sha256": "c230a317a54dd960bcbeb5f347f52e18dc665a26f7efda2159fced9a5ac7e097"
+    },
+    "pr558-round3/runtime-aa/bin/standard/net10.0/RuntimeParity.before.standard.dll": {
+      "bytes": 210944,
+      "sha256": "50a9b719fec13be6e779e37ac04eb3dde19e29dfbc1c496961facb0b2c11ad86"
+    },
+    "pr558-round3/runtime-aa/bin/standard/net10.0/RuntimeParity.before.standard.pdb": {
+      "bytes": 89944,
+      "sha256": "854877be78854264ffc50e70bcad1fd36d8c6ed9d688bf8cdc501bf3ef4014d9"
+    },
+    "pr558-round3/runtime-aa/bin/standard/net10.0/RuntimeParity.current.standard.dll": {
+      "bytes": 260608,
+      "sha256": "c52b7983ea8c216dfe1127e87d974ff92ffc3caa59755d87377947a3d631c98e"
+    },
+    "pr558-round3/runtime-aa/bin/standard/net10.0/RuntimeParity.current.standard.pdb": {
+      "bytes": 113720,
+      "sha256": "b45da41fb405ea2dadf1b4ce4f071010802843ca6f3e0c7b2150b54776d1c3c5"
+    },
+    "pr558-round3/runtime-aa/bin/standard/net472/RuntimeAA.standard.exe": {
+      "bytes": 48640,
+      "sha256": "6ff12a619a7eee7956224bf12bd3b067774104a51bf465005c199377b0183790"
+    },
+    "pr558-round3/runtime-aa/bin/standard/net472/RuntimeAA.standard.exe.config": {
+      "bytes": 176,
+      "sha256": "ad8267122c40d37dcd9d99e1412d763187a1825732f378db8867f3ecf675cf70"
+    },
+    "pr558-round3/runtime-aa/bin/standard/net472/RuntimeAA.standard.pdb": {
+      "bytes": 10032,
+      "sha256": "df330509be8248ef9f0594089d89bf1868db52d44c2f1ca4fbb2c7103b411bec"
+    },
+    "pr558-round3/runtime-aa/bin/standard/net472/RuntimeParity.before.standard.dll": {
+      "bytes": 210944,
+      "sha256": "cefafedd6fbc3491abad1aa207a77e173bc358dd0f740e0dc5ee829d8b2d4134"
+    },
+    "pr558-round3/runtime-aa/bin/standard/net472/RuntimeParity.before.standard.pdb": {
+      "bytes": 81364,
+      "sha256": "b78ba353c3c487bde92630aa41decedfc938fbc4555a82fb107f3b2c8abe367f"
+    },
+    "pr558-round3/runtime-aa/bin/standard/net472/RuntimeParity.current.standard.dll": {
+      "bytes": 260608,
+      "sha256": "b331569fc0fc7a7b9a28e9d4ea23c4beb5e5d5c0361c9fdc0aaf8191e371685b"
+    },
+    "pr558-round3/runtime-aa/bin/standard/net472/RuntimeParity.current.standard.pdb": {
+      "bytes": 105372,
+      "sha256": "10e8f4a8a6425c8eb68fb8207b5ff135b59b3c7ce6479fbbda03df8ccd4ab1d6"
+    },
+    "pr558-round3/runtime-aa/bin/standard/net8.0/RuntimeAA.standard.deps.json": {
+      "bytes": 2150,
+      "sha256": "667c267abbc627fdbd7b2dca68d48519b2a8f32dcde83d675d3f477e4f776970"
+    },
+    "pr558-round3/runtime-aa/bin/standard/net8.0/RuntimeAA.standard.dll": {
+      "bytes": 48640,
+      "sha256": "fda5380e5d3f75adff42c76e8c9cac817fc65da1653fce97879f0b8d36d520c2"
+    },
+    "pr558-round3/runtime-aa/bin/standard/net8.0/RuntimeAA.standard.exe": {
+      "bytes": 132608,
+      "sha256": "bcf5b2d6e4a66a14ce42d73a92fc5a9a5b0b6081fb35f829061b5e847ae448e4"
+    },
+    "pr558-round3/runtime-aa/bin/standard/net8.0/RuntimeAA.standard.pdb": {
+      "bytes": 18616,
+      "sha256": "ddd3067aace57e56b7f2e03631dac2bf429e73f8b7e61e7a2212f288563f8347"
+    },
+    "pr558-round3/runtime-aa/bin/standard/net8.0/RuntimeAA.standard.runtimeconfig.json": {
+      "bytes": 340,
+      "sha256": "28329cf08f6505e73806b17558b187c02f0c1c516fe47ebfb7a013d082aaa306"
+    },
+    "pr558-round3/runtime-aa/bin/standard/net8.0/RuntimeParity.before.standard.dll": {
+      "bytes": 210432,
+      "sha256": "a4a5f8b5a491b11ccffdacb1e9da25e759a606f91afc63b37388501c3d5ef205"
+    },
+    "pr558-round3/runtime-aa/bin/standard/net8.0/RuntimeParity.before.standard.pdb": {
+      "bytes": 89884,
+      "sha256": "e9aa28ae3b60d78297d5e07d94d10305cf5b4a379b96ac1c12efd878e920d287"
+    },
+    "pr558-round3/runtime-aa/bin/standard/net8.0/RuntimeParity.current.standard.dll": {
+      "bytes": 260096,
+      "sha256": "3aa754edaffb4fb5ead3707f2418b3a7a2ff20a5f85c0b7b2ac748fedba326ad"
+    },
+    "pr558-round3/runtime-aa/bin/standard/net8.0/RuntimeParity.current.standard.pdb": {
+      "bytes": 113660,
+      "sha256": "d2835f2f4538683f3d419c2cf84d94c076b30a6d1ed5fa0b7d8b9930de116468"
+    },
+    "pr558-round3/runtime-aa/build-light.log": {
+      "bytes": 4453,
+      "sha256": "908f99496cf9cff935091d9b2020f337833de57b863f6c02e85aecd79bac2f99"
+    },
+    "pr558-round3/runtime-aa/build-standard.log": {
+      "bytes": 4471,
+      "sha256": "8b4df94e12e3fa7a9c08657883b5ce0686b5ec0c6fe1285098e554f1c74d5f30"
+    },
+    "pr558-round3/runtime-aa/canonical-analysis.json": {
+      "bytes": 11442,
+      "sha256": "5afed0ba1d7a5dae3f265138e4bd84edf2de3bd07e77139117c3c080113033b9"
+    },
+    "pr558-round3/runtime-aa/canonical-net10.0-light.jsonl": {
+      "bytes": 76578,
+      "sha256": "751cc2cdedf294d5faf44e37f58231ccc4f966309e5f980449f8971bbbe5b6b8"
+    },
+    "pr558-round3/runtime-aa/canonical-net10.0-light.log": {
+      "bytes": 162,
+      "sha256": "e19e0e37ab60368d1a8aa6304b122911ef2b43dc3249c9801ed0fc08c89596ab"
+    },
+    "pr558-round3/runtime-aa/canonical-net10.0-standard.jsonl": {
+      "bytes": 74152,
+      "sha256": "f762d0a09542bd2b15a7216a494168ee04a08d403c80f4ce0c0cbf37db48e84c"
+    },
+    "pr558-round3/runtime-aa/canonical-net10.0-standard.log": {
+      "bytes": 177,
+      "sha256": "3bfc0af3a9ba222ecaeb68da17107997bc11f136db6d9b3a2d4308dc7e161bb9"
+    },
+    "pr558-round3/runtime-aa/canonical-net472-light.jsonl": {
+      "bytes": 73212,
+      "sha256": "268ffc5a9f027d5284240e557fbecc3072004a86d47c378a8e0fb1de87cc10dc"
+    },
+    "pr558-round3/runtime-aa/canonical-net472-light.log": {
+      "bytes": 162,
+      "sha256": "e19e0e37ab60368d1a8aa6304b122911ef2b43dc3249c9801ed0fc08c89596ab"
+    },
+    "pr558-round3/runtime-aa/canonical-net472-standard.jsonl": {
+      "bytes": 70786,
+      "sha256": "e461bb7ed12b64dda41c05405488e76d33d58aa5a90ef632a287336d51c361ba"
+    },
+    "pr558-round3/runtime-aa/canonical-net472-standard.log": {
+      "bytes": 177,
+      "sha256": "3bfc0af3a9ba222ecaeb68da17107997bc11f136db6d9b3a2d4308dc7e161bb9"
+    },
+    "pr558-round3/runtime-aa/canonical-net8.0-light.jsonl": {
+      "bytes": 76298,
+      "sha256": "3dabbe1ba50cbefa9a8c8844cfee1a166eb1a13b0ddc7aafed1b1f5d71f19b3b"
+    },
+    "pr558-round3/runtime-aa/canonical-net8.0-light.log": {
+      "bytes": 162,
+      "sha256": "e19e0e37ab60368d1a8aa6304b122911ef2b43dc3249c9801ed0fc08c89596ab"
+    },
+    "pr558-round3/runtime-aa/canonical-net8.0-standard.jsonl": {
+      "bytes": 73872,
+      "sha256": "0e9c8b612f5558fd1188583056c68092226854487e07a8eddab6877c88735ed4"
+    },
+    "pr558-round3/runtime-aa/canonical-net8.0-standard.log": {
+      "bytes": 177,
+      "sha256": "3bfc0af3a9ba222ecaeb68da17107997bc11f136db6d9b3a2d4308dc7e161bb9"
+    },
+    "pr558-round3/runtime-aa/canonical-summary.log": {
+      "bytes": 448,
+      "sha256": "c01b4c909ae80e557bfc7fcf3de5de3b01ee0f154707ff141f88cf4871a81bd0"
+    },
+    "pr558-round3/runtime-aa/control-summary.log": {
+      "bytes": 430,
+      "sha256": "ba3198d4f745e6d54d33ac91acbe12ca2aa600765c4d69348b9867235d244692"
+    },
+    "pr558-round3/runtime-aa/controls-net10.0-light.jsonl": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "pr558-round3/runtime-aa/controls-net10.0-light.log": {
+      "bytes": 162,
+      "sha256": "e19e0e37ab60368d1a8aa6304b122911ef2b43dc3249c9801ed0fc08c89596ab"
+    },
+    "pr558-round3/runtime-aa/controls-net10.0-standard.jsonl": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "pr558-round3/runtime-aa/controls-net10.0-standard.log": {
+      "bytes": 177,
+      "sha256": "3bfc0af3a9ba222ecaeb68da17107997bc11f136db6d9b3a2d4308dc7e161bb9"
+    },
+    "pr558-round3/runtime-aa/controls-net472-light.jsonl": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "pr558-round3/runtime-aa/controls-net472-light.log": {
+      "bytes": 162,
+      "sha256": "e19e0e37ab60368d1a8aa6304b122911ef2b43dc3249c9801ed0fc08c89596ab"
+    },
+    "pr558-round3/runtime-aa/controls-net472-standard.jsonl": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "pr558-round3/runtime-aa/controls-net472-standard.log": {
+      "bytes": 177,
+      "sha256": "3bfc0af3a9ba222ecaeb68da17107997bc11f136db6d9b3a2d4308dc7e161bb9"
+    },
+    "pr558-round3/runtime-aa/controls-net8.0-light.jsonl": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "pr558-round3/runtime-aa/controls-net8.0-light.log": {
+      "bytes": 162,
+      "sha256": "e19e0e37ab60368d1a8aa6304b122911ef2b43dc3249c9801ed0fc08c89596ab"
+    },
+    "pr558-round3/runtime-aa/controls-net8.0-standard.jsonl": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "pr558-round3/runtime-aa/controls-net8.0-standard.log": {
+      "bytes": 177,
+      "sha256": "3bfc0af3a9ba222ecaeb68da17107997bc11f136db6d9b3a2d4308dc7e161bb9"
+    },
+    "pr558-round3/runtime-aa/light.csproj": {
+      "bytes": 802,
+      "sha256": "f0625312a61cc8baa2c8a60c79d79f07bc36755af9391f24b6dd09fa9199b703"
+    },
+    "pr558-round3/runtime-aa/manifest.json": {
+      "bytes": 582,
+      "sha256": "03da54d4161ad9d2498e1518e3a203a42c0c8c06c10452ad0bd4dad04fcebab3"
+    },
+    "pr558-round3/runtime-aa/measure-net10.0-light.jsonl": {
+      "bytes": 92443,
+      "sha256": "ca5f6388a9e6a9edd61aa938bd713508fa1887a898712c2577b565647379a454"
+    },
+    "pr558-round3/runtime-aa/measure-net10.0-light.log": {
+      "bytes": 162,
+      "sha256": "e19e0e37ab60368d1a8aa6304b122911ef2b43dc3249c9801ed0fc08c89596ab"
+    },
+    "pr558-round3/runtime-aa/measure-net10.0-standard.jsonl": {
+      "bytes": 93182,
+      "sha256": "304a4176678c37495a71333e665e9d17b2eeb5236fde9941dfda2680c4179425"
+    },
+    "pr558-round3/runtime-aa/measure-net10.0-standard.log": {
+      "bytes": 177,
+      "sha256": "3bfc0af3a9ba222ecaeb68da17107997bc11f136db6d9b3a2d4308dc7e161bb9"
+    },
+    "pr558-round3/runtime-aa/measure-net472-light.jsonl": {
+      "bytes": 93933,
+      "sha256": "90171b3c4b4e315d23dcfcb5164fdfeeccac360c47d401d68f77aed93d8e3ebe"
+    },
+    "pr558-round3/runtime-aa/measure-net472-light.log": {
+      "bytes": 162,
+      "sha256": "e19e0e37ab60368d1a8aa6304b122911ef2b43dc3249c9801ed0fc08c89596ab"
+    },
+    "pr558-round3/runtime-aa/measure-net472-standard.jsonl": {
+      "bytes": 94679,
+      "sha256": "8c56f33b2d4a4bc1a163f1423510e4972ad45dcba42db6a31220c698a661c03e"
+    },
+    "pr558-round3/runtime-aa/measure-net472-standard.log": {
+      "bytes": 177,
+      "sha256": "3bfc0af3a9ba222ecaeb68da17107997bc11f136db6d9b3a2d4308dc7e161bb9"
+    },
+    "pr558-round3/runtime-aa/measure-net8.0-light.jsonl": {
+      "bytes": 92368,
+      "sha256": "3432752a753e41b6a55c0a4c75a205a95e80e0bf3696c9fac9443e6de1220d7b"
+    },
+    "pr558-round3/runtime-aa/measure-net8.0-light.log": {
+      "bytes": 162,
+      "sha256": "e19e0e37ab60368d1a8aa6304b122911ef2b43dc3249c9801ed0fc08c89596ab"
+    },
+    "pr558-round3/runtime-aa/measure-net8.0-standard.jsonl": {
+      "bytes": 93179,
+      "sha256": "f8e919a13fae94c13114ae725aa722e8a2120ddc83a01091c5105fa0c9d524c4"
+    },
+    "pr558-round3/runtime-aa/measure-net8.0-standard.log": {
+      "bytes": 177,
+      "sha256": "3bfc0af3a9ba222ecaeb68da17107997bc11f136db6d9b3a2d4308dc7e161bb9"
+    },
+    "pr558-round3/runtime-aa/standard.csproj": {
+      "bytes": 777,
+      "sha256": "de463121540bc578487fb2d905f4c1f4abc2ffcbcb6d7820b7eb0abd51bbd258"
+    },
+    "pr558-round3/runtime-aa/timing-summary.log": {
+      "bytes": 430,
+      "sha256": "23926c3ebf0b8d89c80225daa3b8e520a4d9422017154202c2c7be3d541f9607"
+    },
+    "pr558-round3/runtime-parity/Analyze-Native.py": {
+      "bytes": 1733,
+      "sha256": "7d22a418a972f9fae2770648a636b18e8a5277273e19c779ed93ba2f6cac14e5"
+    },
+    "pr558-round3/runtime-parity/Analyze.py": {
+      "bytes": 3979,
+      "sha256": "2be40798435a8a45cc935aba100aa86a216a474d1624715e77c2434c54bb4b3c"
+    },
+    "pr558-round3/runtime-parity/Build.ps1": {
+      "bytes": 404,
+      "sha256": "103e1884f8de1167c7c6b3ca5721a9ba1d989fc9ab7bd86779db7c38e7b11224"
+    },
+    "pr558-round3/runtime-parity/Canonical.cs": {
+      "bytes": 11555,
+      "sha256": "7b07902a72a6bda5156ca7aac0846b255287462930679e59690ae02a7966dfae"
+    },
+    "pr558-round3/runtime-parity/Native-Diagnostics.py": {
+      "bytes": 1070,
+      "sha256": "87a3f30abf3eb7c5bb32452e71fd825c6adfb8201e3de9666ff94e7115ce9145"
+    },
+    "pr558-round3/runtime-parity/Prepare.py": {
+      "bytes": 3202,
+      "sha256": "9844554a737126fc3c020c9387f93addf33dd02c10505fb6172accf7114a5751"
+    },
+    "pr558-round3/runtime-parity/Program.cs": {
+      "bytes": 7314,
+      "sha256": "d40ed43ef585180b71a9a3bef81a4e005d40fb80371917b39d83040c81e10383"
+    },
+    "pr558-round3/runtime-parity/README.md": {
+      "bytes": 2930,
+      "sha256": "d048c267a3a29bd6d0723b92c2302f1ef0c469a7803a776958646e6219a33772"
+    },
+    "pr558-round3/runtime-parity/REPORT.md": {
+      "bytes": 18882,
+      "sha256": "00420c26fd8ca5f5e1b2889463f494c17a35f6c070df6baac40c78b46909dec2"
+    },
+    "pr558-round3/runtime-parity/Report.py": {
+      "bytes": 5835,
+      "sha256": "6e9f89ba2b8dc2eaf6ac089ea161fdf739e31dcf7e7f47e064967bfbbfbb3d34"
+    },
+    "pr558-round3/runtime-parity/Run-Controls.py": {
+      "bytes": 1224,
+      "sha256": "c382047c3de7ed8262b0066b6570eafb5b41b8d5eb14f8f3b8369f3b3e88d499"
+    },
+    "pr558-round3/runtime-parity/Run-Timings.py": {
+      "bytes": 1307,
+      "sha256": "49045543198c890b2d83c2ce961e55b1324e36136a4679ceb3d1a28a63f44f71"
+    },
+    "pr558-round3/runtime-parity/Trees.cs": {
+      "bytes": 7114,
+      "sha256": "bcde9cb58b84ac39dbea189e437bc9722925ce2dc266d1738dcefab53fc55743"
+    },
+    "pr558-round3/runtime-parity/bin/light/net10.0/RuntimeParity.before.light.dll": {
+      "bytes": 359424,
+      "sha256": "8db7e020969c075c554897ade0b1d47428b4ed939b764c036dbbac65691c6c8f"
+    },
+    "pr558-round3/runtime-parity/bin/light/net10.0/RuntimeParity.before.light.pdb": {
+      "bytes": 159380,
+      "sha256": "0e735d0712c988839cf3c5e87c0ab2d199786f1b96dd75e8edb130262713440f"
+    },
+    "pr558-round3/runtime-parity/bin/light/net10.0/RuntimeParity.current.light.dll": {
+      "bytes": 410112,
+      "sha256": "78cceaede89d236730e35b4ccb1417faf4a19a5ec182ac4dac3ad5a7d819bb92"
+    },
+    "pr558-round3/runtime-parity/bin/light/net10.0/RuntimeParity.current.light.pdb": {
+      "bytes": 183740,
+      "sha256": "99d2714ce47dcb7b58bfc20a0ba852f3f9a37616744fe8e8aee52b24865132ca"
+    },
+    "pr558-round3/runtime-parity/bin/light/net10.0/RuntimeParity.light.deps.json": {
+      "bytes": 2107,
+      "sha256": "e4a130068c0dfd298c9899b6100d9d11b1724cf9cb01f570be6d8b0f8ed0d788"
+    },
+    "pr558-round3/runtime-parity/bin/light/net10.0/RuntimeParity.light.dll": {
+      "bytes": 48640,
+      "sha256": "77724893fd3d3167c5ea736376a7a3433d6b81bf0521bfb8a28dece0a66d8aab"
+    },
+    "pr558-round3/runtime-parity/bin/light/net10.0/RuntimeParity.light.exe": {
+      "bytes": 139776,
+      "sha256": "89c1a18d15869bcf3a33db7e0df3ed40e3a61c6374ecc671e54c7da8bc379e12"
+    },
+    "pr558-round3/runtime-parity/bin/light/net10.0/RuntimeParity.light.pdb": {
+      "bytes": 18880,
+      "sha256": "e791d83bc0755e2a8b0fc834e8a868f34f412e346af7f587ac07a31df45e7c32"
+    },
+    "pr558-round3/runtime-parity/bin/light/net10.0/RuntimeParity.light.runtimeconfig.json": {
+      "bytes": 342,
+      "sha256": "c230a317a54dd960bcbeb5f347f52e18dc665a26f7efda2159fced9a5ac7e097"
+    },
+    "pr558-round3/runtime-parity/bin/light/net472/RuntimeParity.before.light.dll": {
+      "bytes": 357888,
+      "sha256": "477c68d64cc715e654e054085d15352d07ef794b0e8fe616f96b1c26c9ec5608"
+    },
+    "pr558-round3/runtime-parity/bin/light/net472/RuntimeParity.before.light.pdb": {
+      "bytes": 150820,
+      "sha256": "41fa8fa734010294b88c2f30599a3925faaabc3066cd38e9b1eb88dc95796a2b"
+    },
+    "pr558-round3/runtime-parity/bin/light/net472/RuntimeParity.current.light.dll": {
+      "bytes": 409600,
+      "sha256": "6faf71045411109036e1fc26e1cf04da5a26d508be1d82ec915cb7830d28c0c6"
+    },
+    "pr558-round3/runtime-parity/bin/light/net472/RuntimeParity.current.light.pdb": {
+      "bytes": 175412,
+      "sha256": "d92854ff425aa698cbaadd497de5f4d684c46137091046b11cb20edcbfead0a5"
+    },
+    "pr558-round3/runtime-parity/bin/light/net472/RuntimeParity.light.exe": {
+      "bytes": 49152,
+      "sha256": "bb5fcc66e7d09d0e21b508d908ec83df584be53053099018b513c79b2bffbefb"
+    },
+    "pr558-round3/runtime-parity/bin/light/net472/RuntimeParity.light.exe.config": {
+      "bytes": 176,
+      "sha256": "ad8267122c40d37dcd9d99e1412d763187a1825732f378db8867f3ecf675cf70"
+    },
+    "pr558-round3/runtime-parity/bin/light/net472/RuntimeParity.light.pdb": {
+      "bytes": 10032,
+      "sha256": "64788a5c1670d0162159db1f289b301788a3d3b4a5c38c2addf50e89f72883d5"
+    },
+    "pr558-round3/runtime-parity/bin/light/net8.0/RuntimeParity.before.light.dll": {
+      "bytes": 358400,
+      "sha256": "d28553737b89b89bb04b50efab16fd5ed58b2144d70aa3f07878da3742cd2dc9"
+    },
+    "pr558-round3/runtime-parity/bin/light/net8.0/RuntimeParity.before.light.pdb": {
+      "bytes": 159316,
+      "sha256": "dae962a5c03445d71d5e6cdc8d5258067b9eb57776e91bc47ca60b750d19fcaf"
+    },
+    "pr558-round3/runtime-parity/bin/light/net8.0/RuntimeParity.current.light.dll": {
+      "bytes": 409088,
+      "sha256": "62d82e01c3c772e49241c209029a158045c8d2203ec85c7be98c1181d83805c9"
+    },
+    "pr558-round3/runtime-parity/bin/light/net8.0/RuntimeParity.current.light.pdb": {
+      "bytes": 183676,
+      "sha256": "39eb30d29ef60982e124df1082588e18a2643181133202b5e913f782e78e26fd"
+    },
+    "pr558-round3/runtime-parity/bin/light/net8.0/RuntimeParity.light.deps.json": {
+      "bytes": 2105,
+      "sha256": "a0f3757f7f8488055c041f1f5e41fa58f412a182d20ccd3d79442f171019a010"
+    },
+    "pr558-round3/runtime-parity/bin/light/net8.0/RuntimeParity.light.dll": {
+      "bytes": 48640,
+      "sha256": "dcca4128ea89eeb6c96c2b909e26ad3e7c4f4123f69d4a0bfc9974af1907942f"
+    },
+    "pr558-round3/runtime-parity/bin/light/net8.0/RuntimeParity.light.exe": {
+      "bytes": 132608,
+      "sha256": "28ab33e948946f35aa6b899dbe02ca569a7e0f558c66d4a00f15fc5d37d4bd9f"
+    },
+    "pr558-round3/runtime-parity/bin/light/net8.0/RuntimeParity.light.pdb": {
+      "bytes": 18612,
+      "sha256": "883e00e2020796a4791ae9cae1d8fb560625b6b2398f73ac44bf6087ca2270cb"
+    },
+    "pr558-round3/runtime-parity/bin/light/net8.0/RuntimeParity.light.runtimeconfig.json": {
+      "bytes": 340,
+      "sha256": "28329cf08f6505e73806b17558b187c02f0c1c516fe47ebfb7a013d082aaa306"
+    },
+    "pr558-round3/runtime-parity/bin/standard/net10.0/RuntimeParity.before.standard.dll": {
+      "bytes": 210944,
+      "sha256": "50a9b719fec13be6e779e37ac04eb3dde19e29dfbc1c496961facb0b2c11ad86"
+    },
+    "pr558-round3/runtime-parity/bin/standard/net10.0/RuntimeParity.before.standard.pdb": {
+      "bytes": 89944,
+      "sha256": "854877be78854264ffc50e70bcad1fd36d8c6ed9d688bf8cdc501bf3ef4014d9"
+    },
+    "pr558-round3/runtime-parity/bin/standard/net10.0/RuntimeParity.current.standard.dll": {
+      "bytes": 260608,
+      "sha256": "c52b7983ea8c216dfe1127e87d974ff92ffc3caa59755d87377947a3d631c98e"
+    },
+    "pr558-round3/runtime-parity/bin/standard/net10.0/RuntimeParity.current.standard.pdb": {
+      "bytes": 113720,
+      "sha256": "b45da41fb405ea2dadf1b4ce4f071010802843ca6f3e0c7b2150b54776d1c3c5"
+    },
+    "pr558-round3/runtime-parity/bin/standard/net10.0/RuntimeParity.standard.deps.json": {
+      "bytes": 2164,
+      "sha256": "7227e7c719e5737b4832c35830eecfc1605ff524def992b1f7ca6e9157b1eee8"
+    },
+    "pr558-round3/runtime-parity/bin/standard/net10.0/RuntimeParity.standard.dll": {
+      "bytes": 48640,
+      "sha256": "96d62d0850871dc410ac1f1e7714e58d1ca285b1d202be7c436a98ce37027444"
+    },
+    "pr558-round3/runtime-parity/bin/standard/net10.0/RuntimeParity.standard.exe": {
+      "bytes": 139776,
+      "sha256": "9cf0c2830dc875cb55cc88c177b789871df6d39c93b6f966d7fc5b7f6716c90e"
+    },
+    "pr558-round3/runtime-parity/bin/standard/net10.0/RuntimeParity.standard.pdb": {
+      "bytes": 18888,
+      "sha256": "df3171815b85ede0d25152b37818f242df9e73daa761f8bb2e9f677df689240b"
+    },
+    "pr558-round3/runtime-parity/bin/standard/net10.0/RuntimeParity.standard.runtimeconfig.json": {
+      "bytes": 342,
+      "sha256": "c230a317a54dd960bcbeb5f347f52e18dc665a26f7efda2159fced9a5ac7e097"
+    },
+    "pr558-round3/runtime-parity/bin/standard/net472/RuntimeParity.before.standard.dll": {
+      "bytes": 210944,
+      "sha256": "cefafedd6fbc3491abad1aa207a77e173bc358dd0f740e0dc5ee829d8b2d4134"
+    },
+    "pr558-round3/runtime-parity/bin/standard/net472/RuntimeParity.before.standard.pdb": {
+      "bytes": 81364,
+      "sha256": "b78ba353c3c487bde92630aa41decedfc938fbc4555a82fb107f3b2c8abe367f"
+    },
+    "pr558-round3/runtime-parity/bin/standard/net472/RuntimeParity.current.standard.dll": {
+      "bytes": 260608,
+      "sha256": "b331569fc0fc7a7b9a28e9d4ea23c4beb5e5d5c0361c9fdc0aaf8191e371685b"
+    },
+    "pr558-round3/runtime-parity/bin/standard/net472/RuntimeParity.current.standard.pdb": {
+      "bytes": 105372,
+      "sha256": "10e8f4a8a6425c8eb68fb8207b5ff135b59b3c7ce6479fbbda03df8ccd4ab1d6"
+    },
+    "pr558-round3/runtime-parity/bin/standard/net472/RuntimeParity.standard.exe": {
+      "bytes": 49152,
+      "sha256": "338432151ae8285276f579d37045c4aa06c013201c5ad061165be68ed4a6ca63"
+    },
+    "pr558-round3/runtime-parity/bin/standard/net472/RuntimeParity.standard.exe.config": {
+      "bytes": 176,
+      "sha256": "ad8267122c40d37dcd9d99e1412d763187a1825732f378db8867f3ecf675cf70"
+    },
+    "pr558-round3/runtime-parity/bin/standard/net472/RuntimeParity.standard.pdb": {
+      "bytes": 10040,
+      "sha256": "f28b452275f050beeeacfe61ab5bcccf4cb37f7eb3f2ce3e35381629866c8781"
+    },
+    "pr558-round3/runtime-parity/bin/standard/net8.0/RuntimeParity.before.standard.dll": {
+      "bytes": 210432,
+      "sha256": "a4a5f8b5a491b11ccffdacb1e9da25e759a606f91afc63b37388501c3d5ef205"
+    },
+    "pr558-round3/runtime-parity/bin/standard/net8.0/RuntimeParity.before.standard.pdb": {
+      "bytes": 89884,
+      "sha256": "e9aa28ae3b60d78297d5e07d94d10305cf5b4a379b96ac1c12efd878e920d287"
+    },
+    "pr558-round3/runtime-parity/bin/standard/net8.0/RuntimeParity.current.standard.dll": {
+      "bytes": 260096,
+      "sha256": "3aa754edaffb4fb5ead3707f2418b3a7a2ff20a5f85c0b7b2ac748fedba326ad"
+    },
+    "pr558-round3/runtime-parity/bin/standard/net8.0/RuntimeParity.current.standard.pdb": {
+      "bytes": 113660,
+      "sha256": "d2835f2f4538683f3d419c2cf84d94c076b30a6d1ed5fa0b7d8b9930de116468"
+    },
+    "pr558-round3/runtime-parity/bin/standard/net8.0/RuntimeParity.standard.deps.json": {
+      "bytes": 2162,
+      "sha256": "05cae0f95bfe7a5b85e9c37a1468995d93663b3f00f58a7414b29e99680dbe67"
+    },
+    "pr558-round3/runtime-parity/bin/standard/net8.0/RuntimeParity.standard.dll": {
+      "bytes": 48640,
+      "sha256": "ac162296203dce55a98a7daed4c0577364b50b2b4ddd4351ad58503107a5c182"
+    },
+    "pr558-round3/runtime-parity/bin/standard/net8.0/RuntimeParity.standard.exe": {
+      "bytes": 132608,
+      "sha256": "f98eb62f76e8a47d6c9fa4f62247544956b780284736699ab988da0597714690"
+    },
+    "pr558-round3/runtime-parity/bin/standard/net8.0/RuntimeParity.standard.pdb": {
+      "bytes": 18624,
+      "sha256": "a608fa070a100efcdc24d24c96f9fc2f531d02d2bb11ed8d16f681c7927e96a4"
+    },
+    "pr558-round3/runtime-parity/bin/standard/net8.0/RuntimeParity.standard.runtimeconfig.json": {
+      "bytes": 340,
+      "sha256": "28329cf08f6505e73806b17558b187c02f0c1c516fe47ebfb7a013d082aaa306"
+    },
+    "pr558-round3/runtime-parity/build-light.log": {
+      "bytes": 4477,
+      "sha256": "608aa1b186b998201db5ef6e959a1f8b7b1c0e060cd784f3f324d442d08ff5f7"
+    },
+    "pr558-round3/runtime-parity/build-standard.log": {
+      "bytes": 4495,
+      "sha256": "d5e13d6a5fddb441a62229e12e9e60f87f0b1448d80e4e17966583574a56a089"
+    },
+    "pr558-round3/runtime-parity/canonical-analysis.json": {
+      "bytes": 186988,
+      "sha256": "fdc8434660ea27cd754eac4b0332b9efe9f62fe78adf4101fcc66357075436b9"
+    },
+    "pr558-round3/runtime-parity/canonical-net10.0-light.jsonl": {
+      "bytes": 241506,
+      "sha256": "a110ac39dab10444ed4713ddf28a7044b7da53b98c3dec2cc887fc05d60271b0"
+    },
+    "pr558-round3/runtime-parity/canonical-net10.0-light.log": {
+      "bytes": 514,
+      "sha256": "7952b41866e0c54b7a50423ba7d1b09ebc1ae90c6d52b971dc1365f3f68e0853"
+    },
+    "pr558-round3/runtime-parity/canonical-net10.0-standard.jsonl": {
+      "bytes": 237196,
+      "sha256": "83799d948b4ec69fc0daf89c8fced36022de5fc0277bb5c792c14c485c0475dc"
+    },
+    "pr558-round3/runtime-parity/canonical-net10.0-standard.log": {
+      "bytes": 559,
+      "sha256": "66e8748f9cfb5e1df8e0db9d9c85833f88ed26cb70a8c3b23bb62123ae9b7936"
+    },
+    "pr558-round3/runtime-parity/canonical-net472-light.jsonl": {
+      "bytes": 228760,
+      "sha256": "d18b0994d333605926947475081376a182cc52a580e89800f2c41e17ce625373"
+    },
+    "pr558-round3/runtime-parity/canonical-net472-light.log": {
+      "bytes": 514,
+      "sha256": "7952b41866e0c54b7a50423ba7d1b09ebc1ae90c6d52b971dc1365f3f68e0853"
+    },
+    "pr558-round3/runtime-parity/canonical-net472-standard.jsonl": {
+      "bytes": 224512,
+      "sha256": "17a233566f1ad1babadf41fac09fdf5ea3e18cfa3a8be1102506db70204d9002"
+    },
+    "pr558-round3/runtime-parity/canonical-net472-standard.log": {
+      "bytes": 559,
+      "sha256": "66e8748f9cfb5e1df8e0db9d9c85833f88ed26cb70a8c3b23bb62123ae9b7936"
+    },
+    "pr558-round3/runtime-parity/canonical-net8.0-light.jsonl": {
+      "bytes": 240569,
+      "sha256": "d5d1173e3f31da9d100bc4c335ca0d0abc8906e4e18a8ec6956e9bd89ea7c323"
+    },
+    "pr558-round3/runtime-parity/canonical-net8.0-light.log": {
+      "bytes": 514,
+      "sha256": "7952b41866e0c54b7a50423ba7d1b09ebc1ae90c6d52b971dc1365f3f68e0853"
+    },
+    "pr558-round3/runtime-parity/canonical-net8.0-standard.jsonl": {
+      "bytes": 236259,
+      "sha256": "3f7c316cd20938b79b5d5c4d3ea83db1d644c8091f4ab03807ca8ce29908eb4b"
+    },
+    "pr558-round3/runtime-parity/canonical-net8.0-standard.log": {
+      "bytes": 559,
+      "sha256": "66e8748f9cfb5e1df8e0db9d9c85833f88ed26cb70a8c3b23bb62123ae9b7936"
+    },
+    "pr558-round3/runtime-parity/control-summary.log": {
+      "bytes": 364,
+      "sha256": "cc4436045ba4f807492bd5e597c369a1c53558bd4443df32d83254be38e5587d"
+    },
+    "pr558-round3/runtime-parity/controls-net10.0-light.jsonl": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "pr558-round3/runtime-parity/controls-net10.0-light.log": {
+      "bytes": 514,
+      "sha256": "7952b41866e0c54b7a50423ba7d1b09ebc1ae90c6d52b971dc1365f3f68e0853"
+    },
+    "pr558-round3/runtime-parity/controls-net10.0-standard.jsonl": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "pr558-round3/runtime-parity/controls-net10.0-standard.log": {
+      "bytes": 559,
+      "sha256": "66e8748f9cfb5e1df8e0db9d9c85833f88ed26cb70a8c3b23bb62123ae9b7936"
+    },
+    "pr558-round3/runtime-parity/controls-net472-light.jsonl": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "pr558-round3/runtime-parity/controls-net472-light.log": {
+      "bytes": 514,
+      "sha256": "7952b41866e0c54b7a50423ba7d1b09ebc1ae90c6d52b971dc1365f3f68e0853"
+    },
+    "pr558-round3/runtime-parity/controls-net472-standard.jsonl": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "pr558-round3/runtime-parity/controls-net472-standard.log": {
+      "bytes": 559,
+      "sha256": "66e8748f9cfb5e1df8e0db9d9c85833f88ed26cb70a8c3b23bb62123ae9b7936"
+    },
+    "pr558-round3/runtime-parity/controls-net8.0-light.jsonl": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "pr558-round3/runtime-parity/controls-net8.0-light.log": {
+      "bytes": 514,
+      "sha256": "7952b41866e0c54b7a50423ba7d1b09ebc1ae90c6d52b971dc1365f3f68e0853"
+    },
+    "pr558-round3/runtime-parity/controls-net8.0-standard.jsonl": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "pr558-round3/runtime-parity/controls-net8.0-standard.log": {
+      "bytes": 559,
+      "sha256": "66e8748f9cfb5e1df8e0db9d9c85833f88ed26cb70a8c3b23bb62123ae9b7936"
+    },
+    "pr558-round3/runtime-parity/light.csproj": {
+      "bytes": 734,
+      "sha256": "c418063631288b323132ec1ec8aace4c50e51c27829ae255cd81fdbbcb9d8e70"
+    },
+    "pr558-round3/runtime-parity/light/before/Expression.cs": {
+      "bytes": 317411,
+      "sha256": "2fb0489fe2157c1cabeef4140c37fa4fd52b6c8e5cc3e76f3ba199ee35da767e"
+    },
+    "pr558-round3/runtime-parity/light/before/ExpressionVisitor.cs": {
+      "bytes": 20224,
+      "sha256": "a6162cdb8af3aa2274dc2a8c929e4f822e7d7f179d2d931f85d5eae0d8a9685b"
+    },
+    "pr558-round3/runtime-parity/light/before/FastExpressionCompiler.cs": {
+      "bytes": 679907,
+      "sha256": "e98ce3f889ba744c70aa76c09744a64698c239f4a4ece2293ae7ca107eecdf78"
+    },
+    "pr558-round3/runtime-parity/light/before/FlatExpression.cs": {
+      "bytes": 119743,
+      "sha256": "d47822bd4bc9d9c07aa976647e249e5eb39c6b8e216d21512b115aa23e4f6548"
+    },
+    "pr558-round3/runtime-parity/light/before/ILReader.cs": {
+      "bytes": 37615,
+      "sha256": "ceb16ba300543d6104d81e8b9b5ae687aef20dbdc9536c640bb4c00da915995d"
+    },
+    "pr558-round3/runtime-parity/light/before/ImTools.cs": {
+      "bytes": 78461,
+      "sha256": "a5d5c4f0630490d2d27d76a715517de7b7c18dace82f1a76de35f5c4a9a23fb0"
+    },
+    "pr558-round3/runtime-parity/light/before/Library.csproj": {
+      "bytes": 296,
+      "sha256": "9ce67a2842d6e554d9f16ccbc1ef45b92e6e544a3c1400411e7621b7fe424d2c"
+    },
+    "pr558-round3/runtime-parity/light/before/bin/Release/net10.0/RuntimeParity.before.light.deps.json": {
+      "bytes": 472,
+      "sha256": "8448547c231ae5e8f0223d7393b429f8ec1905b131ef55c69579e35b046cca8f"
+    },
+    "pr558-round3/runtime-parity/light/before/bin/Release/net10.0/RuntimeParity.before.light.dll": {
+      "bytes": 359424,
+      "sha256": "8db7e020969c075c554897ade0b1d47428b4ed939b764c036dbbac65691c6c8f"
+    },
+    "pr558-round3/runtime-parity/light/before/bin/Release/net10.0/RuntimeParity.before.light.pdb": {
+      "bytes": 159380,
+      "sha256": "0e735d0712c988839cf3c5e87c0ab2d199786f1b96dd75e8edb130262713440f"
+    },
+    "pr558-round3/runtime-parity/light/before/bin/Release/net472/RuntimeParity.before.light.dll": {
+      "bytes": 357888,
+      "sha256": "477c68d64cc715e654e054085d15352d07ef794b0e8fe616f96b1c26c9ec5608"
+    },
+    "pr558-round3/runtime-parity/light/before/bin/Release/net472/RuntimeParity.before.light.pdb": {
+      "bytes": 150820,
+      "sha256": "41fa8fa734010294b88c2f30599a3925faaabc3066cd38e9b1eb88dc95796a2b"
+    },
+    "pr558-round3/runtime-parity/light/before/bin/Release/net8.0/RuntimeParity.before.light.deps.json": {
+      "bytes": 470,
+      "sha256": "864eca3d65286ebcc78833ac437603f43d815d0672b6ebfc3f99efe861abc064"
+    },
+    "pr558-round3/runtime-parity/light/before/bin/Release/net8.0/RuntimeParity.before.light.dll": {
+      "bytes": 358400,
+      "sha256": "d28553737b89b89bb04b50efab16fd5ed58b2144d70aa3f07878da3742cd2dc9"
+    },
+    "pr558-round3/runtime-parity/light/before/bin/Release/net8.0/RuntimeParity.before.light.pdb": {
+      "bytes": 159316,
+      "sha256": "dae962a5c03445d71d5e6cdc8d5258067b9eb57776e91bc47ca60b750d19fcaf"
+    },
+    "pr558-round3/runtime-parity/light/current/Expression.cs": {
+      "bytes": 321197,
+      "sha256": "9a360ff6496ac26b82eb2a7c67a07215c569b5d86eed1c1bdc2e25aa70f141c2"
+    },
+    "pr558-round3/runtime-parity/light/current/ExpressionVisitor.cs": {
+      "bytes": 20224,
+      "sha256": "a6162cdb8af3aa2274dc2a8c929e4f822e7d7f179d2d931f85d5eae0d8a9685b"
+    },
+    "pr558-round3/runtime-parity/light/current/FastExpressionCompiler.cs": {
+      "bytes": 893892,
+      "sha256": "e2af56a875f89786ea881cbb463b445381707f0caacf9111efc364e767c2e7e7"
+    },
+    "pr558-round3/runtime-parity/light/current/FlatExpression.cs": {
+      "bytes": 119743,
+      "sha256": "d47822bd4bc9d9c07aa976647e249e5eb39c6b8e216d21512b115aa23e4f6548"
+    },
+    "pr558-round3/runtime-parity/light/current/ILReader.cs": {
+      "bytes": 37615,
+      "sha256": "ceb16ba300543d6104d81e8b9b5ae687aef20dbdc9536c640bb4c00da915995d"
+    },
+    "pr558-round3/runtime-parity/light/current/ImTools.cs": {
+      "bytes": 78461,
+      "sha256": "a5d5c4f0630490d2d27d76a715517de7b7c18dace82f1a76de35f5c4a9a23fb0"
+    },
+    "pr558-round3/runtime-parity/light/current/Library.csproj": {
+      "bytes": 297,
+      "sha256": "d494f38e32aa8390c07324568f4c14b455636b92a12afe8c7b2602a78930015c"
+    },
+    "pr558-round3/runtime-parity/light/current/bin/Release/net10.0/RuntimeParity.current.light.deps.json": {
+      "bytes": 475,
+      "sha256": "8124dbc65749e041618ea0ce41e2158f58d8ff160073668dff71c119244807f4"
+    },
+    "pr558-round3/runtime-parity/light/current/bin/Release/net10.0/RuntimeParity.current.light.dll": {
+      "bytes": 410112,
+      "sha256": "78cceaede89d236730e35b4ccb1417faf4a19a5ec182ac4dac3ad5a7d819bb92"
+    },
+    "pr558-round3/runtime-parity/light/current/bin/Release/net10.0/RuntimeParity.current.light.pdb": {
+      "bytes": 183740,
+      "sha256": "99d2714ce47dcb7b58bfc20a0ba852f3f9a37616744fe8e8aee52b24865132ca"
+    },
+    "pr558-round3/runtime-parity/light/current/bin/Release/net472/RuntimeParity.current.light.dll": {
+      "bytes": 409600,
+      "sha256": "6faf71045411109036e1fc26e1cf04da5a26d508be1d82ec915cb7830d28c0c6"
+    },
+    "pr558-round3/runtime-parity/light/current/bin/Release/net472/RuntimeParity.current.light.pdb": {
+      "bytes": 175412,
+      "sha256": "d92854ff425aa698cbaadd497de5f4d684c46137091046b11cb20edcbfead0a5"
+    },
+    "pr558-round3/runtime-parity/light/current/bin/Release/net8.0/RuntimeParity.current.light.deps.json": {
+      "bytes": 473,
+      "sha256": "c43ba0ff169f2c512003c65fed2fdc0488b063658d203d728aedae6ce11fd643"
+    },
+    "pr558-round3/runtime-parity/light/current/bin/Release/net8.0/RuntimeParity.current.light.dll": {
+      "bytes": 409088,
+      "sha256": "62d82e01c3c772e49241c209029a158045c8d2203ec85c7be98c1181d83805c9"
+    },
+    "pr558-round3/runtime-parity/light/current/bin/Release/net8.0/RuntimeParity.current.light.pdb": {
+      "bytes": 183676,
+      "sha256": "39eb30d29ef60982e124df1082588e18a2643181133202b5e913f782e78e26fd"
+    },
+    "pr558-round3/runtime-parity/manifest.json": {
+      "bytes": 5629,
+      "sha256": "275e289d16d2041a35c8c3b24cab7d0d786fab029ba7f8333ecadfdd2b80ad43"
+    },
+    "pr558-round3/runtime-parity/native-analysis.json": {
+      "bytes": 4125,
+      "sha256": "285a157cfcdf240e6fdeb68c62dbd57534961a0f58bb566b81b0b30d721546c3"
+    },
+    "pr558-round3/runtime-parity/native-net10.0-standard-add.dasm": {
+      "bytes": 52996,
+      "sha256": "ccafb6ab17b726ab9ce5b6f0a13ffbb97f95347e7b2660c31fc4ccdea348eaf1"
+    },
+    "pr558-round3/runtime-parity/native-net10.0-standard-add.jsonl": {
+      "bytes": 4137,
+      "sha256": "1f65e91fb7181a28087b7eda701ee450f79c953e2684100650406e967a92c04b"
+    },
+    "pr558-round3/runtime-parity/native-net10.0-standard-add.log": {
+      "bytes": 26,
+      "sha256": "d79fb07c40a9b2c101c235354f2bcfa4035884826e3f32e8658e4df60e194533"
+    },
+    "pr558-round3/runtime-parity/native-net10.0-standard-capture1.dasm": {
+      "bytes": 66930,
+      "sha256": "22ab464d2ef344ab79b28f42dda6b0de2983756423d690ea7e97ee994e330947"
+    },
+    "pr558-round3/runtime-parity/native-net10.0-standard-capture1.jsonl": {
+      "bytes": 24941,
+      "sha256": "11b4f05e7813762f41dbbdbbac7dc87d14cb7c191fa1e7b713f13a1743f11c2a"
+    },
+    "pr558-round3/runtime-parity/native-net10.0-standard-capture1.log": {
+      "bytes": 38,
+      "sha256": "0a92789b5ddc8eedee8d84ce67a84b78ec7fb8bd6a367a8d2e56872dbe142fba"
+    },
+    "pr558-round3/runtime-parity/native-net8.0-standard-add.dasm": {
+      "bytes": 53097,
+      "sha256": "fb3f060aa7789e8d0b6550757c21e770235549ec549db9d1eb0edf2af05b0df4"
+    },
+    "pr558-round3/runtime-parity/native-net8.0-standard-add.jsonl": {
+      "bytes": 4120,
+      "sha256": "4911da90bcaa3e3816ce5181052e857b4b56a9179b7f817a58c31c9be2d1616a"
+    },
+    "pr558-round3/runtime-parity/native-net8.0-standard-add.log": {
+      "bytes": 26,
+      "sha256": "d79fb07c40a9b2c101c235354f2bcfa4035884826e3f32e8658e4df60e194533"
+    },
+    "pr558-round3/runtime-parity/native-net8.0-standard-capture1.dasm": {
+      "bytes": 71672,
+      "sha256": "ec546804a98f596fab67da92db0d58e2d8137c4c0b960063d5c0f397b281a2f5"
+    },
+    "pr558-round3/runtime-parity/native-net8.0-standard-capture1.jsonl": {
+      "bytes": 24830,
+      "sha256": "4ff17e7c5520e0590579a7cb0990e3ab56b75acd32a29193c1b639c2dff35d44"
+    },
+    "pr558-round3/runtime-parity/native-net8.0-standard-capture1.log": {
+      "bytes": 38,
+      "sha256": "0a92789b5ddc8eedee8d84ce67a84b78ec7fb8bd6a367a8d2e56872dbe142fba"
+    },
+    "pr558-round3/runtime-parity/native-summary.log": {
+      "bytes": 172,
+      "sha256": "dd225144c9eb5ad7050a526a5dc3aea113b0a1ca8d166c64bc4f6f3da16bcc00"
+    },
+    "pr558-round3/runtime-parity/runtime-analysis.json": {
+      "bytes": 1329369,
+      "sha256": "2cc5d56f66f83ee4e858828f55e9c7d4326c2fc27d5af69373ee65eaf2570a8c"
+    },
+    "pr558-round3/runtime-parity/runtime-net10.0-light.jsonl": {
+      "bytes": 313857,
+      "sha256": "f731f135c71d17510ded7668512ba70cbe2f6478314f61bdb5a5e42603c99b90"
+    },
+    "pr558-round3/runtime-parity/runtime-net10.0-light.log": {
+      "bytes": 514,
+      "sha256": "7952b41866e0c54b7a50423ba7d1b09ebc1ae90c6d52b971dc1365f3f68e0853"
+    },
+    "pr558-round3/runtime-parity/runtime-net10.0-standard.jsonl": {
+      "bytes": 316157,
+      "sha256": "8e9d65d9c960a37b92627846768980e30ba9c636dc7aa8c052f6bc123bcbee92"
+    },
+    "pr558-round3/runtime-parity/runtime-net10.0-standard.log": {
+      "bytes": 559,
+      "sha256": "66e8748f9cfb5e1df8e0db9d9c85833f88ed26cb70a8c3b23bb62123ae9b7936"
+    },
+    "pr558-round3/runtime-parity/runtime-net472-light.jsonl": {
+      "bytes": 318985,
+      "sha256": "eb26db4e805a01a2da2cbff94474ad7e8b964d512d42817afaed3459b583c621"
+    },
+    "pr558-round3/runtime-parity/runtime-net472-light.log": {
+      "bytes": 514,
+      "sha256": "7952b41866e0c54b7a50423ba7d1b09ebc1ae90c6d52b971dc1365f3f68e0853"
+    },
+    "pr558-round3/runtime-parity/runtime-net472-standard.jsonl": {
+      "bytes": 321202,
+      "sha256": "6d49221365f26904d692a6402b18ef92b4fd3edd7ddc722a04a49d51a2d9789b"
+    },
+    "pr558-round3/runtime-parity/runtime-net472-standard.log": {
+      "bytes": 559,
+      "sha256": "66e8748f9cfb5e1df8e0db9d9c85833f88ed26cb70a8c3b23bb62123ae9b7936"
+    },
+    "pr558-round3/runtime-parity/runtime-net8.0-light.jsonl": {
+      "bytes": 313821,
+      "sha256": "b61e3cb716147645f33b34d54ba92b28171dc9b9ade5444a895f53fdc1d188d8"
+    },
+    "pr558-round3/runtime-parity/runtime-net8.0-light.log": {
+      "bytes": 514,
+      "sha256": "7952b41866e0c54b7a50423ba7d1b09ebc1ae90c6d52b971dc1365f3f68e0853"
+    },
+    "pr558-round3/runtime-parity/runtime-net8.0-standard.jsonl": {
+      "bytes": 315868,
+      "sha256": "60e2eeceef964e93d99ab983014631f769498d1f5beb645167a506edcb62c23d"
+    },
+    "pr558-round3/runtime-parity/runtime-net8.0-standard.log": {
+      "bytes": 559,
+      "sha256": "66e8748f9cfb5e1df8e0db9d9c85833f88ed26cb70a8c3b23bb62123ae9b7936"
+    },
+    "pr558-round3/runtime-parity/source-audit.json": {
+      "bytes": 1525,
+      "sha256": "728c02047a93b75f8c64c4e2725d4d75c4ef06f0e7f60a9451419af9b1d6bb25"
+    },
+    "pr558-round3/runtime-parity/standard.csproj": {
+      "bytes": 709,
+      "sha256": "38c258c5cf9f30bf1fba56a277d543ba5333830b9e72cddf43973f5931495f65"
+    },
+    "pr558-round3/runtime-parity/standard/before/FastExpressionCompiler.cs": {
+      "bytes": 679907,
+      "sha256": "e98ce3f889ba744c70aa76c09744a64698c239f4a4ece2293ae7ca107eecdf78"
+    },
+    "pr558-round3/runtime-parity/standard/before/ILReader.cs": {
+      "bytes": 37615,
+      "sha256": "ceb16ba300543d6104d81e8b9b5ae687aef20dbdc9536c640bb4c00da915995d"
+    },
+    "pr558-round3/runtime-parity/standard/before/ImTools.cs": {
+      "bytes": 78461,
+      "sha256": "a5d5c4f0630490d2d27d76a715517de7b7c18dace82f1a76de35f5c4a9a23fb0"
+    },
+    "pr558-round3/runtime-parity/standard/before/Library.csproj": {
+      "bytes": 248,
+      "sha256": "142c8dfa0f87d022f2464b0b5309adde7819580fa2e8c93a90d90f8b1edc41f3"
+    },
+    "pr558-round3/runtime-parity/standard/before/bin/Release/net10.0/RuntimeParity.before.standard.deps.json": {
+      "bytes": 481,
+      "sha256": "0c720735fef9cc639ba0ec0fd7169c64ec947f04491b0dc9d2bd97c8c784a04f"
+    },
+    "pr558-round3/runtime-parity/standard/before/bin/Release/net10.0/RuntimeParity.before.standard.dll": {
+      "bytes": 210944,
+      "sha256": "50a9b719fec13be6e779e37ac04eb3dde19e29dfbc1c496961facb0b2c11ad86"
+    },
+    "pr558-round3/runtime-parity/standard/before/bin/Release/net10.0/RuntimeParity.before.standard.pdb": {
+      "bytes": 89944,
+      "sha256": "854877be78854264ffc50e70bcad1fd36d8c6ed9d688bf8cdc501bf3ef4014d9"
+    },
+    "pr558-round3/runtime-parity/standard/before/bin/Release/net472/RuntimeParity.before.standard.dll": {
+      "bytes": 210944,
+      "sha256": "cefafedd6fbc3491abad1aa207a77e173bc358dd0f740e0dc5ee829d8b2d4134"
+    },
+    "pr558-round3/runtime-parity/standard/before/bin/Release/net472/RuntimeParity.before.standard.pdb": {
+      "bytes": 81364,
+      "sha256": "b78ba353c3c487bde92630aa41decedfc938fbc4555a82fb107f3b2c8abe367f"
+    },
+    "pr558-round3/runtime-parity/standard/before/bin/Release/net8.0/RuntimeParity.before.standard.deps.json": {
+      "bytes": 479,
+      "sha256": "54e2b8071ab0876e7280f965fb6091f90799111f67d49009857ed3e07f232f52"
+    },
+    "pr558-round3/runtime-parity/standard/before/bin/Release/net8.0/RuntimeParity.before.standard.dll": {
+      "bytes": 210432,
+      "sha256": "a4a5f8b5a491b11ccffdacb1e9da25e759a606f91afc63b37388501c3d5ef205"
+    },
+    "pr558-round3/runtime-parity/standard/before/bin/Release/net8.0/RuntimeParity.before.standard.pdb": {
+      "bytes": 89884,
+      "sha256": "e9aa28ae3b60d78297d5e07d94d10305cf5b4a379b96ac1c12efd878e920d287"
+    },
+    "pr558-round3/runtime-parity/standard/current/FastExpressionCompiler.cs": {
+      "bytes": 893892,
+      "sha256": "e2af56a875f89786ea881cbb463b445381707f0caacf9111efc364e767c2e7e7"
+    },
+    "pr558-round3/runtime-parity/standard/current/ILReader.cs": {
+      "bytes": 37615,
+      "sha256": "ceb16ba300543d6104d81e8b9b5ae687aef20dbdc9536c640bb4c00da915995d"
+    },
+    "pr558-round3/runtime-parity/standard/current/ImTools.cs": {
+      "bytes": 78461,
+      "sha256": "a5d5c4f0630490d2d27d76a715517de7b7c18dace82f1a76de35f5c4a9a23fb0"
+    },
+    "pr558-round3/runtime-parity/standard/current/Library.csproj": {
+      "bytes": 249,
+      "sha256": "32ba5dfa89d5e24ccfcc608183bb259181d354bb51affff2882e1b51a8723c1f"
+    },
+    "pr558-round3/runtime-parity/standard/current/bin/Release/net10.0/RuntimeParity.current.standard.deps.json": {
+      "bytes": 484,
+      "sha256": "ed7ba979d78bc48d3e123e05e1ef0fa57fa93abc39b100ae108908a1a2f7be35"
+    },
+    "pr558-round3/runtime-parity/standard/current/bin/Release/net10.0/RuntimeParity.current.standard.dll": {
+      "bytes": 260608,
+      "sha256": "c52b7983ea8c216dfe1127e87d974ff92ffc3caa59755d87377947a3d631c98e"
+    },
+    "pr558-round3/runtime-parity/standard/current/bin/Release/net10.0/RuntimeParity.current.standard.pdb": {
+      "bytes": 113720,
+      "sha256": "b45da41fb405ea2dadf1b4ce4f071010802843ca6f3e0c7b2150b54776d1c3c5"
+    },
+    "pr558-round3/runtime-parity/standard/current/bin/Release/net472/RuntimeParity.current.standard.dll": {
+      "bytes": 260608,
+      "sha256": "b331569fc0fc7a7b9a28e9d4ea23c4beb5e5d5c0361c9fdc0aaf8191e371685b"
+    },
+    "pr558-round3/runtime-parity/standard/current/bin/Release/net472/RuntimeParity.current.standard.pdb": {
+      "bytes": 105372,
+      "sha256": "10e8f4a8a6425c8eb68fb8207b5ff135b59b3c7ce6479fbbda03df8ccd4ab1d6"
+    },
+    "pr558-round3/runtime-parity/standard/current/bin/Release/net8.0/RuntimeParity.current.standard.deps.json": {
+      "bytes": 482,
+      "sha256": "8a6a322ba194d0b92f48155a2afaf12edc0d412834d140dab520d42c1e101da4"
+    },
+    "pr558-round3/runtime-parity/standard/current/bin/Release/net8.0/RuntimeParity.current.standard.dll": {
+      "bytes": 260096,
+      "sha256": "3aa754edaffb4fb5ead3707f2418b3a7a2ff20a5f85c0b7b2ac748fedba326ad"
+    },
+    "pr558-round3/runtime-parity/standard/current/bin/Release/net8.0/RuntimeParity.current.standard.pdb": {
+      "bytes": 113660,
+      "sha256": "d2835f2f4538683f3d419c2cf84d94c076b30a6d1ed5fa0b7d8b9930de116468"
+    },
+    "pr558-round3/runtime-parity/timing-summary.log": {
+      "bytes": 723,
+      "sha256": "d353704ecc868cf4c627586ca68d1abae44c68a6f03ad3578a947ce1425bef1b"
+    },
+    "pr558-round4/publication/GenerateReport.py": {
+      "bytes": 33793,
+      "sha256": "95d107ecfd559477a5f4af597b4297c323993aa208af4d73128ff8bca0eb5af4"
+    },
+    "pr558-round4/publication/Package.py": {
+      "bytes": 8038,
+      "sha256": "4a8b631f9d346eefbe3c5aa952517beefecf8a01c24ab4e0d7fb0ea8a5d82490"
+    },
+    "pr558-round4/publication/README.txt": {
+      "bytes": 2583,
+      "sha256": "6491550dd0b48eff5f9b8d152ae814176fcf7c91f6dd2a927b19e8df7ad8308c"
+    },
+    "pr558-round4/publication/REPORT.txt": {
+      "bytes": 6503,
+      "sha256": "6c732c1649241113b54ec192d54cdc0dcd289b42f035d803ae42c0f44a3f542d"
+    },
+    "pr558-round4/publication/VALIDATION-REPRODUCTION.txt": {
+      "bytes": 1707,
+      "sha256": "bfa2e93c4896474aa4dda6a5dae1a94299d50ec730840ff34f72dc5b8857ba54"
+    },
+    "pr558-round4/publication/final-state.json": {
+      "bytes": 4265,
+      "sha256": "9d4a134f2cdd83497c6fb1c265d4de36c12b0523cf547199c86b8d60dcac09ef"
+    },
+    "pr558-round4/publication/hash-inventory.json": {
+      "bytes": 572127,
+      "sha256": "a75f6299dcb71d845cba6f614e06138eebf69ac80680fb71ce5af0353c84708e"
+    },
+    "pr558-round4/publication/inventory-summary.log": {
+      "bytes": 1573,
+      "sha256": "535a8cf1c0237b4eab6e13b36f17cb255285d7d0a3b1c6758180227b24e94794"
+    },
+    "pr558-round4/publication/package-inventory.json": {
+      "bytes": 3587,
+      "sha256": "80e458624c6549ed3805b8642ba0cc2561af679febf32cff8456f84d337f8ba3"
+    },
+    "pr558-round4/publication/pr558-before-body.txt": {
+      "bytes": 18099,
+      "sha256": "f1fe5d161ef8a5b33d9ca8ba8c39ee97c1cb9c0effa3ba531a2458168beea4e0"
+    },
+    "pr558-round4/publication/pr558-before.json": {
+      "bytes": 18467,
+      "sha256": "fd708e3a12c5c77b93753ac2b095e3f47cffdc6ade91e6448e0c17be3f965eca"
+    },
+    "pr558-round4/publication/pr558-description-draft.txt": {
+      "bytes": 24637,
+      "sha256": "0941981bde2e3e0fb8617fe4a9f2e41cb09d1e65e822947a1b068c8c186d0223"
+    },
+    "pr558-round4/publication/pr558-measurement-comment-draft.txt": {
+      "bytes": 6188,
+      "sha256": "33f31e71147a8390e19f6a7ad0b8363c9512b91f234335bea43d6e4f11503b11"
+    },
+    "pr558-round4/publication/report-data.json": {
+      "bytes": 4820,
+      "sha256": "f6d2e64403644476282f77c2236905ae0f45846e7316d353dbcf39de5259cd19"
+    },
+    "pr558-round4/publication/report.html": {
+      "bytes": 755166,
+      "sha256": "6b135b317407aac32edfc55d81bbea8e31b5132b4303d7fada84169155c533c6"
+    }
+  },
+  "excludedDirectories": [
+    ".git",
+    ".vs",
+    "__pycache__",
+    "artifacts",
+    "node_modules",
+    "obj"
+  ],
+  "excludedSuffixes": [
+    ".dmp",
+    ".etlx",
+    ".zip"
+  ],
+  "scope": "Archives preserve measured snapshots, raw rows, binaries and relative layouts. Frozen42f evidence is not relabeled as final combined code performance."
+}

@@ -1,0 +1,46 @@
+{
+  "upstreamMaster": "233ed5adaa9d9ceea67d71e153d0d2457f2cce00",
+  "commentCommit": "f089ff5b82d4f374d7953b9641b18d876eb7f08e",
+  "validatedCodeHead": "7949ee5d1d7253ba50c49744980c69d72db489fb",
+  "codes": {
+    "FastExpressionCompiler": 0,
+    "FastExpressionCompiler.LightExpression": 0,
+    "native-net10.0": 0,
+    "native-net8.0": 0,
+    "framework-build": 0,
+    "framework-run": 0,
+    "imported-build": 0,
+    "imported-full": 0
+  },
+  "imported": {
+    "total": 35122,
+    "executed": 35064,
+    "passed": 35064,
+    "failed": 0,
+    "error": 0,
+    "timeout": 0,
+    "aborted": 0
+  },
+  "batches": 21,
+  "executedCrashes": 0,
+  "exclusions": 69,
+  "newExclusions": 0,
+  "native": {
+    "native-net10.0": {
+      "legacyPassed": 1714
+    },
+    "native-net8.0": {
+      "legacyPassed": 1713
+    },
+    "framework-run": {
+      "legacyPassed": 1597,
+      "testXPassed": 1041
+    }
+  },
+  "snapshot": {
+    "commit": "7949ee5d1d7253ba50c49744980c69d72db489fb",
+    "compilerSha256": "339482b9a1380f955efd59b75fd2501c9fa03dd6bc9874ab8d557974a8762b82",
+    "assemblySha256": "c634aa0c9aabb9a26d6a041fce45b0a8af5989c4e838b9ec15172494dc8da0df"
+  },
+  "performance": "No fresh timings; earlier reports retain their original source IDs."
+}

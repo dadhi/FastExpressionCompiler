@@ -1,0 +1,426 @@
+{
+  "framework_compile": [
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "capture1",
+      "before B": "4,169.57",
+      "fixed B": "4,307.21",
+      "delta B": "137.64"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "capture8",
+      "before B": "7,547.62",
+      "fixed B": "7,836.77",
+      "delta B": "289.15"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "capture_array",
+      "before B": "4,392.00",
+      "fixed B": "4,440.00",
+      "delta B": "48.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "capture_call",
+      "before B": "4,288.00",
+      "fixed B": "4,432.00",
+      "delta B": "144.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "capture_ctor",
+      "before B": "4,448.00",
+      "fixed B": "4,504.00",
+      "delta B": "56.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "capture_invoke",
+      "before B": "4,768.00",
+      "fixed B": "4,824.00",
+      "delta B": "56.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "capture_mutable",
+      "before B": "4,376.00",
+      "fixed B": "5,272.00",
+      "delta B": "896.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "capture_mutable_reference",
+      "before B": "7,552.00",
+      "fixed B": "7,664.00",
+      "delta B": "112.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "capture_mutable_reference_array",
+      "before B": "7,736.00",
+      "fixed B": "7,848.00",
+      "delta B": "112.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "capture_mutable_reference_ctor",
+      "before B": "7,800.00",
+      "fixed B": "7,912.00",
+      "delta B": "112.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "capture_reference",
+      "before B": "4,264.00",
+      "fixed B": "4,408.00",
+      "delta B": "144.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "capture_try",
+      "before B": "4,912.00",
+      "fixed B": "5,096.00",
+      "delta B": "184.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "invoke_try_argument",
+      "before B": "2,041.76",
+      "fixed B": "2,057.86",
+      "delta B": "16.10"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "nested_eh32",
+      "before B": "17,256.00",
+      "fixed B": "17,272.00",
+      "delta B": "16.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "nested_eh8",
+      "before B": "5,144.00",
+      "fixed B": "5,160.00",
+      "delta B": "16.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "try_catch",
+      "before B": "1,890.08",
+      "fixed B": "1,906.68",
+      "delta B": "16.60"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "try_finally",
+      "before B": "1,857.97",
+      "fixed B": "1,875.02",
+      "delta B": "17.05"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "standard",
+      "scenario": "capture1",
+      "before B": "4,169.01",
+      "fixed B": "4,306.70",
+      "delta B": "137.68"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "before B": "7,547.15",
+      "fixed B": "7,838.00",
+      "delta B": "290.85"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "standard",
+      "scenario": "capture_array",
+      "before B": "4,394.92",
+      "fixed B": "4,441.95",
+      "delta B": "47.03"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "standard",
+      "scenario": "capture_call",
+      "before B": "4,288.00",
+      "fixed B": "4,432.00",
+      "delta B": "144.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "standard",
+      "scenario": "capture_ctor",
+      "before B": "4,448.00",
+      "fixed B": "4,504.00",
+      "delta B": "56.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "standard",
+      "scenario": "capture_invoke",
+      "before B": "4,768.00",
+      "fixed B": "4,824.00",
+      "delta B": "56.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "before B": "4,376.00",
+      "fixed B": "5,272.00",
+      "delta B": "896.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "before B": "4,264.00",
+      "fixed B": "4,408.00",
+      "delta B": "144.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "before B": "4,912.00",
+      "fixed B": "5,096.00",
+      "delta B": "184.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "standard",
+      "scenario": "invoke_try_argument",
+      "before B": "2,497.29",
+      "fixed B": "2,514.30",
+      "delta B": "17.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "standard",
+      "scenario": "nested_eh32",
+      "before B": "17,256.00",
+      "fixed B": "17,272.00",
+      "delta B": "16.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "standard",
+      "scenario": "nested_eh8",
+      "before B": "5,144.00",
+      "fixed B": "5,160.00",
+      "delta B": "16.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "standard",
+      "scenario": "try_catch",
+      "before B": "1,892.80",
+      "fixed B": "1,907.83",
+      "delta B": "15.04"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "standard",
+      "scenario": "try_finally",
+      "before B": "1,860.03",
+      "fixed B": "1,877.54",
+      "delta B": "17.51"
+    }
+  ],
+  "cold_compile_first": [
+    {
+      "runtime": "10.0.9",
+      "scenario": "nested_mixed128",
+      "before B": "68,896.00",
+      "fixed B": "79,224.00",
+      "delta B": "10,328.00",
+      "time ratio": "1.5451"
+    },
+    {
+      "runtime": "10.0.9",
+      "scenario": "try_catch",
+      "before B": "42,984.00",
+      "fixed B": "44,208.00",
+      "delta B": "1,224.00",
+      "time ratio": "1.4955"
+    },
+    {
+      "runtime": "10.0.9",
+      "scenario": "try_finally",
+      "before B": "42,952.00",
+      "fixed B": "44,176.00",
+      "delta B": "1,224.00",
+      "time ratio": "1.1785"
+    },
+    {
+      "runtime": "8.0.28",
+      "scenario": "nested_mixed128",
+      "before B": "73,672.00",
+      "fixed B": "84,000.00",
+      "delta B": "10,328.00",
+      "time ratio": "1.4567"
+    },
+    {
+      "runtime": "8.0.28",
+      "scenario": "try_catch",
+      "before B": "47,376.00",
+      "fixed B": "48,624.00",
+      "delta B": "1,248.00",
+      "time ratio": "1.5569"
+    },
+    {
+      "runtime": "8.0.28",
+      "scenario": "try_finally",
+      "before B": "47,344.00",
+      "fixed B": "48,592.00",
+      "delta B": "1,248.00",
+      "time ratio": "1.5780"
+    }
+  ],
+  "cold_totals": [
+    {
+      "runtime": "10.0.9",
+      "phase": "cold compile + first invoke",
+      "median scenario time ratio": "1.5688",
+      "allocation increases": "3/10"
+    },
+    {
+      "runtime": "8.0.28",
+      "phase": "cold compile + first invoke",
+      "median scenario time ratio": "1.4850",
+      "allocation increases": "3/10"
+    }
+  ],
+  "modern_paired_totals": [
+    {
+      "runtime": "10.0.9",
+      "phase": "activate",
+      "comparisons": 12,
+      "median paired ratio": "0.9222",
+      "time ratios >1.03": 0,
+      "allocation increases": 0,
+      "allocation decreases": 0
+    },
+    {
+      "runtime": "10.0.9",
+      "phase": "compile",
+      "comparisons": 41,
+      "median paired ratio": "1.0982",
+      "time ratios >1.03": 35,
+      "allocation increases": 0,
+      "allocation decreases": 14
+    },
+    {
+      "runtime": "10.0.9",
+      "phase": "compile_first",
+      "comparisons": 41,
+      "median paired ratio": "1.0135",
+      "time ratios >1.03": 12,
+      "allocation increases": 0,
+      "allocation decreases": 14
+    },
+    {
+      "runtime": "10.0.9",
+      "phase": "construct",
+      "comparisons": 41,
+      "median paired ratio": "0.9848",
+      "time ratios >1.03": 3,
+      "allocation increases": 0,
+      "allocation decreases": 0
+    },
+    {
+      "runtime": "10.0.9",
+      "phase": "invoke",
+      "comparisons": 41,
+      "median paired ratio": "0.9997",
+      "time ratios >1.03": 1,
+      "allocation increases": 0,
+      "allocation decreases": 1
+    },
+    {
+      "runtime": "10.0.9",
+      "phase": "nested_invoke",
+      "comparisons": 12,
+      "median paired ratio": "0.9887",
+      "time ratios >1.03": 1,
+      "allocation increases": 0,
+      "allocation decreases": 1
+    },
+    {
+      "runtime": "8.0.28",
+      "phase": "activate",
+      "comparisons": 12,
+      "median paired ratio": "0.9364",
+      "time ratios >1.03": 0,
+      "allocation increases": 0,
+      "allocation decreases": 0
+    },
+    {
+      "runtime": "8.0.28",
+      "phase": "compile",
+      "comparisons": 41,
+      "median paired ratio": "1.1144",
+      "time ratios >1.03": 35,
+      "allocation increases": 0,
+      "allocation decreases": 14
+    },
+    {
+      "runtime": "8.0.28",
+      "phase": "compile_first",
+      "comparisons": 41,
+      "median paired ratio": "0.9970",
+      "time ratios >1.03": 10,
+      "allocation increases": 0,
+      "allocation decreases": 14
+    },
+    {
+      "runtime": "8.0.28",
+      "phase": "construct",
+      "comparisons": 41,
+      "median paired ratio": "0.9917",
+      "time ratios >1.03": 6,
+      "allocation increases": 0,
+      "allocation decreases": 0
+    },
+    {
+      "runtime": "8.0.28",
+      "phase": "invoke",
+      "comparisons": 41,
+      "median paired ratio": "0.9994",
+      "time ratios >1.03": 2,
+      "allocation increases": 0,
+      "allocation decreases": 1
+    },
+    {
+      "runtime": "8.0.28",
+      "phase": "nested_invoke",
+      "comparisons": 12,
+      "median paired ratio": "0.9997",
+      "time ratios >1.03": 2,
+      "allocation increases": 0,
+      "allocation decreases": 1
+    }
+  ]
+}

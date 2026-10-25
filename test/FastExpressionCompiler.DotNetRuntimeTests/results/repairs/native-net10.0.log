@@ -1,0 +1,8 @@
+
+//## .NET Latest (Core): Running UnitTests and IssueTests in parallel...
+
+//UnitTests are passing in 8749 ms.
+
+//IssueTests are passing in 14508 ms.
+
+//ALL 1712 tests are passing in 14510 ms.
