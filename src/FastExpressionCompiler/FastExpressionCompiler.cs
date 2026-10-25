@@ -345,12 +345,14 @@ namespace FastExpressionCompiler
         {
             var isRoot = context.PreCreatedClosures == null;
             Type[] closurePlusParamTypes = null;
+            DynamicMethod method = null;
+            ILGenerator il = null;
             try
             {
                 closurePlusParamTypes = RentPooledOrNewClosureTypeToParamTypes(lambdaExpr.GetParamExprs());
                 // Collection is skipped, so exception policy must be chosen conservatively.
-                var method = CreateExceptionAwareDynamicMethod(lambdaExpr.ReturnType, closurePlusParamTypes);
-                var il = method.GetILGenerator();
+                method = CreateExceptionAwareDynamicMethod(lambdaExpr.ReturnType, closurePlusParamTypes);
+                il = DynamicMethodHacks.RentPooledOrNewILGenerator(method, lambdaExpr.ReturnType, closurePlusParamTypes);
                 EmittingVisitor.EmitLoadConstantsAndNestedLambdasIntoVars(il, ref context);
                 var bodyExpr = lambdaExpr.Body;
                 var returnType = lambdaExpr.ReturnType;
@@ -369,6 +371,7 @@ namespace FastExpressionCompiler
             }
             finally
             {
+                if (il != null) DynamicMethodHacks.FreePooledILGenerator(method, il);
                 if (closurePlusParamTypes != null) FreePooledClosureTypeAndParamTypes(closurePlusParamTypes);
                 FreeHoistedTypes(ref context);
             }
