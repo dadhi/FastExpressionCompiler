@@ -69,6 +69,9 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Coalesce_with_nullable_left_emits_the_same_IL_shape_as_system();
             Can_compile_shifts_with_nullable_shift_count();
             Can_compile_right_shift_with_nullable_shift_count();
+            IsLifted_and_IsLiftedToNull_are_the_same_as_in_system_expressions();
+            Lifted_comparisons_have_the_same_type_and_result_as_system();
+            And_AndAlso_OrElse_take_the_type_from_the_left_operand();
             Can_compile_nullable_boolean_and_also();
             Can_compile_nullable_boolean_or_else();
             Can_compile_nullable_boolean_not();
@@ -80,7 +83,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_print_reference_comparison();
             Can_round_trip_new_expression_kinds_through_system_expressions();
 
-            return 61;
+            return 64;
         }
 
         private static int _sideEffectCalls;
@@ -721,6 +724,135 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var nullMethodFast = Lambda<Func<bool?, bool?, bool?>>(withNullMethod, left, right).CompileFast(true);
             Asserts.AreEqual(true, nullMethodFast(null, true));
             Asserts.AreEqual(null, nullMethodFast(null, false));
+        }
+
+        public void And_AndAlso_OrElse_take_the_type_from_the_left_operand()
+        {
+            var i = Parameter(typeof(int), "i");
+            var j = Parameter(typeof(int), "j");
+            var b = Parameter(typeof(bool), "b");
+            var c = Parameter(typeof(bool), "c");
+            var sysI = SysExpr.Parameter(typeof(int), "i");
+            var sysJ = SysExpr.Parameter(typeof(int), "j");
+
+            // bitwise And/Or on integers is of the integer type, as in System
+            Asserts.AreEqual(SysExpr.And(sysI, sysJ).Type, And(i, j).Type);
+            Asserts.AreEqual(typeof(int), And(i, j).Type);
+            Asserts.AreEqual(typeof(int), Or(i, j).Type);
+            Asserts.AreEqual(typeof(int), And(i, j).ToExpression().Type);
+
+            var andInts = Lambda<Func<int, int, int>>(And(i, j), i, j);
+            Asserts.AreEqual(andInts.CompileSys()(12, 10), andInts.CompileFast(true)(12, 10));
+            Asserts.AreEqual(8, andInts.CompileFast(true)(12, 10));
+
+            var longs = Parameter(typeof(long), "l");
+            Asserts.AreEqual(typeof(long), And(longs, longs).Type);
+
+            // bool operands stay logical
+            Asserts.AreEqual(typeof(bool), And(b, c).Type);
+            Asserts.AreEqual(typeof(bool), AndAlso(b, c).Type);
+            Asserts.AreEqual(typeof(bool), OrElse(b, c).Type);
+            var andBools = Lambda<Func<bool, bool, bool>>(And(b, c), b, c);
+            Asserts.AreEqual(false, andBools.CompileFast(true)(true, false));
+            Asserts.AreEqual(true, andBools.CompileFast(true)(true, true));
+
+            // bool? operands are lifted
+            var nb = Parameter(typeof(bool?), "nb");
+            Asserts.AreEqual(typeof(bool?), And(nb, nb).Type);
+            Asserts.AreEqual(typeof(bool?), AndAlso(nb, nb).Type);
+            Asserts.AreEqual(typeof(bool?), OrElse(nb, nb).Type);
+        }
+
+        public void Lifted_comparisons_have_the_same_type_and_result_as_system()
+        {
+            var ip = Parameter(typeof(int), "a"); var iq = Parameter(typeof(int), "b");
+            var np = Parameter(typeof(int?), "a"); var nq = Parameter(typeof(int?), "b");
+
+            var eqInt = Equal(ip, iq, true, null);
+            Asserts.AreEqual(typeof(bool), eqInt.Type);
+            Asserts.AreEqual(true, Lambda<Func<int, int, bool>>(eqInt, ip, iq).CompileFast(true)(1, 1));
+            Asserts.AreEqual(true, Lambda<Func<int, int, bool>>(LessThan(ip, iq, true, null), ip, iq).CompileFast(true)(1, 2));
+
+            // lifted to null: the result is null when any operand is null, so null == null is null and not true
+            var eqNull = Equal(np, nq, true, null);
+            Asserts.AreEqual(typeof(bool?), eqNull.Type);
+            var liftedOps = new Func<Expression, Expression, bool, MethodInfo, BinaryExpression>[]
+                { Equal, NotEqual, GreaterThan, GreaterThanOrEqual, LessThan, LessThanOrEqual };
+            var sysLiftedOps = new Func<SysExpr, SysExpr, bool, MethodInfo, System.Linq.Expressions.BinaryExpression>[]
+                { SysExpr.Equal, SysExpr.NotEqual, SysExpr.GreaterThan, SysExpr.GreaterThanOrEqual, SysExpr.LessThan, SysExpr.LessThanOrEqual };
+            var values = new int?[] { null, 0, 1, 2, -1 };
+            for (var i = 0; i < liftedOps.Length; ++i)
+            {
+                var f = Lambda<Func<int?, int?, bool?>>(liftedOps[i](np, nq, true, null), np, nq);
+                var sa = SysExpr.Parameter(typeof(int?)); var sb = SysExpr.Parameter(typeof(int?));
+                var fs = SysExpr.Lambda<Func<int?, int?, bool?>>(sysLiftedOps[i](sa, sb, true, null), sa, sb).Compile();
+                var ff = f.CompileFast(true);
+                Asserts.IsNotNull(ff);
+                foreach (var x in values)
+                    foreach (var y in values)
+                        Asserts.AreEqual(fs(x, y), ff(x, y));
+
+                // the right operand is a complex expression
+                var fc = Lambda<Func<int?, int?, bool?>>(liftedOps[i](np, Block(nq), true, null), np, nq).CompileFast(true);
+                Asserts.IsNotNull(fc);
+                foreach (var x in values)
+                    foreach (var y in values)
+                        Asserts.AreEqual(fs(x, y), fc(x, y));
+            }
+
+            // all comparison factories, with and without lifting, for the nullable and non-nullable operands
+            var names = new[] { "Equal", "NotEqual", "GreaterThan", "GreaterThanOrEqual", "LessThan", "LessThanOrEqual" };
+            foreach (var name in names)
+                foreach (var t in new[] { typeof(int), typeof(int?), typeof(bool), typeof(bool?), typeof(double?) })
+                    foreach (var lift in new[] { false, true })
+                    {
+                        System.Linq.Expressions.BinaryExpression s = null;
+                        try
+                        {
+                            s = (System.Linq.Expressions.BinaryExpression)typeof(SysExpr).GetMethod(name, new[] { typeof(SysExpr), typeof(SysExpr), typeof(bool), typeof(System.Reflection.MethodInfo) })
+                                .Invoke(null, new object[] { SysExpr.Parameter(t), SysExpr.Parameter(t), lift, null });
+                        }
+                        catch (System.Reflection.TargetInvocationException) { }
+                        if (s == null)
+                            continue;
+
+                        var l = (BinaryExpression)typeof(Expression).GetMethod(name, new[] { typeof(Expression), typeof(Expression), typeof(bool), typeof(System.Reflection.MethodInfo) })
+                            .Invoke(null, new object[] { Parameter(t), Parameter(t), lift, null });
+                        var what = $"{name}({t.Name}, lift: {lift})";
+                        Asserts.AreEqual(s.Type, l.Type, what + " Type");
+                        Asserts.AreEqual(s.IsLifted, l.IsLifted, what + " IsLifted");
+                        Asserts.AreEqual(s.IsLiftedToNull, l.IsLiftedToNull, what + " IsLiftedToNull");
+                    }
+        }
+        public void IsLifted_and_IsLiftedToNull_are_the_same_as_in_system_expressions()
+        {
+            var types = new[] { typeof(int), typeof(int?), typeof(long), typeof(bool), typeof(bool?), typeof(double?), typeof(uint?) };
+            var names = new[] { "Add", "Subtract", "Multiply", "Divide", "Modulo", "And", "Or", "ExclusiveOr", "LeftShift", "RightShift",
+                "AndAlso", "OrElse", "Equal", "NotEqual", "LessThan", "GreaterThanOrEqual", "Coalesce" };
+            var checkedCount = 0;
+            foreach (var name in names)
+                foreach (var lt in types)
+                    foreach (var rt in types)
+                    {
+                        System.Linq.Expressions.BinaryExpression s = null;
+                        try
+                        {
+                            s = (System.Linq.Expressions.BinaryExpression)typeof(SysExpr).GetMethod(name, new[] { typeof(SysExpr), typeof(SysExpr) })
+                                .Invoke(null, new object[] { SysExpr.Parameter(lt), SysExpr.Parameter(rt) });
+                        }
+                        catch (System.Reflection.TargetInvocationException) { }
+                        if (s == null)
+                            continue;
+
+                        var l = (BinaryExpression)typeof(Expression).GetMethod(name, new[] { typeof(Expression), typeof(Expression) })
+                            .Invoke(null, new object[] { Parameter(lt), Parameter(rt) });
+                        var what = $"{name}({lt.Name}, {rt.Name})";
+                        Asserts.AreEqual(s.Type, l.Type, what + " Type");
+                        Asserts.AreEqual(s.IsLifted, l.IsLifted, what + " IsLifted");
+                        Asserts.AreEqual(s.IsLiftedToNull, l.IsLiftedToNull, what + " IsLiftedToNull");
+                        ++checkedCount;
+                    }
+            Asserts.IsTrue(checkedCount > 100);
         }
 
         public void Can_compile_right_shift_with_nullable_shift_count()

@@ -1541,11 +1541,16 @@ public abstract class Expression
     [RequiresUnreferencedCode(Trimming.Message)]
     public static BinaryExpression Power(Expression left, Expression right, MethodInfo method) => GetLeftTypedBinary(ExpressionType.Power, left, right, method);
 
+    // bool operands give the bool typed logical node, otherwise (bitwise or lifted operands) the type is taken from the left operand
+    [MethodImpl((MethodImplOptions)256)]
+    private static BinaryExpression GetBoolOrLeftTypedBinary(ExpressionType nodeType, Expression left, Expression right) =>
+        left.Type == typeof(bool)
+            ? new LogicalBinaryExpression(nodeType, left, right)
+            : new LeftTypedBinaryExpression(nodeType, left, right);
+
     /// <summary>Creates a BinaryExpression that represents a bitwise AND operation.</summary>
     public static BinaryExpression And(Expression left, Expression right) =>
-        left.Type == typeof(bool?)
-            ? new LeftTypedBinaryExpression(ExpressionType.And, left, right)
-            : new LogicalBinaryExpression(ExpressionType.And, left, right);
+        GetBoolOrLeftTypedBinary(ExpressionType.And, left, right);
 
     /// <summary>Creates a BinaryExpression that represents a bitwise AND operation.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
@@ -1553,9 +1558,7 @@ public abstract class Expression
 
     /// <summary>Creates a BinaryExpression that represents a conditional AND operation that evaluates the second operand only if the first operand evaluates to true.</summary>
     public static BinaryExpression AndAlso(Expression left, Expression right) =>
-        left.Type == typeof(bool?)
-            ? new LeftTypedBinaryExpression(ExpressionType.AndAlso, left, right)
-            : new LogicalBinaryExpression(ExpressionType.AndAlso, left, right);
+        GetBoolOrLeftTypedBinary(ExpressionType.AndAlso, left, right);
 
     /// <summary>Creates a BinaryExpression that represents a conditional AND operation that evaluates the second operand only if the first operand evaluates to true.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
@@ -1579,9 +1582,7 @@ public abstract class Expression
 
     /// <summary>Creates a BinaryExpression that represents a conditional OR operation that evaluates the second operand only if the first operand evaluates to false.</summary>
     public static BinaryExpression OrElse(Expression left, Expression right) =>
-        left.Type == typeof(bool?)
-            ? new LeftTypedBinaryExpression(ExpressionType.OrElse, left, right)
-            : new LogicalBinaryExpression(ExpressionType.OrElse, left, right);
+        GetBoolOrLeftTypedBinary(ExpressionType.OrElse, left, right);
 
     /// <summary>Creates a BinaryExpression that represents a conditional OR operation that evaluates the second operand only if the first operand evaluates to false.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
@@ -1991,10 +1992,11 @@ public abstract class Expression
         var rType = right.Type;
         if (method == null)
         {
-            if (lType == rType && lType.IsNumeric())
-                return lType.IsNullable() && liftToNull
-                    ? (BinaryExpression)new LiftedToNullBinaryExpression(binaryType, left, right)
-                    : new LeftTypedBinaryExpression(binaryType, left, right);
+            // reachable only from the comparison factories with liftToNull
+            if (lType == rType)
+                return liftToNull && lType.IsNullable()
+                    ? new LiftedToNullBinaryExpression(binaryType, left, right)
+                    : new LogicalBinaryExpression(binaryType, left, right);
 
             throw new NotSupportedException($"The user-defined binary operator is not supported yet for {binaryType} left `{left}` and `{right}`");
         }
@@ -3514,10 +3516,15 @@ public abstract class BinaryExpression : Expression
     public bool IsLifted
     {
         [RequiresUnreferencedCode(Trimming.Message)]
-        get =>
-            NodeType != ExpressionType.Coalesce & NodeType != ExpressionType.Assign &&
-            Left.Type.IsNullable() &&
-            (Method == null || !Method.GetParameters()[0].ParameterType.GetNonRef().IsEquivalentTo(Left.Type));
+        get
+        {
+            var nt = NodeType;
+            if (nt == ExpressionType.Coalesce | nt == ExpressionType.Assign)
+                return false;
+            var lt = Left.Type;
+            return lt.IsNullable() &&
+                (Method == null || !Method.GetParameters()[0].ParameterType.GetNonRef().IsEquivalentTo(lt));
+        }
     }
 
     /// <summary>Gets a value that indicates whether the expression tree node represents a lifted call to an operator whose return type is lifted to a nullable type.</summary>

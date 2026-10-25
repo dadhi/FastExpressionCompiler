@@ -170,7 +170,7 @@ namespace FastExpressionCompiler
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Delegate CompileFast(this LambdaExpression lambdaExpr, bool ifFastFailedReturnNull = false, CompilerFlags flags = CompilerFlags.Default) =>
-            (Delegate)TryCompileBoundToFirstClosureParam(lambdaExpr.Type, lambdaExpr.Body, lambdaExpr.GetParamExprs(), lambdaExpr.ReturnType, flags) 
+            (Delegate)TryCompileBoundToFirstClosureParam(lambdaExpr.Type, lambdaExpr.Body, lambdaExpr.GetParamExprs(), lambdaExpr.ReturnType, flags)
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Returns the System expression itself or convert the System expression into Light Expression</summary>
@@ -225,7 +225,7 @@ namespace FastExpressionCompiler
         /// <summary>Compiles lambda expression to TDelegate type. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
         public static Func<T1, T2, R> CompileFast<T1, T2, R>(this Expression<Func<T1, T2, R>> lambdaExpr,
             bool ifFastFailedReturnNull = false, CompilerFlags flags = CompilerFlags.Default) =>
-            (Func<T1, T2, R>)TryCompileBoundToFirstClosureParam(typeof(Func<T1, T2, R>), lambdaExpr.Body, lambdaExpr.GetParamExprs(), typeof(R), flags) ?? 
+            (Func<T1, T2, R>)TryCompileBoundToFirstClosureParam(typeof(Func<T1, T2, R>), lambdaExpr.Body, lambdaExpr.GetParamExprs(), typeof(R), flags) ??
             (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
         /// <summary>Compiles lambda expression to delegate. Use ifFastFailedReturnNull parameter to Not fallback to Expression.Compile, useful for testing.</summary>
@@ -414,7 +414,7 @@ namespace FastExpressionCompiler
             }
 #endif
             // Try to avoid compilation altogether for Func<bool> delegates via Interpreter, see #468
-            if (closureAndParamTypes.Length == 1 & returnType == typeof(bool) 
+            if (closureAndParamTypes.Length == 1 & returnType == typeof(bool)
                 && bodyExpr.Type.IsPrimitive // the interpreter folds only primitives, nullable constant folding is not supported, see #496
                 && Interpreter.IsCandidateForInterpretation(bodyExpr)
                 && Interpreter.TryInterpretBool(out var result, bodyExpr, flags))
@@ -2020,6 +2020,10 @@ namespace FastExpressionCompiler
                                 var comparison = (BinaryExpression)expr;
                                 if (comparison.Method != null && !comparison.IsLifted)
                                     return TryEmitComparisonMethod(comparison, il, ref context, parent);
+                                if (exprType != typeof(bool) && !(exprType == typeof(bool?) && comparison.Method == null &&
+                                      comparison.Left.Type == comparison.Right.Type && comparison.Left.Type.IsNullable() &&
+                                      !IsNullContainingExpression(comparison.Left) && !IsNullContainingExpression(comparison.Right)))
+                                    return false; // todo: @feat other kinds of lifting are not supported yet
 #if LIGHT_EXPRESSION
                                 if (comparison is LogicalBinaryExpression { IsReferenceComparison: true })
                                     return TryEmitReferenceComparison(comparison, nodeType == ExpressionType.NotEqual, il, ref context, parent);
@@ -4907,7 +4911,7 @@ namespace FastExpressionCompiler
                             // or if the field is not accessed from the just constructed object `new Widget().DodgyValue`, #333
                             if (((parent & ParentFlags.InstanceAccess) != 0 &
                                 (parent & ParentFlags.IndexAccess) == 0) && field.FieldType.IsValueType)
-                            isByAddress = true;
+                                isByAddress = true;
 
                         // we don't need to duplicate the instance if we are working with the field address to save to it directly,
                         // so the field address should be Dupped instead for loading and then storing by-ref for assignment (see below).
@@ -5263,8 +5267,9 @@ namespace FastExpressionCompiler
                     {
                         if (switchValues.GetSurePresentRef(1).Value - switchValues.GetSurePresentRef(0).Value > valueGapMin)
                             firstTestValueIdx = 1;
-                        
-                        if (firstTestValueIdx == 0 || switchValuesCount >= 2 + minSwitchTableSize) {
+
+                        if (firstTestValueIdx == 0 || switchValuesCount >= 2 + minSwitchTableSize)
+                        {
                             if (switchValues.GetSurePresentRef(lastTestValueIdx).Value - switchValues.GetSurePresentRef(lastTestValueIdx - 1).Value > valueGapMin)
                                 --lastTestValueIdx;
                         }
@@ -5939,15 +5944,21 @@ namespace FastExpressionCompiler
 
                     if (isLiftedToNull)
                     {
+                        // the result is `bool?`: the compared value when both operands have a value, otherwise default(bool?)
                         var resultLabel = il.DefineLabel();
                         var isNullLabel = il.DefineLabel();
                         EmitLoadLocalVariable(il, leftHasValueVar);
-                        il.Demit(OpCodes.Brfalse_S, isNullLabel); // safe: jumps over EmitLoadLocalVariable (1-4 bytes) + Brtrue_S (2 bytes) = 3-6 bytes
+                        il.Demit(OpCodes.Brfalse, isNullLabel);
                         EmitLoadLocalVariable(il, rightHasValueVar);
-                        il.Demit(OpCodes.Brtrue_S, resultLabel);  // safe: jumps over Pop (1 byte) + Ldnull (1 byte) = 2 bytes
+                        il.Demit(OpCodes.Brfalse, isNullLabel);
+                        il.Demit(OpCodes.Newobj, Tools.NullableReflected<bool>.Constructor);
+                        il.Demit(OpCodes.Br, resultLabel);
                         il.DmarkLabel(isNullLabel);
                         il.Demit(OpCodes.Pop);
-                        il.Demit(OpCodes.Ldnull);
+                        var nullResultVar = il.GetNextLocalVarIndex(typeof(bool?));
+                        EmitLoadLocalVariableAddress(il, nullResultVar);
+                        il.Demit(OpCodes.Initobj, typeof(bool?));
+                        EmitLoadLocalVariable(il, nullResultVar);
                         il.DmarkLabel(resultLabel);
                     }
                 }
@@ -6859,31 +6870,6 @@ namespace FastExpressionCompiler
                 throw new InvalidCastException($"Unreachable switch case detected `{@case}` at `{caller}`:{line}");
             }
 
-            /// <summary>Operation accepting IComparable inputs and producing bool output</summary>
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static bool IsComparison(ExpressionType nodeType) =>
-                nodeType == ExpressionType.Equal |
-                nodeType == ExpressionType.NotEqual |
-                nodeType == ExpressionType.GreaterThan |
-                nodeType == ExpressionType.GreaterThanOrEqual |
-                nodeType == ExpressionType.LessThan |
-                nodeType == ExpressionType.LessThanOrEqual;
-
-            /// <summary>Operation accepting the same primitive type inputs (or of the coalescing types) and producing the "same" primitive type output</summary>
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static bool IsArithmeticBinary(ExpressionType nodeType) =>
-                nodeType == ExpressionType.Add |
-                nodeType == ExpressionType.Subtract |
-                nodeType == ExpressionType.Multiply |
-                nodeType == ExpressionType.Divide |
-                nodeType == ExpressionType.Modulo |
-                nodeType == ExpressionType.Power |
-                nodeType == ExpressionType.LeftShift |
-                nodeType == ExpressionType.RightShift |
-                nodeType == ExpressionType.And |
-                nodeType == ExpressionType.Or |
-                nodeType == ExpressionType.ExclusiveOr;
-
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             internal static void NegatePrimitiveValue(ref PValue value, TypeCode code)
             {
@@ -7457,7 +7443,7 @@ namespace FastExpressionCompiler
                     nodeType == ExpressionType.Not |
                     nodeType == ExpressionType.Negate |
                     expr is BinaryExpression;
-                    // todo: @wip include conditional?
+                // todo: @wip include conditional?
             }
 
 #if INTERPRETATION_DIAGNOSTICS
@@ -7608,14 +7594,14 @@ namespace FastExpressionCompiler
             [MethodImpl((MethodImplOptions)256)]
             internal static long PValueToLong(ref PValue value, TypeCode code) => code switch
             {
-                TypeCode.Char   => (long)value.CharValue,
-                TypeCode.SByte  => (long)value.SByteValue,
-                TypeCode.Byte   => (long)value.ByteValue,
-                TypeCode.Int16  => (long)value.Int16Value,
+                TypeCode.Char => (long)value.CharValue,
+                TypeCode.SByte => (long)value.SByteValue,
+                TypeCode.Byte => (long)value.ByteValue,
+                TypeCode.Int16 => (long)value.Int16Value,
                 TypeCode.UInt16 => (long)value.UInt16Value,
-                TypeCode.Int32  => (long)value.Int32Value,
+                TypeCode.Int32 => (long)value.Int32Value,
                 TypeCode.UInt32 => (long)value.UInt32Value,
-                TypeCode.Int64  => value.Int64Value,
+                TypeCode.Int64 => value.Int64Value,
                 TypeCode.UInt64 => (long)value.UInt64Value,
                 _ => 0L,
             };
@@ -7632,7 +7618,7 @@ namespace FastExpressionCompiler
                 if (nodeType == ExpressionType.Not)
                 {
                     var operandExpr = ((UnaryExpression)expr).Operand;
-                    if (operandExpr.NodeType == ExpressionType.Conditional) 
+                    if (operandExpr.NodeType == ExpressionType.Conditional)
                         operandExpr = Tools.TryReduceConditional((ConditionalExpression)operandExpr);
                     if (operandExpr is ConstantExpression co)
                         resultBool = (bool)co.Value;
@@ -7650,7 +7636,7 @@ namespace FastExpressionCompiler
 
                     // Interpreting the left part as the first candidate for the result
                     var left = binaryExpr.Left;
-                    if (left.NodeType == ExpressionType.Conditional) 
+                    if (left.NodeType == ExpressionType.Conditional)
                         left = Tools.TryReduceConditional((ConditionalExpression)left);
                     if (left is ConstantExpression lc)
                         resultBool = (bool)lc.Value;
@@ -7664,7 +7650,7 @@ namespace FastExpressionCompiler
 
                     // If the first part is not enough to decide of the expression result, go right
                     var right = binaryExpr.Right;
-                    if (right.NodeType == ExpressionType.Conditional) 
+                    if (right.NodeType == ExpressionType.Conditional)
                         right = Tools.TryReduceConditional((ConditionalExpression)right);
                     if (right is ConstantExpression rc)
                     {
@@ -7862,7 +7848,7 @@ namespace FastExpressionCompiler
                 // yes: arithmetic, negate, default, convert
                 // no: not, logical, comparison
 
-                if (IsArithmeticBinary(nodeType))
+                if (nodeType.IsArithmeticBinary())
                 {
                     var binaryExpr = (BinaryExpression)expr;
                     var left = binaryExpr.Left;
@@ -7954,7 +7940,7 @@ namespace FastExpressionCompiler
                 // What is supported for the int result
                 // yes: arithmetic, convert, default
                 // no: not, logical, comparison
-                if (IsArithmeticBinary(nodeType))
+                if (nodeType.IsArithmeticBinary())
                 {
                     var binaryExpr = (BinaryExpression)expr;
                     var left = binaryExpr.Left;
@@ -8065,7 +8051,7 @@ namespace FastExpressionCompiler
                 // What is supported for the non-boolean, non-decimal result
                 // yes: arithmetic, convert, default
                 // no: not, logical, comparison
-                if (IsArithmeticBinary(nodeType))
+                if (nodeType.IsArithmeticBinary())
                 {
                     var binaryExpr = (BinaryExpression)expr;
                     var left = binaryExpr.Left;
@@ -8287,11 +8273,35 @@ namespace FastExpressionCompiler
             nodeType == ExpressionType.Block |
             nodeType == ExpressionType.Loop;
 
-
         [MethodImpl((MethodImplOptions)256)]
         internal static bool IsBlockLikeOrConditional(this ExpressionType nodeType) =>
             nodeType == ExpressionType.Conditional | nodeType == ExpressionType.Coalesce ||
             IsBracedBlockLike(nodeType);
+
+        /// <summary>Operation accepting IComparable inputs and producing bool output</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsComparison(this ExpressionType nodeType) =>
+            nodeType == ExpressionType.Equal |
+            nodeType == ExpressionType.NotEqual |
+            nodeType == ExpressionType.GreaterThan |
+            nodeType == ExpressionType.GreaterThanOrEqual |
+            nodeType == ExpressionType.LessThan |
+            nodeType == ExpressionType.LessThanOrEqual;
+
+        /// <summary>Operation accepting the same primitive type inputs (or of the coalescing types) and producing the "same" primitive type output</summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsArithmeticBinary(this ExpressionType nodeType) =>
+            nodeType == ExpressionType.Add |
+            nodeType == ExpressionType.Subtract |
+            nodeType == ExpressionType.Multiply |
+            nodeType == ExpressionType.Divide |
+            nodeType == ExpressionType.Modulo |
+            nodeType == ExpressionType.Power |
+            nodeType == ExpressionType.LeftShift |
+            nodeType == ExpressionType.RightShift |
+            nodeType == ExpressionType.And |
+            nodeType == ExpressionType.Or |
+            nodeType == ExpressionType.ExclusiveOr;
 
         // Returns true when a non-void expression used as a statement needs a `_ = ` discard prefix
         // to suppress CS0201 / produce valid, unambiguous C# output.
@@ -8674,7 +8684,7 @@ namespace FastExpressionCompiler
                     var equals = Equals(lc.Value, rc.Value);
                     return bi.NodeType == ExpressionType.Equal
                         ? (equals ? condExpr.IfTrue : condExpr.IfFalse)
-                        : (equals ? condExpr.IfFalse: condExpr.IfTrue);
+                        : (equals ? condExpr.IfFalse : condExpr.IfTrue);
                 }
 
                 // Handle compile-time branch elimination for null/default equality:
@@ -10192,165 +10202,194 @@ namespace FastExpressionCompiler
             switch (expr.NodeType)
             {
                 case ExpressionType.Parameter:
-                {
-                    // Bound parameters are hashed by their position for structural consistency
-                    // so that Lambda(x=>x+1) and Lambda(y=>y+1) produce the same hash.
-                    for (var i = 0; i < _xps.Count; i++)
-                        if (ReferenceEquals(_xps.GetSurePresentRef(i), expr))
-                            return Combine(h, i);
-                    // Free/standalone parameter: use name as discriminator.
-                    return Combine(h, ((ParameterExpression)expr).Name?.GetHashCode() ?? 0);
-                }
+                    {
+                        // Bound parameters are hashed by their position for structural consistency
+                        // so that Lambda(x=>x+1) and Lambda(y=>y+1) produce the same hash.
+                        for (var i = 0; i < _xps.Count; i++)
+                            if (ReferenceEquals(_xps.GetSurePresentRef(i), expr))
+                                return Combine(h, i);
+                        // Free/standalone parameter: use name as discriminator.
+                        return Combine(h, ((ParameterExpression)expr).Name?.GetHashCode() ?? 0);
+                    }
                 case ExpressionType.Constant:
                     return Combine(h, ((ConstantExpression)expr).Value?.GetHashCode() ?? 0);
                 case ExpressionType.Lambda:
-                {
-                    var l = (LambdaExpression)expr;
-                    var sc = _xps.Count;
+                    {
+                        var l = (LambdaExpression)expr;
+                        var sc = _xps.Count;
 #if LIGHT_EXPRESSION
                     var pc = l.ParameterCount;
                     for (var i = 0; i < pc; i++) _xps.AddDefaultAndGetRef() = l.GetParameter(i);
 #else
-                    var pc = l.Parameters.Count;
-                    for (var i = 0; i < pc; i++) _xps.AddDefaultAndGetRef() = l.Parameters[i];
+                        var pc = l.Parameters.Count;
+                        for (var i = 0; i < pc; i++) _xps.AddDefaultAndGetRef() = l.Parameters[i];
 #endif
-                    h = Combine(h, Hash(l.Body));
-                    _xps.Count = sc;
-                    return h;
-                }
-                case ExpressionType.Negate: case ExpressionType.NegateChecked:
-                case ExpressionType.UnaryPlus: case ExpressionType.Not:
-                case ExpressionType.ArrayLength: case ExpressionType.TypeAs:
-                case ExpressionType.Convert: case ExpressionType.ConvertChecked:
-                case ExpressionType.Quote: case ExpressionType.Throw:
-                case ExpressionType.OnesComplement: case ExpressionType.IsTrue: case ExpressionType.IsFalse:
-                case ExpressionType.Increment: case ExpressionType.Decrement:
-                case ExpressionType.PreIncrementAssign: case ExpressionType.PostIncrementAssign:
-                case ExpressionType.PreDecrementAssign: case ExpressionType.PostDecrementAssign:
+                        h = Combine(h, Hash(l.Body));
+                        _xps.Count = sc;
+                        return h;
+                    }
+                case ExpressionType.Negate:
+                case ExpressionType.NegateChecked:
+                case ExpressionType.UnaryPlus:
+                case ExpressionType.Not:
+                case ExpressionType.ArrayLength:
+                case ExpressionType.TypeAs:
+                case ExpressionType.Convert:
+                case ExpressionType.ConvertChecked:
+                case ExpressionType.Quote:
+                case ExpressionType.Throw:
+                case ExpressionType.OnesComplement:
+                case ExpressionType.IsTrue:
+                case ExpressionType.IsFalse:
+                case ExpressionType.Increment:
+                case ExpressionType.Decrement:
+                case ExpressionType.PreIncrementAssign:
+                case ExpressionType.PostIncrementAssign:
+                case ExpressionType.PreDecrementAssign:
+                case ExpressionType.PostDecrementAssign:
                 case ExpressionType.Unbox:
-                {
-                    var u = (UnaryExpression)expr;
-                    return Combine(h, Combine(u.Method?.GetHashCode() ?? 0, Hash(u.Operand)));
-                }
-                case ExpressionType.Add: case ExpressionType.AddChecked:
-                case ExpressionType.Subtract: case ExpressionType.SubtractChecked:
-                case ExpressionType.Multiply: case ExpressionType.MultiplyChecked:
-                case ExpressionType.Divide: case ExpressionType.Modulo:
-                case ExpressionType.Power: case ExpressionType.And:
-                case ExpressionType.Or: case ExpressionType.ExclusiveOr:
-                case ExpressionType.LeftShift: case ExpressionType.RightShift:
-                case ExpressionType.AndAlso: case ExpressionType.OrElse:
-                case ExpressionType.Equal: case ExpressionType.NotEqual:
-                case ExpressionType.LessThan: case ExpressionType.LessThanOrEqual:
-                case ExpressionType.GreaterThan: case ExpressionType.GreaterThanOrEqual:
-                case ExpressionType.Coalesce: case ExpressionType.ArrayIndex:
+                    {
+                        var u = (UnaryExpression)expr;
+                        return Combine(h, Combine(u.Method?.GetHashCode() ?? 0, Hash(u.Operand)));
+                    }
+                case ExpressionType.Add:
+                case ExpressionType.AddChecked:
+                case ExpressionType.Subtract:
+                case ExpressionType.SubtractChecked:
+                case ExpressionType.Multiply:
+                case ExpressionType.MultiplyChecked:
+                case ExpressionType.Divide:
+                case ExpressionType.Modulo:
+                case ExpressionType.Power:
+                case ExpressionType.And:
+                case ExpressionType.Or:
+                case ExpressionType.ExclusiveOr:
+                case ExpressionType.LeftShift:
+                case ExpressionType.RightShift:
+                case ExpressionType.AndAlso:
+                case ExpressionType.OrElse:
+                case ExpressionType.Equal:
+                case ExpressionType.NotEqual:
+                case ExpressionType.LessThan:
+                case ExpressionType.LessThanOrEqual:
+                case ExpressionType.GreaterThan:
+                case ExpressionType.GreaterThanOrEqual:
+                case ExpressionType.Coalesce:
+                case ExpressionType.ArrayIndex:
                 case ExpressionType.Assign:
-                case ExpressionType.AddAssign: case ExpressionType.AddAssignChecked:
-                case ExpressionType.SubtractAssign: case ExpressionType.SubtractAssignChecked:
-                case ExpressionType.MultiplyAssign: case ExpressionType.MultiplyAssignChecked:
-                case ExpressionType.DivideAssign: case ExpressionType.ModuloAssign:
-                case ExpressionType.PowerAssign: case ExpressionType.AndAssign:
-                case ExpressionType.OrAssign: case ExpressionType.ExclusiveOrAssign:
-                case ExpressionType.LeftShiftAssign: case ExpressionType.RightShiftAssign:
-                {
-                    var b = (BinaryExpression)expr;
-                    return Combine(h, Combine(b.Method?.GetHashCode() ?? 0, Combine(Hash(b.Left), Hash(b.Right))));
-                }
+                case ExpressionType.AddAssign:
+                case ExpressionType.AddAssignChecked:
+                case ExpressionType.SubtractAssign:
+                case ExpressionType.SubtractAssignChecked:
+                case ExpressionType.MultiplyAssign:
+                case ExpressionType.MultiplyAssignChecked:
+                case ExpressionType.DivideAssign:
+                case ExpressionType.ModuloAssign:
+                case ExpressionType.PowerAssign:
+                case ExpressionType.AndAssign:
+                case ExpressionType.OrAssign:
+                case ExpressionType.ExclusiveOrAssign:
+                case ExpressionType.LeftShiftAssign:
+                case ExpressionType.RightShiftAssign:
+                    {
+                        var b = (BinaryExpression)expr;
+                        return Combine(h, Combine(b.Method?.GetHashCode() ?? 0, Combine(Hash(b.Left), Hash(b.Right))));
+                    }
                 case ExpressionType.Call:
-                {
-                    var m = (MethodCallExpression)expr;
-                    h = Combine(h, Combine(m.Method.GetHashCode(), Hash(m.Object)));
-                    var args = (IArgumentProvider)m;
-                    for (var i = 0; i < args.ArgumentCount; i++) h = Combine(h, Hash(args.GetArgument(i)));
-                    return h;
-                }
+                    {
+                        var m = (MethodCallExpression)expr;
+                        h = Combine(h, Combine(m.Method.GetHashCode(), Hash(m.Object)));
+                        var args = (IArgumentProvider)m;
+                        for (var i = 0; i < args.ArgumentCount; i++) h = Combine(h, Hash(args.GetArgument(i)));
+                        return h;
+                    }
                 case ExpressionType.MemberAccess:
-                {
-                    var m = (MemberExpression)expr;
-                    return Combine(h, Combine(m.Member.GetHashCode(), Hash(m.Expression)));
-                }
+                    {
+                        var m = (MemberExpression)expr;
+                        return Combine(h, Combine(m.Member.GetHashCode(), Hash(m.Expression)));
+                    }
                 case ExpressionType.New:
-                {
-                    var n = (NewExpression)expr;
-                    h = Combine(h, n.Constructor?.GetHashCode() ?? 0);
-                    var args = (IArgumentProvider)n;
-                    for (var i = 0; i < args.ArgumentCount; i++) h = Combine(h, Hash(args.GetArgument(i)));
-                    return h;
-                }
+                    {
+                        var n = (NewExpression)expr;
+                        h = Combine(h, n.Constructor?.GetHashCode() ?? 0);
+                        var args = (IArgumentProvider)n;
+                        for (var i = 0; i < args.ArgumentCount; i++) h = Combine(h, Hash(args.GetArgument(i)));
+                        return h;
+                    }
                 case ExpressionType.NewArrayInit:
                 case ExpressionType.NewArrayBounds:
-                {
+                    {
 #if LIGHT_EXPRESSION
                     var args = (IArgumentProvider)expr;
                     for (var i = 0; i < args.ArgumentCount; i++) h = Combine(h, Hash(args.GetArgument(i)));
 #else
-                    var na = (NewArrayExpression)expr;
-                    for (var i = 0; i < na.Expressions.Count; i++) h = Combine(h, Hash(na.Expressions[i]));
+                        var na = (NewArrayExpression)expr;
+                        for (var i = 0; i < na.Expressions.Count; i++) h = Combine(h, Hash(na.Expressions[i]));
 #endif
-                    return h;
-                }
+                        return h;
+                    }
                 case ExpressionType.Conditional:
-                {
-                    var c = (ConditionalExpression)expr;
-                    return Combine(h, Combine(Hash(c.Test), Combine(Hash(c.IfTrue), Hash(c.IfFalse))));
-                }
+                    {
+                        var c = (ConditionalExpression)expr;
+                        return Combine(h, Combine(Hash(c.Test), Combine(Hash(c.IfTrue), Hash(c.IfFalse))));
+                    }
                 case ExpressionType.Block:
-                {
-                    var b = (BlockExpression)expr;
-                    var sc = _xps.Count;
-                    var vc = b.Variables.Count;
-                    for (var i = 0; i < vc; i++) _xps.AddDefaultAndGetRef() = b.Variables[i];
-                    for (var i = 0; i < b.Expressions.Count; i++) h = Combine(h, Hash(b.Expressions[i]));
-                    _xps.Count = sc;
-                    return h;
-                }
+                    {
+                        var b = (BlockExpression)expr;
+                        var sc = _xps.Count;
+                        var vc = b.Variables.Count;
+                        for (var i = 0; i < vc; i++) _xps.AddDefaultAndGetRef() = b.Variables[i];
+                        for (var i = 0; i < b.Expressions.Count; i++) h = Combine(h, Hash(b.Expressions[i]));
+                        _xps.Count = sc;
+                        return h;
+                    }
                 case ExpressionType.MemberInit:
-                {
-                    var mi = (MemberInitExpression)expr;
+                    {
+                        var mi = (MemberInitExpression)expr;
 #if LIGHT_EXPRESSION
                     h = Combine(h, Hash(mi.Expression));
 #else
-                    h = Combine(h, Hash(mi.NewExpression));
+                        h = Combine(h, Hash(mi.NewExpression));
 #endif
-                    for (var i = 0; i < mi.Bindings.Count; i++) h = Combine(h, mi.Bindings[i].Member.GetHashCode());
-                    return h;
-                }
+                        for (var i = 0; i < mi.Bindings.Count; i++) h = Combine(h, mi.Bindings[i].Member.GetHashCode());
+                        return h;
+                    }
                 case ExpressionType.ListInit:
-                {
-                    var li = (ListInitExpression)expr;
-                    h = Combine(h, Hash(li.NewExpression));
-                    for (var i = 0; i < li.Initializers.Count; i++) h = Combine(h, li.Initializers[i].AddMethod.GetHashCode());
-                    return h;
-                }
+                    {
+                        var li = (ListInitExpression)expr;
+                        h = Combine(h, Hash(li.NewExpression));
+                        for (var i = 0; i < li.Initializers.Count; i++) h = Combine(h, li.Initializers[i].AddMethod.GetHashCode());
+                        return h;
+                    }
                 case ExpressionType.TypeIs:
                 case ExpressionType.TypeEqual:
-                {
-                    var tb = (TypeBinaryExpression)expr;
-                    return Combine(h, Combine(tb.TypeOperand.GetHashCode(), Hash(tb.Expression)));
-                }
+                    {
+                        var tb = (TypeBinaryExpression)expr;
+                        return Combine(h, Combine(tb.TypeOperand.GetHashCode(), Hash(tb.Expression)));
+                    }
                 case ExpressionType.Invoke:
-                {
-                    var inv = (InvocationExpression)expr;
-                    h = Combine(h, Hash(inv.Expression));
-                    var args = (IArgumentProvider)inv;
-                    for (var i = 0; i < args.ArgumentCount; i++) h = Combine(h, Hash(args.GetArgument(i)));
-                    return h;
-                }
+                    {
+                        var inv = (InvocationExpression)expr;
+                        h = Combine(h, Hash(inv.Expression));
+                        var args = (IArgumentProvider)inv;
+                        for (var i = 0; i < args.ArgumentCount; i++) h = Combine(h, Hash(args.GetArgument(i)));
+                        return h;
+                    }
                 case ExpressionType.Goto:
-                {
-                    var g = (GotoExpression)expr;
-                    return Combine(h, Combine((int)g.Kind, Combine(g.Target.Name?.GetHashCode() ?? 0, Hash(g.Value))));
-                }
+                    {
+                        var g = (GotoExpression)expr;
+                        return Combine(h, Combine((int)g.Kind, Combine(g.Target.Name?.GetHashCode() ?? 0, Hash(g.Value))));
+                    }
                 case ExpressionType.Label:
-                {
-                    var l = (LabelExpression)expr;
-                    return Combine(h, Combine(l.Target.Name?.GetHashCode() ?? 0, Hash(l.DefaultValue)));
-                }
+                    {
+                        var l = (LabelExpression)expr;
+                        return Combine(h, Combine(l.Target.Name?.GetHashCode() ?? 0, Hash(l.DefaultValue)));
+                    }
                 case ExpressionType.Loop:
-                {
-                    var l = (LoopExpression)expr;
-                    return Combine(h, Hash(l.Body));
-                }
+                    {
+                        var l = (LoopExpression)expr;
+                        return Combine(h, Hash(l.Body));
+                    }
                 default:
                     return h;
             }
@@ -10382,27 +10421,27 @@ namespace FastExpressionCompiler
             switch (x.NodeType)
             {
                 case ExpressionType.Parameter:
-                {
-                    // Check if this parameter is bound inside an enclosing lambda or block by looking it
-                    // up in the collected pairs. E.g. in Lambda<Func<int,int>>(body: Add(p, one), parameters: p),
-                    // when we reach `p` inside the body we find it at index 0 in _xps, and then verify
-                    // the corresponding param from the other expression is also at index 0 in _yps.
-                    for (var i = 0; i < _xps.Count; i++)
-                        if (ReferenceEquals(_xps.GetSurePresentRef(i), x))
-                            return ReferenceEquals(_yps.GetSurePresentRef(i), y);
-                    // Unbound/standalone parameter, not found in any enclosing lambda or block parameter list.
-                    var px = (ParameterExpression)x;
-                    var py = (ParameterExpression)y;
-                    return px.IsByRef == py.IsByRef && px.Name == py.Name;
-                }
+                    {
+                        // Check if this parameter is bound inside an enclosing lambda or block by looking it
+                        // up in the collected pairs. E.g. in Lambda<Func<int,int>>(body: Add(p, one), parameters: p),
+                        // when we reach `p` inside the body we find it at index 0 in _xps, and then verify
+                        // the corresponding param from the other expression is also at index 0 in _yps.
+                        for (var i = 0; i < _xps.Count; i++)
+                            if (ReferenceEquals(_xps.GetSurePresentRef(i), x))
+                                return ReferenceEquals(_yps.GetSurePresentRef(i), y);
+                        // Unbound/standalone parameter, not found in any enclosing lambda or block parameter list.
+                        var px = (ParameterExpression)x;
+                        var py = (ParameterExpression)y;
+                        return px.IsByRef == py.IsByRef && px.Name == py.Name;
+                    }
 
                 case ExpressionType.Constant:
                     return Equals(((ConstantExpression)x).Value, ((ConstantExpression)y).Value);
 
                 case ExpressionType.Lambda:
-                {
-                    var lx = (LambdaExpression)x;
-                    var ly = (LambdaExpression)y;
+                    {
+                        var lx = (LambdaExpression)x;
+                        var ly = (LambdaExpression)y;
 #if LIGHT_EXPRESSION
                     var pc = lx.ParameterCount;
                     if (pc != ly.ParameterCount) return false;
@@ -10416,288 +10455,317 @@ namespace FastExpressionCompiler
                         _yps.AddDefaultAndGetRef() = lpy;
                     }
 #else
-                    var pc = lx.Parameters.Count;
-                    if (pc != ly.Parameters.Count) return false;
-                    var sc = _xps.Count;
-                    for (var i = 0; i < pc; i++)
-                    {
-                        var lpx = lx.Parameters[i];
-                        var lpy = ly.Parameters[i];
-                        if (lpx.Type != lpy.Type | lpx.IsByRef != lpy.IsByRef) return false;
-                        _xps.AddDefaultAndGetRef() = lpx;
-                        _yps.AddDefaultAndGetRef() = lpy;
-                    }
+                        var pc = lx.Parameters.Count;
+                        if (pc != ly.Parameters.Count) return false;
+                        var sc = _xps.Count;
+                        for (var i = 0; i < pc; i++)
+                        {
+                            var lpx = lx.Parameters[i];
+                            var lpy = ly.Parameters[i];
+                            if (lpx.Type != lpy.Type | lpx.IsByRef != lpy.IsByRef) return false;
+                            _xps.AddDefaultAndGetRef() = lpx;
+                            _yps.AddDefaultAndGetRef() = lpy;
+                        }
 #endif
-                    var eq = Eq(lx.Body, ly.Body);
-                    _xps.Count = sc;
-                    _yps.Count = sc;
-                    return eq;
-                }
+                        var eq = Eq(lx.Body, ly.Body);
+                        _xps.Count = sc;
+                        _yps.Count = sc;
+                        return eq;
+                    }
 
-                case ExpressionType.Negate: case ExpressionType.NegateChecked:
-                case ExpressionType.UnaryPlus: case ExpressionType.Not:
-                case ExpressionType.ArrayLength: case ExpressionType.TypeAs:
-                case ExpressionType.Convert: case ExpressionType.ConvertChecked:
-                case ExpressionType.Quote: case ExpressionType.Throw:
-                case ExpressionType.OnesComplement: case ExpressionType.IsTrue: case ExpressionType.IsFalse:
-                case ExpressionType.Increment: case ExpressionType.Decrement:
-                case ExpressionType.PreIncrementAssign: case ExpressionType.PostIncrementAssign:
-                case ExpressionType.PreDecrementAssign: case ExpressionType.PostDecrementAssign:
+                case ExpressionType.Negate:
+                case ExpressionType.NegateChecked:
+                case ExpressionType.UnaryPlus:
+                case ExpressionType.Not:
+                case ExpressionType.ArrayLength:
+                case ExpressionType.TypeAs:
+                case ExpressionType.Convert:
+                case ExpressionType.ConvertChecked:
+                case ExpressionType.Quote:
+                case ExpressionType.Throw:
+                case ExpressionType.OnesComplement:
+                case ExpressionType.IsTrue:
+                case ExpressionType.IsFalse:
+                case ExpressionType.Increment:
+                case ExpressionType.Decrement:
+                case ExpressionType.PreIncrementAssign:
+                case ExpressionType.PostIncrementAssign:
+                case ExpressionType.PreDecrementAssign:
+                case ExpressionType.PostDecrementAssign:
                 case ExpressionType.Unbox:
-                {
-                    var ux = (UnaryExpression)x;
-                    var uy = (UnaryExpression)y;
-                    return ux.Method == uy.Method && Eq(ux.Operand, uy.Operand);
-                }
+                    {
+                        var ux = (UnaryExpression)x;
+                        var uy = (UnaryExpression)y;
+                        return ux.Method == uy.Method && Eq(ux.Operand, uy.Operand);
+                    }
 
-                case ExpressionType.Add: case ExpressionType.AddChecked:
-                case ExpressionType.Subtract: case ExpressionType.SubtractChecked:
-                case ExpressionType.Multiply: case ExpressionType.MultiplyChecked:
-                case ExpressionType.Divide: case ExpressionType.Modulo:
-                case ExpressionType.Power: case ExpressionType.And:
-                case ExpressionType.Or: case ExpressionType.ExclusiveOr:
-                case ExpressionType.LeftShift: case ExpressionType.RightShift:
-                case ExpressionType.AndAlso: case ExpressionType.OrElse:
-                case ExpressionType.Equal: case ExpressionType.NotEqual:
-                case ExpressionType.LessThan: case ExpressionType.LessThanOrEqual:
-                case ExpressionType.GreaterThan: case ExpressionType.GreaterThanOrEqual:
-                case ExpressionType.Coalesce: case ExpressionType.ArrayIndex:
+                case ExpressionType.Add:
+                case ExpressionType.AddChecked:
+                case ExpressionType.Subtract:
+                case ExpressionType.SubtractChecked:
+                case ExpressionType.Multiply:
+                case ExpressionType.MultiplyChecked:
+                case ExpressionType.Divide:
+                case ExpressionType.Modulo:
+                case ExpressionType.Power:
+                case ExpressionType.And:
+                case ExpressionType.Or:
+                case ExpressionType.ExclusiveOr:
+                case ExpressionType.LeftShift:
+                case ExpressionType.RightShift:
+                case ExpressionType.AndAlso:
+                case ExpressionType.OrElse:
+                case ExpressionType.Equal:
+                case ExpressionType.NotEqual:
+                case ExpressionType.LessThan:
+                case ExpressionType.LessThanOrEqual:
+                case ExpressionType.GreaterThan:
+                case ExpressionType.GreaterThanOrEqual:
+                case ExpressionType.Coalesce:
+                case ExpressionType.ArrayIndex:
                 case ExpressionType.Assign:
-                case ExpressionType.AddAssign: case ExpressionType.AddAssignChecked:
-                case ExpressionType.SubtractAssign: case ExpressionType.SubtractAssignChecked:
-                case ExpressionType.MultiplyAssign: case ExpressionType.MultiplyAssignChecked:
-                case ExpressionType.DivideAssign: case ExpressionType.ModuloAssign:
-                case ExpressionType.PowerAssign: case ExpressionType.AndAssign:
-                case ExpressionType.OrAssign: case ExpressionType.ExclusiveOrAssign:
-                case ExpressionType.LeftShiftAssign: case ExpressionType.RightShiftAssign:
-                {
-                    var bx = (BinaryExpression)x;
-                    var by = (BinaryExpression)y;
-                    return bx.Method == by.Method &&
-                        Eq(bx.Conversion, by.Conversion) &&
-                        Eq(bx.Left, by.Left) &&
-                        Eq(bx.Right, by.Right);
-                }
+                case ExpressionType.AddAssign:
+                case ExpressionType.AddAssignChecked:
+                case ExpressionType.SubtractAssign:
+                case ExpressionType.SubtractAssignChecked:
+                case ExpressionType.MultiplyAssign:
+                case ExpressionType.MultiplyAssignChecked:
+                case ExpressionType.DivideAssign:
+                case ExpressionType.ModuloAssign:
+                case ExpressionType.PowerAssign:
+                case ExpressionType.AndAssign:
+                case ExpressionType.OrAssign:
+                case ExpressionType.ExclusiveOrAssign:
+                case ExpressionType.LeftShiftAssign:
+                case ExpressionType.RightShiftAssign:
+                    {
+                        var bx = (BinaryExpression)x;
+                        var by = (BinaryExpression)y;
+                        return bx.Method == by.Method &&
+                            Eq(bx.Conversion, by.Conversion) &&
+                            Eq(bx.Left, by.Left) &&
+                            Eq(bx.Right, by.Right);
+                    }
 
                 case ExpressionType.Call:
-                {
-                    var mx = (MethodCallExpression)x;
-                    var my = (MethodCallExpression)y;
-                    return mx.Method == my.Method &&
-                        Eq(mx.Object, my.Object) &&
-                        EqArgs(mx, my);
-                }
+                    {
+                        var mx = (MethodCallExpression)x;
+                        var my = (MethodCallExpression)y;
+                        return mx.Method == my.Method &&
+                            Eq(mx.Object, my.Object) &&
+                            EqArgs(mx, my);
+                    }
 
                 case ExpressionType.MemberAccess:
-                {
-                    var fx = (MemberExpression)x;
-                    var fy = (MemberExpression)y;
-                    return fx.Member == fy.Member && Eq(fx.Expression, fy.Expression);
-                }
+                    {
+                        var fx = (MemberExpression)x;
+                        var fy = (MemberExpression)y;
+                        return fx.Member == fy.Member && Eq(fx.Expression, fy.Expression);
+                    }
 
                 case ExpressionType.New:
-                {
-                    var nx = (NewExpression)x;
-                    var ny = (NewExpression)y;
-                    return nx.Constructor == ny.Constructor && EqArgs(nx, ny);
-                }
+                    {
+                        var nx = (NewExpression)x;
+                        var ny = (NewExpression)y;
+                        return nx.Constructor == ny.Constructor && EqArgs(nx, ny);
+                    }
 
                 case ExpressionType.NewArrayInit:
                 case ExpressionType.NewArrayBounds:
-                {
-                    var nx = (NewArrayExpression)x;
-                    var ny = (NewArrayExpression)y;
+                    {
+                        var nx = (NewArrayExpression)x;
+                        var ny = (NewArrayExpression)y;
 #if LIGHT_EXPRESSION
                     return EqArgs(nx, ny);
 #else
-                    var ec = nx.Expressions.Count;
-                    if (ec != ny.Expressions.Count) return false;
-                    for (var i = 0; i < ec; i++)
-                        if (!Eq(nx.Expressions[i], ny.Expressions[i])) return false;
-                    return true;
+                        var ec = nx.Expressions.Count;
+                        if (ec != ny.Expressions.Count) return false;
+                        for (var i = 0; i < ec; i++)
+                            if (!Eq(nx.Expressions[i], ny.Expressions[i])) return false;
+                        return true;
 #endif
-                }
+                    }
 
                 case ExpressionType.Conditional:
-                {
-                    var cx = (ConditionalExpression)x;
-                    var cy = (ConditionalExpression)y;
-                    return Eq(cx.Test, cy.Test) && Eq(cx.IfTrue, cy.IfTrue) && Eq(cx.IfFalse, cy.IfFalse);
-                }
+                    {
+                        var cx = (ConditionalExpression)x;
+                        var cy = (ConditionalExpression)y;
+                        return Eq(cx.Test, cy.Test) && Eq(cx.IfTrue, cy.IfTrue) && Eq(cx.IfFalse, cy.IfFalse);
+                    }
 
                 case ExpressionType.Block:
-                {
-                    var bx = (BlockExpression)x;
-                    var by = (BlockExpression)y;
-                    var vc = bx.Variables.Count;
-                    if (vc != by.Variables.Count) return false;
-                    var ec = bx.Expressions.Count;
-                    if (ec != by.Expressions.Count) return false;
-                    var sc = _xps.Count;
-                    for (var i = 0; i < vc; i++)
                     {
-                        var bvx = bx.Variables[i];
-                        var bvy = by.Variables[i];
-                        if (bvx.Type != bvy.Type | bvx.IsByRef != bvy.IsByRef) return false;
-                        _xps.AddDefaultAndGetRef() = bvx;
-                        _yps.AddDefaultAndGetRef() = bvy;
+                        var bx = (BlockExpression)x;
+                        var by = (BlockExpression)y;
+                        var vc = bx.Variables.Count;
+                        if (vc != by.Variables.Count) return false;
+                        var ec = bx.Expressions.Count;
+                        if (ec != by.Expressions.Count) return false;
+                        var sc = _xps.Count;
+                        for (var i = 0; i < vc; i++)
+                        {
+                            var bvx = bx.Variables[i];
+                            var bvy = by.Variables[i];
+                            if (bvx.Type != bvy.Type | bvx.IsByRef != bvy.IsByRef) return false;
+                            _xps.AddDefaultAndGetRef() = bvx;
+                            _yps.AddDefaultAndGetRef() = bvy;
+                        }
+                        var eq = true;
+                        for (var i = 0; i < ec && eq; i++)
+                            eq = Eq(bx.Expressions[i], by.Expressions[i]);
+                        _xps.Count = sc;
+                        _yps.Count = sc;
+                        return eq;
                     }
-                    var eq = true;
-                    for (var i = 0; i < ec && eq; i++)
-                        eq = Eq(bx.Expressions[i], by.Expressions[i]);
-                    _xps.Count = sc;
-                    _yps.Count = sc;
-                    return eq;
-                }
 
                 case ExpressionType.MemberInit:
-                {
-                    var mx = (MemberInitExpression)x;
-                    var my = (MemberInitExpression)y;
-                    var bc = mx.Bindings.Count;
-                    if (bc != my.Bindings.Count) return false;
+                    {
+                        var mx = (MemberInitExpression)x;
+                        var my = (MemberInitExpression)y;
+                        var bc = mx.Bindings.Count;
+                        if (bc != my.Bindings.Count) return false;
 #if LIGHT_EXPRESSION
                     if (!Eq(mx.Expression, my.Expression)) return false;
 #else
-                    if (!Eq(mx.NewExpression, my.NewExpression)) return false;
+                        if (!Eq(mx.NewExpression, my.NewExpression)) return false;
 #endif
-                    for (var i = 0; i < bc; i++)
-                        if (!EqBinding(mx.Bindings[i], my.Bindings[i])) return false;
-                    return true;
-                }
+                        for (var i = 0; i < bc; i++)
+                            if (!EqBinding(mx.Bindings[i], my.Bindings[i])) return false;
+                        return true;
+                    }
 
                 case ExpressionType.ListInit:
-                {
-                    var lx = (ListInitExpression)x;
-                    var ly = (ListInitExpression)y;
-                    var ic = lx.Initializers.Count;
-                    if (ic != ly.Initializers.Count) return false;
-                    if (!Eq(lx.NewExpression, ly.NewExpression)) return false;
-                    for (var i = 0; i < ic; i++)
-                        if (!EqElementInit(lx.Initializers[i], ly.Initializers[i])) return false;
-                    return true;
-                }
+                    {
+                        var lx = (ListInitExpression)x;
+                        var ly = (ListInitExpression)y;
+                        var ic = lx.Initializers.Count;
+                        if (ic != ly.Initializers.Count) return false;
+                        if (!Eq(lx.NewExpression, ly.NewExpression)) return false;
+                        for (var i = 0; i < ic; i++)
+                            if (!EqElementInit(lx.Initializers[i], ly.Initializers[i])) return false;
+                        return true;
+                    }
 
                 case ExpressionType.TypeIs:
                 case ExpressionType.TypeEqual:
-                {
-                    var tx = (TypeBinaryExpression)x;
-                    var ty = (TypeBinaryExpression)y;
-                    return tx.TypeOperand == ty.TypeOperand && Eq(tx.Expression, ty.Expression);
-                }
+                    {
+                        var tx = (TypeBinaryExpression)x;
+                        var ty = (TypeBinaryExpression)y;
+                        return tx.TypeOperand == ty.TypeOperand && Eq(tx.Expression, ty.Expression);
+                    }
 
                 case ExpressionType.Invoke:
-                {
-                    var ix = (InvocationExpression)x;
-                    var iy = (InvocationExpression)y;
-                    return Eq(ix.Expression, iy.Expression) && EqArgs(ix, iy);
-                }
+                    {
+                        var ix = (InvocationExpression)x;
+                        var iy = (InvocationExpression)y;
+                        return Eq(ix.Expression, iy.Expression) && EqArgs(ix, iy);
+                    }
 
                 case ExpressionType.Index:
-                {
-                    var ix = (IndexExpression)x;
-                    var iy = (IndexExpression)y;
-                    return ix.Indexer == iy.Indexer && Eq(ix.Object, iy.Object) && EqArgs(ix, iy);
-                }
+                    {
+                        var ix = (IndexExpression)x;
+                        var iy = (IndexExpression)y;
+                        return ix.Indexer == iy.Indexer && Eq(ix.Object, iy.Object) && EqArgs(ix, iy);
+                    }
 
                 case ExpressionType.Default:
                     return true; // Type already matched above
 
                 case ExpressionType.Label:
-                {
-                    var lx = (LabelExpression)x;
-                    var ly = (LabelExpression)y;
-                    return EqLabel(lx.Target, ly.Target) && Eq(lx.DefaultValue, ly.DefaultValue);
-                }
+                    {
+                        var lx = (LabelExpression)x;
+                        var ly = (LabelExpression)y;
+                        return EqLabel(lx.Target, ly.Target) && Eq(lx.DefaultValue, ly.DefaultValue);
+                    }
 
                 case ExpressionType.Goto:
-                {
-                    var gx = (GotoExpression)x;
-                    var gy = (GotoExpression)y;
-                    return gx.Kind == gy.Kind && EqLabel(gx.Target, gy.Target) && Eq(gx.Value, gy.Value);
-                }
+                    {
+                        var gx = (GotoExpression)x;
+                        var gy = (GotoExpression)y;
+                        return gx.Kind == gy.Kind && EqLabel(gx.Target, gy.Target) && Eq(gx.Value, gy.Value);
+                    }
 
                 case ExpressionType.Loop:
-                {
-                    var lx = (LoopExpression)x;
-                    var ly = (LoopExpression)y;
-                    return EqLabel(lx.BreakLabel, ly.BreakLabel) &&
-                        EqLabel(lx.ContinueLabel, ly.ContinueLabel) &&
-                        Eq(lx.Body, ly.Body);
-                }
+                    {
+                        var lx = (LoopExpression)x;
+                        var ly = (LoopExpression)y;
+                        return EqLabel(lx.BreakLabel, ly.BreakLabel) &&
+                            EqLabel(lx.ContinueLabel, ly.ContinueLabel) &&
+                            Eq(lx.Body, ly.Body);
+                    }
 
                 case ExpressionType.Try:
-                {
-                    var tx = (TryExpression)x;
-                    var ty = (TryExpression)y;
-                    if (!Eq(tx.Body, ty.Body)) return false;
-                    if (!Eq(tx.Finally, ty.Finally)) return false;
-                    if (!Eq(tx.Fault, ty.Fault)) return false;
-                    var hc = tx.Handlers.Count;
-                    if (hc != ty.Handlers.Count) return false;
-                    for (var i = 0; i < hc; i++)
                     {
-                        var hx = tx.Handlers[i];
-                        var hy = ty.Handlers[i];
-                        if (hx.Test != hy.Test) return false;
-                        var sc = _xps.Count;
-                        if (hx.Variable != null | hy.Variable != null)
+                        var tx = (TryExpression)x;
+                        var ty = (TryExpression)y;
+                        if (!Eq(tx.Body, ty.Body)) return false;
+                        if (!Eq(tx.Finally, ty.Finally)) return false;
+                        if (!Eq(tx.Fault, ty.Fault)) return false;
+                        var hc = tx.Handlers.Count;
+                        if (hc != ty.Handlers.Count) return false;
+                        for (var i = 0; i < hc; i++)
                         {
-                            if (hx.Variable == null | hy.Variable == null) return false;
-                            if (hx.Variable.Type != hy.Variable.Type) return false;
-                            _xps.AddDefaultAndGetRef() = hx.Variable;
-                            _yps.AddDefaultAndGetRef() = hy.Variable;
+                            var hx = tx.Handlers[i];
+                            var hy = ty.Handlers[i];
+                            if (hx.Test != hy.Test) return false;
+                            var sc = _xps.Count;
+                            if (hx.Variable != null | hy.Variable != null)
+                            {
+                                if (hx.Variable == null | hy.Variable == null) return false;
+                                if (hx.Variable.Type != hy.Variable.Type) return false;
+                                _xps.AddDefaultAndGetRef() = hx.Variable;
+                                _yps.AddDefaultAndGetRef() = hy.Variable;
+                            }
+                            var ceq = Eq(hx.Body, hy.Body) && Eq(hx.Filter, hy.Filter);
+                            _xps.Count = sc;
+                            _yps.Count = sc;
+                            if (!ceq) return false;
                         }
-                        var ceq = Eq(hx.Body, hy.Body) && Eq(hx.Filter, hy.Filter);
-                        _xps.Count = sc;
-                        _yps.Count = sc;
-                        if (!ceq) return false;
+                        return true;
                     }
-                    return true;
-                }
 
                 case ExpressionType.Switch:
-                {
-                    var sx = (SwitchExpression)x;
-                    var sy = (SwitchExpression)y;
-                    if (sx.Comparison != sy.Comparison) return false;
-                    if (!Eq(sx.SwitchValue, sy.SwitchValue)) return false;
-                    if (!Eq(sx.DefaultBody, sy.DefaultBody)) return false;
-                    var cc = sx.Cases.Count;
-                    if (cc != sy.Cases.Count) return false;
-                    for (var i = 0; i < cc; i++)
                     {
-                        var cx = sx.Cases[i];
-                        var cy = sy.Cases[i];
-                        if (!Eq(cx.Body, cy.Body)) return false;
-                        var tc = cx.TestValues.Count;
-                        if (tc != cy.TestValues.Count) return false;
-                        for (var j = 0; j < tc; j++)
-                            if (!Eq(cx.TestValues[j], cy.TestValues[j])) return false;
+                        var sx = (SwitchExpression)x;
+                        var sy = (SwitchExpression)y;
+                        if (sx.Comparison != sy.Comparison) return false;
+                        if (!Eq(sx.SwitchValue, sy.SwitchValue)) return false;
+                        if (!Eq(sx.DefaultBody, sy.DefaultBody)) return false;
+                        var cc = sx.Cases.Count;
+                        if (cc != sy.Cases.Count) return false;
+                        for (var i = 0; i < cc; i++)
+                        {
+                            var cx = sx.Cases[i];
+                            var cy = sy.Cases[i];
+                            if (!Eq(cx.Body, cy.Body)) return false;
+                            var tc = cx.TestValues.Count;
+                            if (tc != cy.TestValues.Count) return false;
+                            for (var j = 0; j < tc; j++)
+                                if (!Eq(cx.TestValues[j], cy.TestValues[j])) return false;
+                        }
+                        return true;
                     }
-                    return true;
-                }
 
                 case ExpressionType.RuntimeVariables:
-                {
-                    var rx = (RuntimeVariablesExpression)x;
-                    var ry = (RuntimeVariablesExpression)y;
-                    var vc = rx.Variables.Count;
-                    if (vc != ry.Variables.Count) return false;
-                    for (var i = 0; i < vc; i++)
-                        if (!Eq(rx.Variables[i], ry.Variables[i])) return false;
-                    return true;
-                }
+                    {
+                        var rx = (RuntimeVariablesExpression)x;
+                        var ry = (RuntimeVariablesExpression)y;
+                        var vc = rx.Variables.Count;
+                        if (vc != ry.Variables.Count) return false;
+                        for (var i = 0; i < vc; i++)
+                            if (!Eq(rx.Variables[i], ry.Variables[i])) return false;
+                        return true;
+                    }
 
                 case ExpressionType.DebugInfo:
-                {
-                    var dx = (DebugInfoExpression)x;
-                    var dy = (DebugInfoExpression)y;
-                    return dx.IsClear == dy.IsClear &&
-                        dx.StartLine == dy.StartLine && dx.StartColumn == dy.StartColumn &&
-                        dx.EndLine == dy.EndLine && dx.EndColumn == dy.EndColumn &&
-                        dx.Document?.FileName == dy.Document?.FileName;
-                }
+                    {
+                        var dx = (DebugInfoExpression)x;
+                        var dy = (DebugInfoExpression)y;
+                        return dx.IsClear == dy.IsClear &&
+                            dx.StartLine == dy.StartLine && dx.StartColumn == dy.StartColumn &&
+                            dx.EndLine == dy.EndLine && dx.EndColumn == dy.EndColumn &&
+                            dx.Document?.FileName == dy.Document?.FileName;
+                    }
 
                 default:
                     return false;
@@ -10747,25 +10815,25 @@ namespace FastExpressionCompiler
                 case MemberBindingType.Assignment:
                     return Eq(((MemberAssignment)x).Expression, ((MemberAssignment)y).Expression);
                 case MemberBindingType.MemberBinding:
-                {
-                    var mb = (MemberMemberBinding)x;
-                    var mbOther = (MemberMemberBinding)y;
-                    var bc = mb.Bindings.Count;
-                    if (bc != mbOther.Bindings.Count) return false;
-                    for (var i = 0; i < bc; i++)
-                        if (!EqBinding(mb.Bindings[i], mbOther.Bindings[i])) return false;
-                    return true;
-                }
+                    {
+                        var mb = (MemberMemberBinding)x;
+                        var mbOther = (MemberMemberBinding)y;
+                        var bc = mb.Bindings.Count;
+                        if (bc != mbOther.Bindings.Count) return false;
+                        for (var i = 0; i < bc; i++)
+                            if (!EqBinding(mb.Bindings[i], mbOther.Bindings[i])) return false;
+                        return true;
+                    }
                 case MemberBindingType.ListBinding:
-                {
-                    var lb = (MemberListBinding)x;
-                    var lbOther = (MemberListBinding)y;
-                    var ic = lb.Initializers.Count;
-                    if (ic != lbOther.Initializers.Count) return false;
-                    for (var i = 0; i < ic; i++)
-                        if (!EqElementInit(lb.Initializers[i], lbOther.Initializers[i])) return false;
-                    return true;
-                }
+                    {
+                        var lb = (MemberListBinding)x;
+                        var lbOther = (MemberListBinding)y;
+                        var ic = lb.Initializers.Count;
+                        if (ic != lbOther.Initializers.Count) return false;
+                        for (var i = 0; i < ic; i++)
+                            if (!EqElementInit(lb.Initializers[i], lbOther.Initializers[i])) return false;
+                        return true;
+                    }
                 default: return false;
             }
         }
@@ -11427,7 +11495,7 @@ namespace FastExpressionCompiler
                                         caseBodyIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode, inTheLastBlock: true);
                                 else
                                 {
-                                    var bodyIn = enclosedIn == EnclosedIn.Return ? EnclosedIn.Return 
+                                    var bodyIn = enclosedIn == EnclosedIn.Return ? EnclosedIn.Return
                                         : defaultBody.Type != typeof(void) ? EnclosedIn.Return : EnclosedIn.AvoidParens;
                                     defaultBody.ToCSharpString(bodyIn == EnclosedIn.Return ? sb.Append("return ") : sb, bodyIn, ref ctx,
                                         caseBodyIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode).AppendSemicolonOnce(defaultBody);
@@ -11575,7 +11643,7 @@ namespace FastExpressionCompiler
                                         lineIndent, stripNamespace, printType, indentSpaces, notRecognizedToCode);
 
                                     if (valueOp) sb.Append(')');
-                                    
+
                                     sb = e.NodeType == ExpressionType.TypeAs ? sb.Append(" as ") : sb.Append(" is ");
                                     sb.Append(e.Type.ToCode(stripNamespace, printType));
 
@@ -11762,7 +11830,7 @@ namespace FastExpressionCompiler
 
         internal static StringBuilder AppendRefOnce(this StringBuilder sb)
         {
-            var len = sb.Length; 
+            var len = sb.Length;
             return len >= 4 &&
                 sb[len - 4] == 'r' &&
                 sb[len - 3] == 'e' &&
@@ -12242,7 +12310,7 @@ namespace FastExpressionCompiler
                 var found = false;
                 for (var i = 0; i < ctx.SameNamed.Count; ++i)
                 {
-                    ref var n = ref ctx.SameNamed.GetSurePresentRef(i); 
+                    ref var n = ref ctx.SameNamed.GetSurePresentRef(i);
                     if (found = ReferenceEquals(n.Obj, parOrTarget))
                     {
                         nameIndex = n.Index;
@@ -12357,7 +12425,7 @@ namespace FastExpressionCompiler
 
             if (type.IsEnum)
             {
-                var result = !stripNamespace && !string.IsNullOrEmpty(type.Namespace) 
+                var result = !stripNamespace && !string.IsNullOrEmpty(type.Namespace)
                     ? string.Concat(type.Namespace, ".", type.Name) : type.Name;
                 return printType?.Invoke(type, result) ?? result;
             }
@@ -12368,7 +12436,7 @@ namespace FastExpressionCompiler
                 if (arrayType != null)
                 {
                     var rank = arrayType.GetArrayRank();
-                    buildInTypeString += rank == 1 ? "[]" : ("[" + new string(',', rank-1) + "]");
+                    buildInTypeString += rank == 1 ? "[]" : ("[" + new string(',', rank - 1) + "]");
                 }
                 return printType?.Invoke(arrayType ?? type, buildInTypeString) ?? buildInTypeString;
             }
