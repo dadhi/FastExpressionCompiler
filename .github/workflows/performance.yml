@@ -1,0 +1,138 @@
+name: PR performance
+
+on:
+  pull_request:
+    branches: [master]
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      pull_request:
+        description: Pull request number to compare with its current base
+        required: true
+        type: string
+      runtime:
+        description: Target runtime
+        type: choice
+        options: [net10.0, net8.0, both]
+        default: net10.0
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: performance-${{ github.event.pull_request.number || inputs.pull_request }}
+  cancel-in-progress: true
+
+jobs:
+  revisions:
+    runs-on: ubuntu-24.04
+    outputs:
+      number: ${{ steps.pr.outputs.number }}
+      base: ${{ steps.pr.outputs.base }}
+      head: ${{ steps.pr.outputs.head }}
+      head-repo: ${{ steps.pr.outputs.head-repo }}
+      runtimes: ${{ steps.pr.outputs.runtimes }}
+    steps:
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        id: pr
+        env:
+          REQUESTED_PR: ${{ inputs.pull_request }}
+          REQUESTED_RUNTIME: ${{ inputs.runtime }}
+        with:
+          script: |
+            const text = process.env.REQUESTED_PR;
+            if (context.eventName === 'workflow_dispatch' && !/^[1-9][0-9]*$/.test(text)) throw new Error('Invalid PR number');
+            const pr = context.eventName === 'pull_request' ? context.payload.pull_request :
+              (await github.rest.pulls.get({...context.repo, pull_number: Number(text)})).data;
+            if (pr.base.ref !== 'master' || pr.base.repo.full_name !== `${context.repo.owner}/${context.repo.repo}`) throw new Error('Expected a PR targeting master in this repository');
+            core.setOutput('number', pr.number);
+            core.setOutput('base', pr.base.sha);
+            core.setOutput('head', pr.head.sha);
+            core.setOutput('head-repo', pr.head.repo.full_name);
+            const runtime = process.env.REQUESTED_RUNTIME || 'net10.0';
+            if (!['net10.0', 'net8.0', 'both'].includes(runtime)) throw new Error('Invalid runtime');
+            core.setOutput('runtimes', JSON.stringify(runtime === 'both' ? ['net8.0', 'net10.0'] : [runtime]));
+
+  benchmark:
+    needs: revisions
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        runtime: ${{ fromJSON(needs.revisions.outputs.runtimes) }}
+    env:
+      PR_NUMBER: ${{ needs.revisions.outputs.number }}
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      DOTNET_NOLOGO: 1
+      DOTNET_TieredCompilation: 0
+      DOTNET_ReadyToRun: 0
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.revisions.outputs.base }}
+          path: baseline
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: ${{ needs.revisions.outputs.head-repo }}
+          ref: ${{ needs.revisions.outputs.head }}
+          path: candidate
+          persist-credentials: false
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: 10.0.301
+          # The extended .NET 8 pass needs the runtime as well as the pinned SDK.
+      - if: matrix.runtime == 'net8.0'
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: 8.0.422
+      - name: Select one frozen harness
+        shell: bash
+        run: |
+          suite=test/FastExpressionCompiler.Benchmarks/Regression
+          harness="baseline/$suite"
+          if [ ! -f "$harness/run.py" ]; then harness="candidate/$suite"; fi
+          echo "PERFORMANCE_HARNESS=$harness" >> "$GITHUB_ENV"
+      - name: Harness and policy tests
+        shell: bash
+        run: |
+          python3 -m unittest discover -s "$PERFORMANCE_HARNESS/tests" -v
+          node --test "$PERFORMANCE_HARNESS/tests/publish.test.cjs"
+      - name: Benchmark exact base and PR head in both orders
+        id: measure
+        continue-on-error: true
+        env:
+          RUNTIME: ${{ matrix.runtime }}
+        shell: bash
+        run: python3 "$PERFORMANCE_HARNESS/run.py" --baseline baseline --candidate candidate --runtime "$RUNTIME" --output results
+      - name: Compare (reporting only)
+        if: always() && steps.measure.outcome != 'skipped'
+        shell: bash
+        run: |
+          status=0
+          python3 "$PERFORMANCE_HARNESS/compare.py" --input results || status=$?
+          if [ -f results/report.md ]; then cat results/report.md >> "$GITHUB_STEP_SUMMARY"; fi
+          exit "$status"
+      - name: Upload comment data
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: performance-report-${{ matrix.runtime }}-${{ github.run_attempt }}
+          path: results/report.json
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Upload complete benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: performance-data-${{ matrix.runtime }}-${{ github.run_attempt }}
+          path: |
+            results/context.json
+            results/sources.json
+            results/report.md
+            results/logs
+            results/runs
+          if-no-files-found: warn
+          retention-days: 14
