@@ -2017,14 +2017,14 @@ namespace FastExpressionCompiler
                         case ExpressionType.Equal:
                         case ExpressionType.NotEqual:
                             {
-                                var comparison = (BinaryExpression)expr;
-                                var cmpMethod = comparison.Method;
-                                if (cmpMethod != null && !comparison.IsLifted)
-                                    return TryEmitComparisonMethod(comparison, il, ref context, parent);
+                                var cmp = (BinaryExpression)expr;
+                                var cmpLeft = cmp.Left;
+                                var cmpRight = cmp.Right;
+                                var cmpMethod = cmp.Method;
+                                if (cmpMethod != null && !cmp.IsLifted)
+                                    return TryEmitComparisonMethod(cmpLeft, cmpRight, cmpMethod, il, ref context, parent);
 
-                                var cmpLeft = comparison.Left;
                                 var cmpLeftType = cmpLeft.Type;
-                                var cmpRight = comparison.Right;
                                 var cmpRightType = cmpRight.Type;
                                 var exprTypeIsBool = exprType == typeof(bool);
                                 if (!exprTypeIsBool)
@@ -2063,8 +2063,8 @@ namespace FastExpressionCompiler
                                     }
                                 }
 #if LIGHT_EXPRESSION
-                                if (comparison is LogicalBinaryExpression { IsReferenceComparison: true })
-                                    return TryEmitReferenceComparison(comparison, nodeType == ExpressionType.NotEqual, il, ref context, parent);
+                                if (cmp is LogicalBinaryExpression { IsReferenceComparison: true })
+                                    return TryEmitReferenceComparison(cmp, nodeType == ExpressionType.NotEqual, il, ref context, parent);
 #endif
                                 if (exprType.IsPrimitive && Interpreter.TryInterpretBool(out var boolResult, expr, context.CompilerFlags))
                                 {
@@ -2086,22 +2086,41 @@ namespace FastExpressionCompiler
                         case ExpressionType.RightShift:
                             {
                                 var binary = (BinaryExpression)expr;
-                                var binaryLeft = binary.Left;
-                                var binaryRight = binary.Right;
-                                if ((nodeType == ExpressionType.And || nodeType == ExpressionType.Or) && binary.Method == null &&
-                                    exprType == typeof(bool?) && binaryLeft.Type == typeof(bool?) && binaryRight.Type == typeof(bool?))
-                                    return TryEmitNullableBooleanAndOr(binaryLeft, binaryRight, nodeType == ExpressionType.And, il, ref context, parent);
+                                var binLeft = binary.Left;
+                                var binRight = binary.Right;
+                                var binMethod = binary.Method;
+                                if (binMethod != null)
+                                {
+                                    var ok = TryEmitOperatorMethod(out var canEmitOperatorMethod, exprType, binLeft, binRight, binMethod, il, ref context, parent);
+                                    if (canEmitOperatorMethod)
+                                        return ok;
+                                }
+                                else if ((nodeType == ExpressionType.And | nodeType == ExpressionType.Or) &&
+                                    exprType == typeof(bool?) && binLeft.Type == typeof(bool?) && binRight.Type == typeof(bool?))
+                                    return TryEmitNullableBooleanAndOr(binLeft, binRight, nodeType == ExpressionType.And, il, ref context, parent);
 
                                 return exprType.IsPrimitive
-                                    && TryInterpretAndEmitResult(expr, il, parent, context.CompilerFlags)
-                                    || TryEmitArithmetic(binaryLeft, binaryRight, nodeType, exprType, il, ref context, parent);
+                                    && TryInterpretAndEmitResult(expr, exprType, il, parent, context.CompilerFlags)
+                                    || TryEmitArithmetic(binLeft, binRight, nodeType, exprType, il, ref context, parent);
                             }
                         // todo: @feature #472 add interpretation when those node types are supported
                         case ExpressionType.AddChecked:
                         case ExpressionType.SubtractChecked:
                         case ExpressionType.MultiplyChecked:
                         case ExpressionType.Power:
-                            return TryEmitArithmetic(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, nodeType, exprType, il, ref context, parent);
+                            {
+                                var bin = (BinaryExpression)expr;
+                                var left = bin.Left;
+                                var right = bin.Right;
+                                var method = bin.Method;
+                                if (method != null)
+                                {
+                                    var ok = TryEmitOperatorMethod(out var canEmitOperatorMethod, exprType, left, right, method, il, ref context, parent);
+                                    if (canEmitOperatorMethod)
+                                        return ok;
+                                }
+                                return TryEmitArithmetic(left, right, nodeType, exprType, il, ref context, parent);
+                            }
 
                         case ExpressionType.AndAlso:
                         case ExpressionType.OrElse:
@@ -2608,6 +2627,15 @@ namespace FastExpressionCompiler
                 }
             }
 
+            [MethodImpl((MethodImplOptions)256)]
+            private static int EmitNullableVarAddressAndHasValue(ILGenerator il, Type type)
+            {
+                Debug.Assert(type.IsNullable(), "Expecting a nullable type");
+                var varIndex = EmitStoreAndLoadLocalVariableAddress(il, type);
+                EmitMethodCall(il, type.GetNullableHasValueGetterMethod());
+                return varIndex;
+            }
+
             private static bool TryEmitCoalesceOperator(BinaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var labelFalse = il.DefineLabel(); // todo: @perf define only if needed
@@ -2628,9 +2656,7 @@ namespace FastExpressionCompiler
                 {
                     Debug.Assert(leftType.IsNullable(), "Expecting Nullable, it is the only ValueType comparable to null");
 
-                    var varIndex = EmitStoreAndLoadLocalVariableAddress(il, leftType);
-                    EmitMethodCall(il, leftType.GetNullableHasValueGetterMethod());
-
+                    var varIndex = EmitNullableVarAddressAndHasValue(il, leftType);
                     il.Demit(OpCodes.Brfalse, labelFalse);
 
                     var underlyingLeftType = Nullable.GetUnderlyingType(leftType);
@@ -3393,8 +3419,7 @@ namespace FastExpressionCompiler
                     // first check the source value for null and return null without calling the conversion method, otherwise call the conversion method
                     if (methodParamType == underlyingNullableSourceType & underlyingNullableTargetType != null)
                     {
-                        var sourceVarIndex = EmitStoreAndLoadLocalVariableAddress(il, sourceType);
-                        EmitMethodCall(il, sourceType.GetNullableHasValueGetterMethod());
+                        var sourceVarIndex = EmitNullableVarAddressAndHasValue(il, sourceType);
 
                         var labelSourceHasValue = il.DefineLabel();
                         il.Demit(OpCodes.Brtrue_S, labelSourceHasValue); // Jump to this label when the source has a value
@@ -3445,8 +3470,7 @@ namespace FastExpressionCompiler
 
                 if (underlyingNullableSourceType != null & underlyingNullableTargetType != null)
                 {
-                    var sourceVarIndex = EmitStoreAndLoadLocalVariableAddress(il, sourceType);
-                    EmitMethodCall(il, sourceType.GetNullableHasValueGetterMethod());
+                    var sourceVarIndex = EmitNullableVarAddressAndHasValue(il, sourceType);
 
                     var labelSourceHasValue = il.DefineLabel();
                     il.Demit(OpCodes.Brtrue_S, labelSourceHasValue); // Jump here when the source has a value
@@ -4395,9 +4419,7 @@ namespace FastExpressionCompiler
                                 var rightIsNullable = rightType.IsNullable();
                                 if (rightIsNullable) // todo: @perf @clarify is it even possible to have left non-nullable and right nullable
                                 {
-                                    var rightVar = EmitStoreAndLoadLocalVariableAddress(il, rightType);
-                                    il.Demit(OpCodes.Call, leftType.GetNullableHasValueGetterMethod());
-
+                                    var rightVar = EmitNullableVarAddressAndHasValue(il, rightType);
                                     il.Demit(OpCodes.Brfalse, leftOrRightNullableAreNullLabel = il.DefineLabel());
 
                                     EmitLoadLocalVariableAddress(il, rightVar);
@@ -5747,15 +5769,12 @@ namespace FastExpressionCompiler
             }
 #endif
 
-            private static bool TryEmitComparisonMethod(BinaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            private static bool TryEmitComparisonMethod(Expression left, Expression right, MethodInfo method, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
-                var method = expr.Method;
                 var pars = method.GetParameters();
                 var leftParamType = pars[0].ParameterType;
-                if (!TryEmit(expr.Left, il, ref context, ParentFlags.Call, leftParamType.IsByRef ? 0 : -1))
+                if (!TryEmit(left, il, ref context, ParentFlags.Call, leftParamType.IsByRef ? 0 : -1))
                     return false;
-
-                var right = expr.Right;
 
                 // Keep the evaluation stack empty while a nontrivial right operand may emit exception regions or jumps, just as for call arguments.
 #if LIGHT_EXPRESSION
@@ -6084,10 +6103,8 @@ namespace FastExpressionCompiler
                     if (!TryEmit(left, il, ref context, flags | ParentFlags.InstanceCall))
                         return false;
 
-                    leftVar = EmitStoreAndLoadLocalVariableAddress(il, leftType);
-                    EmitMethodCall(il, leftType.GetNullableHasValueGetterMethod());
+                    leftVar = EmitNullableVarAddressAndHasValue(il, leftType);
                     il.Demit(OpCodes.Brfalse, noNullableValueLabel);
-
                     EmitLoadLocalVariableAddress(il, leftVar);
                     il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
                     leftValueVar = EmitStoreLocalVariable(il, Nullable.GetUnderlyingType(leftType));
@@ -6124,11 +6141,8 @@ namespace FastExpressionCompiler
                         if (!TryEmit(right, il, ref context, flags | ParentFlags.InstanceCall))
                             return false;
 
-                        rightVar = EmitStoreAndLoadLocalVariableAddress(il, rightType);
-
-                        EmitMethodCall(il, rightType.GetNullableHasValueGetterMethod());
+                        rightVar = EmitNullableVarAddressAndHasValue(il, rightType);
                         il.Demit(OpCodes.Brfalse, noNullableValueLabel);
-
                         EmitLoadLocalVariableAddress(il, rightVar);
                         il.Demit(OpCodes.Ldfld, rightType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
                         rightValueVar = EmitStoreLocalVariable(il, Nullable.GetUnderlyingType(rightType));
@@ -6175,6 +6189,119 @@ namespace FastExpressionCompiler
 
                 il.EmitPopIfIgnoreResult(parent);
                 return true;
+            }
+
+            // The variant for the already stored nullable variable
+            [MethodImpl((MethodImplOptions)256)]
+            private static void EmitLoadNullableVarAddressAndHasValue(ILGenerator il, int varIndex, Type nullableType)
+            {
+                EmitLoadLocalVariableAddress(il, varIndex);
+                EmitMethodCall(il, nullableType.GetNullableHasValueGetterMethod());
+            }
+
+            // Loads the variable value, or the value of the nullable variable (unsafe, without the `HasValue` check)
+            [MethodImpl((MethodImplOptions)256)]
+            private static void EmitLoadVarOrNullableValue(ILGenerator il, int varIndex, Type varType, bool loadNullableValue)
+            {
+                if (!loadNullableValue)
+                    EmitLoadLocalVariable(il, varIndex);
+                else
+                {
+                    EmitLoadLocalVariableAddress(il, varIndex);
+                    il.Demit(OpCodes.Ldfld, varType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                }
+            }
+
+            [MethodImpl((MethodImplOptions)256)]
+            private static bool IsOperandOfOperatorMethod(Type operandType, Type paramType) =>
+                operandType == paramType ||
+                operandType.IsNullable() && Nullable.GetUnderlyingType(operandType) == paramType || // lifted
+                !operandType.IsValueType && !paramType.IsByRef && paramType.IsAssignableFrom(operandType);
+
+            private static bool TryEmitOperatorMethod(out bool canEmitOperatorMethod,
+                Type exprType, Expression left, Expression right, MethodInfo method, ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            {
+                var leftType = left.Type;
+                var rightType = right.Type;
+                var pars = method.GetParameters();
+
+                // Checks the binary operator with the explicit static method, which may be lifted over the nullable operands,
+                // e.g. `decimal? + decimal?` with `decimal.op_Addition`. Otherwise, the operator is looked up by name.
+                canEmitOperatorMethod = false;
+                if (!method.IsStatic)
+                    return false;
+                if (pars.Length != 2)
+                    return false;
+                var p0 = pars[0].ParameterType;
+                var p1 = pars[1].ParameterType;
+                if (!IsOperandOfOperatorMethod(leftType, p0) || !IsOperandOfOperatorMethod(rightType, p1))
+                    return false;
+
+                var returnType = method.ReturnType;
+                var leftIsNullable = leftType.IsNullable();
+                var rightIsNullable = rightType.IsNullable();
+
+                var isLifted = leftIsNullable && leftType != p0 || rightIsNullable && rightType != p1;
+                var isNullableExpr = exprType.IsNullable();
+                canEmitOperatorMethod = (!isLifted | isNullableExpr) // the null result of the lifted operator needs the nullable type
+                    && (exprType == returnType || isNullableExpr && Nullable.GetUnderlyingType(exprType) == returnType);
+                if (!canEmitOperatorMethod)
+                    return false;
+
+                var liftLeft = leftIsNullable & leftType != p0;
+                var liftRight = rightIsNullable & rightType != p1;
+                var wrapResult = exprType != returnType;
+
+                if (!liftLeft & !liftRight & !wrapResult)
+                    return TryEmitComparisonMethod(left, right, method, il, ref context, parent);
+
+                var flags = (parent
+                    & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
+                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
+                    | ParentFlags.Arithmetic;
+
+                // Both operands are evaluated and stored first, as System does, then the nullable ones are checked for the value
+                if (!TryEmit(left, il, ref context, flags))
+                    return false;
+                var leftVar = EmitStoreLocalVariable(il, leftType);
+                if (!TryEmit(right, il, ref context, flags))
+                    return false;
+                var rightVar = EmitStoreLocalVariable(il, rightType);
+
+                var isLiftedCall = liftLeft | liftRight;
+                var nullLabel = default(Label);
+                if (isLiftedCall)
+                    nullLabel = il.DefineLabel();
+                if (liftLeft)
+                {
+                    EmitLoadNullableVarAddressAndHasValue(il, leftVar, leftType);
+                    il.Demit(OpCodes.Brfalse, nullLabel);
+                }
+                if (liftRight)
+                {
+                    EmitLoadNullableVarAddressAndHasValue(il, rightVar, rightType);
+                    il.Demit(OpCodes.Brfalse, nullLabel);
+                }
+
+                EmitLoadVarOrNullableValue(il, leftVar, leftType, liftLeft);
+                EmitLoadVarOrNullableValue(il, rightVar, rightType, liftRight);
+
+                if (!EmitMethodCall(il, method))
+                    return false;
+                if (wrapResult)
+                    il.Demit(OpCodes.Newobj, exprType.GetNullableConstructor());
+
+                if (isLiftedCall)
+                {
+                    var endLabel = il.DefineLabel();
+                    il.Demit(OpCodes.Br, endLabel);
+                    il.DmarkLabel(nullLabel);
+                    EmitLoadLocalVariable(il, InitValueTypeVariable(il, exprType));
+                    il.DmarkLabel(endLabel);
+                }
+
+                context.LastEmitIsAddress = false;
+                return il.EmitPopIfIgnoreResult(parent);
             }
 
             private static bool TryEmitNullableBooleanAndOr(Expression left, Expression right, bool isAnd, ILGenerator il,
@@ -6360,6 +6487,9 @@ namespace FastExpressionCompiler
                         MethodInfo method = null;
                         if (exprType != typeof(string))
                         {
+                            // the nullable operands are already unwrapped to the values here
+                            leftType = Nullable.GetUnderlyingType(leftType) ?? leftType;
+                            rightType = Nullable.GetUnderlyingType(rightType) ?? rightType;
                             // Note, that the result operation Type may be different from the operand Type,
                             // e.g. `TimeSpan op_Subtraction(DateTime, DateTime)`, that mean we should look
                             // for the specific method in the operand types, then in the result (expr) type.
@@ -6857,14 +6987,14 @@ namespace FastExpressionCompiler
 
             /// <summary>Tries to interpret and emit the result IL
             /// In case of exception return false, to allow FEC emit normally and throw in the invocation phase</summary>
-            public static bool TryInterpretAndEmitResult(Expression expr, ILGenerator il, ParentFlags parent, CompilerFlags flags)
+            public static bool TryInterpretAndEmitResult(
+                Expression expr, Type exprType, ILGenerator il, ParentFlags parent, CompilerFlags flags)
             {
-                var type = expr.Type;
-                Debug.Assert(type.IsPrimitive);
+                Debug.Assert(exprType.IsPrimitive);
                 if ((flags & CompilerFlags.DisableInterpreter) != 0)
                     return false;
 
-                var typeCode = Type.GetTypeCode(type);
+                var typeCode = Type.GetTypeCode(exprType);
                 try
                 {
                     switch (typeCode)
@@ -8355,6 +8485,11 @@ namespace FastExpressionCompiler
                 ExpressionType.MultiplyChecked => "op_Multiply",
                 ExpressionType.Divide => "op_Division",
                 ExpressionType.Modulo => "op_Modulus",
+                ExpressionType.And => "op_BitwiseAnd",
+                ExpressionType.Or => "op_BitwiseOr",
+                ExpressionType.ExclusiveOr => "op_ExclusiveOr",
+                ExpressionType.LeftShift => "op_LeftShift",
+                ExpressionType.RightShift => "op_RightShift",
                 _ => null
             };
 

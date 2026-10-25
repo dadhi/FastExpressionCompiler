@@ -75,6 +75,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_compile_type_is_and_type_equal_the_same_as_system();
             IsLifted_and_IsLiftedToNull_are_the_same_as_in_system_expressions();
             Lifted_comparisons_with_null_operand_and_other_nullable_types_are_the_same_as_system();
+            Binary_operators_with_methods_and_nullable_operands_are_the_same_as_system();
             Lifted_comparisons_have_the_same_type_and_result_as_system();
             And_AndAlso_OrElse_take_the_type_from_the_left_operand();
             Can_compile_nullable_boolean_and_also();
@@ -88,7 +89,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_print_reference_comparison();
             Can_round_trip_new_expression_kinds_through_system_expressions();
 
-            return 69;
+            return 70;
         }
 
         private static int _sideEffectCalls;
@@ -875,6 +876,75 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.AreEqual(true, withOr(true));
             Asserts.AreEqual(null, withOr(false));
         }
+        public struct ArMoney
+        {
+            public int V;
+            public ArMoney(int v) { V = v; }
+            public static ArMoney operator +(ArMoney a, ArMoney b) => new ArMoney(a.V + b.V);
+            public static ArMoney operator -(ArMoney a, ArMoney b) => new ArMoney(a.V - b.V);
+            public static ArMoney operator *(ArMoney a, ArMoney b) => new ArMoney(a.V * b.V);
+            public static ArMoney operator /(ArMoney a, ArMoney b) => new ArMoney(a.V / b.V);
+            public static ArMoney operator %(ArMoney a, ArMoney b) => new ArMoney(a.V % b.V);
+            public static ArMoney operator &(ArMoney a, ArMoney b) => new ArMoney(a.V & b.V);
+            public static ArMoney operator |(ArMoney a, ArMoney b) => new ArMoney(a.V | b.V);
+            public static ArMoney operator ^(ArMoney a, ArMoney b) => new ArMoney(a.V ^ b.V);
+            public override bool Equals(object o) => o is ArMoney m && m.V == V;
+            public override int GetHashCode() => V;
+            public override string ToString() => "M" + V;
+        }
+        public static int ArCustomInt(int a, int b) => a * 100 + b;
+        public static decimal ArCustomDec(decimal a, decimal b) => a * 100 + b;
+        public static ArMoney ArCustomMoney(ArMoney a, ArMoney b) => new ArMoney(a.V * 100 + b.V);
+
+        public void Binary_operators_with_methods_and_nullable_operands_are_the_same_as_system()
+        {
+            var names = new[] { "Add", "Subtract", "Multiply", "Divide", "Modulo", "And", "Or", "ExclusiveOr", "AddChecked", "SubtractChecked", "MultiplyChecked" };
+            var cases = new (Type, object, object, MethodInfo)[]
+            {
+                (typeof(int?), 1, 2, null), (typeof(int?), 1, 2, typeof(LightExpressionTests).GetMethod("ArCustomInt")),
+                (typeof(long?), 1L, 2L, null), (typeof(byte?), (byte)1, (byte)2, null), (typeof(double?), 1.0, 2.0, null), (typeof(uint?), 1u, 2u, null),
+                (typeof(decimal?), 1m, 2m, null), (typeof(decimal?), 1m, 2m, typeof(LightExpressionTests).GetMethod("ArCustomDec")),
+                (typeof(decimal), 1m, 2m, null), (typeof(DateTime?), new DateTime(2000, 1, 1), new DateTime(2001, 1, 1), null),
+                (typeof(ArMoney?), new ArMoney(1), new ArMoney(2), null), (typeof(ArMoney?), new ArMoney(1), new ArMoney(2), typeof(LightExpressionTests).GetMethod("ArCustomMoney")),
+                (typeof(ArMoney), new ArMoney(1), new ArMoney(2), null), (typeof(ArMoney), new ArMoney(1), new ArMoney(2), typeof(LightExpressionTests).GetMethod("ArCustomMoney")),
+                (typeof(int), 1, 2, typeof(LightExpressionTests).GetMethod("ArCustomInt")),
+            };
+            var failures = new System.Collections.Generic.List<string>();
+            foreach (var (t, v1, v2, m) in cases)
+                foreach (var name in names)
+                {
+                    var what = $"{t.Name} {name} method={m?.Name}";
+                    Delegate sysD, fastD; Type rt;
+                    try
+                    {
+                        var sa = SysExpr.Parameter(t, "a"); var sb = SysExpr.Parameter(t, "b");
+                        var se = (SysExpr)typeof(SysExpr).GetMethod(name, new[] { typeof(SysExpr), typeof(SysExpr), typeof(MethodInfo) }).Invoke(null, new object[] { sa, sb, m });
+                        rt = se.Type;
+                        sysD = SysExpr.Lambda(typeof(Func<,,>).MakeGenericType(t, t, rt), se, sa, sb).Compile();
+                    }
+                    catch (Exception) { continue; }
+                    try
+                    {
+                        var la = Parameter(t, "a"); var lb = Parameter(t, "b");
+                        var le = (Expression)typeof(Expression).GetMethod(name, new[] { typeof(Expression), typeof(Expression), typeof(MethodInfo) }).Invoke(null, new object[] { la, lb, m });
+                        if (le.Type != rt) { failures.Add($"type: {what} sys={rt.Name} light={le.Type.Name}"); continue; }
+                        fastD = Lambda(typeof(Func<,,>).MakeGenericType(t, t, rt), le, la, lb).CompileFast(true);
+                        if (fastD == null) { failures.Add("not compiled: " + what); continue; }
+                    }
+                    catch (Exception ex) { failures.Add("exception: " + what + " " + (ex.InnerException ?? ex).Message.Split('\n')[0]); continue; }
+                    var xs = t.IsValueType && Nullable.GetUnderlyingType(t) == null ? new[] { v1, v2 } : new[] { null, v1, v2 };
+                    foreach (var x in xs)
+                        foreach (var y in xs)
+                        {
+                            object e, a;
+                            try { e = sysD.DynamicInvoke(x, y); } catch (Exception ex) { e = "ex:" + ex.InnerException?.GetType().Name; }
+                            try { a = fastD.DynamicInvoke(x, y); } catch (Exception ex) { a = "ex:" + ex.InnerException?.GetType().Name; }
+                            if (!Equals(e, a)) { failures.Add($"value: {what} ({x},{y}) sys={e} fec={a}"); break; }
+                        }
+                }
+            Asserts.AreEqual(0, failures.Count, string.Join("; ", failures));
+        }
+
         public void Lifted_comparisons_have_the_same_type_and_result_as_system()
         {
             var ip = Parameter(typeof(int), "a"); var iq = Parameter(typeof(int), "b");
