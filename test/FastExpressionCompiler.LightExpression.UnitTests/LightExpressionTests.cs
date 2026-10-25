@@ -69,6 +69,8 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Coalesce_with_nullable_left_emits_the_same_IL_shape_as_system();
             Can_compile_shifts_with_nullable_shift_count();
             Can_compile_right_shift_with_nullable_shift_count();
+            Type_is_and_type_equal_emit_the_short_IL();
+            Type_is_and_type_equal_with_the_known_value_type_still_evaluate_the_operand();
             Can_round_trip_more_expression_kinds_through_system_expressions();
             Can_compile_type_is_and_type_equal_the_same_as_system();
             IsLifted_and_IsLiftedToNull_are_the_same_as_in_system_expressions();
@@ -85,7 +87,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_print_reference_comparison();
             Can_round_trip_new_expression_kinds_through_system_expressions();
 
-            return 66;
+            return 68;
         }
 
         private static int _sideEffectCalls;
@@ -1007,6 +1009,50 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
         public class TypeTestBase { }
         public class TypeTestDerived : TypeTestBase { }
 
+        public void Type_is_and_type_equal_emit_the_short_IL()
+        {
+            var o = Parameter(typeof(object), "o");
+            var s = Parameter(typeof(string), "s");
+            var i = Parameter(typeof(int), "i");
+            var n = Parameter(typeof(int?), "n");
+            const CompilerFlags flags = CompilerFlags.EnableDelegateDebugInfo;
+
+            Lambda<Func<object, bool>>(TypeIs(o, typeof(string)), o).CompileFast(true, flags).AssertOpCodes(
+                OpCodes.Ldarg_1, OpCodes.Isinst, OpCodes.Ldnull, OpCodes.Cgt_Un, OpCodes.Ret);
+
+            // exact check of the sealed class does not need the GetType call
+            Lambda<Func<object, bool>>(TypeEqual(o, typeof(string)), o).CompileFast(true, flags).AssertOpCodes(
+                OpCodes.Ldarg_1, OpCodes.Isinst, OpCodes.Ldnull, OpCodes.Cgt_Un, OpCodes.Ret);
+
+            // the value type is known at the compile time
+            Lambda<Func<int, bool>>(TypeIs(i, typeof(object)), i).CompileFast(true, flags).AssertOpCodes(OpCodes.Ldc_I4_1, OpCodes.Ret);
+            Lambda<Func<int, bool>>(TypeIs(i, typeof(string)), i).CompileFast(true, flags).AssertOpCodes(OpCodes.Ldc_I4_0, OpCodes.Ret);
+            Lambda<Func<int, bool>>(TypeEqual(i, typeof(int)), i).CompileFast(true, flags).AssertOpCodes(OpCodes.Ldc_I4_1, OpCodes.Ret);
+            Lambda<Func<int, bool>>(TypeEqual(i, typeof(long)), i).CompileFast(true, flags).AssertOpCodes(OpCodes.Ldc_I4_0, OpCodes.Ret);
+
+            // the nullable has a matching type whenever it has a value
+            Lambda<Func<int?, bool>>(TypeIs(n, typeof(int)), n).CompileFast(true, flags).AssertOpCodes(
+                OpCodes.Ldarg_1, OpCodes.Stloc_0, OpCodes.Ldloca_S, OpCodes.Call, OpCodes.Ret);
+            Lambda<Func<int?, bool>>(TypeEqual(n, typeof(int)), n).CompileFast(true, flags).AssertOpCodes(
+                OpCodes.Ldarg_1, OpCodes.Stloc_0, OpCodes.Ldloca_S, OpCodes.Call, OpCodes.Ret);
+
+            // the operand is already of the type, so it is just the null check
+            Lambda<Func<string, bool>>(TypeIs(s, typeof(object)), s).CompileFast(true, flags).AssertOpCodes(
+                OpCodes.Ldarg_1, OpCodes.Ldnull, OpCodes.Cgt_Un, OpCodes.Ret);
+        }
+
+        public void Type_is_and_type_equal_with_the_known_value_type_still_evaluate_the_operand()
+        {
+            var calls = 0;
+            Func<int> side = () => { ++calls; return 42; };
+            Func<int?> sideNullable = () => { ++calls; return null; };
+
+            Asserts.AreEqual(true, Lambda<Func<bool>>(TypeIs(Invoke(Constant(side)), typeof(object))).CompileFast(true)());
+            Asserts.AreEqual(false, Lambda<Func<bool>>(TypeEqual(Invoke(Constant(side)), typeof(long))).CompileFast(true)());
+            Asserts.AreEqual(false, Lambda<Func<bool>>(TypeIs(Invoke(Constant(sideNullable)), typeof(int))).CompileFast(true)());
+            Asserts.AreEqual(false, Lambda<Func<bool>>(TypeEqual(Invoke(Constant(sideNullable)), typeof(int))).CompileFast(true)());
+            Asserts.AreEqual(4, calls);
+        }
         public void Can_compile_right_shift_with_nullable_shift_count()
         {
             var value = Parameter(typeof(int), "value");

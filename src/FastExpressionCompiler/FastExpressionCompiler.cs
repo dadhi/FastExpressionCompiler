@@ -3119,14 +3119,56 @@ namespace FastExpressionCompiler
                 if ((parent & ParentFlags.IgnoreResult) != 0)
                     return TryEmit(operand, il, ref context, parent);
 
+                var isTypeIs = expr.NodeType == ExpressionType.TypeIs;
+                if (operandType.IsValueType)
+                {
+                    var isNullableOperand = operandType.IsNullable();
+                    var underlyingType = isNullableOperand ? Nullable.GetUnderlyingType(operandType) : operandType;
+
+                    // the type of the value is known at the compile time, the empty `Nullable<T>` is the only unknown, it is `null` when boxed
+                    var matches = isTypeIs
+                        ? typeOperand.IsAssignableFrom(operandType) || typeOperand.IsAssignableFrom(underlyingType)
+                        : typeOperand.GetNonNullableOrSelf() == underlyingType;
+
+                    if (!isNullableOperand || !matches)
+                    {
+                        // evaluate the operand for its side effects only
+                        if (!TryEmit(operand, il, ref context, (parent & ~ParentFlags.InstanceAccess) | ParentFlags.IgnoreResult))
+                            return false;
+                        il.Demit(matches ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
+                        return true;
+                    }
+
+                    // the operand matches whenever it has a value
+                    if (!TryEmit(operand, il, ref context, parent & ~ParentFlags.InstanceAccess))
+                        return false;
+                    if (!context.LastEmitIsAddress && !(operand is ParameterExpression p && p.IsByRef))
+                        EmitStoreAndLoadLocalVariableAddress(il, operandType);
+                    EmitMethodCall(il, operandType.GetNullableHasValueGetterMethod());
+                    return true;
+                }
+
                 if (!TryEmit(operand, il, ref context, parent & ~ParentFlags.InstanceAccess))
                     return false;
 
-                // the type check works on the reference, so the value type operand (including `Nullable<T>`, which boxes to `null` when empty) is boxed first
-                if (operandType.IsValueType)
-                    il.Demit(OpCodes.Box, operandType);
+                if (isTypeIs)
+                {
+                    // already known to be assignable, so just the null check is left
+                    if (typeOperand.IsValueType || !typeOperand.IsAssignableFrom(operandType))
+                    {
+                        il.Demit(OpCodes.Isinst, typeOperand);
+                        il.Demit(OpCodes.Ldnull);
+                        il.Demit(OpCodes.Cgt_Un);
+                        return true;
+                    }
+                    il.Demit(OpCodes.Ldnull);
+                    il.Demit(OpCodes.Cgt_Un);
+                    return true;
+                }
 
-                if (expr.NodeType == ExpressionType.TypeIs)
+                // the exact type check of the sealed class is the same as `isinst`, but not for the arrays, the generic variance
+                // and the value types, where `isinst` is more permissive than the `GetType() == typeof(T)`
+                if (typeOperand.IsClass && typeOperand.IsSealed && !typeOperand.IsArray && !typeOperand.IsGenericType)
                 {
                     il.Demit(OpCodes.Isinst, typeOperand);
                     il.Demit(OpCodes.Ldnull);
@@ -3134,7 +3176,7 @@ namespace FastExpressionCompiler
                     return true;
                 }
 
-                // TypeEqual is the exact type check: `x != null && x.GetType() == typeof(T)`, where the nullable `T` is compared as its underlying type
+                // `x != null && x.GetType() == typeof(T)`, where the nullable `T` is compared as its underlying type
                 var isNullLabel = il.DefineLabel();
                 var endLabel = il.DefineLabel();
                 il.Demit(OpCodes.Dup);
