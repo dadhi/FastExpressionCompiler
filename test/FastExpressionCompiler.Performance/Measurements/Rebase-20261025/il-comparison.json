@@ -95,6 +95,11 @@
     "rootAndNestedInstructionsEqual": true
   },
   {
+    "configuration": "net10.0-light-0",
+    "shape": "capture_mutable_reference32",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
     "configuration": "net10.0-standard-0",
     "shape": "constant",
     "rootAndNestedInstructionsEqual": true
@@ -190,6 +195,11 @@
     "rootAndNestedInstructionsEqual": true
   },
   {
+    "configuration": "net10.0-standard-0",
+    "shape": "capture_mutable_reference32",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
     "configuration": "net8.0-light-0",
     "shape": "constant",
     "rootAndNestedInstructionsEqual": true
@@ -285,6 +295,11 @@
     "rootAndNestedInstructionsEqual": true
   },
   {
+    "configuration": "net8.0-light-0",
+    "shape": "capture_mutable_reference32",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
     "configuration": "net8.0-standard-0",
     "shape": "constant",
     "rootAndNestedInstructionsEqual": true
@@ -377,6 +392,11 @@
   {
     "configuration": "net8.0-standard-0",
     "shape": "constructors32",
+    "rootAndNestedInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-standard-0",
+    "shape": "capture_mutable_reference32",
     "rootAndNestedInstructionsEqual": true
   }
 ]

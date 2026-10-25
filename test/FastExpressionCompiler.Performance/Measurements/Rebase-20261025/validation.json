@@ -1,19 +1,24 @@
 {
-  "source": "00af81b4470d1ef158c28d9f6c5a03c5142acb31",
+  "source": "00ce08cd4c22611faadfbcb6bfc04ee2a20bd3d9",
   "base558": "dd989683d484bfc4a8c13e65373f528314885f24",
-  "master": "0f37356fc9ca2c05b085f94592cfaf492f78eacf",
-  "nativeCounters": {
-    "net10": [
-      "1734"
-    ],
-    "net8": [
-      "1733"
-    ],
-    "net472": [
-      "1051",
-      "1617"
-    ]
+  "measuredMaster": "280cbafc8fd5b29b6fec7e672bbe70d221075b30",
+  "releaseBuild": "passed",
+  "nativeRunners": {
+    "net10": {
+      "passed": true,
+      "legacyCount": 1734
+    },
+    "net8": {
+      "passed": true,
+      "legacyCount": 1733
+    },
+    "net472": {
+      "passed": true,
+      "legacyCount": 1617,
+      "culture": "en-US current and default threads"
+    }
   },
+  "registeredRegressionFixtures": "passed, both Standard and Light",
   "runtime": {
     "passed": 35088,
     "skipped": 59,
