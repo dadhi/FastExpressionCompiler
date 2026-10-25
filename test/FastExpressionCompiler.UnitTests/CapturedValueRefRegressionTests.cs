@@ -689,13 +689,7 @@ public struct CapturedValueRefRegressionTests : ITestX
 
     public static Func<string>[] PairReferences(Func<string> first, Func<string> second) => new[] { first, second };
 
-    private static object SingleCaptureStorage(Delegate captured)
-    {
-        foreach (var field in captured.Target.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
-            if (field.GetValue(captured.Target) is ExpressionCompiler.ArrayClosureWithNonPassedParams closure)
-                return closure.NonPassedParams[0];
-        return null;
-    }
+    private static object SingleCaptureStorage(Delegate captured) => GetCapturedCell(captured);
     public static int? AddNullable(ref int? value, int increment) => value = value + increment;
     public static string Replace(ref string value) => value = "changed";
     public static object Identity(object value) => value;
@@ -847,17 +841,7 @@ public struct CapturedValueRefRegressionTests : ITestX
     private static void AssertOriginalValueStorage(TestContext t, Func<object> captured, object value)
     {
         t.IsTrue(ReferenceEquals(value, captured()));
-        var foundClosure = false;
-        foreach (var field in captured.Target.GetType().GetFields(System.Reflection.BindingFlags.Instance |
-            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic))
-        {
-            if (field.GetValue(captured.Target) is ExpressionCompiler.ArrayClosureWithNonPassedParams closure)
-            {
-                foundClosure = true;
-                t.IsTrue(ReferenceEquals(value, closure.NonPassedParams[0]));
-            }
-        }
-        t.IsTrue(foundClosure);
+        t.IsTrue(ReferenceEquals(value, GetCapturedCell(captured)));
     }
 
     public sealed class NestedReferenceNode { public object Value; }

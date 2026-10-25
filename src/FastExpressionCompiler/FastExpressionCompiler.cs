@@ -48,6 +48,12 @@ THE SOFTWARE.
 #if LIGHT_EXPRESSION
 namespace FastExpressionCompiler.LightExpression
 {
+#if NETFRAMEWORK
+    using CapturedClosure = FastExpressionCompiler.LightExpression.ExpressionCompiler.ArrayClosureWithNonPassedParams;
+#else
+    using CapturedClosure = FastExpressionCompiler.LightExpression.ExpressionCompiler.ArrayClosure;
+#endif
+
     using static FastExpressionCompiler.LightExpression.Expression;
     using PE = FastExpressionCompiler.LightExpression.ParameterExpression;
     using ParamExprs = FastExpressionCompiler.LightExpression.IParameterProvider;
@@ -59,6 +65,12 @@ namespace FastExpressionCompiler.LightExpression
 #else
 namespace FastExpressionCompiler
 {
+#if NETFRAMEWORK
+    using CapturedClosure = FastExpressionCompiler.ExpressionCompiler.ArrayClosureWithNonPassedParams;
+#else
+    using CapturedClosure = FastExpressionCompiler.ExpressionCompiler.ArrayClosure;
+#endif
+
     using static System.Linq.Expressions.Expression;
     using PE = System.Linq.Expressions.ParameterExpression;
     using ParamExprs = System.Collections.Generic.IReadOnlyList<System.Linq.Expressions.ParameterExpression>;
@@ -2279,89 +2291,255 @@ namespace FastExpressionCompiler
         {
             public static readonly MethodInfo[] Methods = typeof(CurryClosureFuncs).GetMethods();
 
-            // todo: @mem @perf can we avoid closure creation over `f` and `c`?
-            public static Func<R> Curry<C, R>(Func<C, R> f, C c) =>
-                () => f(c);
+            public static Func<R> Curry<R>(Func<CapturedClosure, R> f, object[] variables, object[] constants) =>
+                new CapturedFunc<R>(f, variables, constants).Invoke;
 
-            public static Func<T1, R> Curry<C, T1, R>(Func<C, T1, R> f, C c) =>
-                t1 => f(c, t1);
+            public static Func<T1, R> Curry<T1, R>(Func<CapturedClosure, T1, R> f, object[] variables, object[] constants) =>
+                new CapturedFunc<T1, R>(f, variables, constants).Invoke;
 
-            public static Func<T1, T2, R> Curry<C, T1, T2, R>(Func<C, T1, T2, R> f, C c) =>
-                (t1, t2) => f(c, t1, t2);
+            public static Func<T1, T2, R> Curry<T1, T2, R>(Func<CapturedClosure, T1, T2, R> f, object[] variables, object[] constants) =>
+                new CapturedFunc<T1, T2, R>(f, variables, constants).Invoke;
 
-            public static Func<T1, T2, T3, R> Curry<C, T1, T2, T3, R>(Func<C, T1, T2, T3, R> f, C c) =>
-                (t1, t2, t3) => f(c, t1, t2, t3);
+            public static Func<T1, T2, T3, R> Curry<T1, T2, T3, R>(Func<CapturedClosure, T1, T2, T3, R> f, object[] variables, object[] constants) =>
+                new CapturedFunc<T1, T2, T3, R>(f, variables, constants).Invoke;
 
-            public static Func<T1, T2, T3, T4, R> Curry<C, T1, T2, T3, T4, R>(Func<C, T1, T2, T3, T4, R> f, C c) =>
-                (t1, t2, t3, t4) => f(c, t1, t2, t3, t4);
+            public static Func<T1, T2, T3, T4, R> Curry<T1, T2, T3, T4, R>(Func<CapturedClosure, T1, T2, T3, T4, R> f, object[] variables, object[] constants) =>
+                new CapturedFunc<T1, T2, T3, T4, R>(f, variables, constants).Invoke;
 
-            public static Func<T1, T2, T3, T4, T5, R> Curry<C, T1, T2, T3, T4, T5, R>(Func<C, T1, T2, T3, T4, T5, R> f,
-                C c) => (t1, t2, t3, t4, t5) => f(c, t1, t2, t3, t4, t5);
+            public static Func<T1, T2, T3, T4, T5, R> Curry<T1, T2, T3, T4, T5, R>(Func<CapturedClosure, T1, T2, T3, T4, T5, R> f, object[] variables, object[] constants) =>
+                new CapturedFunc<T1, T2, T3, T4, T5, R>(f, variables, constants).Invoke;
 
-            public static Func<T1, T2, T3, T4, T5, T6, R>
-                Curry<C, T1, T2, T3, T4, T5, T6, R>(Func<C, T1, T2, T3, T4, T5, T6, R> f, C c) =>
-                (t1, t2, t3, t4, t5, t6) => f(c, t1, t2, t3, t4, t5, t6);
+            public static Func<T1, T2, T3, T4, T5, T6, R> Curry<T1, T2, T3, T4, T5, T6, R>(Func<CapturedClosure, T1, T2, T3, T4, T5, T6, R> f, object[] variables, object[] constants) =>
+                new CapturedFunc<T1, T2, T3, T4, T5, T6, R>(f, variables, constants).Invoke;
 
-            public static Func<T1, T2, T3, T4, T5, T6, T7, R>
-                Curry<C, T1, T2, T3, T4, T5, T6, T7, R>(Func<C, T1, T2, T3, T4, T5, T6, T7, R> f, C c) =>
-                (t1, t2, t3, t4, t5, t6, t7) => f(c, t1, t2, t3, t4, t5, t6, t7);
+            public static Func<T1, T2, T3, T4, T5, T6, T7, R> Curry<T1, T2, T3, T4, T5, T6, T7, R>(Func<CapturedClosure, T1, T2, T3, T4, T5, T6, T7, R> f, object[] variables, object[] constants) =>
+                new CapturedFunc<T1, T2, T3, T4, T5, T6, T7, R>(f, variables, constants).Invoke;
 
-            public static Func<T1, T2, T3, T4, T5, T6, T7, T8, R>
-                Curry<C, T1, T2, T3, T4, T5, T6, T7, T8, R>(Func<C, T1, T2, T3, T4, T5, T6, T7, T8, R> f, C c) =>
-                (t1, t2, t3, t4, t5, t6, t7, t8) => f(c, t1, t2, t3, t4, t5, t6, t7, t8);
+            public static Func<T1, T2, T3, T4, T5, T6, T7, T8, R> Curry<T1, T2, T3, T4, T5, T6, T7, T8, R>(Func<CapturedClosure, T1, T2, T3, T4, T5, T6, T7, T8, R> f, object[] variables, object[] constants) =>
+                new CapturedFunc<T1, T2, T3, T4, T5, T6, T7, T8, R>(f, variables, constants).Invoke;
 
-            public static Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, R>
-                Curry<C, T1, T2, T3, T4, T5, T6, T7, T8, T9, R>(Func<C, T1, T2, T3, T4, T5, T6, T7, T8, T9, R> f, C c) =>
-                (t1, t2, t3, t4, t5, t6, t7, t8, t9) => f(c, t1, t2, t3, t4, t5, t6, t7, t8, t9);
+            public static Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, R> Curry<T1, T2, T3, T4, T5, T6, T7, T8, T9, R>(Func<CapturedClosure, T1, T2, T3, T4, T5, T6, T7, T8, T9, R> f, object[] variables, object[] constants) =>
+                new CapturedFunc<T1, T2, T3, T4, T5, T6, T7, T8, T9, R>(f, variables, constants).Invoke;
 
-            public static Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R>
-                Curry<C, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R>(Func<C, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R> f, C c) =>
-                (t1, t2, t3, t4, t5, t6, t7, t8, t9, t10) => f(c, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10);
+            public static Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R> Curry<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R>(Func<CapturedClosure, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R> f, object[] variables, object[] constants) =>
+                new CapturedFunc<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R>(f, variables, constants).Invoke;
+
+        }
+
+        private sealed class CapturedFunc<R> : ArrayClosureWithNonPassedParams
+        {
+            private readonly Func<CapturedClosure, R> _lambda;
+            internal CapturedFunc(Func<CapturedClosure, R> lambda, object[] variables, object[] constants)
+                : base(variables, constants) => _lambda = lambda;
+            internal R Invoke() => _lambda(this);
+        }
+
+        private sealed class CapturedFunc<T1, R> : ArrayClosureWithNonPassedParams
+        {
+            private readonly Func<CapturedClosure, T1, R> _lambda;
+            internal CapturedFunc(Func<CapturedClosure, T1, R> lambda, object[] variables, object[] constants)
+                : base(variables, constants) => _lambda = lambda;
+            internal R Invoke(T1 t1) => _lambda(this, t1);
+        }
+
+        private sealed class CapturedFunc<T1, T2, R> : ArrayClosureWithNonPassedParams
+        {
+            private readonly Func<CapturedClosure, T1, T2, R> _lambda;
+            internal CapturedFunc(Func<CapturedClosure, T1, T2, R> lambda, object[] variables, object[] constants)
+                : base(variables, constants) => _lambda = lambda;
+            internal R Invoke(T1 t1, T2 t2) => _lambda(this, t1, t2);
+        }
+
+        private sealed class CapturedFunc<T1, T2, T3, R> : ArrayClosureWithNonPassedParams
+        {
+            private readonly Func<CapturedClosure, T1, T2, T3, R> _lambda;
+            internal CapturedFunc(Func<CapturedClosure, T1, T2, T3, R> lambda, object[] variables, object[] constants)
+                : base(variables, constants) => _lambda = lambda;
+            internal R Invoke(T1 t1, T2 t2, T3 t3) => _lambda(this, t1, t2, t3);
+        }
+
+        private sealed class CapturedFunc<T1, T2, T3, T4, R> : ArrayClosureWithNonPassedParams
+        {
+            private readonly Func<CapturedClosure, T1, T2, T3, T4, R> _lambda;
+            internal CapturedFunc(Func<CapturedClosure, T1, T2, T3, T4, R> lambda, object[] variables, object[] constants)
+                : base(variables, constants) => _lambda = lambda;
+            internal R Invoke(T1 t1, T2 t2, T3 t3, T4 t4) => _lambda(this, t1, t2, t3, t4);
+        }
+
+        private sealed class CapturedFunc<T1, T2, T3, T4, T5, R> : ArrayClosureWithNonPassedParams
+        {
+            private readonly Func<CapturedClosure, T1, T2, T3, T4, T5, R> _lambda;
+            internal CapturedFunc(Func<CapturedClosure, T1, T2, T3, T4, T5, R> lambda, object[] variables, object[] constants)
+                : base(variables, constants) => _lambda = lambda;
+            internal R Invoke(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5) => _lambda(this, t1, t2, t3, t4, t5);
+        }
+
+        private sealed class CapturedFunc<T1, T2, T3, T4, T5, T6, R> : ArrayClosureWithNonPassedParams
+        {
+            private readonly Func<CapturedClosure, T1, T2, T3, T4, T5, T6, R> _lambda;
+            internal CapturedFunc(Func<CapturedClosure, T1, T2, T3, T4, T5, T6, R> lambda, object[] variables, object[] constants)
+                : base(variables, constants) => _lambda = lambda;
+            internal R Invoke(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6) => _lambda(this, t1, t2, t3, t4, t5, t6);
+        }
+
+        private sealed class CapturedFunc<T1, T2, T3, T4, T5, T6, T7, R> : ArrayClosureWithNonPassedParams
+        {
+            private readonly Func<CapturedClosure, T1, T2, T3, T4, T5, T6, T7, R> _lambda;
+            internal CapturedFunc(Func<CapturedClosure, T1, T2, T3, T4, T5, T6, T7, R> lambda, object[] variables, object[] constants)
+                : base(variables, constants) => _lambda = lambda;
+            internal R Invoke(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7) => _lambda(this, t1, t2, t3, t4, t5, t6, t7);
+        }
+
+        private sealed class CapturedFunc<T1, T2, T3, T4, T5, T6, T7, T8, R> : ArrayClosureWithNonPassedParams
+        {
+            private readonly Func<CapturedClosure, T1, T2, T3, T4, T5, T6, T7, T8, R> _lambda;
+            internal CapturedFunc(Func<CapturedClosure, T1, T2, T3, T4, T5, T6, T7, T8, R> lambda, object[] variables, object[] constants)
+                : base(variables, constants) => _lambda = lambda;
+            internal R Invoke(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7, T8 t8) => _lambda(this, t1, t2, t3, t4, t5, t6, t7, t8);
+        }
+
+        private sealed class CapturedFunc<T1, T2, T3, T4, T5, T6, T7, T8, T9, R> : ArrayClosureWithNonPassedParams
+        {
+            private readonly Func<CapturedClosure, T1, T2, T3, T4, T5, T6, T7, T8, T9, R> _lambda;
+            internal CapturedFunc(Func<CapturedClosure, T1, T2, T3, T4, T5, T6, T7, T8, T9, R> lambda, object[] variables, object[] constants)
+                : base(variables, constants) => _lambda = lambda;
+            internal R Invoke(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7, T8 t8, T9 t9) => _lambda(this, t1, t2, t3, t4, t5, t6, t7, t8, t9);
+        }
+
+        private sealed class CapturedFunc<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R> : ArrayClosureWithNonPassedParams
+        {
+            private readonly Func<CapturedClosure, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R> _lambda;
+            internal CapturedFunc(Func<CapturedClosure, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R> lambda, object[] variables, object[] constants)
+                : base(variables, constants) => _lambda = lambda;
+            internal R Invoke(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7, T8 t8, T9 t9, T10 t10) => _lambda(this, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10);
         }
 
         internal static class CurryClosureActions
         {
             public static readonly MethodInfo[] Methods = typeof(CurryClosureActions).GetMethods();
 
-            public static Action Curry<C>(Action<C> a, C c) =>
-                () => a(c);
+            public static Action Curry(Action<CapturedClosure> f, object[] variables, object[] constants) =>
+                new CapturedAction(f, variables, constants).Invoke;
 
-            public static Action<T1> Curry<C, T1>(Action<C, T1> f, C c) =>
-                t1 => f(c, t1);
+            public static Action<T1> Curry<T1>(Action<CapturedClosure, T1> f, object[] variables, object[] constants) =>
+                new CapturedAction<T1>(f, variables, constants).Invoke;
 
-            public static Action<T1, T2> Curry<C, T1, T2>(Action<C, T1, T2> f, C c) =>
-                (t1, t2) => f(c, t1, t2);
+            public static Action<T1, T2> Curry<T1, T2>(Action<CapturedClosure, T1, T2> f, object[] variables, object[] constants) =>
+                new CapturedAction<T1, T2>(f, variables, constants).Invoke;
 
-            public static Action<T1, T2, T3> Curry<C, T1, T2, T3>(Action<C, T1, T2, T3> f, C c) =>
-                (t1, t2, t3) => f(c, t1, t2, t3);
+            public static Action<T1, T2, T3> Curry<T1, T2, T3>(Action<CapturedClosure, T1, T2, T3> f, object[] variables, object[] constants) =>
+                new CapturedAction<T1, T2, T3>(f, variables, constants).Invoke;
 
-            public static Action<T1, T2, T3, T4> Curry<C, T1, T2, T3, T4>(Action<C, T1, T2, T3, T4> f, C c) =>
-                (t1, t2, t3, t4) => f(c, t1, t2, t3, t4);
+            public static Action<T1, T2, T3, T4> Curry<T1, T2, T3, T4>(Action<CapturedClosure, T1, T2, T3, T4> f, object[] variables, object[] constants) =>
+                new CapturedAction<T1, T2, T3, T4>(f, variables, constants).Invoke;
 
-            public static Action<T1, T2, T3, T4, T5> Curry<C, T1, T2, T3, T4, T5>(Action<C, T1, T2, T3, T4, T5> f,
-                C c) => (t1, t2, t3, t4, t5) => f(c, t1, t2, t3, t4, t5);
+            public static Action<T1, T2, T3, T4, T5> Curry<T1, T2, T3, T4, T5>(Action<CapturedClosure, T1, T2, T3, T4, T5> f, object[] variables, object[] constants) =>
+                new CapturedAction<T1, T2, T3, T4, T5>(f, variables, constants).Invoke;
 
-            public static Action<T1, T2, T3, T4, T5, T6>
-                Curry<C, T1, T2, T3, T4, T5, T6>(Action<C, T1, T2, T3, T4, T5, T6> f, C c) =>
-                (t1, t2, t3, t4, t5, t6) => f(c, t1, t2, t3, t4, t5, t6);
+            public static Action<T1, T2, T3, T4, T5, T6> Curry<T1, T2, T3, T4, T5, T6>(Action<CapturedClosure, T1, T2, T3, T4, T5, T6> f, object[] variables, object[] constants) =>
+                new CapturedAction<T1, T2, T3, T4, T5, T6>(f, variables, constants).Invoke;
 
-            public static Action<T1, T2, T3, T4, T5, T6, T7>
-                Curry<C, T1, T2, T3, T4, T5, T6, T7>(Action<C, T1, T2, T3, T4, T5, T6, T7> f, C c) =>
-                (t1, t2, t3, t4, t5, t6, t7) => f(c, t1, t2, t3, t4, t5, t6, t7);
+            public static Action<T1, T2, T3, T4, T5, T6, T7> Curry<T1, T2, T3, T4, T5, T6, T7>(Action<CapturedClosure, T1, T2, T3, T4, T5, T6, T7> f, object[] variables, object[] constants) =>
+                new CapturedAction<T1, T2, T3, T4, T5, T6, T7>(f, variables, constants).Invoke;
 
-            public static Action<T1, T2, T3, T4, T5, T6, T7, T8>
-                Curry<C, T1, T2, T3, T4, T5, T6, T7, T8>(Action<C, T1, T2, T3, T4, T5, T6, T7, T8> f, C c) =>
-                (t1, t2, t3, t4, t5, t6, t7, t8) => f(c, t1, t2, t3, t4, t5, t6, t7, t8);
+            public static Action<T1, T2, T3, T4, T5, T6, T7, T8> Curry<T1, T2, T3, T4, T5, T6, T7, T8>(Action<CapturedClosure, T1, T2, T3, T4, T5, T6, T7, T8> f, object[] variables, object[] constants) =>
+                new CapturedAction<T1, T2, T3, T4, T5, T6, T7, T8>(f, variables, constants).Invoke;
 
-            public static Action<T1, T2, T3, T4, T5, T6, T7, T8, T9>
-                Curry<C, T1, T2, T3, T4, T5, T6, T7, T8, T9>(Action<C, T1, T2, T3, T4, T5, T6, T7, T8, T9> f, C c) =>
-                (t1, t2, t3, t4, t5, t6, t7, t8, t9) => f(c, t1, t2, t3, t4, t5, t6, t7, t8, t9);
+            public static Action<T1, T2, T3, T4, T5, T6, T7, T8, T9> Curry<T1, T2, T3, T4, T5, T6, T7, T8, T9>(Action<CapturedClosure, T1, T2, T3, T4, T5, T6, T7, T8, T9> f, object[] variables, object[] constants) =>
+                new CapturedAction<T1, T2, T3, T4, T5, T6, T7, T8, T9>(f, variables, constants).Invoke;
 
-            public static Action<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>
-                Curry<C, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(Action<C, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> f, C c) =>
-                (t1, t2, t3, t4, t5, t6, t7, t8, t9, t10) => f(c, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10);
+            public static Action<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> Curry<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(Action<CapturedClosure, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> f, object[] variables, object[] constants) =>
+                new CapturedAction<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(f, variables, constants).Invoke;
+
         }
 
+        private sealed class CapturedAction : ArrayClosureWithNonPassedParams
+        {
+            private readonly Action<CapturedClosure> _lambda;
+            internal CapturedAction(Action<CapturedClosure> lambda, object[] variables, object[] constants)
+                : base(variables, constants) => _lambda = lambda;
+            internal void Invoke() => _lambda(this);
+        }
+
+        private sealed class CapturedAction<T1> : ArrayClosureWithNonPassedParams
+        {
+            private readonly Action<CapturedClosure, T1> _lambda;
+            internal CapturedAction(Action<CapturedClosure, T1> lambda, object[] variables, object[] constants)
+                : base(variables, constants) => _lambda = lambda;
+            internal void Invoke(T1 t1) => _lambda(this, t1);
+        }
+
+        private sealed class CapturedAction<T1, T2> : ArrayClosureWithNonPassedParams
+        {
+            private readonly Action<CapturedClosure, T1, T2> _lambda;
+            internal CapturedAction(Action<CapturedClosure, T1, T2> lambda, object[] variables, object[] constants)
+                : base(variables, constants) => _lambda = lambda;
+            internal void Invoke(T1 t1, T2 t2) => _lambda(this, t1, t2);
+        }
+
+        private sealed class CapturedAction<T1, T2, T3> : ArrayClosureWithNonPassedParams
+        {
+            private readonly Action<CapturedClosure, T1, T2, T3> _lambda;
+            internal CapturedAction(Action<CapturedClosure, T1, T2, T3> lambda, object[] variables, object[] constants)
+                : base(variables, constants) => _lambda = lambda;
+            internal void Invoke(T1 t1, T2 t2, T3 t3) => _lambda(this, t1, t2, t3);
+        }
+
+        private sealed class CapturedAction<T1, T2, T3, T4> : ArrayClosureWithNonPassedParams
+        {
+            private readonly Action<CapturedClosure, T1, T2, T3, T4> _lambda;
+            internal CapturedAction(Action<CapturedClosure, T1, T2, T3, T4> lambda, object[] variables, object[] constants)
+                : base(variables, constants) => _lambda = lambda;
+            internal void Invoke(T1 t1, T2 t2, T3 t3, T4 t4) => _lambda(this, t1, t2, t3, t4);
+        }
+
+        private sealed class CapturedAction<T1, T2, T3, T4, T5> : ArrayClosureWithNonPassedParams
+        {
+            private readonly Action<CapturedClosure, T1, T2, T3, T4, T5> _lambda;
+            internal CapturedAction(Action<CapturedClosure, T1, T2, T3, T4, T5> lambda, object[] variables, object[] constants)
+                : base(variables, constants) => _lambda = lambda;
+            internal void Invoke(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5) => _lambda(this, t1, t2, t3, t4, t5);
+        }
+
+        private sealed class CapturedAction<T1, T2, T3, T4, T5, T6> : ArrayClosureWithNonPassedParams
+        {
+            private readonly Action<CapturedClosure, T1, T2, T3, T4, T5, T6> _lambda;
+            internal CapturedAction(Action<CapturedClosure, T1, T2, T3, T4, T5, T6> lambda, object[] variables, object[] constants)
+                : base(variables, constants) => _lambda = lambda;
+            internal void Invoke(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6) => _lambda(this, t1, t2, t3, t4, t5, t6);
+        }
+
+        private sealed class CapturedAction<T1, T2, T3, T4, T5, T6, T7> : ArrayClosureWithNonPassedParams
+        {
+            private readonly Action<CapturedClosure, T1, T2, T3, T4, T5, T6, T7> _lambda;
+            internal CapturedAction(Action<CapturedClosure, T1, T2, T3, T4, T5, T6, T7> lambda, object[] variables, object[] constants)
+                : base(variables, constants) => _lambda = lambda;
+            internal void Invoke(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7) => _lambda(this, t1, t2, t3, t4, t5, t6, t7);
+        }
+
+        private sealed class CapturedAction<T1, T2, T3, T4, T5, T6, T7, T8> : ArrayClosureWithNonPassedParams
+        {
+            private readonly Action<CapturedClosure, T1, T2, T3, T4, T5, T6, T7, T8> _lambda;
+            internal CapturedAction(Action<CapturedClosure, T1, T2, T3, T4, T5, T6, T7, T8> lambda, object[] variables, object[] constants)
+                : base(variables, constants) => _lambda = lambda;
+            internal void Invoke(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7, T8 t8) => _lambda(this, t1, t2, t3, t4, t5, t6, t7, t8);
+        }
+
+        private sealed class CapturedAction<T1, T2, T3, T4, T5, T6, T7, T8, T9> : ArrayClosureWithNonPassedParams
+        {
+            private readonly Action<CapturedClosure, T1, T2, T3, T4, T5, T6, T7, T8, T9> _lambda;
+            internal CapturedAction(Action<CapturedClosure, T1, T2, T3, T4, T5, T6, T7, T8, T9> lambda, object[] variables, object[] constants)
+                : base(variables, constants) => _lambda = lambda;
+            internal void Invoke(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7, T8 t8, T9 t9) => _lambda(this, t1, t2, t3, t4, t5, t6, t7, t8, t9);
+        }
+
+        private sealed class CapturedAction<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> : ArrayClosureWithNonPassedParams
+        {
+            private readonly Action<CapturedClosure, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> _lambda;
+            internal CapturedAction(Action<CapturedClosure, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> lambda, object[] variables, object[] constants)
+                : base(variables, constants) => _lambda = lambda;
+            internal void Invoke(T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6, T7 t7, T8 t8, T9 t9, T10 t10) => _lambda(this, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10);
+        }
         /// Helps to identify constants as the one to be put into the Closure
         public static bool IsClosureBoundConstant(object value, Type type) =>
             value is string s ? !ReferenceEquals(string.IsInterned(s), s) :
@@ -8110,27 +8288,32 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Castclass, ((NestedLambdaForNonPassedParams)nestedLambdaInfo.Lambda).NestedLambda.GetType());
 #endif
 
-                // Load the nonPassedParams as a first argument of closure
+                // The target stores both the open delegate and the captured storage;
+                // no separate ArrayClosure plus compiler-generated Curry display class.
                 EmitLoadLocalVariable(il, nonPassedParamsVarIndex);
-
-                // Load the constants as a second argument and call the closure constructor
                 var lambda = nestedLambdaInfo.Lambda;
                 if (lambda is NestedLambdaForNonPassedParamsWithConstants)
                 {
                     EmitLoadLocalVariable(il, nestedLambdaInfo.LambdaVarIndex);
                     il.Demit(OpCodes.Ldfld, NestedLambdaForNonPassedParamsWithConstants.ConstantsAndNestedLambdasField);
-                    il.Demit(OpCodes.Newobj, ArrayClosureWithNonPassedParamsAndConstantsCtor);
                 }
                 else
-                    il.Demit(OpCodes.Newobj, ArrayClosureWithNonPassedParamsCtor);
+                    il.Demit(OpCodes.Ldnull);
 
-                // Call the `Curry` method with the nested lambda and closure to produce a closed lambda with the expected signature
-                var lambdaType = (lambda is NestedLambdaForNonPassedParams lp ? lp.NestedLambda : lambda).GetType();
-                var lambdaTypeArgs = lambdaType.GetGenericArguments();
                 var nestedLambdaExpr = nestedLambdaInfo.LambdaExpression;
-                var closureMethod = nestedLambdaExpr.ReturnType == typeof(void)
-                    ? CurryClosureActions.Methods[lambdaTypeArgs.Length - 1].MakeGenericMethod(lambdaTypeArgs)
-                    : CurryClosureFuncs.Methods[lambdaTypeArgs.Length - 2].MakeGenericMethod(lambdaTypeArgs);
+                var parameters = nestedLambdaExpr.GetParamExprs();
+                var parameterCount = parameters.GetParamCount();
+                var returnsVoid = nestedLambdaExpr.ReturnType == typeof(void);
+                var typeArgs = new Type[parameterCount + (returnsVoid ? 0 : 1)];
+                for (var p = 0; p < parameterCount; ++p)
+                    typeArgs[p] = parameters.GetParameter(p).Type;
+                if (!returnsVoid)
+                    typeArgs[parameterCount] = nestedLambdaExpr.ReturnType;
+                var closureMethod = returnsVoid
+                    ? CurryClosureActions.Methods[parameterCount]
+                    : CurryClosureFuncs.Methods[parameterCount];
+                if (typeArgs.Length != 0)
+                    closureMethod = closureMethod.MakeGenericMethod(typeArgs);
 
                 var ok = EmitMethodCall(il, closureMethod);
 
