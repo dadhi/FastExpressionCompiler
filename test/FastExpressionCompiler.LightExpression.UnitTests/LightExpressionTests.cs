@@ -69,6 +69,8 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Coalesce_with_nullable_left_emits_the_same_IL_shape_as_system();
             Can_compile_shifts_with_nullable_shift_count();
             Can_compile_right_shift_with_nullable_shift_count();
+            Can_round_trip_more_expression_kinds_through_system_expressions();
+            Can_compile_type_is_and_type_equal_the_same_as_system();
             IsLifted_and_IsLiftedToNull_are_the_same_as_in_system_expressions();
             Lifted_comparisons_have_the_same_type_and_result_as_system();
             And_AndAlso_OrElse_take_the_type_from_the_left_operand();
@@ -83,7 +85,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_print_reference_comparison();
             Can_round_trip_new_expression_kinds_through_system_expressions();
 
-            return 64;
+            return 66;
         }
 
         private static int _sideEffectCalls;
@@ -852,8 +854,158 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                         Asserts.AreEqual(s.IsLiftedToNull, l.IsLiftedToNull, what + " IsLiftedToNull");
                         ++checkedCount;
                     }
-            Asserts.IsTrue(checkedCount > 100);
+            // the number of the combinations accepted by System differs slightly between the runtimes, so this is just a sanity check
+            Asserts.IsTrue(checkedCount > 50);
         }
+
+        public void Can_round_trip_more_expression_kinds_through_system_expressions()
+        {
+            var a = Parameter(typeof(int), "a");
+            var o = Parameter(typeof(object), "o");
+            var v = Variable(typeof(int), "v");
+            var arr = Variable(typeof(int[]), "arr");
+            var d = Variable(typeof(double), "d");
+            var cases = new List<(string, Expression)>
+            {
+                ("TypeIs string", Convert(TypeIs(o, typeof(string)), typeof(object))),
+                ("TypeEqual string", Convert(TypeEqual(o, typeof(string)), typeof(object))),
+                ("TypeIs int on int", Convert(TypeIs(a, typeof(int)), typeof(object))),
+                ("TypeIs object on int", Convert(TypeIs(a, typeof(object)), typeof(object))),
+                ("TypeEqual int boxed", Convert(TypeEqual(Convert(a, typeof(object)), typeof(int)), typeof(object))),
+                ("ConvertChecked", Convert(ConvertChecked(a, typeof(long)), typeof(object))),
+                ("TypeAs", TypeAs(o, typeof(string))),
+                ("Unbox", Convert(Unbox(o, typeof(int)), typeof(object))),
+                ("Negate", Convert(Negate(a), typeof(object))),
+                ("NegateChecked", Convert(NegateChecked(a), typeof(object))),
+                ("OnesComplement", Convert(OnesComplement(a), typeof(object))),
+                ("UnaryPlus", Convert(UnaryPlus(a), typeof(object))),
+                ("Increment", Convert(Increment(a), typeof(object))),
+                ("Decrement", Convert(Decrement(a), typeof(object))),
+                ("IsTrue", Convert(IsTrue(Equal(a, Constant(1))), typeof(object))),
+                ("IsFalse", Convert(IsFalse(Equal(a, Constant(1))), typeof(object))),
+                ("Not bool", Convert(Not(Equal(a, Constant(1))), typeof(object))),
+                ("Not int", Convert(Not(a), typeof(object))),
+                ("ExclusiveOr", Convert(ExclusiveOr(a, Constant(3)), typeof(object))),
+                ("LeftShift", Convert(LeftShift(a, Constant(2)), typeof(object))),
+                ("Power", Convert(Power(Convert(a, typeof(double)), Constant(2.0)), typeof(object))),
+                ("AddAssign", Block(new[] { v }, Assign(v, a), AddAssign(v, Constant(2)), Convert(v, typeof(object)))),
+                ("SubtractAssign", Block(new[] { v }, Assign(v, a), SubtractAssign(v, Constant(2)), Convert(v, typeof(object)))),
+                ("MultiplyAssign", Block(new[] { v }, Assign(v, a), MultiplyAssign(v, Constant(2)), Convert(v, typeof(object)))),
+                ("DivideAssign", Block(new[] { v }, Assign(v, a), DivideAssign(v, Constant(2)), Convert(v, typeof(object)))),
+                ("ModuloAssign", Block(new[] { v }, Assign(v, a), ModuloAssign(v, Constant(2)), Convert(v, typeof(object)))),
+                ("AndAssign", Block(new[] { v }, Assign(v, a), AndAssign(v, Constant(2)), Convert(v, typeof(object)))),
+                ("OrAssign", Block(new[] { v }, Assign(v, a), OrAssign(v, Constant(2)), Convert(v, typeof(object)))),
+                ("ExclusiveOrAssign", Block(new[] { v }, Assign(v, a), ExclusiveOrAssign(v, Constant(2)), Convert(v, typeof(object)))),
+                ("LeftShiftAssign", Block(new[] { v }, Assign(v, a), LeftShiftAssign(v, Constant(2)), Convert(v, typeof(object)))),
+                ("RightShiftAssign", Block(new[] { v }, Assign(v, a), RightShiftAssign(v, Constant(1)), Convert(v, typeof(object)))),
+                ("PowerAssign", Block(new[] { d }, Assign(d, Convert(a, typeof(double))), PowerAssign(d, Constant(2.0)), Convert(d, typeof(object)))),
+                ("AddAssignChecked", Block(new[] { v }, Assign(v, a), AddAssignChecked(v, Constant(2)), Convert(v, typeof(object)))),
+                ("PreIncrementAssign", Block(new[] { v }, Assign(v, a), Convert(PreIncrementAssign(v), typeof(object)))),
+                ("PostIncrementAssign", Block(new[] { v }, Assign(v, a), Convert(PostIncrementAssign(v), typeof(object)))),
+                ("PreDecrementAssign", Block(new[] { v }, Assign(v, a), Convert(PreDecrementAssign(v), typeof(object)))),
+                ("PostDecrementAssign", Block(new[] { v }, Assign(v, a), Convert(PostDecrementAssign(v), typeof(object)))),
+                ("ArrayIndex", Block(new[] { arr }, Assign(arr, NewArrayInit(typeof(int), a, Constant(5))), Convert(ArrayIndex(arr, Constant(1)), typeof(object)))),
+                ("ArrayAccess", Block(new[] { arr }, Assign(arr, NewArrayBounds(typeof(int), Constant(3))), Assign(ArrayAccess(arr, Constant(1)), a), Convert(ArrayAccess(arr, Constant(1)), typeof(object)))),
+                ("ArrayLength", Block(new[] { arr }, Assign(arr, NewArrayBounds(typeof(int), a)), Convert(ArrayLength(arr), typeof(object)))),
+                ("Switch", Convert(Switch(a, Constant(0), SwitchCase(Constant(10), Constant(1)), SwitchCase(Constant(20), Constant(2))), typeof(object))),
+                ("TryCatch", Convert(TryCatch(Constant(1), Catch(typeof(Exception), Constant(2))), typeof(object))),
+                ("TryFinally", Convert(TryFinally(Constant(1), Empty()), typeof(object))),
+                ("Condition", Convert(Condition(Equal(a, Constant(1)), Constant(10), Constant(20)), typeof(object))),
+                ("Coalesce", Coalesce(o, Constant("x"))),
+                ("Lift Invoke", Convert(Invoke(Lambda<Func<int, int>>(Add(a, Constant(1)), a), a), typeof(object))),
+                ("Default", Convert(Default(typeof(int)), typeof(object))),
+                ("New", Convert(New(typeof(DateTime).GetConstructor(new[] { typeof(int), typeof(int), typeof(int) }), Constant(2000), Constant(1), Constant(2)), typeof(object))),
+                ("Call", Call(typeof(Math).GetMethod("Abs", new[] { typeof(int) }), a) is var c ? Convert(c, typeof(object)) : null),
+            };
+
+            foreach (var (name, body) in cases)
+            {
+                var lambda = Lambda<Func<int, object, object>>(body, a, o);
+                var back = lambda.ToLambdaExpression().ToLightExpression();
+                var backSys = back.ToLambdaExpression().Compile();
+                var expected = lambda.CompileSys();
+                var backFast = (Func<int, object, object>)back.CompileFast(true);
+                Asserts.IsNotNull(backFast, name);
+                var backCompiledSys = (Func<int, object, object>)back.CompileSys();
+
+                foreach (var (x, y) in new (int, object)[] { (1, "s"), (2, 5), (3, null) })
+                {
+                    var what = $"{name} ({x}, {y})";
+                    var r0 = Run(expected, x, y);
+                    Asserts.AreEqual(r0, Run(backFast, x, y), what + " back CompileFast");
+                    Asserts.AreEqual(r0, Run(backCompiledSys, x, y), what + " back CompileSys");
+                    Asserts.AreEqual(r0, Run(backSys, x, y), what + " back to System");
+                }
+            }
+        }
+
+        // the exception type name stands for the thrown result, so the failing cases are compared too
+        private static object Run(Func<int, object, object> f, int x, object y)
+        {
+            try { return f(x, y); }
+            catch (Exception ex) { return ex.GetType().Name; }
+        }
+
+        public void Can_compile_type_is_and_type_equal_the_same_as_system()
+        {
+            var o = Parameter(typeof(object), "o");
+            var n = Parameter(typeof(int?), "n");
+            var i = Parameter(typeof(int), "i");
+            var s = Parameter(typeof(string), "s");
+            var baseObj = Parameter(typeof(TypeTestBase), "b");
+
+            var typeOperands = new[] { typeof(int), typeof(int?), typeof(long), typeof(string), typeof(object), typeof(ValueType),
+                typeof(TypeTestBase), typeof(TypeTestDerived), typeof(IDisposable), typeof(int[]), typeof(DayOfWeek) };
+            var operands = new (ParameterExpression, object[])[]
+            {
+                (o, new object[] { null, 1, 1L, "s", DayOfWeek.Monday, new TypeTestBase(), new TypeTestDerived(), new int[0] }),
+                (n, new object[] { null, 5 }),
+                (i, new object[] { 7 }),
+                (s, new object[] { null, "s" }),
+                (baseObj, new object[] { null, new TypeTestBase(), new TypeTestDerived() }),
+            };
+
+            foreach (var isEqual in new[] { false, true })
+                foreach (var t in typeOperands)
+                    foreach (var (operandParam, values) in operands)
+                    {
+                        var p = Parameter(operandParam.Type, "p"); // not shared with the outer lambda parameter
+                        var body = isEqual ? TypeEqual(p, t) : TypeIs(p, t);
+                        Asserts.AreEqual(isEqual ? ExpressionType.TypeEqual : ExpressionType.TypeIs, body.NodeType);
+                        Asserts.AreEqual(typeof(bool), body.Type);
+
+                        var lambda = Lambda<Func<object, bool>>(Invoke(Lambda(body, p), Convert(o, p.Type)), o);
+                        var what = $"{(isEqual ? "TypeEqual" : "TypeIs")}({p.Type.Name}, {t.Name})";
+                        var fast = lambda.CompileFast(true);
+                        Asserts.IsNotNull(fast, what);
+                        // System on .NET Framework fails to compile `TypeEqual` for a nullable parameter, so the expected value is computed by the definition
+                        Func<object, bool> sys;
+                        try { sys = lambda.CompileSys(); }
+                        catch (InvalidOperationException) when (isEqual && p.Type.IsValueType)
+                        {
+                            sys = v => v != null && v.GetType() == t.GetNonNullableOrSelf();
+                        }
+                        var back = lambda.ToLambdaExpression().ToLightExpression();
+                        var backFast = (Func<object, bool>)back.CompileFast(true);
+                        Asserts.IsNotNull(backFast, what + " after the round trip");
+
+                        foreach (var v in values)
+                        {
+                            Asserts.AreEqual(sys(v), fast(v), what + " with " + (v ?? "null"));
+                            Asserts.AreEqual(sys(v), backFast(v), what + " round trip with " + (v ?? "null"));
+                        }
+                    }
+
+            // the result is ignored but the operand is still evaluated
+            var calls = 0;
+            Func<object> side = () => { ++calls; return "x"; };
+            var ignored = Lambda<Action>(TypeEqual(Invoke(Constant(side)), typeof(string))).CompileFast(true);
+            ignored();
+            Asserts.AreEqual(1, calls);
+        }
+
+        public class TypeTestBase { }
+        public class TypeTestDerived : TypeTestBase { }
 
         public void Can_compile_right_shift_with_nullable_shift_count()
         {

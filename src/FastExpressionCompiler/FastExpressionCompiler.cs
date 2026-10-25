@@ -3106,22 +3106,49 @@ namespace FastExpressionCompiler
                 return il.EmitPopIfIgnoreResult(parent);
             }
 
+            private static readonly MethodInfo _objectGetTypeMethod = typeof(object).GetMethod(nameof(object.GetType));
+
             private static bool TryEmitTypeIsOrEqual(TypeBinaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
-                if (!TryEmit(expr.Expression, il, ref context, parent))
+                var operand = expr.Expression;
+                var operandType = operand.Type;
+                var typeOperand = expr.TypeOperand;
+                if (operandType == typeof(void) | typeOperand == typeof(void))
                     return false;
+
                 if ((parent & ParentFlags.IgnoreResult) != 0)
-                    return true;
+                    return TryEmit(operand, il, ref context, parent);
+
+                if (!TryEmit(operand, il, ref context, parent & ~ParentFlags.InstanceAccess))
+                    return false;
+
+                // the type check works on the reference, so the value type operand (including `Nullable<T>`, which boxes to `null` when empty) is boxed first
+                if (operandType.IsValueType)
+                    il.Demit(OpCodes.Box, operandType);
+
                 if (expr.NodeType == ExpressionType.TypeIs)
                 {
-                    il.Demit(OpCodes.Isinst, expr.TypeOperand);
+                    il.Demit(OpCodes.Isinst, typeOperand);
                     il.Demit(OpCodes.Ldnull);
                     il.Demit(OpCodes.Cgt_Un);
                     return true;
                 }
-                if ((context.CompilerFlags & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
-                    throw new NotSupportedExpressionException(Result.NotSupported_TypeEqual);
-                return false;
+
+                // TypeEqual is the exact type check: `x != null && x.GetType() == typeof(T)`, where the nullable `T` is compared as its underlying type
+                var isNullLabel = il.DefineLabel();
+                var endLabel = il.DefineLabel();
+                il.Demit(OpCodes.Dup);
+                il.Demit(OpCodes.Brfalse, isNullLabel);
+                EmitMethodCall(il, _objectGetTypeMethod);
+                il.Demit(OpCodes.Ldtoken, typeOperand.GetNonNullableOrSelf());
+                EmitMethodCall(il, GetTypeFromHandleMethod);
+                il.Demit(OpCodes.Ceq);
+                il.Demit(OpCodes.Br, endLabel);
+                il.DmarkLabel(isNullLabel);
+                il.Demit(OpCodes.Pop);
+                il.Demit(OpCodes.Ldc_I4_0);
+                il.DmarkLabel(endLabel);
+                return true;
             }
 
             private static bool TryEmitNot(UnaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)

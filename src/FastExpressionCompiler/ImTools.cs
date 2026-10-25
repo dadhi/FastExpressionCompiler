@@ -767,7 +767,7 @@ public struct ProvidedArrayPool<T, TClearItems> : ISmallArrayPool<T>
                 if (target[i] == null)
                 {
                     var sourceArr = source.GetSurePresentRef(i);
-                    Debug.Assert(sourceArr == null || sourceArr.Length == i + 1, $"Expecting the source array {sourceArr.Length} to be of the right length");
+                    Debug.Assert(sourceArr == null || sourceArr.Length == i + 1, "Expecting the source array to be of the right length");
                     target[i] = sourceArr;
                 }
         }

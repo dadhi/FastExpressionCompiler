@@ -2912,6 +2912,13 @@ public static class FromSysExpressionConverter
                         vars[i] = (ParameterExpression)sysVars[i].ToLightExpression(ref exprsConverted);
                     return new RuntimeVariablesExpression(vars);
                 }
+            case ExpressionType.TypeIs:
+            case ExpressionType.TypeEqual:
+                var typeTest = (System.Linq.Expressions.TypeBinaryExpression)sysExpr;
+                var tested = typeTest.Expression.ToLightExpression(ref exprsConverted);
+                return nodeType == ExpressionType.TypeIs
+                    ? Expression.TypeIs(tested, typeTest.TypeOperand)
+                    : Expression.TypeEqual(tested, typeTest.TypeOperand);
             case ExpressionType.DebugInfo:
                 {
                     var die = (System.Linq.Expressions.DebugInfoExpression)sysExpr;

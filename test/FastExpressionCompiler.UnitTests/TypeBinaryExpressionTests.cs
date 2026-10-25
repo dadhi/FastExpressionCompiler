@@ -29,7 +29,7 @@ namespace FastExpressionCompiler.UnitTests
                 TypeEqual(sExpr, typeof(A)),
                 sExpr);
 
-            var f = expr.CompileSys(); // TODO: CompileFast, but it does not work ATM
+            var f = expr.CompileFast(true);
             Asserts.IsNotNull(f);
             bool result = f(new A());
             Asserts.IsTrue(result, expr.ToString());
