@@ -1,6 +1,6 @@
 # Local closure experiments above #559
 
-Branch: `perf/closure-experiments-250-350`. Local experiments only: no push and no pull request created. The parent #559 branch is unchanged. These are fresh paired measurements against the current local #559 production code, without previous-branch numbers or parent-history baselines. System is an untimed behavior oracle, not a before/after timing series.
+Branch: `perf/closure-experiments-250-350`. Published as a draft for evaluation above #559; the parent #559 branch is unchanged. These are fresh paired measurements against the current local #559 production code, without previous-branch numbers or parent-history baselines. System is an untimed behavior oracle, not a before/after timing series.
 
 | Stage | Commit |
 | --- | --- |
@@ -13,7 +13,7 @@ Branch: `perf/closure-experiments-250-350`. Local experiments only: no push and 
 
 - #350 is the stronger candidate: a deterministic 24 B saving per created captured delegate and approximately 9% lower root/factory execution geometric means in this profile. Small compile-time and cached-call differences remain noisy; slower individual results are retained.
 - #250 is functional but not a general performance improvement. The pooled flat and sibling cases allocate less, while the single nested 64-constant case allocates about 1,200 B more than ordinary #559 compilation. For eight siblings, compile plus first execution is about 19–62% slower than #559 across the four measured configurations. Compile-only timings are dominated by the different JIT boundary and must not be used alone.
-- The shared manual target retains unrelated constants after one child escapes; the final pooled revision reproduces the same lifetime result. Keep this path experimental and explicitly selected. No production/default-path replacement or combined PR is recommended yet.
+- The shared manual target retains unrelated constants after one child escapes; the final pooled revision reproduces the same lifetime result. Keep this path experimental and explicitly selected. The combined draft presents the experiments for review; merging them together or replacing the default path is not recommended yet.
 
 ## Issue #350: combine captured storage and delegate target
 
