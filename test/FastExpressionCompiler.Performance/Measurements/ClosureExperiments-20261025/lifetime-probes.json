@@ -1,0 +1,114 @@
+[
+  {
+    "version": "after559",
+    "unusedMegabyteAlive": false,
+    "result": 42,
+    "tfm": "net8.0",
+    "flavor": "standard"
+  },
+  {
+    "version": "after350",
+    "unusedMegabyteAlive": false,
+    "result": 42,
+    "tfm": "net8.0",
+    "flavor": "standard"
+  },
+  {
+    "version": "after250pooled",
+    "unusedMegabyteAlive": false,
+    "result": 42,
+    "tfm": "net8.0",
+    "flavor": "standard"
+  },
+  {
+    "version": "after250pooled-precreated",
+    "unusedMegabyteAlive": true,
+    "result": 42,
+    "tfm": "net8.0",
+    "flavor": "standard"
+  },
+  {
+    "version": "after559",
+    "unusedMegabyteAlive": false,
+    "result": 42,
+    "tfm": "net8.0",
+    "flavor": "light"
+  },
+  {
+    "version": "after350",
+    "unusedMegabyteAlive": false,
+    "result": 42,
+    "tfm": "net8.0",
+    "flavor": "light"
+  },
+  {
+    "version": "after250pooled",
+    "unusedMegabyteAlive": false,
+    "result": 42,
+    "tfm": "net8.0",
+    "flavor": "light"
+  },
+  {
+    "version": "after250pooled-precreated",
+    "unusedMegabyteAlive": true,
+    "result": 42,
+    "tfm": "net8.0",
+    "flavor": "light"
+  },
+  {
+    "version": "after559",
+    "unusedMegabyteAlive": false,
+    "result": 42,
+    "tfm": "net10.0",
+    "flavor": "standard"
+  },
+  {
+    "version": "after350",
+    "unusedMegabyteAlive": false,
+    "result": 42,
+    "tfm": "net10.0",
+    "flavor": "standard"
+  },
+  {
+    "version": "after250pooled",
+    "unusedMegabyteAlive": false,
+    "result": 42,
+    "tfm": "net10.0",
+    "flavor": "standard"
+  },
+  {
+    "version": "after250pooled-precreated",
+    "unusedMegabyteAlive": true,
+    "result": 42,
+    "tfm": "net10.0",
+    "flavor": "standard"
+  },
+  {
+    "version": "after559",
+    "unusedMegabyteAlive": false,
+    "result": 42,
+    "tfm": "net10.0",
+    "flavor": "light"
+  },
+  {
+    "version": "after350",
+    "unusedMegabyteAlive": false,
+    "result": 42,
+    "tfm": "net10.0",
+    "flavor": "light"
+  },
+  {
+    "version": "after250pooled",
+    "unusedMegabyteAlive": false,
+    "result": 42,
+    "tfm": "net10.0",
+    "flavor": "light"
+  },
+  {
+    "version": "after250pooled-precreated",
+    "unusedMegabyteAlive": true,
+    "result": 42,
+    "tfm": "net10.0",
+    "flavor": "light"
+  }
+]

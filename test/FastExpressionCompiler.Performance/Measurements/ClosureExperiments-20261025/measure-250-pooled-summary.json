@@ -1,0 +1,3182 @@
+[
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "flat_constants64",
+    "phase": "compile",
+    "after559": {
+      "ns": 40009.56820412169,
+      "bytes": 7464.306999496869,
+      "rounds": [
+        {
+          "ns": 39776.987242394505,
+          "bytes": 7464.329735034347
+        },
+        {
+          "ns": 41661.87253243091,
+          "bytes": 7464.284263959391
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 1417525.8742244784,
+      "bytes": 8504.389433255456,
+      "rounds": [
+        {
+          "ns": 1516742.8034020283,
+          "bytes": 8504.494602551522
+        },
+        {
+          "ns": 1351638.3248730965,
+          "bytes": 8504.284263959391
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 1368432.4656470655,
+      "bytes": 6248.306999496869,
+      "rounds": [
+        {
+          "ns": 1420026.087667648,
+          "bytes": 6248.329735034347
+        },
+        {
+          "ns": 1253892.6254935137,
+          "bytes": 6248.284263959391
+        }
+      ]
+    },
+    "after250-precreated/after559": 35.42967189729501,
+    "after250-precreated/allocationDelta": 1040.0824337585864,
+    "after250pooled-precreated/after559": 34.20263019749593,
+    "after250pooled-precreated/allocationDelta": -1216.0,
+    "pooled/unpooled": 0.9653668342355503
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "flat_constants64",
+    "phase": "compile_first",
+    "after559": {
+      "ns": 1296650.4629629632,
+      "bytes": 7472.026666666667,
+      "rounds": [
+        {
+          "ns": 1821375,
+          "bytes": 7473.333333333333
+        },
+        {
+          "ns": 999103.3333333333,
+          "bytes": 7470.72
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 1379930.0,
+      "bytes": 8512.026666666667,
+      "rounds": [
+        {
+          "ns": 2035259.259259259,
+          "bytes": 8513.333333333334
+        },
+        {
+          "ns": 976118.3333333333,
+          "bytes": 8510.72
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 1703516.6666666665,
+      "bytes": 6256.026666666667,
+      "rounds": [
+        {
+          "ns": 1974745.3703703703,
+          "bytes": 6257.333333333333
+        },
+        {
+          "ns": 1434951.6666666665,
+          "bytes": 6254.72
+        }
+      ]
+    },
+    "after250-precreated/after559": 1.0642266666428635,
+    "after250-precreated/allocationDelta": 1040.0,
+    "after250pooled-precreated/after559": 1.3137824844283612,
+    "after250pooled-precreated/allocationDelta": -1216.0,
+    "pooled/unpooled": 1.2344949864606658
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "flat_constants64",
+    "phase": "invoke",
+    "after559": {
+      "ns": 19.45977491477774,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 21.335519537420694,
+          "bytes": 0
+        },
+        {
+          "ns": 15.568905462005299,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 17.80844868754663,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 22.01559288297401,
+          "bytes": 0
+        },
+        {
+          "ns": 15.501347159301364,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 17.561727278394045,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 20.96859388076791,
+          "bytes": 0
+        },
+        {
+          "ns": 14.988297314110419,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated/after559": 0.9151415556211242,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 0.9024630220700899,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 0.986145822497997
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "flat_constants64",
+    "phase": "invoke_nested",
+    "after559": {
+      "ns": 19.260924669547364,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 18.00735516136947,
+          "bytes": 0
+        },
+        {
+          "ns": 20.795974464351264,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 16.661774564876595,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 17.05987882070203,
+          "bytes": 0
+        },
+        {
+          "ns": 16.23832675244209,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 16.845313241469462,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 20.984338032950706,
+          "bytes": 0
+        },
+        {
+          "ns": 15.714407227340693,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated/after559": 0.8650557982410795,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 0.8745848670548448,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 1.0110155539482433
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "flat_constants64",
+    "phase": "construct",
+    "after559": {
+      "ns": 10537.04088573156,
+      "bytes": 11368.457866053457,
+      "rounds": [
+        {
+          "ns": 20970.245059802393,
+          "bytes": 11368.458658346333
+        },
+        {
+          "ns": 9014.17649133414,
+          "bytes": 11368.45707376058
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 9044.448224800213,
+      "bytes": 11368.457866053457,
+      "rounds": [
+        {
+          "ns": 9934.461128445137,
+          "bytes": 11368.458658346333
+        },
+        {
+          "ns": 6236.617039500202,
+          "bytes": 11368.45707376058
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 9739.49681385079,
+      "bytes": 11368.457866053457,
+      "rounds": [
+        {
+          "ns": 11659.028861154446,
+          "bytes": 11368.458658346333
+        },
+        {
+          "ns": 9012.55164248287,
+          "bytes": 11368.45707376058
+        }
+      ]
+    },
+    "after250-precreated/after559": 0.8583480241637385,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 0.9243104320719927,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 1.076848091975885
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nested_constants64",
+    "phase": "compile",
+    "after559": {
+      "ns": 44291.4156626506,
+      "bytes": 8657.265060240963,
+      "rounds": [
+        {
+          "ns": 46668.17269076305,
+          "bytes": 8658.024096385541
+        },
+        {
+          "ns": 39872.74096385542,
+          "bytes": 8656.506024096385
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 1432944.0261044176,
+      "bytes": 10097.265060240963,
+      "rounds": [
+        {
+          "ns": 2412888.0522088353,
+          "bytes": 10098.024096385541
+        },
+        {
+          "ns": 1213233.935742972,
+          "bytes": 10096.506024096385
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 1426388.4914658633,
+      "bytes": 9857.265060240963,
+      "rounds": [
+        {
+          "ns": 2010136.0441767068,
+          "bytes": 9858.024096385541
+        },
+        {
+          "ns": 1195740.3363453816,
+          "bytes": 9856.506024096385
+        }
+      ]
+    },
+    "after250-precreated/after559": 32.352635486265775,
+    "after250-precreated/allocationDelta": 1440.0,
+    "after250pooled-precreated/after559": 32.20462633956148,
+    "after250pooled-precreated/allocationDelta": 1200.0,
+    "pooled/unpooled": 0.995425128602981
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nested_constants64",
+    "phase": "compile_first",
+    "after559": {
+      "ns": 1168554.1529830324,
+      "bytes": 8662.896551724138,
+      "rounds": [
+        {
+          "ns": 1478626.9841269841,
+          "bytes": 8664
+        },
+        {
+          "ns": 1056704.022988506,
+          "bytes": 8661.793103448275
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 1291429.4608648058,
+      "bytes": 10102.896551724138,
+      "rounds": [
+        {
+          "ns": 1990928.5714285714,
+          "bytes": 10104
+        },
+        {
+          "ns": 1059913.7931034483,
+          "bytes": 10101.793103448275
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 1317760.741652983,
+      "bytes": 9862.896551724138,
+      "rounds": [
+        {
+          "ns": 1599878.9682539683,
+          "bytes": 9864
+        },
+        {
+          "ns": 1180915.2298850573,
+          "bytes": 9861.793103448275
+        }
+      ]
+    },
+    "after250-precreated/after559": 1.1051515734791604,
+    "after250-precreated/allocationDelta": 1440.0,
+    "after250pooled-precreated/after559": 1.1276847874692524,
+    "after250pooled-precreated/allocationDelta": 1200.0,
+    "pooled/unpooled": 1.0203892520544982
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nested_constants64",
+    "phase": "invoke",
+    "after559": {
+      "ns": 19.2561429388251,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 25.933888993948383,
+          "bytes": 0
+        },
+        {
+          "ns": 16.556555955782056,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 19.802837950105392,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 23.457560980411422,
+          "bytes": 0
+        },
+        {
+          "ns": 16.57747487405483,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 18.582312878096907,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 20.361145326433103,
+          "bytes": 0
+        },
+        {
+          "ns": 17.931725797475654,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated/after559": 1.0283906809903254,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 0.9650070077445475,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 0.9383661536248652
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nested_constants64",
+    "phase": "invoke_nested",
+    "after559": {
+      "ns": 15.205207507226927,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 17.56635851656509,
+          "bytes": 0
+        },
+        {
+          "ns": 15.076007140770137,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 15.074726966365851,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 16.89202768664835,
+          "bytes": 0
+        },
+        {
+          "ns": 14.96182385030069,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 14.727985608544666,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 14.662479089381709,
+          "bytes": 0
+        },
+        {
+          "ns": 14.793492127707623,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated/after559": 0.9914186938389983,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 0.9686145750753193,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 0.9769984983081403
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nested_constants64",
+    "phase": "construct",
+    "after559": {
+      "ns": 6497.786371052092,
+      "bytes": 11392.475344840499,
+      "rounds": [
+        {
+          "ns": 7757.190492978435,
+          "bytes": 11392.473823373875
+        },
+        {
+          "ns": 5339.004399659381,
+          "bytes": 11392.476866307125
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 5847.582114107762,
+      "bytes": 11392.475344840499,
+      "rounds": [
+        {
+          "ns": 5880.354309888948,
+          "bytes": 11392.473823373875
+        },
+        {
+          "ns": 5336.52072097644,
+          "bytes": 11392.476866307125
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 5853.891560261655,
+      "bytes": 11392.475344840499,
+      "rounds": [
+        {
+          "ns": 6726.276514483812,
+          "bytes": 11392.473823373875
+        },
+        {
+          "ns": 4928.860346295771,
+          "bytes": 11392.476866307125
+        }
+      ]
+    },
+    "after250-precreated/after559": 0.8999344977174046,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 0.9009055124281994,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 1.0010789837629934
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nested_siblings8",
+    "phase": "compile",
+    "after559": {
+      "ns": 35260.74876631356,
+      "bytes": 16376.792522111642,
+      "rounds": [
+        {
+          "ns": 45529.91598546776,
+          "bytes": 16376.686648501362
+        },
+        {
+          "ns": 29802.139037433157,
+          "bytes": 16376.898395721924
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 1144630.2792915532,
+      "bytes": 18936.906963528538,
+      "rounds": [
+        {
+          "ns": 1203236.148955495,
+          "bytes": 18936.91553133515
+        },
+        {
+          "ns": 963814.3939393939,
+          "bytes": 18936.898395721924
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 1055493.506905487,
+      "bytes": 15520.792522111642,
+      "rounds": [
+        {
+          "ns": 1278486.148955495,
+          "bytes": 15520.686648501362
+        },
+        {
+          "ns": 900244.2067736185,
+          "bytes": 15520.898395721924
+        }
+      ]
+    },
+    "after250-precreated/after559": 32.46188238592024,
+    "after250-precreated/allocationDelta": 2560.1144414168957,
+    "after250pooled-precreated/after559": 29.933950464315018,
+    "after250pooled-precreated/allocationDelta": -856.0,
+    "pooled/unpooled": 0.9221261450105657
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nested_siblings8",
+    "phase": "compile_first",
+    "after559": {
+      "ns": 752373.4567901235,
+      "bytes": 16469.51111111111,
+      "rounds": [
+        {
+          "ns": 759921.2962962963,
+          "bytes": 16470.222222222223
+        },
+        {
+          "ns": 697838.0952380951,
+          "bytes": 16468.8
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 1069850.3086419753,
+      "bytes": 19029.51111111111,
+      "rounds": [
+        {
+          "ns": 1131864.197530864,
+          "bytes": 19030.222222222223
+        },
+        {
+          "ns": 916146.4285714285,
+          "bytes": 19028.8
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 914846.2301587302,
+      "bytes": 15613.511111111111,
+      "rounds": [
+        {
+          "ns": 918055.5555555555,
+          "bytes": 15614.222222222223
+        },
+        {
+          "ns": 911636.9047619049,
+          "bytes": 15612.8
+        }
+      ]
+    },
+    "after250-precreated/after559": 1.4219671082048988,
+    "after250-precreated/allocationDelta": 2560.0,
+    "after250pooled-precreated/after559": 1.2159469767338282,
+    "after250pooled-precreated/allocationDelta": -856.0,
+    "pooled/unpooled": 0.8551161062148956
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nested_siblings8",
+    "phase": "invoke",
+    "after559": {
+      "ns": 39.53604746498698,
+      "bytes": 88.0,
+      "rounds": [
+        {
+          "ns": 39.62656427331389,
+          "bytes": 88
+        },
+        {
+          "ns": 39.445530656660075,
+          "bytes": 88
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 34.44330432856266,
+      "bytes": 88.0,
+      "rounds": [
+        {
+          "ns": 34.787426367902505,
+          "bytes": 88
+        },
+        {
+          "ns": 32.87373678838402,
+          "bytes": 88
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 54.91238062918315,
+      "bytes": 88.0,
+      "rounds": [
+        {
+          "ns": 45.703386561623866,
+          "bytes": 88
+        },
+        {
+          "ns": 64.12137469674244,
+          "bytes": 88
+        }
+      ]
+    },
+    "after250-precreated/after559": 0.8711873476746901,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 1.388919331853125,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 1.5942831763573329
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nested_siblings8",
+    "phase": "invoke_nested",
+    "after559": {
+      "ns": 27.585949530184468,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 29.89172465706609,
+          "bytes": 0
+        },
+        {
+          "ns": 23.05405695524081,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 23.512084398881093,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 26.23255377737972,
+          "bytes": 0
+        },
+        {
+          "ns": 22.687804740188074,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 27.628745691259496,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 33.60727168182961,
+          "bytes": 0
+        },
+        {
+          "ns": 22.211946459931717,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated/after559": 0.8523210112145764,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 1.0015513753125735,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 1.1750870413077588
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "nested_siblings8",
+    "phase": "construct",
+    "after559": {
+      "ns": 7902.514275188802,
+      "bytes": 10056.42751835155,
+      "rounds": [
+        {
+          "ns": 6312.75406504065,
+          "bytes": 10056.421807747489
+        },
+        {
+          "ns": 8118.7910603548835,
+          "bytes": 10056.43322895561
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 7733.323543792441,
+      "bytes": 10056.42751835155,
+      "rounds": [
+        {
+          "ns": 6945.301291248206,
+          "bytes": 10056.421807747489
+        },
+        {
+          "ns": 13412.975072143428,
+          "bytes": 10056.43322895561
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 7781.585773930128,
+      "bytes": 10056.42751835155,
+      "rounds": [
+        {
+          "ns": 6369.3956241033,
+          "bytes": 10056.421807747489
+        },
+        {
+          "ns": 7965.0104377724565,
+          "bytes": 10056.43322895561
+        }
+      ]
+    },
+    "after250-precreated/after559": 0.9785902656414603,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 0.9846974650032145,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 1.0062408135214291
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "flat_constants64",
+    "phase": "compile",
+    "after559": {
+      "ns": 44819.3447037702,
+      "bytes": 7464.296641232795,
+      "rounds": [
+        {
+          "ns": 86353.22627314815,
+          "bytes": 7464.291666666667
+        },
+        {
+          "ns": 41918.237582286056,
+          "bytes": 7464.301615798923
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 1218828.8027300895,
+      "bytes": 8504.296641232795,
+      "rounds": [
+        {
+          "ns": 1580688.0787037038,
+          "bytes": 8504.291666666666
+        },
+        {
+          "ns": 987454.3686415321,
+          "bytes": 8504.301615798922
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 1203014.550255274,
+      "bytes": 6248.296641232795,
+      "rounds": [
+        {
+          "ns": 1424299.6238425926,
+          "bytes": 6248.291666666667
+        },
+        {
+          "ns": 985690.0807899461,
+          "bytes": 6248.301615798923
+        }
+      ]
+    },
+    "after250-precreated/after559": 27.194257541823493,
+    "after250-precreated/allocationDelta": 1040.0,
+    "after250pooled-precreated/after559": 26.841413193488222,
+    "after250pooled-precreated/allocationDelta": -1216.0,
+    "pooled/unpooled": 0.987025042040857
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "flat_constants64",
+    "phase": "compile_first",
+    "after559": {
+      "ns": 1280826.9199346404,
+      "bytes": 7471.7411764705885,
+      "rounds": [
+        {
+          "ns": 1749139.705882353,
+          "bytes": 7473.882352941177
+        },
+        {
+          "ns": 976316.6666666666,
+          "bytes": 7469.6
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 1168205.8823529412,
+      "bytes": 8511.741176470588,
+      "rounds": [
+        {
+          "ns": 1795745.0980392157,
+          "bytes": 8513.882352941177
+        },
+        {
+          "ns": 968702.7777777778,
+          "bytes": 8509.6
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 1203837.0506535948,
+      "bytes": 6255.7411764705885,
+      "rounds": [
+        {
+          "ns": 1631085.7843137253,
+          "bytes": 6257.882352941177
+        },
+        {
+          "ns": 971912.5,
+          "bytes": 6253.6
+        }
+      ]
+    },
+    "after250-precreated/after559": 0.9120716188667817,
+    "after250-precreated/allocationDelta": 1040.0,
+    "after250pooled-precreated/after559": 0.9398904972383197,
+    "after250pooled-precreated/allocationDelta": -1216.0,
+    "pooled/unpooled": 1.0305007609008843
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "flat_constants64",
+    "phase": "invoke",
+    "after559": {
+      "ns": 15.95712767823529,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 17.484607208322053,
+          "bytes": 0
+        },
+        {
+          "ns": 13.77088532052077,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 16.82130894817503,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 17.06422832058652,
+          "bytes": 0
+        },
+        {
+          "ns": 14.011155051938545,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 15.398078878897408,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 17.74980627277303,
+          "bytes": 0
+        },
+        {
+          "ns": 13.985180459384326,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated/after559": 1.0541564426484122,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 0.9649655745939543,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 0.9153912413319042
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "flat_constants64",
+    "phase": "invoke_nested",
+    "after559": {
+      "ns": 13.845023688740737,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 15.791899467817432,
+          "bytes": 0
+        },
+        {
+          "ns": 13.701081687736949,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 13.991469028892416,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 15.413400126152085,
+          "bytes": 0
+        },
+        {
+          "ns": 13.865791185957432,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 13.857443925176335,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 14.987902526258704,
+          "bytes": 0
+        },
+        {
+          "ns": 13.796753519933256,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated/after559": 1.010577471259278,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 1.0008970902986392,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 0.9904209412578966
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "flat_constants64",
+    "phase": "construct",
+    "after559": {
+      "ns": 10163.36285710004,
+      "bytes": 8520.37118019124,
+      "rounds": [
+        {
+          "ns": 12510.564322011232,
+          "bytes": 8520.359454399571
+        },
+        {
+          "ns": 8242.295821462489,
+          "bytes": 8520.382905982906
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 10042.857924555905,
+      "bytes": 8520.37118019124,
+      "rounds": [
+        {
+          "ns": 12620.509048765267,
+          "bytes": 8520.359454399571
+        },
+        {
+          "ns": 8246.771130104464,
+          "bytes": 8520.382905982906
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 9698.959861240328,
+      "bytes": 8520.37118019124,
+      "rounds": [
+        {
+          "ns": 11010.040563430506,
+          "bytes": 8520.359454399571
+        },
+        {
+          "ns": 8451.851851851852,
+          "bytes": 8520.382905982906
+        }
+      ]
+    },
+    "after250-precreated/after559": 0.9881432027726972,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 0.9543061679102322,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 0.9657569522640853
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nested_constants64",
+    "phase": "compile",
+    "after559": {
+      "ns": 52455.04541169936,
+      "bytes": 8656.592155757431,
+      "rounds": [
+        {
+          "ns": 62431.19975262832,
+          "bytes": 8656.623376623376
+        },
+        {
+          "ns": 50033.45854201447,
+          "bytes": 8656.560934891486
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 1427373.1709750223,
+      "bytes": 10096.592155757431,
+      "rounds": [
+        {
+          "ns": 1590140.924551639,
+          "bytes": 10096.623376623376
+        },
+        {
+          "ns": 1075272.0506399556,
+          "bytes": 10096.560934891486
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 1325614.646150614,
+      "bytes": 9856.592155757431,
+      "rounds": [
+        {
+          "ns": 1667199.8299319728,
+          "bytes": 9856.623376623376
+        },
+        {
+          "ns": 1075582.2899276572,
+          "bytes": 9856.560934891486
+        }
+      ]
+    },
+    "after250-precreated/after559": 27.21136088572839,
+    "after250-precreated/allocationDelta": 1440.0,
+    "after250pooled-precreated/after559": 25.27144216054676,
+    "after250pooled-precreated/allocationDelta": 1200.0,
+    "pooled/unpooled": 0.9287092353326928
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nested_constants64",
+    "phase": "compile_first",
+    "after559": {
+      "ns": 1104652.885610766,
+      "bytes": 8662.652173913044,
+      "rounds": [
+        {
+          "ns": 1342985.507246377,
+          "bytes": 8663.304347826086
+        },
+        {
+          "ns": 1005784.2261904761,
+          "bytes": 8662
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 1170550.8863871638,
+      "bytes": 10102.652173913044,
+      "rounds": [
+        {
+          "ns": 1322844.2028985508,
+          "bytes": 10103.304347826086
+        },
+        {
+          "ns": 1053708.3333333333,
+          "bytes": 10102
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 1132801.112836439,
+      "bytes": 9862.652173913044,
+      "rounds": [
+        {
+          "ns": 1338750,
+          "bytes": 9863.304347826086
+        },
+        {
+          "ns": 1060287.2023809524,
+          "bytes": 9862
+        }
+      ]
+    },
+    "after250-precreated/after559": 1.059654939243618,
+    "after250-precreated/allocationDelta": 1440.0,
+    "after250pooled-precreated/after559": 1.025481513326342,
+    "after250pooled-precreated/allocationDelta": 1200.0,
+    "pooled/unpooled": 0.9677504207721911
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nested_constants64",
+    "phase": "invoke",
+    "after559": {
+      "ns": 17.85756761797402,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 19.836608995704843,
+          "bytes": 0
+        },
+        {
+          "ns": 15.534778105068806,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 18.435411231626652,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 21.02718860093625,
+          "bytes": 0
+        },
+        {
+          "ns": 15.880899305323881,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 17.46833609114032,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 19.746302060711358,
+          "bytes": 0
+        },
+        {
+          "ns": 15.618545405887666,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated/after559": 1.0323584726662898,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 0.9782035529608225,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 0.9475425240947553
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nested_constants64",
+    "phase": "invoke_nested",
+    "after559": {
+      "ns": 14.300670472651786,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 16.382914799908523,
+          "bytes": 0
+        },
+        {
+          "ns": 13.304135985926722,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 14.60602972507641,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 16.203969887443627,
+          "bytes": 0
+        },
+        {
+          "ns": 13.725897658138717,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 15.509354633937253,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 16.85234718507223,
+          "bytes": 0
+        },
+        {
+          "ns": 13.314553176335895,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated/after559": 1.0213527927245498,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 1.0845194051283764,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 1.0618460270082817
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nested_constants64",
+    "phase": "construct",
+    "after559": {
+      "ns": 9024.192330074242,
+      "bytes": 8544.3579218058,
+      "rounds": [
+        {
+          "ns": 10878.772666423269,
+          "bytes": 8544.368017524645
+        },
+        {
+          "ns": 7692.546583850932,
+          "bytes": 8544.347826086956
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 8769.5736429086,
+      "bytes": 8544.3579218058,
+      "rounds": [
+        {
+          "ns": 10554.718875502009,
+          "bytes": 8544.368017524645
+        },
+        {
+          "ns": 7665.964211771665,
+          "bytes": 8544.347826086956
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 8559.366293384666,
+      "bytes": 8544.3579218058,
+      "rounds": [
+        {
+          "ns": 10854.022149202872,
+          "bytes": 8544.368017524645
+        },
+        {
+          "ns": 7787.414965986394,
+          "bytes": 8544.347826086956
+        }
+      ]
+    },
+    "after250-precreated/after559": 0.9717848780419834,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 0.9484911203476365,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 0.9760299236789106
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nested_siblings8",
+    "phase": "compile",
+    "after559": {
+      "ns": 40691.32239773188,
+      "bytes": 16376.739405687025,
+      "rounds": [
+        {
+          "ns": 41874.39772229523,
+          "bytes": 16376.662286465178
+        },
+        {
+          "ns": 40035.59133252329,
+          "bytes": 16376.81652490887
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 1046756.7855534782,
+      "bytes": 18936.849786764553,
+      "rounds": [
+        {
+          "ns": 1052473.8282961017,
+          "bytes": 18936.883048620235
+        },
+        {
+          "ns": 1041039.7428108547,
+          "bytes": 18936.81652490887
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 993780.3766707168,
+      "bytes": 15520.739405687025,
+      "rounds": [
+        {
+          "ns": 1040966.0534384581,
+          "bytes": 15520.662286465178
+        },
+        {
+          "ns": 973219.4714459295,
+          "bytes": 15520.81652490887
+        }
+      ]
+    },
+    "after250-precreated/after559": 25.72432459486311,
+    "after250-precreated/allocationDelta": 2560.1103810775276,
+    "after250pooled-precreated/after559": 24.422415348342422,
+    "after250pooled-precreated/allocationDelta": -856.0,
+    "pooled/unpooled": 0.9493899541766526
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nested_siblings8",
+    "phase": "compile_first",
+    "after559": {
+      "ns": 738975.3289473684,
+      "bytes": 16468.920203735142,
+      "rounds": [
+        {
+          "ns": 733663.3771929825,
+          "bytes": 16468.42105263158
+        },
+        {
+          "ns": 761045.6989247312,
+          "bytes": 16469.41935483871
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 887174.3421052631,
+      "bytes": 19028.920203735142,
+      "rounds": [
+        {
+          "ns": 885664.4736842106,
+          "bytes": 19028.42105263158
+        },
+        {
+          "ns": 1044465.0537634409,
+          "bytes": 19029.41935483871
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 878407.7178834183,
+      "bytes": 15612.920203735144,
+      "rounds": [
+        {
+          "ns": 877894.7368421053,
+          "bytes": 15612.421052631578
+        },
+        {
+          "ns": 878920.6989247312,
+          "bytes": 15613.41935483871
+        }
+      ]
+    },
+    "after250-precreated/after559": 1.2005466317380262,
+    "after250-precreated/allocationDelta": 2560.0,
+    "after250pooled-precreated/after559": 1.1886834153647106,
+    "after250pooled-precreated/allocationDelta": -855.9999999999982,
+    "pooled/unpooled": 0.9901184876457972
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nested_siblings8",
+    "phase": "invoke",
+    "after559": {
+      "ns": 36.06625514416126,
+      "bytes": 88.0,
+      "rounds": [
+        {
+          "ns": 36.2857473935515,
+          "bytes": 88
+        },
+        {
+          "ns": 35.84676289477102,
+          "bytes": 88
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 33.526334598036335,
+      "bytes": 88.0,
+      "rounds": [
+        {
+          "ns": 33.51945153466164,
+          "bytes": 88
+        },
+        {
+          "ns": 33.53321766141103,
+          "bytes": 88
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 35.618182279959875,
+      "bytes": 88.0,
+      "rounds": [
+        {
+          "ns": 36.186616633014594,
+          "bytes": 88
+        },
+        {
+          "ns": 32.80866633861631,
+          "bytes": 88
+        }
+      ]
+    },
+    "after250-precreated/after559": 0.9295762608018895,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 0.987576396207192,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 1.0623941658700162
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nested_siblings8",
+    "phase": "invoke_nested",
+    "after559": {
+      "ns": 24.766456416093803,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 24.397853395386754,
+          "bytes": 0
+        },
+        {
+          "ns": 27.087096367113972,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 24.305032911974912,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 20.36177323652507,
+          "bytes": 0
+        },
+        {
+          "ns": 25.189741792531912,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 24.59849648765237,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 20.025740416613573,
+          "bytes": 0
+        },
+        {
+          "ns": 27.402709739086188,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated/after559": 0.9813690139450452,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 0.993218249489568,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 1.0120741896026344
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "nested_siblings8",
+    "phase": "construct",
+    "after559": {
+      "ns": 4996.596280312371,
+      "bytes": 7048.292226996475,
+      "rounds": [
+        {
+          "ns": 4825.164830579201,
+          "bytes": 7048.294441662494
+        },
+        {
+          "ns": 5082.465063707356,
+          "bytes": 7048.290012330456
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 4975.293669671174,
+      "bytes": 7048.292226996475,
+      "rounds": [
+        {
+          "ns": 4972.030963111334,
+          "bytes": 7048.294441662494
+        },
+        {
+          "ns": 4983.307644882861,
+          "bytes": 7048.290012330456
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 4950.8630830545035,
+      "bytes": 7048.292226996475,
+      "rounds": [
+        {
+          "ns": 4576.5836254381575,
+          "bytes": 7048.294441662494
+        },
+        {
+          "ns": 5299.203658035347,
+          "bytes": 7048.290012330456
+        }
+      ]
+    },
+    "after250-precreated/after559": 0.9957365755714277,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 0.9908471297875183,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 0.9950896191785429
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "flat_constants64",
+    "phase": "compile",
+    "after559": {
+      "ns": 46019.928728070176,
+      "bytes": 7464.338983050848,
+      "rounds": [
+        {
+          "ns": 45576.64473684211,
+          "bytes": 7464.421052631579
+        },
+        {
+          "ns": 49423.11087570621,
+          "bytes": 7464.338983050848
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 1031306.9385593222,
+      "bytes": 8504.380017841213,
+      "rounds": [
+        {
+          "ns": 882094.0241228071,
+          "bytes": 8504.421052631578
+        },
+        {
+          "ns": 1114766.5960451977,
+          "bytes": 8504.338983050848
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 969587.7913135593,
+      "bytes": 6248.380017841213,
+      "rounds": [
+        {
+          "ns": 884784.7587719298,
+          "bytes": 6248.421052631579
+        },
+        {
+          "ns": 1111397.2457627119,
+          "bytes": 6248.338983050848
+        }
+      ]
+    },
+    "after250-precreated/after559": 22.410007296040625,
+    "after250-precreated/allocationDelta": 1040.0410347903653,
+    "after250pooled-precreated/after559": 21.068867729952665,
+    "after250pooled-precreated/allocationDelta": -1215.9589652096347,
+    "pooled/unpooled": 0.94015443420561
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "flat_constants64",
+    "phase": "compile_first",
+    "after559": {
+      "ns": 1016479.5551670552,
+      "bytes": 7468.475524475525,
+      "rounds": [
+        {
+          "ns": 1045294.191919192,
+          "bytes": 7468.848484848485
+        },
+        {
+          "ns": 762044.8717948718,
+          "bytes": 7468.102564102564
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 928203.9141414142,
+      "bytes": 8508.475524475525,
+      "rounds": [
+        {
+          "ns": 1045032.8282828283,
+          "bytes": 8508.848484848484
+        },
+        {
+          "ns": 704775.641025641,
+          "bytes": 8508.102564102564
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 1045001.2626262626,
+      "bytes": 6252.475524475525,
+      "rounds": [
+        {
+          "ns": 1045071.9696969697,
+          "bytes": 6252.848484848485
+        },
+        {
+          "ns": 971885.6837606838,
+          "bytes": 6252.102564102564
+        }
+      ]
+    },
+    "after250-precreated/after559": 0.9131555174160555,
+    "after250-precreated/allocationDelta": 1040.0,
+    "after250pooled-precreated/after559": 1.0280593026335094,
+    "after250pooled-precreated/allocationDelta": -1216.0,
+    "pooled/unpooled": 1.125831562122732
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "flat_constants64",
+    "phase": "invoke",
+    "after559": {
+      "ns": 13.840404386697376,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 13.262558304849792,
+          "bytes": 0
+        },
+        {
+          "ns": 17.50630022314422,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 15.044131066616965,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 13.751635800845568,
+          "bytes": 0
+        },
+        {
+          "ns": 15.147640296090383,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 17.191327176897463,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 13.556614480261253,
+          "bytes": 0
+        },
+        {
+          "ns": 32.380265428334056,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated/after559": 1.0869719298864233,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 1.2421116245288908,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 1.1427264958522692
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "flat_constants64",
+    "phase": "invoke_nested",
+    "after559": {
+      "ns": 19.394336879817594,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 19.53892706386987,
+          "bytes": 0
+        },
+        {
+          "ns": 19.24974669576532,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 17.669752164706914,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 20.647330025507454,
+          "bytes": 0
+        },
+        {
+          "ns": 13.824802731842306,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 20.139629371645132,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 19.27715036192413,
+          "bytes": 0
+        },
+        {
+          "ns": 31.986274224741432,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated/after559": 0.9110779231175807,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 1.0384283565066417,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 1.1397799575181073
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "flat_constants64",
+    "phase": "construct",
+    "after559": {
+      "ns": 7175.44470439691,
+      "bytes": 11368.451223640095,
+      "rounds": [
+        {
+          "ns": 7352.384135472371,
+          "bytes": 11368.463458110517
+        },
+        {
+          "ns": 5797.83393501805,
+          "bytes": 11368.438989169676
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 7861.194667260844,
+      "bytes": 11368.451223640095,
+      "rounds": [
+        {
+          "ns": 6890.643568033273,
+          "bytes": 11368.463458110517
+        },
+        {
+          "ns": 11113.916967509025,
+          "bytes": 11368.438989169676
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 7162.9112819370175,
+      "bytes": 11368.451223640095,
+      "rounds": [
+        {
+          "ns": 6783.106803327391,
+          "bytes": 11368.463458110517
+        },
+        {
+          "ns": 7753.84476534296,
+          "bytes": 11368.438989169676
+        }
+      ]
+    },
+    "after250-precreated/after559": 1.0955689843785885,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 0.9982532897992772,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 0.9111733756916192
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nested_constants64",
+    "phase": "compile",
+    "after559": {
+      "ns": 51440.177688316646,
+      "bytes": 8656.471290496105,
+      "rounds": [
+        {
+          "ns": 51010.14173998045,
+          "bytes": 8656.469208211143
+        },
+        {
+          "ns": 55447.8550295858,
+          "bytes": 8656.473372781065
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 1272519.453638793,
+      "bytes": 10096.471290496105,
+      "rounds": [
+        {
+          "ns": 1086864.8582600197,
+          "bytes": 10096.469208211143
+        },
+        {
+          "ns": 1483994.0828402366,
+          "bytes": 10096.473372781065
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 1233040.8887018687,
+      "bytes": 9856.471290496105,
+      "rounds": [
+        {
+          "ns": 1113592.4975562072,
+          "bytes": 9856.469208211143
+        },
+        {
+          "ns": 1425525.2712031559,
+          "bytes": 9856.473372781065
+        }
+      ]
+    },
+    "after250-precreated/after559": 24.73785104999383,
+    "after250-precreated/allocationDelta": 1440.0,
+    "after250pooled-precreated/after559": 23.970385486866682,
+    "after250pooled-precreated/allocationDelta": 1200.0,
+    "pooled/unpooled": 0.9689760617615435
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nested_constants64",
+    "phase": "compile_first",
+    "after559": {
+      "ns": 1056282.0512820513,
+      "bytes": 8663.076923076922,
+      "rounds": [
+        {
+          "ns": 1026608.9743589743,
+          "bytes": 8662.153846153846
+        },
+        {
+          "ns": 1485058.3333333335,
+          "bytes": 8664
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 1046551.282051282,
+      "bytes": 10103.076923076922,
+      "rounds": [
+        {
+          "ns": 1071225.9615384615,
+          "bytes": 10102.153846153846
+        },
+        {
+          "ns": 872731.25,
+          "bytes": 10104
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 1097758.012820513,
+      "bytes": 9863.076923076922,
+      "rounds": [
+        {
+          "ns": 1091516.0256410257,
+          "bytes": 9862.153846153846
+        },
+        {
+          "ns": 1306487.5,
+          "bytes": 9864
+        }
+      ]
+    },
+    "after250-precreated/after559": 0.9907877169559413,
+    "after250-precreated/allocationDelta": 1440.0,
+    "after250pooled-precreated/after559": 1.0392659910183277,
+    "after250pooled-precreated/allocationDelta": 1200.0,
+    "pooled/unpooled": 1.048929022062697
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nested_constants64",
+    "phase": "invoke",
+    "after559": {
+      "ns": 21.578254618116972,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 22.40126011662696,
+          "bytes": 0
+        },
+        {
+          "ns": 15.241732700376069,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 21.98300928042608,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 22.244681334606017,
+          "bytes": 0
+        },
+        {
+          "ns": 18.249487634785268,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 23.88000216570012,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 23.259619318045093,
+          "bytes": 0
+        },
+        {
+          "ns": 25.595360326625276,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated/after559": 1.0187575255493222,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 1.1066697741925158,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 1.08629359434257
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nested_constants64",
+    "phase": "invoke_nested",
+    "after559": {
+      "ns": 19.290958458803892,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 18.833147277305677,
+          "bytes": 0
+        },
+        {
+          "ns": 21.961228155159322,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 19.91920103813606,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 18.182677089377922,
+          "bytes": 0
+        },
+        {
+          "ns": 23.934144384764753,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 18.396415372650345,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 18.56218783126572,
+          "bytes": 0
+        },
+        {
+          "ns": 15.880557086807846,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated/after559": 1.0325666856145996,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 0.9536288936568986,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 0.9235518702497011
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nested_constants64",
+    "phase": "construct",
+    "after559": {
+      "ns": 7063.467570517125,
+      "bytes": 11392.443428025977,
+      "rounds": [
+        {
+          "ns": 6408.562952534191,
+          "bytes": 11392.450522928399
+        },
+        {
+          "ns": 8338.761275435285,
+          "bytes": 11392.436333123558
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 6894.236893268973,
+      "bytes": 11392.443428025977,
+      "rounds": [
+        {
+          "ns": 6631.343858943416,
+          "bytes": 11392.450522928399
+        },
+        {
+          "ns": 8278.153625620587,
+          "bytes": 11392.436333123558
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 6948.712791633146,
+      "bytes": 11392.443428025977,
+      "rounds": [
+        {
+          "ns": 6506.846674711719,
+          "bytes": 11392.450522928399
+        },
+        {
+          "ns": 10486.014963988533,
+          "bytes": 11392.436333123558
+        }
+      ]
+    },
+    "after250-precreated/after559": 0.976041416548082,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 0.9837537614863604,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 1.0079016574578918
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nested_siblings8",
+    "phase": "compile",
+    "after559": {
+      "ns": 46527.087299526946,
+      "bytes": 16376.703049882697,
+      "rounds": [
+        {
+          "ns": 42288.0658436214,
+          "bytes": 16376.658436213991
+        },
+        {
+          "ns": 55206.77570093458,
+          "bytes": 16376.747663551401
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 1515862.0125187493,
+      "bytes": 18936.785354409447,
+      "rounds": [
+        {
+          "ns": 1146473.936899863,
+          "bytes": 18936.82304526749
+        },
+        {
+          "ns": 2022452.492211838,
+          "bytes": 18936.747663551403
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 1569315.7292427854,
+      "bytes": 15520.703049882697,
+      "rounds": [
+        {
+          "ns": 1184752.614883402,
+          "bytes": 15520.658436213991
+        },
+        {
+          "ns": 2012912.57788162,
+          "bytes": 15520.747663551401
+        }
+      ]
+    },
+    "after250-precreated/after559": 32.58020436052875,
+    "after250-precreated/allocationDelta": 2560.08230452675,
+    "after250pooled-precreated/after559": 33.72907741118669,
+    "after250pooled-precreated/allocationDelta": -856.0,
+    "pooled/unpooled": 1.035262917259347
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nested_siblings8",
+    "phase": "compile_first",
+    "after559": {
+      "ns": 863981.9444444445,
+      "bytes": 16472.0,
+      "rounds": [
+        {
+          "ns": 836458.3333333334,
+          "bytes": 16469.333333333332
+        },
+        {
+          "ns": 1333666.6666666667,
+          "bytes": 16474.666666666668
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 1299378.4722222222,
+      "bytes": 19032.0,
+      "rounds": [
+        {
+          "ns": 987269.4444444444,
+          "bytes": 19029.333333333332
+        },
+        {
+          "ns": 1713008.3333333333,
+          "bytes": 19034.666666666668
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 1400050.6944444445,
+      "bytes": 15616.0,
+      "rounds": [
+        {
+          "ns": 1055998.611111111,
+          "bytes": 15613.333333333334
+        },
+        {
+          "ns": 2610661.111111111,
+          "bytes": 15618.666666666666
+        }
+      ]
+    },
+    "after250-precreated/after559": 1.50394169759849,
+    "after250-precreated/allocationDelta": 2560.0,
+    "after250pooled-precreated/after559": 1.6204629083362403,
+    "after250pooled-precreated/allocationDelta": -856.0,
+    "pooled/unpooled": 1.0774772126631056
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nested_siblings8",
+    "phase": "invoke",
+    "after559": {
+      "ns": 56.69418665686908,
+      "bytes": 88.0,
+      "rounds": [
+        {
+          "ns": 51.789322205820504,
+          "bytes": 88
+        },
+        {
+          "ns": 102.09456009522354,
+          "bytes": 88
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 66.87946523064574,
+      "bytes": 88.0,
+      "rounds": [
+        {
+          "ns": 64.33512561059753,
+          "bytes": 88
+        },
+        {
+          "ns": 95.78304665454692,
+          "bytes": 88
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 67.40979711652605,
+      "bytes": 88.0,
+      "rounds": [
+        {
+          "ns": 64.7301413205125,
+          "bytes": 88
+        },
+        {
+          "ns": 148.59327386198441,
+          "bytes": 88
+        }
+      ]
+    },
+    "after250-precreated/after559": 1.1796529622238192,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 1.1890072173450728,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 1.0079296669620694
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nested_siblings8",
+    "phase": "invoke_nested",
+    "after559": {
+      "ns": 28.42895713627189,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 27.809237751689952,
+          "bytes": 0
+        },
+        {
+          "ns": 39.28487773043423,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 28.679584390371033,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 28.574512142475616,
+          "bytes": 0
+        },
+        {
+          "ns": 40.65068720356688,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 28.674793531399636,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 28.293593593698226,
+          "bytes": 0
+        },
+        {
+          "ns": 40.69773739359548,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated/after559": 1.0088159144529214,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 1.008647394061954,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 0.9998329522873768
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "nested_siblings8",
+    "phase": "construct",
+    "after559": {
+      "ns": 8903.744085568014,
+      "bytes": 10056.440095549093,
+      "rounds": [
+        {
+          "ns": 8421.710072013417,
+          "bytes": 10056.426161586269
+        },
+        {
+          "ns": 24988.743851683692,
+          "bytes": 10056.454029511919
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 8897.41787511098,
+      "bytes": 10056.440095549093,
+      "rounds": [
+        {
+          "ns": 8439.775081385025,
+          "bytes": 10056.426161586269
+        },
+        {
+          "ns": 16522.725122966327,
+          "bytes": 10056.454029511919
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 8980.652559928973,
+      "bytes": 10056.440095549093,
+      "rounds": [
+        {
+          "ns": 7890.931735227385,
+          "bytes": 10056.426161586269
+        },
+        {
+          "ns": 13403.234960272417,
+          "bytes": 10056.454029511919
+        }
+      ]
+    },
+    "after250-precreated/after559": 0.9992894887368462,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 1.0086377678448348,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 1.0093549258881982
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "flat_constants64",
+    "phase": "compile",
+    "after559": {
+      "ns": 50368.45374617737,
+      "bytes": 7464.316597719398,
+      "rounds": [
+        {
+          "ns": 55915.61544342507,
+          "bytes": 7464.366972477064
+        },
+        {
+          "ns": 43787.645590682194,
+          "bytes": 7464.266222961731
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 935576.5044370494,
+      "bytes": 8504.316597719397,
+      "rounds": [
+        {
+          "ns": 974128.8226299695,
+          "bytes": 8504.366972477064
+        },
+        {
+          "ns": 840865.0859678314,
+          "bytes": 8504.26622296173
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 963935.875382263,
+      "bytes": 6248.316597719398,
+      "rounds": [
+        {
+          "ns": 969373.6620795107,
+          "bytes": 6248.366972477064
+        },
+        {
+          "ns": 935111.8968386024,
+          "bytes": 6248.266222961731
+        }
+      ]
+    },
+    "after250-precreated/after559": 18.574652085841596,
+    "after250-precreated/allocationDelta": 1039.999999999999,
+    "after250pooled-precreated/after559": 19.137690432980964,
+    "after250pooled-precreated/allocationDelta": -1216.0,
+    "pooled/unpooled": 1.0303121880580763
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "flat_constants64",
+    "phase": "compile_first",
+    "after559": {
+      "ns": 866724.7474747475,
+      "bytes": 7469.090909090909,
+      "rounds": [
+        {
+          "ns": 909912.8787878788,
+          "bytes": 7468.848484848485
+        },
+        {
+          "ns": 767184.7222222222,
+          "bytes": 7469.333333333333
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 837261.3636363636,
+      "bytes": 8509.090909090908,
+      "rounds": [
+        {
+          "ns": 866405.303030303,
+          "bytes": 8508.848484848484
+        },
+        {
+          "ns": 678120.8333333334,
+          "bytes": 8509.333333333334
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 848022.4747474748,
+      "bytes": 6253.090909090909,
+      "rounds": [
+        {
+          "ns": 914284.0909090909,
+          "bytes": 6252.848484848485
+        },
+        {
+          "ns": 731013.8888888889,
+          "bytes": 6253.333333333333
+        }
+      ]
+    },
+    "after250-precreated/after559": 0.9660060660270436,
+    "after250-precreated/allocationDelta": 1039.999999999999,
+    "after250pooled-precreated/after559": 0.9784219006302025,
+    "after250pooled-precreated/allocationDelta": -1216.0,
+    "pooled/unpooled": 1.012852750142887
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "flat_constants64",
+    "phase": "invoke",
+    "after559": {
+      "ns": 13.006369711083067,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 12.579441135045544,
+          "bytes": 0
+        },
+        {
+          "ns": 13.500737700570053,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 14.162150517247849,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 12.511147647478566,
+          "bytes": 0
+        },
+        {
+          "ns": 17.430951596726977,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 12.43252031874725,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 12.268548383902345,
+          "bytes": 0
+        },
+        {
+          "ns": 17.195871220672394,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated/after559": 1.0888626751229369,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 0.9558793571855161,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 0.8778695229658722
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "flat_constants64",
+    "phase": "invoke_nested",
+    "after559": {
+      "ns": 12.748860531457616,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 12.717388429210757,
+          "bytes": 0
+        },
+        {
+          "ns": 13.067509600845254,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 13.071746839559914,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 12.729599394951896,
+          "bytes": 0
+        },
+        {
+          "ns": 13.131084665290246,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 12.672025916077846,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 12.498308308900905,
+          "bytes": 0
+        },
+        {
+          "ns": 13.699086346800176,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated/after559": 1.0253266797691905,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 0.9939732170424029,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 0.96942100176907
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "flat_constants64",
+    "phase": "construct",
+    "after559": {
+      "ns": 9112.974723340041,
+      "bytes": 8520.35943046816,
+      "rounds": [
+        {
+          "ns": 7904.564755838641,
+          "bytes": 8520.35668789809
+        },
+        {
+          "ns": 12151.659959758552,
+          "bytes": 8520.36217303823
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 8564.533371940774,
+      "bytes": 8520.35943046816,
+      "rounds": [
+        {
+          "ns": 8135.575902335456,
+          "bytes": 8520.35668789809
+        },
+        {
+          "ns": 10239.593812877263,
+          "bytes": 8520.36217303823
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 9065.120753715499,
+      "bytes": 8520.35943046816,
+      "rounds": [
+        {
+          "ns": 8145.1831210191085,
+          "bytes": 8520.35668789809
+        },
+        {
+          "ns": 9951.238682092555,
+          "bytes": 8520.36217303823
+        }
+      ]
+    },
+    "after250-precreated/after559": 0.9398175274211388,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 0.9947488091345212,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 1.0584488798204412
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nested_constants64",
+    "phase": "compile",
+    "after559": {
+      "ns": 44535.33920713738,
+      "bytes": 8656.570667312582,
+      "rounds": [
+        {
+          "ns": 43421.83147632312,
+          "bytes": 8656.445682451253
+        },
+        {
+          "ns": 49769.565217391304,
+          "bytes": 8656.695652173914
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 869694.203403173,
+      "bytes": 10096.570667312582,
+      "rounds": [
+        {
+          "ns": 726471.274373259,
+          "bytes": 10096.445682451253
+        },
+        {
+          "ns": 1195386.956521739,
+          "bytes": 10096.695652173914
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 760717.2086310606,
+      "bytes": 9856.570667312582,
+      "rounds": [
+        {
+          "ns": 714323.4679665738,
+          "bytes": 9856.445682451253
+        },
+        {
+          "ns": 1083493.8405797102,
+          "bytes": 9856.695652173914
+        }
+      ]
+    },
+    "after250-precreated/after559": 19.528181863803855,
+    "after250-precreated/allocationDelta": 1440.0,
+    "after250pooled-precreated/after559": 17.081203874812868,
+    "after250pooled-precreated/allocationDelta": 1200.0,
+    "pooled/unpooled": 0.874695042986744
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nested_constants64",
+    "phase": "compile_first",
+    "after559": {
+      "ns": 743141.7533476806,
+      "bytes": 8660.304160688665,
+      "rounds": [
+        {
+          "ns": 726848.5772357724,
+          "bytes": 8659.90243902439
+        },
+        {
+          "ns": 895134.8039215686,
+          "bytes": 8660.70588235294
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 790258.2048063128,
+      "bytes": 10100.304160688665,
+      "rounds": [
+        {
+          "ns": 728591.4634146341,
+          "bytes": 10099.90243902439
+        },
+        {
+          "ns": 1110235.294117647,
+          "bytes": 10100.70588235294
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 765729.674796748,
+      "bytes": 9860.304160688665,
+      "rounds": [
+        {
+          "ns": 730535.569105691,
+          "bytes": 9859.90243902439
+        },
+        {
+          "ns": 887650.7352941176,
+          "bytes": 9860.70588235294
+        }
+      ]
+    },
+    "after250-precreated/after559": 1.0634017012856345,
+    "after250-precreated/allocationDelta": 1440.0,
+    "after250pooled-precreated/after559": 1.0303951720480165,
+    "after250pooled-precreated/allocationDelta": 1200.0,
+    "pooled/unpooled": 0.9689613725483854
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nested_constants64",
+    "phase": "invoke",
+    "after559": {
+      "ns": 15.34624114108943,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 14.958215377684823,
+          "bytes": 0
+        },
+        {
+          "ns": 18.196716333405494,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 15.408958097055333,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 15.322729499145131,
+          "bytes": 0
+        },
+        {
+          "ns": 16.57440884630216,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 15.537879848983302,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 15.322520320836016,
+          "bytes": 0
+        },
+        {
+          "ns": 16.43214878928549,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated/after559": 1.0040867959384516,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 1.012487664316753,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 1.0083666754829197
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nested_constants64",
+    "phase": "invoke_nested",
+    "after559": {
+      "ns": 13.29215098869718,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 12.779984725880173,
+          "bytes": 0
+        },
+        {
+          "ns": 16.764962209934723,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 13.091977606796426,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 12.76810125575322,
+          "bytes": 0
+        },
+        {
+          "ns": 13.816663129895593,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 13.32233989933665,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 13.074095903332811,
+          "bytes": 0
+        },
+        {
+          "ns": 14.882399025185816,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated/after559": 0.9849404823891206,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 1.0022711832468003,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 1.0175956833611324
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nested_constants64",
+    "phase": "construct",
+    "after559": {
+      "ns": 9741.4510718756,
+      "bytes": 8544.349993708485,
+      "rounds": [
+        {
+          "ns": 9030.345911949686,
+          "bytes": 8544.329331046312
+        },
+        {
+          "ns": 10581.805019305019,
+          "bytes": 8544.370656370656
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 9330.976512226513,
+      "bytes": 8544.349993708485,
+      "rounds": [
+        {
+          "ns": 8593.396226415094,
+          "bytes": 8544.329331046312
+        },
+        {
+          "ns": 9336.309523809525,
+          "bytes": 8544.370656370656
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 8823.19897084048,
+      "bytes": 8544.349993708485,
+      "rounds": [
+        {
+          "ns": 8716.63807890223,
+          "bytes": 8544.329331046312
+        },
+        {
+          "ns": 11360.666023166023,
+          "bytes": 8544.370656370656
+        }
+      ]
+    },
+    "after250-precreated/after559": 0.9578630989756586,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 0.9057376468597998,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 0.9455815218567226
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nested_siblings8",
+    "phase": "compile",
+    "after559": {
+      "ns": 36296.92473295045,
+      "bytes": 16376.855677819673,
+      "rounds": [
+        {
+          "ns": 34744.15621436716,
+          "bytes": 16376.72976054732
+        },
+        {
+          "ns": 37849.69325153374,
+          "bytes": 16376.981595092024
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 932959.0509451957,
+      "bytes": 18936.946897888087,
+      "rounds": [
+        {
+          "ns": 842497.8620296465,
+          "bytes": 18936.91220068415
+        },
+        {
+          "ns": 1208938.5224948875,
+          "bytes": 18936.981595092024
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 957043.2536760848,
+      "bytes": 15520.855677819673,
+      "rounds": [
+        {
+          "ns": 868070.9806157355,
+          "bytes": 15520.72976054732
+        },
+        {
+          "ns": 1086373.0828220858,
+          "bytes": 15520.981595092024
+        }
+      ]
+    },
+    "after250-precreated/after559": 25.703528819846625,
+    "after250-precreated/allocationDelta": 2560.0912200684143,
+    "after250pooled-precreated/after559": 26.36706169234437,
+    "after250pooled-precreated/allocationDelta": -856.0,
+    "pooled/unpooled": 1.0258148551176913
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nested_siblings8",
+    "phase": "compile_first",
+    "after559": {
+      "ns": 626666.2326388888,
+      "bytes": 16468.52380952381,
+      "rounds": [
+        {
+          "ns": 568046.0069444444,
+          "bytes": 16467.333333333332
+        },
+        {
+          "ns": 700166.6666666667,
+          "bytes": 16469.714285714286
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 858481.3368055555,
+      "bytes": 19028.52380952381,
+      "rounds": [
+        {
+          "ns": 776476.5625,
+          "bytes": 19027.333333333332
+        },
+        {
+          "ns": 988694.9404761904,
+          "bytes": 19029.714285714286
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 856028.6458333333,
+      "bytes": 15612.52380952381,
+      "rounds": [
+        {
+          "ns": 798094.6180555555,
+          "bytes": 15611.333333333334
+        },
+        {
+          "ns": 1026651.7857142857,
+          "bytes": 15613.714285714286
+        }
+      ]
+    },
+    "after250-precreated/after559": 1.3699179756191655,
+    "after250-precreated/allocationDelta": 2560.0,
+    "after250pooled-precreated/after559": 1.366004104335733,
+    "after250pooled-precreated/allocationDelta": -856.0,
+    "pooled/unpooled": 0.997142988592683
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nested_siblings8",
+    "phase": "invoke",
+    "after559": {
+      "ns": 37.4428323577815,
+      "bytes": 88.0,
+      "rounds": [
+        {
+          "ns": 32.748889316961765,
+          "bytes": 88
+        },
+        {
+          "ns": 49.999839285011156,
+          "bytes": 88
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 41.09105532605762,
+      "bytes": 88.0,
+      "rounds": [
+        {
+          "ns": 38.756347748687276,
+          "bytes": 88
+        },
+        {
+          "ns": 54.913800515734394,
+          "bytes": 88
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 45.478876368811264,
+      "bytes": 88.0,
+      "rounds": [
+        {
+          "ns": 39.76365672393617,
+          "bytes": 88
+        },
+        {
+          "ns": 52.2789787205319,
+          "bytes": 88
+        }
+      ]
+    },
+    "after250-precreated/after559": 1.0974344818099193,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 1.2146216913892116,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 1.1067828754442122
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nested_siblings8",
+    "phase": "invoke_nested",
+    "after559": {
+      "ns": 22.77708790522037,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 19.39355442918369,
+          "bytes": 0
+        },
+        {
+          "ns": 27.392730847940918,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 21.371900124778534,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 21.030407324475267,
+          "bytes": 0
+        },
+        {
+          "ns": 21.7133929250818,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 21.542315340504373,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 20.343930689117506,
+          "bytes": 0
+        },
+        {
+          "ns": 23.29704964777592,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated/after559": 0.9383069606488292,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 0.9457888308701222,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 1.007973798058707
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "nested_siblings8",
+    "phase": "construct",
+    "after559": {
+      "ns": 4196.572621202977,
+      "bytes": 7048.279476775657,
+      "rounds": [
+        {
+          "ns": 3847.0428485214243,
+          "bytes": 7048.270368135184
+        },
+        {
+          "ns": 6930.269260499871,
+          "bytes": 7048.2885854161295
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 4183.0423995893525,
+      "bytes": 7048.279476775657,
+      "rounds": [
+        {
+          "ns": 3826.6596258298127,
+          "bytes": 7048.270368135184
+        },
+        {
+          "ns": 5458.923816885682,
+          "bytes": 7048.2885854161295
+        }
+      ]
+    },
+    "after250pooled-precreated": {
+      "ns": 4755.113044604856,
+      "bytes": 7048.279476775657,
+      "rounds": [
+        {
+          "ns": 4148.938845302756,
+          "bytes": 7048.270368135184
+        },
+        {
+          "ns": 6141.415442755303,
+          "bytes": 7048.2885854161295
+        }
+      ]
+    },
+    "after250-precreated/after559": 0.9967758876504929,
+    "after250-precreated/allocationDelta": 0.0,
+    "after250pooled-precreated/after559": 1.1330944258130746,
+    "after250pooled-precreated/allocationDelta": 0.0,
+    "pooled/unpooled": 1.1367594660459726
+  }
+]

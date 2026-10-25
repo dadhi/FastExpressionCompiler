@@ -1,0 +1,15 @@
+{
+  "source": "5a0d565c3d0d865d1a05e47272c7ae41cb530f3a",
+  "native": {
+    "net10": "passed",
+    "net8": "passed",
+    "net472": "passed, en-US current/default-thread culture"
+  },
+  "importedRuntime": {
+    "passed": 35088,
+    "skipped": 59,
+    "failed": 0,
+    "crashes": 0
+  },
+  "importedStandardAssemblyMatchesCurrentBuild": true
+}

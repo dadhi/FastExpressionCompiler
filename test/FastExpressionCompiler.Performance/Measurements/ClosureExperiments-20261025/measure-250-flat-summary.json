@@ -1,0 +1,1042 @@
+[
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "flat_constants64",
+    "phase": "compile",
+    "after559-precreated": {
+      "ns": 1311393.5185185187,
+      "bytes": 8663.53216374269,
+      "rounds": [
+        {
+          "ns": 1241484.5679012346,
+          "bytes": 8662.222222222223
+        },
+        {
+          "ns": 1411625,
+          "bytes": 8664.842105263158
+        }
+      ]
+    },
+    "after350-precreated": {
+      "ns": 1314246.9948018193,
+      "bytes": 8663.53216374269,
+      "rounds": [
+        {
+          "ns": 1268143.5185185184,
+          "bytes": 8662.222222222223
+        },
+        {
+          "ns": 1530300.4385964912,
+          "bytes": 8664.842105263158
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 1349178.7280701755,
+      "bytes": 8511.53216374269,
+      "rounds": [
+        {
+          "ns": 1170370.3703703703,
+          "bytes": 8510.222222222223
+        },
+        {
+          "ns": 1376690.7894736843,
+          "bytes": 8512.842105263158
+        }
+      ]
+    },
+    "after350-precreated/before": 1.0021759115345668,
+    "after350-precreated/allocationDelta": 0.0,
+    "after250-precreated/before": 1.0288130214295574,
+    "after250-precreated/allocationDelta": -152.0
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "flat_constants64",
+    "phase": "compile_first",
+    "after559-precreated": {
+      "ns": 1320376.1574074074,
+      "bytes": 8664.666666666668,
+      "rounds": [
+        {
+          "ns": 1218583.3333333333,
+          "bytes": 8664
+        },
+        {
+          "ns": 1340129.6296296297,
+          "bytes": 8665.333333333334
+        }
+      ]
+    },
+    "after350-precreated": {
+      "ns": 1270834.4907407407,
+      "bytes": 8664.666666666668,
+      "rounds": [
+        {
+          "ns": 1119357.142857143,
+          "bytes": 8664
+        },
+        {
+          "ns": 1434553.2407407407,
+          "bytes": 8665.333333333334
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 1136003.4722222222,
+      "bytes": 8512.666666666668,
+      "rounds": [
+        {
+          "ns": 1091541.6666666667,
+          "bytes": 8512
+        },
+        {
+          "ns": 1159696.7592592593,
+          "bytes": 8513.333333333334
+        }
+      ]
+    },
+    "after350-precreated/before": 0.9624791265816681,
+    "after350-precreated/allocationDelta": 0.0,
+    "after250-precreated/before": 0.8603635152370476,
+    "after250-precreated/allocationDelta": -152.0
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "flat_constants64",
+    "phase": "invoke",
+    "after559-precreated": {
+      "ns": 17.317790043122724,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 18.44142656894997,
+          "bytes": 0
+        },
+        {
+          "ns": 16.42681338137385,
+          "bytes": 0
+        }
+      ]
+    },
+    "after350-precreated": {
+      "ns": 18.312465341207144,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 19.20210880701805,
+          "bytes": 0
+        },
+        {
+          "ns": 17.77056531995621,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 18.32265422413807,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 19.766504204938773,
+          "bytes": 0
+        },
+        {
+          "ns": 17.072221588835554,
+          "bytes": 0
+        }
+      ]
+    },
+    "after350-precreated/before": 1.0574366183911226,
+    "after350-precreated/allocationDelta": 0.0,
+    "after250-precreated/before": 1.0580249661482874,
+    "after250-precreated/allocationDelta": 0.0
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "flat_constants64",
+    "phase": "invoke_nested",
+    "after559-precreated": {
+      "ns": 17.00099043430952,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 17.928166884106037,
+          "bytes": 0
+        },
+        {
+          "ns": 16.073813984513006,
+          "bytes": 0
+        }
+      ]
+    },
+    "after350-precreated": {
+      "ns": 17.486429417058503,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 17.900094563689336,
+          "bytes": 0
+        },
+        {
+          "ns": 15.303181256255618,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 14.9440003670931,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 15.274045000567057,
+          "bytes": 0
+        },
+        {
+          "ns": 14.613955733619143,
+          "bytes": 0
+        }
+      ]
+    },
+    "after350-precreated/before": 1.0285535707242868,
+    "after350-precreated/allocationDelta": 0.0,
+    "after250-precreated/before": 0.8790076333985088,
+    "after250-precreated/allocationDelta": 0.0
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "standard",
+    "shape": "flat_constants64",
+    "phase": "construct",
+    "after559-precreated": {
+      "ns": 6159.409153005465,
+      "bytes": 11368.50952354844,
+      "rounds": [
+        {
+          "ns": 6420.723398984269,
+          "bytes": 11368.46822742475
+        },
+        {
+          "ns": 6042.725409836065,
+          "bytes": 11368.550819672131
+        }
+      ]
+    },
+    "after350-precreated": {
+      "ns": 6646.542087519012,
+      "bytes": 11368.50952354844,
+      "rounds": [
+        {
+          "ns": 6380.883810231636,
+          "bytes": 11368.46822742475
+        },
+        {
+          "ns": 6942.315573770492,
+          "bytes": 11368.550819672131
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 7447.921381583623,
+      "bytes": 11368.50952354844,
+      "rounds": [
+        {
+          "ns": 7786.773813947727,
+          "bytes": 11368.46822742475
+        },
+        {
+          "ns": 6797.1994535519125,
+          "bytes": 11368.550819672131
+        }
+      ]
+    },
+    "after350-precreated/before": 1.0790876076605258,
+    "after350-precreated/allocationDelta": 0.0,
+    "after250-precreated/before": 1.2091941282954766,
+    "after250-precreated/allocationDelta": 0.0
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "flat_constants64",
+    "phase": "compile",
+    "after559-precreated": {
+      "ns": 1358264.2045454546,
+      "bytes": 8664.01818181818,
+      "rounds": [
+        {
+          "ns": 1338151.5151515151,
+          "bytes": 8663.636363636364
+        },
+        {
+          "ns": 1387054.1666666665,
+          "bytes": 8664.4
+        }
+      ]
+    },
+    "after350-precreated": {
+      "ns": 1362492.8977272727,
+      "bytes": 8664.01818181818,
+      "rounds": [
+        {
+          "ns": 1302100.3787878787,
+          "bytes": 8663.636363636364
+        },
+        {
+          "ns": 1407075,
+          "bytes": 8664.4
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 1407285.4166666665,
+      "bytes": 8512.01818181818,
+      "rounds": [
+        {
+          "ns": 1409806.8181818181,
+          "bytes": 8511.636363636364
+        },
+        {
+          "ns": 1405385.4166666665,
+          "bytes": 8512.4
+        }
+      ]
+    },
+    "after350-precreated/before": 1.0031133067982405,
+    "after350-precreated/allocationDelta": 0.0,
+    "after250-precreated/before": 1.0360910726772903,
+    "after250-precreated/allocationDelta": -152.0
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "flat_constants64",
+    "phase": "compile_first",
+    "after559-precreated": {
+      "ns": 1321592.1052631577,
+      "bytes": 8665.362229102167,
+      "rounds": [
+        {
+          "ns": 1332074.5614035088,
+          "bytes": 8664.842105263158
+        },
+        {
+          "ns": 1196424.0196078431,
+          "bytes": 8665.882352941177
+        }
+      ]
+    },
+    "after350-precreated": {
+      "ns": 1334370.8075335398,
+      "bytes": 8665.362229102167,
+      "rounds": [
+        {
+          "ns": 1400502.1929824562,
+          "bytes": 8664.842105263158
+        },
+        {
+          "ns": 1111610.294117647,
+          "bytes": 8665.882352941177
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 1373410.2167182663,
+      "bytes": 8513.362229102167,
+      "rounds": [
+        {
+          "ns": 1390359.649122807,
+          "bytes": 8512.842105263158
+        },
+        {
+          "ns": 1356460.7843137253,
+          "bytes": 8513.882352941177
+        }
+      ]
+    },
+    "after350-precreated/before": 1.0096691726739981,
+    "after350-precreated/allocationDelta": 0.0,
+    "after250-precreated/before": 1.0392088536612365,
+    "after250-precreated/allocationDelta": -152.0
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "flat_constants64",
+    "phase": "invoke",
+    "after559-precreated": {
+      "ns": 19.065686660642005,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 18.883709364865513,
+          "bytes": 0
+        },
+        {
+          "ns": 21.35330840751561,
+          "bytes": 0
+        }
+      ]
+    },
+    "after350-precreated": {
+      "ns": 19.537784041783453,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 18.026081943051224,
+          "bytes": 0
+        },
+        {
+          "ns": 21.771368008616474,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 17.327714528740145,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 16.811404073402308,
+          "bytes": 0
+        },
+        {
+          "ns": 19.674915037572777,
+          "bytes": 0
+        }
+      ]
+    },
+    "after350-precreated/before": 1.0247616248784797,
+    "after350-precreated/allocationDelta": 0.0,
+    "after250-precreated/before": 0.9088429300849877,
+    "after250-precreated/allocationDelta": 0.0
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "flat_constants64",
+    "phase": "invoke_nested",
+    "after559-precreated": {
+      "ns": 17.93492590693655,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 18.296589828431667,
+          "bytes": 0
+        },
+        {
+          "ns": 17.573261985441434,
+          "bytes": 0
+        }
+      ]
+    },
+    "after350-precreated": {
+      "ns": 17.703740830412634,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 17.25105155688005,
+          "bytes": 0
+        },
+        {
+          "ns": 18.126399777269114,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 19.97468185355546,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 18.68761942238954,
+          "bytes": 0
+        },
+        {
+          "ns": 22.12940300252041,
+          "bytes": 0
+        }
+      ]
+    },
+    "after350-precreated/before": 0.987109783574043,
+    "after350-precreated/allocationDelta": 0.0,
+    "after250-precreated/before": 1.1137309380146372,
+    "after250-precreated/allocationDelta": 0.0
+  },
+  {
+    "runtime": "10.0.9",
+    "flavor": "light",
+    "shape": "flat_constants64",
+    "phase": "construct",
+    "after559-precreated": {
+      "ns": 11576.919834943064,
+      "bytes": 8520.420802568635,
+      "rounds": [
+        {
+          "ns": 11442.54367720466,
+          "bytes": 8520.349417637271
+        },
+        {
+          "ns": 12035.115559895834,
+          "bytes": 8520.4921875
+        }
+      ]
+    },
+    "after350-precreated": {
+      "ns": 11514.100881397757,
+      "bytes": 8520.420802568635,
+      "rounds": [
+        {
+          "ns": 11159.889767054909,
+          "bytes": 8520.349417637271
+        },
+        {
+          "ns": 12069.783528645834,
+          "bytes": 8520.4921875
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 10818.09830837493,
+      "bytes": 8520.420802568635,
+      "rounds": [
+        {
+          "ns": 11149.99306711037,
+          "bytes": 8520.349417637271
+        },
+        {
+          "ns": 10327.229817708334,
+          "bytes": 8520.4921875
+        }
+      ]
+    },
+    "after350-precreated/before": 0.994573776579527,
+    "after350-precreated/allocationDelta": 0.0,
+    "after250-precreated/before": 0.9344539361603116,
+    "after250-precreated/allocationDelta": 0.0
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "flat_constants64",
+    "phase": "compile",
+    "after559-precreated": {
+      "ns": 886425.4385964912,
+      "bytes": 8661.438596491229,
+      "rounds": [
+        {
+          "ns": 1307878.4722222222,
+          "bytes": 8662.666666666666
+        },
+        {
+          "ns": 832960.5263157894,
+          "bytes": 8660.21052631579
+        }
+      ]
+    },
+    "after350-precreated": {
+      "ns": 742890.4879385964,
+      "bytes": 8661.438596491229,
+      "rounds": [
+        {
+          "ns": 1173376.7361111112,
+          "bytes": 8662.666666666666
+        },
+        {
+          "ns": 729665.5701754387,
+          "bytes": 8660.21052631579
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 843314.5559210526,
+      "bytes": 8509.438596491229,
+      "rounds": [
+        {
+          "ns": 1005062.5,
+          "bytes": 8510.666666666666
+        },
+        {
+          "ns": 832748.9035087719,
+          "bytes": 8508.21052631579
+        }
+      ]
+    },
+    "after350-precreated/before": 0.8380744229484672,
+    "after350-precreated/allocationDelta": 0.0,
+    "after250-precreated/before": 0.9513654721555627,
+    "after250-precreated/allocationDelta": -152.0
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "flat_constants64",
+    "phase": "compile_first",
+    "after559-precreated": {
+      "ns": 1074544.8529411764,
+      "bytes": 8661.55294117647,
+      "rounds": [
+        {
+          "ns": 1062116.6666666667,
+          "bytes": 8662.4
+        },
+        {
+          "ns": 1086973.0392156863,
+          "bytes": 8660.70588235294
+        }
+      ]
+    },
+    "after350-precreated": {
+      "ns": 1031297.5,
+      "bytes": 8661.55294117647,
+      "rounds": [
+        {
+          "ns": 1003746.6666666667,
+          "bytes": 8662.4
+        },
+        {
+          "ns": 1094799.0196078431,
+          "bytes": 8660.70588235294
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 1049830.0,
+      "bytes": 8509.55294117647,
+      "rounds": [
+        {
+          "ns": 1046941.6666666667,
+          "bytes": 8510.4
+        },
+        {
+          "ns": 1082920.343137255,
+          "bytes": 8508.70588235294
+        }
+      ]
+    },
+    "after350-precreated/before": 0.959752863900653,
+    "after350-precreated/allocationDelta": 0.0,
+    "after250-precreated/before": 0.9769997009677833,
+    "after250-precreated/allocationDelta": -152.0
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "flat_constants64",
+    "phase": "invoke",
+    "after559-precreated": {
+      "ns": 18.190870341600828,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 18.057551894440415,
+          "bytes": 0
+        },
+        {
+          "ns": 18.324188788761244,
+          "bytes": 0
+        }
+      ]
+    },
+    "after350-precreated": {
+      "ns": 19.09532451800058,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 19.068684576382076,
+          "bytes": 0
+        },
+        {
+          "ns": 19.121964459619086,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 18.443194554073266,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 17.96135539780404,
+          "bytes": 0
+        },
+        {
+          "ns": 18.925033710342486,
+          "bytes": 0
+        }
+      ]
+    },
+    "after350-precreated/before": 1.0497202255535487,
+    "after350-precreated/allocationDelta": 0.0,
+    "after250-precreated/before": 1.0138709257849745,
+    "after250-precreated/allocationDelta": 0.0
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "flat_constants64",
+    "phase": "invoke_nested",
+    "after559-precreated": {
+      "ns": 19.90029736483357,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 20.287827689070475,
+          "bytes": 0
+        },
+        {
+          "ns": 18.26529674067945,
+          "bytes": 0
+        }
+      ]
+    },
+    "after350-precreated": {
+      "ns": 19.074946604906657,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 20.26983964400742,
+          "bytes": 0
+        },
+        {
+          "ns": 18.33619765973924,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 19.21432698233871,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 19.989618147629688,
+          "bytes": 0
+        },
+        {
+          "ns": 18.018867424121872,
+          "bytes": 0
+        }
+      ]
+    },
+    "after350-precreated/before": 0.9585257071894103,
+    "after350-precreated/allocationDelta": 0.0,
+    "after250-precreated/before": 0.9655296415968608,
+    "after250-precreated/allocationDelta": 0.0
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "standard",
+    "shape": "flat_constants64",
+    "phase": "construct",
+    "after559-precreated": {
+      "ns": 5926.765014053048,
+      "bytes": 11368.44519724249,
+      "rounds": [
+        {
+          "ns": 5372.368341220726,
+          "bytes": 11368.436840189297
+        },
+        {
+          "ns": 6335.159543538305,
+          "bytes": 11368.453554295682
+        }
+      ]
+    },
+    "after350-precreated": {
+      "ns": 6580.435019624945,
+      "bytes": 11368.44519724249,
+      "rounds": [
+        {
+          "ns": 4916.370889455164,
+          "bytes": 11368.436840189297
+        },
+        {
+          "ns": 6680.540412850704,
+          "bytes": 11368.453554295682
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 6299.148677133304,
+      "bytes": 11368.44519724249,
+      "rounds": [
+        {
+          "ns": 4980.380111636937,
+          "bytes": 11368.436840189297
+        },
+        {
+          "ns": 6693.042229975287,
+          "bytes": 11368.453554295682
+        }
+      ]
+    },
+    "after350-precreated/before": 1.1102911966345839,
+    "after350-precreated/allocationDelta": 0.0,
+    "after250-precreated/before": 1.0628308465406155,
+    "after250-precreated/allocationDelta": 0.0
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "flat_constants64",
+    "phase": "compile",
+    "after559-precreated": {
+      "ns": 1009012.0471014492,
+      "bytes": 8661.478260869564,
+      "rounds": [
+        {
+          "ns": 1052519.927536232,
+          "bytes": 8662.95652173913
+        },
+        {
+          "ns": 965504.1666666666,
+          "bytes": 8660
+        }
+      ]
+    },
+    "after350-precreated": {
+      "ns": 848723.4375,
+      "bytes": 8661.478260869564,
+      "rounds": [
+        {
+          "ns": 690518.1159420289,
+          "bytes": 8662.95652173913
+        },
+        {
+          "ns": 932781.25,
+          "bytes": 8660
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 866246.9429347826,
+      "bytes": 8509.478260869564,
+      "rounds": [
+        {
+          "ns": 893603.2608695652,
+          "bytes": 8510.95652173913
+        },
+        {
+          "ns": 838890.625,
+          "bytes": 8508
+        }
+      ]
+    },
+    "after350-precreated/before": 0.8411430170116361,
+    "after350-precreated/allocationDelta": 0.0,
+    "after250-precreated/before": 0.8585100102850283,
+    "after250-precreated/allocationDelta": -152.0
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "flat_constants64",
+    "phase": "compile_first",
+    "after559-precreated": {
+      "ns": 1048855.6547619049,
+      "bytes": 8662.493506493507,
+      "rounds": [
+        {
+          "ns": 1012366.0714285715,
+          "bytes": 8661.714285714286
+        },
+        {
+          "ns": 1164274.6212121213,
+          "bytes": 8663.272727272728
+        }
+      ]
+    },
+    "after350-precreated": {
+      "ns": 964850.8522727273,
+      "bytes": 8662.493506493507,
+      "rounds": [
+        {
+          "ns": 875886.9047619047,
+          "bytes": 8661.714285714286
+        },
+        {
+          "ns": 1033674.2424242423,
+          "bytes": 8663.272727272728
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 1045757.9816017315,
+      "bytes": 8510.493506493507,
+      "rounds": [
+        {
+          "ns": 1054892.857142857,
+          "bytes": 8509.714285714286
+        },
+        {
+          "ns": 1036623.106060606,
+          "bytes": 8511.272727272728
+        }
+      ]
+    },
+    "after350-precreated/before": 0.9199081378759911,
+    "after350-precreated/allocationDelta": 0.0,
+    "after250-precreated/before": 0.9970466163326578,
+    "after250-precreated/allocationDelta": -152.0
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "flat_constants64",
+    "phase": "invoke",
+    "after559-precreated": {
+      "ns": 19.376303356638246,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 18.74009504328556,
+          "bytes": 0
+        },
+        {
+          "ns": 29.366760390992663,
+          "bytes": 0
+        }
+      ]
+    },
+    "after350-precreated": {
+      "ns": 18.857052317255636,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 20.10923093052419,
+          "bytes": 0
+        },
+        {
+          "ns": 13.376871904487668,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 18.77767206376786,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 19.60687681325541,
+          "bytes": 0
+        },
+        {
+          "ns": 17.795004408045365,
+          "bytes": 0
+        }
+      ]
+    },
+    "after350-precreated/before": 0.9732017490733228,
+    "after350-precreated/allocationDelta": 0.0,
+    "after250-precreated/before": 0.9691049793218014,
+    "after250-precreated/allocationDelta": 0.0
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "flat_constants64",
+    "phase": "invoke_nested",
+    "after559-precreated": {
+      "ns": 18.75625696538266,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 19.198963183548642,
+          "bytes": 0
+        },
+        {
+          "ns": 13.280746052007522,
+          "bytes": 0
+        }
+      ]
+    },
+    "after350-precreated": {
+      "ns": 19.52846403991198,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 20.03861524470188,
+          "bytes": 0
+        },
+        {
+          "ns": 16.70024675625662,
+          "bytes": 0
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 17.960316215533545,
+      "bytes": 0.0,
+      "rounds": [
+        {
+          "ns": 17.949113800216313,
+          "bytes": 0
+        },
+        {
+          "ns": 17.971518630850774,
+          "bytes": 0
+        }
+      ]
+    },
+    "after350-precreated/before": 1.0411706384677144,
+    "after350-precreated/allocationDelta": 0.0,
+    "after250-precreated/before": 0.9575639877765517,
+    "after250-precreated/allocationDelta": 0.0
+  },
+  {
+    "runtime": "8.0.28",
+    "flavor": "light",
+    "shape": "flat_constants64",
+    "phase": "construct",
+    "after559-precreated": {
+      "ns": 10996.17295214923,
+      "bytes": 8520.34022816404,
+      "rounds": [
+        {
+          "ns": 10906.680859691809,
+          "bytes": 8520.350364963504
+        },
+        {
+          "ns": 20904.374201787996,
+          "bytes": 8520.330091364574
+        }
+      ]
+    },
+    "after350-precreated": {
+      "ns": 10474.395814913056,
+      "bytes": 8520.34022816404,
+      "rounds": [
+        {
+          "ns": 11265.81508515815,
+          "bytes": 8520.350364963504
+        },
+        {
+          "ns": 10098.094115335496,
+          "bytes": 8520.330091364574
+        }
+      ]
+    },
+    "after250-precreated": {
+      "ns": 11109.281224655311,
+      "bytes": 8520.34022816404,
+      "rounds": [
+        {
+          "ns": 11430.717761557178,
+          "bytes": 8520.350364963504
+        },
+        {
+          "ns": 10664.615875822772,
+          "bytes": 8520.330091364574
+        }
+      ]
+    },
+    "after350-precreated/before": 0.9525492060277033,
+    "after350-precreated/allocationDelta": 0.0,
+    "after250-precreated/before": 1.0102861489172899,
+    "after250-precreated/allocationDelta": 0.0
+  }
+]

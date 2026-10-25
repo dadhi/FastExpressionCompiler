@@ -1,0 +1,102 @@
+[
+  {
+    "configuration": "net10.0-light-0",
+    "shape": "flat_constants64",
+    "ordinaryInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-light-0",
+    "shape": "nested_constants8",
+    "ordinaryInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-light-0",
+    "shape": "nested_constants64",
+    "ordinaryInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-light-0",
+    "shape": "nested_siblings8",
+    "ordinaryInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-light-0",
+    "shape": "nested_reused8",
+    "ordinaryInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-standard-0",
+    "shape": "flat_constants64",
+    "ordinaryInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-standard-0",
+    "shape": "nested_constants8",
+    "ordinaryInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-standard-0",
+    "shape": "nested_constants64",
+    "ordinaryInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-standard-0",
+    "shape": "nested_siblings8",
+    "ordinaryInstructionsEqual": true
+  },
+  {
+    "configuration": "net10.0-standard-0",
+    "shape": "nested_reused8",
+    "ordinaryInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-light-0",
+    "shape": "flat_constants64",
+    "ordinaryInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-light-0",
+    "shape": "nested_constants8",
+    "ordinaryInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-light-0",
+    "shape": "nested_constants64",
+    "ordinaryInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-light-0",
+    "shape": "nested_siblings8",
+    "ordinaryInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-light-0",
+    "shape": "nested_reused8",
+    "ordinaryInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-standard-0",
+    "shape": "flat_constants64",
+    "ordinaryInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-standard-0",
+    "shape": "nested_constants8",
+    "ordinaryInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-standard-0",
+    "shape": "nested_constants64",
+    "ordinaryInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-standard-0",
+    "shape": "nested_siblings8",
+    "ordinaryInstructionsEqual": true
+  },
+  {
+    "configuration": "net8.0-standard-0",
+    "shape": "nested_reused8",
+    "ordinaryInstructionsEqual": true
+  }
+]

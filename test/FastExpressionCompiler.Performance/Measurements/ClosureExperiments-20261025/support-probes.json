@@ -1,0 +1,314 @@
+[
+  {
+    "shape": "flat_constants64",
+    "version": "after559-precreated",
+    "supported": true,
+    "tfm": "net8.0",
+    "flavor": "standard"
+  },
+  {
+    "shape": "flat_constants64",
+    "version": "after250-precreated",
+    "supported": true,
+    "tfm": "net8.0",
+    "flavor": "standard"
+  },
+  {
+    "shape": "nested_constants8",
+    "version": "after559-precreated",
+    "supported": false,
+    "error": "System.NotSupportedException",
+    "message": "precreated path rejected tree",
+    "tfm": "net8.0",
+    "flavor": "standard"
+  },
+  {
+    "shape": "nested_constants8",
+    "version": "after250-precreated",
+    "supported": true,
+    "tfm": "net8.0",
+    "flavor": "standard"
+  },
+  {
+    "shape": "nested_constants64",
+    "version": "after559-precreated",
+    "supported": false,
+    "error": "System.NotSupportedException",
+    "message": "precreated path rejected tree",
+    "tfm": "net8.0",
+    "flavor": "standard"
+  },
+  {
+    "shape": "nested_constants64",
+    "version": "after250-precreated",
+    "supported": true,
+    "tfm": "net8.0",
+    "flavor": "standard"
+  },
+  {
+    "shape": "nested_siblings8",
+    "version": "after559-precreated",
+    "supported": false,
+    "error": "System.NotSupportedException",
+    "message": "precreated path rejected tree",
+    "tfm": "net8.0",
+    "flavor": "standard"
+  },
+  {
+    "shape": "nested_siblings8",
+    "version": "after250-precreated",
+    "supported": true,
+    "tfm": "net8.0",
+    "flavor": "standard"
+  },
+  {
+    "shape": "nested_reused8",
+    "version": "after559-precreated",
+    "supported": false,
+    "error": "System.NotSupportedException",
+    "message": "precreated path rejected tree",
+    "tfm": "net8.0",
+    "flavor": "standard"
+  },
+  {
+    "shape": "nested_reused8",
+    "version": "after250-precreated",
+    "supported": true,
+    "tfm": "net8.0",
+    "flavor": "standard"
+  },
+  {
+    "shape": "flat_constants64",
+    "version": "after559-precreated",
+    "supported": true,
+    "tfm": "net8.0",
+    "flavor": "light"
+  },
+  {
+    "shape": "flat_constants64",
+    "version": "after250-precreated",
+    "supported": true,
+    "tfm": "net8.0",
+    "flavor": "light"
+  },
+  {
+    "shape": "nested_constants8",
+    "version": "after559-precreated",
+    "supported": false,
+    "error": "System.NotSupportedException",
+    "message": "precreated path rejected tree",
+    "tfm": "net8.0",
+    "flavor": "light"
+  },
+  {
+    "shape": "nested_constants8",
+    "version": "after250-precreated",
+    "supported": true,
+    "tfm": "net8.0",
+    "flavor": "light"
+  },
+  {
+    "shape": "nested_constants64",
+    "version": "after559-precreated",
+    "supported": false,
+    "error": "System.NotSupportedException",
+    "message": "precreated path rejected tree",
+    "tfm": "net8.0",
+    "flavor": "light"
+  },
+  {
+    "shape": "nested_constants64",
+    "version": "after250-precreated",
+    "supported": true,
+    "tfm": "net8.0",
+    "flavor": "light"
+  },
+  {
+    "shape": "nested_siblings8",
+    "version": "after559-precreated",
+    "supported": false,
+    "error": "System.NotSupportedException",
+    "message": "precreated path rejected tree",
+    "tfm": "net8.0",
+    "flavor": "light"
+  },
+  {
+    "shape": "nested_siblings8",
+    "version": "after250-precreated",
+    "supported": true,
+    "tfm": "net8.0",
+    "flavor": "light"
+  },
+  {
+    "shape": "nested_reused8",
+    "version": "after559-precreated",
+    "supported": false,
+    "error": "System.NotSupportedException",
+    "message": "precreated path rejected tree",
+    "tfm": "net8.0",
+    "flavor": "light"
+  },
+  {
+    "shape": "nested_reused8",
+    "version": "after250-precreated",
+    "supported": true,
+    "tfm": "net8.0",
+    "flavor": "light"
+  },
+  {
+    "shape": "flat_constants64",
+    "version": "after559-precreated",
+    "supported": true,
+    "tfm": "net10.0",
+    "flavor": "standard"
+  },
+  {
+    "shape": "flat_constants64",
+    "version": "after250-precreated",
+    "supported": true,
+    "tfm": "net10.0",
+    "flavor": "standard"
+  },
+  {
+    "shape": "nested_constants8",
+    "version": "after559-precreated",
+    "supported": false,
+    "error": "System.NotSupportedException",
+    "message": "precreated path rejected tree",
+    "tfm": "net10.0",
+    "flavor": "standard"
+  },
+  {
+    "shape": "nested_constants8",
+    "version": "after250-precreated",
+    "supported": true,
+    "tfm": "net10.0",
+    "flavor": "standard"
+  },
+  {
+    "shape": "nested_constants64",
+    "version": "after559-precreated",
+    "supported": false,
+    "error": "System.NotSupportedException",
+    "message": "precreated path rejected tree",
+    "tfm": "net10.0",
+    "flavor": "standard"
+  },
+  {
+    "shape": "nested_constants64",
+    "version": "after250-precreated",
+    "supported": true,
+    "tfm": "net10.0",
+    "flavor": "standard"
+  },
+  {
+    "shape": "nested_siblings8",
+    "version": "after559-precreated",
+    "supported": false,
+    "error": "System.NotSupportedException",
+    "message": "precreated path rejected tree",
+    "tfm": "net10.0",
+    "flavor": "standard"
+  },
+  {
+    "shape": "nested_siblings8",
+    "version": "after250-precreated",
+    "supported": true,
+    "tfm": "net10.0",
+    "flavor": "standard"
+  },
+  {
+    "shape": "nested_reused8",
+    "version": "after559-precreated",
+    "supported": false,
+    "error": "System.NotSupportedException",
+    "message": "precreated path rejected tree",
+    "tfm": "net10.0",
+    "flavor": "standard"
+  },
+  {
+    "shape": "nested_reused8",
+    "version": "after250-precreated",
+    "supported": true,
+    "tfm": "net10.0",
+    "flavor": "standard"
+  },
+  {
+    "shape": "flat_constants64",
+    "version": "after559-precreated",
+    "supported": true,
+    "tfm": "net10.0",
+    "flavor": "light"
+  },
+  {
+    "shape": "flat_constants64",
+    "version": "after250-precreated",
+    "supported": true,
+    "tfm": "net10.0",
+    "flavor": "light"
+  },
+  {
+    "shape": "nested_constants8",
+    "version": "after559-precreated",
+    "supported": false,
+    "error": "System.NotSupportedException",
+    "message": "precreated path rejected tree",
+    "tfm": "net10.0",
+    "flavor": "light"
+  },
+  {
+    "shape": "nested_constants8",
+    "version": "after250-precreated",
+    "supported": true,
+    "tfm": "net10.0",
+    "flavor": "light"
+  },
+  {
+    "shape": "nested_constants64",
+    "version": "after559-precreated",
+    "supported": false,
+    "error": "System.NotSupportedException",
+    "message": "precreated path rejected tree",
+    "tfm": "net10.0",
+    "flavor": "light"
+  },
+  {
+    "shape": "nested_constants64",
+    "version": "after250-precreated",
+    "supported": true,
+    "tfm": "net10.0",
+    "flavor": "light"
+  },
+  {
+    "shape": "nested_siblings8",
+    "version": "after559-precreated",
+    "supported": false,
+    "error": "System.NotSupportedException",
+    "message": "precreated path rejected tree",
+    "tfm": "net10.0",
+    "flavor": "light"
+  },
+  {
+    "shape": "nested_siblings8",
+    "version": "after250-precreated",
+    "supported": true,
+    "tfm": "net10.0",
+    "flavor": "light"
+  },
+  {
+    "shape": "nested_reused8",
+    "version": "after559-precreated",
+    "supported": false,
+    "error": "System.NotSupportedException",
+    "message": "precreated path rejected tree",
+    "tfm": "net10.0",
+    "flavor": "light"
+  },
+  {
+    "shape": "nested_reused8",
+    "version": "after250-precreated",
+    "supported": true,
+    "tfm": "net10.0",
+    "flavor": "light"
+  }
+]
