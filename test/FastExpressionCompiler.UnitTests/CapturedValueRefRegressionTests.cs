@@ -39,6 +39,7 @@ public struct CapturedValueRefRegressionTests : ITestX
         Concurrent_compilation_keeps_hoisted_metadata_isolated(t);
         Static_indexed_properties_allow_captured_parameters(t);
         Private_mutable_reference_captures_reuse_value_slots(t);
+        Repeated_reference_captures_preserve_independent_state(t);
         Private_mutable_reference_container_captures_reuse_value_slots(t);
         Shared_or_byref_reference_captures_keep_cells(t);
         Boxed_value_cells_share_struct_mutations_and_replacements(t);
@@ -54,6 +55,48 @@ public struct CapturedValueRefRegressionTests : ITestX
 #endif
     }
 
+    public void Repeated_reference_captures_preserve_independent_state(TestContext t)
+    {
+        // Equal names must not merge two different storage locations. Repeated
+        // updates make both the returned state and state across calls observable.
+        var first = SysExpr.Parameter(typeof(string), "value");
+        var second = SysExpr.Parameter(typeof(string), "value");
+        var concat = typeof(string).GetMethod(nameof(string.Concat), new[] { typeof(string), typeof(string) });
+        var resultType = typeof(Tuple<string, string>);
+        var updates = new System.Linq.Expressions.Expression[65];
+        for (var i = 0; i < 32; ++i)
+        {
+            updates[i * 2] = SysExpr.Assign(first, SysExpr.Call(concat, first, SysExpr.Constant("a")));
+            updates[i * 2 + 1] = SysExpr.Assign(second, SysExpr.Call(concat, second, SysExpr.Constant("b")));
+        }
+        updates[64] = SysExpr.New(resultType.GetConstructor(new[] { typeof(string), typeof(string) }), first, second);
+        var child = SysExpr.Lambda<Func<Tuple<string, string>>>(SysExpr.Block(updates));
+        var expression = SysExpr.Lambda<Func<string, string, Func<Tuple<string, string>>>>(child, first, second);
+        var systemFactory = expression.Compile();
+        foreach (var flags in new[] { CompilerFlags.Default, CompilerFlags.NoInvocationLambdaInlining, CompilerFlags.EnableDelegateDebugInfo })
+        {
+            var factory = expression.FromSysExpression().CompileFast(true, flags);
+            if (!t.IsNotNull(factory)) return;
+            var actual = factory("first", "second");
+            var expected = systemFactory("first", "second");
+            var independentActual = factory("other first", "other second");
+            var independentExpected = systemFactory("other first", "other second");
+            for (var i = 0; i < 8; ++i)
+            {
+                var expectedState = expected();
+                var actualState = actual();
+                t.AreEqual(expectedState.Item1, actualState.Item1);
+                t.AreEqual(expectedState.Item2, actualState.Item2);
+                if ((i & 1) == 0)
+                {
+                    expectedState = independentExpected();
+                    actualState = independentActual();
+                    t.AreEqual(expectedState.Item1, actualState.Item1);
+                    t.AreEqual(expectedState.Item2, actualState.Item2);
+                }
+            }
+        }
+    }
     private sealed class HiddenCaptureReference
     {
         internal readonly int Value = 42;

@@ -3210,9 +3210,14 @@ namespace FastExpressionCompiler
                         return Result.ParameterIsNotVariableNorInPassedParameters;
                     }
                     context.Status |= ClosureStatus.HasClosure;
-                    if (!context.TryHoistVariable(parExpr))
-                        return Result.NotSupported_HoistedVariable;
-                    _ = nestedLambda.NonPassedParameters.GetIndexOrAdd(parExpr, default(RefEq<ParameterExpression>));
+                    // The first occurrence establishes storage for this capture. Repeated
+                    // uses need no further whole-root private-reference analysis.
+                    if (nestedLambda.NonPassedParameters.TryGetIndex(parExpr, default(RefEq<ParameterExpression>)) == -1)
+                    {
+                        if (!context.TryHoistVariable(parExpr))
+                            return Result.NotSupported_HoistedVariable;
+                        nestedLambda.NonPassedParameters.Add(parExpr);
+                    }
                 }
             }
             return Result.OK;
