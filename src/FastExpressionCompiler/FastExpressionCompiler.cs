@@ -1956,8 +1956,10 @@ namespace FastExpressionCompiler
                         case ExpressionType.OnesComplement:
                         case ExpressionType.UnaryPlus:
                         case ExpressionType.Unbox:
-                            return TryEmitSimpleUnaryExpression((UnaryExpression)expr, nodeType, il, ref context, parent);
-
+                        {
+                            var oper = ((UnaryExpression)expr).Operand;
+                            return TryEmitSimpleUnary(exprType, oper, oper.Type, nodeType, il, ref context, parent);
+                        }
                         case ExpressionType.TypeIs:
                         case ExpressionType.TypeEqual:
                             return TryEmitTypeIsOrEqual((TypeBinaryExpression)expr, il, ref context, parent);
@@ -2146,8 +2148,19 @@ namespace FastExpressionCompiler
                         case ExpressionType.Not:
                             {
                                 var notExpr = (UnaryExpression)expr;
-                                if (exprType == typeof(bool?) && notExpr.Method == null && notExpr.Operand.Type == typeof(bool?))
-                                    return TryEmitNullableBooleanNot(notExpr.Operand, il, ref context, parent);
+                                var oper = notExpr.Operand;
+                                var operType = oper.Type;
+                                if (exprType == typeof(bool?) && operType == typeof(bool?) && notExpr.Method == null)
+                                    return TryEmitNullableBooleanNot(oper, il, ref context, parent);
+
+                                if (notExpr.Method == null)
+                                {
+                                    if (operType == exprType && exprType != typeof(bool?) && exprType.IsNullable())
+                                        return TryEmitLiftedUnary(oper, nodeType, exprType, operType, Nullable.GetUnderlyingType(exprType), il, ref context, parent);
+
+                                    if (exprType.IsValueType && !exprType.IsPrimitive && !exprType.IsNullable())
+                                        return TryEmitSimpleUnary(exprType, oper, operType, nodeType, il, ref context, parent);
+                                }
 
                                 if (!exprType.IsPrimitive)
                                 {
@@ -3073,15 +3086,12 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitSimpleUnaryExpression(UnaryExpression expr, ExpressionType nodeType,
-                ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            private static bool TryEmitSimpleUnary(
+                Type exprType, Expression oper, Type operType, ExpressionType nodeType, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
-                var exprType = expr.Type;
-                var exprOper = expr.Operand;
-                if ((nodeType == ExpressionType.IsTrue | nodeType == ExpressionType.IsFalse) &&
-                    exprOper.Type == typeof(bool?))
+                if (operType == typeof(bool?) && (nodeType == ExpressionType.IsTrue | nodeType == ExpressionType.IsFalse))
                 {
-                    if (!TryEmit(exprOper, il, ref context, parent & ~ParentFlags.IgnoreResult))
+                    if (!TryEmit(oper, il, ref context, parent & ~ParentFlags.IgnoreResult))
                         return false;
 
                     var valueVar = EmitStoreLocalVariable(il, typeof(bool?));
@@ -3110,15 +3120,24 @@ namespace FastExpressionCompiler
                     return il.EmitPopIfIgnoreResult(parent);
                 }
 
-                if (!TryEmit(exprOper, il, ref context, parent))
+                var underlyingOperType = Nullable.GetUnderlyingType(operType);
+                if (underlyingOperType != null & nodeType != ExpressionType.TypeAs & nodeType != ExpressionType.Unbox)
+                    return TryEmitLiftedUnary(oper, nodeType, exprType, operType, underlyingOperType, il, ref context, parent);
+
+                if (!TryEmit(oper, il, ref context, parent & ~ParentFlags.IgnoreResult))
                     return false;
 
                 if (nodeType == ExpressionType.TypeAs)
                 {
-                    il.TryEmitBoxOf(exprOper.Type);
+                    il.TryEmitBoxOf(operType);
                     il.Demit(OpCodes.Isinst, exprType);
                     if (exprType.IsValueType)
                         il.Demit(OpCodes.Unbox_Any, exprType);
+                }
+                else if ((nodeType == ExpressionType.IsFalse | nodeType == ExpressionType.IsTrue) && operType != typeof(bool))
+                {
+                    if (!EmitUnaryOperation(il, nodeType, operType))
+                        return false;
                 }
                 else if (nodeType == ExpressionType.IsFalse)
                 {
@@ -3131,42 +3150,119 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Ldc_I4_1);
                     il.DmarkLabel(continueLabel);
                 }
-                else if (nodeType == ExpressionType.Increment)
+                else if (nodeType == ExpressionType.Increment | nodeType == ExpressionType.Decrement |
+                    nodeType == ExpressionType.Negate | nodeType == ExpressionType.NegateChecked |
+                    nodeType == ExpressionType.OnesComplement | nodeType == ExpressionType.UnaryPlus |
+                    nodeType == ExpressionType.Not)
                 {
-                    if (exprType.IsPrimitive)
-                    {
-                        if (!TryEmitNumberOne(il, exprType))
-                            return false;
-                        il.Demit(OpCodes.Add);
-                    }
-                    else if (!EmitMethodCallCheckForNull(il, exprType.GetMethod("op_Increment")))
+                    if (!EmitUnaryOperation(il, nodeType, exprType))
                         return false;
                 }
-                else if (nodeType == ExpressionType.Decrement)
-                {
-                    if (exprType.IsPrimitive)
-                    {
-                        if (!TryEmitNumberOne(il, exprType))
-                            return false;
-                        il.Demit(OpCodes.Sub);
-                    }
-                    else if (!EmitMethodCallCheckForNull(il, exprType.GetMethod("op_Decrement")))
-                        return false;
-                }
-                else if (nodeType == ExpressionType.Negate | nodeType == ExpressionType.NegateChecked)
-                {
-                    if (exprType.IsPrimitive)
-                        il.Demit(OpCodes.Neg);
-                    else if (!EmitMethodCallCheckForNull(il, exprType.GetMethod("op_UnaryNegation")))
-                        return false;
-                }
-                else if (nodeType == ExpressionType.OnesComplement)
-                    il.Demit(OpCodes.Not);
                 else if (nodeType == ExpressionType.Unbox)
                     il.Demit(OpCodes.Unbox_Any, exprType);
                 // else if (nodeType == ExpressionType.IsTrue) { }
                 // else if (nodeType == ExpressionType.UnaryPlus) { }
 
+                return il.EmitPopIfIgnoreResult(parent);
+            }
+
+            // Applies the unary operator to the value on the stack: the IL instruction for the primitives, the user-defined operator method otherwise
+            private static bool EmitUnaryOperation(ILGenerator il, ExpressionType nodeType, Type type)
+            {
+                if (type.IsEnum)
+                    type = Enum.GetUnderlyingType(type);
+
+                if (type.IsPrimitive)
+                {
+                    switch (nodeType)
+                    {
+                        case ExpressionType.Increment:
+                            if (!TryEmitNumberOne(il, type))
+                                return false;
+                            il.Demit(OpCodes.Add);
+                            return true;
+                        case ExpressionType.Decrement:
+                            if (!TryEmitNumberOne(il, type))
+                                return false;
+                            il.Demit(OpCodes.Sub);
+                            return true;
+                        case ExpressionType.Negate:
+                            il.Demit(OpCodes.Neg);
+                            return true;
+                        case ExpressionType.NegateChecked:
+                            // `x * -1` overflows exactly when the checked negation does
+                            if (type == typeof(int))
+                            {
+                                il.Demit(OpCodes.Ldc_I4_M1);
+                                il.Demit(OpCodes.Mul_Ovf);
+                            }
+                            else if (type == typeof(long))
+                            {
+                                il.Demit(OpCodes.Ldc_I8, -1L);
+                                il.Demit(OpCodes.Mul_Ovf);
+                            }
+                            else
+                            {
+                                il.Demit(OpCodes.Neg);
+                                if (type == typeof(short))
+                                    il.Demit(OpCodes.Conv_Ovf_I2);
+                                else if (type == typeof(sbyte))
+                                    il.Demit(OpCodes.Conv_Ovf_I1);
+                            }
+                            return true;
+                        case ExpressionType.OnesComplement:
+                        case ExpressionType.Not:
+                            il.Demit(OpCodes.Not);
+                            return true;
+                        case ExpressionType.UnaryPlus:
+                            return true;
+                    }
+                    return false;
+                }
+
+                var methodName = nodeType switch
+                {
+                    ExpressionType.Increment => "op_Increment",
+                    ExpressionType.Decrement => "op_Decrement",
+                    ExpressionType.Negate or ExpressionType.NegateChecked => "op_UnaryNegation",
+                    ExpressionType.OnesComplement => "op_OnesComplement",
+                    ExpressionType.Not => "op_LogicalNot",
+                    ExpressionType.UnaryPlus => "op_UnaryPlus",
+                    ExpressionType.IsTrue => "op_True",
+                    ExpressionType.IsFalse => "op_False",
+                    _ => null
+                };
+                return methodName != null && EmitMethodCallCheckForNull(il, type.GetMethod(methodName, BindingFlags.Public | BindingFlags.Static, null, new[] { type }, null));
+            }
+
+            // Lifted unary operator: null stays null, otherwise the operator is applied to the underlying value and wrapped back
+            private static bool TryEmitLiftedUnary(
+                Expression oper, ExpressionType nodeType, Type exprType, Type operType, Type underlyingType,
+                ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            {
+                var flags = (parent
+                    & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
+                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
+                    | ParentFlags.Arithmetic;
+
+                if (!TryEmit(oper, il, ref context, flags))
+                    return false;
+
+                var nullLabel = il.DefineLabel();
+                var doneLabel = il.DefineLabel();
+                var opVar = EmitNullableVarAddressAndHasValue(il, operType);
+                il.Demit(OpCodes.Brfalse, nullLabel);
+
+                EmitLoadVarOrNullableValue(il, opVar, operType, loadNullableValue: true);
+                if (!EmitUnaryOperation(il, nodeType, underlyingType))
+                    return false;
+                il.Demit(OpCodes.Newobj, exprType.GetNullableConstructor());
+                il.Demit(OpCodes.Br, doneLabel);
+
+                il.DmarkLabel(nullLabel);
+                EmitLoadLocalVariable(il, InitValueTypeVariable(il, exprType));
+
+                il.DmarkLabel(doneLabel);
                 return il.EmitPopIfIgnoreResult(parent);
             }
 
@@ -3264,7 +3360,7 @@ namespace FastExpressionCompiler
                     return TryEmitComparison(((BinaryExpression)op).Left, ((BinaryExpression)op).Right,
                         expr.Type, ExpressionType.NotEqual, il, ref context, parent);
 
-                if (!TryEmit(op, il, ref context, parent))
+                if (!TryEmit(op, il, ref context, parent & ~ParentFlags.IgnoreResult))
                     return false;
 
                 if ((parent & ParentFlags.IgnoreResult) != 0)
@@ -6350,9 +6446,9 @@ namespace FastExpressionCompiler
                 return il.EmitPopIfIgnoreResult(parent);
             }
 
-            // Lifted `!` for `bool?`: null stays null
-            private static bool TryEmitNullableBooleanNot(Expression operand, ILGenerator il,
-                ref CompilerContext context, ParentFlags parent)
+            // Lifted `!` for `bool?`, null stays null
+            private static bool TryEmitNullableBooleanNot(
+                Expression operand, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var flags = (parent
                     & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
@@ -6363,16 +6459,14 @@ namespace FastExpressionCompiler
                     return false;
                 var opVar = EmitStoreLocalVariable(il, typeof(bool?));
 
-                var hasValueGetter = Tools.NullableReflected<bool>.HasValueGetterMethod;
-                var valueField = Tools.NullableReflected<bool>.ValueField;
                 var nullLabel = il.DefineLabel();
                 var doneLabel = il.DefineLabel();
 
                 EmitLoadLocalVariableAddress(il, opVar);
-                EmitMethodCall(il, hasValueGetter);
+                EmitMethodCall(il, Tools.NullableReflected<bool>.HasValueGetterMethod);
                 il.Demit(OpCodes.Brfalse, nullLabel);
                 EmitLoadLocalVariableAddress(il, opVar);
-                il.Demit(OpCodes.Ldfld, valueField);
+                il.Demit(OpCodes.Ldfld, Tools.NullableReflected<bool>.ValueField);
                 il.Demit(OpCodes.Ldc_I4_0);
                 il.Demit(OpCodes.Ceq);
                 il.Demit(OpCodes.Newobj, Tools.NullableReflected<bool>.Constructor);
@@ -10465,8 +10559,8 @@ namespace FastExpressionCompiler
                         var l = (LambdaExpression)expr;
                         var sc = _xps.Count;
 #if LIGHT_EXPRESSION
-                    var pc = l.ParameterCount;
-                    for (var i = 0; i < pc; i++) _xps.AddDefaultAndGetRef() = l.GetParameter(i);
+                        var pc = l.ParameterCount;
+                        for (var i = 0; i < pc; i++) _xps.AddDefaultAndGetRef() = l.GetParameter(i);
 #else
                         var pc = l.Parameters.Count;
                         for (var i = 0; i < pc; i++) _xps.AddDefaultAndGetRef() = l.Parameters[i];
@@ -10567,8 +10661,8 @@ namespace FastExpressionCompiler
                 case ExpressionType.NewArrayBounds:
                     {
 #if LIGHT_EXPRESSION
-                    var args = (IArgumentProvider)expr;
-                    for (var i = 0; i < args.ArgumentCount; i++) h = Combine(h, Hash(args.GetArgument(i)));
+                        var args = (IArgumentProvider)expr;
+                        for (var i = 0; i < args.ArgumentCount; i++) h = Combine(h, Hash(args.GetArgument(i)));
 #else
                         var na = (NewArrayExpression)expr;
                         for (var i = 0; i < na.Expressions.Count; i++) h = Combine(h, Hash(na.Expressions[i]));
@@ -10594,7 +10688,7 @@ namespace FastExpressionCompiler
                     {
                         var mi = (MemberInitExpression)expr;
 #if LIGHT_EXPRESSION
-                    h = Combine(h, Hash(mi.Expression));
+                        h = Combine(h, Hash(mi.Expression));
 #else
                         h = Combine(h, Hash(mi.NewExpression));
 #endif
@@ -10690,17 +10784,17 @@ namespace FastExpressionCompiler
                         var lx = (LambdaExpression)x;
                         var ly = (LambdaExpression)y;
 #if LIGHT_EXPRESSION
-                    var pc = lx.ParameterCount;
-                    if (pc != ly.ParameterCount) return false;
-                    var sc = _xps.Count;
-                    for (var i = 0; i < pc; i++)
-                    {
-                        var lpx = lx.GetParameter(i);
-                        var lpy = ly.GetParameter(i);
-                        if (lpx.Type != lpy.Type | lpx.IsByRef != lpy.IsByRef) return false;
-                        _xps.AddDefaultAndGetRef() = lpx;
-                        _yps.AddDefaultAndGetRef() = lpy;
-                    }
+                        var pc = lx.ParameterCount;
+                        if (pc != ly.ParameterCount) return false;
+                        var sc = _xps.Count;
+                        for (var i = 0; i < pc; i++)
+                        {
+                            var lpx = lx.GetParameter(i);
+                            var lpy = ly.GetParameter(i);
+                            if (lpx.Type != lpy.Type | lpx.IsByRef != lpy.IsByRef) return false;
+                            _xps.AddDefaultAndGetRef() = lpx;
+                            _yps.AddDefaultAndGetRef() = lpy;
+                        }
 #else
                         var pc = lx.Parameters.Count;
                         if (pc != ly.Parameters.Count) return false;
@@ -10823,7 +10917,7 @@ namespace FastExpressionCompiler
                         var nx = (NewArrayExpression)x;
                         var ny = (NewArrayExpression)y;
 #if LIGHT_EXPRESSION
-                    return EqArgs(nx, ny);
+                        return EqArgs(nx, ny);
 #else
                         var ec = nx.Expressions.Count;
                         if (ec != ny.Expressions.Count) return false;
@@ -10872,7 +10966,7 @@ namespace FastExpressionCompiler
                         var bc = mx.Bindings.Count;
                         if (bc != my.Bindings.Count) return false;
 #if LIGHT_EXPRESSION
-                    if (!Eq(mx.Expression, my.Expression)) return false;
+                        if (!Eq(mx.Expression, my.Expression)) return false;
 #else
                         if (!Eq(mx.NewExpression, my.NewExpression)) return false;
 #endif

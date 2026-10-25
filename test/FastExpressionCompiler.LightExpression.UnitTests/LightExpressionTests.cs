@@ -76,6 +76,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             IsLifted_and_IsLiftedToNull_are_the_same_as_in_system_expressions();
             Lifted_comparisons_with_null_operand_and_other_nullable_types_are_the_same_as_system();
             Binary_operators_with_methods_and_nullable_operands_are_the_same_as_system();
+            Unary_operators_with_nullable_and_user_defined_operands_are_the_same_as_system();
             Lifted_comparisons_have_the_same_type_and_result_as_system();
             And_AndAlso_OrElse_take_the_type_from_the_left_operand();
             Can_compile_nullable_boolean_and_also();
@@ -89,7 +90,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_print_reference_comparison();
             Can_round_trip_new_expression_kinds_through_system_expressions();
 
-            return 70;
+            return 71;
         }
 
         private static int _sideEffectCalls;
@@ -945,6 +946,95 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.AreEqual(0, failures.Count, string.Join("; ", failures));
         }
 
+        public struct UnMoney
+        {
+            public int V;
+            public UnMoney(int v) { V = v; }
+            public static UnMoney operator -(UnMoney a) => new UnMoney(-a.V);
+            public static UnMoney operator +(UnMoney a) => new UnMoney(a.V + 1000);
+            public static UnMoney operator ~(UnMoney a) => new UnMoney(~a.V);
+            public static UnMoney operator !(UnMoney a) => new UnMoney(a.V + 5000);
+            public static UnMoney operator ++(UnMoney a) => new UnMoney(a.V + 1);
+            public static UnMoney operator --(UnMoney a) => new UnMoney(a.V - 1);
+            public static bool operator true(UnMoney a) => a.V != 0;
+            public static bool operator false(UnMoney a) => a.V == 0;
+            public override bool Equals(object o) => o is UnMoney m && m.V == V;
+            public override int GetHashCode() => V;
+            public override string ToString() => "U" + V;
+        }
+
+        public void Unary_operators_with_nullable_and_user_defined_operands_are_the_same_as_system()
+        {
+            var names = new[] { "Negate", "NegateChecked", "UnaryPlus", "OnesComplement", "Increment", "Decrement", "Not", "IsTrue", "IsFalse" };
+            var cases = new (Type, object[])[]
+            {
+                (typeof(int), new object[] { 0, 1, int.MinValue, int.MaxValue }),
+                (typeof(int?), new object[] { null, 0, 1, int.MinValue, int.MaxValue }),
+                (typeof(long?), new object[] { null, 0L, 1L, long.MinValue, long.MaxValue }),
+                (typeof(short?), new object[] { null, (short)0, (short)1, short.MinValue, short.MaxValue }),
+                (typeof(ushort?), new object[] { null, (ushort)0, (ushort)1, ushort.MaxValue }),
+                (typeof(byte?), new object[] { null, (byte)0, (byte)1, byte.MaxValue }),
+                (typeof(sbyte?), new object[] { null, (sbyte)0, (sbyte)1, sbyte.MinValue, sbyte.MaxValue }),
+                (typeof(uint?), new object[] { null, 0u, 1u, uint.MaxValue }),
+                (typeof(ulong?), new object[] { null, 0UL, 1UL, ulong.MaxValue }),
+                (typeof(double?), new object[] { null, 0.0, 1.5, double.MaxValue }),
+                (typeof(float?), new object[] { null, 0f, 1.5f, float.MaxValue }),
+                (typeof(decimal), new object[] { 0m, 1m, decimal.MinValue }),
+                (typeof(decimal?), new object[] { null, 0m, 1m, decimal.MinValue }),
+                (typeof(bool), new object[] { true, false }),
+                (typeof(bool?), new object[] { null, true, false }),
+                (typeof(UnMoney), new object[] { new UnMoney(0), new UnMoney(3) }),
+                (typeof(UnMoney?), new object[] { null, new UnMoney(0), new UnMoney(3) }),
+                (typeof(LiftEnum), new object[] { LiftEnum.A, LiftEnum.C }),
+                (typeof(LiftEnum?), new object[] { null, LiftEnum.A, LiftEnum.C }),
+            };
+            var failures = new System.Collections.Generic.List<string>();
+            foreach (var (t, xs) in cases)
+                foreach (var name in names)
+                {
+                    var what = $"{t.Name} {name}";
+                    Delegate sysD, fastD; Type rt;
+                    try
+                    {
+                        var sa = SysExpr.Parameter(t, "a");
+                        var se = (SysExpr)typeof(SysExpr).GetMethod(name, new[] { typeof(SysExpr) }).Invoke(null, new object[] { sa });
+                        rt = se.Type;
+                        sysD = SysExpr.Lambda(typeof(Func<,>).MakeGenericType(t, rt), se, sa).Compile();
+                    }
+                    catch (Exception) { continue; }
+                    try
+                    {
+                        var la = Parameter(t, "a");
+                        var le = (Expression)typeof(Expression).GetMethod(name, new[] { typeof(Expression) }).Invoke(null, new object[] { la });
+                        if (le.Type != rt) { failures.Add($"type: {what} sys={rt.Name} light={le.Type.Name}"); continue; }
+                        fastD = Lambda(typeof(Func<,>).MakeGenericType(t, rt), le, la).CompileFast(true);
+                        if (fastD == null) { failures.Add("not compiled: " + what); continue; }
+                    }
+                    catch (Exception ex) { failures.Add("exception: " + what + " " + (ex.InnerException ?? ex).Message.Split('\n')[0]); continue; }
+
+                    // the same operation with the ignored result
+                    try
+                    {
+                        var ia = Parameter(t, "a");
+                        var ie = (Expression)typeof(Expression).GetMethod(name, new[] { typeof(Expression) }).Invoke(null, new object[] { ia });
+                        var ignoredD = Lambda(typeof(Func<,>).MakeGenericType(t, typeof(int)), Block(ie, Constant(1)), ia).CompileFast(true);
+                        if (ignoredD == null) failures.Add("ignored not compiled: " + what);
+                        else
+                            foreach (var x in xs)
+                                try { ignoredD.DynamicInvoke(x); } catch (Exception ex) when (ex.InnerException is OverflowException) { }
+                    }
+                    catch (Exception ex) { failures.Add("ignored exception: " + what + " " + (ex.InnerException ?? ex).Message.Split('\n')[0]); }
+
+                    foreach (var x in xs)
+                    {
+                        object e, a;
+                        try { e = sysD.DynamicInvoke(x); } catch (Exception ex) { e = "ex:" + ex.InnerException?.GetType().Name; }
+                        try { a = fastD.DynamicInvoke(x); } catch (Exception ex) { a = "ex:" + ex.InnerException?.GetType().Name; }
+                        if (!Equals(e, a)) { failures.Add($"value: {what} ({x}) sys={e} fec={a}"); break; }
+                    }
+                }
+            Asserts.AreEqual(0, failures.Count, string.Join("\n", failures));
+        }
         public void Lifted_comparisons_have_the_same_type_and_result_as_system()
         {
             var ip = Parameter(typeof(int), "a"); var iq = Parameter(typeof(int), "b");
