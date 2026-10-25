@@ -1,0 +1,168 @@
+using System;
+using System.Linq;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Text.Json;
+#if LIGHT
+using FastExpressionCompiler.LightExpression;
+using E = FastExpressionCompiler.LightExpression.Expression;
+using X = FastExpressionCompiler.LightExpression.Expression;
+using L = FastExpressionCompiler.LightExpression.LambdaExpression;
+#else
+using FastExpressionCompiler;
+using E = System.Linq.Expressions.Expression;
+using X = System.Linq.Expressions.Expression;
+using L = System.Linq.Expressions.LambdaExpression;
+#endif
+public class Box { public int Value; public Box(int x) { Value=x; } public int Add(int x)=>Value+x; public static int Read(Box b)=>b.Value; }
+public struct Counter { public int Value; public Counter(int value){Value=value;} public int Increment()=>++Value; }
+public struct LargeCounter { public int Value; public long A,B,C,D; public LargeCounter(int value){this=default;Value=value;} public int Increment()=>++Value; }
+public class DelegateHolder { public readonly Func<int> Reader; public DelegateHolder(Func<int> reader){Reader=reader;} }
+public class Holder { public Box Box; public Holder(Box box){Box=box;} }
+public static class Program {
+ public static int AddRef(ref int value)=>++value;
+ static object sink; static long checksum;
+#if LIGHT
+ static L systemSource;
+ static System.Linq.Expressions.LambdaExpression systemPrepared;
+#endif
+ record Scenario(string Name, Func<L> Build);
+ static X Balanced(X x,int depth) => depth==0?x:E.Add(Balanced(x,depth-1),Balanced(x,depth-1));
+ static L Build(string name) {
+  var x=E.Parameter(typeof(int),"x"); X body=x;
+  switch(name) {
+   case "constant": body=E.Constant(42);break;
+   case "add": body=E.Add(x,E.Constant(1));break;
+   case "arithmetic64": for(int i=0;i<64;i++)body=E.Add(body,E.Constant(i));break;
+   case "balanced256":body=Balanced(x,8);break;
+   case "conditional":body=E.Condition(E.LessThan(x,E.Constant(0)),E.Negate(x),x);break;
+   case "nullable":body=E.Coalesce(E.Convert(x,typeof(int?)),E.Constant(7));break;
+   case "new_member":body=E.Field(E.New(typeof(Box).GetConstructor(new[]{typeof(int)}),x),"Value");break;
+   case "constant_object":body=E.Call(E.Constant(new Box(7)),typeof(Box).GetMethod("Add"),x);break;
+   case "array":body=E.ArrayIndex(E.Constant(new[]{2,3,5,7}),E.And(x,E.Constant(3)));break;
+   case "new_array":body=E.ArrayLength(E.NewArrayInit(typeof(int),x,x,x));break;
+   case "interned_string":body=E.Property(E.Constant("fixed literal"),"Length");break;
+   case "noninterned_string":body=E.Property(E.Constant(new string('z',37)),"Length");break;
+   case "try_catch":body=E.TryCatch(E.Divide(E.Constant(42),x),E.Catch(typeof(DivideByZeroException),E.Constant(-1)));break;
+   case "try_finally":body=E.TryFinally(E.Add(x,E.Constant(1)),E.Empty());break;
+   case "switch":body=E.Switch(x,E.Constant(8),E.SwitchCase(E.Constant(3),E.Constant(0)),E.SwitchCase(E.Constant(4),E.Constant(1)));break;
+   case "goto":{var t=E.Label(typeof(int));body=E.Block(E.Return(t,x),E.Label(t,E.Constant(0)));break;}
+   case "loop":{var v=E.Variable(typeof(int));var t=E.Label(typeof(int));body=E.Block(new[]{v},E.Assign(v,E.Constant(0)),E.Loop(E.IfThenElse(E.LessThan(v,E.Constant(8)),E.Block(E.PostIncrementAssign(v),E.Empty()),E.Break(t,v)),t));break;}
+   case "blocks32":case "blocks128":{int n=name=="blocks32"?32:128;var arr=new List<X>();for(int i=0;i<n;i++){var v=E.Variable(typeof(int),"v"+i);arr.Add(E.Block(new[]{v},E.Assign(v,x),E.Add(v,E.Constant(i))));}body=E.Block(arr);break;}
+   case "invoke_literal":{var p=E.Parameter(typeof(int));body=E.Invoke(E.Lambda<Func<int,int>>(E.Add(p,E.Constant(2)),p),x);break;}
+   case "invoke_delegate":body=E.Invoke(E.Constant((Func<int,int>)(v=>v+2)),x);break;
+   case "invoke_try_argument":{var p=E.Parameter(typeof(int));body=E.Invoke(E.Lambda<Func<int,int>>(E.Add(p,E.Constant(2)),p),E.TryFinally(x,E.Empty()));break;}
+   case "capture_byref_call": return E.Lambda<Func<int,Func<int>>>(E.Lambda<Func<int>>(E.Call(typeof(Program).GetMethod("AddRef"),x)),x);
+   case "capture_struct":case "capture_large_struct":{
+    var type=name=="capture_struct"?typeof(Counter):typeof(LargeCounter);var v=E.Variable(type);
+    return E.Lambda<Func<int,Func<int>>>(E.Block(new[]{v},E.Assign(v,E.New(type.GetConstructor(new[]{typeof(int)}),x)),E.Lambda<Func<int>>(E.Call(v,type.GetMethod("Increment")))),x);
+   }
+   case "capture_mutable_reference":case "capture_mutable_reference_ctor":case "capture_mutable_reference_array":{
+    var v=E.Variable(typeof(string),"text");
+    var toggle=E.Assign(v,E.Condition(E.Equal(v,E.Constant("first")),E.Constant("second"),E.Constant("first")));
+    X child=E.Lambda<Func<int>>(E.Block(toggle,E.Property(v,"Length")));
+    if(name=="capture_mutable_reference_ctor")child=E.Field(E.New(typeof(DelegateHolder).GetConstructors()[0],child),"Reader");
+    if(name=="capture_mutable_reference_array")child=E.ArrayIndex(E.NewArrayInit(typeof(Func<int>),child),E.Constant(0));
+    return E.Lambda<Func<int,Func<int>>>(E.Block(new[]{v},E.Assign(v,E.Constant("first")),child),x);
+   }
+   case "capture_mutable": return E.Lambda<Func<int,Func<int>>>(E.Lambda<Func<int>>(E.PreIncrementAssign(x)),x);
+   case "capture1": return E.Lambda<Func<int,Func<int>>>(E.Lambda<Func<int>>(E.Add(x,E.Constant(1))),x);
+   case "capture_call":case "capture_ctor":case "capture_invoke":case "capture_try":case "capture_array":{
+   var v=E.Variable(typeof(Box),"box");X read=E.Field(v,"Value");
+   if(name=="capture_call")read=E.Call(typeof(Box).GetMethod("Read"),v);
+   if(name=="capture_ctor")read=E.Field(E.Field(E.New(typeof(Holder).GetConstructor(new[]{typeof(Box)}),v),"Box"),"Value");
+   if(name=="capture_invoke")read=E.Invoke(E.Constant((Func<Box,int>)Box.Read),v);
+   if(name=="capture_try")read=E.TryFinally(read,E.Empty());
+   if(name=="capture_array")read=E.Field(E.ArrayIndex(E.NewArrayInit(typeof(Box),v),E.Constant(0)),"Value");
+   return E.Lambda<Func<int,Func<int>>>(E.Block(new[]{v},E.Assign(v,E.Constant(new Box(7))),E.Lambda<Func<int>>(read)),x);
+   }
+   case "capture_reference":{var v=E.Variable(typeof(Box),"box");return E.Lambda<Func<int,Func<int>>>(E.Block(new[]{v},E.Assign(v,E.Constant(new Box(7))),E.Lambda<Func<int>>(E.Field(v,"Value"))),x);}
+   case "nested_mixed32":case "nested_mixed128":{int n=int.Parse(name.Substring("nested_mixed".Length));for(int i=0;i<n;i++)body=E.Condition(E.GreaterThan(x,E.Constant(-9)),E.Block(body),E.Constant(0));break;}
+   case "nested_eh8":case "nested_eh32":{int n=int.Parse(name.Substring("nested_eh".Length));for(int i=0;i<n;i++)body=E.TryFinally(body,E.Empty());break;}
+   case "nested_blocks8":case "nested_blocks32":case "nested_blocks128":{int count=int.Parse(name.Substring("nested_blocks".Length));for(int i=0;i<count;i++)body=E.Block(body);break;}
+   case "capture8":{var vs=Enumerable.Range(0,8).Select(i=>E.Variable(typeof(int),"v"+i)).ToArray();X sum=x;foreach(var v in vs)sum=E.Add(sum,v);return E.Lambda<Func<int,Func<int>>>(E.Block(vs,vs.Select(v=>(X)E.Assign(v,x)).Concat(new X[]{E.Lambda<Func<int>>(sum)})),x);}
+   case "quote_closed":return E.Lambda<Func<int,System.Linq.Expressions.Expression<Func<int>>>>(E.Quote(E.Lambda<Func<int>>(E.Constant(9))),x);
+   case "quote_capture":return E.Lambda<Func<int,System.Linq.Expressions.Expression<Func<int>>>>(E.Quote(E.Lambda<Func<int>>(x)),x);
+   case "runtime_variables":
+#if LIGHT
+    var sp=System.Linq.Expressions.Expression.Parameter(typeof(int));
+    return System.Linq.Expressions.Expression.Lambda<Func<int,IRuntimeVariables>>(System.Linq.Expressions.Expression.RuntimeVariables(sp),sp).ToLightExpression();
+#else
+    return E.Lambda<Func<int,IRuntimeVariables>>(E.RuntimeVariables(x),x);
+#endif
+   default:throw new Exception(name);
+  }
+  return E.Lambda<Func<int,int>>(body,x);
+ }
+ static Delegate Compile(L tree,bool system) {
+  if(system) {
+#if LIGHT
+   if(!ReferenceEquals(systemSource,tree)){systemSource=tree;systemPrepared=(System.Linq.Expressions.LambdaExpression)tree.ToExpression();}
+   return systemPrepared.Compile();
+#else
+   return tree.Compile();
+#endif
+  }
+  return tree.CompileFast(true)??throw new NotSupportedException("strict FEC returned null");
+ }
+ static string Verify(Delegate d) {
+  var parts=new List<string>();
+  foreach(int v in new[]{-2,0,3}) {
+   var result=d.DynamicInvoke(v);
+   if(result is Func<int> nested) result=nested()+":"+nested();
+   if(result is System.Linq.Expressions.Expression<Func<int>> quote) result=quote.Compile()();
+   if(result is IRuntimeVariables vars) {var initial=vars[0];vars[0]=17;result=initial+":"+vars[0];}
+   parts.Add(result?.ToString()??"null");
+  }
+  return string.Join("|",parts);
+ }
+ static Action<int> Driver(Delegate d) {
+  if(d is Func<int,int> f)return n=>{long s=0;for(int i=0;i<n;i++)s+=f(3);checksum=s;};
+  if(d is Func<int,Func<int>> f2)return n=>{long s=0;for(int i=0;i<n;i++){var v=f2(3);sink=v;s+=v();}checksum=s;};
+  if(d is Func<int,System.Linq.Expressions.Expression<Func<int>>> fq)return n=>{for(int i=0;i<n;i++)sink=fq(3);};
+  if(d is Func<int,IRuntimeVariables> fr)return n=>{for(int i=0;i<n;i++)sink=fr(3);};
+  throw new Exception("driver "+d.GetType());
+ }
+ record Sample(string Version,string Runtime,string Flavor,string Scenario,string Phase,int Round,int SampleIndex,int Operations,double NsPerOp,double BytesPerOp,int Gen0,int Gen1,int Gen2);
+ static void Measure(string version,string flavor,string scenario,string phase,int round,Action<int> op) {
+  op(30);
+  int n=phase=="invoke"?10000:20;
+  var sw=Stopwatch.StartNew();op(n);sw.Stop();
+  n=(int)Math.Clamp(n*8.0/Math.Max(sw.Elapsed.TotalMilliseconds,0.01),phase=="invoke"?1000:10,phase=="invoke"?1000000:2000);
+  for(int k=0;k<7;k++) {
+   GC.Collect();GC.WaitForPendingFinalizers();GC.Collect();
+   long allocated=GC.GetAllocatedBytesForCurrentThread();int g0=GC.CollectionCount(0),g1=GC.CollectionCount(1),g2=GC.CollectionCount(2);
+   long start=Stopwatch.GetTimestamp();op(n);long end=Stopwatch.GetTimestamp();
+   long bytes=GC.GetAllocatedBytesForCurrentThread()-allocated;
+   Console.WriteLine(JsonSerializer.Serialize(new Sample(version,Environment.Version.ToString(),flavor,scenario,phase,round,k,n,(end-start)*1e9/Stopwatch.Frequency/n,bytes/(double)n,GC.CollectionCount(0)-g0,GC.CollectionCount(1)-g1,GC.CollectionCount(2)-g2)));
+  }
+ }
+ public static void Main(string[] args) {
+  string version=args[0],flavor=args[1];int round=int.Parse(args[2]);bool system=version=="system";
+  string[] names={"constant","add","arithmetic64","balanced256","conditional","nullable","new_member","constant_object","array","new_array","interned_string","noninterned_string","try_catch","try_finally","switch","goto","loop","blocks32","blocks128","invoke_literal","invoke_delegate","invoke_try_argument","capture1","capture8","quote_closed","quote_capture","runtime_variables"};
+  names=names.Concat(new[]{"capture_reference","nested_blocks8","nested_blocks32","nested_blocks128","nested_mixed32","nested_mixed128","nested_eh8","nested_eh32","capture_call","capture_ctor","capture_invoke","capture_try","capture_array","capture_mutable","capture_byref_call","capture_struct","capture_large_struct","capture_mutable_reference","capture_mutable_reference_ctor","capture_mutable_reference_array"}).ToArray();
+  if(args.Length>3)names=names.Where(n=>args.Skip(3).Contains(n)).ToArray();
+  foreach(string name in names) {
+   try {
+    var tree=Build(name);var oracle=Compile(tree,true);var d=Compile(tree,system);var expected=Verify(oracle);var actual=Verify(d);
+    if(expected!=actual)throw new Exception("behavior mismatch "+actual+" expected "+expected);
+    Console.Error.WriteLine("PASS "+version+" "+flavor+" "+name+" "+actual);
+    Action<int> build=n=>{for(int i=0;i<n;i++)sink=Build(name);};
+    Action<int> compile=n=>{for(int i=0;i<n;i++)sink=Compile(tree,system);};
+    Action<int> first=n=>{for(int i=0;i<n;i++){var c=Compile(tree,system);if(c is Func<int,int> f)checksum=f(3);else if(c is Func<int,Func<int>> ff){var nested=ff(3);sink=nested;checksum=nested();}else if(c is Func<int,IRuntimeVariables> fr)sink=fr(3);else sink=((Func<int,System.Linq.Expressions.Expression<Func<int>>>)c)(3);}};
+    Measure(version,flavor,name,"construct",round,build);
+    Measure(version,flavor,name,"compile",round,compile);
+    Measure(version,flavor,name,"compile_first",round,first);
+    Measure(version,flavor,name,"invoke",round,Driver(d));
+    if(d is Func<int,Func<int>> factory) {
+     Action<int> activate=n=>{for(int i=0;i<n;i++)sink=factory(3);};
+     var inner=factory(3); Action<int> nestedInvoke=n=>{long sum=0;for(int i=0;i<n;i++)sum+=inner();checksum=sum;};
+     Measure(version,flavor,name,"activate",round,activate);
+     Measure(version,flavor,name,"nested_invoke",round,nestedInvoke);
+    }
+   } catch(Exception e) {Console.Error.WriteLine("FAIL "+version+" "+flavor+" "+name+" "+e);}
+  }
+  GC.KeepAlive(sink);GC.KeepAlive(checksum);
+ }
+}

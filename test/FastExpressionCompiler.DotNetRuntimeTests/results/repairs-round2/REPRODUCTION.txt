@@ -1,0 +1,42 @@
+Reproduction and interpretation
+
+Use Windows, Python 3, .NET SDK 10 with net8 runtime, and Framework 4.8.1 with
+net472 targeting support. Measurements here used an ARM64 VM; do not expect
+identical wall times elsewhere. Run elapsed benchmarks sequentially without
+builds or other probes in parallel.
+
+Unzip reproduction.zip into a scratch folder. The integrated and
+integrated-framework directories contain exact before/published/fixed library
+sources, the common Program.cs and standalone Harness.csproj projects. They can
+be built without checking out a different branch. For each version/flavor:
+  dotnet build pr558-round2/integrated/<version>/<flavor>/Harness.csproj -c Release
+  dotnet build pr558-round2/integrated-framework/<version>/<flavor>/Harness.csproj -c Release
+
+Set DOTNET_TieredCompilation=0 and DOTNET_ReadyToRun=0 for modern timings.
+Modern invocation:
+  dotnet <version>/<flavor>/bin/Release/<net8.0|net10.0>/Harness.dll <version> <flavor> <round> <scenario> ...
+Framework invocation:
+  <version>/<flavor>/bin/Release/net472/Harness.exe <version> <flavor> <round>
+Use versions before,published,fixed,system; system runs the fixed project's
+harness with the system argument. Flavors standard/light; rounds 0/1. Scenario
+names and exclusions are explicit in integrated-matrix.py. The run/analyze
+commands in both integrated scripts automate the exact opposite-order rounds;
+build commands export git sources and assume the original repository location,
+so adapt r if recreating exports instead of building archived snapshots.
+
+Raw-measurements.zip includes unaggregated samples, manifests, hashes, and
+accepted/rejected experiment decisions. Frame-stages.json maps each isolated
+source pair to agent/main commits. Validation-logs.zip preserves full logs and
+imported batch counters; validation.json asserts actual passes, not merely a
+zero runner exit code. Native production/test sources are in the measured git
+commit. Standard/Light production builds use all project targets; native tests
+use TestsRunner net8/net10, Framework uses TestsRunner.Net472 with en-US culture;
+the imported suite uses DotNetRuntimeTests net10 with FEC_TEST_COMPILER=fec.
+
+Numbers count managed allocations only. Time medians are descriptive; all
+observations, including residual regressions and noisy controls, are retained.
+No native/JIT/retained-memory totals or universal parity claim is made.
+Equal-count confirmation projects use200 operations per compilation sample and
+100000 per invocation sample. They address fractional adaptive-count residuals;
+the original data is not replaced or adjusted. Empty windows allocate0. The
+control is not used to claim precise CPU improvements from very short phases.

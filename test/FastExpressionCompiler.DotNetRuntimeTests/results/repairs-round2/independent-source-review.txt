@@ -1,0 +1,30 @@
+Read-only review of accepted source db640cba (6487c9b2..db640cba)
+
+Independent source review found no actionable correctness defect in the seven
+commits. No builds or elapsed probes ran during this review.
+
+The binary shortcut is limited to the physical root, two terminal operands,
+conversion-null and a conservative operator whitelist. It uses the unchanged
+terminal collector left-to-right and stops on the first error. Explicit Light
+intrinsic roots/leaves retain original scoped callbacks. CaptureAnalysisRoot is
+assigned before the shortcut, and public cleanup remains in finally.
+
+Empty-validator gating skips only when both goto lists are empty. Both existing
+validators otherwise iterate those goto lists; declaration-only checks are not
+removed.
+
+Framework eligibility is seeded only for fully collecting owned roots. Manual,
+UserProvided and collection-skipping contexts remain conservative. Whole-root
+capture analysis completes before emission; any Try, Quote, RuntimeVariables,
+opaque or custom intrinsic requirement forces typed cells across siblings.
+Cast omission requires the same owned proof; typed signatures independently
+supply their actual closure type. Only already rented signatures with nonzero
+user-arity are modified; shared zero-argument arrays are unchanged and each
+subsequent rent overwrites all entries. Constructor lookup uses exact public
+StrongBox<T> constructors and clears rented scratch state in finally.
+
+Limits: ordinary Light nodes are trusted per user instruction. Explicit
+IsIntrinsic=true callbacks retain scopes; arbitrary dishonest node getters are
+not newly validated. Owned DynamicMethods reuse FEC's existing host/full-trust
+behavior; restricted anonymous/manual cases retain conservative casts/storage.
+Runtime/performance claims require the separate validation/measurement evidence.

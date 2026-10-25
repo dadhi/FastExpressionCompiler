@@ -1,0 +1,62 @@
+{
+  "validation": {
+    "exitCode": 0,
+    "seconds": 1303.188248872757
+  },
+  "modern-build": {
+    "exitCode": 0,
+    "seconds": 45.014193296432495
+  },
+  "paired-prepare": {
+    "exitCode": 0,
+    "seconds": 37.745200872421265
+  },
+  "paired-build": {
+    "exitCode": 0,
+    "seconds": 90.36433100700378
+  },
+  "framework-build": {
+    "exitCode": 0,
+    "seconds": 209.23337244987488
+  },
+  "cold-build": {
+    "exitCode": 0,
+    "seconds": 80.03019380569458
+  },
+  "modern-matrix": {
+    "exitCode": 0,
+    "seconds": 481.0111210346222
+  },
+  "paired-net8.0": {
+    "exitCode": 0,
+    "seconds": 125.15581560134888
+  },
+  "paired-net10.0": {
+    "exitCode": 0,
+    "seconds": 160.16156148910522
+  },
+  "framework-current": {
+    "exitCode": 0,
+    "seconds": 175.3274645805359
+  },
+  "cold": {
+    "exitCode": 0,
+    "seconds": 1422.1131510734558
+  },
+  "modern-analysis": {
+    "exitCode": 0,
+    "seconds": 1.282144546508789
+  },
+  "paired-analysis": {
+    "exitCode": 0,
+    "seconds": 0.9862699508666992
+  },
+  "extra-analysis": {
+    "exitCode": 0,
+    "seconds": 14.751927137374878
+  },
+  "actual-inner-il": {
+    "exitCode": 0,
+    "seconds": 2.7452127933502197
+  }
+}
