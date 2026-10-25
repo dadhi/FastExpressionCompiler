@@ -607,7 +607,7 @@ public abstract class Expression
 
     /// <summary>Creates a UnaryExpression that represents a conversion operation for which the implementing method is specified.</summary>
     public static UnaryExpression Convert(Expression expression, Type type, MethodInfo method) =>
-        new ConvertWithMethodUnaryExpression(ExpressionType.Convert, expression, type, method);
+        new MethodUnaryExpression(ExpressionType.Convert, expression, type, method);
 
     /// <summary>Creates a UnaryExpression that represents a conversion operation that throws an exception if the target type is overflowed.</summary>
     public static UnaryExpression ConvertChecked(Expression expression, Type type) =>
@@ -615,7 +615,7 @@ public abstract class Expression
 
     /// <summary>Creates a UnaryExpression that represents a conversion operation that throws an exception if the target type is overflowed and for which the implementing method is specified.</summary>
     public static UnaryExpression ConvertChecked(Expression expression, Type type, MethodInfo method) =>
-        new ConvertWithMethodUnaryExpression(ExpressionType.ConvertChecked, expression, type, method);
+        new MethodUnaryExpression(ExpressionType.ConvertChecked, expression, type, method);
 
     /// <summary>Creates a UnaryExpression that represents the decrementing of the expression by 1.</summary>
     public static UnaryExpression Decrement(Expression expression) =>
@@ -638,31 +638,100 @@ public abstract class Expression
         : new TypedUnaryExpression<bool>(ExpressionType.IsTrue, expression);
 
     /// <summary>Creates a UnaryExpression, given an operand and its type</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static UnaryExpression MakeUnary(ExpressionType unaryType, Expression operand, Type type = null) =>
         MakeUnary(unaryType, operand, type, method: null);
 
-    internal static UnaryExpression ThrowNotSupportedUnary(string message) => throw new NotSupportedException("Negate with method is not supported");
+    internal static UnaryExpression ThrowNotSupportedUnary(string message) => throw new NotSupportedException(message);
+
+    /// <summary>Creates the unary operator expression implemented by the static method, which may be lifted over the nullable operand.
+    /// The type is the method return type, or its nullable type for the lifted call.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
+    private static UnaryExpression GetMethodBasedUnary(ExpressionType nodeType, Expression operand, MethodInfo method)
+    {
+        var ps = method.GetParameters();
+        if (ps.Length != 1)
+            throw new ArgumentException("IncorrectNumberOfMethodCallArguments in " + method, nameof(method));
+
+        var operandType = operand.Type;
+        var type = method.ReturnType;
+        if (ps[0].IsAssignableFrom(operandType))
+            return new MethodUnaryExpression(nodeType, operand, type, method);
+
+        // check for lifted call
+        if (operandType.IsNullable() && ps[0].IsAssignableFrom(operandType.GetUnderlyingNullableTypeUnsafe()) &&
+            type.IsValueType && !type.IsNullable())
+            return new MethodUnaryExpression(nodeType, operand, type.GetNullable(), method);
+
+        throw new InvalidOperationException($"OperandTypesDoNotMatchParameters for {nodeType} and method {method.Name}");
+    }
+
+    /// <summary>Creates a UnaryExpression that represents a bitwise complement operation, with the implementing method.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
+    public static UnaryExpression Not(Expression expression, MethodInfo method) =>
+        method == null ? Not(expression) : GetMethodBasedUnary(ExpressionType.Not, expression, method);
+
+    /// <summary>Creates a UnaryExpression that represents the decrementing of the expression by 1, with the implementing method.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
+    public static UnaryExpression Decrement(Expression expression, MethodInfo method) =>
+        method == null ? Decrement(expression) : GetMethodBasedUnary(ExpressionType.Decrement, expression, method);
+
+    /// <summary>Creates a UnaryExpression that represents the incrementing of the expression by 1, with the implementing method.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
+    public static UnaryExpression Increment(Expression expression, MethodInfo method) =>
+        method == null ? Increment(expression) : GetMethodBasedUnary(ExpressionType.Increment, expression, method);
+
+    /// <summary>Returns whether the expression evaluates to false, with the implementing method.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
+    public static UnaryExpression IsFalse(Expression expression, MethodInfo method) =>
+        method == null ? IsFalse(expression) : GetMethodBasedUnary(ExpressionType.IsFalse, expression, method);
+
+    /// <summary>Returns whether the expression evaluates to true, with the implementing method.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
+    public static UnaryExpression IsTrue(Expression expression, MethodInfo method) =>
+        method == null ? IsTrue(expression) : GetMethodBasedUnary(ExpressionType.IsTrue, expression, method);
+
+    /// <summary>Creates a UnaryExpression that represents an arithmetic negation operation, with the implementing method.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
+    public static UnaryExpression Negate(Expression expression, MethodInfo method) =>
+        method == null ? Negate(expression) : GetMethodBasedUnary(ExpressionType.Negate, expression, method);
+
+    /// <summary>Creates a UnaryExpression that represents an arithmetic negation operation that has overflow checking, with the implementing method.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
+    public static UnaryExpression NegateChecked(Expression expression, MethodInfo method) =>
+        method == null ? NegateChecked(expression) : GetMethodBasedUnary(ExpressionType.NegateChecked, expression, method);
+
+    /// <summary>Returns the expression representing the ones complement, with the implementing method.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
+    public static UnaryExpression OnesComplement(Expression expression, MethodInfo method) =>
+        method == null ? OnesComplement(expression) : GetMethodBasedUnary(ExpressionType.OnesComplement, expression, method);
+
+    /// <summary>Creates a UnaryExpression that represents a unary plus operation, with the implementing method.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
+    public static UnaryExpression UnaryPlus(Expression expression, MethodInfo method) =>
+        method == null ? UnaryPlus(expression) : GetMethodBasedUnary(ExpressionType.UnaryPlus, expression, method);
 
     /// <summary>Creates a UnaryExpression, given an operand, its type and a method</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static UnaryExpression MakeUnary(ExpressionType unaryType, Expression operand, Type type, MethodInfo method = null) =>
         unaryType switch
         {
-            ExpressionType.Negate => method == null ? Negate(operand) : ThrowNotSupportedUnary("Negate with method is not supported"),
-            ExpressionType.NegateChecked => method == null ? NegateChecked(operand) : ThrowNotSupportedUnary("NegateChecked with method is not supported"),
-            ExpressionType.Not => method == null ? Not(operand) : ThrowNotSupportedUnary("Not with method is not supported"),
-            ExpressionType.IsFalse => method == null ? IsFalse(operand) : ThrowNotSupportedUnary("IsFalse with method is not supported"),
-            ExpressionType.IsTrue => method == null ? IsTrue(operand) : ThrowNotSupportedUnary("IsTrue with method is not supported"),
-            ExpressionType.OnesComplement => method == null ? OnesComplement(operand) : ThrowNotSupportedUnary("OnesComplement with method is not supported"),
+            ExpressionType.Negate => Negate(operand, method),
+            ExpressionType.NegateChecked => NegateChecked(operand, method),
+            ExpressionType.Not => Not(operand, method),
+            ExpressionType.IsFalse => IsFalse(operand, method),
+            ExpressionType.IsTrue => IsTrue(operand, method),
+            ExpressionType.OnesComplement => OnesComplement(operand, method),
             ExpressionType.ArrayLength => ArrayLength(operand),
             ExpressionType.Convert => Convert(operand, type, method),
             ExpressionType.ConvertChecked => ConvertChecked(operand, type, method),
             ExpressionType.Throw => Throw(operand, type),
             ExpressionType.TypeAs => TypeAs(operand, type),
             ExpressionType.Quote => Quote(operand),
-            ExpressionType.UnaryPlus => method == null ? UnaryPlus(operand) : ThrowNotSupportedUnary("UnaryPlus with method is not supported"),
+            ExpressionType.UnaryPlus => UnaryPlus(operand, method),
             ExpressionType.Unbox => Unbox(operand, type),
-            ExpressionType.Increment => method == null ? Increment(operand) : ThrowNotSupportedUnary("Increment with method is not supported"),
-            ExpressionType.Decrement => method == null ? Decrement(operand) : ThrowNotSupportedUnary("Decrement with method is not supported"),
+            ExpressionType.Increment => Increment(operand, method),
+            ExpressionType.Decrement => Decrement(operand, method),
             ExpressionType.PreIncrementAssign => method == null ? PreIncrementAssign(operand) : ThrowNotSupportedUnary("PreIncrementAssign with method is not supported"),
             ExpressionType.PostIncrementAssign => method == null ? PostIncrementAssign(operand) : ThrowNotSupportedUnary("PostIncrementAssign with method is not supported"),
             ExpressionType.PreDecrementAssign => method == null ? PreDecrementAssign(operand) : ThrowNotSupportedUnary("PreDecrementAssign with method is not supported"),
@@ -3347,23 +3416,23 @@ public abstract class UnaryExpression : Expression
             case ExpressionType.ArrayLength: return SysExpr.ArrayLength(Operand.ToExpression(ref exprsConverted));
             case ExpressionType.Convert: return SysExpr.Convert(Operand.ToExpression(ref exprsConverted), Type, Method);
             case ExpressionType.ConvertChecked: return SysExpr.ConvertChecked(Operand.ToExpression(ref exprsConverted), Type, Method);
-            case ExpressionType.Decrement: return SysExpr.Decrement(Operand.ToExpression(ref exprsConverted));
-            case ExpressionType.Increment: return SysExpr.Increment(Operand.ToExpression(ref exprsConverted));
-            case ExpressionType.IsFalse: return SysExpr.IsFalse(Operand.ToExpression(ref exprsConverted));
-            case ExpressionType.IsTrue: return SysExpr.IsTrue(Operand.ToExpression(ref exprsConverted));
-            case ExpressionType.Negate: return SysExpr.Negate(Operand.ToExpression(ref exprsConverted));
-            case ExpressionType.NegateChecked: return SysExpr.NegateChecked(Operand.ToExpression(ref exprsConverted));
-            case ExpressionType.OnesComplement: return SysExpr.OnesComplement(Operand.ToExpression(ref exprsConverted));
+            case ExpressionType.Decrement: return SysExpr.Decrement(Operand.ToExpression(ref exprsConverted), Method);
+            case ExpressionType.Increment: return SysExpr.Increment(Operand.ToExpression(ref exprsConverted), Method);
+            case ExpressionType.IsFalse: return SysExpr.IsFalse(Operand.ToExpression(ref exprsConverted), Method);
+            case ExpressionType.IsTrue: return SysExpr.IsTrue(Operand.ToExpression(ref exprsConverted), Method);
+            case ExpressionType.Negate: return SysExpr.Negate(Operand.ToExpression(ref exprsConverted), Method);
+            case ExpressionType.NegateChecked: return SysExpr.NegateChecked(Operand.ToExpression(ref exprsConverted), Method);
+            case ExpressionType.OnesComplement: return SysExpr.OnesComplement(Operand.ToExpression(ref exprsConverted), Method);
             case ExpressionType.PostDecrementAssign: return SysExpr.PostDecrementAssign(Operand.ToExpression(ref exprsConverted));
             case ExpressionType.PostIncrementAssign: return SysExpr.PostIncrementAssign(Operand.ToExpression(ref exprsConverted));
             case ExpressionType.PreDecrementAssign: return SysExpr.PreDecrementAssign(Operand.ToExpression(ref exprsConverted));
             case ExpressionType.PreIncrementAssign: return SysExpr.PreIncrementAssign(Operand.ToExpression(ref exprsConverted));
             case ExpressionType.Quote: return SysExpr.Quote(Operand.ToExpression(ref exprsConverted));
-            case ExpressionType.UnaryPlus: return SysExpr.UnaryPlus(Operand.ToExpression(ref exprsConverted));
+            case ExpressionType.UnaryPlus: return SysExpr.UnaryPlus(Operand.ToExpression(ref exprsConverted), Method);
             case ExpressionType.Unbox: return SysExpr.Unbox(Operand.ToExpression(ref exprsConverted), Type);
             case ExpressionType.Throw: return SysExpr.Throw(Operand?.ToExpression(ref exprsConverted), Type);
             case ExpressionType.TypeAs: return SysExpr.TypeAs(Operand.ToExpression(ref exprsConverted), Type);
-            case ExpressionType.Not: return SysExpr.Not(Operand.ToExpression(ref exprsConverted));
+            case ExpressionType.Not: return SysExpr.Not(Operand.ToExpression(ref exprsConverted), Method);
             default:
                 throw new NotSupportedException("Cannot convert Expression to Expression of type " + NodeType);
         }
@@ -3424,10 +3493,10 @@ public sealed class TypedConvertUnaryExpression<T> : UnaryExpression
     public TypedConvertUnaryExpression(Expression operand) : base(operand) { }
 }
 
-public sealed class ConvertWithMethodUnaryExpression : TypedUnaryExpression
+public sealed class MethodUnaryExpression : TypedUnaryExpression
 {
     public override MethodInfo Method { get; }
-    public ConvertWithMethodUnaryExpression(ExpressionType nodeType, Expression operand, Type type, MethodInfo method)
+    public MethodUnaryExpression(ExpressionType nodeType, Expression operand, Type type, MethodInfo method)
         : base(nodeType, operand, type) =>
         Method = method;
 }

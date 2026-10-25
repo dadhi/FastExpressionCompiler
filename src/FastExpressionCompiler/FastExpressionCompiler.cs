@@ -1957,8 +1957,9 @@ namespace FastExpressionCompiler
                         case ExpressionType.UnaryPlus:
                         case ExpressionType.Unbox:
                         {
-                            var oper = ((UnaryExpression)expr).Operand;
-                            return TryEmitSimpleUnary(exprType, oper, oper.Type, nodeType, il, ref context, parent);
+                            var unaryExpr = (UnaryExpression)expr;
+                            var oper = unaryExpr.Operand;
+                            return TryEmitSimpleUnary(exprType, oper, oper.Type, unaryExpr.Method, nodeType, il, ref context, parent);
                         }
                         case ExpressionType.TypeIs:
                         case ExpressionType.TypeEqual:
@@ -2150,20 +2151,18 @@ namespace FastExpressionCompiler
                                 var notExpr = (UnaryExpression)expr;
                                 var oper = notExpr.Operand;
                                 var operType = oper.Type;
-                                if (exprType == typeof(bool?) && operType == typeof(bool?) && notExpr.Method == null)
+                                var method = notExpr.Method;
+                                if (method != null)
+                                    return TryEmitSimpleUnary(exprType, oper, operType, method, nodeType, il, ref context, parent);
+
+                                if (exprType == typeof(bool?) && operType == typeof(bool?))
                                     return TryEmitNullableBooleanNot(oper, il, ref context, parent);
-
-                                if (notExpr.Method == null)
-                                {
-                                    if (operType == exprType && exprType != typeof(bool?) && exprType.IsNullable())
-                                        return TryEmitLiftedUnary(oper, nodeType, exprType, operType, Nullable.GetUnderlyingType(exprType), il, ref context, parent);
-
-                                    if (exprType.IsValueType && !exprType.IsPrimitive && !exprType.IsNullable())
-                                        return TryEmitSimpleUnary(exprType, oper, operType, nodeType, il, ref context, parent);
-                                }
 
                                 if (!exprType.IsPrimitive)
                                 {
+                                    if (exprType.IsValueType) // the lifted `!` or the `op_LogicalNot` of the struct
+                                        return TryEmitSimpleUnary(exprType, oper, operType, null, nodeType, il, ref context, parent);
+
                                     Debug.WriteLine("Unsupported: non-primitive result in !x (other than `bool?` operand without a method), see #480: " + expr);
                                     return false;
                                 }
@@ -3086,43 +3085,13 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitSimpleUnary(
-                Type exprType, Expression oper, Type operType, ExpressionType nodeType, ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            private static bool TryEmitSimpleUnary(Type exprType, Expression oper, Type operType, MethodInfo method,
+                ExpressionType nodeType, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
-                if (operType == typeof(bool?) && (nodeType == ExpressionType.IsTrue | nodeType == ExpressionType.IsFalse))
-                {
-                    if (!TryEmit(oper, il, ref context, parent & ~ParentFlags.IgnoreResult))
-                        return false;
-
-                    var valueVar = EmitStoreLocalVariable(il, typeof(bool?));
-                    var nullLabel = il.DefineLabel();
-                    var endLabel = il.DefineLabel();
-
-                    EmitLoadLocalVariableAddress(il, valueVar);
-                    il.Demit(OpCodes.Call, Tools.NullableReflected<bool>.HasValueGetterMethod);
-                    il.Demit(OpCodes.Brfalse, nullLabel);
-
-                    EmitLoadLocalVariableAddress(il, valueVar);
-                    il.Demit(OpCodes.Ldfld, Tools.NullableReflected<bool>.ValueField);
-                    if (nodeType == ExpressionType.IsFalse)
-                    {
-                        il.Demit(OpCodes.Ldc_I4_0);
-                        il.Demit(OpCodes.Ceq);
-                    }
-                    il.Demit(OpCodes.Newobj, Tools.NullableReflected<bool>.Constructor);
-                    il.Demit(OpCodes.Br, endLabel);
-
-                    il.DmarkLabel(nullLabel);
-                    InitValueTypeVariable(il, typeof(bool?), valueVar);
-                    EmitLoadLocalVariable(il, valueVar);
-                    il.DmarkLabel(endLabel);
-
-                    return il.EmitPopIfIgnoreResult(parent);
-                }
-
                 var underlyingOperType = Nullable.GetUnderlyingType(operType);
-                if (underlyingOperType != null & nodeType != ExpressionType.TypeAs & nodeType != ExpressionType.Unbox)
-                    return TryEmitLiftedUnary(oper, nodeType, exprType, operType, underlyingOperType, il, ref context, parent);
+                if (underlyingOperType != null & nodeType != ExpressionType.TypeAs & nodeType != ExpressionType.Unbox &&
+                    (method == null || method.GetParameters()[0].ParameterType != operType)) // the method takes the underlying type, so the call is lifted
+                    return TryEmitLiftedUnary(oper, nodeType, exprType, operType, underlyingOperType, method, il, ref context, parent);
 
                 if (!TryEmit(oper, il, ref context, parent & ~ParentFlags.IgnoreResult))
                     return false;
@@ -3134,41 +3103,20 @@ namespace FastExpressionCompiler
                     if (exprType.IsValueType)
                         il.Demit(OpCodes.Unbox_Any, exprType);
                 }
-                else if ((nodeType == ExpressionType.IsFalse | nodeType == ExpressionType.IsTrue) && operType != typeof(bool))
-                {
-                    if (!EmitUnaryOperation(il, nodeType, operType))
-                        return false;
-                }
-                else if (nodeType == ExpressionType.IsFalse)
-                {
-                    var falseLabel = il.DefineLabel();
-                    var continueLabel = il.DefineLabel();
-                    il.Demit(OpCodes.Brfalse_S, falseLabel); // safe: jumps over Ldc_I4_0 (1 byte) + Br_S (2 bytes) = 3 bytes
-                    il.Demit(OpCodes.Ldc_I4_0);
-                    il.Demit(OpCodes.Br_S, continueLabel);   // safe: jumps over Ldc_I4_1 (1 byte) = 1 byte
-                    il.DmarkLabel(falseLabel);
-                    il.Demit(OpCodes.Ldc_I4_1);
-                    il.DmarkLabel(continueLabel);
-                }
-                else if (nodeType == ExpressionType.Increment | nodeType == ExpressionType.Decrement |
-                    nodeType == ExpressionType.Negate | nodeType == ExpressionType.NegateChecked |
-                    nodeType == ExpressionType.OnesComplement | nodeType == ExpressionType.UnaryPlus |
-                    nodeType == ExpressionType.Not)
-                {
-                    if (!EmitUnaryOperation(il, nodeType, exprType))
-                        return false;
-                }
                 else if (nodeType == ExpressionType.Unbox)
                     il.Demit(OpCodes.Unbox_Any, exprType);
-                // else if (nodeType == ExpressionType.IsTrue) { }
-                // else if (nodeType == ExpressionType.UnaryPlus) { }
+                else if (!EmitUnaryOperation(il, nodeType, operType, method))
+                    return false;
 
                 return il.EmitPopIfIgnoreResult(parent);
             }
 
-            // Applies the unary operator to the value on the stack: the IL instruction for the primitives, the user-defined operator method otherwise
-            private static bool EmitUnaryOperation(ILGenerator il, ExpressionType nodeType, Type type)
+            // Applies the unary operator to the value on the stack: the explicit method if any, the IL instruction for the primitives, the operator method found by name otherwise
+            private static bool EmitUnaryOperation(ILGenerator il, ExpressionType nodeType, Type type, MethodInfo method)
             {
+                if (method != null)
+                    return EmitMethodCall(il, method);
+
                 if (type.IsEnum)
                     type = Enum.GetUnderlyingType(type);
 
@@ -3176,6 +3124,13 @@ namespace FastExpressionCompiler
                 {
                     switch (nodeType)
                     {
+                        case ExpressionType.IsTrue:
+                        case ExpressionType.UnaryPlus:
+                            return true;
+                        case ExpressionType.IsFalse:
+                            il.Demit(OpCodes.Ldc_I4_0);
+                            il.Demit(OpCodes.Ceq);
+                            return true;
                         case ExpressionType.Increment:
                             if (!TryEmitNumberOne(il, type))
                                 return false;
@@ -3214,8 +3169,6 @@ namespace FastExpressionCompiler
                         case ExpressionType.Not:
                             il.Demit(OpCodes.Not);
                             return true;
-                        case ExpressionType.UnaryPlus:
-                            return true;
                     }
                     return false;
                 }
@@ -3236,9 +3189,8 @@ namespace FastExpressionCompiler
             }
 
             // Lifted unary operator: null stays null, otherwise the operator is applied to the underlying value and wrapped back
-            private static bool TryEmitLiftedUnary(
-                Expression oper, ExpressionType nodeType, Type exprType, Type operType, Type underlyingType,
-                ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            private static bool TryEmitLiftedUnary(Expression oper, ExpressionType nodeType, Type exprType, Type operType, Type underlyingType,
+                MethodInfo method, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var flags = (parent
                     & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
@@ -3254,18 +3206,16 @@ namespace FastExpressionCompiler
                 il.Demit(OpCodes.Brfalse, nullLabel);
 
                 EmitLoadVarOrNullableValue(il, opVar, operType, loadNullableValue: true);
-                if (!EmitUnaryOperation(il, nodeType, underlyingType))
+                if (!EmitUnaryOperation(il, nodeType, underlyingType, method))
                     return false;
                 il.Demit(OpCodes.Newobj, exprType.GetNullableConstructor());
                 il.Demit(OpCodes.Br, doneLabel);
 
                 il.DmarkLabel(nullLabel);
-                EmitLoadLocalVariable(il, InitValueTypeVariable(il, exprType));
-
+                EmitLoadLocalVariable(il, InitValueTypeVariable(il, exprType)); // the result type may differ from the operand type
                 il.DmarkLabel(doneLabel);
                 return il.EmitPopIfIgnoreResult(parent);
             }
-
             private static readonly MethodInfo _objectGetTypeMethod = typeof(object).GetMethod(nameof(object.GetType));
 
             private static bool TryEmitTypeIsOrEqual(TypeBinaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
@@ -3450,8 +3400,14 @@ namespace FastExpressionCompiler
                     methodParamType = mParams[0].ParameterType;
 
                     // todo: @wip check if we need to add the ParentFlags.Call here?
-                    if (!TryEmit(opExpr, il, ref context, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess))
+                    var isByRefParam = methodParamType.IsByRef;
+                    if (!TryEmit(opExpr, il, ref context, parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess,
+                        isByRefParam && !(opExpr is ParameterExpression { IsByRef: true } && sourceType.IsNullable()) ? 0 : -1))
                         return false;
+
+                    // The by-ref param of the method needs the address of the operand, the nullable by-ref parameter is already the address
+                    if (isByRefParam && !context.LastEmitIsAddress && !(opExpr is ParameterExpression { IsByRef: true }))
+                        EmitStoreAndLoadLocalVariableAddress(il, sourceType);
                 }
                 else
                 {
@@ -3546,6 +3502,15 @@ namespace FastExpressionCompiler
                     {
                         EmitStoreAndLoadLocalVariableAddress(il, sourceType);
                         EmitMethodCall(il, sourceType.GetNullableValueGetterMethod());
+                    }
+                    else if (methodParamType.IsByRef)
+                    {
+                        // The address of the operand is on the stack already, the lifted call passes the copy of the value, so the by-ref is lost
+                        if (methodParamType.GetElementType() == underlyingNullableSourceType)
+                        {
+                            EmitMethodCall(il, sourceType.GetNullableValueGetterMethod());
+                            EmitStoreAndLoadLocalVariableAddress(il, underlyingNullableSourceType);
+                        }
                     }
                     else if (methodParamType != sourceType) // This is an unlikely case of Target(Source? source), or a polymorphic base type
                     {
@@ -8747,6 +8712,7 @@ namespace FastExpressionCompiler
         [MethodImpl((MethodImplOptions)256)]
         internal static MethodInfo GetNullableValueGetterMethod(this Type type) =>
             type == typeof(int?) ? NullableReflected<int>.ValueGetterMethod :
+            type == typeof(bool?) ? NullableReflected<bool>.ValueGetterMethod :
             type == typeof(double?) ? NullableReflected<double>.ValueGetterMethod :
             type.GetProperty("Value").GetMethod;
 
@@ -8754,6 +8720,7 @@ namespace FastExpressionCompiler
         [MethodImpl((MethodImplOptions)256)]
         internal static MethodInfo GetNullableHasValueGetterMethod(this Type type) =>
             type == typeof(int?) ? NullableReflected<int>.HasValueGetterMethod :
+            type == typeof(bool?) ? NullableReflected<bool>.HasValueGetterMethod :
             type == typeof(double?) ? NullableReflected<double>.HasValueGetterMethod :
             type.GetProperty("HasValue").GetMethod;
 
@@ -8761,6 +8728,7 @@ namespace FastExpressionCompiler
         [MethodImpl((MethodImplOptions)256)]
         internal static FieldInfo GetNullableValueUnsafeAkaGetValueOrDefaultMethod(this Type type) =>
             type == typeof(int?) ? NullableReflected<int>.ValueField :
+            type == typeof(bool?) ? NullableReflected<bool>.ValueField :
             type == typeof(double?) ? NullableReflected<double>.ValueField :
             type.GetField("value", BindingFlags.Instance | BindingFlags.NonPublic);
 
@@ -8768,6 +8736,7 @@ namespace FastExpressionCompiler
         [MethodImpl((MethodImplOptions)256)]
         internal static ConstructorInfo GetNullableConstructor(this Type type) =>
             type == typeof(int?) ? NullableReflected<int>.Constructor :
+            type == typeof(bool?) ? NullableReflected<bool>.Constructor :
             type == typeof(double?) ? NullableReflected<double>.Constructor :
             type.GetConstructors()[0];
 

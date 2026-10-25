@@ -77,6 +77,9 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Lifted_comparisons_with_null_operand_and_other_nullable_types_are_the_same_as_system();
             Binary_operators_with_methods_and_nullable_operands_are_the_same_as_system();
             Unary_operators_with_nullable_and_user_defined_operands_are_the_same_as_system();
+            Convert_with_the_method_taking_ref_param_is_the_same_as_system();
+            Negate_checked_of_short_emits_the_short_IL();
+            Unary_operators_with_explicit_method_are_the_same_as_system();
             Lifted_comparisons_have_the_same_type_and_result_as_system();
             And_AndAlso_OrElse_take_the_type_from_the_left_operand();
             Can_compile_nullable_boolean_and_also();
@@ -90,7 +93,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_print_reference_comparison();
             Can_round_trip_new_expression_kinds_through_system_expressions();
 
-            return 71;
+            return 74;
         }
 
         private static int _sideEffectCalls;
@@ -1034,6 +1037,133 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                     }
                 }
             Asserts.AreEqual(0, failures.Count, string.Join("\n", failures));
+        }
+        public static class UnMethods
+        {
+            public static int Custom(int x) => x * 7 + 1;
+            public static int? CustomNullable(int? x) => x == null ? -1 : x * 7 + 1;
+            public static long Widen(int x) => (long)x * 1000;
+            public static string Show(int x) => "S" + x;
+            public static bool Positive(int x) => x > 0;
+        }
+
+        public void Unary_operators_with_explicit_method_are_the_same_as_system()
+        {
+            var names = new[] { "Negate", "NegateChecked", "UnaryPlus", "OnesComplement", "Increment", "Decrement", "Not", "IsTrue", "IsFalse" };
+            var opNames = new System.Collections.Generic.Dictionary<string, string>
+            {
+                { "Negate", "op_UnaryNegation" }, { "NegateChecked", "op_UnaryNegation" }, { "UnaryPlus", "op_UnaryPlus" },
+                { "OnesComplement", "op_OnesComplement" }, { "Increment", "op_Increment" }, { "Decrement", "op_Decrement" },
+                { "Not", "op_LogicalNot" }, { "IsTrue", "op_True" }, { "IsFalse", "op_False" },
+            };
+            var ints = new object[] { 0, 3, -5 };
+            var nullableInts = new object[] { null, 0, 3, -5 };
+            var money = new object[] { new UnMoney(0), new UnMoney(3) };
+            var nullableMoney = new object[] { null, new UnMoney(0), new UnMoney(3) };
+            var decimals = new object[] { 0m, 1.5m };
+            var nullableDecimals = new object[] { null, 0m, 1.5m };
+
+            var cases = new System.Collections.Generic.List<(Type, MethodInfo, object[])>
+            {
+                (typeof(int), typeof(UnMethods).GetMethod(nameof(UnMethods.Custom)), ints),
+                (typeof(int?), typeof(UnMethods).GetMethod(nameof(UnMethods.Custom)), nullableInts), // lifted
+                (typeof(int?), typeof(UnMethods).GetMethod(nameof(UnMethods.CustomNullable)), nullableInts), // takes the nullable
+                (typeof(int), typeof(UnMethods).GetMethod(nameof(UnMethods.Widen)), ints),
+                (typeof(int?), typeof(UnMethods).GetMethod(nameof(UnMethods.Widen)), nullableInts), // the lifted type differs from the operand
+                (typeof(int), typeof(UnMethods).GetMethod(nameof(UnMethods.Show)), ints), // reference type result
+                (typeof(int?), typeof(UnMethods).GetMethod(nameof(UnMethods.Positive)), nullableInts), // lifted bool
+                (typeof(decimal), typeof(decimal).GetMethod(nameof(decimal.Negate)), decimals),
+                (typeof(decimal?), typeof(decimal).GetMethod(nameof(decimal.Negate)), nullableDecimals),
+            };
+            foreach (var name in names)
+            {
+                cases.Add((typeof(UnMoney), typeof(UnMoney).GetMethod(opNames[name]), money));
+                cases.Add((typeof(UnMoney?), typeof(UnMoney).GetMethod(opNames[name]), nullableMoney));
+            }
+
+            var failures = new System.Collections.Generic.List<string>();
+            var compared = 0;
+            foreach (var (t, method, xs) in cases)
+                foreach (var name in names)
+                {
+                    var what = $"{t.Name} {name} {method.Name}";
+                    Delegate sysD, fastD, lightSysD; Type rt;
+                    try
+                    {
+                        var sa = SysExpr.Parameter(t, "a");
+                        var se = (SysExpr)typeof(SysExpr).GetMethod(name, new[] { typeof(SysExpr), typeof(MethodInfo) }).Invoke(null, new object[] { sa, method });
+                        rt = se.Type;
+                        sysD = SysExpr.Lambda(typeof(Func<,>).MakeGenericType(t, rt), se, sa).Compile();
+                    }
+                    catch (Exception) { continue; }
+
+                    try
+                    {
+                        var la = Parameter(t, "a");
+                        var le = (Expression)typeof(Expression).GetMethod(name, new[] { typeof(Expression), typeof(MethodInfo) }).Invoke(null, new object[] { la, method });
+                        Asserts.AreSame(method, ((UnaryExpression)le).Method);
+                        if (le.Type != rt) { failures.Add($"type: {what} sys={rt.Name} light={le.Type.Name}"); continue; }
+                        var lambda = Lambda(typeof(Func<,>).MakeGenericType(t, rt), le, la);
+                        fastD = lambda.CompileFast(true);
+                        lightSysD = lambda.CompileSys();
+                        if (fastD == null) { failures.Add("not compiled: " + what); continue; }
+
+                        // the same operation with the ignored result
+                        var ia = Parameter(t, "a");
+                        var ie = (Expression)typeof(Expression).GetMethod(name, new[] { typeof(Expression), typeof(MethodInfo) }).Invoke(null, new object[] { ia, method });
+                        var ignoredD = Lambda(typeof(Func<,>).MakeGenericType(t, typeof(int)), Block(ie, Constant(1)), ia).CompileFast(true);
+                        if (ignoredD == null) { failures.Add("ignored not compiled: " + what); continue; }
+                        foreach (var x in xs)
+                            Asserts.AreEqual(1, ignoredD.DynamicInvoke(x));
+                    }
+                    catch (Exception ex) { failures.Add("exception: " + what + " " + (ex.InnerException ?? ex).Message.Split('\n')[0]); continue; }
+
+                    compared++;
+                    foreach (var x in xs)
+                    {
+                        object e, a, b;
+                        try { e = sysD.DynamicInvoke(x); } catch (Exception ex) { e = "ex:" + ex.InnerException?.GetType().Name; }
+                        try { a = fastD.DynamicInvoke(x); } catch (Exception ex) { a = "ex:" + ex.InnerException?.GetType().Name; }
+                        try { b = lightSysD.DynamicInvoke(x); } catch (Exception ex) { b = "ex:" + ex.InnerException?.GetType().Name; }
+                        if (!Equals(e, a) || !Equals(e, b)) { failures.Add($"value: {what} ({x}) sys={e} fec={a} light-to-sys={b}"); break; }
+                    }
+                }
+            Asserts.AreEqual(0, failures.Count, string.Join("\n", failures));
+            Asserts.IsTrue(compared > 30, "compared " + compared);
+        }
+        public delegate T RefConvFunc<T, R>(ref R r);
+        public class RefConv
+        {
+            public int Value;
+            public static RefConv FromRef(ref int x) => new RefConv { Value = x++ };
+        }
+
+        public void Convert_with_the_method_taking_ref_param_is_the_same_as_system()
+        {
+            var method = typeof(RefConv).GetMethod(nameof(RefConv.FromRef));
+
+            var p = Parameter(typeof(int).MakeByRefType(), "p");
+            var e = Lambda<RefConvFunc<RefConv, int>>(Convert(p, typeof(RefConv), method), p);
+            int x = 5;
+            Asserts.AreEqual(5, e.CompileFast(true)(ref x).Value);
+            Asserts.AreEqual(6, x);
+
+            var np = Parameter(typeof(int?).MakeByRefType(), "p");
+            var ne = Lambda<RefConvFunc<RefConv, int?>>(Convert(np, typeof(RefConv), method), np);
+            int? nx = 5;
+            Asserts.AreEqual(5, ne.CompileFast(true)(ref nx).Value);
+            Asserts.AreEqual(5, nx); // the refness is lost on lifting, same as in System
+        }
+
+        public void Negate_checked_of_short_emits_the_short_IL()
+        {
+            var s = Parameter(typeof(short), "s"); var ns = Parameter(typeof(short?), "s");
+            Lambda<Func<short, short>>(NegateChecked(s), s).CompileFast(true).AssertOpCodes(
+                OpCodes.Ldarg_1, OpCodes.Neg, OpCodes.Conv_Ovf_I2, OpCodes.Ret);
+            Lambda<Func<short?, short?>>(NegateChecked(ns), ns).CompileFast(true).AssertOpCodes(
+                OpCodes.Ldarg_1, OpCodes.Stloc_0, OpCodes.Ldloca_S, OpCodes.Call, OpCodes.Brfalse,
+                OpCodes.Ldloca_S, OpCodes.Ldfld, OpCodes.Neg, OpCodes.Conv_Ovf_I2, OpCodes.Newobj, OpCodes.Br,
+                OpCodes.Ldloca_S, OpCodes.Initobj, OpCodes.Ldloc_1, OpCodes.Ret);
         }
         public void Lifted_comparisons_have_the_same_type_and_result_as_system()
         {
