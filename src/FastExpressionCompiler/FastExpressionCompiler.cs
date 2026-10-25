@@ -2018,12 +2018,50 @@ namespace FastExpressionCompiler
                         case ExpressionType.NotEqual:
                             {
                                 var comparison = (BinaryExpression)expr;
-                                if (comparison.Method != null && !comparison.IsLifted)
+                                var cmpMethod = comparison.Method;
+                                if (cmpMethod != null && !comparison.IsLifted)
                                     return TryEmitComparisonMethod(comparison, il, ref context, parent);
-                                if (exprType != typeof(bool) && !(exprType == typeof(bool?) && comparison.Method == null &&
-                                      comparison.Left.Type == comparison.Right.Type && comparison.Left.Type.IsNullable() &&
-                                      !IsNullContainingExpression(comparison.Left) && !IsNullContainingExpression(comparison.Right)))
-                                    return false; // todo: @feat other kinds of lifting are not supported yet
+
+                                var cmpLeft = comparison.Left;
+                                var cmpLeftType = cmpLeft.Type;
+                                var cmpRight = comparison.Right;
+                                var cmpRightType = cmpRight.Type;
+                                var exprTypeIsBool = exprType == typeof(bool);
+                                if (!exprTypeIsBool)
+                                {
+                                    if (exprType != typeof(bool?) ||
+                                        !IsStandardComparisonMethod(cmpMethod, nodeType) ||
+                                        cmpLeftType != cmpRightType ||
+                                        !cmpLeftType.IsNullable())
+                                        return false; // todo: @feat other kinds of lifting are not supported yet
+                                }
+
+                                // A `null` operand of the nullable type: the relational comparison is always `false` (`default(bool?)` when lifted to null),
+                                // the other operand is still evaluated for its side effects
+                                if (IsStandardComparisonMethod(cmpMethod, nodeType) &&
+                                    cmpLeftType == cmpRightType &&
+                                    cmpLeftType.IsNullable() &&
+                                    (!exprTypeIsBool || nodeType != ExpressionType.Equal & nodeType != ExpressionType.NotEqual))
+                                {
+                                    var leftIsNull = IsNullContainingExpression(cmpLeft);
+                                    var rightIsNull = IsNullContainingExpression(cmpRight);
+                                    if (leftIsNull | rightIsNull)
+                                    {
+                                        if (!leftIsNull && !TryEmit(cmpLeft, il, ref context, parent | ParentFlags.IgnoreResult))
+                                            return false;
+                                        if (!rightIsNull && !TryEmit(cmpRight, il, ref context, parent | ParentFlags.IgnoreResult))
+                                            return false;
+                                        if ((parent & ParentFlags.IgnoreResult) == 0)
+                                        {
+                                            if (exprTypeIsBool)
+                                                il.Demit(OpCodes.Ldc_I4_0);
+                                            else
+                                                EmitLoadLocalVariable(il, InitValueTypeVariable(il, typeof(bool?)));
+                                        }
+                                        context.LastEmitIsAddress = false;
+                                        return true;
+                                    }
+                                }
 #if LIGHT_EXPRESSION
                                 if (comparison is LogicalBinaryExpression { IsReferenceComparison: true })
                                     return TryEmitReferenceComparison(comparison, nodeType == ExpressionType.NotEqual, il, ref context, parent);
@@ -3861,7 +3899,6 @@ namespace FastExpressionCompiler
                 return valueVarIndex;
             }
 
-            // todo: @perf merge with EmitLoadLocalVariable
             private static int InitValueTypeVariable(ILGenerator il, Type exprType) =>
                 InitValueTypeVariable(il, exprType, il.GetNextLocalVarIndex(exprType));
 
@@ -5889,14 +5926,7 @@ namespace FastExpressionCompiler
 
                 if (!leftType.IsPrimitive && !leftType.IsEnum)
                 {
-                    var methodName
-                        = nodeType == ExpressionType.Equal ? "op_Equality"
-                        : nodeType == ExpressionType.NotEqual ? "op_Inequality"
-                        : nodeType == ExpressionType.GreaterThan ? "op_GreaterThan"
-                        : nodeType == ExpressionType.GreaterThanOrEqual ? "op_GreaterThanOrEqual"
-                        : nodeType == ExpressionType.LessThan ? "op_LessThan"
-                        : nodeType == ExpressionType.LessThanOrEqual ? "op_LessThanOrEqual"
-                        : null;
+                    var methodName = GetStandardComparisonMethodNameOrNull(nodeType);
                     if (methodName == null)
                         return false;
 
@@ -5935,10 +5965,10 @@ namespace FastExpressionCompiler
                         EmitEqualToZeroOrNull(il);
                         break;
                     case ExpressionType.LessThan:
-                        il.Demit(OpCodes.Clt);
+                        il.Demit(leftType.IsUnsigned() && rightType.IsUnsigned() ? OpCodes.Clt_Un : OpCodes.Clt);
                         break;
                     case ExpressionType.GreaterThan:
-                        il.Demit(OpCodes.Cgt);
+                        il.Demit(leftType.IsUnsigned() && rightType.IsUnsigned() ? OpCodes.Cgt_Un : OpCodes.Cgt);
                         break;
                     case ExpressionType.GreaterThanOrEqual:
                         // simplifying by using the LessThen (Clt) and comparing with negative outcome (Ceq 0)
@@ -6397,6 +6427,19 @@ namespace FastExpressionCompiler
 
                 return true;
             }
+
+            [MethodImpl((MethodImplOptions)256)]
+            private static string GetStandardComparisonMethodNameOrNull(ExpressionType nodeType) =>
+                nodeType == ExpressionType.Equal ? "op_Equality"
+                : nodeType == ExpressionType.NotEqual ? "op_Inequality"
+                : nodeType == ExpressionType.GreaterThan ? "op_GreaterThan"
+                : nodeType == ExpressionType.GreaterThanOrEqual ? "op_GreaterThanOrEqual"
+                : nodeType == ExpressionType.LessThan ? "op_LessThan"
+                : nodeType == ExpressionType.LessThanOrEqual ? "op_LessThanOrEqual"
+                : null;
+
+            private static bool IsStandardComparisonMethod(MethodInfo method, ExpressionType nodeType) =>
+                method == null || method.IsSpecialName && method.IsStatic && method.Name == GetStandardComparisonMethodNameOrNull(nodeType);
 
             private static bool IsNullContainingExpression(Expression expr) =>
                 expr is DefaultExpression ld && (ld.Type.IsClass || ld.Type.IsNullable()) ||

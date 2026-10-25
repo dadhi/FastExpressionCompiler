@@ -74,6 +74,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_round_trip_more_expression_kinds_through_system_expressions();
             Can_compile_type_is_and_type_equal_the_same_as_system();
             IsLifted_and_IsLiftedToNull_are_the_same_as_in_system_expressions();
+            Lifted_comparisons_with_null_operand_and_other_nullable_types_are_the_same_as_system();
             Lifted_comparisons_have_the_same_type_and_result_as_system();
             And_AndAlso_OrElse_take_the_type_from_the_left_operand();
             Can_compile_nullable_boolean_and_also();
@@ -87,7 +88,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_print_reference_comparison();
             Can_round_trip_new_expression_kinds_through_system_expressions();
 
-            return 68;
+            return 69;
         }
 
         private static int _sideEffectCalls;
@@ -767,6 +768,113 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.AreEqual(typeof(bool?), OrElse(nb, nb).Type);
         }
 
+        public struct LiftMoney
+        {
+            public int V;
+            public LiftMoney(int v) { V = v; }
+            public static bool operator ==(LiftMoney a, LiftMoney b) => a.V == b.V;
+            public static bool operator !=(LiftMoney a, LiftMoney b) => a.V != b.V;
+            public static bool operator <(LiftMoney a, LiftMoney b) => a.V < b.V;
+            public static bool operator >(LiftMoney a, LiftMoney b) => a.V > b.V;
+            public static bool operator <=(LiftMoney a, LiftMoney b) => a.V <= b.V;
+            public static bool operator >=(LiftMoney a, LiftMoney b) => a.V >= b.V;
+            public override bool Equals(object o) => o is LiftMoney m && m.V == V;
+            public override int GetHashCode() => V;
+        }
+        public enum LiftEnum { A, B, C }
+
+        public void Lifted_comparisons_with_null_operand_and_other_nullable_types_are_the_same_as_system()
+        {
+            var names = new[] { "Equal", "NotEqual", "GreaterThan", "GreaterThanOrEqual", "LessThan", "LessThanOrEqual" };
+            var cases = new (Type, object, object)[]
+            {
+                (typeof(int?), 1, 2), (typeof(long?), 1L, 2L), (typeof(double?), 1.0, 2.0), (typeof(uint?), 1u, 2u),
+                (typeof(char?), 'a', 'b'), (typeof(LiftEnum?), LiftEnum.A, LiftEnum.B), (typeof(bool?), true, false),
+                (typeof(decimal?), 1m, 2m), (typeof(DateTime?), new DateTime(2000, 1, 1), new DateTime(2001, 1, 1)),
+                (typeof(LiftMoney?), new LiftMoney(1), new LiftMoney(2)),
+            };
+            var sig = new[] { typeof(SysExpr), typeof(SysExpr), typeof(bool), typeof(MethodInfo) };
+            var lsig = new[] { typeof(Expression), typeof(Expression), typeof(bool), typeof(MethodInfo) };
+            var checkedCount = 0;
+            foreach (var (t, v1, v2) in cases)
+                foreach (var name in names)
+                    foreach (var lift in new[] { false, true })
+                        foreach (var nullSide in new[] { 0, 1, 2 }) // none, left, right
+                        {
+                            var what = $"{t.Name} {name} lift={lift} nullSide={nullSide}";
+                            Delegate sysD;
+                            try
+                            {
+                                var sa = SysExpr.Parameter(t, "a"); var sb = SysExpr.Parameter(t, "b");
+                                var sl = nullSide == 1 ? SysExpr.Constant(null, t) : (SysExpr)sa;
+                                var sr = nullSide == 2 ? SysExpr.Constant(null, t) : (SysExpr)sb;
+                                var se = (SysExpr)typeof(SysExpr).GetMethod(name, sig).Invoke(null, new object[] { sl, sr, lift, null });
+                                sysD = SysExpr.Lambda(typeof(Func<,,>).MakeGenericType(t, t, se.Type), se, sa, sb).Compile();
+                            }
+                            catch (System.Reflection.TargetInvocationException) { continue; } // the operator is not defined for the type
+
+                            var la = Parameter(t, "a"); var lb = Parameter(t, "b");
+                            var ll = nullSide == 1 ? Constant(null, t) : (Expression)la;
+                            var lr = nullSide == 2 ? Constant(null, t) : (Expression)lb;
+                            var le = (Expression)typeof(Expression).GetMethod(name, lsig).Invoke(null, new object[] { ll, lr, lift, null });
+                            var fastD = Lambda(typeof(Func<,,>).MakeGenericType(t, t, le.Type), le, la, lb).CompileFast(true);
+                            Asserts.IsNotNull(fastD, what);
+                            ++checkedCount;
+
+                            foreach (var x in new[] { null, v1, v2 })
+                                foreach (var y in new[] { null, v1, v2 })
+                                    Asserts.AreEqual(sysD.DynamicInvoke(x, y), fastD.DynamicInvoke(x, y), $"{what} ({x}, {y})");
+                        }
+            Asserts.IsTrue(checkedCount > 100);
+
+            // both operands are constants, as in the ported dotnet/runtime tests
+            foreach (var (t, v1, v2) in cases)
+                foreach (var name in names)
+                    foreach (var lift in new[] { false, true })
+                        foreach (var x in new[] { null, v1, v2 })
+                            foreach (var y in new[] { null, v1, v2 })
+                            {
+                                object expected;
+                                try
+                                {
+                                    var se = (SysExpr)typeof(SysExpr).GetMethod(name, sig).Invoke(null, new object[] { SysExpr.Constant(x, t), SysExpr.Constant(y, t), lift, null });
+                                    expected = SysExpr.Lambda(typeof(Func<>).MakeGenericType(se.Type), se).Compile().DynamicInvoke();
+                                }
+                                catch (System.Reflection.TargetInvocationException) { continue; }
+
+                                var le = (Expression)typeof(Expression).GetMethod(name, lsig).Invoke(null, new object[] { Constant(x, t), Constant(y, t), lift, null });
+                                var fastD = Lambda(typeof(Func<>).MakeGenericType(le.Type), le).CompileFast(true);
+                                var what = $"{t.Name} {name} lift={lift} ({x}, {y})";
+                                Asserts.IsNotNull(fastD, what);
+                                Asserts.AreEqual(expected, fastD.DynamicInvoke(), what);
+                            }
+
+            // unsigned operands above the signed range
+            var ua = Parameter(typeof(uint?), "ua"); var ub = Parameter(typeof(uint?), "ub");
+            var ult = Lambda<Func<uint?, uint?, bool>>(LessThan(ua, ub), ua, ub).CompileFast(true);
+            Asserts.AreEqual(true, ult(1u, uint.MaxValue));
+            Asserts.AreEqual(false, ult(uint.MaxValue, 1u));
+            var ugt = Lambda<Func<uint?, uint?, bool?>>(GreaterThan(ua, ub, true, null), ua, ub).CompileFast(true);
+            Asserts.AreEqual(true, ugt(uint.MaxValue, 1u));
+            Asserts.AreEqual(null, ugt(null, 1u));
+            var pu = Parameter(typeof(ulong), "pu"); var pv = Parameter(typeof(ulong), "pv");
+            Asserts.AreEqual(true, Lambda<Func<ulong, ulong, bool>>(GreaterThan(pu, pv), pu, pv).CompileFast(true)(ulong.MaxValue, 1UL));
+            // the other operand is still evaluated when the result is known to be null
+            var calls = 0;
+            Func<int?> sideEffect = () => { ++calls; return 1; };
+            var lt = LessThan(Invoke(Constant(sideEffect)), Constant(null, typeof(int?)), true, null);
+            Asserts.AreEqual(typeof(bool?), lt.Type);
+            Asserts.AreEqual(null, Lambda<Func<bool?>>(lt).CompileFast(true)());
+            var gt = GreaterThan(Constant(null, typeof(int?)), Invoke(Constant(sideEffect)), true, null);
+            Asserts.AreEqual(null, Lambda<Func<bool?>>(gt).CompileFast(true)());
+            Asserts.AreEqual(2, calls);
+
+            // and the result is usable as a nested operand
+            var nb = Parameter(typeof(bool?), "nb");
+            var withOr = Lambda<Func<bool?, bool?>>(Or(nb, lt), nb).CompileFast(true);
+            Asserts.AreEqual(true, withOr(true));
+            Asserts.AreEqual(null, withOr(false));
+        }
         public void Lifted_comparisons_have_the_same_type_and_result_as_system()
         {
             var ip = Parameter(typeof(int), "a"); var iq = Parameter(typeof(int), "b");
