@@ -1248,20 +1248,21 @@ public abstract class Expression
     public static ElementInit ElementInit(MethodInfo addMethod, IEnumerable<Expression> arguments) =>
         ElementInit(addMethod, arguments.AsReadOnlyList());
 
+    [RequiresUnreferencedCode(Trimming.Message)]
+    // The outer tree still consists of LightExpression nodes. A parameter or constant
+    // may hold a System Expression<TDelegate> as runtime data; Invoke compiles that
+    // value and invokes its delegate. This does not mix System nodes into the tree.
+    private static Type GetInvocationReturnType(Expression expression) =>
+        expression is LambdaExpression directLambda ? directLambda.ReturnType :
+        expression is UnaryExpression quote && quote.NodeType == ExpressionType.Quote && quote.Operand is LambdaExpression lambda
+            ? lambda.ReturnType
+            : (expression.Type.FindExpressionCompileMethod()?.ReturnType ?? expression.Type).FindDelegateInvokeMethod().ReturnType;
+
     public static InvocationExpression Invoke(LambdaExpression expression) =>
         new NotNullExpressionInvocationExpression(expression);
 
     public static InvocationExpression Invoke(LambdaExpression expression, Expression a0) =>
         new OneArgumentInvocationExpression(expression, a0);
-
-    [MethodImpl((MethodImplOptions)256)]
-    [RequiresUnreferencedCode(Trimming.Message)]
-    private static Type GetInvocationReturnType(Expression expression) =>
-        expression is LambdaExpression lambda
-            ? lambda.ReturnType
-            : expression is UnaryExpression unExpr && unExpr.NodeType == ExpressionType.Quote && unExpr.Operand is LambdaExpression quotedLambda
-                ? quotedLambda.ReturnType
-                : expression.Type.FindDelegateInvokeMethod().ReturnType;
 
     [RequiresUnreferencedCode(Trimming.Message)]
     public static InvocationExpression Invoke(Expression expression, Expression a0) =>
@@ -1553,9 +1554,9 @@ public abstract class Expression
 
     /// <summary>Creates a BinaryExpression that represents a conditional AND operation that evaluates the second operand only if the first operand evaluates to true.</summary>
     public static BinaryExpression AndAlso(Expression left, Expression right) =>
-        left.Type == typeof(bool?)
-            ? new LeftTypedBinaryExpression(ExpressionType.AndAlso, left, right)
-            : new LogicalBinaryExpression(ExpressionType.AndAlso, left, right);
+        left.Type == typeof(bool)
+            ? new LogicalBinaryExpression(ExpressionType.AndAlso, left, right)
+            : new LeftTypedBinaryExpression(ExpressionType.AndAlso, left, right);
 
     /// <summary>Creates a BinaryExpression that represents a conditional AND operation that evaluates the second operand only if the first operand evaluates to true.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
@@ -1579,9 +1580,9 @@ public abstract class Expression
 
     /// <summary>Creates a BinaryExpression that represents a conditional OR operation that evaluates the second operand only if the first operand evaluates to false.</summary>
     public static BinaryExpression OrElse(Expression left, Expression right) =>
-        left.Type == typeof(bool?)
-            ? new LeftTypedBinaryExpression(ExpressionType.OrElse, left, right)
-            : new LogicalBinaryExpression(ExpressionType.OrElse, left, right);
+        left.Type == typeof(bool)
+            ? new LogicalBinaryExpression(ExpressionType.OrElse, left, right)
+            : new LeftTypedBinaryExpression(ExpressionType.OrElse, left, right);
 
     /// <summary>Creates a BinaryExpression that represents a conditional OR operation that evaluates the second operand only if the first operand evaluates to false.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
@@ -2910,6 +2911,13 @@ public static class FromSysExpressionConverter
                         vars[i] = (ParameterExpression)sysVars[i].ToLightExpression(ref exprsConverted);
                     return new RuntimeVariablesExpression(vars);
                 }
+            case ExpressionType.TypeIs:
+            case ExpressionType.TypeEqual:
+                var typeTest = (System.Linq.Expressions.TypeBinaryExpression)sysExpr;
+                var tested = typeTest.Expression.ToLightExpression(ref exprsConverted);
+                return nodeType == ExpressionType.TypeIs
+                    ? Expression.TypeIs(tested, typeTest.TypeOperand)
+                    : Expression.TypeEqual(tested, typeTest.TypeOperand);
             case ExpressionType.DebugInfo:
                 {
                     var die = (System.Linq.Expressions.DebugInfoExpression)sysExpr;
@@ -3036,12 +3044,25 @@ internal static class TypeTools
     [RequiresUnreferencedCode(Trimming.Message)]
     internal static FieldInfo FindField(this Type type, string fieldName)
     {
-        var fields = type.GetTypeInfo().DeclaredFields.AsArray();
-        for (var i = 0; i < fields.Length; i++)
-            if (fields[i].Name == fieldName)
-                return fields[i];
+        var info = type.GetTypeInfo();
+        if (fieldName == null)
+            return null;
+        try
+        {
+            var field = info.GetDeclaredField(fieldName);
+            if (field != null)
+                return field;
+        }
+        catch (AmbiguousMatchException)
+        {
+            // CLR metadata can contain same-name fields with different types. Preserve
+            // the existing first-declared-match behavior for such non-C# types.
+            foreach (var field in info.DeclaredFields)
+                if (field.Name == fieldName)
+                    return field;
+        }
 
-        return type.GetTypeInfo().BaseType?.FindField(fieldName);
+        return info.BaseType?.FindField(fieldName);
     }
 
     internal const BindingFlags InstanceMethods = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
@@ -3516,7 +3537,8 @@ public abstract class BinaryExpression : Expression
         [RequiresUnreferencedCode(Trimming.Message)]
         get =>
             NodeType != ExpressionType.Coalesce & NodeType != ExpressionType.Assign &&
-            Left.Type.IsNullable() &&
+            (Left.Type.IsNullable() ||
+                (NodeType == ExpressionType.LeftShift || NodeType == ExpressionType.RightShift) && Right.Type.IsNullable()) &&
             (Method == null || !Method.GetParameters()[0].ParameterType.GetNonRef().IsEquivalentTo(Left.Type));
     }
 
@@ -5957,18 +5979,19 @@ public sealed class TypedReturnManyParametersExpression<TDelegate> : ManyParamet
         : base(body, parameters) => ReturnType = returnType;
 }
 
-// todo: @feature is not supported yet
 public sealed class DynamicExpression : Expression
 {
     public override ExpressionType NodeType => ExpressionType.Dynamic;
-    public override Type Type => typeof(object);
+    public override Type Type { get; }
     public Type DelegateType { get; }
     public CallSiteBinder Binder { get; }
     public IReadOnlyList<Expression> Arguments { get; }
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public DynamicExpression(Type delegateType, CallSiteBinder binder, IReadOnlyList<Expression> arguments)
     {
         DelegateType = delegateType;
+        Type = delegateType.FindDelegateInvokeMethod().ReturnType;
         Binder = binder;
         Arguments = arguments;
     }

@@ -1,5 +1,7 @@
 # Compatibility results: 18 October 2026
 
+This is the original import snapshot. Subsequent compiler changes and current results are documented in the [fixes report](fixes/README.md); the historical counts and limitations below describe the original measured commit.
+
 Measured with Windows ARM64, .NET SDK 10.0.301, .NET runtime 10.0.9, Release, against FastExpressionCompiler commit `1d2a4bd364bd5271f5594074f76e298f5afa53db`. The upstream System.Linq.Expressions suite is pinned at dotnet/runtime commit `ec0059c08c077e839c6eb8827c846530a891d7e2`.
 
 ## Overall results

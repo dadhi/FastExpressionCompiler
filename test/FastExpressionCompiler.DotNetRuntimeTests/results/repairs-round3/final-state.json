@@ -1,0 +1,95 @@
+{
+  "status": "Final70f297cb validated; bounded combined and map measurements complete. Universal performance/allocation parity not established.",
+  "final_code_head": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+  "accepted_arithmetic_commit": "44ee17d7f3fd5d363b7088158cc97b2cc60f7da7",
+  "try_value_commit": "6d397bc6255ddf406f5586c405ddd04cff7d4cdd",
+  "final_validation": {
+    "codeHead": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "codes": {
+      "FastExpressionCompiler": 0,
+      "FastExpressionCompiler.LightExpression": 0,
+      "native-net10.0": 0,
+      "native-net8.0": 0,
+      "framework-build": 0,
+      "framework-run": 0,
+      "imported-build": 0,
+      "imported-full": 0
+    },
+    "imported": {
+      "batches": 21,
+      "crashes": 0,
+      "counters": {
+        "total": 35122,
+        "executed": 35064,
+        "passed": 35064,
+        "failed": 0,
+        "error": 0,
+        "timeout": 0,
+        "aborted": 0,
+        "notExecuted": 0
+      },
+      "originalDenominator": 35133,
+      "exclusions": 69,
+      "newExclusions": 0
+    },
+    "native": {
+      "net10": "All runner suites pass; legacy1712",
+      "net8": "All runner suites pass; legacy1711",
+      "framework": "TestX1037 plus legacy1595 pass"
+    },
+    "priorAttempt": {
+      "head": "6d397bc6",
+      "result": "Interrupted after managed stack proved preexisting SmallMap16 promotion hang; fixed3be541d3; no Trycontrolflow regression"
+    },
+    "snapshot": {
+      "commit": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+      "compilerSha256": "4239ac0a6f673fba71eead86d2eae40e7eec79f0a52241f2c9d8ac2669ada237",
+      "assemblySha256": "6ddb580a9826a3494ff3bdc863d3af73d58ba836d2a7754ecc9f7afd698521d1"
+    }
+  },
+  "notes": "Historical42f/isolated snapshots retain their exact sources. Old6d validation was interrupted by unchanged-prePR SmallMap capacity bug, not a Try-value regression;70f includes its fix and supported EH-host correction.",
+  "combined_expected": true,
+  "validation_path": "pr558-repair/validation-70f297cb",
+  "candidate_code_head": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+  "combined_snapshot_head": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+  "combined_measurements_state": "Complete:12474 raw rows/198 groups,0 errors;21 rotated samples, all short samples retained. Compile independently calibrated; FEC other phases use common counts, System independently calibrated.",
+  "map_capacity_commit": "3be541d3aeba0d58560b0a49d78206bb108edbfc",
+  "supported_host_commit": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+  "combined_path": "pr558-round4/combined-final-bounded",
+  "historical_combined_path": "pr558-round4/combined-final",
+  "map_capacity_path": "pr558-round4/map-capacity",
+  "supported_host_path": "pr558-round4/supported-eh-host",
+  "review_reply_paths": [
+    "pr558-round4/dadhi-host-reply.json",
+    "pr558-round4/dadhi-host-reply-published.json"
+  ],
+  "official_source_urls": [
+    "https://github.com/dotnet/runtime/blob/v10.0.9/src/libraries/System.Private.CoreLib/src/System/Reflection/Emit/DynamicMethod.cs#L228-L240",
+    "https://github.com/dotnet/runtime/blob/v10.0.9/src/coreclr/System.Private.CoreLib/src/System/Reflection/Emit/DynamicMethod.CoreCLR.cs#L41-L56"
+  ],
+  "allocation_confirmation_path": "allocation-confirmation-round4",
+  "allocation_confirmation_state": "Complete:2970 raw rows/198 groups;5 samples x200 operations after40warmups;164 unchanged,26 decreased,8 increased. Six FrameworkLight approximately192B residual plus two FrameworkStandard0.8B groups retained. No elapsed claims.",
+  "validation_reproduction_paths": [
+    "pr558-repair/validate.py",
+    "pr558-repair/summarize-validation.py",
+    "fec-round12/Run-Full.py",
+    "pr558-repair/frozen-70f297cb",
+    "fec-fixes/FrameworkRunner/Program.cs",
+    "fec-fixes/FrameworkRunner/FrameworkRunner.csproj"
+  ],
+  "allocation_confirmation_summary": {
+    "complete": true,
+    "counts": {
+      "unchanged": 164,
+      "decreased": 26,
+      "increased": 8
+    },
+    "primaryPositiveReconfirmation": {
+      "primary_positive": 28,
+      "positive_again": 6,
+      "now_equal": 21,
+      "now_decreased": 1
+    },
+    "errors": []
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "source": "00af81b4470d1ef158c28d9f6c5a03c5142acb31",
+  "base558": "dd989683d484bfc4a8c13e65373f528314885f24",
+  "master": "0f37356fc9ca2c05b085f94592cfaf492f78eacf",
+  "nativeCounters": {
+    "net10": [
+      "1734"
+    ],
+    "net8": [
+      "1733"
+    ],
+    "net472": [
+      "1051",
+      "1617"
+    ]
+  },
+  "runtime": {
+    "passed": 35088,
+    "skipped": 59,
+    "failed": 0,
+    "crashes": 0
+  }
+}

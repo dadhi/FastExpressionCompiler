@@ -1,0 +1,229 @@
+{
+  "ProcessIsolation": "One fresh native Framework process per version/flavor/case/round",
+  "Rounds": 2,
+  "IncludeSystem": true,
+  "Flavors": [
+    "standard",
+    "light"
+  ],
+  "VerifyOnly": false,
+  "StartedUTC": "2026-10-19T11:32:02.7399284Z",
+  "Names": [
+    "constant",
+    "add",
+    "arithmetic64",
+    "balanced256",
+    "conditional",
+    "nullable",
+    "new_member",
+    "constant_object",
+    "array",
+    "new_array",
+    "interned_string",
+    "noninterned_string",
+    "try_catch",
+    "try_finally",
+    "switch",
+    "goto",
+    "loop",
+    "blocks32",
+    "blocks128",
+    "invoke_literal",
+    "invoke_delegate",
+    "invoke_try_argument",
+    "capture1",
+    "capture8",
+    "quote_closed",
+    "quote_capture",
+    "runtime_variables",
+    "capture_reference",
+    "nested_blocks8",
+    "nested_blocks32",
+    "nested_blocks128",
+    "nested_mixed32",
+    "nested_mixed128",
+    "nested_eh8",
+    "nested_eh32",
+    "capture_call",
+    "capture_ctor",
+    "capture_invoke",
+    "capture_try",
+    "capture_array",
+    "capture_mutable",
+    "capture_byref_call",
+    "capture_struct",
+    "capture_large_struct",
+    "capture_mutable_reference",
+    "capture_mutable_reference_ctor",
+    "capture_mutable_reference_array"
+  ],
+  "SourceRuns": {
+    "beforeAndSystem": "final20d (earlier independent-process controls; unchanged binaries)",
+    "current": "latest-current (fresh processes, source 6676ab49b27c9fc13220eb20980282b5597b438f)"
+  },
+  "TimingCaveat": "Before/System controls and current were measured in separate chronological runs; Framework time ratios are descriptive, not paired causal estimates.",
+  "MeasuredControlAssemblyHashes": {
+    "archive": "historical-20d.zip",
+    "path": "historical-20d\\framework-phase\\hashes-final.json",
+    "manifestSha256": "d4bc521f10fd415cc79db9ff930014ccb28231791e397680cd11f5ddbbc2739d",
+    "hashes": [
+      {
+        "Path": "Program.cs",
+        "SHA256": "C1AE440E548B1DC211561B157352599F3FE910640EBCE6A0DFA54AEBEEE8227A"
+      },
+      {
+        "Path": "cases.json",
+        "SHA256": "D87CEC89BE22A0A62AC6430444C68AE69297670329BB446359FAC78ED17CD487"
+      },
+      {
+        "Path": "Prepare.ps1",
+        "SHA256": "3F681F08977D99BC86C8125FF587EED9DD13A8A9A060E000B03712863468C58B"
+      },
+      {
+        "Path": "Run-Paired.ps1",
+        "SHA256": "54CC5AEEB381ED43027A31EC0BC070DBAA417564BF45EBF8048BD49F00F0151B"
+      },
+      {
+        "Path": "manifest.json",
+        "SHA256": "F72B3CA6485E5159F4CE3877C7FC1DBD785EFCEE1739F5E5A4F198EA3690236F"
+      },
+      {
+        "Path": "snapshots\\before\\light\\bin\\Release\\net472\\FecFrameworkSnapshot.light.dll",
+        "SHA256": "C6F47091C91091E2C9373301A09930FED78A8243ED253F687AA38B91A2B03BAD"
+      },
+      {
+        "Path": "snapshots\\before\\light\\bin\\Release\\net472\\Harness.exe",
+        "SHA256": "779086BFD836A43FF385BFD161F4910477064306092A90229160434D0E9DFDAF"
+      },
+      {
+        "Path": "snapshots\\before\\light\\library\\Expression.cs",
+        "SHA256": "4D9AC7B84E8AAFEA392CD68E4119E25C441F5A44DF34D071AB8D1E636E5582AE"
+      },
+      {
+        "Path": "snapshots\\before\\light\\library\\ExpressionVisitor.cs",
+        "SHA256": "67D2C31FA55A89B83C71AE09FE8D969517C509F3C60FCEE02AB0EF8C044201C4"
+      },
+      {
+        "Path": "snapshots\\before\\light\\library\\FastExpressionCompiler.cs",
+        "SHA256": "634ACE5AA818DAC1E86AB9CF6C8D5066ACDD3C2A08790404FEE372918D52DA42"
+      },
+      {
+        "Path": "snapshots\\before\\light\\library\\FlatExpression.cs",
+        "SHA256": "77FBB1E6F757632322E34FB5843DFDB3C163FA399CB487D70DFED52378CDC0B4"
+      },
+      {
+        "Path": "snapshots\\before\\light\\library\\ILReader.cs",
+        "SHA256": "27618F8B6C190F90F46B4BC8D3089885888C8A340E84C2239515C7FDAF2D41FF"
+      },
+      {
+        "Path": "snapshots\\before\\light\\library\\ImTools.cs",
+        "SHA256": "4B975803958131933B87925F0F62CD73BB81421C07185D69AAAD317D660E6156"
+      },
+      {
+        "Path": "snapshots\\before\\light\\library\\TestTools.cs",
+        "SHA256": "0081443C2104DDD3AD6DFCA39A31182FBDD7BB28252956BBFB74D06A8BB58E56"
+      },
+      {
+        "Path": "snapshots\\before\\light\\library\\bin\\Release\\net472\\FecFrameworkSnapshot.light.dll",
+        "SHA256": "C6F47091C91091E2C9373301A09930FED78A8243ED253F687AA38B91A2B03BAD"
+      },
+      {
+        "Path": "snapshots\\before\\standard\\bin\\Release\\net472\\FecFrameworkSnapshot.standard.dll",
+        "SHA256": "4BDC6133AB032880DEEBFC1174329E022E3CF363EB589A471728F915687AD8F8"
+      },
+      {
+        "Path": "snapshots\\before\\standard\\bin\\Release\\net472\\Harness.exe",
+        "SHA256": "764E4740A1406D0A3C90FF48D3E2D9464E2B4A7E1C5AF508D6B4A89305CF0921"
+      },
+      {
+        "Path": "snapshots\\before\\standard\\library\\FastExpressionCompiler.cs",
+        "SHA256": "634ACE5AA818DAC1E86AB9CF6C8D5066ACDD3C2A08790404FEE372918D52DA42"
+      },
+      {
+        "Path": "snapshots\\before\\standard\\library\\ILReader.cs",
+        "SHA256": "27618F8B6C190F90F46B4BC8D3089885888C8A340E84C2239515C7FDAF2D41FF"
+      },
+      {
+        "Path": "snapshots\\before\\standard\\library\\ImTools.cs",
+        "SHA256": "4B975803958131933B87925F0F62CD73BB81421C07185D69AAAD317D660E6156"
+      },
+      {
+        "Path": "snapshots\\before\\standard\\library\\TestTools.cs",
+        "SHA256": "0081443C2104DDD3AD6DFCA39A31182FBDD7BB28252956BBFB74D06A8BB58E56"
+      },
+      {
+        "Path": "snapshots\\before\\standard\\library\\bin\\Release\\net472\\FecFrameworkSnapshot.standard.dll",
+        "SHA256": "4BDC6133AB032880DEEBFC1174329E022E3CF363EB589A471728F915687AD8F8"
+      },
+      {
+        "Path": "snapshots\\current\\light\\bin\\Release\\net472\\FecFrameworkSnapshot.light.dll",
+        "SHA256": "E4DC3036F8D5D7EE6F8581273280798759050AB00B2F05D311F35784115D89F0"
+      },
+      {
+        "Path": "snapshots\\current\\light\\bin\\Release\\net472\\Harness.exe",
+        "SHA256": "8B7B3EAFF5A1804BBAB42C2E4CB464E3BA0188FBCDB647264A4A34153E0712FA"
+      },
+      {
+        "Path": "snapshots\\current\\light\\library\\Expression.cs",
+        "SHA256": "0CC710584ED46F23E676274263F70381DA52813DC58064E95AD257B145227A3E"
+      },
+      {
+        "Path": "snapshots\\current\\light\\library\\ExpressionVisitor.cs",
+        "SHA256": "67D2C31FA55A89B83C71AE09FE8D969517C509F3C60FCEE02AB0EF8C044201C4"
+      },
+      {
+        "Path": "snapshots\\current\\light\\library\\FastExpressionCompiler.cs",
+        "SHA256": "21408A285797BDEDBAFFDA8BEF0479F45ED755AAA2182915F68D8AD212250ABE"
+      },
+      {
+        "Path": "snapshots\\current\\light\\library\\FlatExpression.cs",
+        "SHA256": "77FBB1E6F757632322E34FB5843DFDB3C163FA399CB487D70DFED52378CDC0B4"
+      },
+      {
+        "Path": "snapshots\\current\\light\\library\\ILReader.cs",
+        "SHA256": "27618F8B6C190F90F46B4BC8D3089885888C8A340E84C2239515C7FDAF2D41FF"
+      },
+      {
+        "Path": "snapshots\\current\\light\\library\\ImTools.cs",
+        "SHA256": "4B975803958131933B87925F0F62CD73BB81421C07185D69AAAD317D660E6156"
+      },
+      {
+        "Path": "snapshots\\current\\light\\library\\TestTools.cs",
+        "SHA256": "0081443C2104DDD3AD6DFCA39A31182FBDD7BB28252956BBFB74D06A8BB58E56"
+      },
+      {
+        "Path": "snapshots\\current\\light\\library\\bin\\Release\\net472\\FecFrameworkSnapshot.light.dll",
+        "SHA256": "E4DC3036F8D5D7EE6F8581273280798759050AB00B2F05D311F35784115D89F0"
+      },
+      {
+        "Path": "snapshots\\current\\standard\\bin\\Release\\net472\\FecFrameworkSnapshot.standard.dll",
+        "SHA256": "0DC80582AF7FAFBB0FCF2E6D581919F0420EC9AFAB700ECC4502754CDF017406"
+      },
+      {
+        "Path": "snapshots\\current\\standard\\bin\\Release\\net472\\Harness.exe",
+        "SHA256": "30F6A2A73C8B754E5E4AF9643C4E8DD87E75A3C31B741074CFD801CC112A37DE"
+      },
+      {
+        "Path": "snapshots\\current\\standard\\library\\FastExpressionCompiler.cs",
+        "SHA256": "21408A285797BDEDBAFFDA8BEF0479F45ED755AAA2182915F68D8AD212250ABE"
+      },
+      {
+        "Path": "snapshots\\current\\standard\\library\\ILReader.cs",
+        "SHA256": "27618F8B6C190F90F46B4BC8D3089885888C8A340E84C2239515C7FDAF2D41FF"
+      },
+      {
+        "Path": "snapshots\\current\\standard\\library\\ImTools.cs",
+        "SHA256": "4B975803958131933B87925F0F62CD73BB81421C07185D69AAAD317D660E6156"
+      },
+      {
+        "Path": "snapshots\\current\\standard\\library\\TestTools.cs",
+        "SHA256": "0081443C2104DDD3AD6DFCA39A31182FBDD7BB28252956BBFB74D06A8BB58E56"
+      },
+      {
+        "Path": "snapshots\\current\\standard\\library\\bin\\Release\\net472\\FecFrameworkSnapshot.standard.dll",
+        "SHA256": "0DC80582AF7FAFBB0FCF2E6D581919F0420EC9AFAB700ECC4502754CDF017406"
+      }
+    ]
+  },
+  "RebuiltSnapshotWarning": "Framework Prepare rebuilt before/current binaries. Latest assembly hashes identify the freshly measured current binary; latest rebuilt-before hashes do not identify the old measured before/System controls or their MVID. Original measured-control hashes are the historical manifest above."
+}

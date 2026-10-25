@@ -1,0 +1,13 @@
+# Final compatibility-repair performance evidence
+
+Measured code: 70f297cbd5b2f232fd16ec0753b52f5c9ef387a0. The latest timed comparison is last pushed revision `42f98478` -> `70f297cb` plus System; historical pre-PR measurements keep their own source identities. Universal performance/allocation parity is not established.
+
+Start with REPORT.txt, the three readable comparison CSVs, and validation.json. report.html contains all tables; download/open it locally for the interactive view. Primary and equal-count allocation observations remain separate. The final matrix contains 12,474 rows/198 phase groups; the independent allocation confirmation contains 2,970 rows/198 groups. All raw data and frozen sources/binaries are archived.
+
+To inspect/reproduce raw records, extract all supplemental ZIPs into ONE NEW directory outside a source checkout (the archives contain standalone C# projects). Preserve their pr558-round3/, pr558-round4/, allocation-confirmation-round4/ and pr558-repair/ paths. Open pr558-round4/publication/report.html inside that directory for working raw-file links. Each archive has its own SHA256 manifest; archives.json and archive-verification.json record archive/content verification. Scripts retain exact source/TFM boundaries and original machine paths; adjust repository roots where noted. Do not overwrite original measurements; use new output directories and run timings without concurrent builds/tests.
+
+held-experiments-history.zip is the unchanged older held-experiment archive (SHA256 7e18a65f079f6a936e718a41cf02db322ce91f4cb6c52533ad4b6444b14a4421). For links to that original archive, put a copy at pr558-round3/held-experiments.zip in the extracted tree. Its contents are rejected/held prototypes, not merged fixes.
+
+Final validation: 35,064 imported passes, 0 failures/crashes among executed cases, 69 existing exclusions unchanged; all production and native Standard/Light configurations pass. A prior `6d397bc6` attempt stalled in a preexisting SmallMap16 helper; bounded pre-parent reproductions and the preserved stack identify it, and `3be541d3` fixes it. Deep-tree crash modes remain deferred.
+
+Remaining costs include approximately 192 B per Framework Light capture compilation after EH history, small allocation batch differences, observed timing regressions, and source-specific historical cold risks. The supported anonymous EH constructor eagerly JITs at CreateDelegate; compile-only and compile+first must be compared separately. No final `70f297cb` fresh-process cold matrix was run. Exact managed allocator attribution remains unresolved; total native/JIT/retained memory was not measured.

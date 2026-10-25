@@ -1,0 +1,9 @@
+{
+  "base": "0f37356fc9ca2c05b085f94592cfaf492f78eacf",
+  "source_commit": "79197e80a5b7ffd4300e32c7d1895bbed076cf0e",
+  "production_sha256": {
+    "src/FastExpressionCompiler/FastExpressionCompiler.cs": "2a76f728cfad09c891594a105970dc027b07b0512556c39318de92efd5203ffb",
+    "src/FastExpressionCompiler.LightExpression/Expression.cs": "f67c3fe624c6f3f02b9bbfc86971fb5e8b6ffabc87d2303606bb0077c65b4689",
+    "src/FastExpressionCompiler/ImTools.cs": "66a482dbe23c3b00d9ebc50a16a564b2b24b57fc2402306ce1121bb697cec6f8"
+  }
+}

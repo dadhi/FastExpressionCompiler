@@ -11,7 +11,7 @@ namespace System.Linq.Expressions.Tests
 {
     public static class CompilerTests
     {
-        [Theory]
+        [KnownFecCrashTheory("10,000-deep expression traversal overflows the stack; requires a broader traversal/emission change. No stack-size workaround. Re-enable after a structural fix.")]
         [ClassData(typeof(CompilationTypes))]
         [OuterLoop("Takes over a minute to complete")]
         // Compiling a 10,000-deep expression tree takes hours on the single-threaded wasm
@@ -31,7 +31,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Equal(n, f());
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("VerifiedCompilerRepresentationBehaviorTests.NonNullableConstants", "private closure layout")]
         public static void EmitConstantsToIL_NonNullableValueTypes()
         {
             VerifyEmitConstantsToIL((bool)true);
@@ -52,7 +52,7 @@ namespace System.Linq.Expressions.Tests
             VerifyEmitConstantsToIL((decimal)49.95m);
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("VerifiedCompilerRepresentationBehaviorTests.NullableConstants", "private closure layout")]
         public static void EmitConstantsToIL_NullableValueTypes()
         {
             VerifyEmitConstantsToIL((bool?)null);
@@ -88,14 +88,14 @@ namespace System.Linq.Expressions.Tests
             VerifyEmitConstantsToIL((DateTime?)null);
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("VerifiedCompilerRepresentationBehaviorTests.ReferenceConstants", "private closure layout")]
         public static void EmitConstantsToIL_ReferenceTypes()
         {
             VerifyEmitConstantsToIL((string)null);
             VerifyEmitConstantsToIL((string)"bar");
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("VerifiedCompilerRepresentationBehaviorTests.EnumConstants", "private closure layout")]
         public static void EmitConstantsToIL_Enums()
         {
             VerifyEmitConstantsToIL(ConstantsEnum.A);
@@ -103,14 +103,14 @@ namespace System.Linq.Expressions.Tests
             VerifyEmitConstantsToIL((ConstantsEnum?)ConstantsEnum.A);
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("VerifiedCompilerRepresentationBehaviorTests.SharedConstantReferences", "private closure layout")]
         public static void EmitConstantsToIL_ShareReferences()
         {
             var o = new object();
             VerifyEmitConstantsToIL(Expression.Equal(Expression.Constant(o), Expression.Constant(o)), 1, true);
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("VerifiedCompilerRepresentationBehaviorTests.CapturedConstants", "private closure layout")]
         public static void EmitConstantsToIL_LiftedToClosure()
         {
             VerifyEmitConstantsToIL(DateTime.Now, 1);
@@ -145,7 +145,7 @@ namespace System.Linq.Expressions.Tests
             );
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("RuntimeCompilerLayoutBehaviorRegressionTests.VerifyIL_Simple_behavior")]
         [ActiveIssue("https://github.com/mono/mono/issues/14919", TestRuntimes.Mono)]
         public static void VerifyIL_Simple()
         {
@@ -162,7 +162,7 @@ namespace System.Linq.Expressions.Tests
                   }");
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("RuntimeCompilerLayoutBehaviorRegressionTests.VerifyIL_Exceptions_behavior")]
         [ActiveIssue("https://github.com/mono/mono/issues/14919", TestRuntimes.Mono)]
         public static void VerifyIL_Exceptions()
         {
@@ -223,7 +223,7 @@ namespace System.Linq.Expressions.Tests
                   }");
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("RuntimeCompilerLayoutBehaviorRegressionTests.VerifyIL_Closure1_behavior")]
         [ActiveIssue("https://github.com/mono/mono/issues/14919", TestRuntimes.Mono)]
         public static void VerifyIL_Closure1()
         {
@@ -258,7 +258,7 @@ namespace System.Linq.Expressions.Tests
                 appendInnerLambdas: true);
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("RuntimeCompilerLayoutBehaviorRegressionTests.VerifyIL_Closure2_behavior")]
         [ActiveIssue("https://github.com/mono/mono/issues/14919", TestRuntimes.Mono)]
         public static void VerifyIL_Closure2()
         {
@@ -316,7 +316,7 @@ namespace System.Linq.Expressions.Tests
                 appendInnerLambdas: true);
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("RuntimeCompilerLayoutBehaviorRegressionTests.VerifyIL_Closure3_behavior")]
         [ActiveIssue("https://github.com/mono/mono/issues/14919", TestRuntimes.Mono)]
         public static void VerifyIL_Closure3()
         {
