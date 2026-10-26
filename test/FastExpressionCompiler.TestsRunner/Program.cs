@@ -9,8 +9,12 @@ namespace FastExpressionCompiler.UnitTests
 {
     public class Program
     {
-        public static void Main()
+        public static void Main(string[] args)
         {
+            RunRuntimeAccessorContracts();
+            if (Array.IndexOf(args, "--runtime-accessor-contracts") >= 0)
+                return;
+
             // TestTools.AllowPrintCS = false;
             // TestTools.AllowPrintIL = false;
             // TestTools.AllowPrintExpression = false;
@@ -79,6 +83,17 @@ namespace FastExpressionCompiler.UnitTests
             lt.Run(new LightExpression.IssueTests.Issue561_NonBooleanEqualityOperator());
 
             RunAllTests();
+        }
+
+        private static void RunRuntimeAccessorContracts()
+        {
+            var standard = new TestRun(TestFlags.RethrowException);
+            standard.Run(new RuntimeAccessorContractTests());
+            var light = new LightExpression.TestRun(LightExpression.TestFlags.RethrowException);
+            light.Run(new LightExpression.UnitTests.RuntimeAccessorContractTests());
+            if (standard.FailedTestCount != 0 || light.FailedTestCount != 0)
+                throw new InvalidOperationException("Runtime accessor contracts failed; see the member/assertion diagnostics above.");
+            Console.WriteLine($"Runtime accessor contracts passed: {standard.TotalTestCount} Standard, {light.TotalTestCount} LightExpression.");
         }
 
         public static void RunAllTests()
