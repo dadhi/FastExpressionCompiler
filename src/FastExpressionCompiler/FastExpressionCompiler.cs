@@ -2673,7 +2673,7 @@ namespace FastExpressionCompiler
 
             private static bool TryEmitCoalesceOperator(BinaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
-                var labelFalse = il.DefineLabel(); // todo: @perf define only if needed
+                var labelFalse = il.DefineLabel();
                 var labelDone = il.DefineLabel();
 
                 var left = expr.Left;
@@ -3795,7 +3795,7 @@ namespace FastExpressionCompiler
                 switch (Type.GetTypeCode(constType))
                 {
                     case TypeCode.Boolean:
-                        il.Demit((bool)constValue ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0); // todo: @perf check for LightExpression
+                        il.Demit((bool)constValue ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
                         break;
                     case TypeCode.Char:
                         EmitLoadConstantInt(il, (char)constValue);
