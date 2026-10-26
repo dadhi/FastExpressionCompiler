@@ -79,6 +79,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Unary_operators_with_nullable_and_user_defined_operands_are_the_same_as_system();
             Convert_with_the_method_taking_ref_param_is_the_same_as_system();
             Negate_checked_of_short_emits_the_short_IL();
+            Compound_assign_and_inc_dec_with_methods_are_the_same_as_system();
             Unary_operators_with_explicit_method_are_the_same_as_system();
             Lifted_comparisons_have_the_same_type_and_result_as_system();
             And_AndAlso_OrElse_take_the_type_from_the_left_operand();
@@ -93,7 +94,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_print_reference_comparison();
             Can_round_trip_new_expression_kinds_through_system_expressions();
 
-            return 74;
+            return 75;
         }
 
         private static int _sideEffectCalls;
@@ -892,6 +893,8 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             public static ArMoney operator &(ArMoney a, ArMoney b) => new ArMoney(a.V & b.V);
             public static ArMoney operator |(ArMoney a, ArMoney b) => new ArMoney(a.V | b.V);
             public static ArMoney operator ^(ArMoney a, ArMoney b) => new ArMoney(a.V ^ b.V);
+            public static ArMoney operator ++(ArMoney a) => new ArMoney(a.V + 1);
+            public static ArMoney operator --(ArMoney a) => new ArMoney(a.V - 1);
             public override bool Equals(object o) => o is ArMoney m && m.V == V;
             public override int GetHashCode() => V;
             public override string ToString() => "M" + V;
@@ -1130,6 +1133,100 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                 }
             Asserts.AreEqual(0, failures.Count, string.Join("\n", failures));
             Asserts.IsTrue(compared > 30, "compared " + compared);
+        }
+        public class CaHolder
+        {
+            public ArMoney F = new ArMoney(10);
+            public ArMoney P { get; set; } = new ArMoney(20);
+            public ArMoney? N;
+            public ArMoney G;
+            public ArMoney[] Arr = { new ArMoney(1), new ArMoney(2), new ArMoney(3) };
+            public int Calls;
+            public CaHolder(bool hasN) { if (hasN) N = new ArMoney(30); }
+            public int NextIndex() { Calls++; return 1; }
+            public CaHolder Self() { Calls++; return this; }
+            public ArMoney this[int i] { get => Arr[i]; set => Arr[i] = value; }
+            public string State() => $"{F} {P} {N} {G} {Arr[0]},{Arr[1]},{Arr[2]} calls={Calls}";
+        }
+
+        public void Compound_assign_and_inc_dec_with_methods_are_the_same_as_system()
+        {
+            var money = typeof(ArMoney);
+            var ops = new (string, Func<Expression, Expression>)[]
+            {
+                ("PreInc", t => PreIncrementAssign(t, money.GetMethod("op_Increment"))),
+                ("PostInc", t => PostIncrementAssign(t, money.GetMethod("op_Increment"))),
+                ("PreDec", t => PreDecrementAssign(t, money.GetMethod("op_Decrement"))),
+                ("PostDec", t => PostDecrementAssign(t, money.GetMethod("op_Decrement"))),
+                ("AddAssign", t => MakeBinary(ExpressionType.AddAssign, t, Constant(new ArMoney(5), t.Type), false, money.GetMethod("op_Addition"))),
+                ("SubtractAssign", t => MakeBinary(ExpressionType.SubtractAssign, t, Constant(new ArMoney(5), t.Type), false, money.GetMethod("op_Subtraction"))),
+                ("OrAssign", t => MakeBinary(ExpressionType.OrAssign, t, Constant(new ArMoney(5), t.Type), false, money.GetMethod("op_BitwiseOr"))),
+                ("CustomMultiplyAssign", t => MakeBinary(ExpressionType.MultiplyAssign, t, Constant(new ArMoney(5), t.Type), false, typeof(LightExpressionTests).GetMethod(nameof(ArCustomMoney)))),
+            };
+
+            var indexer = typeof(CaHolder).GetProperty("Item");
+            var targets = new (string, Func<ParameterExpression, Expression>)[]
+            {
+                ("field", h => Field(h, "F")),
+                ("property", h => Property(h, "P")),
+                ("nullable field", h => Field(h, "N")),
+                ("array element", h => ArrayAccess(Field(h, "Arr"), Constant(1))),
+                ("array element with the side effect index", h => ArrayAccess(Field(h, "Arr"), Call(h, typeof(CaHolder).GetMethod("NextIndex")))),
+                ("indexer", h => Property(h, indexer, Constant(2))),
+                ("field of the side effect instance", h => Field(Call(h, typeof(CaHolder).GetMethod("Self")), "F")),
+                ("property of the side effect instance", h => Property(Call(h, typeof(CaHolder).GetMethod("Self")), "P")),
+            };
+
+            var failures = new System.Collections.Generic.List<string>();
+            var compared = 0;
+            foreach (var (opName, op) in ops)
+                foreach (var (targetName, target) in targets)
+                    for (var variant = 0; variant < 3; ++variant) // 0 - the used result, 1 - the ignored result, 2 - the local variable
+                    {
+                        var what = $"{opName} {targetName} variant {variant}";
+                        Func<CaHolder, object> sysF, fastF;
+                        try
+                        {
+                            var h = Parameter(typeof(CaHolder), "h");
+                            Expression body;
+                            if (variant == 2)
+                            {
+                                if (targetName != "field")
+                                    continue;
+                                var v = Variable(typeof(ArMoney), "v");
+                                var r = Variable(typeof(object), "r");
+                                body = Block(new[] { v, r },
+                                    Assign(v, Field(h, "F")),
+                                    Assign(r, Convert(op(v), typeof(object))),
+                                    Assign(Field(h, "G"), v),
+                                    r);
+                            }
+                            else
+                            {
+                                var e = op(target(h));
+                                body = variant == 0 ? (Expression)Convert(e, typeof(object)) : Block(e, Constant(1, typeof(object)));
+                            }
+                            var lambda = Lambda<Func<CaHolder, object>>(body, h);
+                            try { sysF = lambda.CompileSys(); }
+                            catch (Exception) { continue; } // not valid for System, so nothing to compare to
+                            fastF = lambda.CompileFast(true);
+                        }
+                        catch (Exception ex) { failures.Add("exception: " + what + " " + (ex.InnerException ?? ex).Message.Split('\n')[0]); continue; }
+
+                        compared++;
+                        foreach (var hasN in new[] { true, false })
+                        {
+                            var sysH = new CaHolder(hasN);
+                            var fastH = new CaHolder(hasN);
+                            object e1, e2;
+                            try { e1 = sysF(sysH); } catch (Exception ex) { e1 = "ex:" + ex.GetType().Name; }
+                            try { e2 = fastF(fastH); } catch (Exception ex) { e2 = "ex:" + ex.GetType().Name; }
+                            if (!Equals(e1, e2) || sysH.State() != fastH.State())
+                                failures.Add($"{what} hasN={hasN}: sys={e1} {sysH.State()} fec={e2} {fastH.State()}");
+                        }
+                    }
+            Asserts.AreEqual(0, failures.Count, string.Join("\n", failures));
+            Asserts.IsTrue(compared > 100, "compared " + compared);
         }
         public delegate T RefConvFunc<T, R>(ref R r);
         public class RefConv

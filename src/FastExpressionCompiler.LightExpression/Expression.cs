@@ -655,13 +655,16 @@ public abstract class Expression
 
         var operandType = operand.Type;
         var type = method.ReturnType;
+
+        // the pre/post increment/decrement assign nodes (contiguous in the enum) have the type of the assigned operand
+        var isIncDecAssign = nodeType >= ExpressionType.PreIncrementAssign && nodeType <= ExpressionType.PostDecrementAssign;
         if (ps[0].IsAssignableFrom(operandType))
-            return new MethodUnaryExpression(nodeType, operand, type, method);
+            return new MethodUnaryExpression(nodeType, operand, isIncDecAssign ? operandType : type, method);
 
         // check for lifted call
         if (operandType.IsNullable() && ps[0].IsAssignableFrom(operandType.GetUnderlyingNullableTypeUnsafe()) &&
             type.IsValueType && !type.IsNullable())
-            return new MethodUnaryExpression(nodeType, operand, type.GetNullable(), method);
+            return new MethodUnaryExpression(nodeType, operand, isIncDecAssign ? operandType : type.GetNullable(), method);
 
         throw new InvalidOperationException($"OperandTypesDoNotMatchParameters for {nodeType} and method {method.Name}");
     }
@@ -711,6 +714,26 @@ public abstract class Expression
     public static UnaryExpression UnaryPlus(Expression expression, MethodInfo method) =>
         method == null ? UnaryPlus(expression) : GetMethodBasedUnary(ExpressionType.UnaryPlus, expression, method);
 
+    /// <summary>Creates a UnaryExpression that represents the assignment of the expression incremented by 1 and returns the incremented value, with the implementing method.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
+    public static UnaryExpression PreIncrementAssign(Expression expression, MethodInfo method) =>
+        method == null ? PreIncrementAssign(expression) : GetMethodBasedUnary(ExpressionType.PreIncrementAssign, expression, method);
+
+    /// <summary>Creates a UnaryExpression that represents the assignment of the expression incremented by 1 and returns the original value, with the implementing method.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
+    public static UnaryExpression PostIncrementAssign(Expression expression, MethodInfo method) =>
+        method == null ? PostIncrementAssign(expression) : GetMethodBasedUnary(ExpressionType.PostIncrementAssign, expression, method);
+
+    /// <summary>Creates a UnaryExpression that represents the assignment of the expression decremented by 1 and returns the decremented value, with the implementing method.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
+    public static UnaryExpression PreDecrementAssign(Expression expression, MethodInfo method) =>
+        method == null ? PreDecrementAssign(expression) : GetMethodBasedUnary(ExpressionType.PreDecrementAssign, expression, method);
+
+    /// <summary>Creates a UnaryExpression that represents the assignment of the expression decremented by 1 and returns the original value, with the implementing method.</summary>
+    [RequiresUnreferencedCode(Trimming.Message)]
+    public static UnaryExpression PostDecrementAssign(Expression expression, MethodInfo method) =>
+        method == null ? PostDecrementAssign(expression) : GetMethodBasedUnary(ExpressionType.PostDecrementAssign, expression, method);
+
     /// <summary>Creates a UnaryExpression, given an operand, its type and a method</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
     public static UnaryExpression MakeUnary(ExpressionType unaryType, Expression operand, Type type, MethodInfo method = null) =>
@@ -732,10 +755,10 @@ public abstract class Expression
             ExpressionType.Unbox => Unbox(operand, type),
             ExpressionType.Increment => Increment(operand, method),
             ExpressionType.Decrement => Decrement(operand, method),
-            ExpressionType.PreIncrementAssign => method == null ? PreIncrementAssign(operand) : ThrowNotSupportedUnary("PreIncrementAssign with method is not supported"),
-            ExpressionType.PostIncrementAssign => method == null ? PostIncrementAssign(operand) : ThrowNotSupportedUnary("PostIncrementAssign with method is not supported"),
-            ExpressionType.PreDecrementAssign => method == null ? PreDecrementAssign(operand) : ThrowNotSupportedUnary("PreDecrementAssign with method is not supported"),
-            ExpressionType.PostDecrementAssign => method == null ? PostDecrementAssign(operand) : ThrowNotSupportedUnary("PostDecrementAssign with method is not supported"),
+            ExpressionType.PreIncrementAssign => PreIncrementAssign(operand, method),
+            ExpressionType.PostIncrementAssign => PostIncrementAssign(operand, method),
+            ExpressionType.PreDecrementAssign => PreDecrementAssign(operand, method),
+            ExpressionType.PostDecrementAssign => PostDecrementAssign(operand, method),
             _ => ThrowNotSupportedUnary($"Making UnaryExpression of {unaryType} is not supported")
         };
 
@@ -3423,10 +3446,10 @@ public abstract class UnaryExpression : Expression
             case ExpressionType.Negate: return SysExpr.Negate(Operand.ToExpression(ref exprsConverted), Method);
             case ExpressionType.NegateChecked: return SysExpr.NegateChecked(Operand.ToExpression(ref exprsConverted), Method);
             case ExpressionType.OnesComplement: return SysExpr.OnesComplement(Operand.ToExpression(ref exprsConverted), Method);
-            case ExpressionType.PostDecrementAssign: return SysExpr.PostDecrementAssign(Operand.ToExpression(ref exprsConverted));
-            case ExpressionType.PostIncrementAssign: return SysExpr.PostIncrementAssign(Operand.ToExpression(ref exprsConverted));
-            case ExpressionType.PreDecrementAssign: return SysExpr.PreDecrementAssign(Operand.ToExpression(ref exprsConverted));
-            case ExpressionType.PreIncrementAssign: return SysExpr.PreIncrementAssign(Operand.ToExpression(ref exprsConverted));
+            case ExpressionType.PostDecrementAssign: return SysExpr.PostDecrementAssign(Operand.ToExpression(ref exprsConverted), Method);
+            case ExpressionType.PostIncrementAssign: return SysExpr.PostIncrementAssign(Operand.ToExpression(ref exprsConverted), Method);
+            case ExpressionType.PreDecrementAssign: return SysExpr.PreDecrementAssign(Operand.ToExpression(ref exprsConverted), Method);
+            case ExpressionType.PreIncrementAssign: return SysExpr.PreIncrementAssign(Operand.ToExpression(ref exprsConverted), Method);
             case ExpressionType.Quote: return SysExpr.Quote(Operand.ToExpression(ref exprsConverted));
             case ExpressionType.UnaryPlus: return SysExpr.UnaryPlus(Operand.ToExpression(ref exprsConverted), Method);
             case ExpressionType.Unbox: return SysExpr.Unbox(Operand.ToExpression(ref exprsConverted), Type);
@@ -6044,14 +6067,16 @@ public sealed class TypedReturnManyParametersExpression<TDelegate> : ManyParamet
 public sealed class DynamicExpression : Expression
 {
     public override ExpressionType NodeType => ExpressionType.Dynamic;
-    public override Type Type => typeof(object);
+    public override Type Type { get;}
     public Type DelegateType { get; }
     public CallSiteBinder Binder { get; }
     public IReadOnlyList<Expression> Arguments { get; }
 
+    [RequiresUnreferencedCode(Trimming.Message)]
     public DynamicExpression(Type delegateType, CallSiteBinder binder, IReadOnlyList<Expression> arguments)
     {
         DelegateType = delegateType;
+        Type = delegateType.FindDelegateInvokeMethod().ReturnType;
         Binder = binder;
         Arguments = arguments;
     }

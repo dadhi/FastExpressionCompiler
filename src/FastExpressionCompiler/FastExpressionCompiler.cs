@@ -2199,13 +2199,27 @@ namespace FastExpressionCompiler
 
                         case ExpressionType.PostIncrementAssign:
                         case ExpressionType.PreIncrementAssign:
-                            return TryEmitArithmeticAndOrAssign(((UnaryExpression)expr).Operand, null, exprType, ExpressionType.Add,
-                                nodeType == ExpressionType.PostIncrementAssign, il, ref context, parent);
+                            {
+                                var incExpr = (UnaryExpression)expr;
+                                var incMethod = incExpr.Method;
+                                return incMethod != null
+                                    ? TryEmitOpAssignWithMethod(incExpr.Operand, null, incMethod, ExpressionType.Add,
+                                        nodeType == ExpressionType.PostIncrementAssign, il, ref context, parent)
+                                    : TryEmitArithmeticAndOrAssign(incExpr.Operand, null, exprType, ExpressionType.Add,
+                                        nodeType == ExpressionType.PostIncrementAssign, il, ref context, parent);
+                            }
 
                         case ExpressionType.PostDecrementAssign:
                         case ExpressionType.PreDecrementAssign:
-                            return TryEmitArithmeticAndOrAssign(((UnaryExpression)expr).Operand, null, exprType, ExpressionType.Subtract,
-                                nodeType == ExpressionType.PostDecrementAssign, il, ref context, parent);
+                            {
+                                var decExpr = (UnaryExpression)expr;
+                                var decMethod = decExpr.Method;
+                                return decMethod != null
+                                    ? TryEmitOpAssignWithMethod(decExpr.Operand, null, decMethod, ExpressionType.Subtract,
+                                        nodeType == ExpressionType.PostDecrementAssign, il, ref context, parent)
+                                    : TryEmitArithmeticAndOrAssign(decExpr.Operand, null, exprType, ExpressionType.Subtract,
+                                        nodeType == ExpressionType.PostDecrementAssign, il, ref context, parent);
+                            }
 
                         case ExpressionType.AddAssign:
                         case ExpressionType.AddAssignChecked:
@@ -2223,8 +2237,17 @@ namespace FastExpressionCompiler
                         case ExpressionType.RightShiftAssign:
                         case ExpressionType.Assign:
                             var ba = (BinaryExpression)expr;
-                            return TryEmitArithmeticAndOrAssign(ba.Left, ba.Right, exprType,
-                                AssignToArithmeticOrSelf(nodeType), false, il, ref context, parent);
+                            if (nodeType == ExpressionType.Assign)
+                                return TryEmitArithmeticAndOrAssign(ba.Left, ba.Right, exprType, nodeType, false, il, ref context, parent);
+
+                            if (ba.Conversion != null) // todo: @feature the conversion lambda of the compound assignment is not supported yet, better to fail than to produce the wrong result
+                                return false;
+
+                            var baMethod = ba.Method;
+                            return baMethod != null
+                                ? TryEmitOpAssignWithMethod(ba.Left, ba.Right, baMethod, AssignToArithmeticOrSelf(nodeType), false, il, ref context, parent)
+                                : TryEmitArithmeticAndOrAssign(ba.Left, ba.Right, exprType,
+                                    AssignToArithmeticOrSelf(nodeType), false, il, ref context, parent);
 
                         case ExpressionType.Block:
                             {
@@ -4621,6 +4644,84 @@ namespace FastExpressionCompiler
                 if (resultVar != -1)
                     EmitLoadLocalVariable(il, resultVar);
                 return true;
+            }
+
+            // Lowers `left op= right` (or `left++` / `left--` when the right is null) with the explicit or user-defined method into
+            // `left = method(left, right)` the same way as System reduces it, with the temps for the target instance and indexes to evaluate them once.
+            private static bool TryEmitOpAssignWithMethod(Expression left, Expression right, MethodInfo method, ExpressionType arithType,
+                bool isPost, ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            {
+                SmallList<ParameterExpression, Stack8<ParameterExpression>, NoArrayPool<ParameterExpression>> vars = default;
+                SmallList<Expression, Stack8<Expression>, NoArrayPool<Expression>> stmts = default;
+                var target = left;
+                if (left is MemberExpression memberExpr)
+                {
+                    var obj = memberExpr.Expression;
+                    if (obj != null && !(obj is ParameterExpression || obj is ConstantExpression))
+                    {
+                        if (obj.Type.IsValueType) // the temp copy of the struct would lose the mutation
+                            return false;
+                        var objVar = Expression.Variable(obj.Type);
+                        vars.Add(objVar);
+                        stmts.Add(Expression.Assign(objVar, obj));
+                        target = Expression.MakeMemberAccess(objVar, memberExpr.Member);
+                    }
+                }
+                else if (left is IndexExpression indexExpr)
+                {
+                    var obj = indexExpr.Object;
+                    var indexArgs = indexExpr.GetArgExprs();
+                    var indexArgCount = indexArgs.GetArgCount();
+                    var args = new Expression[indexArgCount];
+                    if (obj != null && !(obj is ParameterExpression | obj is ConstantExpression))
+                    {
+                        if (obj.Type.IsValueType)
+                            return false;
+                        var objVar = Expression.Variable(obj.Type);
+                        vars.Add(objVar);
+                        stmts.Add(Expression.Assign(objVar, obj));
+                        obj = objVar;
+                    }
+                    for (var i = 0; i < indexArgCount; ++i)
+                    {
+                        var arg = indexArgs.GetArgument(i);
+                        if (!(arg is ParameterExpression | arg is ConstantExpression))
+                        {
+                            var argVar = Expression.Variable(arg.Type);
+                            vars.Add(argVar);
+                            stmts.Add(Expression.Assign(argVar, arg));
+                            arg = argVar;
+                        }
+                        args[i] = arg;
+                    }
+                    target = indexExpr.Indexer != null
+                        ? Expression.MakeIndex(obj, indexExpr.Indexer, args)
+                        : Expression.ArrayAccess(obj, args);
+                }
+                else if (!(left is ParameterExpression))
+                    return false;
+
+                // the old value is needed only for the post increment/decrement with the used result
+                var oldVar = isPost && !parent.IgnoresResult() ? Expression.Variable(left.Type) : null;
+                var operand = target;
+                if (oldVar != null)
+                {
+                    vars.Add(oldVar);
+                    stmts.Add(Expression.Assign(oldVar, target));
+                    operand = oldVar;
+                }
+
+                Expression value = right != null
+                    ? Expression.MakeBinary(arithType, operand, right, false, method)
+                    : arithType == ExpressionType.Add
+                        ? Expression.Increment(operand, method)
+                        : Expression.Decrement(operand, method);
+                stmts.Add(Expression.Assign(target, value));
+                if (oldVar != null)
+                    stmts.Add(oldVar);
+
+                var lowered = vars.Count == 0 ? stmts[0] : Expression.Block(vars.CopyToNewArray(), stmts.CopyToNewArray());
+                return TryEmit(lowered, il, ref context, parent);
             }
 
             private static ExpressionType AssignToArithmeticOrSelf(ExpressionType nodeType) => nodeType switch

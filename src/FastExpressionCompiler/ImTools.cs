@@ -850,8 +850,11 @@ public interface ISmallList<T> : IIndexed<T>, IEnumerable<T>
     /// <summary>Clears the list.</summary>
     void Clear();
 
-    /// <summary>Copies the contents of the list to the passed array.</summary>
-    void CopyToArray(T[] arr, int copyToIndex = 0);
+    /// <summary>Copies the contents of the list to the passed array. Copies into the new array starting from the specified index and for the specified count</summary>
+    void CopyToArray(T[] arr, int copyToIndex = 0, int copyCount = -1);
+
+    /// <summary>Copies the contents of the list to a new array. Copies into the new array starting from the specified index and for the specified count.</summary>
+    T[] CopyToNewArray(int copyToIndex = 0, int copyCount = -1);
 }
 
 /// <summary>Generic version of SmallList abstracted for how much items are on the stack</summary>
@@ -1048,23 +1051,33 @@ public struct SmallList<T, TStack, TPool> : ISmallList<T>
     }
 
     /// <inheritdoc/>
-    public void CopyToArray(T[] arr, int copyToIndex = 0)
+    public void CopyToArray(T[] arr, int copyToIndex = 0, int copyCount = -1)
     {
-        if (_count == 0) return;
+        if (copyCount == -1) copyCount = _count;
+        if (copyCount == 0) return;
 
         Debug.Assert(arr != null, "Target array should not be null");
-        Debug.Assert(arr.Length - copyToIndex >= _count,
-            $"Target array is too small {arr.Length} to hold {_count} items starting from index {copyToIndex}");
 
-        for (var i = 0; i < arr.Length; ++i)
+        var i = 0;
+        var arrLength = arr.Length;
+        var arrCap = arrLength - copyToIndex;
+        var stackCopyCount = Math.Min(Stack.Capacity, Math.Min(copyCount, arrCap));
+        for (; i < stackCopyCount; ++i)
             arr[copyToIndex + i] = Stack.GetSurePresentRef(i);
 
-        var restCount = _count - Stack.Capacity;
-        if (restCount > 0)
-        {
-            Debug.Assert(Rest != null && Rest.Length >= restCount, $"Expecting the Rest of {restCount} but found only {Rest?.Length.ToString() ?? "`null`"}");
-            Array.Copy(Rest, 0, arr, copyToIndex + Stack.Capacity, restCount);
-        }
+        copyCount -= stackCopyCount;
+        arrCap -= stackCopyCount;
+        var restCopyCount = Math.Min(Rest?.Length ?? 0, Math.Min(copyCount - Stack.Capacity, arrCap - Stack.Capacity));
+        if (restCopyCount > 0)
+            Array.Copy(Rest, 0, arr, copyToIndex + Stack.Capacity, restCopyCount);
+    }
+
+    /// <summary>Copies the contents of the list to a new array. Copies into the new array starting from the specified index and for the specified count.</summary>
+    public T[] CopyToNewArray(int copyToIndex = 0, int copyCount = -1)
+    {
+        var arr = new T[copyCount == -1 ? _count : copyCount];
+        CopyToArray(arr, copyToIndex, copyCount);
+        return arr;
     }
 
     /// <summary>Returns an enumerator struct</summary>
