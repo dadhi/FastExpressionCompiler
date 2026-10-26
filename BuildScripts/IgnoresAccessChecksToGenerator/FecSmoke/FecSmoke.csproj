@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <OutputType>Exe</OutputType>
+    <RollForward>Disable</RollForward>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <DefineConstants Condition="'$(Light)' == 'true'">$(DefineConstants);LIGHT_EXPRESSION</DefineConstants>
+    <FacadeDirectory Condition="'$(FacadeDirectory)' == ''">../artifacts/$(TargetFramework)/private</FacadeDirectory>
+  </PropertyGroup>
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.Versioning.SupportedOSPlatformAttribute" Condition="'$(OS)' == 'Windows_NT'">
+      <_Parameter1>windows</_Parameter1>
+    </AssemblyAttribute>
+    <Compile Include="../artifacts/Compiler.Direct.cs" />
+    <Compile Include="../../../src/FastExpressionCompiler/ILReader.cs" />
+    <Compile Include="../../../src/FastExpressionCompiler/ImTools.cs" />
+    <Compile Include="../../../src/FastExpressionCompiler.LightExpression/*.cs" Condition="'$(Light)' == 'true'" />
+    <Compile Include="../../../src/FastExpressionCompiler/TestTools.cs" />
+  </ItemGroup>
+  <Import Project="../build/RuntimeReferences.targets" />
+</Project>

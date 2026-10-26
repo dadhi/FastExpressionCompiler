@@ -1,0 +1,4 @@
+artifacts/
+**/bin/
+**/obj/
+*.log

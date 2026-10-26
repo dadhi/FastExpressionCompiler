@@ -1,0 +1,26 @@
+<Project>
+  <PropertyGroup>
+    <_MetadataTaskAssembly>$(MSBuildThisFileDirectory)../Generator/bin/Release/net10.0/Generator.dll</_MetadataTaskAssembly>
+  </PropertyGroup>
+  <UsingTask AssemblyFile="$(_MetadataTaskAssembly)" TaskName="IgnoresAccessChecksToGenerator.Tasks.PublicizeInternals" />
+  <Target Name="GeneratePrivateRuntimeReferences" BeforeTargets="CoreCompile">
+    <PropertyGroup>
+      <_MetadataOutput>$(IntermediateOutputPath)PrivateRuntimeReferences</_MetadataOutput>
+      <_MetadataAttributeFile>$(_MetadataOutput)/IgnoresAccessChecksTo.g.cs</_MetadataAttributeFile>
+    </PropertyGroup>
+    <Error Condition="!Exists('$(_MetadataTaskAssembly)')" Text="Build the local Generator project in Release first." />
+    <PublicizeInternals ImplementationAssembly="$(RuntimeCoreLib)"
+                        IntermediateOutputPath="$(_MetadataOutput)"
+                        GeneratedCodeFilePath="$(_MetadataAttributeFile)"
+                        IncludePrivateMembers="true">
+      <Output TaskParameter="ReferencePaths" ItemName="PrivateRuntimeReferences" />
+    </PublicizeInternals>
+    <ItemGroup>
+      <ReferencePath Remove="@(ReferencePath)" />
+      <ReferencePathWithRefAssemblies Remove="@(ReferencePathWithRefAssemblies)" />
+      <ReferencePath Include="@(PrivateRuntimeReferences)" />
+      <ReferencePathWithRefAssemblies Include="@(PrivateRuntimeReferences)" />
+      <Compile Include="$(_MetadataAttributeFile)" />
+    </ItemGroup>
+  </Target>
+</Project>

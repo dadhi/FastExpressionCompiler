@@ -1,0 +1,432 @@
+{
+  "sdk": "10.0.301",
+  "fec_base": "734314ede7c5e58845d42345e1cfb4d59591b998",
+  "upstream_generator": "882b30bf82fbb72f3bee8878ad9fd31f5c93c875",
+  "runtimes": {
+    "8.0.28": {
+      "implementation": "C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App\\8.0.28\\System.Private.CoreLib.dll",
+      "sha256_before": "1326005d3c6c4dfc129c5b0b21138b4053f45294276be22c5beefa478707323a",
+      "sha256_after": "1326005d3c6c4dfc129c5b0b21138b4053f45294276be22c5beefa478707323a"
+    },
+    "10.0.9": {
+      "implementation": "C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App\\10.0.9\\System.Private.CoreLib.dll",
+      "sha256_before": "a0b776c3065a323080ed88c2fcce2b3711741346931618428bd1e1ad9144c931",
+      "sha256_after": "a0b776c3065a323080ed88c2fcce2b3711741346931618428bd1e1ad9144c931"
+    }
+  },
+  "results": [
+    {
+      "label": "generator-build",
+      "arguments": [
+        "dotnet",
+        "build",
+        "Generator/Generator.csproj",
+        "-c",
+        "Release"
+      ],
+      "exit_code": 0,
+      "expected": "success",
+      "passed": true
+    },
+    {
+      "label": "net8.0-generate-private",
+      "arguments": [
+        "dotnet",
+        "C:\\Data\\Git\\Github\\FastExpressionCompiler\\BuildScripts\\IgnoresAccessChecksToGenerator\\Generator\\bin\\Release\\net10.0\\Generator.dll",
+        "C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App\\8.0.28\\System.Private.CoreLib.dll",
+        "C:\\Data\\Git\\Github\\FastExpressionCompiler\\BuildScripts\\IgnoresAccessChecksToGenerator\\artifacts\\net8.0\\private\\System.Private.CoreLib.dll",
+        "--private"
+      ],
+      "exit_code": 0,
+      "expected": "success",
+      "passed": true
+    },
+    {
+      "label": "net8.0-verify-private",
+      "arguments": [
+        "dotnet",
+        "C:\\Data\\Git\\Github\\FastExpressionCompiler\\BuildScripts\\IgnoresAccessChecksToGenerator\\Generator\\bin\\Release\\net10.0\\Generator.dll",
+        "--verify",
+        "C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App\\8.0.28\\System.Private.CoreLib.dll",
+        "C:\\Data\\Git\\Github\\FastExpressionCompiler\\BuildScripts\\IgnoresAccessChecksToGenerator\\artifacts\\net8.0\\private\\System.Private.CoreLib.dll",
+        "--private"
+      ],
+      "exit_code": 0,
+      "expected": "success",
+      "passed": true
+    },
+    {
+      "label": "net8.0-generate-internal",
+      "arguments": [
+        "dotnet",
+        "C:\\Data\\Git\\Github\\FastExpressionCompiler\\BuildScripts\\IgnoresAccessChecksToGenerator\\Generator\\bin\\Release\\net10.0\\Generator.dll",
+        "C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App\\8.0.28\\System.Private.CoreLib.dll",
+        "C:\\Data\\Git\\Github\\FastExpressionCompiler\\BuildScripts\\IgnoresAccessChecksToGenerator\\artifacts\\net8.0\\internal\\System.Private.CoreLib.dll"
+      ],
+      "exit_code": 0,
+      "expected": "success",
+      "passed": true
+    },
+    {
+      "label": "net8.0-consumer",
+      "arguments": [
+        "dotnet",
+        "run",
+        "--project",
+        "Consumer/Consumer.csproj",
+        "-c",
+        "Release",
+        "-f",
+        "net8.0",
+        "-p:RuntimeFrameworkVersion=8.0.28"
+      ],
+      "exit_code": 0,
+      "expected": "success",
+      "passed": true
+    },
+    {
+      "label": "net8.0-task",
+      "arguments": [
+        "dotnet",
+        "run",
+        "--project",
+        "Consumer/Consumer.csproj",
+        "-c",
+        "Release",
+        "-f",
+        "net8.0",
+        "-p:RuntimeFrameworkVersion=8.0.28",
+        "-p:UseGeneratorTask=true",
+        "-p:RuntimeCoreLib=C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App\\8.0.28\\System.Private.CoreLib.dll"
+      ],
+      "exit_code": 0,
+      "expected": "success",
+      "passed": true
+    },
+    {
+      "label": "net8.0-private-disabled",
+      "arguments": [
+        "dotnet",
+        "run",
+        "--project",
+        "Consumer/Consumer.csproj",
+        "-c",
+        "Release",
+        "-f",
+        "net8.0",
+        "-p:RuntimeFrameworkVersion=8.0.28",
+        "-p:FacadeDirectory=C:\\Data\\Git\\Github\\FastExpressionCompiler\\BuildScripts\\IgnoresAccessChecksToGenerator\\artifacts\\net8.0\\internal"
+      ],
+      "exit_code": 1,
+      "expected": "failure",
+      "passed": true
+    },
+    {
+      "label": "net8.0-permission-disabled",
+      "arguments": [
+        "dotnet",
+        "run",
+        "--project",
+        "Consumer/Consumer.csproj",
+        "-c",
+        "Release",
+        "-f",
+        "net8.0",
+        "-p:RuntimeFrameworkVersion=8.0.28",
+        "-p:GrantPrivateAccess=false"
+      ],
+      "exit_code": 3762504530,
+      "expected": "failure",
+      "passed": true
+    },
+    {
+      "label": "net8.0-missing-member",
+      "arguments": [
+        "dotnet",
+        "run",
+        "--project",
+        "Consumer/Consumer.csproj",
+        "-c",
+        "Release",
+        "-f",
+        "net8.0",
+        "-p:RuntimeFrameworkVersion=8.0.28",
+        "-p:MissingMemberProbe=true"
+      ],
+      "exit_code": 1,
+      "expected": "failure",
+      "passed": true
+    },
+    {
+      "label": "net8.0-wrong-signature",
+      "arguments": [
+        "dotnet",
+        "run",
+        "--project",
+        "Consumer/Consumer.csproj",
+        "-c",
+        "Release",
+        "-f",
+        "net8.0",
+        "-p:RuntimeFrameworkVersion=8.0.28",
+        "-p:WrongSignatureProbe=true"
+      ],
+      "exit_code": 1,
+      "expected": "failure",
+      "passed": true
+    },
+    {
+      "label": "net8.0-standard",
+      "arguments": [
+        "dotnet",
+        "run",
+        "--project",
+        "FecSmoke/FecSmoke.csproj",
+        "-c",
+        "Release",
+        "-f",
+        "net8.0",
+        "-p:RuntimeFrameworkVersion=8.0.28",
+        "-p:Light=false"
+      ],
+      "exit_code": 0,
+      "expected": "success",
+      "passed": true
+    },
+    {
+      "label": "net8.0-light",
+      "arguments": [
+        "dotnet",
+        "run",
+        "--project",
+        "FecSmoke/FecSmoke.csproj",
+        "-c",
+        "Release",
+        "-f",
+        "net8.0",
+        "-p:RuntimeFrameworkVersion=8.0.28",
+        "-p:Light=true"
+      ],
+      "exit_code": 0,
+      "expected": "success",
+      "passed": true
+    },
+    {
+      "label": "net8.0-consumer-final",
+      "arguments": [
+        "dotnet",
+        "run",
+        "--project",
+        "Consumer/Consumer.csproj",
+        "-c",
+        "Release",
+        "-f",
+        "net8.0",
+        "-p:RuntimeFrameworkVersion=8.0.28"
+      ],
+      "exit_code": 0,
+      "expected": "success",
+      "passed": true
+    },
+    {
+      "label": "net10.0-generate-private",
+      "arguments": [
+        "dotnet",
+        "C:\\Data\\Git\\Github\\FastExpressionCompiler\\BuildScripts\\IgnoresAccessChecksToGenerator\\Generator\\bin\\Release\\net10.0\\Generator.dll",
+        "C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App\\10.0.9\\System.Private.CoreLib.dll",
+        "C:\\Data\\Git\\Github\\FastExpressionCompiler\\BuildScripts\\IgnoresAccessChecksToGenerator\\artifacts\\net10.0\\private\\System.Private.CoreLib.dll",
+        "--private"
+      ],
+      "exit_code": 0,
+      "expected": "success",
+      "passed": true
+    },
+    {
+      "label": "net10.0-verify-private",
+      "arguments": [
+        "dotnet",
+        "C:\\Data\\Git\\Github\\FastExpressionCompiler\\BuildScripts\\IgnoresAccessChecksToGenerator\\Generator\\bin\\Release\\net10.0\\Generator.dll",
+        "--verify",
+        "C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App\\10.0.9\\System.Private.CoreLib.dll",
+        "C:\\Data\\Git\\Github\\FastExpressionCompiler\\BuildScripts\\IgnoresAccessChecksToGenerator\\artifacts\\net10.0\\private\\System.Private.CoreLib.dll",
+        "--private"
+      ],
+      "exit_code": 0,
+      "expected": "success",
+      "passed": true
+    },
+    {
+      "label": "net10.0-generate-internal",
+      "arguments": [
+        "dotnet",
+        "C:\\Data\\Git\\Github\\FastExpressionCompiler\\BuildScripts\\IgnoresAccessChecksToGenerator\\Generator\\bin\\Release\\net10.0\\Generator.dll",
+        "C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App\\10.0.9\\System.Private.CoreLib.dll",
+        "C:\\Data\\Git\\Github\\FastExpressionCompiler\\BuildScripts\\IgnoresAccessChecksToGenerator\\artifacts\\net10.0\\internal\\System.Private.CoreLib.dll"
+      ],
+      "exit_code": 0,
+      "expected": "success",
+      "passed": true
+    },
+    {
+      "label": "net10.0-consumer",
+      "arguments": [
+        "dotnet",
+        "run",
+        "--project",
+        "Consumer/Consumer.csproj",
+        "-c",
+        "Release",
+        "-f",
+        "net10.0",
+        "-p:RuntimeFrameworkVersion=10.0.9"
+      ],
+      "exit_code": 0,
+      "expected": "success",
+      "passed": true
+    },
+    {
+      "label": "net10.0-task",
+      "arguments": [
+        "dotnet",
+        "run",
+        "--project",
+        "Consumer/Consumer.csproj",
+        "-c",
+        "Release",
+        "-f",
+        "net10.0",
+        "-p:RuntimeFrameworkVersion=10.0.9",
+        "-p:UseGeneratorTask=true",
+        "-p:RuntimeCoreLib=C:\\Program Files\\dotnet\\shared\\Microsoft.NETCore.App\\10.0.9\\System.Private.CoreLib.dll"
+      ],
+      "exit_code": 0,
+      "expected": "success",
+      "passed": true
+    },
+    {
+      "label": "net10.0-private-disabled",
+      "arguments": [
+        "dotnet",
+        "run",
+        "--project",
+        "Consumer/Consumer.csproj",
+        "-c",
+        "Release",
+        "-f",
+        "net10.0",
+        "-p:RuntimeFrameworkVersion=10.0.9",
+        "-p:FacadeDirectory=C:\\Data\\Git\\Github\\FastExpressionCompiler\\BuildScripts\\IgnoresAccessChecksToGenerator\\artifacts\\net10.0\\internal"
+      ],
+      "exit_code": 1,
+      "expected": "failure",
+      "passed": true
+    },
+    {
+      "label": "net10.0-permission-disabled",
+      "arguments": [
+        "dotnet",
+        "run",
+        "--project",
+        "Consumer/Consumer.csproj",
+        "-c",
+        "Release",
+        "-f",
+        "net10.0",
+        "-p:RuntimeFrameworkVersion=10.0.9",
+        "-p:GrantPrivateAccess=false"
+      ],
+      "exit_code": 3762504530,
+      "expected": "failure",
+      "passed": true
+    },
+    {
+      "label": "net10.0-missing-member",
+      "arguments": [
+        "dotnet",
+        "run",
+        "--project",
+        "Consumer/Consumer.csproj",
+        "-c",
+        "Release",
+        "-f",
+        "net10.0",
+        "-p:RuntimeFrameworkVersion=10.0.9",
+        "-p:MissingMemberProbe=true"
+      ],
+      "exit_code": 1,
+      "expected": "failure",
+      "passed": true
+    },
+    {
+      "label": "net10.0-wrong-signature",
+      "arguments": [
+        "dotnet",
+        "run",
+        "--project",
+        "Consumer/Consumer.csproj",
+        "-c",
+        "Release",
+        "-f",
+        "net10.0",
+        "-p:RuntimeFrameworkVersion=10.0.9",
+        "-p:WrongSignatureProbe=true"
+      ],
+      "exit_code": 1,
+      "expected": "failure",
+      "passed": true
+    },
+    {
+      "label": "net10.0-standard",
+      "arguments": [
+        "dotnet",
+        "run",
+        "--project",
+        "FecSmoke/FecSmoke.csproj",
+        "-c",
+        "Release",
+        "-f",
+        "net10.0",
+        "-p:RuntimeFrameworkVersion=10.0.9",
+        "-p:Light=false"
+      ],
+      "exit_code": 0,
+      "expected": "success",
+      "passed": true
+    },
+    {
+      "label": "net10.0-light",
+      "arguments": [
+        "dotnet",
+        "run",
+        "--project",
+        "FecSmoke/FecSmoke.csproj",
+        "-c",
+        "Release",
+        "-f",
+        "net10.0",
+        "-p:RuntimeFrameworkVersion=10.0.9",
+        "-p:Light=true"
+      ],
+      "exit_code": 0,
+      "expected": "success",
+      "passed": true
+    },
+    {
+      "label": "net10.0-consumer-final",
+      "arguments": [
+        "dotnet",
+        "run",
+        "--project",
+        "Consumer/Consumer.csproj",
+        "-c",
+        "Release",
+        "-f",
+        "net10.0",
+        "-p:RuntimeFrameworkVersion=10.0.9"
+      ],
+      "exit_code": 0,
+      "expected": "success",
+      "passed": true
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
+    <OutputType>Exe</OutputType>
+    <RollForward>Disable</RollForward>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <FacadeDirectory Condition="'$(FacadeDirectory)' == ''">../artifacts/$(TargetFramework)/private</FacadeDirectory>
+    <GrantPrivateAccess Condition="'$(GrantPrivateAccess)' == ''">true</GrantPrivateAccess>
+    <DefineConstants Condition="'$(GrantPrivateAccess)' == 'true'">$(DefineConstants);GRANT_PRIVATE_ACCESS</DefineConstants>
+    <DefineConstants Condition="'$(MissingMemberProbe)' == 'true'">$(DefineConstants);MISSING_MEMBER</DefineConstants>
+    <DefineConstants Condition="'$(WrongSignatureProbe)' == 'true'">$(DefineConstants);WRONG_SIGNATURE</DefineConstants>
+    <DefineConstants Condition="'$(UseGeneratorTask)' == 'true'">$(DefineConstants);GENERATED_ACCESS_ATTRIBUTE</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.Versioning.SupportedOSPlatformAttribute" Condition="'$(OS)' == 'Windows_NT'">
+      <_Parameter1>windows</_Parameter1>
+    </AssemblyAttribute>
+    <Reference Include="System.Private.CoreLib">
+      <HintPath>$(FacadeDirectory)/System.Private.CoreLib.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+  <Import Project="../build/RuntimeReferences.targets" Condition="'$(UseGeneratorTask)' != 'true'" />
+  <Import Project="../build/IgnoresAccessChecksToGenerator.targets" Condition="'$(UseGeneratorTask)' == 'true'" />
+</Project>
