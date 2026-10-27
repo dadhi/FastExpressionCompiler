@@ -70,6 +70,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new NumericComparisonRegressionTests());
             st.Run(new CoalesceValueConversionRegressionTests());
             st.Run(new VoidLabelValueRegressionTests());
+            st.Run(new UnaryIncrementValueRegressionTests());
             st.Run(new ExplicitIncrementOperatorRegressionTests());
 
             st.Run(new Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
