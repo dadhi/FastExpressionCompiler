@@ -266,7 +266,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ldstr,      // "b"
                 OpCodes.Ldc_I4_2,
                 OpCodes.Ldc_I4_S,   // 33
-                OpCodes.Call,       // Arr.set_Item
+                OpCodes.Callvirt, // Reference receiver checks null       // Arr.set_Item
                 OpCodes.Ret
             );
             a1 = new Arr { Elem = 9 };

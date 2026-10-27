@@ -48,6 +48,7 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.LiftedArithmeticOperatorRegressionTests());
                 t.Run(new LightExpression.UnitTests.UnsignedDivisionRegressionTests());
                 t.Run(new LightExpression.UnitTests.OnesComplementRegressionTests());
+                t.Run(new LightExpression.UnitTests.InvokeRefArgumentRegressionTests());
                 t.Run(new LightExpression.UnitTests.IncrementDecrementRegressionTests());
                 t.Run(new LightExpression.UnitTests.ValueTypeReceiverRegressionTests());
                 t.Run(new LightExpression.UnitTests.MultiRankArrayReceiverRegressionTests());
@@ -62,6 +63,7 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.VoidLabelValueRegressionTests());
                 t.Run(new LightExpression.UnitTests.TypedLabelControlFlowRegressionTests());
                 t.Run(new LightExpression.UnitTests.NegationBehaviorRegressionTests());
+                t.Run(new LightExpression.UnitTests.UnaryPlusMethodRegressionTests());
                 t.Run(new LightExpression.UnitTests.TruthUnaryRegressionTests());
                 t.Run(new LightExpression.UnitTests.ReferenceEqualityRegressionTests());
                 t.Run(new LightExpression.UnitTests.TypeEqualRegressionTests());
@@ -115,6 +117,8 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new LiftedArithmeticOperatorRegressionTests());
             fecTests.Run(new UnsignedDivisionRegressionTests());
             fecTests.Run(new OnesComplementRegressionTests());
+            fecTests.Run(new InvokeRefArgumentRegressionTests());
+            fecTests.Run(new RefConversionMethodRegressionTests());
             fecTests.Run(new IncrementDecrementRegressionTests());
             fecTests.Run(new ValueTypeReceiverRegressionTests());
             fecTests.Run(new MultiRankArrayReceiverRegressionTests());
@@ -129,6 +133,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new VoidLabelValueRegressionTests());
             fecTests.Run(new TypedLabelControlFlowRegressionTests());
             fecTests.Run(new NegationBehaviorRegressionTests());
+            fecTests.Run(new UnaryPlusMethodRegressionTests());
             fecTests.Run(new TruthUnaryRegressionTests());
             fecTests.Run(new ReferenceEqualityRegressionTests());
             fecTests.Run(new TypeEqualRegressionTests());

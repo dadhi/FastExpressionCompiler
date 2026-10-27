@@ -78,6 +78,7 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.UnitTests.LiftedArithmeticOperatorRegressionTests());
                 lt.Run(new LightExpression.UnitTests.UnsignedDivisionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.OnesComplementRegressionTests());
+                lt.Run(new LightExpression.UnitTests.InvokeRefArgumentRegressionTests());
                 lt.Run(new LightExpression.UnitTests.IncrementDecrementRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ValueTypeReceiverRegressionTests());
                 lt.Run(new LightExpression.UnitTests.MultiRankArrayReceiverRegressionTests());
@@ -92,6 +93,7 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.UnitTests.VoidLabelValueRegressionTests());
                 lt.Run(new LightExpression.UnitTests.TypedLabelControlFlowRegressionTests());
                 lt.Run(new LightExpression.UnitTests.NegationBehaviorRegressionTests());
+                lt.Run(new LightExpression.UnitTests.UnaryPlusMethodRegressionTests());
                 lt.Run(new LightExpression.UnitTests.TruthUnaryRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ReferenceEqualityRegressionTests());
                 lt.Run(new LightExpression.UnitTests.TypeEqualRegressionTests());
@@ -141,6 +143,8 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new LiftedArithmeticOperatorRegressionTests());
             st.Run(new UnsignedDivisionRegressionTests());
             st.Run(new OnesComplementRegressionTests());
+            st.Run(new InvokeRefArgumentRegressionTests());
+            st.Run(new RefConversionMethodRegressionTests());
             st.Run(new IncrementDecrementRegressionTests());
             st.Run(new ValueTypeReceiverRegressionTests());
             st.Run(new MultiRankArrayReceiverRegressionTests());
@@ -155,6 +159,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new VoidLabelValueRegressionTests());
             st.Run(new TypedLabelControlFlowRegressionTests());
             st.Run(new NegationBehaviorRegressionTests());
+            st.Run(new UnaryPlusMethodRegressionTests());
             st.Run(new TruthUnaryRegressionTests());
             st.Run(new ReferenceEqualityRegressionTests());
             st.Run(new TypeEqualRegressionTests());
