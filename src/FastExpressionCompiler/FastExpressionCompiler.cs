@@ -1543,6 +1543,10 @@ namespace FastExpressionCompiler
                         {
                             if ((r = TryCollectInfo(ref context, binaryExpr.Left, nestedLambda, ref rootNestedLambdas)) != Result.OK)
                                 return r;
+                            // the conversion lambda of the compound assignment is emitted inlined by `TryEmitOpAssignWithMethod`, here it is collected via the invoke with the default arg
+                            if (binaryExpr.Conversion != null &&
+                                (r = TryCollectInfo(ref context, Expression.Invoke(binaryExpr.Conversion, Expression.Default(binaryExpr.Conversion.Parameters[0].Type)), nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                                return r;
                             expr = binaryExpr.Right;
                             continue;
                         }
@@ -1956,11 +1960,11 @@ namespace FastExpressionCompiler
                         case ExpressionType.OnesComplement:
                         case ExpressionType.UnaryPlus:
                         case ExpressionType.Unbox:
-                        {
-                            var unaryExpr = (UnaryExpression)expr;
-                            var oper = unaryExpr.Operand;
-                            return TryEmitSimpleUnary(exprType, oper, oper.Type, unaryExpr.Method, nodeType, il, ref context, parent);
-                        }
+                            {
+                                var unaryExpr = (UnaryExpression)expr;
+                                var oper = unaryExpr.Operand;
+                                return TryEmitSimpleUnary(exprType, oper, oper.Type, unaryExpr.Method, nodeType, il, ref context, parent);
+                            }
                         case ExpressionType.TypeIs:
                         case ExpressionType.TypeEqual:
                             return TryEmitTypeIsOrEqual((TypeBinaryExpression)expr, il, ref context, parent);
@@ -2240,12 +2244,10 @@ namespace FastExpressionCompiler
                             if (nodeType == ExpressionType.Assign)
                                 return TryEmitArithmeticAndOrAssign(ba.Left, ba.Right, exprType, nodeType, false, il, ref context, parent);
 
-                            if (ba.Conversion != null) // todo: @feature the conversion lambda of the compound assignment is not supported yet, better to fail than to produce the wrong result
-                                return false;
-
                             var baMethod = ba.Method;
-                            return baMethod != null
-                                ? TryEmitOpAssignWithMethod(ba.Left, ba.Right, baMethod, AssignToArithmeticOrSelf(nodeType), false, il, ref context, parent)
+                            var baConversion = ba.Conversion;
+                            return baMethod != null | baConversion != null
+                                ? TryEmitOpAssignWithMethod(ba.Left, ba.Right, baMethod, AssignToArithmeticOrSelf(nodeType), false, il, ref context, parent, baConversion)
                                 : TryEmitArithmeticAndOrAssign(ba.Left, ba.Right, exprType,
                                     AssignToArithmeticOrSelf(nodeType), false, il, ref context, parent);
 
@@ -2673,11 +2675,34 @@ namespace FastExpressionCompiler
 
             private static bool TryEmitCoalesceOperator(BinaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
-                var labelFalse = il.DefineLabel();
-                var labelDone = il.DefineLabel();
-
                 var left = expr.Left;
                 var right = expr.Right;
+                var exprType = expr.Type;
+                var leftType = left.Type;
+                var rightType = right.Type;
+                var underlyingLeftType = Nullable.GetUnderlyingType(leftType);
+                var underlyingExprType = Nullable.GetUnderlyingType(exprType) ?? exprType;
+                var conversion = expr.Conversion;
+
+                // The primitive widening (e.g. `int? ?? long`) is emitted below, the rest (the conversion lambda, `int? ?? decimal?`, etc.)
+                // is lowered to `tmp = left; tmp != null ? conversion(tmp) or (T)tmp : (T)right`
+                if (conversion != null || leftType.IsValueType && (leftType != exprType | rightType != exprType) &&
+                    !(underlyingLeftType.IsPrimitive & underlyingExprType.IsPrimitive & (rightType.IsPrimitive | rightType == exprType)))
+                {
+                    // the conversion parameter of the same type is the temp itself, otherwise (e.g. `int?` to `int`) the unwrapping is done only in the not-null branch
+                    var conversionPar = conversion?.Parameters[0];
+                    var sameTypePar = conversionPar != null && conversionPar.Type == leftType;
+                    var leftVar = sameTypePar ? conversionPar : Expression.Variable(leftType);
+                    var notNullValue = conversion == null ? Expression.Convert(leftVar, exprType)
+                        : sameTypePar ? conversion.Body
+                        : Expression.Block(new[] { conversionPar }, Expression.Assign(conversionPar, Expression.Convert(leftVar, conversionPar.Type)), conversion.Body);
+
+                    return TryEmit(Expression.Block(new[] { leftVar }, Expression.Assign(leftVar, left),
+                        Expression.Condition(Expression.NotEqual(leftVar, Expression.Constant(null, leftType)),
+                            notNullValue, rightType == exprType ? right : Expression.Convert(right, exprType))), il, ref context, parent);
+                }
+                var labelFalse = il.DefineLabel();
+                var labelDone = il.DefineLabel();
 
                 // we won't OpCodes.Pop inside the Coalesce as it may leave the Il in invalid state - instead we will pop at the end here (#284)
                 var flags = (parent & ~ParentFlags.IgnoreResult) | ParentFlags.Coalesce;
@@ -2685,17 +2710,12 @@ namespace FastExpressionCompiler
                 if (!TryEmit(left, il, ref context, flags))
                     return false;
 
-                var exprType = expr.Type;
-                var leftType = left.Type;
                 if (leftType.IsValueType)
                 {
                     Debug.Assert(leftType.IsNullable(), "Expecting Nullable, it is the only ValueType comparable to null");
 
                     var varIndex = EmitNullableVarAddressAndHasValue(il, leftType);
                     il.Demit(OpCodes.Brfalse, labelFalse);
-
-                    var underlyingLeftType = Nullable.GetUnderlyingType(leftType);
-                    var underlyingExprType = Nullable.GetUnderlyingType(exprType) ?? exprType;
 
                     if (exprType == leftType)
                         EmitLoadLocalVariable(il, varIndex); // loading the value (not address) to return it
@@ -2717,18 +2737,11 @@ namespace FastExpressionCompiler
                     if (!TryEmit(right, il, ref context, flags))
                         return false;
 
-                    // the right operand may be of the narrower type than the result, e.g. `long? ?? int` or `int? ?? long?`
-                    var rightType = right.Type;
-                    if (rightType != exprType && rightType.IsValueType)
-                    {
-                        var underlyingRightType = Nullable.GetUnderlyingType(rightType);
-                        if (underlyingRightType != null)
-                            return false;
-                        if (rightType != underlyingExprType && !TryEmitPrimitiveValueConvert(rightType, underlyingExprType, il, isChecked: false))
-                            return false;
-                        if (exprType != underlyingExprType)
-                            il.Demit(OpCodes.Newobj, exprType.GetNullableConstructor());
-                    }
+                    // the right operand may be of the narrower type than the result, e.g. `long? ?? int`
+                    if (rightType != exprType && !TryEmitPrimitiveValueConvert(rightType, underlyingExprType, il, isChecked: false))
+                        return false;
+                    if (rightType != exprType && exprType != underlyingExprType)
+                        il.Demit(OpCodes.Newobj, exprType.GetNullableConstructor());
 
                     il.DmarkLabel(labelDone);
                 }
@@ -3582,7 +3595,7 @@ namespace FastExpressionCompiler
 
                 if (underlyingNullableTargetType != null) // sourceType is NOT nullable here (checked above)
                 {
-                    if (!TryEmitPrimitiveValueConvert(sourceType, underlyingNullableTargetType, il, 
+                    if (!TryEmitPrimitiveValueConvert(sourceType, underlyingNullableTargetType, il,
                         isChecked: expr.NodeType == ExpressionType.ConvertChecked))
                         return false;
                     il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
@@ -4657,9 +4670,9 @@ namespace FastExpressionCompiler
             }
 
             // Lowers `left op= right` (or `left++` / `left--` when the right is null) with the explicit or user-defined method into
-            // `left = method(left, right)` the same way as System reduces it, with the temps for the target instance and indexes to evaluate them once.
+            // `left = [conversion](method(left, right))` the same way as System reduces it, with the temps for the target instance and indexes to evaluate them once.
             private static bool TryEmitOpAssignWithMethod(Expression left, Expression right, MethodInfo method, ExpressionType arithType,
-                bool isPost, ILGenerator il, ref CompilerContext context, ParentFlags parent)
+                bool isPost, ILGenerator il, ref CompilerContext context, ParentFlags parent, LambdaExpression conversion = null)
             {
                 SmallList<ParameterExpression, Stack8<ParameterExpression>, NoArrayPool<ParameterExpression>> vars = default;
                 SmallList<Expression, Stack8<Expression>, NoArrayPool<Expression>> stmts = default;
@@ -4726,6 +4739,11 @@ namespace FastExpressionCompiler
                     : arithType == ExpressionType.Add
                         ? Expression.Increment(operand, method)
                         : Expression.Decrement(operand, method);
+                if (conversion != null) // inlined by hand: the lambda parameter becomes the block variable holding the operation result
+                {
+                    var conversionPar = conversion.Parameters[0];
+                    value = Expression.Block(new[] { conversionPar }, Expression.Assign(conversionPar, value), conversion.Body);
+                }
                 stmts.Add(Expression.Assign(target, value));
                 if (oldVar != null)
                     stmts.Add(oldVar);

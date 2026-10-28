@@ -82,6 +82,8 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Compound_assign_and_inc_dec_with_methods_are_the_same_as_system();
             Convert_and_ConvertChecked_between_primitives_nullables_and_enums_are_the_same_as_system();
             Arithmetic_on_nullable_by_ref_parameter_is_the_same_as_system();
+            Compound_assign_with_the_method_and_conversion_lambda_is_the_same_as_system();
+            Coalesce_with_the_conversion_and_widening_to_decimal_is_the_same_as_system();
             Inc_dec_assign_of_primitives_and_nullables_are_the_same_as_system();
             Inc_dec_assign_of_block_variable_compared_and_returned_via_label_are_the_same_as_system();
 #if NET7_0_OR_GREATER
@@ -101,7 +103,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_print_reference_comparison();
             Can_round_trip_new_expression_kinds_through_system_expressions();
 
-            return 80;
+            return 82;
         }
 
         private static int _sideEffectCalls;
@@ -1484,6 +1486,50 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                     var b = value;
                     Asserts.AreEqual(sys(ref a), fec(ref b));
                 }
+            }
+        }
+        public void Coalesce_with_the_conversion_and_widening_to_decimal_is_the_same_as_system()
+        {
+            var i = Parameter(typeof(int?), "i");
+            var x = Parameter(typeof(int?), "x");
+            var n = Parameter(typeof(int), "n");
+            var s = Parameter(typeof(string), "s");
+            var y = Parameter(typeof(string), "y");
+            var lambdas = new LambdaExpression[]
+            {
+                Lambda<Func<int?, int?>>(Coalesce(i, Constant(5, typeof(int?)), Lambda<Func<int?, int?>>(Multiply(x, Constant(2, typeof(int?))), x)), i),
+                Lambda<Func<int?, int>>(Coalesce(i, Constant(5), Lambda<Func<int, int>>(Multiply(n, Constant(2)), n)), i),
+                Lambda<Func<string, string>>(Coalesce(s, Constant("YY"), Lambda<Func<string, string>>(Call(typeof(string).GetMethod(nameof(string.Concat), new[] { typeof(string), typeof(string) }), y, Constant("def")), y)), s),
+#if NET7_0_OR_GREATER // System on net472 fails to compile the coalesce widening to decimal
+                Lambda<Func<int?, decimal>>(Coalesce(i, Constant(7m)), i),
+                Lambda<Func<int?, decimal?>>(Coalesce(i, Constant(7m, typeof(decimal?))), i),
+#endif
+            };
+            foreach (var lambda in lambdas)
+            {
+                var sys = lambda.CompileSys();
+                var fec = lambda.CompileFast(true);
+                foreach (var arg in lambda.Parameters[0].Type == typeof(string) ? new object[] { null, "abc" } : new object[] { null, 5 })
+                    Asserts.AreEqual(sys.DynamicInvoke(arg), fec.DynamicInvoke(arg));
+            }
+        }
+        public static int AddPlusOne(int a, int b) => a + b + 1;
+        public class IntBox { public int Value = 25; public int[] Arr = { 25 }; }
+
+        public void Compound_assign_with_the_method_and_conversion_lambda_is_the_same_as_system()
+        {
+            var x = Parameter(typeof(int), "x");
+            var doubleIt = Lambda<Func<int, int>>(Multiply(x, Constant(2)), x);
+            var method = GetType().GetMethod(nameof(AddPlusOne));
+            var box = Parameter(typeof(IntBox), "box");
+            foreach (var target in new Expression[] { Field(box, nameof(IntBox.Value)), ArrayAccess(Field(box, nameof(IntBox.Arr)), Constant(0)) })
+            {
+                var lambda = Lambda<Func<IntBox, int>>(MakeBinary(ExpressionType.AddAssign, target, Constant(15), false, method, doubleIt), box);
+                var sysBox = new IntBox();
+                var fecBox = new IntBox();
+                Asserts.AreEqual(lambda.CompileSys()(sysBox), lambda.CompileFast(true)(fecBox));
+                Asserts.AreEqual(sysBox.Value, fecBox.Value);
+                Asserts.AreEqual(sysBox.Arr[0], fecBox.Arr[0]);
             }
         }
         public delegate T RefConvFunc<T, R>(ref R r);
