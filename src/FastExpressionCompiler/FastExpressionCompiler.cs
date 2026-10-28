@@ -1343,7 +1343,7 @@ namespace FastExpressionCompiler
                             var invokeExpr = (InvocationExpression)expr;
                             var invokeArgs = invokeExpr.GetArgExprs();
                             var invokeArgCount = invokeArgs.GetArgCount();
-                            var invokedExpr = invokeExpr.Expression;
+                            var invokedExpr = GetInvokedExpression(invokeExpr, ref context);
                             if ((context.CompilerFlags & CompilerFlags.NoInvocationLambdaInlining) == 0 && invokedExpr is LambdaExpression lambdaExpr)
                             {
                                 var oldIndex = context.CurrentInlinedLambdaInvokeIndex;
@@ -1615,6 +1615,26 @@ namespace FastExpressionCompiler
             }
 #endif
             return inlinedBlock;
+        }
+
+        private static Expression GetInvokedExpression(InvocationExpression invokeExpr, ref CompilerContext context)
+        {
+            var invokedExpr = invokeExpr.Expression;
+#if LIGHT_EXPRESSION
+            if (invokedExpr is ConstantExpression constantExpr &&
+                constantExpr.Value is System.Linq.Expressions.LambdaExpression sysLambda)
+            {
+                if ((context.CompilerFlags & CompilerFlags.NoInvocationLambdaInlining) != 0)
+                {
+                    ref var cachedLambda = ref context.InlinedLambdaInvocation.Map.AddOrGetValueRef(invokeExpr, out var found);
+                    if (!found)
+                        cachedLambda = sysLambda.ToLightExpression();
+                    return cachedLambda;
+                }
+                return sysLambda.ToLightExpression();
+            }
+#endif
+            return invokedExpr;
         }
 
         private static bool PropagateNonPassedParamsToOuterLambda(ref CompilerContext context, NestedLambdaInfo lambda,
@@ -5385,7 +5405,7 @@ namespace FastExpressionCompiler
 
                 var argExprs = expr.GetArgExprs();
                 var argCount = argExprs.GetArgCount();
-                var invokedExpr = expr.Expression;
+                var invokedExpr = GetInvokedExpression(expr, ref context);
                 if ((context.CompilerFlags & CompilerFlags.NoInvocationLambdaInlining) == 0 && invokedExpr is LambdaExpression lambdaExpr)
                 {
                     parent |= ParentFlags.InlinedLambdaInvoke;
