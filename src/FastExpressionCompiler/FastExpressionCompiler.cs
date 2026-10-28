@@ -1143,83 +1143,87 @@ namespace FastExpressionCompiler
             throw new NotSupportedExpressionException(reason);
         }
 
-        sealed class LabelScope
+        /// <summary>The label scope stored in the list and referencing its parent by the index (-1 for the root), so no object per scope</summary>
+        struct LabelScope
         {
-            public readonly LabelScope Parent;
-            public readonly int Depth;
+            public short Parent;
+            public short Depth;
             /// <summary>Can the jump from the outside get into this scope: a block in the statement position, but not in the expression or try</summary>
-            public readonly bool Enterable;
-            public LabelScope(LabelScope parent, bool enterable)
-            {
-                Parent = parent;
-                Depth = parent == null ? 0 : parent.Depth + 1;
-                Enterable = enterable;
-            }
+            public bool Enterable;
         }
 
         struct LabelRef
         {
             public LabelTarget Target;
-            public LabelScope Scope;
+            public short Scope; // the index in the LabelWalk.Scopes
             public bool Enterable;
         }
 
-        private static void CollectLabelRefs(Expression e, LabelScope scope, bool enterable,
-            ref SmallList<LabelRef, Stack8<LabelRef>, NoArrayPool<LabelRef>> defs, ref SmallList<LabelRef, Stack8<LabelRef>, NoArrayPool<LabelRef>> gotos)
+        struct LabelWalk
+        {
+            // shortcut: the scope index is short, so the more than 32K nested scopes will overflow, upgrade to int if it is ever needed
+            public SmallList<LabelScope, Stack8<LabelScope>, NoArrayPool<LabelScope>> Scopes;
+            public SmallList<LabelRef, Stack8<LabelRef>, NoArrayPool<LabelRef>> Defs;
+            public SmallList<LabelRef, Stack8<LabelRef>, NoArrayPool<LabelRef>> Gotos;
+        }
+
+        private static void CollectLabelRefs(Expression e, short scope, bool enterable, ref LabelWalk w)
         {
             if (e == null)
                 return;
             switch (e.NodeType)
             {
                 case ExpressionType.Block:
-                    var blockScope = new LabelScope(scope, enterable);
+                    var blockScope = (short)w.Scopes.Count;
+                    w.Scopes.Add(new LabelScope { Parent = scope, Depth = (short)(w.Scopes.GetSurePresentRef(scope).Depth + 1), Enterable = enterable });
                     var blockExprs = ((BlockExpression)e).Expressions;
                     for (var i = 0; i < blockExprs.Count; ++i)
-                        CollectLabelRefs(blockExprs[i], blockScope, true, ref defs, ref gotos);
+                        CollectLabelRefs(blockExprs[i], blockScope, true, ref w);
                     return;
                 case ExpressionType.Label:
                     var labelExpr = (LabelExpression)e;
-                    defs.Add(new LabelRef { Target = labelExpr.Target, Scope = scope, Enterable = enterable });
-                    CollectLabelRefs(labelExpr.DefaultValue, scope, false, ref defs, ref gotos);
+                    w.Defs.Add(new LabelRef { Target = labelExpr.Target, Scope = scope, Enterable = enterable });
+                    CollectLabelRefs(labelExpr.DefaultValue, scope, false, ref w);
                     return;
                 case ExpressionType.Goto:
                     var gotoExpr = (GotoExpression)e;
-                    gotos.Add(new LabelRef { Target = gotoExpr.Target, Scope = scope });
-                    CollectLabelRefs(gotoExpr.Value, scope, false, ref defs, ref gotos);
+                    w.Gotos.Add(new LabelRef { Target = gotoExpr.Target, Scope = scope });
+                    CollectLabelRefs(gotoExpr.Value, scope, false, ref w);
                     return;
                 case ExpressionType.Loop:
                     var loopExpr = (LoopExpression)e;
-                    var loopScope = new LabelScope(scope, enterable);
+                    var loopScope = (short)w.Scopes.Count;
+                    w.Scopes.Add(new LabelScope { Parent = scope, Depth = (short)(w.Scopes.GetSurePresentRef(scope).Depth + 1), Enterable = enterable });
                     if (loopExpr.BreakLabel != null)
-                        defs.Add(new LabelRef { Target = loopExpr.BreakLabel, Scope = loopScope, Enterable = true });
+                        w.Defs.Add(new LabelRef { Target = loopExpr.BreakLabel, Scope = loopScope, Enterable = true });
                     if (loopExpr.ContinueLabel != null)
-                        defs.Add(new LabelRef { Target = loopExpr.ContinueLabel, Scope = loopScope, Enterable = true });
-                    CollectLabelRefs(loopExpr.Body, loopScope, true, ref defs, ref gotos);
+                        w.Defs.Add(new LabelRef { Target = loopExpr.ContinueLabel, Scope = loopScope, Enterable = true });
+                    CollectLabelRefs(loopExpr.Body, loopScope, true, ref w);
                     return;
                 case ExpressionType.Conditional:
                     var condExpr = (ConditionalExpression)e;
-                    CollectLabelRefs(condExpr.Test, scope, false, ref defs, ref gotos);
-                    CollectLabelRefs(condExpr.IfTrue, scope, enterable, ref defs, ref gotos);
-                    CollectLabelRefs(condExpr.IfFalse, scope, enterable, ref defs, ref gotos);
+                    CollectLabelRefs(condExpr.Test, scope, false, ref w);
+                    CollectLabelRefs(condExpr.IfTrue, scope, enterable, ref w);
+                    CollectLabelRefs(condExpr.IfFalse, scope, enterable, ref w);
                     return;
                 case ExpressionType.Switch:
                     var switchExpr = (SwitchExpression)e;
-                    CollectLabelRefs(switchExpr.SwitchValue, scope, false, ref defs, ref gotos);
+                    CollectLabelRefs(switchExpr.SwitchValue, scope, false, ref w);
                     for (var i = 0; i < switchExpr.Cases.Count; ++i)
-                        CollectLabelRefs(switchExpr.Cases[i].Body, scope, enterable, ref defs, ref gotos);
-                    CollectLabelRefs(switchExpr.DefaultBody, scope, enterable, ref defs, ref gotos);
+                        CollectLabelRefs(switchExpr.Cases[i].Body, scope, enterable, ref w);
+                    CollectLabelRefs(switchExpr.DefaultBody, scope, enterable, ref w);
                     return;
                 case ExpressionType.Try:
                     var tryExpr = (TryExpression)e;
-                    CollectLabelRefs(tryExpr.Body, scope, false, ref defs, ref gotos);
+                    CollectLabelRefs(tryExpr.Body, scope, false, ref w);
                     var handlers = tryExpr.Handlers;
                     for (var i = 0; i < handlers.Count; ++i)
                     {
-                        CollectLabelRefs(handlers[i].Filter, scope, false, ref defs, ref gotos);
-                        CollectLabelRefs(handlers[i].Body, scope, false, ref defs, ref gotos);
+                        CollectLabelRefs(handlers[i].Filter, scope, false, ref w);
+                        CollectLabelRefs(handlers[i].Body, scope, false, ref w);
                     }
-                    CollectLabelRefs(tryExpr.Finally, scope, false, ref defs, ref gotos);
-                    CollectLabelRefs(tryExpr.Fault, scope, false, ref defs, ref gotos);
+                    CollectLabelRefs(tryExpr.Finally, scope, false, ref w);
+                    CollectLabelRefs(tryExpr.Fault, scope, false, ref w);
                     return;
                 case ExpressionType.Lambda:
                     return; // the nested lambda has its own labels
@@ -1228,27 +1232,27 @@ namespace FastExpressionCompiler
             // shortcut: other nodes are walked only through the common operand shapes, so the labels hidden in the rest are not validated
             if (e is BinaryExpression bin)
             {
-                CollectLabelRefs(bin.Left, scope, false, ref defs, ref gotos);
-                CollectLabelRefs(bin.Right, scope, false, ref defs, ref gotos);
+                CollectLabelRefs(bin.Left, scope, false, ref w);
+                CollectLabelRefs(bin.Right, scope, false, ref w);
             }
             else if (e is UnaryExpression unary)
-                CollectLabelRefs(unary.Operand, scope, false, ref defs, ref gotos);
+                CollectLabelRefs(unary.Operand, scope, false, ref w);
             else if (e is TypeBinaryExpression typeBin)
-                CollectLabelRefs(typeBin.Expression, scope, false, ref defs, ref gotos);
+                CollectLabelRefs(typeBin.Expression, scope, false, ref w);
             else if (e is MemberExpression member)
-                CollectLabelRefs(member.Expression, scope, false, ref defs, ref gotos);
+                CollectLabelRefs(member.Expression, scope, false, ref w);
             else if (e is MethodCallExpression call)
             {
-                CollectLabelRefs(call.Object, scope, false, ref defs, ref gotos);
+                CollectLabelRefs(call.Object, scope, false, ref w);
                 var args = call.GetArgExprs();
                 for (var i = 0; i < args.GetArgCount(); ++i)
-                    CollectLabelRefs(args.GetArgument(i), scope, false, ref defs, ref gotos);
+                    CollectLabelRefs(args.GetArgument(i), scope, false, ref w);
             }
             else if (e is NewExpression newExpr)
             {
                 var args = newExpr.GetArgExprs();
                 for (var i = 0; i < args.GetArgCount(); ++i)
-                    CollectLabelRefs(args.GetArgument(i), scope, false, ref defs, ref gotos);
+                    CollectLabelRefs(args.GetArgument(i), scope, false, ref w);
             }
         }
 
@@ -1256,42 +1260,45 @@ namespace FastExpressionCompiler
         /// no jump into the expression or into the block with the value. Throws the InvalidOperationException if violated.</summary>
         public static void ValidateLabels(Expression body)
         {
-            var defs = new SmallList<LabelRef, Stack8<LabelRef>, NoArrayPool<LabelRef>>();
-            var gotos = new SmallList<LabelRef, Stack8<LabelRef>, NoArrayPool<LabelRef>>();
-            CollectLabelRefs(body, new LabelScope(null, true), true, ref defs, ref gotos);
+            var w = new LabelWalk();
+            w.Scopes.Add(new LabelScope { Parent = -1, Enterable = true }); // the root
+            CollectLabelRefs(body, 0, true, ref w);
+            ref var scopes = ref w.Scopes;
 
             // the redefinition: a label is defined in the scope where it is already visible
-            for (var i = 0; i < defs.Count; ++i)
-                for (var j = i + 1; j < defs.Count; ++j)
+            for (var i = 0; i < w.Defs.Count; ++i)
+                for (var j = i + 1; j < w.Defs.Count; ++j)
                 {
-                    ref var a = ref defs.GetSurePresentRef(i);
-                    ref var b = ref defs.GetSurePresentRef(j);
+                    ref var a = ref w.Defs.GetSurePresentRef(i);
+                    ref var b = ref w.Defs.GetSurePresentRef(j);
                     if (a.Target != b.Target)
                         continue;
-                    var outer = a.Scope.Depth <= b.Scope.Depth ? a.Scope : b.Scope;
-                    for (var s = a.Scope.Depth <= b.Scope.Depth ? b.Scope : a.Scope; s != null; s = s.Parent)
+                    var aIsOuter = scopes.GetSurePresentRef(a.Scope).Depth <= scopes.GetSurePresentRef(b.Scope).Depth;
+                    var outer = aIsOuter ? a.Scope : b.Scope;
+                    for (var s = aIsOuter ? b.Scope : a.Scope; s != -1; s = scopes.GetSurePresentRef(s).Parent)
                         if (s == outer)
                             throw new InvalidOperationException($"Label '{a.Target.Name}' is defined multiple times in the scope where it is visible");
                 }
 
-            for (var i = 0; i < gotos.Count; ++i)
+            for (var i = 0; i < w.Gotos.Count; ++i)
             {
-                ref var g = ref gotos.GetSurePresentRef(i);
+                ref var g = ref w.Gotos.GetSurePresentRef(i);
                 var defined = false;
                 var visible = false;
                 var jumpInCount = 0;
-                for (var j = 0; j < defs.Count; ++j)
+                for (var j = 0; j < w.Defs.Count; ++j)
                 {
-                    ref var d = ref defs.GetSurePresentRef(j);
+                    ref var d = ref w.Defs.GetSurePresentRef(j);
                     if (d.Target != g.Target)
                         continue;
                     defined = true;
 
+                    // find the common ancestor scope of the label and the jump
                     var dx = d.Scope;
                     var gy = g.Scope;
-                    while (dx.Depth > gy.Depth) dx = dx.Parent;
-                    while (gy.Depth > dx.Depth) gy = gy.Parent;
-                    while (dx != gy) { dx = dx.Parent; gy = gy.Parent; }
+                    while (scopes.GetSurePresentRef(dx).Depth > scopes.GetSurePresentRef(gy).Depth) dx = scopes.GetSurePresentRef(dx).Parent;
+                    while (scopes.GetSurePresentRef(gy).Depth > scopes.GetSurePresentRef(dx).Depth) gy = scopes.GetSurePresentRef(gy).Parent;
+                    while (dx != gy) { dx = scopes.GetSurePresentRef(dx).Parent; gy = scopes.GetSurePresentRef(gy).Parent; }
 
                     if (dx == d.Scope) // the label scope is the jump scope or its ancestor
                     {
@@ -1300,8 +1307,8 @@ namespace FastExpressionCompiler
                     }
 
                     var enterable = d.Enterable;
-                    for (var s = d.Scope; s != dx; s = s.Parent)
-                        enterable &= s.Enterable;
+                    for (var s = d.Scope; s != dx; s = scopes.GetSurePresentRef(s).Parent)
+                        enterable &= scopes.GetSurePresentRef(s).Enterable;
                     if (enterable)
                         ++jumpInCount;
                 }

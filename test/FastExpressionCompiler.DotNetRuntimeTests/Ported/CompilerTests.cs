@@ -395,7 +395,10 @@ namespace System.Linq.Expressions.Tests
                 s
                 .Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .Where(line => !line.StartsWith("//"))
-                .Select(beforeLambdaUniquifierRemoval => normalizeRegex.Replace(beforeLambdaUniquifierRemoval, "lambda_method"));
+                .Select(beforeLambdaUniquifierRemoval => normalizeRegex.Replace(beforeLambdaUniquifierRemoval, "lambda_method"))
+                // FEC emits the unnamed method with its own closure type, conform the signature to the System one
+                .Select(line => line.StartsWith(".method") ? line.Replace("::(", "::lambda_method(")
+                    .Replace("[FastExpressionCompiler]FastExpressionCompiler.ExpressionCompiler+ArrayClosure", "[System.Linq.Expressions]System.Runtime.CompilerServices.Closure") : line);
 
             return string.Join("\n", lines);
         }
