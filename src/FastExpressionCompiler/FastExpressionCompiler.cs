@@ -3582,8 +3582,8 @@ namespace FastExpressionCompiler
 
                 if (underlyingNullableTargetType != null) // sourceType is NOT nullable here (checked above)
                 {
-                    if (!underlyingNullableTargetType.IsEnum &&
-                        !TryEmitPrimitiveValueConvert(sourceType, underlyingNullableTargetType, il, isChecked: false))
+                    if (!TryEmitPrimitiveValueConvert(sourceType, underlyingNullableTargetType, il, 
+                        isChecked: expr.NodeType == ExpressionType.ConvertChecked))
                         return false;
                     il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
                 }
@@ -3614,52 +3614,60 @@ namespace FastExpressionCompiler
                 return il.EmitPopIfIgnoreResult(parent);
             }
 
+            // The checked conversion of the unsigned source (the Char and the unsigned Enum too) must use the `.un` overflow opcodes,
+            // because the narrow unsigned values are on the stack as the positive `int32` and the wide ones as the `int32` or `int64` with the sign bit possibly set.
             private static bool TryEmitPrimitiveValueConvert(Type sourceType, Type targetType, ILGenerator il, bool isChecked)
             {
-                switch (Type.GetTypeCode(targetType))
+                var sourceCode = Type.GetTypeCode(sourceType); // for the enum it is the code of the underlying type
+                var targetCode = Type.GetTypeCode(targetType);
+                if (sourceCode == targetCode)
+                    return targetCode != TypeCode.Object;
+
+                var isUnsignedSource = (sourceType.IsEnum ? Enum.GetUnderlyingType(sourceType) : sourceType).IsUnsigned();
+                var isUn = isChecked & isUnsignedSource;
+                switch (targetCode)
                 {
                     case TypeCode.SByte:
-                        il.Demit(isChecked ? OpCodes.Conv_Ovf_I1 : OpCodes.Conv_I1);
+                        il.Demit(!isChecked ? OpCodes.Conv_I1 : isUn ? OpCodes.Conv_Ovf_I1_Un : OpCodes.Conv_Ovf_I1);
                         break;
                     case TypeCode.Byte:
-                        il.Demit(isChecked ? OpCodes.Conv_Ovf_U1 : OpCodes.Conv_U1);
+                        il.Demit(!isChecked ? OpCodes.Conv_U1 : isUn ? OpCodes.Conv_Ovf_U1_Un : OpCodes.Conv_Ovf_U1);
                         break;
                     case TypeCode.Int16:
-                        il.Demit(isChecked ? OpCodes.Conv_Ovf_I2 : OpCodes.Conv_I2);
+                        il.Demit(!isChecked ? OpCodes.Conv_I2 : isUn ? OpCodes.Conv_Ovf_I2_Un : OpCodes.Conv_Ovf_I2);
                         break;
                     case TypeCode.Int32:
-                        il.Demit(isChecked ? OpCodes.Conv_Ovf_I4 : OpCodes.Conv_I4);
+                        il.Demit(!isChecked ? OpCodes.Conv_I4 : isUn ? OpCodes.Conv_Ovf_I4_Un : OpCodes.Conv_Ovf_I4);
                         break;
                     case TypeCode.Int64:
-                        il.Demit(isChecked ? OpCodes.Conv_Ovf_I8 : OpCodes.Conv_I8);
+                        il.Demit(!isChecked ? (isUnsignedSource ? OpCodes.Conv_U8 : OpCodes.Conv_I8) : isUn ? OpCodes.Conv_Ovf_I8_Un : OpCodes.Conv_Ovf_I8);
                         break;
                     case TypeCode.Double:
-                        if (sourceType.IsUnsigned())
+                        if (isUnsignedSource)
                             il.Demit(OpCodes.Conv_R_Un);
                         il.Demit(OpCodes.Conv_R8);
                         break;
                     case TypeCode.Single:
-                        if (sourceType.IsUnsigned())
+                        if (isUnsignedSource)
                             il.Demit(OpCodes.Conv_R_Un);
                         il.Demit(OpCodes.Conv_R4);
                         break;
                     case TypeCode.UInt16:
                     case TypeCode.Char:
-                        il.Demit(isChecked ? OpCodes.Conv_Ovf_U2 : OpCodes.Conv_U2);
+                        il.Demit(!isChecked ? OpCodes.Conv_U2 : isUn ? OpCodes.Conv_Ovf_U2_Un : OpCodes.Conv_Ovf_U2);
                         break;
                     case TypeCode.UInt32:
-                        il.Demit(isChecked ? OpCodes.Conv_Ovf_U4 : OpCodes.Conv_U4);
+                        il.Demit(!isChecked ? OpCodes.Conv_U4 : isUn ? OpCodes.Conv_Ovf_U4_Un : OpCodes.Conv_Ovf_U4);
                         break;
                     case TypeCode.UInt64:
-                        il.Demit(isChecked ? OpCodes.Conv_Ovf_U8 : OpCodes.Conv_U8); // should we consider if sourceType.IsUnsigned == false and using the OpCodes.Conv_I8 (seems like the System.Compile does it)
+                        // the unchecked widening of the signed 32 bit and narrower source to the ulong should extend the sign, same as System does it, but the float source is converted with `conv.u8`
+                        il.Demit(!isChecked ? (isUnsignedSource | sourceCode == TypeCode.Single | sourceCode == TypeCode.Double ? OpCodes.Conv_U8 : OpCodes.Conv_I8) : isUn ? OpCodes.Conv_Ovf_U8_Un : OpCodes.Conv_Ovf_U8);
                         break;
                     default:
-                        // todo: @feature for net7+ add Half, Int128, UInt128
                         return false;
                 }
                 return true;
             }
-
             public static bool TryEmitConstant(ConstantExpression expr, Type exprType, ILGenerator il, ref CompilerContext context, int byRefIndex = -1)
             {
                 var ok = false;
@@ -3839,7 +3847,6 @@ namespace FastExpressionCompiler
                     case TypeCode.Decimal:
                         EmitDecimalConstant((decimal)constValue, il);
                         break;
-                    // todo: @feature for net7 add Half, Int128, UInt128
                     default:
                         if (constType == typeof(IntPtr))
                         {
@@ -8567,6 +8574,7 @@ namespace FastExpressionCompiler
         internal static bool IsUnsigned(this Type type) =>
             type == typeof(byte) ||
             type == typeof(ushort) ||
+            type == typeof(char) ||
             type == typeof(uint) ||
             type == typeof(ulong);
 

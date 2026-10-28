@@ -80,6 +80,10 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Convert_with_the_method_taking_ref_param_is_the_same_as_system();
             Negate_checked_of_short_emits_the_short_IL();
             Compound_assign_and_inc_dec_with_methods_are_the_same_as_system();
+            Convert_and_ConvertChecked_between_primitives_nullables_and_enums_are_the_same_as_system();
+#if NET7_0_OR_GREATER
+            Half_Int128_and_UInt128_constants_and_conversions_are_the_same_as_system();
+#endif
             Unary_operators_with_explicit_method_are_the_same_as_system();
             Lifted_comparisons_have_the_same_type_and_result_as_system();
             And_AndAlso_OrElse_take_the_type_from_the_left_operand();
@@ -94,7 +98,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_print_reference_comparison();
             Can_round_trip_new_expression_kinds_through_system_expressions();
 
-            return 75;
+            return 77;
         }
 
         private static int _sideEffectCalls;
@@ -1228,6 +1232,94 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.AreEqual(0, failures.Count, string.Join("\n", failures));
             Asserts.IsTrue(compared > 100, "compared " + compared);
         }
+        public enum ConvLongEnum : long { A = 1, B = long.MaxValue }
+        public enum ConvUIntEnum : uint { A = 1, B = uint.MaxValue }
+
+        public void Convert_and_ConvertChecked_between_primitives_nullables_and_enums_are_the_same_as_system()
+        {
+            var types = new[]
+            {
+                typeof(sbyte), typeof(byte), typeof(short), typeof(ushort), typeof(char), typeof(int), typeof(uint), typeof(long), typeof(ulong),
+                typeof(float), typeof(double), typeof(ConvLongEnum), typeof(ConvUIntEnum)
+            };
+            var values = new object[] { 0, 1, 127, 128, 255, 256, -1, -128, 32767, 32768, 65535, 65536, int.MaxValue, int.MinValue, 2147483648L, 4294967295L, 4294967296L, long.MaxValue, long.MinValue, 9223372036854775808UL, ulong.MaxValue, 1.5, -1.5, 3e10 };
+
+            var failures = new System.Collections.Generic.List<string>();
+            var compared = 0;
+            foreach (var checkedConv in new[] { false, true })
+                foreach (var from in types)
+                    foreach (var fromNullable in new[] { false, true })
+                        foreach (var to in types)
+                            foreach (var toNullable in new[] { false, true })
+                            {
+                                var srcType = fromNullable ? typeof(Nullable<>).MakeGenericType(from) : from;
+                                var dstType = toNullable ? typeof(Nullable<>).MakeGenericType(to) : to;
+                                if (srcType == dstType)
+                                    continue;
+
+                                Delegate sysD, fastD;
+                                try
+                                {
+                                    var sp = SysExpr.Parameter(srcType, "a");
+                                    var se = checkedConv ? SysExpr.ConvertChecked(sp, dstType) : SysExpr.Convert(sp, dstType);
+                                    sysD = SysExpr.Lambda(typeof(Func<,>).MakeGenericType(srcType, dstType), se, sp).Compile();
+                                    var lp = Parameter(srcType, "a");
+                                    var le = checkedConv ? ConvertChecked(lp, dstType) : Convert(lp, dstType);
+                                    fastD = Lambda(typeof(Func<,>).MakeGenericType(srcType, dstType), le, lp).CompileFast(true);
+                                    if (fastD == null) { failures.Add($"not compiled {(checkedConv ? "checked " : "")}{srcType.Name} -> {dstType.Name}"); continue; }
+                                }
+                                catch (Exception) { continue; }
+
+                                var inputs = new System.Collections.Generic.List<object>();
+                                foreach (var v in values)
+                                {
+                                    try
+                                    {
+                                        // go through the unchecked System conversion to get the value of the source type in a normal shape
+                                        var cp = SysExpr.Parameter(typeof(object), "o");
+                                        var cv = SysExpr.Lambda<Func<object, object>>(SysExpr.Convert(SysExpr.Convert(SysExpr.Convert(cp, v.GetType()), from), typeof(object)), cp).Compile()(v);
+                                        inputs.Add(cv);
+                                    }
+                                    catch (Exception) { }
+                                }
+                                if (fromNullable) inputs.Add(null);
+
+                                compared++;
+                                foreach (var x in inputs)
+                                {
+                                    object e, a;
+                                    try { e = sysD.DynamicInvoke(x); } catch (Exception ex) { e = "ex:" + ex.InnerException?.GetType().Name; }
+                                    try { a = fastD.DynamicInvoke(x); } catch (Exception ex) { a = "ex:" + ex.InnerException?.GetType().Name; }
+                                    if (!Equals(e, a))
+                                    {
+                                        failures.Add($"{(checkedConv ? "checked " : "")}{srcType.Name} -> {dstType.Name} ({x}) sys={e} fec={a}");
+                                        break;
+                                    }
+                                }
+                            }
+            Asserts.AreEqual(0, failures.Count, failures.Count + " failures, e.g.\n" + string.Join("\n", failures.Take(15)));
+            Asserts.IsTrue(compared > 500, "compared " + compared);
+        }
+#if NET7_0_OR_GREATER
+        public void Half_Int128_and_UInt128_constants_and_conversions_are_the_same_as_system()
+        {
+            var h = Parameter(typeof(Half), "h");
+            var hc = Lambda<Func<Half, double>>(Convert(Add(h, Constant((Half)2.5)), typeof(double)), h);
+            Asserts.AreEqual(4.0, hc.CompileSys()((Half)1.5));
+            Asserts.AreEqual(4.0, hc.CompileFast(true)((Half)1.5));
+
+            var i = Parameter(typeof(Int128), "i");
+            var big = (Int128)long.MaxValue * 1000;
+            var ic = Lambda<Func<Int128, Int128>>(Add(i, Constant(big)), i);
+            Asserts.AreEqual(big + 7, ic.CompileSys()(7));
+            Asserts.AreEqual(big + 7, ic.CompileFast(true)(7));
+
+            var u = Parameter(typeof(long), "u");
+            var uc = Lambda<Func<long, UInt128>>(Add(Convert(u, typeof(UInt128)), Constant((UInt128)ulong.MaxValue)), u);
+            Asserts.AreEqual((UInt128)ulong.MaxValue + 5, uc.CompileSys()(5));
+            Asserts.AreEqual((UInt128)ulong.MaxValue + 5, uc.CompileFast(true)(5));
+        }
+#endif
         public delegate T RefConvFunc<T, R>(ref R r);
         public class RefConv
         {

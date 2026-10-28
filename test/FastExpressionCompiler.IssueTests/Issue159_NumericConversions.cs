@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Reflection;
 using System.Reflection.Emit;
 
@@ -127,7 +127,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ldloca_S,
                 OpCodes.Ldfld,  // GetValueOrDefault
                 OpCodes.Ldc_I4, // load `int.MaxValue`
-                OpCodes.Conv_U8,// convert it to `ulong?`  
+                OpCodes.Conv_I8,// convert it to `ulong?`, sign-extending the int same as System  
                 OpCodes.Newobj,
                 OpCodes.Stloc_1,
                 OpCodes.Ldloca_S,
