@@ -81,6 +81,9 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Negate_checked_of_short_emits_the_short_IL();
             Compound_assign_and_inc_dec_with_methods_are_the_same_as_system();
             Convert_and_ConvertChecked_between_primitives_nullables_and_enums_are_the_same_as_system();
+            Arithmetic_on_nullable_by_ref_parameter_is_the_same_as_system();
+            Inc_dec_assign_of_primitives_and_nullables_are_the_same_as_system();
+            Inc_dec_assign_of_block_variable_compared_and_returned_via_label_are_the_same_as_system();
 #if NET7_0_OR_GREATER
             Half_Int128_and_UInt128_constants_and_conversions_are_the_same_as_system();
 #endif
@@ -98,7 +101,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_print_reference_comparison();
             Can_round_trip_new_expression_kinds_through_system_expressions();
 
-            return 77;
+            return 80;
         }
 
         private static int _sideEffectCalls;
@@ -1320,6 +1323,169 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.AreEqual((UInt128)ulong.MaxValue + 5, uc.CompileFast(true)(5));
         }
 #endif
+
+        public class IncDecHolder<T>
+        {
+            public T Field;
+            public T[] Array = new T[1];
+        }
+
+        public void Inc_dec_assign_of_primitives_and_nullables_are_the_same_as_system()
+        {
+            var types = new[]
+            {
+                typeof(sbyte), typeof(byte), typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong),
+                typeof(float), typeof(double), typeof(decimal), typeof(char)
+            };
+            var nodes = new[]
+            {
+                ExpressionType.PreIncrementAssign, ExpressionType.PreDecrementAssign,
+                ExpressionType.PostIncrementAssign, ExpressionType.PostDecrementAssign
+            };
+            var values = new object[] { 0, 1, 2, 127, 128, 255, 32767, 65535, int.MaxValue, long.MaxValue, 1.5, -1 };
+
+            var failures = new System.Collections.Generic.List<string>();
+            var compared = 0;
+            foreach (var type in types)
+                foreach (var nullable in new[] { false, true })
+                    foreach (var node in nodes)
+                        foreach (var target in new[] { "param", "field", "array" })
+                        {
+                            var t = nullable ? typeof(Nullable<>).MakeGenericType(type) : type;
+                            var inputs = new System.Collections.Generic.List<object>();
+                            foreach (var v in values)
+                                try { inputs.Add(System.Convert.ChangeType(v, type)); } catch (Exception) { }
+                            if (nullable) inputs.Add(null);
+
+                            foreach (var x in inputs)
+                            {
+                                object e, a;
+                                try { e = RunIncDec(t, node, target, x, false); } catch (Exception ex) { e = "ex:" + ex.GetType().Name; }
+                                try { a = RunIncDec(t, node, target, x, true); } catch (Exception ex) { a = "ex:" + ex.GetType().Name; }
+                                ++compared;
+                                if (!Equals(e, a))
+                                {
+                                    failures.Add($"{node} {target} {t.Name}({x}) sys={e} fec={a}");
+                                    break;
+                                }
+                            }
+                        }
+
+            Asserts.AreEqual(0, failures.Count, failures.Count + " failures, e.g.\n" + string.Join("\n", failures.Take(15)));
+            Asserts.IsTrue(compared > 1000, "compared " + compared);
+        }
+
+        // Returns "operation result;target value after" to compare both the result of the expression and the changed target
+        private static object RunIncDec(Type t, ExpressionType node, string target, object x, bool fast)
+        {
+            var holderType = typeof(IncDecHolder<>).MakeGenericType(t);
+            var holderParam = SysExpr.Parameter(holderType, "h");
+            var param = SysExpr.Parameter(t, "p");
+            var holder = Activator.CreateInstance(holderType);
+            var field = holderType.GetField("Field");
+            var array = holderType.GetField("Array");
+
+            SysExpr targetExpr = target switch
+            {
+                "param" => param,
+                "field" => SysExpr.Field(holderParam, field),
+                _ => SysExpr.ArrayAccess(SysExpr.Field(holderParam, array), SysExpr.Constant(0))
+            };
+
+            var inc = node switch
+            {
+                ExpressionType.PreIncrementAssign => SysExpr.PreIncrementAssign(targetExpr),
+                ExpressionType.PreDecrementAssign => SysExpr.PreDecrementAssign(targetExpr),
+                ExpressionType.PostIncrementAssign => SysExpr.PostIncrementAssign(targetExpr),
+                _ => SysExpr.PostDecrementAssign(targetExpr)
+            };
+
+            var body = SysExpr.NewArrayInit(typeof(object),
+                SysExpr.Convert(inc, typeof(object)),
+                SysExpr.Convert(targetExpr, typeof(object)));
+
+            if (target == "field") field.SetValue(holder, x);
+            else if (target == "array") ((Array)array.GetValue(holder)).SetValue(x, 0);
+
+            var lambda = SysExpr.Lambda(typeof(Func<,,>).MakeGenericType(holderType, t, typeof(object[])), body, holderParam, param);
+            var d = fast ? lambda.ToLightExpression().CompileFast(true) : lambda.Compile();
+            var arr = (object[])d.DynamicInvoke(holder, x);
+            return arr[0] + ";" + arr[1];
+        }
+
+        public void Inc_dec_assign_of_block_variable_compared_and_returned_via_label_are_the_same_as_system()
+        {
+            var types = new[]
+            {
+                typeof(short), typeof(ushort), typeof(int), typeof(uint), typeof(long), typeof(ulong),
+                typeof(float), typeof(double), typeof(decimal)
+            };
+            var nodes = new[]
+            {
+                ExpressionType.PreIncrementAssign, ExpressionType.PreDecrementAssign,
+                ExpressionType.PostIncrementAssign, ExpressionType.PostDecrementAssign
+            };
+
+            var failures = new System.Collections.Generic.List<string>();
+            var compared = 0;
+            foreach (var type in types)
+                foreach (var nullable in new[] { false, true })
+                    foreach (var node in nodes)
+                        foreach (var withLabel in new[] { false, true })
+                            foreach (var v in new object[] { 1, 5, null })
+                            {
+                                if (v == null & !nullable)
+                                    continue;
+
+                                var t = nullable ? typeof(Nullable<>).MakeGenericType(type) : type;
+                                var value = v == null ? null : System.Convert.ChangeType(v, type);
+                                var isPre = node is ExpressionType.PreIncrementAssign or ExpressionType.PreDecrementAssign;
+                                var isInc = node is ExpressionType.PreIncrementAssign or ExpressionType.PostIncrementAssign;
+                                var changed = value == null ? null : System.Convert.ChangeType((int)v + (isInc ? 1 : -1), type);
+                                var expected = withLabel | isPre ? changed : value; // the block result is the changed value, except for the Post operations
+
+                                var variable = Variable(t);
+                                var inc = node switch
+                                {
+                                    ExpressionType.PreIncrementAssign => PreIncrementAssign(variable),
+                                    ExpressionType.PreDecrementAssign => PreDecrementAssign(variable),
+                                    ExpressionType.PostIncrementAssign => PostIncrementAssign(variable),
+                                    _ => PostDecrementAssign(variable)
+                                };
+                                var label = Label(t);
+                                var block = withLabel
+                                    ? Block(new[] { variable }, Assign(variable, Constant(value, t)), inc, Return(label, variable), Label(label, Default(t)))
+                                    : Block(new[] { variable }, Assign(variable, Constant(value, t)), inc);
+                                var lambda = Lambda<Func<bool>>(Equal(Constant(expected, t), block));
+
+                                bool e, a;
+                                try { e = lambda.CompileSys()(); } catch (Exception ex) { failures.Add($"{node} {t.Name}({v}) sys threw {ex.GetType().Name}"); continue; }
+                                try { a = lambda.CompileFast(true)(); } catch (Exception ex) { a = false; failures.Add($"{node} {(withLabel ? "label " : "")}{t.Name}({v}) fec threw {ex.GetType().Name}: {ex.Message}"); continue; }
+                                ++compared;
+                                if (e != a)
+                                    failures.Add($"{node} {(withLabel ? "label " : "")}{t.Name}({v}) sys={e} fec={a}");
+                            }
+
+            Asserts.AreEqual(0, failures.Count, failures.Count + " failures, e.g.\n" + string.Join("\n", failures.Take(15)));
+            Asserts.IsTrue(compared > 200, "compared " + compared);
+        }
+
+        public void Arithmetic_on_nullable_by_ref_parameter_is_the_same_as_system()
+        {
+            var p = Parameter(typeof(int?).MakeByRefType(), "p");
+            foreach (var body in new Expression[] { Add(p, p), Add(Constant(1, typeof(int?)), p), Add(p, Constant(1, typeof(int?))) })
+            {
+                var lambda = Lambda<RefConvFunc<int?, int?>>(body, p);
+                var sys = lambda.CompileSys();
+                var fec = lambda.CompileFast(true);
+                foreach (var value in new int?[] { 5, null })
+                {
+                    var a = value;
+                    var b = value;
+                    Asserts.AreEqual(sys(ref a), fec(ref b));
+                }
+            }
+        }
         public delegate T RefConvFunc<T, R>(ref R r);
         public class RefConv
         {

@@ -3111,10 +3111,17 @@ namespace FastExpressionCompiler
             private static bool TryEmitSimpleUnary(Type exprType, Expression oper, Type operType, MethodInfo method,
                 ExpressionType nodeType, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
-                var underlyingOperType = Nullable.GetUnderlyingType(operType);
-                if (underlyingOperType != null & nodeType != ExpressionType.TypeAs & nodeType != ExpressionType.Unbox &&
+                if (operType.IsNullable() & nodeType != ExpressionType.TypeAs & nodeType != ExpressionType.Unbox &&
                     (method == null || method.GetParameters()[0].ParameterType != operType)) // the method takes the underlying type, so the call is lifted
-                    return TryEmitLiftedUnary(oper, nodeType, exprType, operType, underlyingOperType, method, il, ref context, parent);
+                {
+                    var liftedFlags = (parent
+                        & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
+                            ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
+                        | ParentFlags.Arithmetic;
+                    return TryEmit(oper, il, ref context, liftedFlags) &&
+                        EmitLiftedUnaryOperation(il, nodeType, exprType, operType, method) &&
+                        il.EmitPopIfIgnoreResult(parent);
+                }
 
                 if (!TryEmit(oper, il, ref context, parent & ~ParentFlags.IgnoreResult))
                     return false;
@@ -3211,25 +3218,18 @@ namespace FastExpressionCompiler
                 return methodName != null && EmitMethodCallCheckForNull(il, type.GetMethod(methodName, BindingFlags.Public | BindingFlags.Static, null, new[] { type }, null));
             }
 
-            // Lifted unary operator: null stays null, otherwise the operator is applied to the underlying value and wrapped back
-            private static bool TryEmitLiftedUnary(Expression oper, ExpressionType nodeType, Type exprType, Type operType, Type underlyingType,
-                MethodInfo method, ILGenerator il, ref CompilerContext context, ParentFlags parent)
+
+            // Applies the unary operator to the nullable value on the stack: null stays null, otherwise the operator is applied to the underlying value and wrapped back
+            private static bool EmitLiftedUnaryOperation(ILGenerator il, ExpressionType nodeType, Type exprType, Type operType, MethodInfo method)
             {
-                var flags = (parent
-                    & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
-                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
-                    | ParentFlags.Arithmetic;
-
-                if (!TryEmit(oper, il, ref context, flags))
-                    return false;
-
                 var nullLabel = il.DefineLabel();
                 var doneLabel = il.DefineLabel();
                 var opVar = EmitNullableVarAddressAndHasValue(il, operType);
                 il.Demit(OpCodes.Brfalse, nullLabel);
 
-                EmitLoadVarOrNullableValue(il, opVar, operType, loadNullableValue: true);
-                if (!EmitUnaryOperation(il, nodeType, underlyingType, method))
+                EmitLoadLocalVariableAddress(il, opVar);
+                il.Demit(OpCodes.Ldfld, operType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                if (!EmitUnaryOperation(il, nodeType, Nullable.GetUnderlyingType(operType), method))
                     return false;
                 il.Demit(OpCodes.Newobj, exprType.GetNullableConstructor());
                 il.Demit(OpCodes.Br, doneLabel);
@@ -3237,7 +3237,7 @@ namespace FastExpressionCompiler
                 il.DmarkLabel(nullLabel);
                 EmitLoadLocalVariable(il, InitValueTypeVariable(il, exprType)); // the result type may differ from the operand type
                 il.DmarkLabel(doneLabel);
-                return il.EmitPopIfIgnoreResult(parent);
+                return true;
             }
             private static readonly MethodInfo _objectGetTypeMethod = typeof(object).GetMethod(nameof(object.GetType));
 
@@ -4275,7 +4275,8 @@ namespace FastExpressionCompiler
                         if (resultVar != -1 & isPost)
                             EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value for the later further use
 
-                        EmitIncOrDec(il, nodeType == ExpressionType.Add);
+                        if (!EmitIncOrDec(il, exprType, nodeType == ExpressionType.Add))
+                            return false;
 
                         if (resultVar != -1 & !isPost)
                             EmitStoreAndLoadLocalVariable(il, resultVar);
@@ -4497,7 +4498,8 @@ namespace FastExpressionCompiler
                             {
                                 if (resultVar != -1 & isPost)
                                     EmitStoreAndLoadLocalVariable(il, resultVar); // for the post increment/decrement save the non-incremented value before doing any operation on it
-                                EmitIncOrDec(il, nodeType == ExpressionType.Add);
+                                if (!EmitIncOrDec(il, leftType, nodeType == ExpressionType.Add))
+                                    return false;
                                 if (resultVar != -1 & !isPost)
                                     EmitStoreAndLoadLocalVariable(il, resultVar);
                             }
@@ -4540,7 +4542,8 @@ namespace FastExpressionCompiler
                                 EmitLoadLocalVariableAddress(il, leftNullableVar);
                                 il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
 
-                                EmitIncOrDec(il, nodeType == ExpressionType.Add);
+                                if (!EmitIncOrDec(il, leftType.GetNonNullableOrSelf(), nodeType == ExpressionType.Add))
+                                    return false;
                             }
                             else
                             {
@@ -6271,6 +6274,8 @@ namespace FastExpressionCompiler
                     noNullableValueLabel = il.DefineLabel();
                     if (!TryEmit(left, il, ref context, flags | ParentFlags.InstanceCall))
                         return false;
+                    if (context.LastEmitIsAddress || left is ParameterExpression { IsByRef: true }) // see #461, the nullable by-ref parameter does not set the flag
+                        EmitLoadIndirectlyByRef(il, leftType); // the nullable value is needed here and not its address
 
                     leftVar = EmitNullableVarAddressAndHasValue(il, leftType);
                     il.Demit(OpCodes.Brfalse, noNullableValueLabel);
@@ -6284,7 +6289,10 @@ namespace FastExpressionCompiler
                 var rightIsNullable = false;
                 if (right == null) // indicates the increment/decrement operation
                 {
-                    EmitIncOrDec(il, nodeType == ExpressionType.Add);
+                    if (leftValueVar != -1) // the nullable operand was unwrapped into the variable, the stack is empty
+                        EmitLoadLocalVariable(il, leftValueVar);
+                    if (!EmitIncOrDec(il, leftType.GetNonNullableOrSelf(), nodeType == ExpressionType.Add))
+                        return false;
                 }
                 else
                 {
@@ -6309,6 +6317,8 @@ namespace FastExpressionCompiler
 
                         if (!TryEmit(right, il, ref context, flags | ParentFlags.InstanceCall))
                             return false;
+                        if (context.LastEmitIsAddress || right is ParameterExpression { IsByRef: true })
+                            EmitLoadIndirectlyByRef(il, rightType);
 
                         rightVar = EmitNullableVarAddressAndHasValue(il, rightType);
                         il.Demit(OpCodes.Brfalse, noNullableValueLabel);
@@ -6356,6 +6366,7 @@ namespace FastExpressionCompiler
                     }
                 }
 
+                context.LastEmitIsAddress = false; // the arithmetic result is a value, the left operand might have been an address
                 il.EmitPopIfIgnoreResult(parent);
                 return true;
             }
@@ -6962,12 +6973,13 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            [MethodImpl((MethodImplOptions)256)]
-            private static bool EmitIncOrDec(ILGenerator il, bool isInc = false)
+            // Increments or decrements the value of the `type` on the stack, the nullable value stays null if it is null
+            private static bool EmitIncOrDec(ILGenerator il, Type type, bool isInc)
             {
-                il.Demit(OpCodes.Ldc_I4_1);
-                il.Demit(isInc ? OpCodes.Add : OpCodes.Sub);
-                return true;
+                var nodeType = isInc ? ExpressionType.Increment : ExpressionType.Decrement;
+                return type.IsNullable()
+                    ? EmitLiftedUnaryOperation(il, nodeType, type, type, null)
+                    : EmitUnaryOperation(il, nodeType, type, null);
             }
 
             /// <summary>Store the variable location on stack</summary>
