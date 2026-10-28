@@ -2326,15 +2326,19 @@ namespace FastExpressionCompiler
                                                 var gtOrLabelValue = gt.Value ?? label.DefaultValue;
                                                 if (gtOrLabelValue != null)
                                                 {
-                                                    if (!TryEmit(gtOrLabelValue, il, ref context, parent & ~ParentFlags.IgnoreResult))
+                                                    var isVoidTarget = gt.Target.Type == typeof(void); // the value is evaluated and dropped
+                                                    if (!TryEmit(gtOrLabelValue, il, ref context, isVoidTarget ? parent | ParentFlags.IgnoreResult : parent & ~ParentFlags.IgnoreResult))
                                                         return false;
 
                                                     if ((parent & ParentFlags.InlinedLambdaInvoke) != 0)
                                                     {
-                                                        ref var foundLabel = ref context.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(gt.Target, out var labelFound);
-                                                        if (!labelFound || foundLabel.InlinedLambdaInvokeIndex == -1)
-                                                            return false;
-                                                        EmitGotoToReturnLabel(ref context.LambdaInvokeStackLabels.GetSurePresentRef(foundLabel.InlinedLambdaInvokeIndex), il, gtOrLabelValue, OpCodes.Br);
+                                                        if (!isVoidTarget) // nothing to store for the void
+                                                        {
+                                                            ref var foundLabel = ref context.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(gt.Target, out var labelFound);
+                                                            if (!labelFound || foundLabel.InlinedLambdaInvokeIndex == -1)
+                                                                return false;
+                                                            EmitGotoToReturnLabel(ref context.LambdaInvokeStackLabels.GetSurePresentRef(foundLabel.InlinedLambdaInvokeIndex), il, gtOrLabelValue, OpCodes.Br);
+                                                        }
                                                     }
                                                     else
                                                     {
@@ -2613,9 +2617,14 @@ namespace FastExpressionCompiler
                     throw new InvalidOperationException($"Cannot jump, no labels found for the target `{expr.Target}`");
                 }
                 var gotoValue = expr.Value;
-                if (gotoValue != null &&
-                    !TryEmit(gotoValue, il, ref context, parent & ~ParentFlags.IgnoreResult))
-                    return false;
+                if (gotoValue != null)
+                {
+                    var isVoidTarget = expr.Target.Type == typeof(void); // the value is evaluated and dropped, so no value is left on the stack
+                    if (!TryEmit(gotoValue, il, ref context, isVoidTarget ? parent | ParentFlags.IgnoreResult : parent & ~ParentFlags.IgnoreResult))
+                        return false;
+                    if (isVoidTarget)
+                        gotoValue = null;
+                }
 
                 switch (expr.Kind)
                 {

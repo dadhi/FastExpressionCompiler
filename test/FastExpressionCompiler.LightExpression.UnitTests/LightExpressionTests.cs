@@ -84,6 +84,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Arithmetic_on_nullable_by_ref_parameter_is_the_same_as_system();
             Compound_assign_with_the_method_and_conversion_lambda_is_the_same_as_system();
             Coalesce_with_the_conversion_and_widening_to_decimal_is_the_same_as_system();
+            Goto_with_the_value_to_the_void_label_is_the_same_as_system();
             Inc_dec_assign_of_primitives_and_nullables_are_the_same_as_system();
             Inc_dec_assign_of_block_variable_compared_and_returned_via_label_are_the_same_as_system();
 #if NET7_0_OR_GREATER
@@ -103,7 +104,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_print_reference_comparison();
             Can_round_trip_new_expression_kinds_through_system_expressions();
 
-            return 82;
+            return 83;
         }
 
         private static int _sideEffectCalls;
@@ -1512,6 +1513,17 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                 foreach (var arg in lambda.Parameters[0].Type == typeof(string) ? new object[] { null, "abc" } : new object[] { null, 5 })
                     Asserts.AreEqual(sys.DynamicInvoke(arg), fec.DynamicInvoke(arg));
             }
+        }
+        public void Goto_with_the_value_to_the_void_label_is_the_same_as_system()
+        {
+            foreach (var kind in new[] { GotoExpressionKind.Goto, GotoExpressionKind.Break, GotoExpressionKind.Continue, GotoExpressionKind.Return })
+                foreach (var value in new object[] { 42, "Hello", new DateTime(2020, 1, 1) })
+                {
+                    var target = Label();
+                    var lambda = Lambda<Action>(Block(MakeGoto(kind, target, Constant(value), typeof(void)), Label(target)));
+                    lambda.CompileSys()();
+                    lambda.CompileFast(true)(); // the value is dropped and the IL stays valid
+                }
         }
         public static int AddPlusOne(int a, int b) => a + b + 1;
         public class IntBox { public int Value = 25; public int[] Arr = { 25 }; }
