@@ -85,6 +85,8 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Compound_assign_with_the_method_and_conversion_lambda_is_the_same_as_system();
             Coalesce_with_the_conversion_and_widening_to_decimal_is_the_same_as_system();
             Goto_with_the_value_to_the_void_label_is_the_same_as_system();
+            Goto_and_return_with_the_value_to_the_label_in_the_middle_of_block_are_the_same_as_system();
+            Label_rules_are_the_same_as_system();
             Inc_dec_assign_of_primitives_and_nullables_are_the_same_as_system();
             Inc_dec_assign_of_block_variable_compared_and_returned_via_label_are_the_same_as_system();
 #if NET7_0_OR_GREATER
@@ -104,7 +106,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_print_reference_comparison();
             Can_round_trip_new_expression_kinds_through_system_expressions();
 
-            return 83;
+            return 85;
         }
 
         private static int _sideEffectCalls;
@@ -1524,6 +1526,46 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                     lambda.CompileSys()();
                     lambda.CompileFast(true)(); // the value is dropped and the IL stays valid
                 }
+        }
+        public void Goto_and_return_with_the_value_to_the_label_in_the_middle_of_block_are_the_same_as_system()
+        {
+            foreach (var kind in new[] { GotoExpressionKind.Goto, GotoExpressionKind.Return })
+            {
+                var target = Label(typeof(int));
+                var toMiddle = Lambda<Func<int>>(Block(MakeGoto(kind, target, Constant(1), typeof(void)), Label(target, Constant(2)), Constant(3)));
+                Asserts.AreEqual(toMiddle.CompileSys()(), toMiddle.CompileFast(true)());
+
+                var target2 = Label(typeof(int));
+                var toEnd = Lambda<Func<int>>(Block(MakeGoto(kind, target2, Constant(7), typeof(void)), Label(target2, Constant(0))));
+                Asserts.AreEqual(toEnd.CompileSys()(), toEnd.CompileFast(true)());
+            }
+        }
+        public void Label_rules_are_the_same_as_system()
+        {
+            // the same label in the separate blocks is fine
+            var target = Label(typeof(int));
+            Expression Part(int v) => Block(Goto(target, Constant(v)), Throw(Constant(new Exception())), Label(target, Constant(0)));
+            var multi = Lambda<Func<int>>(Add(Add(Part(6), Part(4)), Part(5)));
+            Asserts.AreEqual(multi.CompileSys()(), multi.CompileFast(true)());
+
+            var label = Label();
+            var shapes = new Expression[]
+            {
+                Block(Goto(label), Block(Label(label)), Block(Label(label))), // ambiguous jump
+                Block(Block(Label(label)), Block(Block(Goto(label))), Block(Label(label))), // ambiguous jump split
+                Block(Goto(label), TypeIs(Label(label), typeof(int))), // jump into the expression
+                Block(Label(label), Loop(Empty(), label)), // the loop redefines the label
+            };
+            foreach (var shape in shapes)
+            {
+                var lambda = Lambda<Action>(shape);
+                var sysThrows = false;
+                try { lambda.CompileSys(); } catch (InvalidOperationException) { sysThrows = true; }
+                var fecThrows = false;
+                try { lambda.CompileFast(true); } catch (InvalidOperationException) { fecThrows = true; }
+                Asserts.IsTrue(sysThrows);
+                Asserts.IsTrue(fecThrows);
+            }
         }
         public static int AddPlusOne(int a, int b) => a + b + 1;
         public class IntBox { public int Value = 25; public int[] Arr = { 25 }; }

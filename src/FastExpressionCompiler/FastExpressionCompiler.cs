@@ -427,6 +427,9 @@ namespace FastExpressionCompiler
             var collectResult = TryCollectInfo(ref context, bodyExpr, null, ref context.NestedLambdas);
             if (collectResult == Result.OK)
             {
+                if (context.HasLabelExpr) // todo: @perf an extra pass over the expression tree, but only if it has the labels
+                    ValidateLabels(bodyExpr);
+
                 var constantsAndNestedLambdas = (context.Status & ClosureStatus.HasClosure) != 0
                     ? context.GetArrayOfConstantsAndNestedLambdas()
                     : null;
@@ -651,6 +654,9 @@ namespace FastExpressionCompiler
             internal SmallSet4<Expression, RefEq<Expression>> ArgsContainingComplexExpression;
 
             internal bool HasComplexExpression;
+
+            /// Set if there is a Label expression (or a loop with the same break and continue label), so the label rules should be validated
+            internal bool HasLabelExpr;
 
             /// The stack for the lambda invocation and the labels bound to them
             internal SmallList<LabelInfo, Stack4<LabelInfo>, NoArrayPool<LabelInfo>> LambdaInvokeStackLabels;
@@ -1137,6 +1143,176 @@ namespace FastExpressionCompiler
             throw new NotSupportedExpressionException(reason);
         }
 
+        sealed class LabelScope
+        {
+            public readonly LabelScope Parent;
+            public readonly int Depth;
+            /// <summary>Can the jump from the outside get into this scope: a block in the statement position, but not in the expression or try</summary>
+            public readonly bool Enterable;
+            public LabelScope(LabelScope parent, bool enterable)
+            {
+                Parent = parent;
+                Depth = parent == null ? 0 : parent.Depth + 1;
+                Enterable = enterable;
+            }
+        }
+
+        struct LabelRef
+        {
+            public LabelTarget Target;
+            public LabelScope Scope;
+            public bool Enterable;
+        }
+
+        private static void CollectLabelRefs(Expression e, LabelScope scope, bool enterable,
+            ref SmallList<LabelRef, Stack8<LabelRef>, NoArrayPool<LabelRef>> defs, ref SmallList<LabelRef, Stack8<LabelRef>, NoArrayPool<LabelRef>> gotos)
+        {
+            if (e == null)
+                return;
+            switch (e.NodeType)
+            {
+                case ExpressionType.Block:
+                    var blockScope = new LabelScope(scope, enterable);
+                    var blockExprs = ((BlockExpression)e).Expressions;
+                    for (var i = 0; i < blockExprs.Count; ++i)
+                        CollectLabelRefs(blockExprs[i], blockScope, true, ref defs, ref gotos);
+                    return;
+                case ExpressionType.Label:
+                    var labelExpr = (LabelExpression)e;
+                    defs.Add(new LabelRef { Target = labelExpr.Target, Scope = scope, Enterable = enterable });
+                    CollectLabelRefs(labelExpr.DefaultValue, scope, false, ref defs, ref gotos);
+                    return;
+                case ExpressionType.Goto:
+                    var gotoExpr = (GotoExpression)e;
+                    gotos.Add(new LabelRef { Target = gotoExpr.Target, Scope = scope });
+                    CollectLabelRefs(gotoExpr.Value, scope, false, ref defs, ref gotos);
+                    return;
+                case ExpressionType.Loop:
+                    var loopExpr = (LoopExpression)e;
+                    var loopScope = new LabelScope(scope, enterable);
+                    if (loopExpr.BreakLabel != null)
+                        defs.Add(new LabelRef { Target = loopExpr.BreakLabel, Scope = loopScope, Enterable = true });
+                    if (loopExpr.ContinueLabel != null)
+                        defs.Add(new LabelRef { Target = loopExpr.ContinueLabel, Scope = loopScope, Enterable = true });
+                    CollectLabelRefs(loopExpr.Body, loopScope, true, ref defs, ref gotos);
+                    return;
+                case ExpressionType.Conditional:
+                    var condExpr = (ConditionalExpression)e;
+                    CollectLabelRefs(condExpr.Test, scope, false, ref defs, ref gotos);
+                    CollectLabelRefs(condExpr.IfTrue, scope, enterable, ref defs, ref gotos);
+                    CollectLabelRefs(condExpr.IfFalse, scope, enterable, ref defs, ref gotos);
+                    return;
+                case ExpressionType.Switch:
+                    var switchExpr = (SwitchExpression)e;
+                    CollectLabelRefs(switchExpr.SwitchValue, scope, false, ref defs, ref gotos);
+                    for (var i = 0; i < switchExpr.Cases.Count; ++i)
+                        CollectLabelRefs(switchExpr.Cases[i].Body, scope, enterable, ref defs, ref gotos);
+                    CollectLabelRefs(switchExpr.DefaultBody, scope, enterable, ref defs, ref gotos);
+                    return;
+                case ExpressionType.Try:
+                    var tryExpr = (TryExpression)e;
+                    CollectLabelRefs(tryExpr.Body, scope, false, ref defs, ref gotos);
+                    var handlers = tryExpr.Handlers;
+                    for (var i = 0; i < handlers.Count; ++i)
+                    {
+                        CollectLabelRefs(handlers[i].Filter, scope, false, ref defs, ref gotos);
+                        CollectLabelRefs(handlers[i].Body, scope, false, ref defs, ref gotos);
+                    }
+                    CollectLabelRefs(tryExpr.Finally, scope, false, ref defs, ref gotos);
+                    CollectLabelRefs(tryExpr.Fault, scope, false, ref defs, ref gotos);
+                    return;
+                case ExpressionType.Lambda:
+                    return; // the nested lambda has its own labels
+            }
+
+            // shortcut: other nodes are walked only through the common operand shapes, so the labels hidden in the rest are not validated
+            if (e is BinaryExpression bin)
+            {
+                CollectLabelRefs(bin.Left, scope, false, ref defs, ref gotos);
+                CollectLabelRefs(bin.Right, scope, false, ref defs, ref gotos);
+            }
+            else if (e is UnaryExpression unary)
+                CollectLabelRefs(unary.Operand, scope, false, ref defs, ref gotos);
+            else if (e is TypeBinaryExpression typeBin)
+                CollectLabelRefs(typeBin.Expression, scope, false, ref defs, ref gotos);
+            else if (e is MemberExpression member)
+                CollectLabelRefs(member.Expression, scope, false, ref defs, ref gotos);
+            else if (e is MethodCallExpression call)
+            {
+                CollectLabelRefs(call.Object, scope, false, ref defs, ref gotos);
+                var args = call.GetArgExprs();
+                for (var i = 0; i < args.GetArgCount(); ++i)
+                    CollectLabelRefs(args.GetArgument(i), scope, false, ref defs, ref gotos);
+            }
+            else if (e is NewExpression newExpr)
+            {
+                var args = newExpr.GetArgExprs();
+                for (var i = 0; i < args.GetArgCount(); ++i)
+                    CollectLabelRefs(args.GetArgument(i), scope, false, ref defs, ref gotos);
+            }
+        }
+
+        /// <summary>Checks the rules of System.Linq.Expressions for the labels: no redefinition in the nested scope, no ambiguous jump,
+        /// no jump into the expression or into the block with the value. Throws the InvalidOperationException if violated.</summary>
+        public static void ValidateLabels(Expression body)
+        {
+            var defs = new SmallList<LabelRef, Stack8<LabelRef>, NoArrayPool<LabelRef>>();
+            var gotos = new SmallList<LabelRef, Stack8<LabelRef>, NoArrayPool<LabelRef>>();
+            CollectLabelRefs(body, new LabelScope(null, true), true, ref defs, ref gotos);
+
+            // the redefinition: a label is defined in the scope where it is already visible
+            for (var i = 0; i < defs.Count; ++i)
+                for (var j = i + 1; j < defs.Count; ++j)
+                {
+                    ref var a = ref defs.GetSurePresentRef(i);
+                    ref var b = ref defs.GetSurePresentRef(j);
+                    if (a.Target != b.Target)
+                        continue;
+                    var outer = a.Scope.Depth <= b.Scope.Depth ? a.Scope : b.Scope;
+                    for (var s = a.Scope.Depth <= b.Scope.Depth ? b.Scope : a.Scope; s != null; s = s.Parent)
+                        if (s == outer)
+                            throw new InvalidOperationException($"Label '{a.Target.Name}' is defined multiple times in the scope where it is visible");
+                }
+
+            for (var i = 0; i < gotos.Count; ++i)
+            {
+                ref var g = ref gotos.GetSurePresentRef(i);
+                var defined = false;
+                var visible = false;
+                var jumpInCount = 0;
+                for (var j = 0; j < defs.Count; ++j)
+                {
+                    ref var d = ref defs.GetSurePresentRef(j);
+                    if (d.Target != g.Target)
+                        continue;
+                    defined = true;
+
+                    var dx = d.Scope;
+                    var gy = g.Scope;
+                    while (dx.Depth > gy.Depth) dx = dx.Parent;
+                    while (gy.Depth > dx.Depth) gy = gy.Parent;
+                    while (dx != gy) { dx = dx.Parent; gy = gy.Parent; }
+
+                    if (dx == d.Scope) // the label scope is the jump scope or its ancestor
+                    {
+                        visible |= d.Scope != g.Scope | d.Enterable;
+                        continue;
+                    }
+
+                    var enterable = d.Enterable;
+                    for (var s = d.Scope; s != dx; s = s.Parent)
+                        enterable &= s.Enterable;
+                    if (enterable)
+                        ++jumpInCount;
+                }
+
+                if (defined & !visible && (jumpInCount != 1 || g.Target.Type != typeof(void)))
+                    throw new InvalidOperationException(jumpInCount > 1
+                        ? $"Ambiguous jump to the label '{g.Target.Name}'"
+                        : $"Control cannot enter the label '{g.Target.Name}': it is in the expression or the block with the value");
+            }
+        }
+
         /// <summary>Wraps the call to `TryCollectInfo` for the compatibility and provide the root place to check the returned error code.
         /// Important: The method collects the info from the nested lambdas up-front and de-duplicates the lambdas as well.</summary>
         [MethodImpl((MethodImplOptions)256)]
@@ -1437,6 +1613,7 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Loop:
                         var loopExpr = (LoopExpression)expr;
+                        context.HasLabelExpr |= loopExpr.BreakLabel != null & loopExpr.BreakLabel == loopExpr.ContinueLabel;
                         context.AddLabel(loopExpr.BreakLabel);
                         context.AddLabel(loopExpr.ContinueLabel);
                         expr = loopExpr.Body;
@@ -1463,6 +1640,7 @@ namespace FastExpressionCompiler
                         }
                     case ExpressionType.Label:
                         var labelExpr = (LabelExpression)expr;
+                        context.HasLabelExpr = true;
                         context.AddLabel(labelExpr.Target, context.CurrentInlinedLambdaInvokeIndex);
                         if (labelExpr.Target != null)
                             context.TargetToGotosAndLabels.Map.AddOrGetValueRef(labelExpr.Target, out _).Item2++;
@@ -2308,7 +2486,7 @@ namespace FastExpressionCompiler
                                             continue;
 
                                         // This is basically the return pattern (see #237), so we don't care for the rest of expressions
-                                        if (stExpr is GotoExpression gt && gt.Kind == GotoExpressionKind.Return &&
+                                        if (stExpr is GotoExpression gt && gt.Kind == GotoExpressionKind.Return && i + 2 == statementCount &&
                                             statementExprs[i + 1] is LabelExpression label && label.Target == gt.Target)
                                         {
                                             // But we cannot use the return pattern and eliminate the target label if we have more gotos referencing it, see #430
@@ -2360,13 +2538,21 @@ namespace FastExpressionCompiler
                                 }
 
                                 parent |= ParentFlags.BlockResult;
-                                if (blockVarCount == 0)
+                                if (blockVarCount == 0 & !context.HasLabelExpr)
                                     continue; // OMG! no recursion, continue with the last expression
 
                                 if (!TryEmit(expr, il, ref context, parent))
                                     return false;
 
-                                context.PopBlock();
+                                if (blockVarCount != 0)
+                                    context.PopBlock();
+
+                                // The same label may be defined in the several separate blocks, so after the block the label is done and the next definition gets a new IL label
+                                if (context.HasLabelExpr)
+                                    for (var i = 0; i < statementExprs.Count; ++i)
+                                        if (statementExprs[i] is LabelExpression blockLabel && blockLabel.Target != null &&
+                                            context.TargetToGotosAndLabels.Map.TryGetValueRef(blockLabel.Target, out var labelFound).Item2 > 1 & labelFound)
+                                            context.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(blockLabel.Target, out _).ReturnVariableIndexPlusOneAndIsDefined = 0;
                                 return true;
                             }
                         case ExpressionType.Loop:
@@ -2640,7 +2826,13 @@ namespace FastExpressionCompiler
 
                     case GotoExpressionKind.Goto:
                         if (gotoValue != null)
-                            goto case GotoExpressionKind.Return;
+                        {
+                            if ((parent & ParentFlags.InlinedLambdaInvoke) != 0)
+                                goto case GotoExpressionKind.Return;
+                            // the value goes to the label (maybe in the middle of the lambda), not out of the lambda via `Ret`
+                            EmitGotoToReturnLabel(ref labelInfo, il, gotoValue, (parent & ParentFlags.TryCatch) != 0 ? OpCodes.Leave : OpCodes.Br);
+                            return true;
+                        }
 
                         var gotoOpCode = (parent & ParentFlags.TryCatch) != 0 ? OpCodes.Leave : OpCodes.Br;
                         il.Demit(gotoOpCode, labelInfo.GetOrDefineLabel(il));
@@ -2664,6 +2856,8 @@ namespace FastExpressionCompiler
                                 EmitGotoToReturnLabel(ref context.LambdaInvokeStackLabels.GetSurePresentRef(invokeIndex), il, gotoValue, OpCodes.Br);
                             }
                         }
+                        else if (gotoValue != null)
+                            EmitGotoToReturnLabel(ref labelInfo, il, gotoValue, OpCodes.Br); // the label may be in the middle of the lambda
                         else
                             il.Demit(OpCodes.Ret);
                         return true;
