@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using FastExpressionCompiler.FlatExpression;
+using SysExpr = System.Linq.Expressions.Expression;
+using SysSwitchCase = System.Linq.Expressions.SwitchCase;
+using SysCatchBlock = System.Linq.Expressions.CatchBlock;
 using static FastExpressionCompiler.LightExpression.Expression;
 #if NET8_0_OR_GREATER
 using CsCheck;
@@ -24,6 +27,114 @@ public partial class LightExpressionTests
                 threads: 1,
                 seed: "0N0XIzNsQ0O2",
                 print: testCase => $"{testCase.Seed}: {testCase.Spec}");
+    }
+
+    /// <summary>Fuzzes presence/absence of every optional child (switch default/cases, try finally/catch, catch variable/filter,
+    /// loop break/continue, goto value, label default): the bits decide what is present; the flat tree must report exactly that.</summary>
+    public void Can_fuzz_optional_children_presence_in_flat_expression()
+    {
+        Gen.Int[0, (1 << 10) - 1].Sample(
+            bits => CheckOptionalChildren(bits),
+            iter: 300, threads: 1, seed: "0N0XIzNsQ0O2", print: bits => System.Convert.ToString(bits, 2).PadLeft(10, '0'));
+    }
+
+    private static bool CheckOptionalChildren(int bits)
+    {
+        var swDefault = (bits & 1) != 0;
+        var swCases = (bits >> 1 & 3) % 3;
+        if (!swDefault && swCases == 0) swCases = 1; // switch needs a default or at least one case
+        var hasFinally = (bits & 8) != 0;
+        var hasCatch = (bits & 16) != 0 || !hasFinally; // try needs a catch or a finally
+        var catchVar = hasCatch && (bits & 32) != 0;
+        var catchFilter = hasCatch && (bits & 64) != 0;
+        var loopBreak = (bits & 128) != 0;
+        var loopContinue = (bits & 256) != 0;
+        var gotoValue = (bits & 512) != 0;
+        var labelDefault = gotoValue; // a non-void label needs its default value
+
+        var p = SysExpr.Parameter(typeof(int), "p");
+        var r = SysExpr.Variable(typeof(int), "r");
+        var t = SysExpr.Variable(typeof(int), "t");
+        var i = SysExpr.Variable(typeof(int), "i");
+        var g = SysExpr.Variable(typeof(int), "g");
+        var fin = SysExpr.Variable(typeof(int), "fin");
+        SysExpr Int(int x) => SysExpr.Constant(x);
+
+        var cases = new SysSwitchCase[swCases];
+        for (var k = 0; k < cases.Length; ++k)
+            cases[k] = SysExpr.SwitchCase(SysExpr.Assign(r, Int(10 + k)), Int(k));
+        var @switch = SysExpr.Switch(typeof(void), p, swDefault ? SysExpr.Assign(r, Int(7)) : null, null, cases);
+
+        var tryBody = SysExpr.Condition(SysExpr.LessThan(p, Int(0)), SysExpr.Throw(SysExpr.New(typeof(Exception)), typeof(int)), p);
+        var filter = catchFilter ? SysExpr.Equal(Int(1), Int(1)) : null;
+        var handlers = !hasCatch ? Array.Empty<SysCatchBlock>() : new[]
+        {
+            catchVar ? SysExpr.Catch(SysExpr.Variable(typeof(Exception), "ex"), Int(-1), filter) : SysExpr.Catch(typeof(Exception), Int(-1), filter)
+        };
+        var @finally = SysExpr.Assign(fin, Int(1));
+        var @try = !hasFinally ? SysExpr.TryCatch(tryBody, handlers)
+            : hasCatch ? SysExpr.TryCatchFinally(tryBody, @finally, handlers)
+            : SysExpr.TryFinally(tryBody, @finally);
+
+        var brk = loopBreak ? SysExpr.Label("brk") : null;
+        var cont = loopContinue ? SysExpr.Label("cont") : null;
+        var exit = SysExpr.Label("exit");
+        var loop = SysExpr.Block(
+            SysExpr.Loop(SysExpr.Block(
+                SysExpr.Assign(i, SysExpr.Add(i, Int(1))),
+                cont != null ? SysExpr.IfThen(SysExpr.LessThan(i, Int(2)), SysExpr.Continue(cont)) : SysExpr.Empty(),
+                SysExpr.IfThen(SysExpr.GreaterThanOrEqual(i, Int(3)), loopBreak ? SysExpr.Break(brk) : SysExpr.Goto(exit))), brk, cont),
+            SysExpr.Label(exit));
+
+        var l = SysExpr.Label(gotoValue ? typeof(int) : typeof(void), "l");
+        var gotoLabel = gotoValue
+            ? SysExpr.Block(SysExpr.Goto(l, Int(5)), SysExpr.Label(l, labelDefault ? Int(9) : null))
+            : SysExpr.Block(typeof(int), SysExpr.Goto(l), SysExpr.Label(l), Int(3));
+
+        var lambda = SysExpr.Lambda<Func<int, int>>(
+            SysExpr.Block(typeof(int), new[] { r, t, i, g, fin },
+                @switch, SysExpr.Assign(t, @try), loop, SysExpr.Assign(g, gotoLabel),
+                SysExpr.Add(SysExpr.Add(r, t), SysExpr.Add(SysExpr.Add(i, g), fin))),
+            p);
+
+        var fe = lambda.ToFlatExpression();
+        var back2 = ((System.Linq.Expressions.Expression<Func<int, int>>)fe.ToExpression()).ToFlatExpression();
+        Ensure(fe.Equals(back2), "structural roundtrip: Equals");
+        Ensure(fe.GetHashCode() == back2.GetHashCode(), "structural roundtrip: GetHashCode");
+
+        int Count(Func<ExprNode, bool> match)
+        {
+            var n = 0;
+            for (var k = 1; k < fe.Nodes.Count; ++k)
+                if (match(fe.Nodes[k])) ++n;
+            return n;
+        }
+        bool Is(ExprNode n, ExpressionType type, int childCount) =>
+            n.Kind == ExprNodeKind.Expression && n.NodeType == type && n.ChildCount == childCount;
+
+        Ensure(Count(n => Is(n, ExpressionType.Switch, 1 + (swDefault ? 1 : 0) + (swCases > 0 ? 1 : 0))) == 1, "switch children");
+        Ensure(Count(n => Is(n, ExpressionType.Loop, 1 + (loopBreak ? 1 : 0) + (loopContinue ? 1 : 0))) == 1, "loop children");
+        Ensure(Count(n => Is(n, ExpressionType.Try, 1 + (hasFinally ? 1 : 0) + (hasCatch ? 1 : 0))) == 1, "try children");
+        Ensure(Count(n => n.Kind == ExprNodeKind.CatchBlock && n.ChildCount == 1 + (catchVar ? 1 : 0) + (catchFilter ? 1 : 0)) == (hasCatch ? 1 : 0), "catch children");
+        Ensure(Count(n => Is(n, ExpressionType.Goto, 2)) == (gotoValue ? 1 : 0), "goto value");
+        Ensure(Count(n => Is(n, ExpressionType.Label, 2)) == (labelDefault ? 1 : 0), "label default");
+
+        if (catchFilter) return true; // FEC does not support catch filters, the structure is checked above
+
+        var fast = fe.ToLightExpression() is FastExpressionCompiler.LightExpression.LambdaExpression fl
+            ? fl.CompileFast<Func<int, int>>(ifFastFailedReturnNull: true) : null;
+        Ensure(fast != null, "CompileFast failed");
+        var expected = lambda.Compile();
+        // an uncaught throw (no catch) must happen in both
+        static int Run(Func<int, int> f, int arg) { try { return f(arg); } catch (Exception) { return int.MinValue; } }
+        foreach (var arg in new[] { -1, 0, 1, 2, 5 })
+            Ensure(Run(fast, arg) == Run(expected, arg), $"result for {arg}");
+        return true;
+    }
+
+    private static void Ensure(bool ok, string what)
+    {
+        if (!ok) throw new InvalidOperationException("Property failed: " + what);
     }
 
     private static FastExpressionCompiler.LightExpression.Expression<Func<int, int>> CreateGeneratedLightExpression(IntSpec spec)
@@ -310,5 +421,6 @@ public partial class LightExpressionTests
     }
 #else
     public void Can_property_test_generated_flat_expression_roundtrip_structurally() { }
+    public void Can_fuzz_optional_children_presence_in_flat_expression() { }
 #endif
 }

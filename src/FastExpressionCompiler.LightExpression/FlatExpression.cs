@@ -178,6 +178,8 @@ public struct ExprTree : IEquatable<ExprTree>
     private const byte CatchHasVariableFlag = 1;
     private const byte CatchHasFilterFlag = 2;
     private const byte TryFaultFlag = 1;
+    private const byte TryHasFinallyFlag = 2;
+    private const byte SwitchHasDefaultFlag = 1;
 
     /// <summary>Gets or sets the root node idx.</summary>
     public int RootIdx;
@@ -365,7 +367,10 @@ public struct ExprTree : IEquatable<ExprTree>
         var ownerIdx = (ushort)idx;
 
         if (ch0 != 0)
-            Nodes.GetSurePresentRef(ownerIdx).SetChildrenInfo(1, MayBeCloneChildForOwner(ch0, ownerIdx));
+        {
+            var child = MayBeCloneChildForOwner(ch0, ownerIdx); // may grow Nodes, so take the owner ref after it
+            Nodes.GetSurePresentRef(ownerIdx).SetChildrenInfo(1, child);
+        }
 
         return ownerIdx;
     }
@@ -770,8 +775,7 @@ public struct ExprTree : IEquatable<ExprTree>
     /// <summary>Adds a switch-case node. Layout: test values then body.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ushort SwitchCase(ushort body, params ushort[] testValues) =>
-        WithOneOrMoreChildren(default, null, null, default, ExprNodeKind.SwitchCase, 0,
-            AppendUShort(testValues, body));
+        WithChildren(default, null, null, default, ExprNodeKind.SwitchCase, AppendUShort(testValues, body));
 
     /// <summary>Adds a switch node. Layout: switchValue, optional defaultBody, optional SwitchCases group.</summary>
     public ushort Switch(Type type, ushort switchValue, ushort defaultBody, MethodInfo comparison, params ushort[] cases)
@@ -779,7 +783,7 @@ public struct ExprTree : IEquatable<ExprTree>
         var casesIdx = cases == null || cases.Length == 0
             ? (ushort)0
             : WithChildren(ExpressionType.Switch, type, null, default, ExprNodeKind.SwitchCases, cases);
-        return WithThreeChildren(ExpressionType.Switch, type, comparison, default, default, switchValue, defaultBody, casesIdx);
+        return WithThreeChildren(ExpressionType.Switch, type, comparison, defaultBody != 0 ? SwitchHasDefaultFlag : (byte)0, default, switchValue, defaultBody, casesIdx);
     }
 
     /// <summary>Adds a switch node without an explicit default case or comparer.</summary>
@@ -823,7 +827,7 @@ public struct ExprTree : IEquatable<ExprTree>
 
     /// <summary>Adds a try/finally node.</summary>
     public ushort TryFinally(ushort body, ushort @finally) =>
-        WithTwoChildren(ExpressionType.Try, Nodes[body].Type, null, default, default, body, @finally);
+        WithTwoChildren(ExpressionType.Try, Nodes[body].Type, null, TryHasFinallyFlag, default, body, @finally);
 
     /// <summary>Adds a try/fault node.</summary>
     public ushort TryFault(ushort body, ushort fault) =>
@@ -831,7 +835,7 @@ public struct ExprTree : IEquatable<ExprTree>
 
     /// <summary>Adds a try node with optional finally block and catch handlers. Layout: body, finally, handlers…</summary>
     public ushort TryCatchFinally(ushort body, ushort @finally, params ushort[] handlers) =>
-        WithTwoOrMoreChildren(ExpressionType.Try, Nodes[body].Type, null, default, default, body, @finally, handlers);
+        WithTwoOrMoreChildren(ExpressionType.Try, Nodes[body].Type, null, TryHasFinallyFlag, default, body, @finally, handlers);
 
     /// <summary>Adds a type-test node.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1383,7 +1387,7 @@ public struct ExprTree : IEquatable<ExprTree>
                                 }
                                 break;
 
-                            case ExpressionType.Block:
+                            case ExpressionType.Block when x.Kind != ExprNodeKind.BlockExprs:
                                 // Layout: first child = BlockExprs; remaining siblings = variables.
                                 if (x.ChildCount == 0)
                                     return false;
@@ -1545,7 +1549,7 @@ public struct ExprTree : IEquatable<ExprTree>
                 case ExpressionType.Lambda:
                     return HashLambda(ref tree, idx, h);
 
-                case ExpressionType.Block:
+                case ExpressionType.Block when node.Kind != ExprNodeKind.BlockExprs:
                     return HashBlock(ref tree, idx, h);
             }
 
@@ -1842,20 +1846,10 @@ public struct ExprTree : IEquatable<ExprTree>
                     {
                         // Layout: switchValue, optional defaultBody, optional SwitchCases group.
                         var children = GetChildren(idx);
-                        var defaultBody = default(SysExpr);
-                        ChildIdxs caseIdxs = default;
-                        if (children.Count > 1)
-                        {
-                            ref var lastChild = ref _tree.Nodes[children[children.Count - 1]];
-                            if (lastChild.Is(ExprNodeKind.SwitchCases))
-                            {
-                                caseIdxs = GetChildren(children[children.Count - 1]);
-                                if (children.Count == 3)
-                                    defaultBody = ReadExpression(children[1]);
-                            }
-                            else
-                                defaultBody = ReadExpression(children[1]);
-                        }
+                        var hasDefault = node.HasFlag(SwitchHasDefaultFlag);
+                        var defaultBody = hasDefault ? ReadExpression(children[1]) : null;
+                        var casesIdx = hasDefault ? 2 : 1;
+                        var caseIdxs = children.Count > casesIdx ? GetChildren(children[casesIdx]) : default;
                         var cases = new SysSwitchCase[caseIdxs.Count];
                         for (var i = 0; i < cases.Length; ++i)
                             cases[i] = ReadSwitchCase(caseIdxs[i]);
@@ -1868,13 +1862,9 @@ public struct ExprTree : IEquatable<ExprTree>
                         if (node.HasFlag(TryFaultFlag))
                             return SysExpr.TryFault(ReadExpression(children[0]), ReadExpression(children[1]));
 
-                        var handlerStart = 1;
-                        var @finally = default(SysExpr);
-                        if (children.Count > 1 && !_tree.Nodes[children[1]].Is(ExprNodeKind.CatchBlock))
-                        {
-                            @finally = ReadExpression(children[1]);
-                            handlerStart = 2;
-                        }
+                        var hasFinally = node.HasFlag(TryHasFinallyFlag);
+                        var @finally = hasFinally ? ReadExpression(children[1]) : null;
+                        var handlerStart = hasFinally ? 2 : 1;
 
                         var handlers = new SysCatchBlock[children.Count - handlerStart];
                         for (var i = 0; i < handlers.Length; ++i)
