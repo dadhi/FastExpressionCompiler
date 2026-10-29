@@ -1712,6 +1712,14 @@ namespace FastExpressionCompiler
                         var switchCases = switchExpr.Cases;
                         if (switchCases.Count != 0)
                         {
+                            // The test values may be the non-primitive constants or the Invoke, so collect them too
+                            for (var i = 0; i < switchCases.Count; i++)
+                            {
+                                var caseTestValues = switchCases[i].TestValues;
+                                for (var v = 0; v < caseTestValues.Count; v++)
+                                    if ((r = TryCollectInfo(ref context, caseTestValues[v], nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                                        return r;
+                            }
                             for (var i = 0; i < switchCases.Count - 1; i++)
                                 if ((r = TryCollectInfo(ref context, switchCases[i].Body, nestedLambda, ref rootNestedLambdas)) != Result.OK)
                                     return r;
@@ -5716,6 +5724,10 @@ namespace FastExpressionCompiler
                 var caseCount = cases.Count;
                 var defaultBody = expr.DefaultBody;
 
+                // The void switch may have the bodies of any type, so ignore their results
+                if (expr.Type == typeof(void))
+                    parent |= ParentFlags.IgnoreResult;
+
                 // Compile-time switch branch elimination (#489): if the switch value is interpretable, select the matching branch
                 if (Interpreter.TryFindSwitchBranch(expr, context.CompilerFlags, out var matchedBody))
                     return matchedBody == null || TryEmit(matchedBody, il, ref context, parent);
@@ -5750,12 +5762,13 @@ namespace FastExpressionCompiler
                 if (customEqualMethod == null && caseCount >= minSwitchTableSize && switchValueType.IsIntegerOrUnderlyingInteger())
                 {
                     var multipleTestValuesLabelsId = 0;
+                    var hasDuplicateTestValue = false;
 #if TESTING || DEBUG
                     SmallList<TestValueAndMultiTestCaseIndex, Stack2<TestValueAndMultiTestCaseIndex>, NoArrayPool<TestValueAndMultiTestCaseIndex>> switchValues = default;
 #else
                     SmallList<TestValueAndMultiTestCaseIndex, Stack8<TestValueAndMultiTestCaseIndex>, NoArrayPool<TestValueAndMultiTestCaseIndex>> switchValues = default;
 #endif
-                    for (var caseIndex = 0; caseIndex < caseCount; ++caseIndex)
+                    for (var caseIndex = 0; caseIndex < caseCount & !hasDuplicateTestValue; ++caseIndex)
                     {
                         var testValues = cases[caseIndex].TestValues;
                         var testValueCount = testValues.Count;
@@ -5770,6 +5783,12 @@ namespace FastExpressionCompiler
                                 return false;
                             }
                             var testValueLong = testValExpr is ConstantExpression constExpr ? ConvertValueObjectToLong(constExpr.Value) : 0L;
+
+                            // The duplicate test value (the first case wins in System) goes to the generic path below, no table
+                            for (var k = 0; k < switchValues.Count & !hasDuplicateTestValue; ++k)
+                                hasDuplicateTestValue = switchValues.GetSurePresentRef(k).Value == testValueLong;
+                            if (hasDuplicateTestValue)
+                                break;
 
                             // Adding a free slot for the new or for the shifted max value
                             ref var freeValRef = ref switchValues.AddDefaultAndGetRef(); // the default value is (0,0)
@@ -5786,7 +5805,7 @@ namespace FastExpressionCompiler
                                 }
 
                                 ref var valRef = ref switchValues.GetSurePresentRef(lastIndex);
-                                Debug.Assert(valRef.Value != testValueLong, "Duplicate test value in switch case");
+                                Debug.Assert(valRef.Value != testValueLong, "The duplicate test values are checked above");
 
                                 // Shift current value further to get space for the smaller new value
                                 if (testValueLong < valRef.Value)
@@ -5810,7 +5829,7 @@ namespace FastExpressionCompiler
                     const int valueGapMin = 4;
                     const int nonContValueCountMax = 3;
                     var contValueCount = 0;
-                    var valuesConditionsMet = true;
+                    var valuesConditionsMet = !hasDuplicateTestValue;
                     var actualSwitchTableSize = 1; // start from the 1 and then add the gaps
 
                     var firstTestValueIdx = 0;
@@ -5829,9 +5848,9 @@ namespace FastExpressionCompiler
                                 --lastTestValueIdx;
                         }
                     }
-                    Debug.Assert(lastTestValueIdx - firstTestValueIdx + 1 >= minSwitchTableSize, "Postcondition: switch table between outliers should be of enough size");
-                    var prevSwitchValue = switchValues.GetSurePresentRef(firstTestValueIdx).Value;
-                    for (var i = firstTestValueIdx + 1; i <= lastTestValueIdx; ++i)
+                    Debug.Assert(hasDuplicateTestValue || lastTestValueIdx - firstTestValueIdx + 1 >= minSwitchTableSize, "Postcondition: switch table between outliers should be of enough size");
+                    var prevSwitchValue = hasDuplicateTestValue ? 0L : switchValues.GetSurePresentRef(firstTestValueIdx).Value;
+                    for (var i = firstTestValueIdx + 1; i <= lastTestValueIdx & valuesConditionsMet; ++i)
                     {
                         var currValue = switchValues.GetSurePresentRef(i).Value;
                         var valueGap = currValue - prevSwitchValue;

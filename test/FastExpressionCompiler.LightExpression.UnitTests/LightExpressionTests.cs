@@ -87,6 +87,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Goto_with_the_value_to_the_void_label_is_the_same_as_system();
             Goto_and_return_with_the_value_to_the_label_in_the_middle_of_block_are_the_same_as_system();
             Label_rules_are_the_same_as_system();
+            Switch_with_duplicate_test_values_and_void_type_are_the_same_as_system();
             Inc_dec_assign_of_primitives_and_nullables_are_the_same_as_system();
             Inc_dec_assign_of_block_variable_compared_and_returned_via_label_are_the_same_as_system();
 #if NET7_0_OR_GREATER
@@ -106,7 +107,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_print_reference_comparison();
             Can_round_trip_new_expression_kinds_through_system_expressions();
 
-            return 85;
+            return 86;
         }
 
         private static int _sideEffectCalls;
@@ -1570,6 +1571,22 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                 Asserts.IsTrue(fecThrows);
                 Asserts.IsFalse(fecNoFlagThrows); // the check is opt-in
             }
+        }
+        public void Switch_with_duplicate_test_values_and_void_type_are_the_same_as_system()
+        {
+            var p = Parameter(typeof(int));
+            var dup = Lambda<Func<int, string>>(Switch(p, Constant("d"),
+                SwitchCase(Constant("a"), Constant(1)), SwitchCase(Constant("b"), Constant(2)),
+                SwitchCase(Constant("c"), Constant(1), Constant(2)), SwitchCase(Constant("e"), Constant(3))), p);
+            var sys = dup.CompileSys();
+            var fec = dup.CompileFast(true);
+            for (var i = 0; i < 5; ++i)
+                Asserts.AreEqual(sys(i), fec(i));
+
+            // System on older runtimes rejects the void switch with the non-void bodies, so check FEC alone: a stack leak would make the IL invalid
+            var voidSwitch = Lambda<Action>(Switch(typeof(void), Constant(DateTime.MinValue), Constant("Def"), null,
+                SwitchCase(Constant("Foo"), Constant(DateTime.MinValue)), SwitchCase(Constant("Bar"), Constant(DateTime.MaxValue))));
+            voidSwitch.CompileFast(true)();
         }
         public static int AddPlusOne(int a, int b) => a + b + 1;
         public class IntBox { public int Value = 25; public int[] Arr = { 25 }; }
