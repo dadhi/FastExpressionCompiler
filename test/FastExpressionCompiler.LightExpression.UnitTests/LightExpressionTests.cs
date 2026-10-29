@@ -37,6 +37,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_build_flat_expression_directly_with_light_expression_like_api();
             Can_build_flat_expression_control_flow_directly();
             Can_property_test_generated_flat_expression_roundtrip_structurally();
+            Can_fuzz_optional_children_presence_in_flat_expression();
 
             Flat_lambda_parameter_ref_before_decl_preserves_identity();
             Flat_lambda_multiple_parameter_refs_all_yield_same_identity();
