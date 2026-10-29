@@ -1255,6 +1255,21 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
             var failures = new System.Collections.Generic.List<string>();
             var compared = 0;
+
+            // the inputs do not depend on the target type, so convert them once per source type, via the unchecked System conversion to get the value in a normal shape
+            var fromInputs = new System.Collections.Generic.Dictionary<Type, System.Collections.Generic.List<object>>();
+            foreach (var from in types)
+            {
+                var list = fromInputs[from] = new System.Collections.Generic.List<object>();
+                foreach (var v in values)
+                    try
+                    {
+                        var cp = SysExpr.Parameter(typeof(object), "o");
+                        list.Add(SysExpr.Lambda<Func<object, object>>(SysExpr.Convert(SysExpr.Convert(SysExpr.Convert(cp, v.GetType()), from), typeof(object)), cp).Compile()(v));
+                    }
+                    catch (Exception) { }
+            }
+
             foreach (var checkedConv in new[] { false, true })
                 foreach (var from in types)
                     foreach (var fromNullable in new[] { false, true })
@@ -1279,18 +1294,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                                 }
                                 catch (Exception) { continue; }
 
-                                var inputs = new System.Collections.Generic.List<object>();
-                                foreach (var v in values)
-                                {
-                                    try
-                                    {
-                                        // go through the unchecked System conversion to get the value of the source type in a normal shape
-                                        var cp = SysExpr.Parameter(typeof(object), "o");
-                                        var cv = SysExpr.Lambda<Func<object, object>>(SysExpr.Convert(SysExpr.Convert(SysExpr.Convert(cp, v.GetType()), from), typeof(object)), cp).Compile()(v);
-                                        inputs.Add(cv);
-                                    }
-                                    catch (Exception) { }
-                                }
+                                var inputs = new System.Collections.Generic.List<object>(fromInputs[from]);
                                 if (fromNullable) inputs.Add(null);
 
                                 compared++;
@@ -1363,11 +1367,13 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                                 try { inputs.Add(System.Convert.ChangeType(v, type)); } catch (Exception) { }
                             if (nullable) inputs.Add(null);
 
-                            foreach (var x in inputs)
+                            var sysResults = RunIncDec(t, node, target, inputs, false);
+                            var fastResults = RunIncDec(t, node, target, inputs, true);
+                            for (var i = 0; i < inputs.Count; ++i)
                             {
-                                object e, a;
-                                try { e = RunIncDec(t, node, target, x, false); } catch (Exception ex) { e = "ex:" + ex.GetType().Name; }
-                                try { a = RunIncDec(t, node, target, x, true); } catch (Exception ex) { a = "ex:" + ex.GetType().Name; }
+                                var x = inputs[i];
+                                var e = sysResults[i];
+                                var a = fastResults[i];
                                 ++compared;
                                 if (!Equals(e, a))
                                 {
@@ -1381,13 +1387,12 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.IsTrue(compared > 1000, "compared " + compared);
         }
 
-        // Returns "operation result;target value after" to compare both the result of the expression and the changed target
-        private static object RunIncDec(Type t, ExpressionType node, string target, object x, bool fast)
+        // Compiles once and returns "operation result;target value after" per input, to compare both the result of the expression and the changed target
+        private static object[] RunIncDec(Type t, ExpressionType node, string target, System.Collections.Generic.List<object> inputs, bool fast)
         {
             var holderType = typeof(IncDecHolder<>).MakeGenericType(t);
             var holderParam = SysExpr.Parameter(holderType, "h");
             var param = SysExpr.Parameter(t, "p");
-            var holder = Activator.CreateInstance(holderType);
             var field = holderType.GetField("Field");
             var array = holderType.GetField("Array");
 
@@ -1398,25 +1403,45 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                 _ => SysExpr.ArrayAccess(SysExpr.Field(holderParam, array), SysExpr.Constant(0))
             };
 
-            var inc = node switch
+            var results = new object[inputs.Count];
+            Delegate d;
+            try
             {
-                ExpressionType.PreIncrementAssign => SysExpr.PreIncrementAssign(targetExpr),
-                ExpressionType.PreDecrementAssign => SysExpr.PreDecrementAssign(targetExpr),
-                ExpressionType.PostIncrementAssign => SysExpr.PostIncrementAssign(targetExpr),
-                _ => SysExpr.PostDecrementAssign(targetExpr)
-            };
+                var inc = node switch
+                {
+                    ExpressionType.PreIncrementAssign => SysExpr.PreIncrementAssign(targetExpr),
+                    ExpressionType.PreDecrementAssign => SysExpr.PreDecrementAssign(targetExpr),
+                    ExpressionType.PostIncrementAssign => SysExpr.PostIncrementAssign(targetExpr),
+                    _ => SysExpr.PostDecrementAssign(targetExpr)
+                };
 
-            var body = SysExpr.NewArrayInit(typeof(object),
-                SysExpr.Convert(inc, typeof(object)),
-                SysExpr.Convert(targetExpr, typeof(object)));
+                var body = SysExpr.NewArrayInit(typeof(object),
+                    SysExpr.Convert(inc, typeof(object)),
+                    SysExpr.Convert(targetExpr, typeof(object)));
 
-            if (target == "field") field.SetValue(holder, x);
-            else if (target == "array") ((Array)array.GetValue(holder)).SetValue(x, 0);
-
-            var lambda = SysExpr.Lambda(typeof(Func<,,>).MakeGenericType(holderType, t, typeof(object[])), body, holderParam, param);
-            var d = fast ? lambda.ToLightExpression().CompileFast(true) : lambda.Compile();
-            var arr = (object[])d.DynamicInvoke(holder, x);
-            return arr[0] + ";" + arr[1];
+                var lambda = SysExpr.Lambda(typeof(Func<,,>).MakeGenericType(holderType, t, typeof(object[])), body, holderParam, param);
+                d = fast ? lambda.ToLightExpression().CompileFast(true) : lambda.Compile();
+            }
+            catch (Exception ex) // e.g. the operator is not defined for the type, so every input gives the same exception
+            {
+                for (var i = 0; i < results.Length; ++i)
+                    results[i] = "ex:" + ex.GetType().Name;
+                return results;
+            }
+            for (var i = 0; i < results.Length; ++i)
+            {
+                var x = inputs[i];
+                try
+                {
+                    var holder = Activator.CreateInstance(holderType);
+                    if (target == "field") field.SetValue(holder, x);
+                    else if (target == "array") ((Array)array.GetValue(holder)).SetValue(x, 0);
+                    var arr = (object[])d.DynamicInvoke(holder, x);
+                    results[i] = arr[0] + ";" + arr[1];
+                }
+                catch (Exception ex) { results[i] = "ex:" + ex.GetType().Name; }
+            }
+            return results;
         }
 
         public void Inc_dec_assign_of_block_variable_compared_and_returned_via_label_are_the_same_as_system()
