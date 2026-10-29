@@ -167,32 +167,6 @@ public struct ExprNode
         _child == other._child;
 }
 
-/// <summary>Maps a lambda node to a captured outer parameter or variable.
-/// Uses the same 16-bit storage range as the flat node links and identities.</summary>
-[StructLayout(LayoutKind.Explicit, Size = 6)]
-public struct LambdaClosureParameterUsage
-{
-    /// <summary>The lambda node idx in the flat-expression node array.</summary>
-    [FieldOffset(0)]
-    public ushort LambdaIdx;
-
-    /// <summary>The parameter-usage expression node idx in the flat-expression node array.</summary>
-    [FieldOffset(2)]
-    public ushort ParameterIdx;
-
-    /// <summary>The shared parameter/variable identity stored in <see cref="ExprNode.ChildIdx"/>.</summary>
-    [FieldOffset(4)]
-    public ushort ParameterId;
-
-    /// <summary>Creates the lambda capture mapping.</summary>
-    public LambdaClosureParameterUsage(ushort lambdaIdx, ushort parameterIdx, ushort parameterId)
-    {
-        LambdaIdx = lambdaIdx;
-        ParameterIdx = parameterIdx;
-        ParameterId = parameterId;
-    }
-}
-
 /// <summary>Stores an expression tree as flat nodes plus separate closure constants.</summary>
 public struct ExprTree : IEquatable<ExprTree>
 {
@@ -213,28 +187,6 @@ public struct ExprTree : IEquatable<ExprTree>
 
     /// <summary>Gets or sets closure constants that are referenced from constant nodes.</summary>
     public SmallList<object, Stack16<object>, NoArrayPool<object>> ClosureConstants;
-
-    /// <summary>Gets or sets all lambda node idxs added during construction.
-    /// The root lambda idx is stored in <see cref="RootIdx"/>; other entries are nested lambdas.</summary>
-    public SmallList<int, Stack8<int>, NoArrayPool<int>> LambdaNodes;
-
-    /// <summary>Gets or sets all block node idxs that carry explicit variable declarations.
-    /// A tracked block uses <c>children.Count == 2</c>: one child list for variables and one for expressions.</summary>
-    public SmallList<int, Stack8<int>, NoArrayPool<int>> BlocksWithVariables;
-
-    /// <summary>Gets or sets all <see cref="ExpressionType.Goto"/> node idxs,
-    /// including <c>return</c>, <c>break</c>, and <c>continue</c>.</summary>
-    public SmallList<int, Stack4<int>, NoArrayPool<int>> GotoNodes;
-
-    /// <summary>Gets or sets all <see cref="ExpressionType.Label"/> expression node idxs.</summary>
-    public SmallList<int, Stack4<int>, NoArrayPool<int>> LabelNodes;
-
-    /// <summary>Gets or sets all <see cref="ExpressionType.Try"/> node idxs for try/catch, try/finally, try/fault, and combined forms.</summary>
-    public SmallList<int, Stack4<int>, NoArrayPool<int>> TryCatchNodes;
-
-    /// <summary>Gets or sets captured outer parameter and variable usages for lambdas.
-    /// The stored idxs use the same 16-bit range as <see cref="ExprNode.ChildIdx"/> and <see cref="ExprNode.NextIdx"/>.</summary>
-    public SmallList<LambdaClosureParameterUsage, Stack16<LambdaClosureParameterUsage>, NoArrayPool<LambdaClosureParameterUsage>> LambdaClosureParameterUsages;
 
     // Import-only identity maps (valid during FromSysExpr / FromLightExpr).
     private SmallMap16<object, int, RefEq<object>> _parameterIds;
@@ -456,22 +408,19 @@ public struct ExprTree : IEquatable<ExprTree>
 
     private ushort WithTwoOrMoreChildren(ExpressionType nodeType, Type type, object obj, byte flags, ExprNodeKind kind, ushort ch0, ushort ch1, ushort[] more)
     {
+        Debug.Assert(ch0 != 0 && ch1 != 0, "Both leading children must be provided.");
         var ownerIdx = AddNode(nodeType, type, obj, flags, kind);
         ushort first = 0, prev = 0, count = 0;
 
-        // todo: @wip if the children id is missing it is more of an error
-        if (ch0 != 0)
-            AppendPreparedChild(MayBeCloneChildForOwner(ch0, ownerIdx), ref first, ref prev, ref count);
-        if (ch1 != 0)
-            AppendPreparedChild(MayBeCloneChildForOwner(ch1, ownerIdx), ref first, ref prev, ref count);
+        AppendPreparedChild(MayBeCloneChildForOwner(ch0, ownerIdx), ref first, ref prev, ref count);
+        AppendPreparedChild(MayBeCloneChildForOwner(ch1, ownerIdx), ref first, ref prev, ref count);
 
         if (more != null)
         {
             for (var i = 0; i < more.Length; ++i)
             {
-                var ch = more[i];
-                if (ch == 0) continue;
-                AppendPreparedChild(MayBeCloneChildForOwner(ch, ownerIdx), ref first, ref prev, ref count);
+                Debug.Assert(more[i] != 0, "Child index must not be zero.");
+                AppendPreparedChild(MayBeCloneChildForOwner(more[i], ownerIdx), ref first, ref prev, ref count);
             }
         }
 
@@ -662,7 +611,7 @@ public struct ExprTree : IEquatable<ExprTree>
         WithThreeChildren(ExpressionType.Conditional, type ?? Nodes[ifTrue].Type, null, default, default, test, ifTrue, ifFalse);
 
     /// <summary>Block layout: first child = BlockExprs sub-node (expression list);
-    /// optional following siblings = variable declarations. Tracked in <see cref="BlocksWithVariables"/> when vars present.</summary>
+    /// optional following siblings = variable declarations. </summary>
     public ushort Block(Type type, ushort[] vars, params ushort[] exprs)
     {
         if (exprs == null || exprs.Length == 0)
@@ -671,10 +620,7 @@ public struct ExprTree : IEquatable<ExprTree>
         var exprsSubNode = WithChildren(ExpressionType.Block, null, null, default, ExprNodeKind.BlockExprs, exprs);
 
         type ??= Nodes[exprs[exprs.Length - 1]].Type;
-        var blockIdx = WithOneOrMoreChildren(ExpressionType.Block, type, null, default, default, exprsSubNode, vars);
-        if (vars != null && vars.Length != 0)
-            BlocksWithVariables.Add(blockIdx);
-        return blockIdx;
+        return WithOneOrMoreChildren(ExpressionType.Block, type, null, default, default, exprsSubNode, vars);
     }
 
     /// <summary>Adds a block node without explicit variables.</summary>
@@ -682,7 +628,7 @@ public struct ExprTree : IEquatable<ExprTree>
     public ushort Block(params ushort[] exprs) =>
         Block(null, null, exprs);
 
-    /// <summary>Adds a lambda node. Layout: body then parameters. Tracks <see cref="LambdaNodes"/> and captures.</summary>
+    /// <summary>Adds a lambda node. Layout: body then parameters.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #if NET10_0_OR_GREATER
     public ushort Lambda(Type delegateType, ushort bodyIdx, params ReadOnlySpan<ushort> pars)
@@ -733,8 +679,6 @@ public struct ExprTree : IEquatable<ExprTree>
 
         prevRef.NextIdx = lambdaIdx; // close the child chain with a link back to the lambda node
 
-        LambdaNodes.Add(lambdaIdx);
-        CollectLambdaClosureParameterUsages(lambdaIdx);
         return lambdaIdx;
     }
 
@@ -791,23 +735,17 @@ public struct ExprTree : IEquatable<ExprTree>
 
     /// <summary>Adds a label-expression node.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public ushort Label(ushort target, ushort defaultValue = 0)
-    {
-        var idx = defaultValue == 0
+    public ushort Label(ushort target, ushort defaultValue = 0) =>
+        defaultValue == 0
             ? WithOneChild(ExpressionType.Label, Nodes[target].Type, null, default, default, target)
             : WithTwoChildren(ExpressionType.Label, Nodes[target].Type, null, default, default, target, defaultValue);
-        LabelNodes.Add(idx);
-        return idx;
-    }
 
     /// <summary>Adds a goto-family node. Kind is stored in flags.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ushort MakeGoto(GotoExpressionKind gotoKind, ushort target, ushort value = 0, Type type = null)
     {
         var resultType = type ?? (value != 0 ? Nodes[value].Type : typeof(void));
-        var idx = WithTwoChildren(ExpressionType.Goto, resultType, null, (byte)gotoKind, default, target, value);
-        GotoNodes.Add(idx);
-        return idx;
+        return WithTwoChildren(ExpressionType.Goto, resultType, null, (byte)gotoKind, default, target, value);
     }
 
     /// <summary>Adds a goto node.</summary>
@@ -880,36 +818,20 @@ public struct ExprTree : IEquatable<ExprTree>
     }
 
     /// <summary>Adds a try/catch node. Layout: body, handlers…</summary>
-    public ushort TryCatch(ushort body, params ushort[] handlers)
-    {
-        var idx = WithOneOrMoreChildren(ExpressionType.Try, Nodes[body].Type, null, default, default, body, handlers);
-        TryCatchNodes.Add(idx);
-        return idx;
-    }
+    public ushort TryCatch(ushort body, params ushort[] handlers) =>
+        WithOneOrMoreChildren(ExpressionType.Try, Nodes[body].Type, null, default, default, body, handlers);
 
     /// <summary>Adds a try/finally node.</summary>
-    public ushort TryFinally(ushort body, ushort @finally)
-    {
-        var idx = WithTwoChildren(ExpressionType.Try, Nodes[body].Type, null, default, default, body, @finally);
-        TryCatchNodes.Add(idx);
-        return idx;
-    }
+    public ushort TryFinally(ushort body, ushort @finally) =>
+        WithTwoChildren(ExpressionType.Try, Nodes[body].Type, null, default, default, body, @finally);
 
     /// <summary>Adds a try/fault node.</summary>
-    public ushort TryFault(ushort body, ushort fault)
-    {
-        var idx = WithTwoChildren(ExpressionType.Try, Nodes[body].Type, null, TryFaultFlag, default, body, fault);
-        TryCatchNodes.Add(idx);
-        return idx;
-    }
+    public ushort TryFault(ushort body, ushort fault) =>
+        WithTwoChildren(ExpressionType.Try, Nodes[body].Type, null, TryFaultFlag, default, body, fault);
 
     /// <summary>Adds a try node with optional finally block and catch handlers. Layout: body, finally, handlers…</summary>
-    public ushort TryCatchFinally(ushort body, ushort @finally, params ushort[] handlers)
-    {
-        var idx = WithTwoOrMoreChildren(ExpressionType.Try, Nodes[body].Type, null, default, default, body, @finally, handlers);
-        TryCatchNodes.Add(idx);
-        return idx;
-    }
+    public ushort TryCatchFinally(ushort body, ushort @finally, params ushort[] handlers) =>
+        WithTwoOrMoreChildren(ExpressionType.Try, Nodes[body].Type, null, default, default, body, @finally, handlers);
 
     /// <summary>Adds a type-test node.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1260,217 +1182,6 @@ public struct ExprTree : IEquatable<ExprTree>
         return id;
     }
 
-    private void CollectLambdaClosureParameterUsages(ushort lambdaIdx)
-    {
-        var children = GetChildren(lambdaIdx);
-        if (children.Count == 0)
-            return;
-
-        ChildIdxs lambdaParameterIds = default;
-        for (var i = 1; i < children.Count; ++i)
-            lambdaParameterIds.Add(ToStoredUShortIdx(Nodes[children[i]].ChildIdx));
-
-        SmallList<ushort, Stack16<ushort>, NoArrayPool<ushort>> localParameterIds = default;
-        SmallList<LambdaClosureParameterUsage, Stack8<LambdaClosureParameterUsage>, NoArrayPool<LambdaClosureParameterUsage>> captures = default;
-        CollectClosureParameterUsages(children[0], lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
-
-        for (var i = 0; i < captures.Count; ++i)
-            LambdaClosureParameterUsages.Add(captures[i]);
-    }
-
-    private void CollectClosureParameterUsages(
-        ushort idx,
-        ushort lambdaIdx,
-        ref ChildIdxs lambdaParameterIds,
-        ref SmallList<ushort, Stack16<ushort>, NoArrayPool<ushort>> localParameterIds,
-        ref SmallList<LambdaClosureParameterUsage, Stack8<LambdaClosureParameterUsage>, NoArrayPool<LambdaClosureParameterUsage>> captures)
-    {
-        if (idx == 0)
-            return;
-
-        ref var node = ref Nodes.GetSurePresentRef(idx);
-
-        // Group / metadata kinds share some ExpressionType values with real expressions.
-        // Always walk their children as a plain sibling list — never apply Block/Lambda layouts.
-        if (node.Kind == ExprNodeKind.BlockExprs ||
-            node.Kind == ExprNodeKind.SwitchCases ||
-            node.Kind == ExprNodeKind.SwitchCase ||
-            node.Kind == ExprNodeKind.CatchBlock ||
-            node.Kind == ExprNodeKind.ObjectReference ||
-            node.Kind == ExprNodeKind.UInt16Pair ||
-            node.Kind == ExprNodeKind.LabelTarget ||
-            node.Kind == ExprNodeKind.MemberAssignment ||
-            node.Kind == ExprNodeKind.MemberMemberBinding ||
-            node.Kind == ExprNodeKind.MemberListBinding ||
-            node.Kind == ExprNodeKind.ElementInit)
-        {
-            if (node.Kind == ExprNodeKind.CatchBlock)
-            {
-                CollectCatchBlockClosureParameterUsages(idx, lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
-                return;
-            }
-
-            WalkClosureChildren(idx, ref node, lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
-            return;
-        }
-
-        if (ReferenceEquals(node.Obj, ExprNode.InlineValueMarker) || node.ChildCount == 0)
-        {
-            if (node.NodeType == ExpressionType.Parameter)
-            {
-                var parameterId = ToStoredUShortIdx(node.ChildIdx);
-                if (!Contains(ref lambdaParameterIds, parameterId) &&
-                    !Contains(ref localParameterIds, parameterId))
-                    AddClosureParameterUsage(lambdaIdx, idx, parameterId, ref captures);
-            }
-            return;
-        }
-
-        switch (node.NodeType)
-        {
-            case ExpressionType.Parameter:
-                {
-                    var parameterId = ToStoredUShortIdx(node.ChildIdx);
-                    if (!Contains(ref lambdaParameterIds, parameterId) &&
-                        !Contains(ref localParameterIds, parameterId))
-                        AddClosureParameterUsage(lambdaIdx, idx, parameterId, ref captures);
-                    return;
-                }
-            case ExpressionType.Lambda:
-                PropagateNestedLambdaClosureParameterUsages(idx, lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
-                return;
-            case ExpressionType.Block:
-                {
-                    // Layout: first child = BlockExprs (expression list); remaining siblings = variables.
-                    var localCount = localParameterIds.Count;
-                    var exprListIdx = node.ChildIdx;
-                    if (exprListIdx == 0)
-                        return;
-
-                    ref var exprList = ref Nodes.GetSurePresentRef(exprListIdx);
-
-                    var varIdx = exprList.NextIdx;
-                    for (var i = 1; i < node.ChildCount && varIdx != 0 && varIdx != idx; ++i)
-                    {
-                        ref var v = ref Nodes.GetSurePresentRef(varIdx);
-                        localParameterIds.Add(ToStoredUShortIdx(v.ChildIdx));
-                        varIdx = v.NextIdx;
-                    }
-
-                    if (exprList.Is(ExprNodeKind.BlockExprs))
-                        WalkClosureChildren(exprListIdx, ref exprList, lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
-                    else
-                        CollectClosureParameterUsages(exprListIdx, lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
-
-                    localParameterIds.Count = localCount;
-                    return;
-                }
-            case ExpressionType.Try:
-                {
-                    WalkClosureChildren(idx, ref node, lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
-                    return;
-                }
-        }
-
-        WalkClosureChildren(idx, ref node, lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
-    }
-
-    private void WalkClosureChildren(
-        ushort idx,
-        ref ExprNode node,
-        ushort lambdaIdx,
-        ref ChildIdxs lambdaParameterIds,
-        ref SmallList<ushort, Stack16<ushort>, NoArrayPool<ushort>> localParameterIds,
-        ref SmallList<LambdaClosureParameterUsage, Stack8<LambdaClosureParameterUsage>, NoArrayPool<LambdaClosureParameterUsage>> captures)
-    {
-        if (node.ChildCount == 0 || node.ChildIdx == 0)
-            return;
-
-        // Stop after ChildCount. Also stop if the sibling chain hits 0 or loops back to this
-        // owner (last-child.NextIdx is the parent up-link).
-        var cIdx = node.ChildIdx;
-        for (var i = 0; i < node.ChildCount && cIdx != 0 && cIdx != idx; ++i)
-        {
-            var next = Nodes.GetSurePresentRef(cIdx).NextIdx;
-            CollectClosureParameterUsages(cIdx, lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
-            cIdx = next;
-        }
-    }
-
-    private void CollectCatchBlockClosureParameterUsages(
-        ushort idx,
-        ushort lambdaIdx,
-        ref ChildIdxs lambdaParameterIds,
-        ref SmallList<ushort, Stack16<ushort>, NoArrayPool<ushort>> localParameterIds,
-        ref SmallList<LambdaClosureParameterUsage, Stack8<LambdaClosureParameterUsage>, NoArrayPool<LambdaClosureParameterUsage>> captures)
-    {
-        ref var node = ref Nodes.GetSurePresentRef(idx);
-        Debug.Assert(node.Is(ExprNodeKind.CatchBlock));
-
-        var localCount = localParameterIds.Count;
-        var childIdx = node.ChildIdx;
-        if (node.HasFlag(CatchHasVariableFlag))
-        {
-            localParameterIds.Add(ToStoredUShortIdx(Nodes.GetSurePresentRef(childIdx).ChildIdx));
-            childIdx = Nodes.GetSurePresentRef(childIdx).NextIdx;
-        }
-
-        var bodyIdx = childIdx;
-        childIdx = Nodes.GetSurePresentRef(childIdx).NextIdx;
-        if (node.HasFlag(CatchHasFilterFlag))
-            CollectClosureParameterUsages(childIdx, lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
-        CollectClosureParameterUsages(bodyIdx, lambdaIdx, ref lambdaParameterIds, ref localParameterIds, ref captures);
-        localParameterIds.Count = localCount;
-    }
-
-    private void PropagateNestedLambdaClosureParameterUsages(
-        ushort nestedLambdaIdx,
-        ushort lambdaIdx,
-        ref ChildIdxs lambdaParameterIds,
-        ref SmallList<ushort, Stack16<ushort>, NoArrayPool<ushort>> localParameterIds,
-        ref SmallList<LambdaClosureParameterUsage, Stack8<LambdaClosureParameterUsage>, NoArrayPool<LambdaClosureParameterUsage>> captures)
-    {
-        for (var i = 0; i < LambdaClosureParameterUsages.Count; ++i)
-        {
-            ref var usage = ref LambdaClosureParameterUsages[i];
-            if (usage.LambdaIdx != nestedLambdaIdx)
-                continue;
-            if (Contains(ref lambdaParameterIds, usage.ParameterId) ||
-                Contains(ref localParameterIds, usage.ParameterId))
-                continue;
-            AddClosureParameterUsage(lambdaIdx, usage.ParameterIdx, usage.ParameterId, ref captures);
-        }
-    }
-
-    private static void AddClosureParameterUsage(
-        ushort lambdaIdx,
-        ushort parameterIdx,
-        ushort parameterId,
-        ref SmallList<LambdaClosureParameterUsage, Stack8<LambdaClosureParameterUsage>, NoArrayPool<LambdaClosureParameterUsage>> captures)
-    {
-        for (var i = 0; i < captures.Count; ++i)
-            if (captures[i].ParameterId == parameterId)
-                return;
-        captures.Add(new LambdaClosureParameterUsage(lambdaIdx, parameterIdx, parameterId));
-    }
-
-    private ChildIdxs GetChildren(int idx)
-    {
-        ref var node = ref Nodes.GetSurePresentRef(idx);
-        if (ReferenceEquals(node.Obj, ExprNode.InlineValueMarker) || node.ChildCount == 0 || node.ChildIdx == 0)
-            return default;
-        var count = node.ChildCount;
-        ChildIdxs children = default;
-        // Stop after ChildCount. Also stop if the sibling chain hits 0 or loops back to this
-        // owner (last-child.NextIdx is the parent up-link).
-        var childIdx = node.ChildIdx;
-        for (var i = 0; i < count && childIdx != 0 && childIdx != idx; ++i)
-        {
-            children.Add(childIdx);
-            childIdx = Nodes.GetSurePresentRef(childIdx).NextIdx;
-        }
-        return children;
-    }
     /// <summary>Reconstructs the flat tree as a System.Linq expression tree.</summary>
     [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
     [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2077",
@@ -1563,16 +1274,6 @@ public struct ExprTree : IEquatable<ExprTree>
         for (var i = 0; i < depth; ++i)
             elementType = elementType.GetElementType();
         return elementType ?? typeof(object);
-    }
-
-    private static bool Contains<TStack, TPool>(ref SmallList<ushort, TStack, TPool> ids, ushort value)
-        where TStack : struct, IStack<ushort, TStack>
-        where TPool : struct, ISmallArrayPool<ushort>
-    {
-        for (var i = 0; i < ids.Count; ++i)
-            if (ids[i] == value)
-                return true;
-        return false;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
