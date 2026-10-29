@@ -1547,6 +1547,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Expression Part(int v) => Block(Goto(target, Constant(v)), Throw(Constant(new Exception())), Label(target, Constant(0)));
             var multi = Lambda<Func<int>>(Add(Add(Part(6), Part(4)), Part(5)));
             Asserts.AreEqual(multi.CompileSys()(), multi.CompileFast(true)());
+            Asserts.AreEqual(multi.CompileSys()(), multi.CompileFast(true, CompilerFlags.ValidateLabels)());
 
             var label = Label();
             var shapes = new Expression[]
@@ -1562,9 +1563,12 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                 var sysThrows = false;
                 try { lambda.CompileSys(); } catch (InvalidOperationException) { sysThrows = true; }
                 var fecThrows = false;
-                try { lambda.CompileFast(true); } catch (InvalidOperationException) { fecThrows = true; }
+                try { lambda.CompileFast(true, CompilerFlags.ValidateLabels); } catch (InvalidOperationException) { fecThrows = true; }
+                var fecNoFlagThrows = false;
+                try { lambda.CompileFast(true); } catch (InvalidOperationException) { fecNoFlagThrows = true; } catch (ArgumentException) { } // garbage in, the IL generator may complain
                 Asserts.IsTrue(sysThrows);
                 Asserts.IsTrue(fecThrows);
+                Asserts.IsFalse(fecNoFlagThrows); // the check is opt-in
             }
         }
         public static int AddPlusOne(int a, int b) => a + b + 1;

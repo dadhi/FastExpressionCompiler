@@ -389,6 +389,15 @@ When passed to `CompileFast(flags: CompilerFlags.ThrowOnNotSupportedExpression)`
 To get the whole list of the not yet supported cases you may check in `Result.NotSupported_` enum values.
 
 
+### ValidateLabels flag
+
+FEC trusts that the expression you construct is valid, and does not check the labels and jumps, to be fast.
+If the expression comes from a third party, or you just want to validate it, pass `CompileFast(flags: CompilerFlags.ValidateLabels)`.
+It will throw the `InvalidOperationException` with the same rules as `System.Linq.Expressions` for the ambiguous jump, the jump into the expression
+or into the block with the value, and the label defined again in the scope where it is already visible.
+The check is an extra pass over the expression tree, so it is off by default.
+
+
 ### Code Generation
 
 The Code Generation capabilities are available via the `ToCSharpString` and `ToExpressionString` extension methods.
