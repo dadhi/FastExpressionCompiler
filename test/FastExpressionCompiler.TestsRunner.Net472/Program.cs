@@ -137,7 +137,9 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new LightExpression.UnitTests.CoalesceTests().Run);
                 Run(new ConditionalOperatorsTests().Run);
                 Run(new LightExpression.UnitTests.ConditionalOperatorsTests().Run);
+                Run(new ByRefCharacterWidthRegressionTests().Run);
                 Run(new ConstantAndConversionTests().Run);
+                Run(new LightExpression.UnitTests.ByRefCharacterWidthRegressionTests().Run);
                 Run(new LightExpression.UnitTests.ConstantAndConversionTests().Run);
                 Run(new ConvertOperatorsTests().Run);
                 Run(new LightExpression.UnitTests.ConvertOperatorsTests().Run);
