@@ -149,7 +149,9 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new LightExpression.UnitTests.HoistedLambdaExprTests().Run);
                 Run(new LoopTests().Run);
                 Run(new LightExpression.UnitTests.LoopTests().Run);
+                Run(new NonVoidListInitializerRegressionTests().Run);
                 Run(new ListInitTests().Run);
+                Run(new LightExpression.UnitTests.NonVoidListInitializerRegressionTests().Run);
                 Run(new LightExpression.UnitTests.ListInitTests().Run);
                 Run(new ManuallyComposedExprTests().Run);
                 Run(new LightExpression.UnitTests.ManuallyComposedExprTests().Run);
