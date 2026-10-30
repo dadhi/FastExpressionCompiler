@@ -1,0 +1,62 @@
+<Project>
+
+  <PropertyGroup>
+    <_IACTG_TargetFramework Condition="'$(MSBuildRuntimeType)' == 'Core'">netstandard2.0</_IACTG_TargetFramework>
+    <_IACTG_TargetFramework Condition="'$(MSBuildRuntimeType)' != 'Core'">net462</_IACTG_TargetFramework>
+    <_IACTG_TaskAssembly>$(MSBuildThisFileDirectory)../tools/$(_IACTG_TargetFramework)/IgnoresAccessChecksToGenerator.Tasks.dll</_IACTG_TaskAssembly>
+    <_IACTG_IntermediatePath>$(IntermediateOutputPath)/IgnoresAccessChecksToGenerator</_IACTG_IntermediatePath>
+    <_IACTG_CodeFilePath>$(_IACTG_IntermediatePath)/IgnoresAccessChecksTo.cs</_IACTG_CodeFilePath>
+    <_IACTG_ManifestFilePath>$(_IACTG_IntermediatePath)/IgnoresAccessChecksToGenerator.manifest</_IACTG_ManifestFilePath>
+  </PropertyGroup>
+
+  <UsingTask AssemblyFile="$(_IACTG_TaskAssembly)" TaskName="IgnoresAccessChecksToGenerator.Tasks.PublicizeInternals" />
+
+  <Target Name="GetIgnoresAccessChecksToGeneratorReferencePaths"
+          Returns="@(_IACTG_InputReferencePath);@(_IACTG_OutputReferencePath)">
+    <ItemGroup>
+      <!-- legacy properties/items -->
+      <IgnoresAccessChecksTo Include="$(InternalsAssemblyNames.Split(;))" />
+      <IgnoresAccessChecksTo Include="@(InternalsAssemblyName)" />
+      <IgnoresAccessChecksToExcludeTypeName Include="$(InternalsAssemblyExcludeTypeNames.Split(;))" />
+      <IgnoresAccessChecksToExcludeTypeName Include="@(InternalsAssemblyExcludeTypeName)" />
+    </ItemGroup>
+    <ItemGroup>
+      <_IACTG_ReferencePathJoin Include="@(ReferencePath)" IgnoresAccessChecksTo="%(IgnoresAccessChecksTo.Identity)" />
+      <_IACTG_InputReferencePath Include="@(_IACTG_ReferencePathJoin)" Condition=" '%(Filename)' == '%(IgnoresAccessChecksTo)' " />
+      <_IACTG_ReferencePathJoin Remove="@(_IACTG_ReferencePathJoin)" />
+      <_IACTG_OutputReferencePath Include="@(_IACTG_InputReferencePath->'$(_IACTG_IntermediatePath)/%(Filename)%(Extension)')" OriginalItemSpec="%(Identity)" />
+    </ItemGroup>
+    <ItemGroup>
+      <_IACTG_Manifest Include="@(IgnoresAccessChecksToExcludeTypeName->'%(Identity)^%(Assembly)')" />
+      <_IACTG_Manifest Include="@(_IACTG_InputReferencePath)" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(_IACTG_ManifestFilePath)" Lines="@(_IACTG_Manifest)" WriteOnlyWhenDifferent="true" Overwrite="true" />
+  </Target>
+
+  <Target Name="IgnoresAccessChecksToGenerator"
+          DependsOnTargets="GetIgnoresAccessChecksToGeneratorReferencePaths"
+          AfterTargets="AfterResolveReferences"
+          Inputs="@(_IACTG_InputReferencePath);$(_IACTG_ManifestFilePath)"
+          Outputs="@(_IACTG_OutputReferencePath);$(_IACTG_CodeFilePath)"
+          Returns="@(ReferencePath);@(Compile)">
+    <PublicizeInternals SourceReferences="@(ReferencePath)"
+                        AssemblyNames="@(IgnoresAccessChecksTo)"
+                        ExcludeTypeNames="@(IgnoresAccessChecksToExcludeTypeName)"
+                        IntermediateOutputPath="$(_IACTG_IntermediatePath)"
+                        GeneratedCodeFilePath="$(_IACTG_CodeFilePath)"
+                        OmitAttributeDefinition="$(IgnoresAccessChecksToOmitAttributeDefinition)" />
+    <ItemGroup>
+      <ReferencePath Include="@(_IACTG_OutputReferencePath)" />
+      <ReferencePath Remove="@(_IACTG_OutputReferencePath->'%(OriginalItemSpec)')" />
+      <Compile Include="$(_IACTG_CodeFilePath)" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="IgnoresAccessChecksToGeneratorClean" AfterTargets="Clean">
+    <ItemGroup>
+      <_IACTG_Directory Include="$(_IACTG_IntermediatePath)" />
+    </ItemGroup>
+    <RemoveDir Directories="@(_IACTG_Directory)" />
+  </Target>
+
+</Project>

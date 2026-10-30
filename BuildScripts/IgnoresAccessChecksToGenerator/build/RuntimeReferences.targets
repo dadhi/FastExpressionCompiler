@@ -1,0 +1,15 @@
+<Project>
+  <Target Name="SelectRuntimeImplementationReferences" BeforeTargets="CoreCompile">
+    <ReadLinesFromFile File="$(FacadeDirectory)/runtime-references.txt">
+      <Output TaskParameter="Lines" ItemName="RuntimeImplementationReference" />
+    </ReadLinesFromFile>
+    <ItemGroup>
+      <!-- A full CoreLib facade conflicts with SDK System.Runtime definitions.
+           Use managed implementation references from the same pinned runtime. -->
+      <ReferencePath Remove="@(ReferencePath)" />
+      <ReferencePathWithRefAssemblies Remove="@(ReferencePathWithRefAssemblies)" />
+      <ReferencePath Include="@(RuntimeImplementationReference)" />
+      <ReferencePathWithRefAssemblies Include="@(ReferencePath)" />
+    </ItemGroup>
+  </Target>
+</Project>
