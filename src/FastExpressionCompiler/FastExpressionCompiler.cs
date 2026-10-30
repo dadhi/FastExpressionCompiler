@@ -4453,6 +4453,9 @@ namespace FastExpressionCompiler
                 var inits = expr.Initializers;
                 var initCount = inits.Count;
                 var ok = true;
+                MethodInfo lastAddMethod = null;
+                ParameterInfo[] methodParams = null;
+                var popAddResult = false;
 
                 // see the TryEmitMethodCall for the reason of the callFlags
                 var callFlags = (parent
@@ -4468,7 +4471,12 @@ namespace FastExpressionCompiler
 
                     var elemInit = inits.GetArgument(i);
                     var method = elemInit.AddMethod;
-                    var methodParams = method.GetParameters();
+                    if (!ReferenceEquals(method, lastAddMethod))
+                    {
+                        lastAddMethod = method;
+                        methodParams = method.GetParameters();
+                        popAddResult = method.ReturnType != typeof(void);
+                    }
                     var addArgs = elemInit.GetArgExprs();
                     var addArgCount = addArgs.GetArgCount();
 
@@ -4485,11 +4493,14 @@ namespace FastExpressionCompiler
                         il.Demit(OpCodes.Constrained, exprType); // todo: @clarify it is a value type so... can we de-virtualize the call?
                         ok = EmitVirtualMethodCall(il, method);
                     }
+                    if (ok && popAddResult)
+                        il.Demit(OpCodes.Pop);
                 }
 
                 if (valueVarIndex != -1)
                     EmitLoadLocalVariable(il, valueVarIndex);
-                return ok;
+                context.LastEmitIsAddress = false;
+                return ok && il.EmitPopIfIgnoreResult(parent);
             }
 
             // the `right = null` argument indicates the increment/decrement operation
