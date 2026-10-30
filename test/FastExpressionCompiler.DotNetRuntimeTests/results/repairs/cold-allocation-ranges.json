@@ -1,0 +1,3422 @@
+[
+  {
+    "runtime": "10.0.9",
+    "scenario": "add",
+    "phase": "cold_compile",
+    "version": "before",
+    "bytes_min": 41968,
+    "bytes_max": 41968,
+    "bytes_samples": [
+      41968,
+      41968,
+      41968,
+      41968,
+      41968,
+      41968,
+      41968,
+      41968,
+      41968
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "add",
+    "phase": "cold_compile",
+    "version": "fixed",
+    "bytes_min": 41968,
+    "bytes_max": 41968,
+    "bytes_samples": [
+      41968,
+      41968,
+      41968,
+      41968,
+      41968,
+      41968,
+      41968,
+      41968,
+      41968
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "add",
+    "phase": "cold_compile",
+    "version": "system",
+    "bytes_min": 6368,
+    "bytes_max": 18704,
+    "bytes_samples": [
+      6368,
+      6368,
+      6368,
+      18704,
+      6368,
+      6368,
+      18704,
+      18704,
+      6368
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "add",
+    "phase": "cold_compile_first",
+    "version": "before",
+    "bytes_min": 41968,
+    "bytes_max": 41968,
+    "bytes_samples": [
+      41968,
+      41968,
+      41968,
+      41968,
+      41968,
+      41968,
+      41968,
+      41968,
+      41968
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "add",
+    "phase": "cold_compile_first",
+    "version": "fixed",
+    "bytes_min": 41968,
+    "bytes_max": 41968,
+    "bytes_samples": [
+      41968,
+      41968,
+      41968,
+      41968,
+      41968,
+      41968,
+      41968,
+      41968,
+      41968
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "add",
+    "phase": "cold_compile_first",
+    "version": "system",
+    "bytes_min": 6368,
+    "bytes_max": 18704,
+    "bytes_samples": [
+      6368,
+      6368,
+      6368,
+      18704,
+      6368,
+      6368,
+      18704,
+      18704,
+      6368
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "add",
+    "phase": "cold_first_invoke",
+    "version": "before",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "add",
+    "phase": "cold_first_invoke",
+    "version": "fixed",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "add",
+    "phase": "cold_first_invoke",
+    "version": "system",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "balanced256",
+    "phase": "cold_compile",
+    "version": "before",
+    "bytes_min": 43520,
+    "bytes_max": 43520,
+    "bytes_samples": [
+      43520,
+      43520,
+      43520,
+      43520,
+      43520,
+      43520,
+      43520,
+      43520,
+      43520
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "balanced256",
+    "phase": "cold_compile",
+    "version": "fixed",
+    "bytes_min": 43520,
+    "bytes_max": 43520,
+    "bytes_samples": [
+      43520,
+      43520,
+      43520,
+      43520,
+      43520,
+      43520,
+      43520,
+      43520,
+      43520
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "balanced256",
+    "phase": "cold_compile",
+    "version": "system",
+    "bytes_min": 39368,
+    "bytes_max": 39368,
+    "bytes_samples": [
+      39368,
+      39368,
+      39368,
+      39368,
+      39368,
+      39368,
+      39368,
+      39368,
+      39368
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "balanced256",
+    "phase": "cold_compile_first",
+    "version": "before",
+    "bytes_min": 43520,
+    "bytes_max": 43520,
+    "bytes_samples": [
+      43520,
+      43520,
+      43520,
+      43520,
+      43520,
+      43520,
+      43520,
+      43520,
+      43520
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "balanced256",
+    "phase": "cold_compile_first",
+    "version": "fixed",
+    "bytes_min": 43520,
+    "bytes_max": 43520,
+    "bytes_samples": [
+      43520,
+      43520,
+      43520,
+      43520,
+      43520,
+      43520,
+      43520,
+      43520,
+      43520
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "balanced256",
+    "phase": "cold_compile_first",
+    "version": "system",
+    "bytes_min": 39368,
+    "bytes_max": 39368,
+    "bytes_samples": [
+      39368,
+      39368,
+      39368,
+      39368,
+      39368,
+      39368,
+      39368,
+      39368,
+      39368
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "balanced256",
+    "phase": "cold_first_invoke",
+    "version": "before",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "balanced256",
+    "phase": "cold_first_invoke",
+    "version": "fixed",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "balanced256",
+    "phase": "cold_first_invoke",
+    "version": "system",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "blocks32",
+    "phase": "cold_compile",
+    "version": "before",
+    "bytes_min": 46056,
+    "bytes_max": 46056,
+    "bytes_samples": [
+      46056,
+      46056,
+      46056,
+      46056,
+      46056,
+      46056,
+      46056,
+      46056,
+      46056
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "blocks32",
+    "phase": "cold_compile",
+    "version": "fixed",
+    "bytes_min": 46056,
+    "bytes_max": 46056,
+    "bytes_samples": [
+      46056,
+      46056,
+      46056,
+      46056,
+      46056,
+      46056,
+      46056,
+      46056,
+      46056
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "blocks32",
+    "phase": "cold_compile",
+    "version": "system",
+    "bytes_min": 52072,
+    "bytes_max": 64408,
+    "bytes_samples": [
+      52072,
+      64408,
+      52072,
+      52072,
+      64408,
+      64408,
+      64408,
+      64408,
+      52072
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "blocks32",
+    "phase": "cold_compile_first",
+    "version": "before",
+    "bytes_min": 46056,
+    "bytes_max": 46056,
+    "bytes_samples": [
+      46056,
+      46056,
+      46056,
+      46056,
+      46056,
+      46056,
+      46056,
+      46056,
+      46056
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "blocks32",
+    "phase": "cold_compile_first",
+    "version": "fixed",
+    "bytes_min": 46056,
+    "bytes_max": 46056,
+    "bytes_samples": [
+      46056,
+      46056,
+      46056,
+      46056,
+      46056,
+      46056,
+      46056,
+      46056,
+      46056
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "blocks32",
+    "phase": "cold_compile_first",
+    "version": "system",
+    "bytes_min": 52072,
+    "bytes_max": 64408,
+    "bytes_samples": [
+      52072,
+      64408,
+      52072,
+      52072,
+      64408,
+      64408,
+      64408,
+      64408,
+      52072
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "blocks32",
+    "phase": "cold_first_invoke",
+    "version": "before",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "blocks32",
+    "phase": "cold_first_invoke",
+    "version": "fixed",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "blocks32",
+    "phase": "cold_first_invoke",
+    "version": "system",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture1",
+    "phase": "cold_compile",
+    "version": "before",
+    "bytes_min": 49000,
+    "bytes_max": 49000,
+    "bytes_samples": [
+      49000,
+      49000,
+      49000,
+      49000,
+      49000,
+      49000,
+      49000,
+      49000,
+      49000
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture1",
+    "phase": "cold_compile",
+    "version": "fixed",
+    "bytes_min": 48808,
+    "bytes_max": 48808,
+    "bytes_samples": [
+      48808,
+      48808,
+      48808,
+      48808,
+      48808,
+      48808,
+      48808,
+      48808,
+      48808
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture1",
+    "phase": "cold_compile",
+    "version": "system",
+    "bytes_min": 16464,
+    "bytes_max": 28800,
+    "bytes_samples": [
+      28800,
+      28800,
+      28800,
+      16464,
+      16464,
+      16464,
+      16464,
+      16464,
+      16464
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture1",
+    "phase": "cold_compile_first",
+    "version": "before",
+    "bytes_min": 49184,
+    "bytes_max": 49184,
+    "bytes_samples": [
+      49184,
+      49184,
+      49184,
+      49184,
+      49184,
+      49184,
+      49184,
+      49184,
+      49184
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture1",
+    "phase": "cold_compile_first",
+    "version": "fixed",
+    "bytes_min": 48992,
+    "bytes_max": 48992,
+    "bytes_samples": [
+      48992,
+      48992,
+      48992,
+      48992,
+      48992,
+      48992,
+      48992,
+      48992,
+      48992
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture1",
+    "phase": "cold_compile_first",
+    "version": "system",
+    "bytes_min": 16864,
+    "bytes_max": 29200,
+    "bytes_samples": [
+      29200,
+      29200,
+      29200,
+      29200,
+      29200,
+      29200,
+      16864,
+      29200,
+      29200
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture1",
+    "phase": "cold_first_invoke",
+    "version": "before",
+    "bytes_min": 184,
+    "bytes_max": 184,
+    "bytes_samples": [
+      184,
+      184,
+      184,
+      184,
+      184,
+      184,
+      184,
+      184,
+      184
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture1",
+    "phase": "cold_first_invoke",
+    "version": "fixed",
+    "bytes_min": 184,
+    "bytes_max": 184,
+    "bytes_samples": [
+      184,
+      184,
+      184,
+      184,
+      184,
+      184,
+      184,
+      184,
+      184
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture1",
+    "phase": "cold_first_invoke",
+    "version": "system",
+    "bytes_min": 400,
+    "bytes_max": 12736,
+    "bytes_samples": [
+      400,
+      400,
+      400,
+      12736,
+      12736,
+      12736,
+      400,
+      12736,
+      12736
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture8",
+    "phase": "cold_compile",
+    "version": "before",
+    "bytes_min": 51040,
+    "bytes_max": 51040,
+    "bytes_samples": [
+      51040,
+      51040,
+      51040,
+      51040,
+      51040,
+      51040,
+      51040,
+      51040,
+      51040
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture8",
+    "phase": "cold_compile",
+    "version": "fixed",
+    "bytes_min": 50720,
+    "bytes_max": 50720,
+    "bytes_samples": [
+      50720,
+      50720,
+      50720,
+      50720,
+      50720,
+      50720,
+      50720,
+      50720,
+      50720
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture8",
+    "phase": "cold_compile",
+    "version": "system",
+    "bytes_min": 30456,
+    "bytes_max": 42792,
+    "bytes_samples": [
+      30456,
+      30456,
+      42792,
+      30456,
+      42792,
+      42792,
+      42792,
+      42792,
+      30456
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture8",
+    "phase": "cold_compile_first",
+    "version": "before",
+    "bytes_min": 51480,
+    "bytes_max": 51480,
+    "bytes_samples": [
+      51480,
+      51480,
+      51480,
+      51480,
+      51480,
+      51480,
+      51480,
+      51480,
+      51480
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture8",
+    "phase": "cold_compile_first",
+    "version": "fixed",
+    "bytes_min": 51160,
+    "bytes_max": 51160,
+    "bytes_samples": [
+      51160,
+      51160,
+      51160,
+      51160,
+      51160,
+      51160,
+      51160,
+      51160,
+      51160
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture8",
+    "phase": "cold_compile_first",
+    "version": "system",
+    "bytes_min": 31224,
+    "bytes_max": 43560,
+    "bytes_samples": [
+      31224,
+      31224,
+      43560,
+      31224,
+      43560,
+      43560,
+      43560,
+      43560,
+      31224
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture8",
+    "phase": "cold_first_invoke",
+    "version": "before",
+    "bytes_min": 440,
+    "bytes_max": 440,
+    "bytes_samples": [
+      440,
+      440,
+      440,
+      440,
+      440,
+      440,
+      440,
+      440,
+      440
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture8",
+    "phase": "cold_first_invoke",
+    "version": "fixed",
+    "bytes_min": 440,
+    "bytes_max": 440,
+    "bytes_samples": [
+      440,
+      440,
+      440,
+      440,
+      440,
+      440,
+      440,
+      440,
+      440
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture8",
+    "phase": "cold_first_invoke",
+    "version": "system",
+    "bytes_min": 768,
+    "bytes_max": 768,
+    "bytes_samples": [
+      768,
+      768,
+      768,
+      768,
+      768,
+      768,
+      768,
+      768,
+      768
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture_mutable",
+    "phase": "cold_compile",
+    "version": "before",
+    "bytes_min": 49160,
+    "bytes_max": 49160,
+    "bytes_samples": [
+      49160,
+      49160,
+      49160,
+      49160,
+      49160,
+      49160,
+      49160,
+      49160,
+      49160
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture_mutable",
+    "phase": "cold_compile",
+    "version": "fixed",
+    "bytes_min": 49016,
+    "bytes_max": 49016,
+    "bytes_samples": [
+      49016,
+      49016,
+      49016,
+      49016,
+      49016,
+      49016,
+      49016,
+      49016,
+      49016
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture_mutable",
+    "phase": "cold_compile",
+    "version": "system",
+    "bytes_min": 17000,
+    "bytes_max": 29336,
+    "bytes_samples": [
+      17000,
+      17000,
+      17000,
+      29336,
+      17000,
+      17000,
+      17000,
+      17000,
+      17000
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture_mutable",
+    "phase": "cold_compile_first",
+    "version": "before",
+    "bytes_min": 49368,
+    "bytes_max": 49368,
+    "bytes_samples": [
+      49368,
+      49368,
+      49368,
+      49368,
+      49368,
+      49368,
+      49368,
+      49368,
+      49368
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture_mutable",
+    "phase": "cold_compile_first",
+    "version": "fixed",
+    "bytes_min": 49200,
+    "bytes_max": 49200,
+    "bytes_samples": [
+      49200,
+      49200,
+      49200,
+      49200,
+      49200,
+      49200,
+      49200,
+      49200,
+      49200
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture_mutable",
+    "phase": "cold_compile_first",
+    "version": "system",
+    "bytes_min": 17416,
+    "bytes_max": 29752,
+    "bytes_samples": [
+      17416,
+      17416,
+      17416,
+      29752,
+      17416,
+      17416,
+      17416,
+      17416,
+      17416
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture_mutable",
+    "phase": "cold_first_invoke",
+    "version": "before",
+    "bytes_min": 208,
+    "bytes_max": 208,
+    "bytes_samples": [
+      208,
+      208,
+      208,
+      208,
+      208,
+      208,
+      208,
+      208,
+      208
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture_mutable",
+    "phase": "cold_first_invoke",
+    "version": "fixed",
+    "bytes_min": 184,
+    "bytes_max": 184,
+    "bytes_samples": [
+      184,
+      184,
+      184,
+      184,
+      184,
+      184,
+      184,
+      184,
+      184
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture_mutable",
+    "phase": "cold_first_invoke",
+    "version": "system",
+    "bytes_min": 416,
+    "bytes_max": 416,
+    "bytes_samples": [
+      416,
+      416,
+      416,
+      416,
+      416,
+      416,
+      416,
+      416,
+      416
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture_mutable_reference",
+    "phase": "cold_compile",
+    "version": "before",
+    "bytes_min": 92496,
+    "bytes_max": 92496,
+    "bytes_samples": [
+      92496,
+      92496,
+      92496,
+      92496,
+      92496,
+      92496,
+      92496,
+      92496,
+      92496
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture_mutable_reference",
+    "phase": "cold_compile",
+    "version": "fixed",
+    "bytes_min": 49616,
+    "bytes_max": 49616,
+    "bytes_samples": [
+      49616,
+      49616,
+      49616,
+      49616,
+      49616,
+      49616,
+      49616,
+      49616,
+      49616
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture_mutable_reference",
+    "phase": "cold_compile",
+    "version": "system",
+    "bytes_min": 19152,
+    "bytes_max": 31568,
+    "bytes_samples": [
+      19152,
+      31488,
+      31488,
+      31488,
+      19152,
+      31568,
+      19152,
+      31488,
+      19152
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture_mutable_reference",
+    "phase": "cold_compile_first",
+    "version": "before",
+    "bytes_min": 92656,
+    "bytes_max": 92656,
+    "bytes_samples": [
+      92656,
+      92656,
+      92656,
+      92656,
+      92656,
+      92656,
+      92656,
+      92656,
+      92656
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture_mutable_reference",
+    "phase": "cold_compile_first",
+    "version": "fixed",
+    "bytes_min": 49776,
+    "bytes_max": 49776,
+    "bytes_samples": [
+      49776,
+      49776,
+      49776,
+      49776,
+      49776,
+      49776,
+      49776,
+      49776,
+      49776
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture_mutable_reference",
+    "phase": "cold_compile_first",
+    "version": "system",
+    "bytes_min": 19616,
+    "bytes_max": 32032,
+    "bytes_samples": [
+      19616,
+      31952,
+      31952,
+      31952,
+      19616,
+      32032,
+      19616,
+      31952,
+      19616
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture_mutable_reference",
+    "phase": "cold_first_invoke",
+    "version": "before",
+    "bytes_min": 160,
+    "bytes_max": 160,
+    "bytes_samples": [
+      160,
+      160,
+      160,
+      160,
+      160,
+      160,
+      160,
+      160,
+      160
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture_mutable_reference",
+    "phase": "cold_first_invoke",
+    "version": "fixed",
+    "bytes_min": 160,
+    "bytes_max": 160,
+    "bytes_samples": [
+      160,
+      160,
+      160,
+      160,
+      160,
+      160,
+      160,
+      160,
+      160
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "capture_mutable_reference",
+    "phase": "cold_first_invoke",
+    "version": "system",
+    "bytes_min": 464,
+    "bytes_max": 464,
+    "bytes_samples": [
+      464,
+      464,
+      464,
+      464,
+      464,
+      464,
+      464,
+      464,
+      464
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "nested_mixed128",
+    "phase": "cold_compile",
+    "version": "before",
+    "bytes_min": 68896,
+    "bytes_max": 68896,
+    "bytes_samples": [
+      68896,
+      68896,
+      68896,
+      68896,
+      68896,
+      68896,
+      68896,
+      68896,
+      68896
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "nested_mixed128",
+    "phase": "cold_compile",
+    "version": "fixed",
+    "bytes_min": 79224,
+    "bytes_max": 79224,
+    "bytes_samples": [
+      79224,
+      79224,
+      79224,
+      79224,
+      79224,
+      79224,
+      79224,
+      79224,
+      79224
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "nested_mixed128",
+    "phase": "cold_compile",
+    "version": "system",
+    "bytes_min": 69984,
+    "bytes_max": 82320,
+    "bytes_samples": [
+      82320,
+      69984,
+      69984,
+      82320,
+      69984,
+      82320,
+      69984,
+      82320,
+      69984
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "nested_mixed128",
+    "phase": "cold_compile_first",
+    "version": "before",
+    "bytes_min": 68896,
+    "bytes_max": 68896,
+    "bytes_samples": [
+      68896,
+      68896,
+      68896,
+      68896,
+      68896,
+      68896,
+      68896,
+      68896,
+      68896
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "nested_mixed128",
+    "phase": "cold_compile_first",
+    "version": "fixed",
+    "bytes_min": 79224,
+    "bytes_max": 79224,
+    "bytes_samples": [
+      79224,
+      79224,
+      79224,
+      79224,
+      79224,
+      79224,
+      79224,
+      79224,
+      79224
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "nested_mixed128",
+    "phase": "cold_compile_first",
+    "version": "system",
+    "bytes_min": 69984,
+    "bytes_max": 82320,
+    "bytes_samples": [
+      82320,
+      69984,
+      69984,
+      82320,
+      69984,
+      82320,
+      69984,
+      82320,
+      69984
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "nested_mixed128",
+    "phase": "cold_first_invoke",
+    "version": "before",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "nested_mixed128",
+    "phase": "cold_first_invoke",
+    "version": "fixed",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "nested_mixed128",
+    "phase": "cold_first_invoke",
+    "version": "system",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "try_catch",
+    "phase": "cold_compile",
+    "version": "before",
+    "bytes_min": 42984,
+    "bytes_max": 42984,
+    "bytes_samples": [
+      42984,
+      42984,
+      42984,
+      42984,
+      42984,
+      42984,
+      42984,
+      42984,
+      42984
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "try_catch",
+    "phase": "cold_compile",
+    "version": "fixed",
+    "bytes_min": 44208,
+    "bytes_max": 44208,
+    "bytes_samples": [
+      44208,
+      44208,
+      44208,
+      44208,
+      44208,
+      44208,
+      44208,
+      44208,
+      44208
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "try_catch",
+    "phase": "cold_compile",
+    "version": "system",
+    "bytes_min": 7544,
+    "bytes_max": 19880,
+    "bytes_samples": [
+      7544,
+      19880,
+      7544,
+      7544,
+      7544,
+      7544,
+      7544,
+      7544,
+      7544
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "try_catch",
+    "phase": "cold_compile_first",
+    "version": "before",
+    "bytes_min": 42984,
+    "bytes_max": 42984,
+    "bytes_samples": [
+      42984,
+      42984,
+      42984,
+      42984,
+      42984,
+      42984,
+      42984,
+      42984,
+      42984
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "try_catch",
+    "phase": "cold_compile_first",
+    "version": "fixed",
+    "bytes_min": 44208,
+    "bytes_max": 44208,
+    "bytes_samples": [
+      44208,
+      44208,
+      44208,
+      44208,
+      44208,
+      44208,
+      44208,
+      44208,
+      44208
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "try_catch",
+    "phase": "cold_compile_first",
+    "version": "system",
+    "bytes_min": 7544,
+    "bytes_max": 19880,
+    "bytes_samples": [
+      7544,
+      19880,
+      7544,
+      7544,
+      7544,
+      7544,
+      7544,
+      7544,
+      7544
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "try_catch",
+    "phase": "cold_first_invoke",
+    "version": "before",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "try_catch",
+    "phase": "cold_first_invoke",
+    "version": "fixed",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "try_catch",
+    "phase": "cold_first_invoke",
+    "version": "system",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "try_finally",
+    "phase": "cold_compile",
+    "version": "before",
+    "bytes_min": 42952,
+    "bytes_max": 42952,
+    "bytes_samples": [
+      42952,
+      42952,
+      42952,
+      42952,
+      42952,
+      42952,
+      42952,
+      42952,
+      42952
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "try_finally",
+    "phase": "cold_compile",
+    "version": "fixed",
+    "bytes_min": 44176,
+    "bytes_max": 44176,
+    "bytes_samples": [
+      44176,
+      44176,
+      44176,
+      44176,
+      44176,
+      44176,
+      44176,
+      44176,
+      44176
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "try_finally",
+    "phase": "cold_compile",
+    "version": "system",
+    "bytes_min": 7480,
+    "bytes_max": 19816,
+    "bytes_samples": [
+      7480,
+      19816,
+      19816,
+      7480,
+      19816,
+      19816,
+      19816,
+      19816,
+      19816
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "try_finally",
+    "phase": "cold_compile_first",
+    "version": "before",
+    "bytes_min": 42952,
+    "bytes_max": 42952,
+    "bytes_samples": [
+      42952,
+      42952,
+      42952,
+      42952,
+      42952,
+      42952,
+      42952,
+      42952,
+      42952
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "try_finally",
+    "phase": "cold_compile_first",
+    "version": "fixed",
+    "bytes_min": 44176,
+    "bytes_max": 44176,
+    "bytes_samples": [
+      44176,
+      44176,
+      44176,
+      44176,
+      44176,
+      44176,
+      44176,
+      44176,
+      44176
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "try_finally",
+    "phase": "cold_compile_first",
+    "version": "system",
+    "bytes_min": 7480,
+    "bytes_max": 19816,
+    "bytes_samples": [
+      7480,
+      19816,
+      19816,
+      7480,
+      19816,
+      19816,
+      19816,
+      19816,
+      19816
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "try_finally",
+    "phase": "cold_first_invoke",
+    "version": "before",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "try_finally",
+    "phase": "cold_first_invoke",
+    "version": "fixed",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "10.0.9",
+    "scenario": "try_finally",
+    "phase": "cold_first_invoke",
+    "version": "system",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "add",
+    "phase": "cold_compile",
+    "version": "before",
+    "bytes_min": 46744,
+    "bytes_max": 46744,
+    "bytes_samples": [
+      46744,
+      46744,
+      46744,
+      46744,
+      46744,
+      46744,
+      46744,
+      46744,
+      46744
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "add",
+    "phase": "cold_compile",
+    "version": "fixed",
+    "bytes_min": 46744,
+    "bytes_max": 46744,
+    "bytes_samples": [
+      46744,
+      46744,
+      46744,
+      46744,
+      46744,
+      46744,
+      46744,
+      46744,
+      46744
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "add",
+    "phase": "cold_compile",
+    "version": "system",
+    "bytes_min": 18744,
+    "bytes_max": 18744,
+    "bytes_samples": [
+      18744,
+      18744,
+      18744,
+      18744,
+      18744,
+      18744,
+      18744,
+      18744,
+      18744
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "add",
+    "phase": "cold_compile_first",
+    "version": "before",
+    "bytes_min": 46744,
+    "bytes_max": 46744,
+    "bytes_samples": [
+      46744,
+      46744,
+      46744,
+      46744,
+      46744,
+      46744,
+      46744,
+      46744,
+      46744
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "add",
+    "phase": "cold_compile_first",
+    "version": "fixed",
+    "bytes_min": 46744,
+    "bytes_max": 46744,
+    "bytes_samples": [
+      46744,
+      46744,
+      46744,
+      46744,
+      46744,
+      46744,
+      46744,
+      46744,
+      46744
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "add",
+    "phase": "cold_compile_first",
+    "version": "system",
+    "bytes_min": 18744,
+    "bytes_max": 18744,
+    "bytes_samples": [
+      18744,
+      18744,
+      18744,
+      18744,
+      18744,
+      18744,
+      18744,
+      18744,
+      18744
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "add",
+    "phase": "cold_first_invoke",
+    "version": "before",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "add",
+    "phase": "cold_first_invoke",
+    "version": "fixed",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "add",
+    "phase": "cold_first_invoke",
+    "version": "system",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "balanced256",
+    "phase": "cold_compile",
+    "version": "before",
+    "bytes_min": 48296,
+    "bytes_max": 48296,
+    "bytes_samples": [
+      48296,
+      48296,
+      48296,
+      48296,
+      48296,
+      48296,
+      48296,
+      48296,
+      48296
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "balanced256",
+    "phase": "cold_compile",
+    "version": "fixed",
+    "bytes_min": 48296,
+    "bytes_max": 48296,
+    "bytes_samples": [
+      48296,
+      48296,
+      48296,
+      48296,
+      48296,
+      48296,
+      48296,
+      48296,
+      48296
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "balanced256",
+    "phase": "cold_compile",
+    "version": "system",
+    "bytes_min": 39408,
+    "bytes_max": 51744,
+    "bytes_samples": [
+      51744,
+      51744,
+      51744,
+      51744,
+      51744,
+      51744,
+      51744,
+      51744,
+      39408
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "balanced256",
+    "phase": "cold_compile_first",
+    "version": "before",
+    "bytes_min": 48296,
+    "bytes_max": 48296,
+    "bytes_samples": [
+      48296,
+      48296,
+      48296,
+      48296,
+      48296,
+      48296,
+      48296,
+      48296,
+      48296
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "balanced256",
+    "phase": "cold_compile_first",
+    "version": "fixed",
+    "bytes_min": 48296,
+    "bytes_max": 48296,
+    "bytes_samples": [
+      48296,
+      48296,
+      48296,
+      48296,
+      48296,
+      48296,
+      48296,
+      48296,
+      48296
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "balanced256",
+    "phase": "cold_compile_first",
+    "version": "system",
+    "bytes_min": 39408,
+    "bytes_max": 51744,
+    "bytes_samples": [
+      51744,
+      51744,
+      51744,
+      51744,
+      51744,
+      51744,
+      51744,
+      51744,
+      39408
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "balanced256",
+    "phase": "cold_first_invoke",
+    "version": "before",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "balanced256",
+    "phase": "cold_first_invoke",
+    "version": "fixed",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "balanced256",
+    "phase": "cold_first_invoke",
+    "version": "system",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "blocks32",
+    "phase": "cold_compile",
+    "version": "before",
+    "bytes_min": 50448,
+    "bytes_max": 50448,
+    "bytes_samples": [
+      50448,
+      50448,
+      50448,
+      50448,
+      50448,
+      50448,
+      50448,
+      50448,
+      50448
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "blocks32",
+    "phase": "cold_compile",
+    "version": "fixed",
+    "bytes_min": 50448,
+    "bytes_max": 50448,
+    "bytes_samples": [
+      50448,
+      50448,
+      50448,
+      50448,
+      50448,
+      50448,
+      50448,
+      50448,
+      50448
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "blocks32",
+    "phase": "cold_compile",
+    "version": "system",
+    "bytes_min": 64448,
+    "bytes_max": 64448,
+    "bytes_samples": [
+      64448,
+      64448,
+      64448,
+      64448,
+      64448,
+      64448,
+      64448,
+      64448,
+      64448
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "blocks32",
+    "phase": "cold_compile_first",
+    "version": "before",
+    "bytes_min": 50448,
+    "bytes_max": 50448,
+    "bytes_samples": [
+      50448,
+      50448,
+      50448,
+      50448,
+      50448,
+      50448,
+      50448,
+      50448,
+      50448
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "blocks32",
+    "phase": "cold_compile_first",
+    "version": "fixed",
+    "bytes_min": 50448,
+    "bytes_max": 50448,
+    "bytes_samples": [
+      50448,
+      50448,
+      50448,
+      50448,
+      50448,
+      50448,
+      50448,
+      50448,
+      50448
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "blocks32",
+    "phase": "cold_compile_first",
+    "version": "system",
+    "bytes_min": 64448,
+    "bytes_max": 64448,
+    "bytes_samples": [
+      64448,
+      64448,
+      64448,
+      64448,
+      64448,
+      64448,
+      64448,
+      64448,
+      64448
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "blocks32",
+    "phase": "cold_first_invoke",
+    "version": "before",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "blocks32",
+    "phase": "cold_first_invoke",
+    "version": "fixed",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "blocks32",
+    "phase": "cold_first_invoke",
+    "version": "system",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture1",
+    "phase": "cold_compile",
+    "version": "before",
+    "bytes_min": 53416,
+    "bytes_max": 53416,
+    "bytes_samples": [
+      53416,
+      53416,
+      53416,
+      53416,
+      53416,
+      53416,
+      53416,
+      53416,
+      53416
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture1",
+    "phase": "cold_compile",
+    "version": "fixed",
+    "bytes_min": 53224,
+    "bytes_max": 53224,
+    "bytes_samples": [
+      53224,
+      53224,
+      53224,
+      53224,
+      53224,
+      53224,
+      53224,
+      53224,
+      53224
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture1",
+    "phase": "cold_compile",
+    "version": "system",
+    "bytes_min": 28920,
+    "bytes_max": 28920,
+    "bytes_samples": [
+      28920,
+      28920,
+      28920,
+      28920,
+      28920,
+      28920,
+      28920,
+      28920,
+      28920
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture1",
+    "phase": "cold_compile_first",
+    "version": "before",
+    "bytes_min": 53600,
+    "bytes_max": 53600,
+    "bytes_samples": [
+      53600,
+      53600,
+      53600,
+      53600,
+      53600,
+      53600,
+      53600,
+      53600,
+      53600
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture1",
+    "phase": "cold_compile_first",
+    "version": "fixed",
+    "bytes_min": 53408,
+    "bytes_max": 53408,
+    "bytes_samples": [
+      53408,
+      53408,
+      53408,
+      53408,
+      53408,
+      53408,
+      53408,
+      53408,
+      53408
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture1",
+    "phase": "cold_compile_first",
+    "version": "system",
+    "bytes_min": 29320,
+    "bytes_max": 29320,
+    "bytes_samples": [
+      29320,
+      29320,
+      29320,
+      29320,
+      29320,
+      29320,
+      29320,
+      29320,
+      29320
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture1",
+    "phase": "cold_first_invoke",
+    "version": "before",
+    "bytes_min": 184,
+    "bytes_max": 184,
+    "bytes_samples": [
+      184,
+      184,
+      184,
+      184,
+      184,
+      184,
+      184,
+      184,
+      184
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture1",
+    "phase": "cold_first_invoke",
+    "version": "fixed",
+    "bytes_min": 184,
+    "bytes_max": 184,
+    "bytes_samples": [
+      184,
+      184,
+      184,
+      184,
+      184,
+      184,
+      184,
+      184,
+      184
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture1",
+    "phase": "cold_first_invoke",
+    "version": "system",
+    "bytes_min": 400,
+    "bytes_max": 400,
+    "bytes_samples": [
+      400,
+      400,
+      400,
+      400,
+      400,
+      400,
+      400,
+      400,
+      400
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture8",
+    "phase": "cold_compile",
+    "version": "before",
+    "bytes_min": 55456,
+    "bytes_max": 55456,
+    "bytes_samples": [
+      55456,
+      55456,
+      55456,
+      55456,
+      55456,
+      55456,
+      55456,
+      55456,
+      55456
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture8",
+    "phase": "cold_compile",
+    "version": "fixed",
+    "bytes_min": 55136,
+    "bytes_max": 55136,
+    "bytes_samples": [
+      55136,
+      55136,
+      55136,
+      55136,
+      55136,
+      55136,
+      55136,
+      55136,
+      55136
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture8",
+    "phase": "cold_compile",
+    "version": "system",
+    "bytes_min": 40928,
+    "bytes_max": 40928,
+    "bytes_samples": [
+      40928,
+      40928,
+      40928,
+      40928,
+      40928,
+      40928,
+      40928,
+      40928,
+      40928
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture8",
+    "phase": "cold_compile_first",
+    "version": "before",
+    "bytes_min": 55896,
+    "bytes_max": 55896,
+    "bytes_samples": [
+      55896,
+      55896,
+      55896,
+      55896,
+      55896,
+      55896,
+      55896,
+      55896,
+      55896
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture8",
+    "phase": "cold_compile_first",
+    "version": "fixed",
+    "bytes_min": 55576,
+    "bytes_max": 55576,
+    "bytes_samples": [
+      55576,
+      55576,
+      55576,
+      55576,
+      55576,
+      55576,
+      55576,
+      55576,
+      55576
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture8",
+    "phase": "cold_compile_first",
+    "version": "system",
+    "bytes_min": 41696,
+    "bytes_max": 41696,
+    "bytes_samples": [
+      41696,
+      41696,
+      41696,
+      41696,
+      41696,
+      41696,
+      41696,
+      41696,
+      41696
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture8",
+    "phase": "cold_first_invoke",
+    "version": "before",
+    "bytes_min": 440,
+    "bytes_max": 440,
+    "bytes_samples": [
+      440,
+      440,
+      440,
+      440,
+      440,
+      440,
+      440,
+      440,
+      440
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture8",
+    "phase": "cold_first_invoke",
+    "version": "fixed",
+    "bytes_min": 440,
+    "bytes_max": 440,
+    "bytes_samples": [
+      440,
+      440,
+      440,
+      440,
+      440,
+      440,
+      440,
+      440,
+      440
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture8",
+    "phase": "cold_first_invoke",
+    "version": "system",
+    "bytes_min": 768,
+    "bytes_max": 768,
+    "bytes_samples": [
+      768,
+      768,
+      768,
+      768,
+      768,
+      768,
+      768,
+      768,
+      768
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture_mutable",
+    "phase": "cold_compile",
+    "version": "before",
+    "bytes_min": 53576,
+    "bytes_max": 53576,
+    "bytes_samples": [
+      53576,
+      53576,
+      53576,
+      53576,
+      53576,
+      53576,
+      53576,
+      53576,
+      53576
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture_mutable",
+    "phase": "cold_compile",
+    "version": "fixed",
+    "bytes_min": 53432,
+    "bytes_max": 53432,
+    "bytes_samples": [
+      53432,
+      53432,
+      53432,
+      53432,
+      53432,
+      53432,
+      53432,
+      53432,
+      53432
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture_mutable",
+    "phase": "cold_compile",
+    "version": "system",
+    "bytes_min": 29456,
+    "bytes_max": 29456,
+    "bytes_samples": [
+      29456,
+      29456,
+      29456,
+      29456,
+      29456,
+      29456,
+      29456,
+      29456,
+      29456
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture_mutable",
+    "phase": "cold_compile_first",
+    "version": "before",
+    "bytes_min": 53784,
+    "bytes_max": 53784,
+    "bytes_samples": [
+      53784,
+      53784,
+      53784,
+      53784,
+      53784,
+      53784,
+      53784,
+      53784,
+      53784
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture_mutable",
+    "phase": "cold_compile_first",
+    "version": "fixed",
+    "bytes_min": 53616,
+    "bytes_max": 53616,
+    "bytes_samples": [
+      53616,
+      53616,
+      53616,
+      53616,
+      53616,
+      53616,
+      53616,
+      53616,
+      53616
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture_mutable",
+    "phase": "cold_compile_first",
+    "version": "system",
+    "bytes_min": 29872,
+    "bytes_max": 29872,
+    "bytes_samples": [
+      29872,
+      29872,
+      29872,
+      29872,
+      29872,
+      29872,
+      29872,
+      29872,
+      29872
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture_mutable",
+    "phase": "cold_first_invoke",
+    "version": "before",
+    "bytes_min": 208,
+    "bytes_max": 208,
+    "bytes_samples": [
+      208,
+      208,
+      208,
+      208,
+      208,
+      208,
+      208,
+      208,
+      208
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture_mutable",
+    "phase": "cold_first_invoke",
+    "version": "fixed",
+    "bytes_min": 184,
+    "bytes_max": 184,
+    "bytes_samples": [
+      184,
+      184,
+      184,
+      184,
+      184,
+      184,
+      184,
+      184,
+      184
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture_mutable",
+    "phase": "cold_first_invoke",
+    "version": "system",
+    "bytes_min": 416,
+    "bytes_max": 416,
+    "bytes_samples": [
+      416,
+      416,
+      416,
+      416,
+      416,
+      416,
+      416,
+      416,
+      416
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture_mutable_reference",
+    "phase": "cold_compile",
+    "version": "before",
+    "bytes_min": 95016,
+    "bytes_max": 95016,
+    "bytes_samples": [
+      95016,
+      95016,
+      95016,
+      95016,
+      95016,
+      95016,
+      95016,
+      95016,
+      95016
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture_mutable_reference",
+    "phase": "cold_compile",
+    "version": "fixed",
+    "bytes_min": 54032,
+    "bytes_max": 54032,
+    "bytes_samples": [
+      54032,
+      54032,
+      54032,
+      54032,
+      54032,
+      54032,
+      54032,
+      54032,
+      54032
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture_mutable_reference",
+    "phase": "cold_compile",
+    "version": "system",
+    "bytes_min": 31608,
+    "bytes_max": 31608,
+    "bytes_samples": [
+      31608,
+      31608,
+      31608,
+      31608,
+      31608,
+      31608,
+      31608,
+      31608,
+      31608
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture_mutable_reference",
+    "phase": "cold_compile_first",
+    "version": "before",
+    "bytes_min": 95176,
+    "bytes_max": 95176,
+    "bytes_samples": [
+      95176,
+      95176,
+      95176,
+      95176,
+      95176,
+      95176,
+      95176,
+      95176,
+      95176
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture_mutable_reference",
+    "phase": "cold_compile_first",
+    "version": "fixed",
+    "bytes_min": 54192,
+    "bytes_max": 54192,
+    "bytes_samples": [
+      54192,
+      54192,
+      54192,
+      54192,
+      54192,
+      54192,
+      54192,
+      54192,
+      54192
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture_mutable_reference",
+    "phase": "cold_compile_first",
+    "version": "system",
+    "bytes_min": 32072,
+    "bytes_max": 32072,
+    "bytes_samples": [
+      32072,
+      32072,
+      32072,
+      32072,
+      32072,
+      32072,
+      32072,
+      32072,
+      32072
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture_mutable_reference",
+    "phase": "cold_first_invoke",
+    "version": "before",
+    "bytes_min": 160,
+    "bytes_max": 160,
+    "bytes_samples": [
+      160,
+      160,
+      160,
+      160,
+      160,
+      160,
+      160,
+      160,
+      160
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture_mutable_reference",
+    "phase": "cold_first_invoke",
+    "version": "fixed",
+    "bytes_min": 160,
+    "bytes_max": 160,
+    "bytes_samples": [
+      160,
+      160,
+      160,
+      160,
+      160,
+      160,
+      160,
+      160,
+      160
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "capture_mutable_reference",
+    "phase": "cold_first_invoke",
+    "version": "system",
+    "bytes_min": 464,
+    "bytes_max": 464,
+    "bytes_samples": [
+      464,
+      464,
+      464,
+      464,
+      464,
+      464,
+      464,
+      464,
+      464
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "nested_mixed128",
+    "phase": "cold_compile",
+    "version": "before",
+    "bytes_min": 73672,
+    "bytes_max": 73672,
+    "bytes_samples": [
+      73672,
+      73672,
+      73672,
+      73672,
+      73672,
+      73672,
+      73672,
+      73672,
+      73672
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "nested_mixed128",
+    "phase": "cold_compile",
+    "version": "fixed",
+    "bytes_min": 84000,
+    "bytes_max": 84000,
+    "bytes_samples": [
+      84000,
+      84000,
+      84000,
+      84000,
+      84000,
+      84000,
+      84000,
+      84000,
+      84000
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "nested_mixed128",
+    "phase": "cold_compile",
+    "version": "system",
+    "bytes_min": 82360,
+    "bytes_max": 82360,
+    "bytes_samples": [
+      82360,
+      82360,
+      82360,
+      82360,
+      82360,
+      82360,
+      82360,
+      82360,
+      82360
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "nested_mixed128",
+    "phase": "cold_compile_first",
+    "version": "before",
+    "bytes_min": 73672,
+    "bytes_max": 73672,
+    "bytes_samples": [
+      73672,
+      73672,
+      73672,
+      73672,
+      73672,
+      73672,
+      73672,
+      73672,
+      73672
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "nested_mixed128",
+    "phase": "cold_compile_first",
+    "version": "fixed",
+    "bytes_min": 84000,
+    "bytes_max": 84000,
+    "bytes_samples": [
+      84000,
+      84000,
+      84000,
+      84000,
+      84000,
+      84000,
+      84000,
+      84000,
+      84000
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "nested_mixed128",
+    "phase": "cold_compile_first",
+    "version": "system",
+    "bytes_min": 82360,
+    "bytes_max": 82360,
+    "bytes_samples": [
+      82360,
+      82360,
+      82360,
+      82360,
+      82360,
+      82360,
+      82360,
+      82360,
+      82360
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "nested_mixed128",
+    "phase": "cold_first_invoke",
+    "version": "before",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "nested_mixed128",
+    "phase": "cold_first_invoke",
+    "version": "fixed",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "nested_mixed128",
+    "phase": "cold_first_invoke",
+    "version": "system",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "try_catch",
+    "phase": "cold_compile",
+    "version": "before",
+    "bytes_min": 47376,
+    "bytes_max": 47376,
+    "bytes_samples": [
+      47376,
+      47376,
+      47376,
+      47376,
+      47376,
+      47376,
+      47376,
+      47376,
+      47376
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "try_catch",
+    "phase": "cold_compile",
+    "version": "fixed",
+    "bytes_min": 48624,
+    "bytes_max": 48624,
+    "bytes_samples": [
+      48624,
+      48624,
+      48624,
+      48624,
+      48624,
+      48624,
+      48624,
+      48624,
+      48624
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "try_catch",
+    "phase": "cold_compile",
+    "version": "system",
+    "bytes_min": 19920,
+    "bytes_max": 19920,
+    "bytes_samples": [
+      19920,
+      19920,
+      19920,
+      19920,
+      19920,
+      19920,
+      19920,
+      19920,
+      19920
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "try_catch",
+    "phase": "cold_compile_first",
+    "version": "before",
+    "bytes_min": 47376,
+    "bytes_max": 47376,
+    "bytes_samples": [
+      47376,
+      47376,
+      47376,
+      47376,
+      47376,
+      47376,
+      47376,
+      47376,
+      47376
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "try_catch",
+    "phase": "cold_compile_first",
+    "version": "fixed",
+    "bytes_min": 48624,
+    "bytes_max": 48624,
+    "bytes_samples": [
+      48624,
+      48624,
+      48624,
+      48624,
+      48624,
+      48624,
+      48624,
+      48624,
+      48624
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "try_catch",
+    "phase": "cold_compile_first",
+    "version": "system",
+    "bytes_min": 19920,
+    "bytes_max": 19920,
+    "bytes_samples": [
+      19920,
+      19920,
+      19920,
+      19920,
+      19920,
+      19920,
+      19920,
+      19920,
+      19920
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "try_catch",
+    "phase": "cold_first_invoke",
+    "version": "before",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "try_catch",
+    "phase": "cold_first_invoke",
+    "version": "fixed",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "try_catch",
+    "phase": "cold_first_invoke",
+    "version": "system",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "try_finally",
+    "phase": "cold_compile",
+    "version": "before",
+    "bytes_min": 47344,
+    "bytes_max": 47344,
+    "bytes_samples": [
+      47344,
+      47344,
+      47344,
+      47344,
+      47344,
+      47344,
+      47344,
+      47344,
+      47344
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "try_finally",
+    "phase": "cold_compile",
+    "version": "fixed",
+    "bytes_min": 48592,
+    "bytes_max": 48592,
+    "bytes_samples": [
+      48592,
+      48592,
+      48592,
+      48592,
+      48592,
+      48592,
+      48592,
+      48592,
+      48592
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "try_finally",
+    "phase": "cold_compile",
+    "version": "system",
+    "bytes_min": 19856,
+    "bytes_max": 19856,
+    "bytes_samples": [
+      19856,
+      19856,
+      19856,
+      19856,
+      19856,
+      19856,
+      19856,
+      19856,
+      19856
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "try_finally",
+    "phase": "cold_compile_first",
+    "version": "before",
+    "bytes_min": 47344,
+    "bytes_max": 47344,
+    "bytes_samples": [
+      47344,
+      47344,
+      47344,
+      47344,
+      47344,
+      47344,
+      47344,
+      47344,
+      47344
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "try_finally",
+    "phase": "cold_compile_first",
+    "version": "fixed",
+    "bytes_min": 48592,
+    "bytes_max": 48592,
+    "bytes_samples": [
+      48592,
+      48592,
+      48592,
+      48592,
+      48592,
+      48592,
+      48592,
+      48592,
+      48592
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "try_finally",
+    "phase": "cold_compile_first",
+    "version": "system",
+    "bytes_min": 19856,
+    "bytes_max": 19856,
+    "bytes_samples": [
+      19856,
+      19856,
+      19856,
+      19856,
+      19856,
+      19856,
+      19856,
+      19856,
+      19856
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "try_finally",
+    "phase": "cold_first_invoke",
+    "version": "before",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "try_finally",
+    "phase": "cold_first_invoke",
+    "version": "fixed",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  {
+    "runtime": "8.0.28",
+    "scenario": "try_finally",
+    "phase": "cold_first_invoke",
+    "version": "system",
+    "bytes_min": 0,
+    "bytes_max": 0,
+    "bytes_samples": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  }
+]

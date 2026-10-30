@@ -1,0 +1,5 @@
+931fa0fc	Test FEC rejection contracts for irreducible expression nodes
+6774772f	Classify interpreter-specific runtime assertions with compiled behavior proofs
+63fa42d4	Fix non-Exception catch policy for generated methods
+2043b6f7	Preserve original string constant reference identity
+d01d4c2e	Keep Framework boxed receivers verifiable during argument spills

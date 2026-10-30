@@ -40,6 +40,8 @@ Moreover the compiled delegate may be slower than the manually created delegate 
 _TL;DR;_
 > Expression.Compile creates a DynamicMethod and associates it with an anonymous assembly to run it in a sand-boxed environment. This makes it safe for a dynamic method to be emitted and executed by partially trusted code but adds some run-time overhead.
 
+FEC keeps owned DynamicMethods for ordinary lambdas. Methods containing exception regions use anonymous hosting to match System's non-Exception throw and catch policy. The APIs that skip collection also use anonymous hosting, because their exception regions are unknown before emission. Anonymous hosting adds eager JIT work when creating the delegate. `CompileFastToIL` inherits the host policy of the caller's method.
+
 See also [a deep dive to Delegate internals](https://mattwarren.org/2017/01/25/How-do-.NET-delegates-work/#different-types-of-delegates).
 
 
@@ -263,16 +265,33 @@ var x = f(new B());
 The idea is to provide the fast compilation for the supported expression types
 and fallback to the system `Expression.Compile()` for the not supported types:
 
+Invoking a runtime `System.Linq.Expressions.Expression<TDelegate>` value compiles that value
+with its `Compile()` method before invoking the resulting delegate, as the system compiler does.
+This runtime operation is distinct from compilation fallback: with
+`CompileFast(ifFastFailedReturnNull: true)`, FEC still compiles the surrounding lambda directly.
+Errors from compiling or executing the runtime expression propagate to its caller.
+Ref-property arguments retain FEC's normal setter copyback after successful invocation.
+The system compiler can lose this copyback when another argument contains an exception
+block; FEC preserves the property mutation instead of reproducing that behavior.
+
+Dynamic expressions use ordinary DLR call sites: each emitted occurrence has its own site,
+reuses binding rules, and reads the current mutable `Target` for every invocation.
+Runtime binder rule compilation is intrinsic DLR behavior; the outer lambda still compiles directly with FEC.
+
+Quoted lambdas and `RuntimeVariables` share live typed cells with compiled outer and sibling lambdas.
+Mutations remain visible after the creating method returns; independent activations keep separate storage.
+Capture-free quoted trees retain their original identity. The closure arrays and direct IL emitter remain in use.
+
 ### What's not supported yet
 
 **FEC does not support yet:** 
 
-- `Quote`
-- `Dynamic`
-- `RuntimeVariables`
+- Captures of by-ref parameters, pointer types, or byref-like values that cannot be stored in a heap cell
+- Reused physical method-tail labels reached with pending operand values or from protected exception regions (strict null / `NotSupported_MethodReturn_Context`)
 - `DebugInfo`
-- `MemberInit` with the `MemberMemberBinding` and the `ListMemberBinding` binding types
 - `NewArrayInit` multi-dimensional array initializer is not supported yet
+
+Nested `MemberInit` member and list bindings are supported. Very deep expression trees still have a known recursive traversal limit; see the [runtime compatibility results](test/FastExpressionCompiler.DotNetRuntimeTests/results/fixes/README.md).
 
 To find what nodes are not supported in your expression you may use the technic described below in the [Diagnostics](#diagnostics) section. 
 

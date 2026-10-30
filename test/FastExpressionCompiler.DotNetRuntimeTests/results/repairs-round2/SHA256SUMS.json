@@ -1,0 +1,20 @@
+{
+  "allocation-confirmation-framework.json": "35abdc3c46b398b6f8834f876b98b904ebfa5d2fd0869799e8e33045fd1c4717",
+  "allocation-confirmation.json": "883a73dc9cc6a093ad0b74b523b5431375fe1210f6f8631f4c2b36672f1c2cc1",
+  "DECISIONS.txt": "9fdc84adddab2d23e1ce2fe32d621192203d999430732dd5f40716639776b2a0",
+  "frame-stages.json": "803d021dd7fe236db3d0df86283eca8f2ba87ec8d07b2ef0517151746e601293",
+  "frame-stages.txt": "01e5d2677513a5afec61d37fa2248a36b8a783372c85e41bb36d2af9f194164d",
+  "framework-comparisons.csv": "8ab275c0a8ffe7af6e1a7f76dc5d57169d584d6168628b6cc724116b70c70bd6",
+  "independent-source-review.txt": "25fb9ffda7e940866a4d97e6c5cf876c5eea495a88d04c08b85e1cb0ea859de4",
+  "manifest.json": "2fd9a7a675753b27187e33acacfe6fc8b8182ec9281df0442f533e61b1e9d87b",
+  "measurements.json": "ebec39c89b3d63f5496e377ea415bb84da45030a8f098ed9e23ff4991fc27a9c",
+  "modern-comparisons.csv": "787e1175c85c60946a9f3124eefbe6a4f102b2214bd6416d3ac45980a101d2db",
+  "raw-measurements.zip": "6d8c1d939e5ad4c626387957722a5f2e13a4e9bdd839fe649ca28dceb919f498",
+  "remaining-costs.json": "f7ae4d3fb8f68e0db62c9b2e4ac6b9b0460f785c8b8ad82056a360d11bf375db",
+  "repair-commits.txt": "b75d6b82256bacfd2ce137612fa637fd694f3c314fdf17fc6144285bd60252cd",
+  "report.html": "0267160284ea611eaeafc961bc99d6c8b8d04ff0bc8c1d13893b576b30d83700",
+  "REPRODUCTION.txt": "9bb7f04bf6d96ee645c6cd29479380d4adeaa669cfff14848199dcf68935771f",
+  "reproduction.zip": "dfd915e54f4ab2cea834700720552860ad0316ce1a06ff203e78809de3abc0c4",
+  "validation-logs.zip": "ed9d20ceaa6e2d6138dfb62be6b8b0cddece5b9bdab692962fbac2ac73c267a6",
+  "validation.json": "1f3f704a0cc5270f03e65353585b747d75168bc8a43a7a4f1edaadf637a51e25"
+}

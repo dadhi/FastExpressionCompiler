@@ -1,0 +1,41 @@
+{
+  "codeHead": "35622f327afd42603e83403b3b5724750108e7d2",
+  "codes": {
+    "FastExpressionCompiler": 0,
+    "FastExpressionCompiler.LightExpression": 0,
+    "native-net10.0": 0,
+    "native-net8.0": 0,
+    "framework-build": 0,
+    "framework-run": 0,
+    "imported-build": 0,
+    "imported-full": 0
+  },
+  "imported": {
+    "batches": 21,
+    "crashes": 0,
+    "counters": {
+      "total": 35122,
+      "executed": 35064,
+      "passed": 35064,
+      "failed": 0,
+      "error": 0,
+      "timeout": 0,
+      "aborted": 0,
+      "notExecuted": 0
+    },
+    "originalDenominator": 35133,
+    "exclusions": 69,
+    "newExclusions": 0
+  },
+  "native": {
+    "net10": "All runner suites pass; legacy1712",
+    "net8": "All runner suites pass; legacy1711",
+    "framework": "TestX1041 and legacy1595 pass"
+  },
+  "snapshot": {
+    "commit": "35622f327afd42603e83403b3b5724750108e7d2",
+    "compilerSha256": "1b020c284666383c94a132f991c81de1b29d5625edf689236332256301dc3c38",
+    "assemblySha256": "c5f2ca84b860b5a70626976f157bd6a26c8f6ce1cae0b611d804fd9b212b3280"
+  },
+  "productionBehavior": "Only source comments changed since8f; held experiments are not merged."
+}

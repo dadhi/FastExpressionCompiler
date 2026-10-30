@@ -308,7 +308,10 @@ namespace System.Linq.Expressions.Tests
                 true);
             Action act = lambda.CompileForFec(useInterpreter);
             act();
-            lambda.Verify(@"
+            // Both rows execute FEC above; its IL differs and it has no interpreter instruction layout.
+            // Keep the upstream IL and interpreter layout assertions in the System compiler control run.
+            if (Environment.GetEnvironmentVariable("FEC_TEST_COMPILER") == "system")
+                lambda.Verify(@"
 .method void ::lambda_method(class [System.Linq.Expressions]System.Runtime.CompilerServices.Closure)
 {
   .maxstack 2
