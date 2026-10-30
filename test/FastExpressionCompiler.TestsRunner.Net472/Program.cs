@@ -123,7 +123,9 @@ namespace FastExpressionCompiler.UnitTests
 
             var unitTests = Task.Run(() =>
             {
+                Run(new UnsignedDivisionRegressionTests().Run);
                 Run(new ArithmeticOperationsTests().Run);
+                Run(new LightExpression.UnitTests.UnsignedDivisionRegressionTests().Run);
                 Run(new LightExpression.UnitTests.ArithmeticOperationsTests().Run);
                 Run(new AssignTests().Run);
                 Run(new LightExpression.UnitTests.AssignTests().Run);
