@@ -1153,6 +1153,8 @@ namespace FastExpressionCompiler
             public short Depth;
             /// <summary>Can the jump from the outside get into this scope: a block in the statement position, but not in the expression or try</summary>
             public bool Enterable;
+            /// <summary>0 - none, 1 - the catch body, 2 - the finally or fault body, to check the rethrow and the jumps out of the finally</summary>
+            public byte Region;
         }
 
         struct LabelRef
@@ -1168,6 +1170,14 @@ namespace FastExpressionCompiler
             public SmallList<LabelScope, Stack8<LabelScope>, NoArrayPool<LabelScope>> Scopes;
             public SmallList<LabelRef, Stack8<LabelRef>, NoArrayPool<LabelRef>> Defs;
             public SmallList<LabelRef, Stack8<LabelRef>, NoArrayPool<LabelRef>> Gotos;
+            public SmallList<short, Stack2<short>, NoArrayPool<short>> Rethrows; // the scopes of the rethrows
+        }
+
+        private static short AddLabelScope(ref LabelWalk w, short parent, bool enterable, byte region = 0)
+        {
+            var scope = (short)w.Scopes.Count;
+            w.Scopes.Add(new LabelScope { Parent = parent, Depth = (short)(w.Scopes.GetSurePresentRef(parent).Depth + 1), Enterable = enterable, Region = region });
+            return scope;
         }
 
         private static void CollectLabelRefs(Expression e, short scope, bool enterable, ref LabelWalk w)
@@ -1182,8 +1192,7 @@ namespace FastExpressionCompiler
                         var blockExprCount = blockExprs.Count;
                         if (blockExprCount == 0)
                             return;
-                        var blockScope = (short)w.Scopes.Count;
-                        w.Scopes.Add(new LabelScope { Parent = scope, Depth = (short)(w.Scopes.GetSurePresentRef(scope).Depth + 1), Enterable = enterable });
+                        var blockScope = AddLabelScope(ref w, scope, enterable);
                         for (var i = 0; i < blockExprCount - 1; ++i)
                             CollectLabelRefs(blockExprs[i], blockScope, true, ref w);
                         e = blockExprs[blockExprCount - 1];
@@ -1207,8 +1216,7 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Loop:
                         var loopExpr = (LoopExpression)e;
-                        var loopScope = (short)w.Scopes.Count;
-                        w.Scopes.Add(new LabelScope { Parent = scope, Depth = (short)(w.Scopes.GetSurePresentRef(scope).Depth + 1), Enterable = enterable });
+                        var loopScope = AddLabelScope(ref w, scope, enterable);
                         if (loopExpr.BreakLabel != null)
                             w.Defs.Add(new LabelRef { Target = loopExpr.BreakLabel, Scope = loopScope, Enterable = true });
                         if (loopExpr.ContinueLabel != null)
@@ -1240,9 +1248,11 @@ namespace FastExpressionCompiler
                         for (var i = 0; i < handlers.Count; ++i)
                         {
                             CollectLabelRefs(handlers[i].Filter, scope, false, ref w);
-                            CollectLabelRefs(handlers[i].Body, scope, false, ref w);
+                            CollectLabelRefs(handlers[i].Body, AddLabelScope(ref w, scope, false, 1), false, ref w);
                         }
                         e = tryExpr.Finally ?? tryExpr.Fault; // only one of them may be set
+                        if (e != null)
+                            scope = AddLabelScope(ref w, scope, false, 2);
                         enterable = false;
                         continue;
 
@@ -1258,7 +1268,11 @@ namespace FastExpressionCompiler
                     e = bin.Right;
                 }
                 else if (e is UnaryExpression unary)
+                {
+                    if (unary.NodeType == ExpressionType.Throw && unary.Operand == null)
+                        w.Rethrows.Add(scope);
                     e = unary.Operand;
+                }
                 else if (e is TypeBinaryExpression typeBin)
                     e = typeBin.Expression;
                 else if (e is MemberExpression member)
@@ -1286,7 +1300,8 @@ namespace FastExpressionCompiler
         }
 
         /// <summary>Checks the rules of System.Linq.Expressions for the labels: no redefinition in the nested scope, no ambiguous jump,
-        /// no jump into the expression or into the block with the value. Throws the InvalidOperationException if violated.</summary>
+        /// no jump into the expression or into the block with the value, no jump out of the finally block, no rethrow outside of the catch body.
+        /// Throws the InvalidOperationException if violated.</summary>
         private static void ValidateLabels(Expression body)
         {
             var w = new LabelWalk();
@@ -1309,6 +1324,15 @@ namespace FastExpressionCompiler
                             throw new InvalidOperationException($"Label '{a.Target.Name}' is defined multiple times in the scope where it is visible");
                 }
 
+            for (var i = 0; i < w.Rethrows.Count; ++i)
+            {
+                var s = w.Rethrows.GetSurePresentRef(i);
+                while (s != -1 && scopes.GetSurePresentRef(s).Region == 0)
+                    s = scopes.GetSurePresentRef(s).Parent;
+                if (s == -1 || scopes.GetSurePresentRef(s).Region != 1)
+                    throw new InvalidOperationException("Rethrow statement is valid only inside a catch block");
+            }
+
             for (var i = 0; i < w.Gotos.Count; ++i)
             {
                 ref var g = ref w.Gotos.GetSurePresentRef(i);
@@ -1328,6 +1352,10 @@ namespace FastExpressionCompiler
                     while (scopes.GetSurePresentRef(dx).Depth > scopes.GetSurePresentRef(gy).Depth) dx = scopes.GetSurePresentRef(dx).Parent;
                     while (scopes.GetSurePresentRef(gy).Depth > scopes.GetSurePresentRef(dx).Depth) gy = scopes.GetSurePresentRef(gy).Parent;
                     while (dx != gy) { dx = scopes.GetSurePresentRef(dx).Parent; gy = scopes.GetSurePresentRef(gy).Parent; }
+
+                    for (var s = g.Scope; s != dx; s = scopes.GetSurePresentRef(s).Parent)
+                        if (scopes.GetSurePresentRef(s).Region == 2)
+                            throw new InvalidOperationException($"Control cannot leave the finally or fault block by the jump to the label '{g.Target.Name}'");
 
                     if (dx == d.Scope) // the label scope is the jump scope or its ancestor
                     {
@@ -2357,6 +2385,43 @@ namespace FastExpressionCompiler
                                     logical.Left.Type == typeof(bool?) && logical.Right.Type == typeof(bool?))
                                     return TryEmitNullableBooleanShortCircuit(logical.Left, logical.Right, nodeType == ExpressionType.AndAlso, il, ref context, parent);
 
+                                var logicalMethod = logical.Method;
+                                if (logicalMethod != null && !exprType.IsPrimitive)
+                                {
+                                    // User-defined `&&` and `||`: `op_False(left) ? left : method(left, right)`, and `op_True` for the `||`.
+                                    // The right is emitted with the empty stack on purpose, so it may contain the try or the other non-stack-safe expression.
+                                    var leftExpr = logical.Left;
+                                    var isAndAlso = nodeType == ExpressionType.AndAlso;
+                                    var leftType = leftExpr.Type;
+                                    var shortCircuitMethod = leftType.GetMethod(isAndAlso ? "op_False" : "op_True", BindingFlags.Public | BindingFlags.Static, null, new[] { leftType }, null);
+                                    if (shortCircuitMethod == null)
+                                        return false;
+
+                                    var operandParent = parent & ~ParentFlags.IgnoreResult;
+                                    if (!TryEmit(leftExpr, il, ref context, operandParent))
+                                        return false;
+                                    var leftVar = EmitStoreLocalVariable(il, leftType);
+                                    EmitLoadLocalVariable(il, leftVar);
+                                    if (!EmitMethodCall(il, shortCircuitMethod))
+                                        return false;
+                                    var skipRightLabel = il.DefineLabel();
+                                    il.Demit(OpCodes.Brtrue, skipRightLabel);
+
+                                    if (!TryEmit(logical.Right, il, ref context, operandParent))
+                                        return false;
+                                    var rightVar = EmitStoreLocalVariable(il, logical.Right.Type);
+                                    EmitLoadLocalVariable(il, leftVar);
+                                    EmitLoadLocalVariable(il, rightVar);
+                                    if (!EmitMethodCall(il, logicalMethod))
+                                        return false;
+                                    var doneLabel = il.DefineLabel();
+                                    il.Demit(OpCodes.Br, doneLabel);
+
+                                    il.DmarkLabel(skipRightLabel);
+                                    EmitLoadLocalVariable(il, leftVar);
+                                    il.DmarkLabel(doneLabel);
+                                    return il.EmitPopIfIgnoreResult(parent);
+                                }
                                 if (!exprType.IsPrimitive)
                                 {
                                     Debug.WriteLine("Unsupported: non-primitive result in || or && (other than `bool?` operands without a method), see #480: " + expr);
@@ -3073,31 +3138,70 @@ namespace FastExpressionCompiler
                 for (var i = 0; i < catchBlocks.Count; i++)
                 {
                     var catchBlock = catchBlocks[i];
-                    if (catchBlock.Filter != null)
-                    {
-                        if ((context.CompilerFlags & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
-                            throw new NotSupportedExpressionException(Result.NotSupported_ExceptionCatchFilter);
-                        return false;
-                    }
-
-                    il.BeginCatchBlock(catchBlock.Test);
-
-                    // at the beginning of catch the Exception value is on the stack,
-                    // we will store into local variable.
                     var exVarExpr = catchBlock.Variable;
-#if DEMIT
-                    Debug.WriteLine($"}} catch {{");
-#endif
+                    var exVarIndex = -1;
                     if (exVarExpr != null)
                     {
                         // first, check if the exception variable was used before and supposed to be reused in the new catch
                         // (this is decided by creator of expression)
-                        var exVarIndex = context.GetDefinedLocalVarOrDefault(exVarExpr);
+                        exVarIndex = context.GetDefinedLocalVarOrDefault(exVarExpr);
                         if (exVarIndex == -1)
                             exVarIndex = il.GetNextLocalVarIndex(exVarExpr.Type);
                         context.PushBlockWithVars(exVarExpr, exVarIndex);
-                        EmitStoreLocalVariable(il, exVarIndex);
                     }
+
+                    var catchFilter = catchBlock.Filter;
+                    var catchTest = catchBlock.Test;
+                    // The CLR wraps the thrown non-Exception object into the RuntimeWrappedException, so the catch of such type is a filter that unwraps it, same as in System
+                    var isNonExceptionTest = catchTest != typeof(object) && !typeof(Exception).IsAssignableFrom(catchTest);
+                    if (isNonExceptionTest && catchTest.IsValueType)
+                        return false;
+                    if (catchFilter != null | isNonExceptionTest)
+                    {
+                        il.BeginExceptFilterBlock();
+                        if (isNonExceptionTest)
+                        {
+                            var notWrappedLabel = il.DefineLabel();
+                            il.Demit(OpCodes.Dup);
+                            il.Demit(OpCodes.Isinst, typeof(RuntimeWrappedException));
+                            il.Demit(OpCodes.Brfalse, notWrappedLabel);
+                            il.Demit(OpCodes.Castclass, typeof(RuntimeWrappedException));
+                            il.Demit(OpCodes.Callvirt, typeof(RuntimeWrappedException).GetMethod("get_WrappedException"));
+                            il.DmarkLabel(notWrappedLabel);
+                        }
+                        // The filter gets any exception as the object, so check the type first and treat the mismatch as `false`.
+                        // The variable assigned here is seen by the filter and by the handler, the same as in System.
+                        il.Demit(OpCodes.Isinst, catchTest);
+                        if (exVarIndex != -1)
+                        {
+                            il.Demit(OpCodes.Dup);
+                            EmitStoreLocalVariable(il, exVarIndex);
+                        }
+                        var filterFalseLabel = il.DefineLabel();
+                        var filterEndLabel = il.DefineLabel();
+                        il.Demit(OpCodes.Brfalse, filterFalseLabel);
+                        if (catchFilter == null)
+                            il.Demit(OpCodes.Ldc_I4_1);
+                        else if (!TryEmit(catchFilter, il, ref context, ParentFlags.Empty))
+                            return false;
+                        il.Demit(OpCodes.Br, filterEndLabel);
+                        il.DmarkLabel(filterFalseLabel);
+                        il.Demit(OpCodes.Ldc_I4_0);
+                        il.DmarkLabel(filterEndLabel);
+
+                        il.BeginCatchBlock(null); // emits the `endfilter`
+                        il.Demit(OpCodes.Pop); // the exception object, the variable is already set by the filter
+                    }
+                    else
+                    {
+                        il.BeginCatchBlock(catchBlock.Test);
+                        // at the beginning of catch the Exception value is on the stack, so store it into the variable
+                        if (exVarIndex != -1)
+                            EmitStoreLocalVariable(il, exVarIndex);
+                    }
+#if DEMIT
+                    Debug.WriteLine($"}} catch {{");
+#endif
 
                     if (!TryEmit(catchBlock.Body, il, ref context, parent))
                         return false;

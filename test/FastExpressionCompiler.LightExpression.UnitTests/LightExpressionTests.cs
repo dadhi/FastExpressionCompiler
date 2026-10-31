@@ -88,6 +88,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Goto_and_return_with_the_value_to_the_label_in_the_middle_of_block_are_the_same_as_system();
             Label_rules_are_the_same_as_system();
             Switch_with_duplicate_test_values_and_void_type_are_the_same_as_system();
+            Catch_filter_non_exception_catch_and_rethrow_rules_are_the_same_as_system();
             Inc_dec_assign_of_primitives_and_nullables_are_the_same_as_system();
             Inc_dec_assign_of_block_variable_compared_and_returned_via_label_are_the_same_as_system();
 #if NET7_0_OR_GREATER
@@ -107,7 +108,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_print_reference_comparison();
             Can_round_trip_new_expression_kinds_through_system_expressions();
 
-            return 86;
+            return 87;
         }
 
         private static int _sideEffectCalls;
@@ -1612,6 +1613,47 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var voidSwitch = Lambda<Action>(Switch(typeof(void), Constant(DateTime.MinValue), Constant("Def"), null,
                 SwitchCase(Constant("Foo"), Constant(DateTime.MinValue)), SwitchCase(Constant("Bar"), Constant(DateTime.MaxValue))));
             voidSwitch.CompileFast(true)();
+        }
+        public void Catch_filter_non_exception_catch_and_rethrow_rules_are_the_same_as_system()
+        {
+            var p = Parameter(typeof(int));
+            var ex = Parameter(typeof(Exception));
+            var thrower = Block(typeof(string), Throw(New(typeof(InvalidOperationException).GetConstructor(Type.EmptyTypes))), Constant("x"));
+
+#if !NETFRAMEWORK // DynamicMethod on .NET Framework does not support the filters
+            // the false filter falls through to the next handler, the filter assignment to the variable is seen by the handler
+            var withFilter = Lambda<Func<int, string>>(TryCatch(thrower,
+                MakeCatchBlock(typeof(Exception), ex, Constant("first"), GreaterThan(p, Constant(0))),
+                Catch(typeof(Exception), Constant("second"))), p);
+            var sys = withFilter.CompileSys();
+            var fec = withFilter.CompileFast(true);
+            for (var i = -1; i < 2; ++i)
+                Asserts.AreEqual(sys(i), fec(i));
+#endif
+
+            var str = Parameter(typeof(string));
+#if !NETFRAMEWORK
+            var nonException = Lambda<Func<string>>(TryCatch(Block(typeof(string), Throw(Constant("Hello")), Constant("x")),
+                Catch(str, str)));
+            Asserts.AreEqual(nonException.CompileSys()(), nonException.CompileFast(true)());
+#endif
+
+            var shapes = new Expression[]
+            {
+                Rethrow(typeof(void)), // outside of the catch
+                TryCatch(Empty(), Catch(typeof(Exception), TryFinally(Empty(), Rethrow(typeof(void))))), // in the finally within the catch
+                Block(Label(Label()), TryFinally(Empty(), Goto(Label()))), // a jump out of the finally
+            };
+            foreach (var shape in shapes)
+            {
+                var lambda = Lambda<Action>(shape);
+                var sysThrows = false;
+                try { lambda.CompileSys(); } catch (InvalidOperationException) { sysThrows = true; }
+                var fecThrows = false;
+                try { lambda.CompileFast(true, CompilerFlags.ValidateLabels); } catch (InvalidOperationException) { fecThrows = true; }
+                Asserts.IsTrue(sysThrows);
+                Asserts.IsTrue(fecThrows);
+            }
         }
         public static int AddPlusOne(int a, int b) => a + b + 1;
         public class IntBox { public int Value = 25; public int[] Arr = { 25 }; }
