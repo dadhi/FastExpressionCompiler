@@ -15,7 +15,11 @@ flat->sys->light->FEC 64-108us, System.Compile 169-198us.
    Found and fixed a real bug on the way: Light `LoopExpression.CreateSysExpression` dropped the continue label when there was no
    break label (Expression.cs); the optional-children fuzzer exposed it as a flat->light->flat mismatch in 80 of 300 trees.
    The fuzzer now asserts flat->light->flat structural equality and direct == via-system.
-3. `todo` Widen the native emitter subset node by node, fuzzer guards each step.
+3. `tried: measured` README expressions (`new X(closure a, b)`, `n => () => n + 1`) built flat (`Flat_compiles_the_readme_expressions_and_compares_the_time`).
+   Both are outside the native subset (closure constant, nested lambda, New), so `CompileFast` = probe (0.1-0.3us) + direct flat->light (~2-4us) + Light FEC (~8us / ~47us).
+   The conversion is a 25-40% overhead on top of Light for these; single noisy runs, the order of measurements moves numbers by 2x.
+   Conclusion: the native subset must grow to closures/New/nested lambdas before flat beats Light on the README cases.
+4. `todo` Widen the native emitter subset node by node, fuzzer guards each step. Next: New + Call + Member (no closure), then closure constants.
 
 ## Construction-time ideas
 - `todo` Profile node access: the scan is ~45ns/node, far from memory bound. Suspect the Stack32 indexer / Type compares.

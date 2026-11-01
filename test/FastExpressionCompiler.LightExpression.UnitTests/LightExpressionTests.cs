@@ -41,6 +41,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_compile_generated_flat_expression_natively();
             Flat_compile_handles_bool_result_and_falls_back_outside_the_subset();
             Experiment_compare_flat_and_light_compile_phases();
+            Flat_compiles_the_readme_expressions_and_compares_the_time();
 
             Flat_lambda_parameter_ref_before_decl_preserves_identity();
             Flat_lambda_multiple_parameter_refs_all_yield_same_identity();
