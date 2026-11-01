@@ -91,17 +91,21 @@ public static partial class ExpressionCompiler
         if (lambda.Type != typeof(TDelegate))
             return null;
 
+        var bodyIdx = lambda.ChildIdx;
+        var returnType = tree.Nodes.GetSurePresentRef(bodyIdx).Type;
+        if (returnType != typeof(int) && returnType != typeof(bool))
+            return null;
+
         var paramCount = lambda.ChildCount - 1;
         var paramTypes = new Type[paramCount + 1];
         paramTypes[0] = typeof(ArrayClosure);
         for (var i = 1; i <= paramCount; ++i)
             paramTypes[i] = typeof(int);
 
-        var dynMethod = new DynamicMethod(string.Empty, typeof(int), paramTypes, typeof(ArrayClosure), true);
+        var dynMethod = new DynamicMethod(string.Empty, returnType, paramTypes, typeof(ArrayClosure), true);
         var il = dynMethod.GetILGenerator();
 
         var vars = default(SmallList<FlatVar, Stack8<FlatVar>, NoArrayPool<FlatVar>>);
-        var bodyIdx = lambda.ChildIdx;
         var parIdx = tree.Nodes.GetSurePresentRef(bodyIdx).NextIdx;
         for (var i = 1; i <= paramCount; ++i)
         {
@@ -204,6 +208,7 @@ public static partial class ExpressionCompiler
                     var exprsIdx = n.ChildIdx;
                     ref var exprs = ref tree.Nodes.GetSurePresentRef(exprsIdx);
                     var varIdx = exprs.NextIdx;
+                    var scopeStart = vars.Count;
                     for (var i = 1; i < n.ChildCount; ++i)
                     {
                         ref var v = ref tree.Nodes.GetSurePresentRef(varIdx);
@@ -218,6 +223,7 @@ public static partial class ExpressionCompiler
                         EmitFlat(ref tree, exprIdx, il, ref vars, i != last || ignoreResult);
                         exprIdx = tree.Nodes.GetSurePresentRef(exprIdx).NextIdx;
                     }
+                    vars.Count = scopeStart; // the block variables go out of the scope
                     return;
                 }
 
