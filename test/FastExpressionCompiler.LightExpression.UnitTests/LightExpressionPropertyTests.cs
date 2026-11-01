@@ -47,6 +47,22 @@ public partial class LightExpressionTests
             iter: 300, threads: 1, seed: "0N0XIzNsQ0O2", print: seed => $"{seed}: {GeneratedIntSpecFactory.Create(seed, 3, 3)}");
     }
 
+    /// <summary>The bool body compiles natively; the tree outside the subset (the string constant) falls back and still works.</summary>
+    public void Flat_compile_handles_bool_result_and_falls_back_outside_the_subset()
+    {
+        var fe = default(ExprTree);
+        var p = fe.ParameterOf<int>("p");
+        fe.RootIdx = fe.Lambda<Func<int, bool>>(fe.MakeBinary(ExpressionType.GreaterThan, p, fe.ConstantInt(1)), p);
+        var native = fe.TryCompileFlat<Func<int, bool>>();
+        Ensure(native != null && native(2) && !native(1), "bool lambda native");
+
+        var fe2 = default(ExprTree);
+        var p2 = fe2.ParameterOf<int>("p");
+        fe2.RootIdx = fe2.Lambda<Func<int, string>>(fe2.ConstantOf("x"), p2);
+        Ensure(fe2.TryCompileFlat<Func<int, string>>() == null, "string is outside the subset");
+        Ensure(fe2.CompileFast<Func<int, string>>()(1) == "x", "fallback result");
+    }
+
     /// <summary>Prints how long the phases of the compilation take on the flat and on the light trees; asserts nothing but the agreement.</summary>
     public void Experiment_compare_flat_and_light_compile_phases()
     {
@@ -480,6 +496,7 @@ public partial class LightExpressionTests
     public void Can_property_test_generated_flat_expression_roundtrip_structurally() { }
     public void Can_fuzz_optional_children_presence_in_flat_expression() { }
     public void Can_compile_generated_flat_expression_natively() { }
+    public void Flat_compile_handles_bool_result_and_falls_back_outside_the_subset() { }
     public void Experiment_compare_flat_and_light_compile_phases() { }
 #endif
 }
