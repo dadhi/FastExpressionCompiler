@@ -1596,12 +1596,12 @@ namespace FastExpressionCompiler
                         context.AddLabel(loopExpr.ContinueLabel);
                         scopeIdx = (short)context.Scopes.Add(new LabelScope { Parent = new ScopeIdx(scopeIdx, enterable) });
                         if (loopExpr.BreakLabel != null)
-                            {
+                        {
                             _ = context.DefTargets.Add(loopExpr.BreakLabel);
                             _ = context.DefPositions.Add(new ScopeIdx(scopeIdx, true));
                         }
                         if (loopExpr.ContinueLabel != null)
-                            {
+                        {
                             _ = context.DefTargets.Add(loopExpr.ContinueLabel);
                             _ = context.DefPositions.Add(new ScopeIdx(scopeIdx, true));
                         }
@@ -1966,17 +1966,37 @@ namespace FastExpressionCompiler
 
             var count = binds.GetBindingCount();
             for (var i = 0; i < count; ++i)
-            {
-                var b = binds.GetArgument(i);
-                if (b.BindingType != MemberBindingType.Assignment)
-                    return b.BindingType == MemberBindingType.MemberBinding ? Result.NotSupported_MemberInit_MemberBinding : Result.NotSupported_MemberInit_ListBinding; // todo: @feature MemberMemberBinding and the MemberListBinding is not supported yet.
-
-                if ((r = TryCollectInfo(ref context, ((MemberAssignment)b).Expression, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
+                if ((r = TryCollectBindingInfo(ref context, binds.GetArgument(i), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                     return r;
-            }
             return r;
         }
 
+        private static Result TryCollectBindingInfo(ref CompilerContext context, MemberBinding b,
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
+        {
+            var r = Result.OK;
+            if (b.BindingType == MemberBindingType.Assignment)
+                return TryCollectInfo(ref context, ((MemberAssignment)b).Expression, nestedLambda, ref rootNestedLambdas, scopeIdx);
+
+            if (b.BindingType == MemberBindingType.MemberBinding)
+            {
+                var subs = ((MemberMemberBinding)b).Bindings;
+                for (var i = 0; i < subs.Count; ++i)
+                    if ((r = TryCollectBindingInfo(ref context, subs[i], nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
+                        return r;
+                return r;
+            }
+
+            var inits = ((MemberListBinding)b).Initializers;
+            for (var i = 0; i < inits.Count; ++i)
+            {
+                var args = inits[i].GetArgExprs();
+                for (var a = 0; a < args.GetArgCount(); ++a)
+                    if ((r = TryCollectInfo(ref context, args.GetArgument(a), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
+                        return r;
+            }
+            return r;
+        }
         private static Result TryCollectListInitExprConstants(ref CompilerContext context, ListInitExpression expr,
             NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
         {
@@ -4435,19 +4455,14 @@ namespace FastExpressionCompiler
                 for (var i = 0; i < bindCount; i++)
                 {
                     var binding = bindings.GetArgument(i);
-                    if (binding.BindingType != MemberBindingType.Assignment) // todo: @feature is not supported yet
-                        return false;
-
                     if (valueVarIndex != -1) // load local value address, to set its members
                         EmitLoadLocalVariableAddress(il, valueVarIndex);
                     else
                         il.Demit(OpCodes.Dup); // duplicate member owner on stack
 
-                    if (!TryEmit(((MemberAssignment)binding).Expression, il, ref context, parent) ||
-                        !EmitMemberSet(il, binding.Member))
+                    if (!EmitBinding(binding, il, ref context, parent))
                         return false;
                 }
-
                 if (valueVarIndex != -1)
                     EmitLoadLocalVariable(il, valueVarIndex);
                 return true;
@@ -4504,13 +4519,6 @@ namespace FastExpressionCompiler
 
                 var inits = expr.Initializers;
                 var initCount = inits.Count;
-                var ok = true;
-
-                // see the TryEmitMethodCall for the reason of the callFlags
-                var callFlags = (parent
-                    & ~(ParentFlags.IgnoreResult | ParentFlags.MemberAccess | ParentFlags.InstanceAccess |
-                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
-                    | ParentFlags.Call;
                 for (var i = 0; i < initCount; ++i)
                 {
                     if (valueVarIndex != -1) // load local value address, to set its members
@@ -4518,30 +4526,107 @@ namespace FastExpressionCompiler
                     else
                         il.Demit(OpCodes.Dup); // duplicate member owner on stack
 
-                    var elemInit = inits.GetArgument(i);
-                    var method = elemInit.AddMethod;
-                    var methodParams = method.GetParameters();
-                    var addArgs = elemInit.GetArgExprs();
-                    var addArgCount = addArgs.GetArgCount();
-
-                    for (var a = 0; ok && a < addArgCount; ++a)
-                        ok = TryEmit(addArgs.GetArgument(a), il, ref context, callFlags, methodParams[a].ParameterType.IsByRef ? a : -1);
-
-                    if (!exprType.IsValueType)
-                        ok = EmitMethodCallOrVirtualCall(il, method);
-                    else if (!method.IsVirtual // #251 - no need for constrained or virtual call because it is already by-ref
-                        || method.DeclaringType == exprType)
-                        ok = EmitMethodCall(il, method);
-                    else
-                    {
-                        il.Demit(OpCodes.Constrained, exprType); // todo: @clarify it is a value type so... can we de-virtualize the call?
-                        ok = EmitVirtualMethodCall(il, method);
-                    }
+                    if (!EmitElementInit(inits.GetArgument(i), exprType, il, ref context, parent))
+                        return false;
                 }
 
                 if (valueVarIndex != -1)
                     EmitLoadLocalVariable(il, valueVarIndex);
+                return true;
+            }
+
+            // The owner (the reference or the address of the value type) is on the stack and is consumed
+            private static bool EmitElementInit(ElementInit elemInit, Type ownerType, ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            {
+                // see the TryEmitMethodCall for the reason of the callFlags
+                var callFlags = (parent
+                    & ~(ParentFlags.IgnoreResult | ParentFlags.MemberAccess | ParentFlags.InstanceAccess |
+                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
+                    | ParentFlags.Call;
+                var method = elemInit.AddMethod;
+                var methodParams = method.GetParameters();
+                var addArgs = elemInit.GetArgExprs();
+                var addArgCount = addArgs.GetArgCount();
+
+                for (var a = 0; a < addArgCount; ++a)
+                    if (!TryEmit(addArgs.GetArgument(a), il, ref context, callFlags, methodParams[a].ParameterType.IsByRef ? a : -1))
+                        return false;
+
+                bool ok;
+                if (!ownerType.IsValueType)
+                    ok = EmitMethodCallOrVirtualCall(il, method);
+                else if (!method.IsVirtual // #251 - no need for constrained or virtual call because it is already by-ref
+                    || method.DeclaringType == ownerType)
+                    ok = EmitMethodCall(il, method);
+                else
+                {
+                    il.Demit(OpCodes.Constrained, ownerType); // todo: @clarify it is a value type so... can we de-virtualize the call?
+                    ok = EmitVirtualMethodCall(il, method);
+                }
+                if (ok && method.ReturnType != typeof(void))
+                    il.Demit(OpCodes.Pop);
                 return ok;
+            }
+
+            // The owner (the reference or the address of the value type) is on the stack and is consumed
+            private static bool EmitBinding(MemberBinding binding, ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            {
+                var member = binding.Member;
+                var isStatic = member is FieldInfo sf ? sf.IsStatic : (((PropertyInfo)member).GetMethod ?? ((PropertyInfo)member).SetMethod).IsStatic;
+                if (isStatic)
+                    il.Demit(OpCodes.Pop); // the static member does not need the owner
+
+                if (binding.BindingType == MemberBindingType.Assignment)
+                    return TryEmit(((MemberAssignment)binding).Expression, il, ref context, parent) &&
+                        EmitMemberSet(il, member);
+
+                // load the member value, or the address for the value type, as the owner of the nested bindings
+                var memberType = member is FieldInfo f ? f.FieldType : ((PropertyInfo)member).PropertyType;
+                var copyVar = -1;
+                if (member is FieldInfo field)
+                    il.Demit(isStatic ? (memberType.IsValueType ? OpCodes.Ldsflda : OpCodes.Ldsfld) : memberType.IsValueType ? OpCodes.Ldflda : OpCodes.Ldfld, field);
+                else if (memberType.IsValueType)
+                {
+                    // the getter returns a copy, so change the local copy and write it back by the setter
+                    var vp = (PropertyInfo)member;
+                    if (vp.GetMethod == null || vp.SetMethod == null)
+                        return false;
+                    if (!isStatic)
+                        il.Demit(OpCodes.Dup);
+                    if (!EmitMethodCallOrVirtualCall(il, vp.GetMethod))
+                        return false;
+                    copyVar = il.GetNextLocalVarIndex(memberType);
+                    EmitStoreLocalVariable(il, copyVar);
+                    EmitLoadLocalVariableAddress(il, copyVar);
+                }
+                else if (((PropertyInfo)member).GetMethod == null || !EmitMethodCallOrVirtualCall(il, ((PropertyInfo)member).GetMethod))
+                    return false;
+
+                if (binding.BindingType == MemberBindingType.MemberBinding)
+                {
+                    var subs = ((MemberMemberBinding)binding).Bindings;
+                    for (var i = 0; i < subs.Count; ++i)
+                    {
+                        il.Demit(OpCodes.Dup);
+                        if (!EmitBinding(subs[i], il, ref context, parent))
+                            return false;
+                    }
+                }
+                else
+                {
+                    var inits = ((MemberListBinding)binding).Initializers;
+                    for (var i = 0; i < inits.Count; ++i)
+                    {
+                        il.Demit(OpCodes.Dup);
+                        if (!EmitElementInit(inits[i], memberType, il, ref context, parent))
+                            return false;
+                    }
+                }
+                il.Demit(OpCodes.Pop);
+                if (copyVar == -1)
+                    return true;
+                EmitLoadLocalVariable(il, copyVar);
+                return EmitMethodCallOrVirtualCall(il, ((PropertyInfo)member).SetMethod);
             }
 
             // the `right = null` argument indicates the increment/decrement operation

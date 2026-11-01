@@ -108,8 +108,10 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Reference_equality_is_converted_to_system_reference_comparison();
             Can_print_reference_comparison();
             Can_round_trip_new_expression_kinds_through_system_expressions();
+            Member_and_list_bindings_are_the_same_as_system();
+            Member_bindings_on_the_struct_property_and_inside_try_are_the_same_as_system();
 
-            return 88;
+            return 90;
         }
 
         private static int _sideEffectCalls;
@@ -1813,6 +1815,62 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                 Asserts.IsTrue(fecThrows);
             }
         }
+        public class BindInner { public int X; public List<int> Items = new List<int>(); public HashSet<int> Set = new HashSet<int>(); public static int S; }
+        public class BindOuter { public BindInner Inner = new BindInner(); public BindInner Prop { get; } = new BindInner(); }
+
+        public void Member_and_list_bindings_are_the_same_as_system()
+        {
+            var inner = typeof(BindOuter).GetField(nameof(BindOuter.Inner));
+            var prop = typeof(BindOuter).GetProperty(nameof(BindOuter.Prop));
+            var x = typeof(BindInner).GetField(nameof(BindInner.X));
+            var items = typeof(BindInner).GetField(nameof(BindInner.Items));
+            var s = typeof(BindInner).GetField(nameof(BindInner.S));
+            var add = typeof(List<int>).GetMethod(nameof(List<int>.Add));
+            var set = typeof(BindInner).GetField(nameof(BindInner.Set));
+            var setAdd = typeof(HashSet<int>).GetMethod(nameof(HashSet<int>.Add));
+
+            // the nested member and list bindings on the field and on the readonly property, and the static member
+            var e = Lambda<Func<BindOuter>>(MemberInit(New(typeof(BindOuter)),
+                MemberBind(inner, Bind(x, Constant(5)), ListBind(items, ElementInit(add, Constant(7)), ElementInit(add, Constant(8))), ListBind(set, ElementInit(setAdd, Constant(4)))),
+                MemberBind(prop, Bind(x, Constant(3)), Bind(s, Constant(9)))));
+
+            var sys = e.CompileSys()();
+            var fast = e.CompileFast(true)();
+            Asserts.AreEqual(sys.Inner.X, fast.Inner.X);
+            Asserts.AreEqual(5, fast.Inner.X);
+            Asserts.AreEqual(sys.Prop.X, fast.Prop.X);
+            Asserts.AreEqual(3, fast.Prop.X);
+            Asserts.AreEqual(sys.Inner.Items.Count, fast.Inner.Items.Count);
+            Asserts.AreEqual(8, fast.Inner.Items[1]);
+            Asserts.AreEqual(sys.Inner.Set.Count, fast.Inner.Set.Count);
+            Asserts.AreEqual(9, BindInner.S);
+        }
+        public struct BindStruct { public int X; public List<int> Items; }
+        public class BindStructOwner { public BindStruct Field; BindStruct _p; public BindStruct Prop { get => _p; set => _p = value; } }
+
+        public void Member_bindings_on_the_struct_property_and_inside_try_are_the_same_as_system()
+        {
+            var x = typeof(BindStruct).GetField(nameof(BindStruct.X));
+            var field = typeof(BindStructOwner).GetField(nameof(BindStructOwner.Field));
+            var prop = typeof(BindStructOwner).GetProperty(nameof(BindStructOwner.Prop));
+
+            // System refuses the struct property, we read the copy, change it and write it back
+            var init = MemberInit(New(typeof(BindStructOwner)),
+                MemberBind(field, Bind(x, Constant(1))),
+                MemberBind(prop, Bind(x, Constant(2))));
+
+            var e = Lambda<Func<BindStructOwner>>(init);
+            var fast = e.CompileFast(true)();
+            Asserts.AreEqual(1, fast.Field.X);
+            Asserts.AreEqual(2, fast.Prop.X);
+
+            // the member init as the call argument inside the try, so the IL stack is not empty at the try
+            var pick = typeof(LightExpressionTests).GetMethod(nameof(PickX));
+            var t = Lambda<Func<int>>(Call(pick, TryCatch(Field(Field(MemberInit(New(typeof(BindStructOwner)), MemberBind(field, Bind(x, Constant(1)))), field), x), Catch(typeof(Exception), Constant(-1)))));
+            Asserts.AreEqual(t.CompileSys()(), t.CompileFast(true)());
+        }
+
+        public static int PickX(int a) => a + 1;
         public static int AddPlusOne(int a, int b) => a + b + 1;
         public class IntBox { public int Value = 25; public int[] Arr = { 25 }; }
 
