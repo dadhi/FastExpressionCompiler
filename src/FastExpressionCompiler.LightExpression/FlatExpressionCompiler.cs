@@ -27,35 +27,8 @@ public static partial class ExpressionCompiler
 
     private static bool IsFlatType(Type t) => t == typeof(int) || t == typeof(bool) || !t.IsValueType && !t.IsByRef && !t.IsPointer;
 
-    // IL needs no conversion only for the same type or the reference upcast
+    // the lambda and delegate return/parameter types are checked once per compile, not per node
     private static bool FlatFits(Type to, Type from) => to == from || !to.IsValueType && !from.IsValueType && to.IsAssignableFrom(from);
-
-    private static bool FlatArgsFit(ref ExprTree tree, int idx, int count, ParameterInfo[] pars)
-    {
-        if (pars.Length != count) return false; // todo: @perf GetParameters allocates, cache or compare lazily
-        for (var i = 0; i < count; ++i)
-        {
-            ref var arg = ref tree.Nodes.GetSurePresentRef(idx);
-            if (!FlatFits(pars[i].ParameterType, arg.Type)) return false;
-            idx = arg.NextIdx;
-        }
-        return true;
-    }
-
-    private static bool FlatCallFits(ref ExprTree tree, ref ExprNode n, MethodInfo method)
-    {
-        var idx = n.ChildIdx;
-        var count = (int)n.ChildCount;
-        if (!method.IsStatic)
-        {
-            if (count == 0) return false;
-            ref var instance = ref tree.Nodes.GetSurePresentRef(idx);
-            if (!FlatFits(method.DeclaringType, instance.Type)) return false;
-            idx = instance.NextIdx;
-            --count;
-        }
-        return !method.IsGenericMethodDefinition && FlatArgsFit(ref tree, idx, count, method.GetParameters());
-    }
 
     /// <summary>The collect phase on the flat nodes: one linear pass over the contiguous array, no recursion, no stack, no per-node casts.
     /// What the tree construction already guarantees is not checked here: the child counts, the not-null children, the parameter
@@ -89,43 +62,23 @@ public static partial class ExpressionCompiler
                     if (!IsFlatType(t)) return Result.NotSupported_UnknownExpression;
                     break;
                 case ExprType.Assign:
-                    {
-                        ref var left = ref tree.Nodes.GetSurePresentRef(n.ChildIdx);
-                        if (!IsFlatType(t) || left.NodeType != ExprType.Parameter ||
-                            !FlatFits(left.Type, tree.Nodes.GetSurePresentRef(left.NextIdx).Type))
-                            return Result.NotSupported_UnknownExpression;
-                        break;
-                    }
+                    // the target must be a parameter, the member assignment is not emitted yet
+                    if (!IsFlatType(t) || tree.Nodes.GetSurePresentRef(n.ChildIdx).NodeType != ExprType.Parameter) return Result.NotSupported_UnknownExpression;
+                    break;
                 case ExprType.Parameter:
                     if (!IsFlatType(t) || n.Flags != 0) return Result.NotSupported_UnknownExpression;
                     break;
                 case ExprType.New:
-                    if (!IsFlatType(t) || n.Obj is not ConstructorInfo ctor ||
-                        !FlatArgsFit(ref tree, n.ChildIdx, n.ChildCount, ctor.GetParameters()))
-                        return Result.NotSupported_UnknownExpression;
+                    // the arguments are not type-checked, same as the Light: the factories did that
+                    if (!IsFlatType(t) || n.Obj is not ConstructorInfo) return Result.NotSupported_UnknownExpression;
                     break;
                 case ExprType.Call:
-                    {
-                        if (!IsFlatType(t) || n.Obj is not MethodInfo method) return Result.NotSupported_UnknownExpression;
-                        if (!FlatCallFits(ref tree, ref n, method)) return Result.NotSupported_UnknownExpression;
-                        break;
-                    }
+                    if (!IsFlatType(t) || n.Obj is not MethodInfo m || m.IsGenericMethodDefinition) return Result.NotSupported_UnknownExpression;
+                    break;
                 case ExprType.MemberAccess:
-                    {
-                        MethodInfo getter = null;
-                        var isStatic = false;
-                        if (n.Obj is FieldInfo field && !field.IsLiteral)
-                            isStatic = field.IsStatic;
-                        else if (n.Obj is PropertyInfo prop && (getter = prop.GetGetMethod(true)) != null)
-                            isStatic = getter.IsStatic;
-                        else
-                            return Result.NotSupported_UnknownExpression;
-                        var declaringType = ((MemberInfo)n.Obj).DeclaringType;
-                        if (!IsFlatType(t) || isStatic != (n.ChildCount == 0) ||
-                            !isStatic && !FlatFits(declaringType, tree.Nodes.GetSurePresentRef(n.ChildIdx).Type))
-                            return Result.NotSupported_UnknownExpression;
-                        break;
-                    }
+                    if (!IsFlatType(t) || !(n.Obj is FieldInfo f && !f.IsLiteral || n.Obj is PropertyInfo p && p.CanRead))
+                        return Result.NotSupported_UnknownExpression;
+                    break;
                 case ExprType.Constant:
                     {
                         var isInline = ReferenceEquals(n.Obj, ExprNode.InlineValueMarker);
