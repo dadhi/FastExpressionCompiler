@@ -249,8 +249,8 @@ public struct Issue561_NonBooleanEqualityOperator : ITestX
         public override ExpressionType NodeType => ExpressionType.Convert;
         public override bool IsIntrinsic => true;
         public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda,
-            ref SmallList<NestedLambdaInfo> rootNestedLambdas) =>
-            ExpressionCompiler.TryCollectInfo(ref context, _body, nestedLambda, ref rootNestedLambdas);
+            ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx) =>
+            ExpressionCompiler.TryCollectInfo(ref context, _body, nestedLambda, ref rootNestedLambdas, scopeIdx);
         public override bool TryEmit(ref CompilerContext context, System.Reflection.Emit.ILGenerator il,
             ParentFlags parent, int byRefIndex = -1) =>
             EmittingVisitor.TryEmit(_body, il, ref context, parent, byRefIndex);

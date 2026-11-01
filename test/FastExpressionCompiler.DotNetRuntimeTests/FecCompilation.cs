@@ -10,21 +10,19 @@ namespace System.Linq.Expressions
     internal static class FecCompilation
     {
         private static bool UseSystem => Environment.GetEnvironmentVariable("FEC_TEST_COMPILER") == "system";
-        // The ported tests expect the System validation errors, so they validate the labels by default. Set FEC_TEST_NO_VALIDATE=1 to run without the flag
-        private static CompilerFlags Flags => Environment.GetEnvironmentVariable("FEC_TEST_NO_VALIDATE") == "1" ? CompilerFlags.Default : CompilerFlags.ValidateLabels;
         public static TDelegate CompileForFec<TDelegate>(this Expression<TDelegate> expression, bool preferInterpretation = false)
             where TDelegate : Delegate
         {
             CompilationObservationAttribute.Record();
             if (UseSystem) return expression.Compile(preferInterpretation);
-            return expression.CompileFast(ifFastFailedReturnNull: true, flags: Flags)
+            return expression.CompileFast(ifFastFailedReturnNull: true)
                 ?? throw new NotSupportedException("FEC strict compilation returned null (fallback disabled). Node: " + expression.Body.NodeType);
         }
         public static Delegate CompileForFec(this LambdaExpression expression, bool preferInterpretation = false)
         {
             CompilationObservationAttribute.Record();
             if (UseSystem) return expression.Compile(preferInterpretation);
-            return expression.CompileFast(ifFastFailedReturnNull: true, flags: Flags)
+            return expression.CompileFast(ifFastFailedReturnNull: true)
                 ?? throw new NotSupportedException("FEC strict compilation returned null (fallback disabled). Node: " + expression.Body.NodeType);
         }
         public static TDelegate CompileForFec<TDelegate>(this Expression<TDelegate> expression, DebugInfoGenerator debugInfoGenerator)

@@ -1575,7 +1575,6 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Expression Part(int v) => Block(Goto(target, Constant(v)), Throw(Constant(new Exception())), Label(target, Constant(0)));
             var multi = Lambda<Func<int>>(Add(Add(Part(6), Part(4)), Part(5)));
             Asserts.AreEqual(multi.CompileSys()(), multi.CompileFast(true)());
-            Asserts.AreEqual(multi.CompileSys()(), multi.CompileFast(true, CompilerFlags.ValidateLabels)());
 
             var label = Label();
             var shapes = new Expression[]
@@ -1591,12 +1590,9 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                 var sysThrows = false;
                 try { lambda.CompileSys(); } catch (InvalidOperationException) { sysThrows = true; }
                 var fecThrows = false;
-                try { lambda.CompileFast(true, CompilerFlags.ValidateLabels); } catch (InvalidOperationException) { fecThrows = true; }
-                var fecNoFlagThrows = false;
-                try { lambda.CompileFast(true); } catch (InvalidOperationException) { fecNoFlagThrows = true; } catch (ArgumentException) { } // garbage in, the IL generator may complain
+                try { lambda.CompileFast(true); } catch (InvalidOperationException) { fecThrows = true; }
                 Asserts.IsTrue(sysThrows);
                 Asserts.IsTrue(fecThrows);
-                Asserts.IsFalse(fecNoFlagThrows); // the check is opt-in
             }
         }
         public void Switch_with_duplicate_test_values_and_void_type_are_the_same_as_system()
@@ -1637,6 +1633,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var one = Constant(1);
             var exc = typeof(Exception);
             var rethrow = Rethrow(typeof(void));
+            var cond = Equal(Call(plusOne, one, one), Constant(3)); // not folded, so no branch is eliminated together with its labels
 
             // a jump goes first, then the label (or the rethrow) hidden at the position in the walked node kind
             var shapes = new Expression[]
@@ -1650,8 +1647,8 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                 Block(typeof(void), jumpV, Loop(Empty(), v)),
                 Block(typeof(void), jumpV, Loop(Empty(), Label(), v)),
                 Block(typeof(void), Goto(v), Loop(Block(Empty(), Empty()), Label(), Label())),
-                Block(typeof(void), jumpV, IfThen(Constant(true), hereV)),
-                Block(typeof(void), jumpV, IfThenElse(Constant(true), hereV, hereV)),
+                Block(typeof(void), jumpV, IfThen(cond, hereV)),
+                Block(typeof(void), jumpV, IfThenElse(cond, hereV, hereV)),
                 Block(typeof(void), jumpB, IfThen(hereB, Empty())),
                 Block(typeof(void), jumpV, Switch(one, hereV, SwitchCase(Empty(), one))),
                 Block(typeof(void), jumpV, Switch(one, Empty(), SwitchCase(hereV, one))),
@@ -1685,9 +1682,9 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                 Block(typeof(void), jumpV, Call(plusOne, Block(typeof(int), hereV, one), one)),
                 Block(typeof(void), jumpV, Goto(other, Block(typeof(int), hereV, one))),
                 Block(typeof(void), jumpV, Add(Loop(Block(typeof(void), hereV, Break(brk, one)), brk), one)),
-                Block(typeof(void), jumpV, Add(Condition(Constant(true), Block(typeof(int), hereV, one), one), one)),
+                Block(typeof(void), jumpV, Add(Condition(cond, Block(typeof(int), hereV, one), one), one)),
                 Block(typeof(void), jumpV, Add(Switch(one, one, SwitchCase(Block(typeof(int), hereV, one), one)), one)),
-                Block(typeof(void), jumpV, Add(Switch(one, Block(typeof(int), hereV, one), SwitchCase(one, one)), one)),
+                Block(typeof(void), jumpV, Add(Switch(Call(plusOne, one, one), Block(typeof(int), hereV, one), SwitchCase(one, one)), one)),
 
                 // the jump from the nested block to the label in the expression of the outer one
                 Block(typeof(void), Add(hereI, one), Block(jumpI)),
@@ -1746,7 +1743,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                 var sysThrows = false;
                 try { lambda.CompileSys(); } catch (InvalidOperationException) { sysThrows = true; }
                 var fecThrows = false;
-                try { lambda.CompileFast(true, CompilerFlags.ValidateLabels); } catch (InvalidOperationException) { fecThrows = true; }
+                try { lambda.CompileFast(true); } catch (InvalidOperationException) { fecThrows = true; }
                 catch (ArgumentException ex) { throw new Exception($"Shape #{n} (validated): {ex.Message}: {shapes[n]}"); }
                 if (sysThrows != fecThrows)
                 {
@@ -1767,12 +1764,12 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             var strict = new Expression[]
             {
                 Block(typeof(void), jumpV, Goto(other, Block(typeof(int), hereV, one))),
-                Block(typeof(void), jumpV, Add(Switch(one, Block(typeof(int), hereV, one), SwitchCase(one, one)), one)),
+                Block(typeof(void), jumpV, Add(Switch(Call(plusOne, one, one), Block(typeof(int), hereV, one), SwitchCase(one, one)), one)),
             };
             foreach (var shape in strict)
             {
                 var throws = false;
-                try { Lambda<Action>(shape).CompileFast(true, CompilerFlags.ValidateLabels); } catch (InvalidOperationException ex) { throws = ex.Message.Contains("Control cannot enter"); }
+                try { Lambda<Action>(shape).CompileFast(true); } catch (InvalidOperationException ex) { throws = ex.Message.Contains("Control cannot enter"); }
                 Asserts.IsTrue(throws);
             }        }
         public void Catch_filter_non_exception_catch_and_rethrow_rules_are_the_same_as_system()
@@ -1811,7 +1808,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                 var sysThrows = false;
                 try { lambda.CompileSys(); } catch (InvalidOperationException) { sysThrows = true; }
                 var fecThrows = false;
-                try { lambda.CompileFast(true, CompilerFlags.ValidateLabels); } catch (InvalidOperationException) { fecThrows = true; }
+                try { lambda.CompileFast(true); } catch (InvalidOperationException) { fecThrows = true; }
                 Asserts.IsTrue(sysThrows);
                 Asserts.IsTrue(fecThrows);
             }

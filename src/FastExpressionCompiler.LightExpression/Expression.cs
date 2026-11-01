@@ -68,7 +68,7 @@ public abstract class Expression
     /// <summary>Collects the information about closure constants, nested lambdas, non-passed parameters, goto labels and variables in blocks.
     /// Returns `0` if everything is fine and positive error code for error.</summary>
     [RequiresUnreferencedCode(Trimming.Message)]
-    public virtual Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) => 0;
+    public virtual Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx) => 0;
 
     /// <summary>The second FEC state to emit the actual IL op-codes based on the information collected by the first traversal
     /// and available in the `closure` structure. Find the expression examples below by searching `IsIntrinsic => true`.</summary>
@@ -3534,8 +3534,8 @@ public class ConvertDelegateIntrinsicExpression : UnaryExpression
     public override bool IsIntrinsic => true;
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) =>
-        ExpressionCompiler.TryCollectInfo(ref context, Operand, nestedLambda, ref rootNestedLambdas);
+    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx) =>
+        ExpressionCompiler.TryCollectInfo(ref context, Operand, nestedLambda, ref rootNestedLambdas, scopeIdx);
 
     [RequiresUnreferencedCode(Trimming.Message)]
     public override bool TryEmit(ref CompilerContext context, ILGenerator il, ParentFlags parent, int byRefIndex = -1)
@@ -3576,8 +3576,8 @@ public class ConvertIntrinsicExpression<T> : UnaryExpression where T : class
     public override bool IsIntrinsic => true;
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) =>
-        ExpressionCompiler.TryCollectInfo(ref context, Operand, nestedLambda, ref rootNestedLambdas);
+    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx) =>
+        ExpressionCompiler.TryCollectInfo(ref context, Operand, nestedLambda, ref rootNestedLambdas, scopeIdx);
 
     [RequiresUnreferencedCode(Trimming.Message)]
     public override bool TryEmit(ref CompilerContext context, ILGenerator il, ParentFlags parent, int byRefIndex = -1)
@@ -4156,7 +4156,7 @@ public sealed class NoArgsNewClassIntrinsicExpression : NewExpression
     public override bool IsIntrinsic => true;
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) => 0;
+    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx) => 0;
 
     [RequiresUnreferencedCode(Trimming.Message)]
     public override bool TryEmit(ref CompilerContext context, ILGenerator il, ParentFlags parent, int byRefIndex = -1)
@@ -4182,8 +4182,8 @@ public sealed class NoByRefOneArgNewIntrinsicExpression : OneArgumentNewExpressi
     public override bool IsIntrinsic => true;
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas) =>
-        ExpressionCompiler.TryCollectInfo(ref context, Argument, nestedLambda, ref rootNestedLambdas);
+    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx) =>
+        ExpressionCompiler.TryCollectInfo(ref context, Argument, nestedLambda, ref rootNestedLambdas, scopeIdx);
 
     [RequiresUnreferencedCode(Trimming.Message)]
     public override bool TryEmit(ref CompilerContext context, ILGenerator il, ParentFlags parent, int byRefIndex = -1)
@@ -4214,11 +4214,11 @@ public sealed class NoByRefTwoArgumentsNewIntrinsicExpression : TwoArgumentsNewE
     public override bool IsIntrinsic => true;
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
     {
         var r = Result.OK;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument0, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
-        return ExpressionCompiler.TryCollectInfo(ref context, Argument1, nestedLambda, ref rootNestedLambdas);
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument0, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK) return r;
+        return ExpressionCompiler.TryCollectInfo(ref context, Argument1, nestedLambda, ref rootNestedLambdas, scopeIdx);
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]
@@ -4256,12 +4256,12 @@ public sealed class NoByRefThreeArgumentsNewIntrinsicExpression : ThreeArguments
     public override bool IsIntrinsic => true;
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
     {
         var r = Result.OK;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument0, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument1, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
-        return ExpressionCompiler.TryCollectInfo(ref context, Argument2, nestedLambda, ref rootNestedLambdas);
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument0, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument1, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK) return r;
+        return ExpressionCompiler.TryCollectInfo(ref context, Argument2, nestedLambda, ref rootNestedLambdas, scopeIdx);
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]
@@ -4301,13 +4301,13 @@ public sealed class NoByRefFourArgumentsNewIntrinsicExpression : FourArgumentsNe
     public override bool IsIntrinsic => true;
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
     {
         var r = Result.OK;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument0, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument1, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument2, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
-        return ExpressionCompiler.TryCollectInfo(ref context, Argument3, nestedLambda, ref rootNestedLambdas);
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument0, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument1, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument2, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK) return r;
+        return ExpressionCompiler.TryCollectInfo(ref context, Argument3, nestedLambda, ref rootNestedLambdas, scopeIdx);
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]
@@ -4350,14 +4350,14 @@ public sealed class NoByRefFiveArgumentsNewIntrinsicExpression : FiveArgumentsNe
     public override bool IsIntrinsic => true;
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
     {
         var r = Result.OK;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument0, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument1, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument2, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument3, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
-        return ExpressionCompiler.TryCollectInfo(ref context, Argument4, nestedLambda, ref rootNestedLambdas);
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument0, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument1, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument2, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument3, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK) return r;
+        return ExpressionCompiler.TryCollectInfo(ref context, Argument4, nestedLambda, ref rootNestedLambdas, scopeIdx);
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]
@@ -4403,15 +4403,15 @@ public sealed class NoByRefSixArgumentsNewIntrinsicExpression : SixArgumentsNewE
     public override bool IsIntrinsic => true;
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
     {
         var r = Result.OK;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument0, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument1, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument2, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument3, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument4, nestedLambda, ref rootNestedLambdas)) != Result.OK) return r;
-        return ExpressionCompiler.TryCollectInfo(ref context, Argument5, nestedLambda, ref rootNestedLambdas);
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument0, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument1, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument2, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument3, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument4, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK) return r;
+        return ExpressionCompiler.TryCollectInfo(ref context, Argument5, nestedLambda, ref rootNestedLambdas, scopeIdx);
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]
@@ -4459,16 +4459,16 @@ public sealed class NoByRefSevenArgumentsNewIntrinsicExpression : SevenArguments
     public override bool IsIntrinsic => true;
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
     {
         var r = Result.OK;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument0, nestedLambda, ref rootNestedLambdas)) != 0) return r;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument1, nestedLambda, ref rootNestedLambdas)) != 0) return r;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument2, nestedLambda, ref rootNestedLambdas)) != 0) return r;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument3, nestedLambda, ref rootNestedLambdas)) != 0) return r;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument4, nestedLambda, ref rootNestedLambdas)) != 0) return r;
-        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument5, nestedLambda, ref rootNestedLambdas)) != 0) return r;
-        return ExpressionCompiler.TryCollectInfo(ref context, Argument6, nestedLambda, ref rootNestedLambdas);
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument0, nestedLambda, ref rootNestedLambdas, scopeIdx)) != 0) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument1, nestedLambda, ref rootNestedLambdas, scopeIdx)) != 0) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument2, nestedLambda, ref rootNestedLambdas, scopeIdx)) != 0) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument3, nestedLambda, ref rootNestedLambdas, scopeIdx)) != 0) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument4, nestedLambda, ref rootNestedLambdas, scopeIdx)) != 0) return r;
+        if ((r = ExpressionCompiler.TryCollectInfo(ref context, Argument5, nestedLambda, ref rootNestedLambdas, scopeIdx)) != 0) return r;
+        return ExpressionCompiler.TryCollectInfo(ref context, Argument6, nestedLambda, ref rootNestedLambdas, scopeIdx);
     }
 
     [RequiresUnreferencedCode(Trimming.Message)]
@@ -4503,12 +4503,12 @@ public sealed class NoByRefManyArgsNewIntrinsicExpression : ManyArgumentsNewExpr
     public override bool IsIntrinsic => true;
 
     [RequiresUnreferencedCode(Trimming.Message)]
-    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+    public override Result TryCollectInfo(ref CompilerContext context, NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
     {
         var r = Result.OK;
         var args = Args;
         for (var i = 0; i < args.Count; i++)
-            if ((r = ExpressionCompiler.TryCollectInfo(ref context, args[i], nestedLambda, ref rootNestedLambdas)) != Result.OK)
+            if ((r = ExpressionCompiler.TryCollectInfo(ref context, args[i], nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                 return r;
         return 0;
     }

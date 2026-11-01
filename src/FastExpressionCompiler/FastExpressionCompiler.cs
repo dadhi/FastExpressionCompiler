@@ -98,10 +98,7 @@ namespace FastExpressionCompiler
         ThrowOnNotSupportedExpression = 1 << 2,
         /// <summary>Will try to Interpret arithmetic, logical, comparison expressions for the primitive types,
         /// and emit the IL the result only instead of the whole computation.</summary>
-        DisableInterpreter = 1 << 4,
-        /// <summary>Opt-in check of the labels and jumps by the System.Linq.Expressions rules (ambiguous jump, jump into the expression, label redefinition),
-        /// throws the `InvalidOperationException`. Use it for the expressions from the third party, skip it for the ones you construct and know are valid.</summary>
-        ValidateLabels = 1 << 5
+        DisableInterpreter = 1 << 4
     }
 
     /// <summary>FEC Not Supported exception</summary>
@@ -427,16 +424,10 @@ namespace FastExpressionCompiler
 
             // The method collects the info from the all nested lambdas deep down up-front and de-duplicates the lambdas as well.
             var context = new CompilerContext(ClosureStatus.ToBeCollected, paramExprs, flags);
-            var collectResult = TryCollectInfo(ref context, bodyExpr, null, ref context.NestedLambdas);
+            var collectResult = TryCollectInfo(ref context, bodyExpr, null, ref context.NestedLambdas, 0, true);
             if (collectResult == Result.OK)
             {
-                if ((flags & CompilerFlags.ValidateLabels) != 0) // todo: @perf an extra pass over the expression tree, so it is opt-in
-                {
-                    LabelWalk w = default;
-                    _ = w.Scopes.Add(new LabelScope { ParentIdx = -1, Enterable = true }); // the root
-                    CollectLabelRefs(ref w, bodyExpr, scopeIdx: 0, enterable: true);
-                    ValidateLabels(ref w, bodyExpr);
-                }
+                ValidateLabels(ref context);
 
                 var constantsAndNestedLambdas = (context.Status & ClosureStatus.HasClosure) != 0
                     ? context.GetArrayOfConstantsAndNestedLambdas()
@@ -665,6 +656,13 @@ namespace FastExpressionCompiler
 
             /// Set if the same label target is defined by the several Label expressions, so each definition needs its own IL label
             internal bool HasLabelDefinedTwice;
+            internal SmallList<LabelScope, Stack8<LabelScope>, NoArrayPool<LabelScope>> Scopes;
+            // The label definitions and gotos are stored as the separate arrays (SoA), because the validation scans the targets way more often than the positions
+            internal SmallList<LabelTarget, Stack2<LabelTarget>, NoArrayPool<LabelTarget>> DefTargets;
+            internal SmallList<ScopeIdx, Stack2<ScopeIdx>, NoArrayPool<ScopeIdx>> DefPositions;
+            internal SmallList<LabelTarget, Stack2<LabelTarget>, NoArrayPool<LabelTarget>> GotoTargets;
+            internal SmallList<short, Stack2<short>, NoArrayPool<short>> GotoScopes;
+            internal SmallList<short, Stack2<short>, NoArrayPool<short>> Rethrows; // the scopes of the rethrows
 
             /// The stack for the lambda invocation and the labels bound to them
             internal SmallList<LabelInfo, Stack4<LabelInfo>, NoArrayPool<LabelInfo>> LambdaInvokeStackLabels;
@@ -708,6 +706,7 @@ namespace FastExpressionCompiler
                 CurrentInlinedLambdaInvokeIndex = -1;
                 ParamExprs = paramExprs;
                 CompilerFlags = compilerFlags;
+                _ = Scopes.Add(new LabelScope { Parent = new ScopeIdx(-1, true) }); // the root
             }
 
             /// <summary>Populates info directly with provided closure object and constants.</summary>
@@ -724,6 +723,7 @@ namespace FastExpressionCompiler
 
                 ParamExprs = paramExprs;
                 CompilerFlags = compilerFlags;
+                _ = Scopes.Add(new LabelScope { Parent = new ScopeIdx(-1, true) }); // the root
             }
 
             [MethodImpl((MethodImplOptions)256)]
@@ -1151,244 +1151,113 @@ namespace FastExpressionCompiler
             throw new NotSupportedExpressionException(reason);
         }
 
-        enum ExceptionRegion : byte
+        internal enum ExceptionRegion : byte
         {
             None = 0,
             Catch = 1,
             FinallyOrFault = 2
         }
 
-        /// <summary>The label scope stored in the list and referencing its parent by the index (-1 for the root), so no object per scope</summary>
-        struct LabelScope
+        /// <summary>The scope index (-1 for the root) with the `Enterable` flag: can the jump from the outside get into the thing,
+        /// e.g. a block in the statement position, but not in the expression or try</summary>
+        internal readonly struct ScopeIdx
         {
-            public short ParentIdx;
-            /// <summary>Can the jump from the outside get into this scope: a block in the statement position, but not in the expression or try</summary>
-            public bool Enterable;
+            public readonly short Index;
+            public readonly bool Enterable;
+            public ScopeIdx(int index, bool enterable) { Index = (short)index; Enterable = enterable; }
+        }
+
+        /// <summary>The label scope stored in the list; Parent.Index is its parent scope, Parent.Enterable tells if this scope is enterable</summary>
+        internal struct LabelScope
+        {
+            public ScopeIdx Parent;
             public ExceptionRegion ExceptionRegion;
-        }
-
-        struct LabelRef
-        {
-            public LabelTarget Target;
-            public short ScopeIdx;
-            public bool Enterable;
-        }
-
-        struct GotoRef
-        {
-            public LabelTarget Target;
-            public short ScopeIdx;
-        }
-
-        struct LabelWalk
-        {
-            public SmallList<LabelScope, Stack8<LabelScope>, NoArrayPool<LabelScope>> Scopes;
-            public SmallList<LabelRef, Stack8<LabelRef>, NoArrayPool<LabelRef>> Defs;
-            public SmallList<GotoRef, Stack8<GotoRef>, NoArrayPool<GotoRef>> Gotos;
-            public SmallList<short, Stack2<short>, NoArrayPool<short>> Rethrows; // the scopes of the rethrows
-        }
-
-        private static void CollectLabelRefs(ref LabelWalk w, Expression e, short scopeIdx, bool enterable)
-        {
-            // The loop continues with the last child instead of the recursion, the same as in TryCollectInfo
-            while (e != null)
-            {
-                switch (e.NodeType)
-                {
-                    case ExpressionType.Block:
-                        {
-                            var blockExprs = ((BlockExpression)e).Expressions;
-                            var blockExprCount = blockExprs.Count;
-                            if (blockExprCount == 0)
-                                return;
-                            scopeIdx = (short)w.Scopes.Add(new LabelScope { ParentIdx = scopeIdx, Enterable = enterable, ExceptionRegion = ExceptionRegion.None });
-
-                            for (var i = 0; i < blockExprCount - 1; ++i)
-                                CollectLabelRefs(ref w, blockExprs[i], scopeIdx, true);
-                            e = blockExprs[blockExprCount - 1];
-                            enterable = true;
-                            continue;
-                        }
-                    case ExpressionType.Label:
-                        var labelExpr = (LabelExpression)e;
-                        _ = w.Defs.Add(new LabelRef { Target = labelExpr.Target, ScopeIdx = scopeIdx, Enterable = enterable });
-                        e = labelExpr.DefaultValue;
-                        enterable = false;
-                        continue;
-
-                    case ExpressionType.Goto:
-                        var gotoExpr = (GotoExpression)e;
-                        w.Gotos.Add(new GotoRef { Target = gotoExpr.Target, ScopeIdx = scopeIdx });
-                        e = gotoExpr.Value;
-                        enterable = false;
-                        continue;
-
-                    case ExpressionType.Loop:
-                        {
-                            var loopExpr = (LoopExpression)e;
-
-                            scopeIdx = (short)w.Scopes.Add(new LabelScope { ParentIdx = scopeIdx, Enterable = enterable, ExceptionRegion = ExceptionRegion.None });
-
-                            if (loopExpr.BreakLabel != null)
-                                _ = w.Defs.Add(new LabelRef { Target = loopExpr.BreakLabel, ScopeIdx = scopeIdx, Enterable = true });
-                            if (loopExpr.ContinueLabel != null)
-                                _ = w.Defs.Add(new LabelRef { Target = loopExpr.ContinueLabel, ScopeIdx = scopeIdx, Enterable = true });
-                            e = loopExpr.Body;
-                            enterable = true;
-                            continue;
-                        }
-                    case ExpressionType.Conditional:
-                        var condExpr = (ConditionalExpression)e;
-                        CollectLabelRefs(ref w, condExpr.Test, scopeIdx, false);
-                        CollectLabelRefs(ref w, condExpr.IfTrue, scopeIdx, enterable);
-                        e = condExpr.IfFalse;
-                        continue;
-
-                    case ExpressionType.Switch:
-                        var switchExpr = (SwitchExpression)e;
-                        CollectLabelRefs(ref w, switchExpr.SwitchValue, scopeIdx, false);
-                        for (var i = 0; i < switchExpr.Cases.Count; ++i)
-                            CollectLabelRefs(ref w, switchExpr.Cases[i].Body, scopeIdx, enterable);
-                        e = switchExpr.DefaultBody;
-                        continue;
-
-                    case ExpressionType.Try:
-                        var tryExpr = (TryExpression)e;
-                        CollectLabelRefs(ref w, tryExpr.Body, scopeIdx, false);
-                        var handlers = tryExpr.Handlers;
-                        for (var i = 0; i < handlers.Count; ++i)
-                        {
-                            CollectLabelRefs(ref w, handlers[i].Filter, scopeIdx, false);
-
-                            var handlerScopeIdx = (short)w.Scopes.Add(new LabelScope { ParentIdx = scopeIdx, Enterable = false, ExceptionRegion = ExceptionRegion.Catch });
-                            CollectLabelRefs(ref w, handlers[i].Body, handlerScopeIdx, false);
-                        }
-                        e = tryExpr.Finally ?? tryExpr.Fault; // only one of them may be set
-                        if (e != null)
-                            scopeIdx = (short)w.Scopes.Add(new LabelScope { ParentIdx = scopeIdx, Enterable = false, ExceptionRegion = ExceptionRegion.FinallyOrFault });
-                        enterable = false;
-                        continue;
-
-                    case ExpressionType.Lambda:
-                        return; // the nested lambda has its own labels
-                }
-
-                // shortcut: other nodes are walked only through the common operand shapes, so the labels hidden in the rest are not validated
-                enterable = false;
-                if (e is BinaryExpression bin)
-                {
-                    CollectLabelRefs(ref w, bin.Left, scopeIdx, false);
-                    e = bin.Right;
-                }
-                else if (e is UnaryExpression unary)
-                {
-                    if (unary.NodeType == ExpressionType.Throw && unary.Operand == null)
-                        w.Rethrows.Add(scopeIdx);
-                    e = unary.Operand;
-                }
-                else if (e is TypeBinaryExpression typeBin)
-                    e = typeBin.Expression;
-                else if (e is MemberExpression member)
-                    e = member.Expression;
-                else if (e is MethodCallExpression call)
-                {
-                    CollectLabelRefs(ref w, call.Object, scopeIdx, false);
-                    var callArgs = call.GetArgExprs();
-                    var callArgCount = callArgs.GetArgCount();
-                    for (var i = 0; i < callArgCount - 1; ++i)
-                        CollectLabelRefs(ref w, callArgs.GetArgument(i), scopeIdx, false);
-                    e = callArgCount == 0 ? null : callArgs.GetArgument(callArgCount - 1);
-                }
-                else if (e is NewExpression newExpr)
-                {
-                    var newArgs = newExpr.GetArgExprs();
-                    var newArgCount = newArgs.GetArgCount();
-                    for (var i = 0; i < newArgCount - 1; ++i)
-                        CollectLabelRefs(ref w, newArgs.GetArgument(i), scopeIdx, false);
-                    e = newArgCount == 0 ? null : newArgs.GetArgument(newArgCount - 1);
-                }
-                else
-                    return;
-            }
         }
 
         /// <summary>Checks the rules of System.Linq.Expressions for the labels: no redefinition in the nested scope, no ambiguous jump,
         /// no jump into the expression or into the block with the value, no jump out of the finally block, no rethrow outside of the catch body.
         /// Throws the InvalidOperationException if violated.</summary>
-        private static void ValidateLabels(ref LabelWalk w, Expression body)
+        private static void ValidateLabels(ref CompilerContext context)
         {
-            ref var scopes = ref w.Scopes;
-            var rethrows = w.Rethrows;
+            if (context.Rethrows.Count == 0 & context.GotoTargets.Count == 0 & context.DefTargets.Count < 2)
+                return; // nothing to check, the most common case
+
+            ref var scopes = ref context.Scopes;
+            ref var rethrows = ref context.Rethrows;
             var rethrowCount = rethrows.Count;
             for (var i = 0; i < rethrowCount; ++i)
             {
-                var s = rethrows.GetSurePresentRef(i);
+                int s = rethrows.GetSurePresentRef(i);
                 while (s != -1 && scopes.GetSurePresentRef(s).ExceptionRegion == ExceptionRegion.None)
-                    s = scopes.GetSurePresentRef(s).ParentIdx;
+                    s = scopes.GetSurePresentRef(s).Parent.Index;
                 if (s == -1 || scopes.GetSurePresentRef(s).ExceptionRegion != ExceptionRegion.Catch)
                     throw new InvalidOperationException("Rethrow statement is valid only inside a catch block");
             }
 
             // The redefinition of the label on the same scope path - both labels share the enclosing scope, i.e., a label is defined in the scope where it is already visible.
             // Lets iterate over all pairs of the label definitions.
-            ref var defs = ref w.Defs;
-            var defCount = defs.Count;
+            ref var defTargets = ref context.DefTargets;
+            ref var defPositions = ref context.DefPositions;
+            var defCount = defTargets.Count;
             for (var i = 0; i < defCount; ++i)
             {
-                var a = defs.GetSurePresentRef(i);
+                var aTarget = defTargets.GetSurePresentRef(i);
                 for (var j = i + 1; j < defCount; ++j)
                 {
-                    var b = defs.GetSurePresentRef(j);
-                    if (a.Target != b.Target)
+                    if (aTarget != defTargets.GetSurePresentRef(j))
                         continue;
+                    var aScopeIdx = defPositions.GetSurePresentRef(i).Index;
+                    var bScopeIdx = defPositions.GetSurePresentRef(j).Index;
                     // search from a upwards for the b
-                    for (var aScope = a.ScopeIdx; aScope != -1; aScope = scopes.GetSurePresentRef(aScope).ParentIdx)
-                        if (aScope == b.ScopeIdx)
-                            throw new InvalidOperationException($"Label '{a.Target.Name}' is defined multiple times in the scope where it is visible");
+                    for (var aScope = aScopeIdx; aScope != -1; aScope = scopes.GetSurePresentRef(aScope).Parent.Index)
+                        if (aScope == bScopeIdx)
+                            throw new InvalidOperationException($"Label '{aTarget.Name}' is defined multiple times in the scope where it is visible");
                     // search from b upwards for the a
-                    for (var bScope = b.ScopeIdx; bScope != -1; bScope = scopes.GetSurePresentRef(bScope).ParentIdx)
-                        if (bScope == a.ScopeIdx)
-                            throw new InvalidOperationException($"Label '{a.Target.Name}' is defined multiple times in the scope where it is visible");
+                    for (var bScope = bScopeIdx; bScope != -1; bScope = scopes.GetSurePresentRef(bScope).Parent.Index)
+                        if (bScope == aScopeIdx)
+                            throw new InvalidOperationException($"Label '{aTarget.Name}' is defined multiple times in the scope where it is visible");
                 }
             }
 
             // Lets iterate over all labels for all gotos
-            var gotos = w.Gotos;
-            var gotoCount = gotos.Count;
+            ref var gotoTargets = ref context.GotoTargets;
+            ref var gotoScopes = ref context.GotoScopes;
+            var gotoCount = gotoTargets.Count;
             for (var i = 0; i < gotoCount; ++i)
             {
-                var got = gotos.GetSurePresentRef(i);
+                var gotoTarget = gotoTargets.GetSurePresentRef(i);
+                var gotoScopeIdx = gotoScopes.GetSurePresentRef(i);
                 var gotoHasAtLeastOneLabel = false;
                 var labelVisible = false;
                 var jumpInCount = 0;
                 for (var j = 0; j < defCount; ++j)
                 {
-                    var def = defs.GetSurePresentRef(j);
-                    if (def.Target != got.Target)
+                    if (defTargets.GetSurePresentRef(j) != gotoTarget)
                         continue;
+                    var def = defPositions.GetSurePresentRef(j);
                     gotoHasAtLeastOneLabel = true;
 
-                    var commonAncestorScopeIdx = got.ScopeIdx;
+                    int commonAncestorScopeIdx = gotoScopeIdx;
                     while (true)
                     {
-                        var defOrItsOuterScopeIdx = def.ScopeIdx;
+                        var defOrItsOuterScopeIdx = def.Index;
                         while (defOrItsOuterScopeIdx != -1 && defOrItsOuterScopeIdx != commonAncestorScopeIdx)
-                            defOrItsOuterScopeIdx = scopes.GetSurePresentRef(defOrItsOuterScopeIdx).ParentIdx;
+                            defOrItsOuterScopeIdx = scopes.GetSurePresentRef(defOrItsOuterScopeIdx).Parent.Index;
 
                         if (defOrItsOuterScopeIdx == commonAncestorScopeIdx)
                             break;
 
-                        commonAncestorScopeIdx = scopes.GetSurePresentRef(commonAncestorScopeIdx).ParentIdx;
+                        commonAncestorScopeIdx = scopes.GetSurePresentRef(commonAncestorScopeIdx).Parent.Index;
                     }
 
                     // check if the goto jump passes through any finally or fault blocks when moving from the goto scope to the common ancestor scope,
                     // excluding the ancestor itself (because it is fine to jump inside the same scope)
-                    for (var s = got.ScopeIdx; s != commonAncestorScopeIdx; s = scopes.GetSurePresentRef(s).ParentIdx)
+                    for (int s = gotoScopeIdx; s != commonAncestorScopeIdx; s = scopes.GetSurePresentRef(s).Parent.Index)
                         if (scopes.GetSurePresentRef(s).ExceptionRegion == ExceptionRegion.FinallyOrFault)
-                            throw new InvalidOperationException($"Control cannot leave the finally or fault block by the jump to the label '{got.Target.Name}'");
+                            throw new InvalidOperationException($"Control cannot leave the finally or fault block by the jump to the label '{gotoTarget.Name}'");
 
                     // if the label scope is the jump scope or its ancestor
-                    if (def.ScopeIdx == commonAncestorScopeIdx)
+                    if (def.Index == commonAncestorScopeIdx)
                     {
                         labelVisible |= def.Enterable;
                         continue;
@@ -1396,16 +1265,16 @@ namespace FastExpressionCompiler
 
                     // if the ancestor scope is enclosing the label scope, check if the label is enterable in the whole pass to the ancestor scope
                     var labelEnterable = def.Enterable;
-                    for (var s = def.ScopeIdx; s != commonAncestorScopeIdx; s = scopes.GetSurePresentRef(s).ParentIdx)
-                        labelEnterable &= scopes.GetSurePresentRef(s).Enterable;
+                    for (var s = def.Index; s != commonAncestorScopeIdx; s = scopes.GetSurePresentRef(s).Parent.Index)
+                        labelEnterable &= scopes.GetSurePresentRef(s).Parent.Enterable;
                     if (labelEnterable)
                         ++jumpInCount;
                 }
 
-                if (gotoHasAtLeastOneLabel & !labelVisible && (jumpInCount != 1 || got.Target.Type != typeof(void)))
+                if (gotoHasAtLeastOneLabel & !labelVisible && (jumpInCount != 1 || gotoTarget.Type != typeof(void)))
                     throw new InvalidOperationException(jumpInCount > 1
-                        ? $"Ambiguous jump to the label '{got.Target.Name}'"
-                        : $"Control cannot enter the label '{got.Target.Name}': it is in the expression or the block with the value");
+                        ? $"Ambiguous jump to the label '{gotoTarget.Name}'"
+                        : $"Control cannot enter the label '{gotoTarget.Name}': it is in the expression or the block with the value");
             }
         }
 
@@ -1415,14 +1284,15 @@ namespace FastExpressionCompiler
         public static bool TryCollectBoundConstants(ref CompilerContext context, Expression expr,
             NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
         {
-            var r = TryCollectInfo(ref context, expr, nestedLambda, ref rootNestedLambdas);
+            var r = TryCollectInfo(ref context, expr, nestedLambda, ref rootNestedLambdas, 0, true);
             return r == Result.OK || (context.CompilerFlags & CompilerFlags.ThrowOnNotSupportedExpression) != 0 && NotSupportedCase<bool>(r);
         }
 
         /// <summary>Collects the information about closure constants, nested lambdas, non-passed parameters, goto labels and variables in blocks.
         /// Returns `OK` result if everything is fine and other result for error.</summary>
         public static Result TryCollectInfo(ref CompilerContext context, Expression expr,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas,
+            short scopeIdx, bool enterable = false)
         {
             var r = Result.OK;
             while (true)
@@ -1431,7 +1301,7 @@ namespace FastExpressionCompiler
                     return Result.ExpressionIsNull;
 #if LIGHT_EXPRESSION
                 if (expr.IsIntrinsic)
-                    return expr.TryCollectInfo(ref context, nestedLambda, ref rootNestedLambdas);
+                    return expr.TryCollectInfo(ref context, nestedLambda, ref rootNestedLambdas, scopeIdx);
 #endif
                 switch (expr.NodeType)
                 {
@@ -1477,20 +1347,21 @@ namespace FastExpressionCompiler
                                 if (callObjectExpr != null)
                                 {
                                     expr = callObjectExpr;
+                                    enterable = false;
                                     continue;
                                 }
                                 return Result.OK;
                             }
 
                             if (callObjectExpr != null &&
-                                (r = TryCollectInfo(ref context, callObjectExpr, nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                                (r = TryCollectInfo(ref context, callObjectExpr, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                                 return r;
 
                             var hasComplexExpression = false;
                             for (var i = 0; i < argCount; i++)
                             {
                                 context.HasComplexExpression = false; // reset the flag because we want to know the real result after the arg collection
-                                if ((r = TryCollectInfo(ref context, callArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                                if ((r = TryCollectInfo(ref context, callArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                                     return r;
                                 // if any argument is complex, then thw whole call should be complex,
                                 // because we cannot just store and restore a single argument, it should be done for all arguments
@@ -1511,6 +1382,7 @@ namespace FastExpressionCompiler
                         if (memberExpr == null)
                             return r;
                         expr = memberExpr;
+                        enterable = false;
                         continue;
 
                     case ExpressionType.New:
@@ -1525,7 +1397,7 @@ namespace FastExpressionCompiler
                             for (var i = 0; i < argCount; i++)
                             {
                                 context.HasComplexExpression = false;
-                                if ((r = TryCollectInfo(ref context, ctorArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                                if ((r = TryCollectInfo(ref context, ctorArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                                     return r;
                                 hasComplexExpression |= context.HasComplexExpression;
                             }
@@ -1554,16 +1426,17 @@ namespace FastExpressionCompiler
                         if (elemCount == 0)
                             return r;
                         for (var i = 0; i < elemCount - 1; i++)
-                            if ((r = TryCollectInfo(ref context, arrElems.GetArgument(i), nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                            if ((r = TryCollectInfo(ref context, arrElems.GetArgument(i), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                                 return r;
                         expr = arrElems.GetArgument(elemCount - 1);
+                        enterable = false;
                         continue;
 
                     case ExpressionType.MemberInit:
-                        return TryCollectMemberInitExprConstants(ref context, (MemberInitExpression)expr, nestedLambda, ref rootNestedLambdas);
+                        return TryCollectMemberInitExprConstants(ref context, (MemberInitExpression)expr, nestedLambda, ref rootNestedLambdas, scopeIdx);
 
                     case ExpressionType.ListInit:
-                        return TryCollectListInitExprConstants(ref context, (ListInitExpression)expr, nestedLambda, ref rootNestedLambdas);
+                        return TryCollectListInitExprConstants(ref context, (ListInitExpression)expr, nestedLambda, ref rootNestedLambdas, scopeIdx);
 
                     case ExpressionType.Lambda:
                         // Here we look if the lambda is already stored in the nested lambdas tree (Collected+Compiled),
@@ -1597,7 +1470,7 @@ namespace FastExpressionCompiler
                         else
                             rootNestedLambdas.Add(newNestedLambda);
 
-                        if ((r = TryCollectInfo(ref nestedLambdaContext, nestedLambdaExpr.Body, newNestedLambda, ref rootNestedLambdas)) != Result.OK)
+                        if ((r = TryCollectInfo(ref nestedLambdaContext, nestedLambdaExpr.Body, newNestedLambda, ref rootNestedLambdas, 0, true)) != Result.OK)
                             return r;
 
                         if (newNestedLambda.NonPassedParameters.Count != 0 &&
@@ -1626,7 +1499,7 @@ namespace FastExpressionCompiler
                                 if (!found)
                                     inlinedExpr = CreateInlinedLambdaInvocationExpression(invokeArgs, lambdaExpr);
 
-                                if ((r = TryCollectInfo(ref context, inlinedExpr, nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                                if ((r = TryCollectInfo(ref context, inlinedExpr, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                                     return r;
 
                                 context.HasComplexExpression = true;
@@ -1635,18 +1508,19 @@ namespace FastExpressionCompiler
                             }
 
                             // No inlining, collect the normal way
+                            enterable = false;
                             if (invokeArgCount == 0)
                             {
                                 expr = invokedExpr;
                                 continue;
                             }
 
-                            if ((r = TryCollectInfo(ref context, invokedExpr, nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                            if ((r = TryCollectInfo(ref context, invokedExpr, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                                 return r;
 
                             var lastArgIndex = invokeArgCount - 1;
                             for (var i = 0; i < lastArgIndex; i++)
-                                if ((r = TryCollectInfo(ref context, invokeArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                                if ((r = TryCollectInfo(ref context, invokeArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                                     return r;
                             expr = invokeArgs.GetArgument(lastArgIndex);
                             continue;
@@ -1662,8 +1536,8 @@ namespace FastExpressionCompiler
                                 continue;
                             }
                         }
-                        if ((r = TryCollectInfo(ref context, condExpr.Test, nestedLambda, ref rootNestedLambdas)) != Result.OK ||
-                            (r = TryCollectInfo(ref context, condExpr.IfFalse, nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                        if ((r = TryCollectInfo(ref context, condExpr.Test, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK ||
+                            (r = TryCollectInfo(ref context, condExpr.IfFalse, nestedLambda, ref rootNestedLambdas, scopeIdx, enterable)) != Result.OK)
                             return r;
                         expr = condExpr.IfTrue;
                         continue;
@@ -1675,6 +1549,13 @@ namespace FastExpressionCompiler
                         if (blockExprCount == 0)
                             return r; // yeah, this is the real case - the block may not contain any expressions
 
+                        // The enterable block without the direct labels is transparent for the validation, so it does not need its own scope
+                        var needsScope = !enterable;
+                        for (var i = 0; !needsScope & i < blockExprCount; ++i)
+                            needsScope = blockExprs[i].NodeType == ExpressionType.Label;
+                        if (needsScope)
+                            scopeIdx = (short)context.Scopes.Add(new LabelScope { Parent = new ScopeIdx(scopeIdx, enterable) });
+
                         var varExprs = blockExpr.Variables;
                         var varExprCount = varExprs?.Count ?? 0; // todo: @perf optimize for an empty and a single variable
 
@@ -1683,9 +1564,10 @@ namespace FastExpressionCompiler
                             blockExprs[1] is BinaryExpression st1 && st1.NodeType == ExpressionType.Assign &&
                             st0.Left == blockExprs[0] && st1.Right == blockExprs[0])
                         {
-                            if ((r = TryCollectInfo(ref context, st0.Right, nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                            if ((r = TryCollectInfo(ref context, st0.Right, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                                 return r;
                             expr = st1.Left;
+                            enterable = false;
                             continue;
                         }
 
@@ -1695,14 +1577,15 @@ namespace FastExpressionCompiler
                             context.PushBlockWithVars(varExprs);
 
                         for (var i = 0; i < blockExprCount - 1; i++)
-                            if ((r = TryCollectInfo(ref context, blockExprs[i], nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                            if ((r = TryCollectInfo(ref context, blockExprs[i], nestedLambda, ref rootNestedLambdas, scopeIdx, true)) != Result.OK)
                                 return r;
 
                         expr = blockExprs[blockExprCount - 1];
+                        enterable = true;
                         if (varExprCount == 0)
                             continue; // in case of no variables we can collect the last expr without recursion
 
-                        if ((r = TryCollectInfo(ref context, expr, nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                        if ((r = TryCollectInfo(ref context, expr, nestedLambda, ref rootNestedLambdas, scopeIdx, true)) != Result.OK)
                             return r;
                         context.PopBlock();
                         return r;
@@ -1711,7 +1594,19 @@ namespace FastExpressionCompiler
                         var loopExpr = (LoopExpression)expr;
                         context.AddLabel(loopExpr.BreakLabel);
                         context.AddLabel(loopExpr.ContinueLabel);
+                        scopeIdx = (short)context.Scopes.Add(new LabelScope { Parent = new ScopeIdx(scopeIdx, enterable) });
+                        if (loopExpr.BreakLabel != null)
+                            {
+                            _ = context.DefTargets.Add(loopExpr.BreakLabel);
+                            _ = context.DefPositions.Add(new ScopeIdx(scopeIdx, true));
+                        }
+                        if (loopExpr.ContinueLabel != null)
+                            {
+                            _ = context.DefTargets.Add(loopExpr.ContinueLabel);
+                            _ = context.DefPositions.Add(new ScopeIdx(scopeIdx, true));
+                        }
                         expr = loopExpr.Body;
+                        enterable = true;
                         continue;
 
                     case ExpressionType.Index:
@@ -1719,36 +1614,45 @@ namespace FastExpressionCompiler
                         var indexArgs = indexExpr.GetArgExprs();
                         var indexArgCount = indexArgs.GetArgCount();
                         for (var i = 0; i < indexArgCount; i++)
-                            if ((r = TryCollectInfo(ref context, indexArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                            if ((r = TryCollectInfo(ref context, indexArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                                 return r;
                         if (indexExpr.Object == null)
                             return r;
                         expr = indexExpr.Object;
+                        enterable = false;
                         continue;
 
                     case ExpressionType.Try:
                         {
                             context.HasComplexExpression = false;
-                            r = TryCollectTryExprInfo(ref context, (TryExpression)expr, nestedLambda, ref rootNestedLambdas);
+                            r = TryCollectTryExprInfo(ref context, (TryExpression)expr, nestedLambda, ref rootNestedLambdas, scopeIdx);
                             context.HasComplexExpression = true;
                             return r;
                         }
                     case ExpressionType.Label:
                         var labelExpr = (LabelExpression)expr;
                         context.AddLabel(labelExpr.Target, context.CurrentInlinedLambdaInvokeIndex);
+                        _ = context.DefTargets.Add(labelExpr.Target);
+                        _ = context.DefPositions.Add(new ScopeIdx(scopeIdx, enterable));
+
                         if (labelExpr.Target != null)
                             context.HasLabelDefinedTwice |= ++context.TargetToGotosAndLabels.Map.AddOrGetValueRef(labelExpr.Target, out _).Item2 > 1;
                         if (labelExpr.DefaultValue == null)
                             return r;
+                        enterable = false;
                         expr = labelExpr.DefaultValue;
                         continue;
 
                     case ExpressionType.Goto:
                         var gotoExpr = (GotoExpression)expr;
+                        _ = context.GotoTargets.Add(gotoExpr.Target);
+                        _ = context.GotoScopes.Add(scopeIdx);
+
                         if (gotoExpr.Target != null)
                             context.TargetToGotosAndLabels.Map.AddOrGetValueRef(gotoExpr.Target, out _).Item1++;
                         if (gotoExpr.Value == null)
                             return r;
+                        enterable = false;
                         expr = gotoExpr.Value;
                         continue;
 
@@ -1764,9 +1668,9 @@ namespace FastExpressionCompiler
                             }
                             return r; // no matched body and no default -> nothing to collect
                         }
-                        if ((r = TryCollectInfo(ref context, switchExpr.SwitchValue, nestedLambda, ref rootNestedLambdas)) != Result.OK ||
+                        if ((r = TryCollectInfo(ref context, switchExpr.SwitchValue, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK ||
                             switchExpr.DefaultBody != null && // todo: @check is the order of collection affects the result?
-                            (r = TryCollectInfo(ref context, switchExpr.DefaultBody, nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                            (r = TryCollectInfo(ref context, switchExpr.DefaultBody, nestedLambda, ref rootNestedLambdas, scopeIdx, enterable)) != Result.OK)
                             return r;
 
                         var switchCases = switchExpr.Cases;
@@ -1777,11 +1681,11 @@ namespace FastExpressionCompiler
                             {
                                 var caseTestValues = switchCases[i].TestValues;
                                 for (var v = 0; v < caseTestValues.Count; v++)
-                                    if ((r = TryCollectInfo(ref context, caseTestValues[v], nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                                    if ((r = TryCollectInfo(ref context, caseTestValues[v], nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                                         return r;
                             }
                             for (var i = 0; i < switchCases.Count - 1; i++)
-                                if ((r = TryCollectInfo(ref context, switchCases[i].Body, nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                                if ((r = TryCollectInfo(ref context, switchCases[i].Body, nestedLambda, ref rootNestedLambdas, scopeIdx, enterable)) != Result.OK)
                                     return r;
                             expr = switchCases[switchCases.Count - 1].Body;
                             continue;
@@ -1790,6 +1694,7 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Extension:
                         expr = expr.Reduce();
+                        enterable = false;
                         continue;
 
                     case ExpressionType.Default:
@@ -1798,6 +1703,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.TypeIs:
                     case ExpressionType.TypeEqual:
                         expr = ((TypeBinaryExpression)expr).Expression;
+                        enterable = false;
                         continue;
 
                     case ExpressionType.Quote:            // todo: @feature - is not supported yet
@@ -1814,20 +1720,26 @@ namespace FastExpressionCompiler
                         if (expr is UnaryExpression unaryExpr)
                         {
                             if (unaryExpr.Operand is null)
+                            {
+                                if (unaryExpr.NodeType == ExpressionType.Throw)
+                                    context.Rethrows.Add(scopeIdx);
                                 return r;
+                            }
                             expr = unaryExpr.Operand;
+                            enterable = false;
                             continue;
                         }
 
                         if (expr is BinaryExpression binaryExpr)
                         {
-                            if ((r = TryCollectInfo(ref context, binaryExpr.Left, nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                            if ((r = TryCollectInfo(ref context, binaryExpr.Left, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                                 return r;
                             // the conversion lambda of the compound assignment is emitted inlined by `TryEmitOpAssignWithMethod`, here it is collected via the invoke with the default arg
                             if (binaryExpr.Conversion != null &&
-                                (r = TryCollectInfo(ref context, Expression.Invoke(binaryExpr.Conversion, Expression.Default(binaryExpr.Conversion.Parameters[0].Type)), nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                                (r = TryCollectInfo(ref context, Expression.Invoke(binaryExpr.Conversion, Expression.Default(binaryExpr.Conversion.Parameters[0].Type)), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                                 return r;
                             expr = binaryExpr.Right;
+                            enterable = false;
                             continue;
                         }
 
@@ -2044,12 +1956,12 @@ namespace FastExpressionCompiler
             where TDelegate : Delegate => d?.Target as IDelegateDebugInfo;
 
         private static Result TryCollectMemberInitExprConstants(ref CompilerContext context, MemberInitExpression expr,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
         {
             var newExpr = expr.NewExpression;
             var binds = expr.GetBindings();
             var r = Result.OK;
-            if ((r = TryCollectInfo(ref context, newExpr, nestedLambda, ref rootNestedLambdas)) != Result.OK)
+            if ((r = TryCollectInfo(ref context, newExpr, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                 return r;
 
             var count = binds.GetBindingCount();
@@ -2059,21 +1971,21 @@ namespace FastExpressionCompiler
                 if (b.BindingType != MemberBindingType.Assignment)
                     return b.BindingType == MemberBindingType.MemberBinding ? Result.NotSupported_MemberInit_MemberBinding : Result.NotSupported_MemberInit_ListBinding; // todo: @feature MemberMemberBinding and the MemberListBinding is not supported yet.
 
-                if ((r = TryCollectInfo(ref context, ((MemberAssignment)b).Expression, nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                if ((r = TryCollectInfo(ref context, ((MemberAssignment)b).Expression, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                     return r;
             }
             return r;
         }
 
         private static Result TryCollectListInitExprConstants(ref CompilerContext context, ListInitExpression expr,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
         {
             var newExpr = expr.NewExpression;
             var inits = expr.Initializers;
             var count = inits.Count;
 
             var r = Result.OK;
-            if ((r = TryCollectInfo(ref context, newExpr, nestedLambda, ref rootNestedLambdas)) != Result.OK)
+            if ((r = TryCollectInfo(ref context, newExpr, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                 return r;
 
             for (var i = 0; i < count; ++i)
@@ -2082,17 +1994,17 @@ namespace FastExpressionCompiler
                 var args = elemInit.Arguments;
                 var argCount = args.Count;
                 for (var a = 0; a < argCount; ++a)
-                    if ((r = TryCollectInfo(ref context, args.GetArgument(a), nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                    if ((r = TryCollectInfo(ref context, args.GetArgument(a), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                         return r;
             }
             return r;
         }
 
         private static Result TryCollectTryExprInfo(ref CompilerContext context, TryExpression tryExpr,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
         {
             var r = Result.OK;
-            if ((r = TryCollectInfo(ref context, tryExpr.Body, nestedLambda, ref rootNestedLambdas)) != Result.OK)
+            if ((r = TryCollectInfo(ref context, tryExpr.Body, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                 return r;
 
             var catchBlocks = tryExpr.Handlers;
@@ -2103,15 +2015,16 @@ namespace FastExpressionCompiler
                 if (catchExVar != null)
                 {
                     context.PushBlockWithVars(catchExVar);
-                    if ((r = TryCollectInfo(ref context, catchExVar, nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                    if ((r = TryCollectInfo(ref context, catchExVar, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                         return r;
                 }
 
                 if (catchBlock.Filter != null &&
-                    (r = TryCollectInfo(ref context, catchBlock.Filter, nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                    (r = TryCollectInfo(ref context, catchBlock.Filter, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                     return r;
 
-                if ((r = TryCollectInfo(ref context, catchBlock.Body, nestedLambda, ref rootNestedLambdas)) != Result.OK)
+                var catchScopeIdx = (short)context.Scopes.Add(new LabelScope { Parent = new ScopeIdx(scopeIdx, false), ExceptionRegion = ExceptionRegion.Catch });
+                if ((r = TryCollectInfo(ref context, catchBlock.Body, nestedLambda, ref rootNestedLambdas, catchScopeIdx)) != Result.OK)
                     return r;
 
                 if (catchExVar != null)
@@ -2119,9 +2032,12 @@ namespace FastExpressionCompiler
             }
 
             var faultOrFinally = tryExpr.Fault ?? tryExpr.Finally;
-            if (faultOrFinally != null &&
-                (r = TryCollectInfo(ref context, faultOrFinally, nestedLambda, ref rootNestedLambdas)) != Result.OK)
-                return r;
+            if (faultOrFinally != null)
+            {
+                var finallyScopeIdx = (short)context.Scopes.Add(new LabelScope { Parent = new ScopeIdx(scopeIdx, false), ExceptionRegion = ExceptionRegion.FinallyOrFault });
+                if ((r = TryCollectInfo(ref context, faultOrFinally, nestedLambda, ref rootNestedLambdas, finallyScopeIdx)) != Result.OK)
+                    return r;
+            }
 
             return r;
         }
