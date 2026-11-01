@@ -168,7 +168,7 @@ public struct ExprNode
 }
 
 /// <summary>Stores an expression tree as flat nodes plus separate closure constants.</summary>
-public struct ExprTree : IEquatable<ExprTree>
+public partial struct ExprTree : IEquatable<ExprTree>
 {
     private static readonly object ClosureConstantMarker = new();
     private const byte ParameterByRefFlag = 1;
@@ -1195,9 +1195,9 @@ public struct ExprTree : IEquatable<ExprTree>
             ? new SysExprBuilder(this).ReadExpression(RootIdx)
             : throw new InvalidOperationException("Flat expression tree is empty.");
 
-    /// <summary>Reconstructs the flat tree as a LightExpression tree.</summary>
+    /// <summary>Reconstructs the flat tree as a LightExpression tree via System.Linq expressions; the slower oracle of <see cref="ToLightExpression"/>.</summary>
     [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
-    public LightExpression.Expression ToLightExpression() =>
+    public LightExpression.Expression ToLightExpressionViaSystem() =>
         LightExpression.FromSysExpressionConverter.ToLightExpression(ToExpression());
 
     /// <summary>Structurally compares two flat expression trees.</summary>
@@ -2023,53 +2023,7 @@ public struct ExprTree : IEquatable<ExprTree>
             return SysExpr.ElementInit((MethodInfo)node.Obj, ReadExpressions(GetChildren(idx)));
         }
 
-        private ChildIdxs GetChildren(int idx)
-        {
-            ref var node = ref _tree.Nodes.GetSurePresentRef(idx);
-            if (ReferenceEquals(node.Obj, ExprNode.InlineValueMarker) || node.ChildCount == 0 || node.ChildIdx == 0)
-                return default;
-            var count = node.ChildCount;
-            ChildIdxs children = default;
-            // Stop after ChildCount. Also stop if the sibling chain hits 0 or loops back to this
-            // owner (last-child.NextIdx is the parent up-link).
-            var childIdx = node.ChildIdx;
-            for (var i = 0; i < count && childIdx != 0 && childIdx != idx; ++i)
-            {
-                children.Add(childIdx);
-                childIdx = _tree.Nodes.GetSurePresentRef(childIdx).NextIdx;
-            }
-            return children;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static object ReadInlineValue(Type type, uint data)
-        {
-            if (type.IsEnum)
-                return Enum.ToObject(type, Type.GetTypeCode(Enum.GetUnderlyingType(type)) switch
-                {
-                    TypeCode.Byte => (object)(byte)data,
-                    TypeCode.SByte => (object)(sbyte)(byte)data,
-                    TypeCode.Char => (object)(char)(ushort)data,
-                    TypeCode.Int16 => (object)(short)(ushort)data,
-                    TypeCode.UInt16 => (object)(ushort)data,
-                    TypeCode.Int32 => (object)(int)data,
-                    TypeCode.UInt32 => (object)data,
-                    var tc => FlatExpressionThrow.UnsupportedInlineConstantType<object>(type, tc)
-                });
-            return Type.GetTypeCode(type) switch
-            {
-                TypeCode.Boolean => (object)(data != 0),
-                TypeCode.Byte => (object)(byte)data,
-                TypeCode.SByte => (object)(sbyte)(byte)data,
-                TypeCode.Char => (object)(char)(ushort)data,
-                TypeCode.Int16 => (object)(short)(ushort)data,
-                TypeCode.UInt16 => (object)(ushort)data,
-                TypeCode.Int32 => (object)(int)data,
-                TypeCode.UInt32 => (object)data,
-                TypeCode.Single => (object)FloatBits.ToFloat(data),
-                _ => FlatExpressionThrow.UnsupportedInlineConstantType<object>(type)
-            };
-        }
+        private ChildIdxs GetChildren(int idx) => ExprTree.GetChildren(_tree, idx);
 
         [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
         private SysExpr[] ReadExpressions(in ChildIdxs childIdxs)
@@ -2084,6 +2038,55 @@ public struct ExprTree : IEquatable<ExprTree>
         [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2077",
             Justification = "Flat expression round-trip stores the runtime type metadata explicitly for reconstruction.")]
         private static NewExpression CreateValueTypeNewExpression(Type type) => SysExpr.New(type);
+    }
+
+    // Shared by the System and the Light builders.
+    private static ChildIdxs GetChildren(in ExprTree tree, int idx)
+    {
+        ref var node = ref tree.Nodes.GetSurePresentRef(idx);
+        if (ReferenceEquals(node.Obj, ExprNode.InlineValueMarker) || node.ChildCount == 0 || node.ChildIdx == 0)
+            return default;
+        var count = node.ChildCount;
+        ChildIdxs children = default;
+        // Stop after ChildCount. Also stop if the sibling chain hits 0 or loops back to this
+        // owner (last-child.NextIdx is the parent up-link).
+        var childIdx = node.ChildIdx;
+        for (var i = 0; i < count && childIdx != 0 && childIdx != idx; ++i)
+        {
+            children.Add(childIdx);
+            childIdx = tree.Nodes.GetSurePresentRef(childIdx).NextIdx;
+        }
+        return children;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static object ReadInlineValue(Type type, uint data)
+    {
+        if (type.IsEnum)
+            return Enum.ToObject(type, Type.GetTypeCode(Enum.GetUnderlyingType(type)) switch
+            {
+                TypeCode.Byte => (object)(byte)data,
+                TypeCode.SByte => (object)(sbyte)(byte)data,
+                TypeCode.Char => (object)(char)(ushort)data,
+                TypeCode.Int16 => (object)(short)(ushort)data,
+                TypeCode.UInt16 => (object)(ushort)data,
+                TypeCode.Int32 => (object)(int)data,
+                TypeCode.UInt32 => (object)data,
+                var tc => FlatExpressionThrow.UnsupportedInlineConstantType<object>(type, tc)
+            });
+        return Type.GetTypeCode(type) switch
+        {
+            TypeCode.Boolean => (object)(data != 0),
+            TypeCode.Byte => (object)(byte)data,
+            TypeCode.SByte => (object)(sbyte)(byte)data,
+            TypeCode.Char => (object)(char)(ushort)data,
+            TypeCode.Int16 => (object)(short)(ushort)data,
+            TypeCode.UInt16 => (object)(ushort)data,
+            TypeCode.Int32 => (object)(int)data,
+            TypeCode.UInt32 => (object)data,
+            TypeCode.Single => (object)FloatBits.ToFloat(data),
+            _ => FlatExpressionThrow.UnsupportedInlineConstantType<object>(type)
+        };
     }
 }
 
