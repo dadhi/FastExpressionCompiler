@@ -40,6 +40,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_fuzz_optional_children_presence_in_flat_expression();
             Can_compile_generated_flat_expression_natively();
             Flat_compile_handles_bool_result_and_falls_back_outside_the_subset();
+            Flat_compile_handles_new_call_and_member_access_natively();
             Experiment_compare_flat_and_light_compile_phases();
             Flat_compiles_the_readme_expressions_and_compares_the_time();
 

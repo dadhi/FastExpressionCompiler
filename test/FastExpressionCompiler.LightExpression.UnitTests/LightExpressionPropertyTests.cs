@@ -58,9 +58,9 @@ public partial class LightExpressionTests
 
         var fe2 = default(ExprTree);
         var p2 = fe2.ParameterOf<int>("p");
-        fe2.RootIdx = fe2.Lambda<Func<int, string>>(fe2.ConstantOf("x"), p2);
-        Ensure(fe2.TryCompileFlat<Func<int, string>>() == null, "string is outside the subset");
-        Ensure(fe2.CompileFast<Func<int, string>>()(1) == "x", "fallback result");
+        fe2.RootIdx = fe2.Lambda<Func<int, Type>>(fe2.ConstantOf(typeof(string)), p2);
+        Ensure(fe2.TryCompileFlat<Func<int, Type>>() == null, "the Type constant is outside the subset");
+        Ensure(fe2.CompileFast<Func<int, Type>>()(1) == typeof(string), "fallback result");
     }
 
     /// <summary>Prints how long the phases of the compilation take on the flat and on the light trees; asserts nothing but the agreement.</summary>
@@ -155,11 +155,76 @@ public partial class LightExpressionTests
         var l1f = (FastExpressionCompiler.LightExpression.LambdaExpression)fe1.ToLightExpression();
         Time("1 prebuilt flat-made light FEC", () => l1f.CompileFast<Func<ReadmeB, ReadmeX>>(true));
         Time("1 prebuilt light FEC (generic)", () => l1.CompileFast<Func<ReadmeB, ReadmeX>>(true));
-        Time("1 flat native probe (falls back)", () => fe1.TryCompileFlat<Func<ReadmeB, ReadmeX>>());
+        Time("1 flat native (closure const + New)", () => fe1.TryCompileFlat<Func<ReadmeB, ReadmeX>>());
         Time("2 light FEC", () => l2.CompileFast(true));
         Time("2 flat->light->FEC (CompileFast)", () => fe2.CompileFast<Func<int, Func<int>>>());
         Time("2 flat->light only", () => fe2.ToLightExpression());
         Time("2 flat native probe (falls back)", () => fe2.TryCompileFlat<Func<int, Func<int>>>());
+    }
+
+    public class FlatPoint
+    {
+        public int X;
+        public int Y { get; set; }
+        public FlatPoint(int x, int y) { X = x; Y = y; }
+        public FlatPoint Self => this;
+        public static int Twice(int v) => v * 2;
+        public int Sum(int k) => X + Y + k;
+    }
+
+    /// <summary>The native subset with the reference types: New, static and instance Call, Field and Property, the reference-typed
+    /// parameter, local and result; the same tree with a closure constant must fall back.</summary>
+    public void Flat_compile_handles_new_call_and_member_access_natively()
+    {
+        var t = typeof(FlatPoint);
+        var ctor = t.GetConstructor(new[] { typeof(int), typeof(int) });
+        var fe = default(ExprTree);
+        var p = fe.ParameterOf<FlatPoint>("p");
+        var k = fe.ParameterOf<int>("k");
+        var q = fe.Variable(t, "q");
+        // (p, k) => { var q = new FlatPoint(1, 2); q = p; new FlatPoint(q.Self.X + Twice(k), q.Sum(k)) }
+        var body = fe.Block(t, new[] { q },
+            fe.Assign(q, fe.New(ctor, fe.ConstantInt(1), fe.ConstantInt(2))),
+            fe.Assign(q, p),
+            fe.New(ctor,
+                fe.Add(fe.Field(fe.Property(q, t.GetProperty("Self")), t.GetField("X")), fe.Call(t.GetMethod("Twice"), k)),
+                fe.Call(q, t.GetMethod("Sum"), k)));
+        fe.RootIdx = fe.Lambda<Func<FlatPoint, int, FlatPoint>>(body, p, k);
+
+        var native = fe.TryCompileFlat<Func<FlatPoint, int, FlatPoint>>();
+        Ensure(native != null, "native compile of New/Call/Member");
+        var r = native(new FlatPoint(10, 20), 3);
+        Ensure(r.X == 10 + 6 && r.Y == 10 + 20 + 3, "native result");
+
+        // closure constant, string and null constants are native too; the nested lambda is outside the subset
+        var fe2 = default(ExprTree);
+        var p2 = fe2.ParameterOf<FlatPoint>("p");
+        var held = new FlatPoint(7, 8);
+        fe2.RootIdx = fe2.Lambda<Func<FlatPoint, object[]>>(
+            fe2.NewArrayInit(typeof(object), fe2.Constant(held, t), fe2.Constant("s"), fe2.ConstantNull(t), p2), p2);
+        Ensure(fe2.TryCompileFlat<Func<FlatPoint, object[]>>() == null, "the array init is outside the subset");
+
+        var fe3 = default(ExprTree);
+        var p3 = fe3.ParameterOf<FlatPoint>("p");
+        fe3.RootIdx = fe3.Lambda<Func<FlatPoint, FlatPoint, int>>(
+            fe3.Add(fe3.Field(fe3.Constant(held, t), t.GetField("X")),
+                fe3.Call(t.GetMethod("Twice"), fe3.Property(fe3.Constant(held, t), t.GetProperty("Y")))),
+            p3, fe3.ParameterOf<FlatPoint>("unused"));
+        var native3 = fe3.TryCompileFlat<Func<FlatPoint, FlatPoint, int>>();
+        Ensure(native3 != null && native3(null, null) == 7 + 16, "closure constant native");
+
+        var fe4 = default(ExprTree);
+        var p4 = fe4.ParameterOf<FlatPoint>("p");
+        fe4.RootIdx = fe4.Lambda<Func<FlatPoint, FlatPoint>>(fe4.Constant(held, t), p4);
+        Ensure(ReferenceEquals(fe4.TryCompileFlat<Func<FlatPoint, FlatPoint>>()(null), held), "closure constant is the same instance");
+        var fe5 = default(ExprTree);
+        var p5 = fe5.ParameterOf<FlatPoint>("p");
+        fe5.RootIdx = fe5.Lambda<Func<FlatPoint, string>>(fe5.Block(fe5.Constant("s"), fe5.Constant("str")), p5);
+        Ensure(fe5.TryCompileFlat<Func<FlatPoint, string>>()(null) == "str", "string constant native");
+        var fe6 = default(ExprTree);
+        var p6 = fe6.ParameterOf<FlatPoint>("p");
+        fe6.RootIdx = fe6.Lambda<Func<FlatPoint, FlatPoint>>(fe6.ConstantNull(t), p6);
+        Ensure(fe6.TryCompileFlat<Func<FlatPoint, FlatPoint>>()(null) == null, "null constant native");
     }
 
     /// <summary>Fuzzes presence/absence of every optional child (switch default/cases, try finally/catch, catch variable/filter,
@@ -563,6 +628,7 @@ public partial class LightExpressionTests
     public void Can_compile_generated_flat_expression_natively() { }
     public void Flat_compile_handles_bool_result_and_falls_back_outside_the_subset() { }
     public void Experiment_compare_flat_and_light_compile_phases() { }
+    public void Flat_compile_handles_new_call_and_member_access_natively() { }
     public void Flat_compiles_the_readme_expressions_and_compares_the_time() { }
 #endif
 }
