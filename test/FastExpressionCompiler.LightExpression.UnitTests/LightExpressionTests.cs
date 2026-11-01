@@ -39,6 +39,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_property_test_generated_flat_expression_roundtrip_structurally();
             Can_fuzz_optional_children_presence_in_flat_expression();
             Can_compile_generated_flat_expression_natively();
+            Flat_compile_handles_bool_result_and_falls_back_outside_the_subset();
             Experiment_compare_flat_and_light_compile_phases();
 
             Flat_lambda_parameter_ref_before_decl_preserves_identity();
