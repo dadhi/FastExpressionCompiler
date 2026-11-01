@@ -29,6 +29,63 @@ public partial class LightExpressionTests
                 print: testCase => $"{testCase.Seed}: {testCase.Spec}");
     }
 
+    /// <summary>The flat-native collect+emit must agree with System.Linq on the generated int/bool trees and must not fall back.</summary>
+    public void Can_compile_generated_flat_expression_natively()
+    {
+        Gen.Int[0, int.MaxValue / 2].Sample(seed =>
+            {
+                var spec = GeneratedIntSpecFactory.Create(seed, maxDepth: 3, maxBreadth: 3);
+                var fe = CreateGeneratedFlatExpression(spec);
+                Ensure(fe.TryCollectFlatInfo() == ExpressionCompiler.Result.OK, "flat collect");
+                var flat = fe.TryCompileFlat<Func<int, int>>();
+                Ensure(flat != null, "flat native compile");
+                var expected = CreateGeneratedLightExpression(spec).CompileSys();
+                for (var arg = -3; arg <= 3; ++arg)
+                    Ensure(flat(arg) == expected(arg), $"result for {arg}");
+                return true;
+            },
+            iter: 300, threads: 1, seed: "0N0XIzNsQ0O2", print: seed => $"{seed}: {GeneratedIntSpecFactory.Create(seed, 3, 3)}");
+    }
+
+    /// <summary>Prints how long the phases of the compilation take on the flat and on the light trees; asserts nothing but the agreement.</summary>
+    public void Experiment_compare_flat_and_light_compile_phases()
+    {
+        const int n = 200, reps = 20;
+        var flats = new ExprTree[n];
+        var lights = new FastExpressionCompiler.LightExpression.Expression<Func<int, int>>[n];
+        var nodes = 0;
+        for (var i = 0; i < n; ++i)
+        {
+            var spec = GeneratedIntSpecFactory.Create(i + 1, maxDepth: 4, maxBreadth: 3);
+            flats[i] = CreateGeneratedFlatExpression(spec);
+            lights[i] = CreateGeneratedLightExpression(spec);
+            nodes += flats[i].Nodes.Count;
+        }
+
+        void Time(string name, int repeat, Action<int> body)
+        {
+            for (var i = 0; i < n; ++i) body(i); // warm up
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            for (var r = 0; r < repeat; ++r)
+                for (var i = 0; i < n; ++i) body(i);
+            sw.Stop();
+            Console.WriteLine($"//flat-vs-light {name,-34} {sw.Elapsed.TotalMilliseconds * 1000 / (n * repeat),9:F2} us/expr");
+        }
+
+        Console.WriteLine($"//flat-vs-light {n} exprs, {nodes / n} flat nodes avg");
+        Time("collect: flat linear scan", reps * 10, i => flats[i].TryCollectFlatInfo());
+        Time("collect: light TryCollectInfo", reps * 10, i =>
+        {
+            var ctx = new ExpressionCompiler.CompilerContext(ExpressionCompiler.ClosureStatus.ToBeCollected, (FastExpressionCompiler.LightExpression.IParameterProvider)lights[i], CompilerFlags.Default);
+            ExpressionCompiler.TryCollectInfo(ref ctx, lights[i].Body, null, ref ctx.NestedLambdas);
+        });
+        Time("compile: flat native (collect+emit)", reps, i => flats[i].TryCompileFlat<Func<int, int>>());
+        Time("compile: light FEC (collect+emit)", reps, i => lights[i].CompileFast(ifFastFailedReturnNull: true));
+        Time("compile: flat->sys->light->FEC", reps, i => ((FastExpressionCompiler.LightExpression.LambdaExpression)flats[i].ToLightExpression()).CompileFast<Func<int, int>>(true));
+        Time("convert only: flat->sys->light", reps, i => flats[i].ToLightExpression());
+        Time("compile: System.Compile", 1, i => lights[i].CompileSys());
+    }
+
     /// <summary>Fuzzes presence/absence of every optional child (switch default/cases, try finally/catch, catch variable/filter,
     /// loop break/continue, goto value, label default): the bits decide what is present; the flat tree must report exactly that.</summary>
     public void Can_fuzz_optional_children_presence_in_flat_expression()
@@ -422,5 +479,7 @@ public partial class LightExpressionTests
 #else
     public void Can_property_test_generated_flat_expression_roundtrip_structurally() { }
     public void Can_fuzz_optional_children_presence_in_flat_expression() { }
+    public void Can_compile_generated_flat_expression_natively() { }
+    public void Experiment_compare_flat_and_light_compile_phases() { }
 #endif
 }
