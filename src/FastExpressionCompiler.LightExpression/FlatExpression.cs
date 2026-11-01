@@ -170,7 +170,7 @@ public struct ExprNode
 /// <summary>Stores an expression tree as flat nodes plus separate closure constants.</summary>
 public partial struct ExprTree : IEquatable<ExprTree>
 {
-    private static readonly object ClosureConstantMarker = new();
+    internal static readonly object ClosureConstantMarker = new();
     private const byte ParameterByRefFlag = 1;
     private const byte BinaryLiftedToNullFlag = 1;
     private const byte LoopHasBreakFlag = 1;
