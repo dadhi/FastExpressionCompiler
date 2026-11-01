@@ -100,6 +100,8 @@ public partial class LightExpressionTests
         Time("compile: flat->sys->light->FEC", reps, i => ((FastExpressionCompiler.LightExpression.LambdaExpression)flats[i].ToLightExpressionViaSystem()).CompileFast<Func<int, int>>(true));
         Time("convert only: flat->sys->light", reps, i => flats[i].ToLightExpressionViaSystem());
         Time("convert only: flat->light direct", reps, i => flats[i].ToLightExpression());
+        Time("convert only: light->sys->flat", reps, i => { var t = default(ExprTree); t.FromLightExprViaSystem(lights[i]); });
+        Time("convert only: light->flat direct", reps, i => { var t = default(ExprTree); t.FromLightExpr(lights[i]); });
         Time("compile: flat->light->FEC", reps, i => ((FastExpressionCompiler.LightExpression.LambdaExpression)flats[i].ToLightExpression()).CompileFast<Func<int, int>>(true));
         Time("compile: System.Compile", 1, i => lights[i].CompileSys());
     }
@@ -176,7 +178,11 @@ public partial class LightExpressionTests
         var back2 = ((System.Linq.Expressions.Expression<Func<int, int>>)fe.ToExpression()).ToFlatExpression();
         Ensure(fe.Equals(back2), "structural roundtrip: Equals");
         Ensure(fe.GetHashCode() == back2.GetHashCode(), "structural roundtrip: GetHashCode");
-        Ensure(fe.ToLightExpressionViaSystem().ToFlatExpression().Equals(fe.ToLightExpression().ToFlatExpression()), "direct flat->light equals via-system");
+        var light = fe.ToLightExpression();
+        Ensure(fe.Equals(light.ToFlatExpression()), "flat->light->flat roundtrip");
+        var viaSys = default(ExprTree);
+        viaSys.FromLightExprViaSystem(light);
+        Ensure(viaSys.Equals(light.ToFlatExpression()), "direct light->flat equals via-system");
 
         int Count(Func<ExprNode, bool> match)
         {
