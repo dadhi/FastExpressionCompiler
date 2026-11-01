@@ -111,8 +111,8 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Member_and_list_bindings_are_the_same_as_system();
             Member_bindings_on_the_struct_property_and_inside_try_are_the_same_as_system();
             Reference_equality_of_the_boxed_values_and_equal_objects_is_the_same_as_system();
-
-            return 91;
+            Type_is_and_equal_with_the_void();
+            return 92;
         }
 
         private static int _sideEffectCalls;
@@ -1895,6 +1895,22 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                 var sys = c.CompileSys()();
                 Asserts.AreEqual(sys, c.CompileFast(true)());
             }
+        }
+        public void Type_is_and_equal_with_the_void()
+        {
+            var voidBlock = Block(typeof(void), Constant(1));
+            var cases = new[]
+            {
+                Lambda<Func<bool>>(TypeIs(voidBlock, typeof(void))),
+                Lambda<Func<bool>>(TypeIs(voidBlock, typeof(object))),
+                Lambda<Func<bool>>(TypeIs(Constant(1), typeof(void))),
+                Lambda<Func<bool>>(TypeEqual(voidBlock, typeof(void))),
+                Lambda<Func<bool>>(TypeEqual(Constant("a"), typeof(void))),
+            };
+            // the expected values are fixed because the .NET Framework System answers false for the void TypeIs void
+            var expected = new[] { true, false, false, true, false };
+            for (var i = 0; i < cases.Length; i++)
+                Asserts.AreEqual(expected[i], cases[i].CompileFast(true)());
         }
         public static int AddPlusOne(int a, int b) => a + b + 1;
         public class IntBox { public int Value = 25; public int[] Arr = { 25 }; }

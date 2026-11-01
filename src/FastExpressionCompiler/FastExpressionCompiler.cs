@@ -3583,11 +3583,17 @@ namespace FastExpressionCompiler
                 var operand = expr.Expression;
                 var operandType = operand.Type;
                 var typeOperand = expr.TypeOperand;
-                if (operandType == typeof(void) | typeOperand == typeof(void))
-                    return false;
-
                 if ((parent & ParentFlags.IgnoreResult) != 0)
                     return TryEmit(operand, il, ref context, parent);
+
+                // the void is only the type of itself, so evaluate the operand and push the constant answer
+                if (operandType == typeof(void) | typeOperand == typeof(void))
+                {
+                    if (!TryEmit(operand, il, ref context, (parent & ~ParentFlags.InstanceAccess) | ParentFlags.IgnoreResult))
+                        return false;
+                    il.Demit(operandType == typeOperand ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
+                    return true;
+                }
 
                 var isTypeIs = expr.NodeType == ExpressionType.TypeIs;
                 if (operandType.IsValueType)
