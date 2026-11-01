@@ -1312,7 +1312,8 @@ namespace FastExpressionCompiler
 #endif
                         var constantExpr = (ConstantExpression)expr;
                         var value = constantExpr.Value;
-                        if (value != null && IsClosureBoundConstant(value, value.GetType()))
+                        // the boxed value type of the reference type constant should keep its box identity, e.g. for the `ReferenceEqual`, so it is closure bound too
+                        if (value != null && (IsClosureBoundConstant(value, value.GetType()) || value.GetType().IsValueType && !constantExpr.Type.IsValueType))
                             context.AddConstantOrIncrementUsageCount(value);
                         return Result.OK;
 
@@ -2295,7 +2296,13 @@ namespace FastExpressionCompiler
                                         il.Demit(boolResult ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0);
                                     return true;
                                 }
-                                return TryEmitComparison(((BinaryExpression)expr).Left, ((BinaryExpression)expr).Right, exprType, nodeType, il, ref context, parent);
+#if LIGHT_EXPRESSION
+                                var referenceComparison = false;
+#else
+                                // System resolves the operator method for the reference types when it exists, so no method means the reference comparison
+                                var referenceComparison = cmpMethod == null && !cmpLeftType.IsValueType && !cmpRightType.IsValueType;
+#endif
+                                return TryEmitComparison(cmpLeft, cmpRight, exprType, nodeType, il, ref context, parent, referenceComparison);
                             }
                         case ExpressionType.Add:
                         case ExpressionType.Subtract:
@@ -4059,10 +4066,11 @@ namespace FastExpressionCompiler
             {
                 if (exprType == null)
                     exprType = constType;
+                var keepBox = constType.IsValueType && !exprType.IsValueType; // see the constant collecting
 #if LIGHT_EXPRESSION
-                if (considerClosure && (refField != null || IsClosureBoundConstant(constValue, constType)))
+                if (considerClosure && (refField != null || keepBox || IsClosureBoundConstant(constValue, constType)))
 #else
-                if (considerClosure && IsClosureBoundConstant(constValue, constType))
+                if (considerClosure && (keepBox || IsClosureBoundConstant(constValue, constType)))
 #endif
                 {
                     var constIndex = closure.Constants.TryGetIndex(constValue, default(RefEq<object>));
@@ -4070,7 +4078,7 @@ namespace FastExpressionCompiler
                         return false; // todo: @check should we throw an exception instead?
 
                     var varIndex = closure.ConstantUsageThenVarIndex[constIndex] - 1;
-                    if (varIndex > 0)
+                    if (varIndex > 0 && !keepBox) // the var holds the unboxed value
                         EmitLoadLocalVariable(il, varIndex);
                     else
                     {
@@ -4085,9 +4093,10 @@ namespace FastExpressionCompiler
                                 return true; // for typed constant we done,
                             // but the object ref field requires the normal constant treatment with unboxing of the ValueType or the cast
                             exprType = constType = ((ConstantExpression)constValue).Value.GetType();
+                            keepBox = false;
                         }
 #endif
-                        if (constType.IsValueType)
+                        if (constType.IsValueType & !keepBox)
                             il.Demit(OpCodes.Unbox_Any, constType);
 #if NETFRAMEWORK
                         else
@@ -4100,6 +4109,7 @@ namespace FastExpressionCompiler
                 }
                 else
                 {
+                    keepBox = false; // the inline constant is not boxed yet
                     if (constValue is string s)
                     {
                         il.Demit(s, OpCodes.Ldstr);
@@ -4114,11 +4124,11 @@ namespace FastExpressionCompiler
                         return false;
                 }
 
-                if (exprType != constType && constType.IsValueType)
+                if (exprType != constType && constType.IsValueType && !keepBox)
                 {
                     if (exprType.IsNullable())
                         il.Demit(OpCodes.Newobj, exprType.GetNullableConstructor());
-                    else if (exprType == typeof(object))
+                    else if (!exprType.IsValueType) // object, interface, ValueType or Enum
                         il.Demit(OpCodes.Box, constType); // using normal type for Enum instead of underlying type
                 }
                 return true;
@@ -6332,7 +6342,6 @@ namespace FastExpressionCompiler
                 return null;
             }
 
-#if LIGHT_EXPRESSION
             // `ReferenceEqual` and `ReferenceNotEqual` compare the references even when the type defines the `==` operator, e.g. string
             private static bool TryEmitReferenceComparison(BinaryExpression expr, bool isNotEqual, ILGenerator il,
                 ref CompilerContext context, ParentFlags parent)
@@ -6350,7 +6359,6 @@ namespace FastExpressionCompiler
                     EmitEqualToZeroOrNull(il);
                 return il.EmitPopIfIgnoreResult(parent);
             }
-#endif
 
             private static bool TryEmitComparisonMethod(Expression left, Expression right, MethodInfo method, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
@@ -6390,7 +6398,7 @@ namespace FastExpressionCompiler
 
             private static bool TryEmitComparison(
                 Expression left, Expression right, Type exprType, ExpressionType nodeType,
-                ILGenerator il, ref CompilerContext context, ParentFlags parent)
+                ILGenerator il, ref CompilerContext context, ParentFlags parent, bool referenceComparison = false)
             {
                 var leftType = left.Type;
                 var leftIsNullable = leftType.IsNullable();
@@ -6524,6 +6532,14 @@ namespace FastExpressionCompiler
                     rVarIndex = EmitStoreAndLoadLocalVariableAddress(il, rightType);
                     il.Demit(OpCodes.Ldfld, rightType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
                     rightType = Nullable.GetUnderlyingType(rightType);
+                }
+
+                if (referenceComparison & isEqualityOp)
+                {
+                    il.Demit(OpCodes.Ceq);
+                    if (nodeType == ExpressionType.NotEqual)
+                        EmitEqualToZeroOrNull(il);
+                    return il.EmitPopIfIgnoreResult(parent);
                 }
 
                 if (!leftType.IsPrimitive && !leftType.IsEnum)

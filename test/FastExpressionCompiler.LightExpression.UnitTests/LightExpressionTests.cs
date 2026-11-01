@@ -110,8 +110,9 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_round_trip_new_expression_kinds_through_system_expressions();
             Member_and_list_bindings_are_the_same_as_system();
             Member_bindings_on_the_struct_property_and_inside_try_are_the_same_as_system();
+            Reference_equality_of_the_boxed_values_and_equal_objects_is_the_same_as_system();
 
-            return 90;
+            return 91;
         }
 
         private static int _sideEffectCalls;
@@ -1871,6 +1872,30 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
         }
 
         public static int PickX(int a) => a + 1;
+        public void Reference_equality_of_the_boxed_values_and_equal_objects_is_the_same_as_system()
+        {
+            object boxed = 42;
+            var s1 = new Uri("http://example.net/");
+            var s2 = new Uri("http://example.net/");
+            var cases = new[]
+            {
+                // the same box typed via the interface and the object, used twice so the constant is shared
+                Lambda<Func<bool>>(ReferenceEqual(Constant(boxed, typeof(IComparable)), Constant(boxed, typeof(IComparable)))),
+                Lambda<Func<bool>>(ReferenceEqual(Constant(boxed, typeof(object)), Constant(boxed, typeof(IComparable)))),
+                Lambda<Func<bool>>(ReferenceNotEqual(Constant(boxed, typeof(IComparable)), Constant(boxed, typeof(object)))),
+                // the different boxes of the equal values
+                Lambda<Func<bool>>(ReferenceEqual(Constant(boxed, typeof(IComparable)), Constant((object)42, typeof(IComparable)))),
+                // the equal objects with the operator ==, which the reference comparison should not call
+                Lambda<Func<bool>>(ReferenceEqual(Constant(s1), Constant(s2))),
+                Lambda<Func<bool>>(ReferenceNotEqual(Constant(s1), Constant(s2))),
+                Lambda<Func<bool>>(ReferenceEqual(Constant(s1), Constant(s1))),
+            };
+            foreach (var c in cases)
+            {
+                var sys = c.CompileSys()();
+                Asserts.AreEqual(sys, c.CompileFast(true)());
+            }
+        }
         public static int AddPlusOne(int a, int b) => a + b + 1;
         public class IntBox { public int Value = 25; public int[] Arr = { 25 }; }
 
