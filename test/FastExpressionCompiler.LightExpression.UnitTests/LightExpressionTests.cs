@@ -28,6 +28,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_embed_normal_Expression_into_LightExpression_eg_as_Constructor_argument();
             Should_output_the_System_and_LightExpression_to_the_identical_construction_syntax();
             Should_output_the_System_and_LightExpression_to_the_identical_CSharp_syntax();
+            Light_loop_with_continue_label_and_no_break_label_keeps_the_continue_label_in_the_system_expression();
             Expression_produced_by_ToExpressionString_should_compile();
             Multiple_methods_in_block_should_be_aligned_when_output_to_csharp();
             Can_roundtrip_light_expression_through_flat_expression();
@@ -2548,6 +2549,15 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.AreEqual(ses, les);
         }
 
+
+        public void Light_loop_with_continue_label_and_no_break_label_keeps_the_continue_label_in_the_system_expression()
+        {
+            var cont = Label("cont");
+            var le = Lambda<Action>(Loop(Block(Continue(cont)), null, cont));
+            var loop = (System.Linq.Expressions.LoopExpression)le.ToLambdaExpression().Body;
+            Asserts.AreEqual(null, loop.BreakLabel);
+            Asserts.AreEqual("cont", loop.ContinueLabel?.Name);
+        }
 
         public void Should_output_the_System_and_LightExpression_to_the_identical_CSharp_syntax()
         {
