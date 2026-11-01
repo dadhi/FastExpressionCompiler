@@ -19,7 +19,12 @@ flat->sys->light->FEC 64-108us, System.Compile 169-198us.
    Both are outside the native subset (closure constant, nested lambda, New), so `CompileFast` = probe (0.1-0.3us) + direct flat->light (~2-4us) + Light FEC (~8us / ~47us).
    The conversion is a 25-40% overhead on top of Light for these; single noisy runs, the order of measurements moves numbers by 2x.
    Conclusion: the native subset must grow to closures/New/nested lambdas before flat beats Light on the README cases.
-4. `todo` Widen the native emitter subset node by node, fuzzer guards each step. Next: New + Call + Member (no closure), then closure constants.
+4. `tried: done` Widened the native subset: reference-typed params/locals/results, `New`, static+instance `Call`, Field/Property getter,
+   closure constants (the `ArrayClosure` array is filled from `ClosureConstants`), string and null constants. The collect checks by construction what IL needs
+   (`FlatFits`: same type or reference upcast, args count, assign target is a parameter, lambda param types == delegate param types).
+   README 1 (`new X(closure a, b)`): light FEC 5.2us -> flat native 3.2us (Release, one noisy run); README 2 (nested lambda) still falls back.
+   Cost: ~90 lines in FlatExpressionCompiler.cs; `GetParameters()` allocates per Call/New in the collect (todo @perf).
+5. `todo` Nested lambdas (closure with nested-lambda slots), Convert, value types (struct params/Nullable), Invoke, arrays, loops/labels/try. Each with a fuzz or deterministic test.
 
 ## Construction-time ideas
 - `todo` Profile node access: the scan is ~45ns/node, far from memory bound. Suspect the Stack32 indexer / Type compares.

@@ -3,6 +3,7 @@
 namespace FastExpressionCompiler.LightExpression;
 
 using System;
+using System.Reflection;
 using System.Reflection.Emit;
 using FastExpressionCompiler.FlatExpression;
 using FastExpressionCompiler.LightExpression.ImTools;
@@ -24,6 +25,38 @@ public static partial class ExpressionCompiler
         public LocalBuilder Local;
     }
 
+    private static bool IsFlatType(Type t) => t == typeof(int) || t == typeof(bool) || !t.IsValueType && !t.IsByRef && !t.IsPointer;
+
+    // IL needs no conversion only for the same type or the reference upcast
+    private static bool FlatFits(Type to, Type from) => to == from || !to.IsValueType && !from.IsValueType && to.IsAssignableFrom(from);
+
+    private static bool FlatArgsFit(ref ExprTree tree, int idx, int count, ParameterInfo[] pars)
+    {
+        if (pars.Length != count) return false; // todo: @perf GetParameters allocates, cache or compare lazily
+        for (var i = 0; i < count; ++i)
+        {
+            ref var arg = ref tree.Nodes.GetSurePresentRef(idx);
+            if (!FlatFits(pars[i].ParameterType, arg.Type)) return false;
+            idx = arg.NextIdx;
+        }
+        return true;
+    }
+
+    private static bool FlatCallFits(ref ExprTree tree, ref ExprNode n, MethodInfo method)
+    {
+        var idx = n.ChildIdx;
+        var count = (int)n.ChildCount;
+        if (!method.IsStatic)
+        {
+            if (count == 0) return false;
+            ref var instance = ref tree.Nodes.GetSurePresentRef(idx);
+            if (!FlatFits(method.DeclaringType, instance.Type)) return false;
+            idx = instance.NextIdx;
+            --count;
+        }
+        return !method.IsGenericMethodDefinition && FlatArgsFit(ref tree, idx, count, method.GetParameters());
+    }
+
     /// <summary>The collect phase on the flat nodes: one linear pass over the contiguous array, no recursion, no stack, no per-node casts.
     /// What the tree construction already guarantees is not checked here: the child counts, the not-null children, the parameter
     /// and label ids, the closure constants (they are in the separate list, so `IsClosureBoundConstant` is already answered).
@@ -31,7 +64,7 @@ public static partial class ExpressionCompiler
     public static Result TryCollectFlatInfo(this ref ExprTree tree)
     {
         var count = tree.Nodes.Count;
-        if (count < 2 || tree.ClosureConstants.Count != 0)
+        if (count < 2)
             return Result.NotSupported_UnknownExpression;
 
         var lambdas = 0;
@@ -49,18 +82,58 @@ public static partial class ExpressionCompiler
                 case ExprType.Add:
                 case ExprType.Subtract:
                 case ExprType.Multiply:
-                case ExprType.Conditional:
-                case ExprType.Assign:
-                case ExprType.Block:
                     if (t != typeof(int)) return Result.NotSupported_UnknownExpression;
                     break;
-                case ExprType.Parameter:
-                    if (t != typeof(int) || n.Flags != 0) return Result.NotSupported_UnknownExpression;
+                case ExprType.Conditional:
+                case ExprType.Block:
+                    if (!IsFlatType(t)) return Result.NotSupported_UnknownExpression;
                     break;
-                case ExprType.Constant:
-                    if (!ReferenceEquals(n.Obj, ExprNode.InlineValueMarker) || t != typeof(int) && t != typeof(bool))
+                case ExprType.Assign:
+                    {
+                        ref var left = ref tree.Nodes.GetSurePresentRef(n.ChildIdx);
+                        if (!IsFlatType(t) || left.NodeType != ExprType.Parameter ||
+                            !FlatFits(left.Type, tree.Nodes.GetSurePresentRef(left.NextIdx).Type))
+                            return Result.NotSupported_UnknownExpression;
+                        break;
+                    }
+                case ExprType.Parameter:
+                    if (!IsFlatType(t) || n.Flags != 0) return Result.NotSupported_UnknownExpression;
+                    break;
+                case ExprType.New:
+                    if (!IsFlatType(t) || n.Obj is not ConstructorInfo ctor ||
+                        !FlatArgsFit(ref tree, n.ChildIdx, n.ChildCount, ctor.GetParameters()))
                         return Result.NotSupported_UnknownExpression;
                     break;
+                case ExprType.Call:
+                    {
+                        if (!IsFlatType(t) || n.Obj is not MethodInfo method) return Result.NotSupported_UnknownExpression;
+                        if (!FlatCallFits(ref tree, ref n, method)) return Result.NotSupported_UnknownExpression;
+                        break;
+                    }
+                case ExprType.MemberAccess:
+                    {
+                        MethodInfo getter = null;
+                        var isStatic = false;
+                        if (n.Obj is FieldInfo field && !field.IsLiteral)
+                            isStatic = field.IsStatic;
+                        else if (n.Obj is PropertyInfo prop && (getter = prop.GetGetMethod(true)) != null)
+                            isStatic = getter.IsStatic;
+                        else
+                            return Result.NotSupported_UnknownExpression;
+                        var declaringType = ((MemberInfo)n.Obj).DeclaringType;
+                        if (!IsFlatType(t) || isStatic != (n.ChildCount == 0) ||
+                            !isStatic && !FlatFits(declaringType, tree.Nodes.GetSurePresentRef(n.ChildIdx).Type))
+                            return Result.NotSupported_UnknownExpression;
+                        break;
+                    }
+                case ExprType.Constant:
+                    {
+                        var isInline = ReferenceEquals(n.Obj, ExprNode.InlineValueMarker);
+                        if (isInline ? t != typeof(int) && t != typeof(bool)
+                            : t.IsValueType || !(ReferenceEquals(n.Obj, ExprTree.ClosureConstantMarker) || n.Obj == null || n.Obj is string && t == typeof(string)))
+                            return Result.NotSupported_UnknownExpression;
+                        break;
+                    }
                 case ExprType.Equal:
                 case ExprType.GreaterThan:
                     if (tree.Nodes.GetSurePresentRef(n.ChildIdx).Type != typeof(int)) return Result.NotSupported_UnknownExpression;
@@ -93,16 +166,28 @@ public static partial class ExpressionCompiler
 
         var bodyIdx = lambda.ChildIdx;
         var returnType = tree.Nodes.GetSurePresentRef(bodyIdx).Type;
-        if (returnType != typeof(int) && returnType != typeof(bool))
+        var invoke = typeof(TDelegate).GetMethod("Invoke");
+        var delegateReturn = invoke?.ReturnType;
+        if (delegateReturn == null || !IsFlatType(delegateReturn) || !FlatFits(delegateReturn, returnType))
             return null;
 
         var paramCount = lambda.ChildCount - 1;
+        var delegatePars = invoke.GetParameters();
+        if (delegatePars.Length != paramCount)
+            return null;
         var paramTypes = new Type[paramCount + 1];
         paramTypes[0] = typeof(ArrayClosure);
+        var firstParIdx = tree.Nodes.GetSurePresentRef(bodyIdx).NextIdx;
         for (var i = 1; i <= paramCount; ++i)
-            paramTypes[i] = typeof(int);
+        {
+            ref var par = ref tree.Nodes.GetSurePresentRef(firstParIdx);
+            if (par.Type != delegatePars[i - 1].ParameterType)
+                return null;
+            paramTypes[i] = par.Type;
+            firstParIdx = par.NextIdx;
+        }
 
-        var dynMethod = new DynamicMethod(string.Empty, returnType, paramTypes, typeof(ArrayClosure), true);
+        var dynMethod = new DynamicMethod(string.Empty, delegateReturn, paramTypes, typeof(ArrayClosure), true);
         var il = dynMethod.GetILGenerator();
 
         var vars = default(SmallList<FlatVar, Stack8<FlatVar>, NoArrayPool<FlatVar>>);
@@ -116,7 +201,15 @@ public static partial class ExpressionCompiler
 
         EmitFlat(ref tree, bodyIdx, il, ref vars, false);
         il.Emit(OpCodes.Ret);
-        return (TDelegate)(object)dynMethod.CreateDelegate(typeof(TDelegate), EmptyArrayClosure);
+        object closure = EmptyArrayClosure;
+        if (tree.ClosureConstants.Count != 0)
+        {
+            var constants = new object[tree.ClosureConstants.Count];
+            for (var i = 0; i < constants.Length; ++i)
+                constants[i] = tree.ClosureConstants[i];
+            closure = new ArrayClosure(constants);
+        }
+        return (TDelegate)(object)dynMethod.CreateDelegate(typeof(TDelegate), closure);
     }
 
     private static void EmitFlat(ref ExprTree tree, int idx, ILGenerator il,
@@ -127,8 +220,23 @@ public static partial class ExpressionCompiler
         switch (nodeType)
         {
             case ExprType.Constant:
-                if (!ignoreResult)
+                if (ignoreResult)
+                    return;
+                if (ReferenceEquals(n.Obj, ExprNode.InlineValueMarker))
                     il.Emit(OpCodes.Ldc_I4, (int)n.InlineValue);
+                else if (ReferenceEquals(n.Obj, ExprTree.ClosureConstantMarker))
+                {
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(OpCodes.Ldfld, ArrayClosureArrayField);
+                    il.Emit(OpCodes.Ldc_I4, (int)n.ChildIdx);
+                    il.Emit(OpCodes.Ldelem_Ref);
+                    if (n.Type != typeof(object))
+                        il.Emit(OpCodes.Castclass, n.Type);
+                }
+                else if (n.Obj is string s)
+                    il.Emit(OpCodes.Ldstr, s);
+                else
+                    il.Emit(OpCodes.Ldnull);
                 return;
 
             case ExprType.Parameter:
@@ -160,6 +268,39 @@ public static partial class ExpressionCompiler
                         return;
                     }
                     throw new InvalidOperationException("The assigned parameter is not in scope");
+                }
+
+            case ExprType.New:
+            case ExprType.Call:
+                {
+                    var argIdx = n.ChildIdx;
+                    for (var i = 0; i < n.ChildCount; ++i)
+                    {
+                        EmitFlat(ref tree, argIdx, il, ref vars, false);
+                        argIdx = tree.Nodes.GetSurePresentRef(argIdx).NextIdx;
+                    }
+                    if (nodeType == ExprType.New)
+                        il.Emit(OpCodes.Newobj, (ConstructorInfo)n.Obj);
+                    else
+                    {
+                        var method = (MethodInfo)n.Obj;
+                        il.Emit(method.IsStatic ? OpCodes.Call : OpCodes.Callvirt, method);
+                    }
+                    break;
+                }
+
+            case ExprType.MemberAccess:
+                {
+                    if (n.ChildCount != 0)
+                        EmitFlat(ref tree, n.ChildIdx, il, ref vars, false);
+                    if (n.Obj is FieldInfo field)
+                        il.Emit(field.IsStatic ? OpCodes.Ldsfld : OpCodes.Ldfld, field);
+                    else
+                    {
+                        var getter = ((PropertyInfo)n.Obj).GetGetMethod(true);
+                        il.Emit(getter.IsStatic ? OpCodes.Call : OpCodes.Callvirt, getter);
+                    }
+                    break;
                 }
 
             case ExprType.Not:
@@ -212,7 +353,7 @@ public static partial class ExpressionCompiler
                     for (var i = 1; i < n.ChildCount; ++i)
                     {
                         ref var v = ref tree.Nodes.GetSurePresentRef(varIdx);
-                        vars.Add(new FlatVar { Id = v.ChildIdx, Arg = -1, Local = il.DeclareLocal(typeof(int)) });
+                        vars.Add(new FlatVar { Id = v.ChildIdx, Arg = -1, Local = il.DeclareLocal(v.Type) });
                         varIdx = v.NextIdx;
                     }
 
