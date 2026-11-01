@@ -10,9 +10,11 @@ flat->sys->light->FEC 64-108us, System.Compile 169-198us.
    convert only 43.6us -> 15.0us; flat->light->FEC 45us vs 108us via System (same run). Verified: all tests, the generated-tree
    property test, and the optional-children fuzzer (direct == via-system structurally, compiles and agrees with System).
    Cost: ~330 duplicated lines (the two builders must be kept in sync). `GetChildren`/`ReadInlineValue` are shared statics on `ExprTree`.
-2. `todo` Light -> Flat directly (now Light -> Sys -> Flat) and Sys -> Flat (exists).
-   Finding: `fe.Equals(fe.ToLightExpression().ToFlatExpression())` is false for the optional-children fuzz tree even via System,
-   so Light -> Sys -> Flat is not structurally faithful there; investigate when writing the direct Light -> Flat.
+2. `tried: done` Light -> Flat directly (`FlatFromLightExpression.cs`, mirrors `AddSysExpression`); Sys -> Flat already existed.
+   convert only 35.8us (via System) -> 14.6us (direct). `FromLightExprViaSystem` and `ToLightExpressionViaSystem` are kept as oracles.
+   Found and fixed a real bug on the way: Light `LoopExpression.CreateSysExpression` dropped the continue label when there was no
+   break label (Expression.cs); the optional-children fuzzer exposed it as a flat->light->flat mismatch in 80 of 300 trees.
+   The fuzzer now asserts flat->light->flat structural equality and direct == via-system.
 3. `todo` Widen the native emitter subset node by node, fuzzer guards each step.
 
 ## Construction-time ideas

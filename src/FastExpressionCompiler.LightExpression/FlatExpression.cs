@@ -889,14 +889,20 @@ public partial struct ExprTree : IEquatable<ExprTree>
         return (ushort)RootIdx;
     }
 
-    // @perf remove Light -> System -> Flat round trip => make it Light -> Flat.
-    /// <summary>Flattens a LightExpression into this tree and sets <see cref="RootIdx"/>.</summary>
+    /// <summary>Flattens a LightExpression into this tree directly, without the System.Linq expressions in between,
+    /// and sets <see cref="RootIdx"/>. Mirrors <c>AddSysExpression</c>: keep the two in sync.</summary>
     [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
     public ushort FromLightExpr(LightExpression.Expression expr)
     {
-        // Prefer Sys round-trip for a single From core; Light→Sys preserves identity via ToExpression.
-        return FromSysExpr(expr.ToExpression());
+        _parameterIds = default;
+        _labelIds = default;
+        RootIdx = AddLightExpression(expr);
+        return (ushort)RootIdx;
     }
+
+    /// <summary>The slower oracle of <see cref="FromLightExpr"/>: Light -> System -> Flat.</summary>
+    [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
+    public ushort FromLightExprViaSystem(LightExpression.Expression expr) => FromSysExpr(expr.ToExpression());
 
     [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
     private ushort AddSysExpression(SysExpr expr)
@@ -1128,17 +1134,19 @@ public partial struct ExprTree : IEquatable<ExprTree>
         }
     }
 
-    private ushort AddSysLabelTarget(SysLabelTarget target)
+    private ushort AddSysLabelTarget(SysLabelTarget target) => AddLabelTarget(target, target.Type, target.Name);
+
+    private ushort AddLabelTarget(object target, Type type, string name)
     {
         var id = checked((ushort)GetId(ref _labelIds, target));
-        // Reuse existing label-target node with the same id when the same SysLabelTarget is seen again.
+        // Reuse existing label-target node with the same id when the same label target is seen again.
         for (var i = 0; i < Nodes.Count; ++i)
         {
             ref var n = ref Nodes.GetSurePresentRef(i);
             if (n.Is(ExprNodeKind.LabelTarget) && n.ChildIdx == id)
                 return checked((ushort)i);
         }
-        return LabelTargetWithId(target.Type, target.Name, id);
+        return LabelTargetWithId(type, name, id);
     }
 
     [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
