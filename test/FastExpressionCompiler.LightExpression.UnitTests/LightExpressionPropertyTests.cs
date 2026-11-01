@@ -106,6 +106,62 @@ public partial class LightExpressionTests
         Time("compile: System.Compile", 1, i => lights[i].CompileSys());
     }
 
+    public class ReadmeA { }
+    public class ReadmeB { }
+    public class ReadmeX
+    {
+        public ReadmeA A; public ReadmeB B;
+        public ReadmeX(ReadmeA a, ReadmeB b) { A = a; B = b; }
+    }
+
+    /// <summary>The README expressions (new X(closure a, b) and n => () => n + 1) built flat: the results must match Light and the phases are timed.</summary>
+    public void Flat_compiles_the_readme_expressions_and_compares_the_time()
+    {
+        var a = new ReadmeA();
+        var ctor = typeof(ReadmeX).GetConstructors()[0];
+
+        var fe1 = default(ExprTree);
+        var b1 = fe1.ParameterOf<ReadmeB>("b");
+        fe1.RootIdx = fe1.Lambda<Func<ReadmeB, ReadmeX>>(fe1.New(ctor, fe1.Constant(a, typeof(ReadmeA)), b1), b1);
+
+        var fe2 = default(ExprTree);
+        var n2 = fe2.ParameterOf<int>("n");
+        fe2.RootIdx = fe2.Lambda<Func<int, Func<int>>>(
+            fe2.Lambda<Func<int>>(fe2.MakeBinary(ExpressionType.Add, n2, fe2.ConstantInt(1))), n2);
+
+        var bp = Parameter(typeof(ReadmeB), "b");
+        var l1 = Lambda<Func<ReadmeB, ReadmeX>>(New(ctor, Constant(a, typeof(ReadmeA)), bp), bp);
+        var np = Parameter(typeof(int), "n");
+        var l2 = Lambda<Func<int, Func<int>>>(Lambda<Func<int>>(Add(np, Constant(1))), np);
+
+        var bb = new ReadmeB();
+        var x = fe1.CompileFast<Func<ReadmeB, ReadmeX>>()(bb);
+        Ensure(x.A == a && x.B == bb, "readme 1 result");
+        Ensure(fe2.CompileFast<Func<int, Func<int>>>()(41)() == 42, "readme 2 result");
+        Ensure(((FastExpressionCompiler.LightExpression.LambdaExpression)fe1.ToLightExpression()).CompileFast<Func<ReadmeB, ReadmeX>>(true)(bb).A == a, "readme 1 direct");
+
+        const int reps = 2000;
+        void Time(string name, Action body)
+        {
+            for (var i = 0; i < 100; ++i) body();
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            for (var i = 0; i < reps; ++i) body();
+            Console.WriteLine($"//flat-readme {name,-36} {sw.Elapsed.TotalMilliseconds * 1000 / reps,9:F2} us");
+        }
+
+        Time("1 light FEC", () => l1.CompileFast(true));
+        Time("1 flat->light->FEC (CompileFast)", () => fe1.CompileFast<Func<ReadmeB, ReadmeX>>());
+        Time("1 flat->light only", () => fe1.ToLightExpression());
+        var l1f = (FastExpressionCompiler.LightExpression.LambdaExpression)fe1.ToLightExpression();
+        Time("1 prebuilt flat-made light FEC", () => l1f.CompileFast<Func<ReadmeB, ReadmeX>>(true));
+        Time("1 prebuilt light FEC (generic)", () => l1.CompileFast<Func<ReadmeB, ReadmeX>>(true));
+        Time("1 flat native probe (falls back)", () => fe1.TryCompileFlat<Func<ReadmeB, ReadmeX>>());
+        Time("2 light FEC", () => l2.CompileFast(true));
+        Time("2 flat->light->FEC (CompileFast)", () => fe2.CompileFast<Func<int, Func<int>>>());
+        Time("2 flat->light only", () => fe2.ToLightExpression());
+        Time("2 flat native probe (falls back)", () => fe2.TryCompileFlat<Func<int, Func<int>>>());
+    }
+
     /// <summary>Fuzzes presence/absence of every optional child (switch default/cases, try finally/catch, catch variable/filter,
     /// loop break/continue, goto value, label default): the bits decide what is present; the flat tree must report exactly that.</summary>
     public void Can_fuzz_optional_children_presence_in_flat_expression()
@@ -507,5 +563,6 @@ public partial class LightExpressionTests
     public void Can_compile_generated_flat_expression_natively() { }
     public void Flat_compile_handles_bool_result_and_falls_back_outside_the_subset() { }
     public void Experiment_compare_flat_and_light_compile_phases() { }
+    public void Flat_compiles_the_readme_expressions_and_compares_the_time() { }
 #endif
 }
