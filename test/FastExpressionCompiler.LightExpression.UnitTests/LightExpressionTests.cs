@@ -88,6 +88,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Goto_and_return_with_the_value_to_the_label_in_the_middle_of_block_are_the_same_as_system();
             Label_rules_are_the_same_as_system();
             Switch_with_duplicate_test_values_and_void_type_are_the_same_as_system();
+            Label_and_rethrow_validation_walks_all_node_kinds_the_same_as_system();
             Catch_filter_non_exception_catch_and_rethrow_rules_are_the_same_as_system();
             Inc_dec_assign_of_primitives_and_nullables_are_the_same_as_system();
             Inc_dec_assign_of_block_variable_compared_and_returned_via_label_are_the_same_as_system();
@@ -108,7 +109,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_print_reference_comparison();
             Can_round_trip_new_expression_kinds_through_system_expressions();
 
-            return 87;
+            return 88;
         }
 
         private static int _sideEffectCalls;
@@ -1614,6 +1615,166 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                 SwitchCase(Constant("Foo"), Constant(DateTime.MinValue)), SwitchCase(Constant("Bar"), Constant(DateTime.MaxValue))));
             voidSwitch.CompileFast(true)();
         }
+        public void Label_and_rethrow_validation_walks_all_node_kinds_the_same_as_system()
+        {
+            var v = Label(typeof(void));
+            var jumpV = Goto(v);
+            var hereV = Label(v);
+            var i = Label(typeof(int));
+            var jumpI = Goto(i, Constant(1));
+            var hereI = Label(i, Constant(0));
+            var s = Label(typeof(string));
+            var jumpS = Goto(s, Constant("a"));
+            var hereS = Label(s, Constant("b"));
+            var b = Label(typeof(bool));
+            var jumpB = Goto(b, Constant(true));
+            var hereB = Label(b, Constant(true));
+            var other = Label(typeof(int));
+            var brk = Label(typeof(int));
+            var toStr = typeof(int).GetMethod("ToString", Type.EmptyTypes);
+            var plusOne = typeof(LightExpressionTests).GetMethod(nameof(AddPlusOne));
+            var ts3 = typeof(TimeSpan).GetConstructor(new[] { typeof(int), typeof(int), typeof(int) });
+            var one = Constant(1);
+            var exc = typeof(Exception);
+            var rethrow = Rethrow(typeof(void));
+
+            // a jump goes first, then the label (or the rethrow) hidden at the position in the walked node kind
+            var shapes = new Expression[]
+            {
+                Block(typeof(void), jumpV, Block(hereV, Empty())), // the label in the nested block
+                Block(typeof(void), jumpV, hereV, Empty()),
+                Block(typeof(void), jumpV, Block(Empty(), hereV)),
+                Block(typeof(void), jumpV, Block(Empty(), Block(hereV, Empty()), Empty())),
+                Block(typeof(void), jumpV, Block(hereV, Block(hereV, Empty()))),
+                Block(typeof(void), jumpV, Loop(hereV)),
+                Block(typeof(void), jumpV, Loop(Empty(), v)),
+                Block(typeof(void), jumpV, Loop(Empty(), Label(), v)),
+                Block(typeof(void), Goto(v), Loop(Block(Empty(), Empty()), Label(), Label())),
+                Block(typeof(void), jumpV, IfThen(Constant(true), hereV)),
+                Block(typeof(void), jumpV, IfThenElse(Constant(true), hereV, hereV)),
+                Block(typeof(void), jumpB, IfThen(hereB, Empty())),
+                Block(typeof(void), jumpV, Switch(one, hereV, SwitchCase(Empty(), one))),
+                Block(typeof(void), jumpV, Switch(one, Empty(), SwitchCase(hereV, one))),
+                Block(typeof(void), jumpI, Switch(hereI, Empty(), SwitchCase(Empty(), one))),
+                Block(typeof(void), jumpV, TryCatch(hereV, Catch(exc, Empty()))),
+                Block(typeof(void), jumpV, TryCatch(Empty(), Catch(exc, hereV))),
+#if !NETFRAMEWORK // DynamicMethod on .NET Framework does not support the filters
+                Block(typeof(void), jumpB, TryCatch(Empty(), MakeCatchBlock(exc, null, Empty(), hereB))),
+#endif
+                Block(typeof(void), jumpV, TryFinally(Empty(), hereV)),
+#if !NETFRAMEWORK
+                Block(typeof(void), jumpV, TryFault(Empty(), hereV)),
+#endif
+                Block(typeof(void), jumpI, Add(hereI, one)),
+                Block(typeof(void), jumpI, Add(one, hereI)),
+                Block(typeof(void), jumpI, Negate(hereI)),
+                Block(typeof(void), jumpI, TypeIs(hereI, typeof(int))),
+                Block(typeof(void), jumpS, Property(hereS, "Length")),
+                Block(typeof(void), jumpI, Call(hereI, toStr)),
+                Block(typeof(void), jumpI, Call(plusOne, hereI, one)),
+                Block(typeof(void), jumpI, Call(plusOne, one, hereI)),
+                Block(typeof(void), jumpI, New(ts3, hereI, one, one)),
+                Block(typeof(void), jumpI, New(ts3, one, one, hereI)),
+                Block(typeof(void), jumpI, Label(other, hereI)),
+                Block(typeof(void), jumpI, Goto(other, hereI)),
+                Block(typeof(void), jumpI, Label(other, Constant(0)), Block(hereI, hereI)),
+                Block(typeof(void), jumpI, Block(hereI, Empty())), // the label with the value can't be entered
+                Block(typeof(void), jumpI, hereI, Empty()),
+
+                // the void label in the block, which is the part of the expression, can't be entered
+                Block(typeof(void), jumpV, Call(plusOne, Block(typeof(int), hereV, one), one)),
+                Block(typeof(void), jumpV, Goto(other, Block(typeof(int), hereV, one))),
+                Block(typeof(void), jumpV, Add(Loop(Block(typeof(void), hereV, Break(brk, one)), brk), one)),
+                Block(typeof(void), jumpV, Add(Condition(Constant(true), Block(typeof(int), hereV, one), one), one)),
+                Block(typeof(void), jumpV, Add(Switch(one, one, SwitchCase(Block(typeof(int), hereV, one), one)), one)),
+                Block(typeof(void), jumpV, Add(Switch(one, Block(typeof(int), hereV, one), SwitchCase(one, one)), one)),
+
+                // the jump from the nested block to the label in the expression of the outer one
+                Block(typeof(void), Add(hereI, one), Block(jumpI)),
+                Block(typeof(void), Block(jumpI), Add(hereI, one)),
+
+                // the same label twice: the nested one is defined first or last
+                Block(typeof(void), Block(hereV), hereV),
+                Block(typeof(void), hereV, Block(hereV)),
+                Block(typeof(void), Block(hereV), Block(hereV)), // fine, the separate scopes
+                Block(typeof(void), Loop(Block(hereV), v)),
+
+                // jumps out of the finally, the fault and the catch
+                Block(typeof(void), TryFinally(Empty(), jumpV), hereV),
+                Block(typeof(void), TryFinally(Empty(), Block(Empty(), jumpV)), hereV),
+#if !NETFRAMEWORK
+                Block(typeof(void), TryFault(Empty(), jumpV), hereV),
+#endif
+                Block(typeof(void), TryCatch(jumpV, Catch(exc, Empty())), hereV),
+                Block(typeof(void), TryCatch(Empty(), Catch(exc, jumpV)), hereV),
+                Block(typeof(void), TryFinally(Block(jumpV, hereV), Empty())),
+                TryFinally(Empty(), Block(jumpV, hereV)), // inside of the finally
+                TryFinally(Empty(), Block(Block(jumpV), hereV)),
+                TryFinally(Empty(), Block(typeof(void), TryCatch(Empty(), Catch(exc, jumpV)), hereV)), // from the catch within the finally
+                Block(typeof(void), TryFinally(Empty(), TryFinally(Empty(), jumpV)), hereV),
+
+                // the rethrow
+                rethrow,
+                TryCatch(Empty(), Catch(exc, rethrow)),
+                TryCatch(Empty(), Catch(exc, Block(typeof(void), Empty(), rethrow))),
+                TryCatch(Empty(), Catch(exc, TryCatch(rethrow, Catch(exc, Empty())))),
+                TryCatch(Empty(), Catch(exc, TryCatch(Empty(), Catch(exc, rethrow)))),
+                TryCatch(rethrow, Catch(exc, Empty())),
+#if !NETFRAMEWORK // DynamicMethod on .NET Framework does not support the filters
+                TryCatch(Empty(), MakeCatchBlock(exc, null, Empty(), Block(Constant(true)))),
+#endif
+                TryFinally(rethrow, Empty()),
+                TryFinally(Empty(), rethrow),
+#if !NETFRAMEWORK
+                TryFault(Empty(), rethrow),
+#endif
+                TryCatch(Empty(), Catch(exc, TryFinally(Empty(), rethrow))),
+#if !NETFRAMEWORK
+                TryCatch(Empty(), Catch(exc, TryFault(Empty(), rethrow))),
+#endif
+                TryFinally(Empty(), TryCatch(Empty(), Catch(exc, rethrow))), // the catch within the finally is fine
+                TryCatch(Empty(), Catch(exc, Block(TryFinally(Empty(), Empty()), rethrow))),
+                Block(typeof(void), Call(plusOne, Block(typeof(int), rethrow, one), one)),
+                Block(typeof(void), Convert(Block(typeof(int), rethrow, one), typeof(long))),
+            };
+
+            var sysThrowCount = 0;
+            var emitLimitCount = 0;
+            for (var n = 0; n < shapes.Length; ++n)
+            {
+                var lambda = Lambda<Action>(shapes[n]);
+                var sysThrows = false;
+                try { lambda.CompileSys(); } catch (InvalidOperationException) { sysThrows = true; }
+                var fecThrows = false;
+                try { lambda.CompileFast(true, CompilerFlags.ValidateLabels); } catch (InvalidOperationException) { fecThrows = true; }
+                catch (ArgumentException ex) { throw new Exception($"Shape #{n} (validated): {ex.Message}: {shapes[n]}"); }
+                if (sysThrows != fecThrows)
+                {
+                    // FEC can't emit some of the valid jumps (e.g. into the switch default) even without the validation, it is not the validation problem
+                    var emitThrows = false;
+                    try { lambda.CompileFast(true); } catch (InvalidOperationException) { emitThrows = true; } catch (ArgumentException) { emitThrows = true; }
+                    if (!(emitThrows & !sysThrows))
+                        throw new Exception($"Shape #{n}: System throws={sysThrows} but FEC throws={fecThrows}: {shapes[n]}");
+                    ++emitLimitCount;
+                    continue;
+                }
+                if (sysThrows)
+                    ++sysThrowCount;
+            }
+            Asserts.IsTrue(sysThrowCount > 20 & sysThrowCount + emitLimitCount < shapes.Length);
+
+            // FEC can't emit these valid-in-System jumps into the goto value and the switch default, so the validation message is what tells that the labels are walked
+            var strict = new Expression[]
+            {
+                Block(typeof(void), jumpV, Goto(other, Block(typeof(int), hereV, one))),
+                Block(typeof(void), jumpV, Add(Switch(one, Block(typeof(int), hereV, one), SwitchCase(one, one)), one)),
+            };
+            foreach (var shape in strict)
+            {
+                var throws = false;
+                try { Lambda<Action>(shape).CompileFast(true, CompilerFlags.ValidateLabels); } catch (InvalidOperationException ex) { throws = ex.Message.Contains("Control cannot enter"); }
+                Asserts.IsTrue(throws);
+            }        }
         public void Catch_filter_non_exception_catch_and_rethrow_rules_are_the_same_as_system()
         {
             var p = Parameter(typeof(int));

@@ -433,10 +433,8 @@ namespace FastExpressionCompiler
                 if ((flags & CompilerFlags.ValidateLabels) != 0) // todo: @perf an extra pass over the expression tree, so it is opt-in
                 {
                     LabelWalk w = default;
-                    // todo: @perf make the first scope a one, so ParentScopeIdx can start with 0 as the natural C# default
-                    _ = w.Scopes.Add(new LabelScope { ParentScopeIdx = -1, Enterable = true }); // the root
+                    _ = w.Scopes.Add(new LabelScope { ParentIdx = -1, Enterable = true }); // the root
                     CollectLabelRefs(ref w, bodyExpr, scopeIdx: 0, enterable: true);
-
                     ValidateLabels(ref w, bodyExpr);
                 }
 
@@ -1163,8 +1161,7 @@ namespace FastExpressionCompiler
         /// <summary>The label scope stored in the list and referencing its parent by the index (-1 for the root), so no object per scope</summary>
         struct LabelScope
         {
-            public short ParentScopeIdx;
-            public short Depth;
+            public short ParentIdx;
             /// <summary>Can the jump from the outside get into this scope: a block in the statement position, but not in the expression or try</summary>
             public bool Enterable;
             public ExceptionRegion ExceptionRegion;
@@ -1173,16 +1170,21 @@ namespace FastExpressionCompiler
         struct LabelRef
         {
             public LabelTarget Target;
-            public short ScopeIdx; // the index in the LabelWalk.Scopes
+            public short ScopeIdx;
             public bool Enterable;
+        }
+
+        struct GotoRef
+        {
+            public LabelTarget Target;
+            public short ScopeIdx;
         }
 
         struct LabelWalk
         {
-            // shortcut: the scope index is short, so the more than 32K nested scopes will overflow, upgrade to int if it is ever needed
             public SmallList<LabelScope, Stack8<LabelScope>, NoArrayPool<LabelScope>> Scopes;
             public SmallList<LabelRef, Stack8<LabelRef>, NoArrayPool<LabelRef>> Defs;
-            public SmallList<LabelRef, Stack8<LabelRef>, NoArrayPool<LabelRef>> Gotos;
+            public SmallList<GotoRef, Stack8<GotoRef>, NoArrayPool<GotoRef>> Gotos;
             public SmallList<short, Stack2<short>, NoArrayPool<short>> Rethrows; // the scopes of the rethrows
         }
 
@@ -1199,9 +1201,7 @@ namespace FastExpressionCompiler
                             var blockExprCount = blockExprs.Count;
                             if (blockExprCount == 0)
                                 return;
-                            // new block scope
-                            var depth = w.Scopes.GetSurePresentRef(scopeIdx).Depth;
-                            scopeIdx = (short)w.Scopes.Add(new LabelScope { ParentScopeIdx = scopeIdx, Depth = (short)(depth + 1), Enterable = enterable, ExceptionRegion = ExceptionRegion.None });
+                            scopeIdx = (short)w.Scopes.Add(new LabelScope { ParentIdx = scopeIdx, Enterable = enterable, ExceptionRegion = ExceptionRegion.None });
 
                             for (var i = 0; i < blockExprCount - 1; ++i)
                                 CollectLabelRefs(ref w, blockExprs[i], scopeIdx, true);
@@ -1218,7 +1218,7 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Goto:
                         var gotoExpr = (GotoExpression)e;
-                        w.Gotos.Add(new LabelRef { Target = gotoExpr.Target, ScopeIdx = scopeIdx });
+                        w.Gotos.Add(new GotoRef { Target = gotoExpr.Target, ScopeIdx = scopeIdx });
                         e = gotoExpr.Value;
                         enterable = false;
                         continue;
@@ -1227,9 +1227,7 @@ namespace FastExpressionCompiler
                         {
                             var loopExpr = (LoopExpression)e;
 
-                            // new loop scope
-                            var depth = w.Scopes.GetSurePresentRef(scopeIdx).Depth;
-                            scopeIdx = (short)w.Scopes.Add(new LabelScope { ParentScopeIdx = scopeIdx, Depth = (short)(depth + 1), Enterable = enterable, ExceptionRegion = ExceptionRegion.None });
+                            scopeIdx = (short)w.Scopes.Add(new LabelScope { ParentIdx = scopeIdx, Enterable = enterable, ExceptionRegion = ExceptionRegion.None });
 
                             if (loopExpr.BreakLabel != null)
                                 _ = w.Defs.Add(new LabelRef { Target = loopExpr.BreakLabel, ScopeIdx = scopeIdx, Enterable = true });
@@ -1262,18 +1260,12 @@ namespace FastExpressionCompiler
                         {
                             CollectLabelRefs(ref w, handlers[i].Filter, scopeIdx, false);
 
-                            // new handler body scope
-                            var depth = w.Scopes.GetSurePresentRef(scopeIdx).Depth;
-                            var handlerScopeIdx = (short)w.Scopes.Add(new LabelScope { ParentScopeIdx = scopeIdx, Depth = (short)(depth + 1), Enterable = false, ExceptionRegion = ExceptionRegion.Catch });
-
+                            var handlerScopeIdx = (short)w.Scopes.Add(new LabelScope { ParentIdx = scopeIdx, Enterable = false, ExceptionRegion = ExceptionRegion.Catch });
                             CollectLabelRefs(ref w, handlers[i].Body, handlerScopeIdx, false);
                         }
                         e = tryExpr.Finally ?? tryExpr.Fault; // only one of them may be set
                         if (e != null)
-                        {
-                            var depth = w.Scopes.GetSurePresentRef(scopeIdx).Depth;
-                            scopeIdx = (short)w.Scopes.Add(new LabelScope { ParentScopeIdx = scopeIdx, Depth = (short)(depth + 1), Enterable = false, ExceptionRegion = ExceptionRegion.FinallyOrFault });
-                        }
+                            scopeIdx = (short)w.Scopes.Add(new LabelScope { ParentIdx = scopeIdx, Enterable = false, ExceptionRegion = ExceptionRegion.FinallyOrFault });
                         enterable = false;
                         continue;
 
@@ -1326,79 +1318,94 @@ namespace FastExpressionCompiler
         private static void ValidateLabels(ref LabelWalk w, Expression body)
         {
             ref var scopes = ref w.Scopes;
-            ref var defs = ref w.Defs;
-
-            // the redefinition: a label is defined in the scope where it is already visible
-            var defCount = defs.Count;
-            for (var i = 0; i < defCount; ++i)
-                for (var j = i + 1; j < defCount; ++j)
-                {
-                    ref var a = ref defs.GetSurePresentRef(i);
-                    ref var b = ref defs.GetSurePresentRef(j);
-                    if (a.Target != b.Target)
-                        continue;
-                    // defs with the same target
-                    var aScopeDepth = scopes.GetSurePresentRef(a.ScopeIdx).Depth;
-                    var bScopeDepth = scopes.GetSurePresentRef(b.ScopeIdx).Depth;
-
-                    var outerScope = aScopeDepth <= bScopeDepth ? a.ScopeIdx : b.ScopeIdx;
-
-                    for (var s = aScopeDepth <= bScopeDepth ? b.ScopeIdx : a.ScopeIdx; s != -1; s = scopes.GetSurePresentRef(s).ParentScopeIdx)
-                        if (s == outerScope)
-                            throw new InvalidOperationException($"Label '{a.Target.Name}' is defined multiple times in the scope where it is visible");
-                }
-
-            for (var i = 0; i < w.Rethrows.Count; ++i)
+            var rethrows = w.Rethrows;
+            var rethrowCount = rethrows.Count;
+            for (var i = 0; i < rethrowCount; ++i)
             {
-                var s = w.Rethrows.GetSurePresentRef(i);
-                while (s != -1 && scopes.GetSurePresentRef(s).ExceptionRegion == 0)
-                    s = scopes.GetSurePresentRef(s).ParentScopeIdx;
+                var s = rethrows.GetSurePresentRef(i);
+                while (s != -1 && scopes.GetSurePresentRef(s).ExceptionRegion == ExceptionRegion.None)
+                    s = scopes.GetSurePresentRef(s).ParentIdx;
                 if (s == -1 || scopes.GetSurePresentRef(s).ExceptionRegion != ExceptionRegion.Catch)
                     throw new InvalidOperationException("Rethrow statement is valid only inside a catch block");
             }
 
-            for (var i = 0; i < w.Gotos.Count; ++i)
+            // The redefinition of the label on the same scope path - both labels share the enclosing scope, i.e., a label is defined in the scope where it is already visible.
+            // Lets iterate over all pairs of the label definitions.
+            ref var defs = ref w.Defs;
+            var defCount = defs.Count;
+            for (var i = 0; i < defCount; ++i)
             {
-                ref var g = ref w.Gotos.GetSurePresentRef(i);
-                var defined = false;
-                var visible = false;
+                var a = defs.GetSurePresentRef(i);
+                for (var j = i + 1; j < defCount; ++j)
+                {
+                    var b = defs.GetSurePresentRef(j);
+                    if (a.Target != b.Target)
+                        continue;
+                    // search from a upwards for the b
+                    for (var aScope = a.ScopeIdx; aScope != -1; aScope = scopes.GetSurePresentRef(aScope).ParentIdx)
+                        if (aScope == b.ScopeIdx)
+                            throw new InvalidOperationException($"Label '{a.Target.Name}' is defined multiple times in the scope where it is visible");
+                    // search from b upwards for the a
+                    for (var bScope = b.ScopeIdx; bScope != -1; bScope = scopes.GetSurePresentRef(bScope).ParentIdx)
+                        if (bScope == a.ScopeIdx)
+                            throw new InvalidOperationException($"Label '{a.Target.Name}' is defined multiple times in the scope where it is visible");
+                }
+            }
+
+            // Lets iterate over all labels for all gotos
+            var gotos = w.Gotos;
+            var gotoCount = gotos.Count;
+            for (var i = 0; i < gotoCount; ++i)
+            {
+                var got = gotos.GetSurePresentRef(i);
+                var gotoHasAtLeastOneLabel = false;
+                var labelVisible = false;
                 var jumpInCount = 0;
                 for (var j = 0; j < defCount; ++j)
                 {
-                    ref var d = ref defs.GetSurePresentRef(j);
-                    if (d.Target != g.Target)
+                    var def = defs.GetSurePresentRef(j);
+                    if (def.Target != got.Target)
                         continue;
-                    defined = true;
+                    gotoHasAtLeastOneLabel = true;
 
-                    // find the common ancestor scope of the label and the jump
-                    var dx = d.ScopeIdx;
-                    var gy = g.ScopeIdx;
-                    while (scopes.GetSurePresentRef(dx).Depth > scopes.GetSurePresentRef(gy).Depth) dx = scopes.GetSurePresentRef(dx).ParentScopeIdx;
-                    while (scopes.GetSurePresentRef(gy).Depth > scopes.GetSurePresentRef(dx).Depth) gy = scopes.GetSurePresentRef(gy).ParentScopeIdx;
-
-                    while (dx != gy) { dx = scopes.GetSurePresentRef(dx).ParentScopeIdx; gy = scopes.GetSurePresentRef(gy).ParentScopeIdx; }
-
-                    for (var s = g.ScopeIdx; s != dx; s = scopes.GetSurePresentRef(s).ParentScopeIdx)
-                        if (scopes.GetSurePresentRef(s).ExceptionRegion == ExceptionRegion.FinallyOrFault)
-                            throw new InvalidOperationException($"Control cannot leave the finally or fault block by the jump to the label '{g.Target.Name}'");
-
-                    if (dx == d.ScopeIdx) // the label scope is the jump scope or its ancestor
+                    var commonAncestorScopeIdx = got.ScopeIdx;
+                    while (true)
                     {
-                        visible |= d.ScopeIdx != g.ScopeIdx | d.Enterable;
+                        var defOrItsOuterScopeIdx = def.ScopeIdx;
+                        while (defOrItsOuterScopeIdx != -1 && defOrItsOuterScopeIdx != commonAncestorScopeIdx)
+                            defOrItsOuterScopeIdx = scopes.GetSurePresentRef(defOrItsOuterScopeIdx).ParentIdx;
+
+                        if (defOrItsOuterScopeIdx == commonAncestorScopeIdx)
+                            break;
+
+                        commonAncestorScopeIdx = scopes.GetSurePresentRef(commonAncestorScopeIdx).ParentIdx;
+                    }
+
+                    // check if the goto jump passes through any finally or fault blocks when moving from the goto scope to the common ancestor scope,
+                    // excluding the ancestor itself (because it is fine to jump inside the same scope)
+                    for (var s = got.ScopeIdx; s != commonAncestorScopeIdx; s = scopes.GetSurePresentRef(s).ParentIdx)
+                        if (scopes.GetSurePresentRef(s).ExceptionRegion == ExceptionRegion.FinallyOrFault)
+                            throw new InvalidOperationException($"Control cannot leave the finally or fault block by the jump to the label '{got.Target.Name}'");
+
+                    // if the label scope is the jump scope or its ancestor
+                    if (def.ScopeIdx == commonAncestorScopeIdx)
+                    {
+                        labelVisible |= def.Enterable;
                         continue;
                     }
 
-                    var enterable = d.Enterable;
-                    for (var s = d.ScopeIdx; s != dx; s = scopes.GetSurePresentRef(s).ParentScopeIdx)
-                        enterable &= scopes.GetSurePresentRef(s).Enterable;
-                    if (enterable)
+                    // if the ancestor scope is enclosing the label scope, check if the label is enterable in the whole pass to the ancestor scope
+                    var labelEnterable = def.Enterable;
+                    for (var s = def.ScopeIdx; s != commonAncestorScopeIdx; s = scopes.GetSurePresentRef(s).ParentIdx)
+                        labelEnterable &= scopes.GetSurePresentRef(s).Enterable;
+                    if (labelEnterable)
                         ++jumpInCount;
                 }
 
-                if (defined & !visible && (jumpInCount != 1 || g.Target.Type != typeof(void)))
+                if (gotoHasAtLeastOneLabel & !labelVisible && (jumpInCount != 1 || got.Target.Type != typeof(void)))
                     throw new InvalidOperationException(jumpInCount > 1
-                        ? $"Ambiguous jump to the label '{g.Target.Name}'"
-                        : $"Control cannot enter the label '{g.Target.Name}': it is in the expression or the block with the value");
+                        ? $"Ambiguous jump to the label '{got.Target.Name}'"
+                        : $"Control cannot enter the label '{got.Target.Name}': it is in the expression or the block with the value");
             }
         }
 
