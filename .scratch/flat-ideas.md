@@ -67,3 +67,8 @@ flat->sys->light->FEC 64-108us, System.Compile 169-198us.
 - Release B/op before -> after: README 1 flat 1544 -> 1368, README 2 3024 -> 2848, Complex 2016 -> 1840, hoisted 1832 -> 1656. Light FEC: 1080 / 3000 / 1656 / 1232. Floor of one DynamicMethod is ~1150 B.
 - Left: object[] constants copy (could reuse the tree array if ImTools SmallList exposed its heap array), the ArrayClosure + delegate (needed), ILGenerator/LocalBuilder (BCL). Flat is now ~290 B over Light on one-lambda trees, below Light on README 2.
 - Todo: ImTools SmallList hand-over of its backing array to skip the copy; check what else allocates in the 290 B with an allocation profiler.
+
+## Step 10: reuse the FEC pooling (done, measured)
+- Learned from FEC TryCompileBoundToFirstClosureParam: it rents/frees the per-thread ILGenerator (DynamicMethodHacks.RentPooledOrNewILGenerator/FreePooledILGenerator), pools the closure+param types arrays, interprets Func<bool> constants, and sizes one object[] for constants+nested lambdas. Flat now uses the ILGenerator pool. DONE: -240 B per compile.
+- Release B/op now: README 1 flat 1128 (Light 1080), README 2 2608 (3000), Complex 1448 (1656), hoisted 1416 (1232). Time: flat 3.1 / 6.6 / 6.6 / 3.3 us vs Light 4.1 / 10.9 / 9.2 / 4.8.
+- Todo: Func<bool> interpreter shortcut (Interpreter is FEC's), the pooled local-var path (GetNextLocalVarLocation), create+compile rows (tree building cost is not measured yet), the nested ILGenerator is not pooled while the parent holds it (same as FEC).
