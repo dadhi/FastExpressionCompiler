@@ -928,10 +928,6 @@ public partial struct ExprTree : IEquatable<ExprTree>
         return (ushort)RootIdx;
     }
 
-    /// <summary>The slower oracle of <see cref="FromLightExpr"/>: Light -> System -> Flat.</summary>
-    [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
-    public ushort FromLightExprViaSystem(LightExpression.Expression expr) => FromSysExpr(expr.ToExpression());
-
     [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
     private ushort AddSysExpression(SysExpr expr)
     {
@@ -1230,11 +1226,6 @@ public partial struct ExprTree : IEquatable<ExprTree>
         Nodes.Count != 0
             ? new SysExprBuilder(this).ReadExpression(RootIdx)
             : throw new InvalidOperationException("Flat expression tree is empty.");
-
-    /// <summary>Reconstructs the flat tree as a LightExpression tree via System.Linq expressions; the slower oracle of <see cref="ToLightExpression"/>.</summary>
-    [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
-    public LightExpression.Expression ToLightExpressionViaSystem() =>
-        LightExpression.FromSysExpressionConverter.ToLightExpression(ToExpression());
 
     /// <summary>Structurally compares two flat expression trees.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

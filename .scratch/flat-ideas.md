@@ -53,3 +53,10 @@ flat->sys->light->FEC 64-108us, System.Compile 169-198us.
 - 5 SOA of the nodes: NOT TRIED. The collect scan of README 2 is 0.23 us of ~7 us, the floor of 2 bare DynamicMethods is 3 us; the layout is not the bottleneck.
 - Biggest win was not structural: the per-delegate-type cache (Invoke, param types, open Func type, Curry method). Collect 0.71 -> 0.23 us, README 2 native 9.5 -> ~6.6 us (Light FEC ~10-11, min of 9 rounds).
 - Todo: the remaining ~3 us over the DynamicMethod floor (IL token resolution, ctx), Convert, value types, Invoke, arrays, loops/try, native-vs-System fuzzer.
+
+## Step 8: via-System dropped from prod, README + ComplexExpression native (done)
+- ToLightExpressionViaSystem / FromLightExprViaSystem removed from src; kept as test-only helpers for the round-trip fuzz.
+- Native now: MemberInit (field/property bindings), NewArrayInit, ArrayIndex (rank 1), reference Convert (castclass, no user-defined/numeric/boxing). Hoisted `() => new X(a, b)`, manual lambda, `n => () => n + 1` and Complex all compile without fallback.
+- Release (noisy), us / bytes per op: README 1 flat 4.4 / 1544 vs Light 7.7 / 1080 (prebuilt); Complex flat native 9.7 / 2016 vs Light FEC 13.8 / 1656; hoisted flat 5.1 / 1832 vs Light 7.6 / 1232. Two bare DynamicMethods floor: 2304 B.
+- Allocation: flat allocates more than Light on one-lambda trees (FlatCtx, constants copy, delegate closure), but nothing here is above the DynamicMethod floor. TRIED nothing more; caching StrongBox Value/ctor lookups NOT DONE (only on assigned-captured path, not in README cases).
+- Todo: alloc of FlatCtx (struct on stack), skip constants copy when the tree constants array can be reused, value-type members, Invoke, loops/try, native-vs-System fuzzer.
