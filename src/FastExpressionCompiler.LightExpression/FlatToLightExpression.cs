@@ -21,6 +21,7 @@ public partial struct ExprTree
     /// <summary>Reconstructs the flat tree as a LightExpression tree directly, without the System.Linq expressions in between.
     /// Mirrors <c>SysExprBuilder</c>: keep the two in sync.</summary>
     [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
+    // todo: @perf the builder copies the whole ExprTree (the big Stack32 inside); take it by ref when the ref fields are available on all the targets
     public LightExpression.Expression ToLightExpression() =>
         Nodes.Count != 0
             ? new LightExprBuilder(this).ReadExpression(RootIdx)
