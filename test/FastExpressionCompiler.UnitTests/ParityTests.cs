@@ -1614,6 +1614,13 @@ namespace FastExpressionCompiler.UnitTests
             t.AreEqual(5, Lambda<Func<short, short, short>>(AddChecked(a, b), a, b).CompileFast(true)(2, 3));
             t.AreEqual(ushort.MaxValue, Lambda<Func<ushort, ushort, ushort>>(AddChecked(ua, ub), ua, ub).CompileFast(true)(ushort.MaxValue, 0));
 
+            // the compound assignment and the lifted operations share the same emit
+            t.Throws<OverflowException>(() => Lambda<Func<short, short>>(Block(AddAssignChecked(a, Constant((short)1)), a), a).CompileFast(true)(short.MaxValue));
+            var na = Parameter(typeof(short?));
+            var nb = Parameter(typeof(short?));
+            var addNullable = Lambda<Func<short?, short?, short?>>(AddChecked(na, nb), na, nb).CompileFast(true);
+            t.Throws<OverflowException>(() => addNullable(short.MaxValue, 1));
+            t.IsNull(addNullable(null, 1));
             var arr = Array.CreateInstance(typeof(int), new[] { 3 }, new[] { -1 });
             arr.SetValue(7, -1);
             var get = Lambda<Func<int>>(ArrayIndex(Constant(arr), Constant(-1))).CompileFast(true);
