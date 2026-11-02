@@ -434,7 +434,7 @@ public static partial class ExpressionCompiler
         var info = FlatGetDelegateInfo(lambda.Type);
         var paramCount = info.ParamTypes.Length;
         var dynMethod = new DynamicMethod(string.Empty, info.ReturnType, info.ClosureParamTypes, typeof(ArrayClosure), true);
-        var il = dynMethod.GetILGenerator();
+        var il = DynamicMethodHacks.RentPooledOrNewILGenerator(dynMethod, info.ReturnType, info.ClosureParamTypes);
 
         var vars = default(SmallList<FlatVar, Stack8<FlatVar>, NoArrayPool<FlatVar>>);
         var parIdx = tree.Nodes.GetSurePresentRef(bodyIdx).NextIdx;
@@ -463,7 +463,9 @@ public static partial class ExpressionCompiler
         EmitFlat(ref tree, bodyIdx, il, ref vars, ctx, false);
         il.Emit(OpCodes.Ret);
 
-        return dynMethod.CreateDelegate(delegateType ?? info.OpenType, closure);
+        var result = dynMethod.CreateDelegate(delegateType ?? info.OpenType, closure);
+        DynamicMethodHacks.FreePooledILGenerator(dynMethod, il); // only after the CreateDelegate, as FEC does
+        return result;
     }
 
     private static void EmitFlat(ref ExprTree tree, int idx, ILGenerator il,
