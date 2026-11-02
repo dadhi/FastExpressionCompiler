@@ -1,4 +1,4 @@
-﻿//#define INTERPRETATION_DIAGNOSTICS
+//#define INTERPRETATION_DIAGNOSTICS
 
 using System;
 using System.Diagnostics;
@@ -50,10 +50,12 @@ namespace FastExpressionCompiler.UnitTests
             // new Issue441_Fails_to_pass_Constant_as_call_parameter_by_reference().Run();
             // new Issue461_InvalidProgramException_when_null_checking_type_by_ref().Run();
 
+            var testXStopwatch = Stopwatch.StartNew();
             var st = new TestRun(TestFlags.RethrowException);
 
             st.Run(new Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
             st.Run(new Issue561_NonBooleanEqualityOperator());
+            st.Run(new ParityTests());
             st.Run(new Issue498_InvalidProgramException_when_using_loop());
             st.Run(new Issue495_Incomplete_pattern_detection_for_NotSupported_1007_Return_goto_from_TryCatch_with_Assign_generates_invalid_IL());
             st.Run(new Issue480_CLR_detected_an_invalid_program_exception());
@@ -77,6 +79,14 @@ namespace FastExpressionCompiler.UnitTests
             lt.Run(new LightExpression.IssueTests.Issue476_System_ExecutionEngineException_with_nullables_on_repeated_calls_to_ConcurrentDictionary());
             lt.Run(new LightExpression.IssueTests.Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
             lt.Run(new LightExpression.IssueTests.Issue561_NonBooleanEqualityOperator());
+            lt.Run(new LightExpression.UnitTests.ParityTests());
+
+            if (st.FailedTestCount > 0 || lt.FailedTestCount > 0)
+            {
+                Console.WriteLine("ERROR: Some TestX tests are FAILED!");
+                Environment.Exit(1);
+            }
+            Console.WriteLine($"//TestX: {st.TotalTestCount + lt.TotalTestCount} tests are passing in {testXStopwatch.ElapsedMilliseconds} ms.");
 
             RunAllTests();
         }

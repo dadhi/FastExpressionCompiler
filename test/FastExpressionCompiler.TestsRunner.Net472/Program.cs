@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
@@ -43,6 +43,7 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.IssueTests.Issue476_System_ExecutionEngineException_with_nullables_on_repeated_calls_to_ConcurrentDictionary());
                 t.Run(new LightExpression.IssueTests.Issue498_InvalidProgramException_when_using_loop());
                 t.Run(new LightExpression.IssueTests.Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
+                t.Run(new LightExpression.UnitTests.ParityTests());
 
                 Console.WriteLine($"Just LightExpression tests are passing in {justLightTestsStopwatch.ElapsedMilliseconds} ms.");
             }
@@ -62,6 +63,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new Issue495_Incomplete_pattern_detection_for_NotSupported_1007_Return_goto_from_TryCatch_with_Assign_generates_invalid_IL());
             fecTests.Run(new Issue498_InvalidProgramException_when_using_loop());
             fecTests.Run(new Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
+            fecTests.Run(new ParityTests());
 
 
             Console.WriteLine($"FEC tests are passing in {fecTestsStopwatch.ElapsedMilliseconds} ms.");
