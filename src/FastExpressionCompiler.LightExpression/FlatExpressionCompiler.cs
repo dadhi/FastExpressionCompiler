@@ -40,7 +40,9 @@ public static partial class ExpressionCompiler
         public bool ByValue;
     }
 
-    /// <summary>The state of one compilation. The only allocation is this object, and the constants array if any.</summary>
+    [ThreadStatic] private static FlatCtx _flatCtx;
+
+    /// <summary>The state of one compilation, one instance per thread.</summary>
     private sealed class FlatCtx
     {
         public object[] Constants; // the closure constants, then the open delegates of the nested lambdas
@@ -205,13 +207,23 @@ public static partial class ExpressionCompiler
         return !nested || info.OpenType != null;
     }
 
-    private static Type FlatBoxType(Type t) => typeof(StrongBox<>).MakeGenericType(t);
+    private sealed class FlatBoxInfo { public Type Type; public ConstructorInfo Ctor; public FieldInfo Value; }
+
+    private static readonly ConcurrentDictionary<Type, FlatBoxInfo> FlatBoxes = new();
+
+    private static FlatBoxInfo FlatBox(Type t)
+    {
+        if (FlatBoxes.TryGetValue(t, out var info))
+            return info;
+        var boxType = typeof(StrongBox<>).MakeGenericType(t);
+        return FlatBoxes.GetOrAdd(t, new FlatBoxInfo { Type = boxType, Ctor = boxType.GetConstructor(Type.EmptyTypes), Value = boxType.GetField("Value") });
+    }
 
     private static LocalBuilder FlatNewBox(ILGenerator il, Type t)
     {
-        var boxType = FlatBoxType(t);
-        var box = il.DeclareLocal(boxType);
-        il.Emit(OpCodes.Newobj, boxType.GetConstructor(Type.EmptyTypes));
+        var info = FlatBox(t);
+        var box = il.DeclareLocal(info.Type);
+        il.Emit(OpCodes.Newobj, info.Ctor);
         il.Emit(OpCodes.Stloc, box);
         return box;
     }
@@ -233,7 +245,7 @@ public static partial class ExpressionCompiler
             return;
         }
         FlatLoadNonPassed(il, v.Slot);
-        il.Emit(OpCodes.Castclass, FlatBoxType(v.Type));
+        il.Emit(OpCodes.Castclass, FlatBox(v.Type).Type);
     }
 
     private static void FlatLoadVar(ILGenerator il, in FlatVar v)
@@ -241,7 +253,7 @@ public static partial class ExpressionCompiler
         if (v.Boxed)
         {
             FlatLoadBox(il, in v);
-            il.Emit(OpCodes.Ldfld, FlatBoxType(v.Type).GetField("Value"));
+            il.Emit(OpCodes.Ldfld, FlatBox(v.Type).Value);
         }
         else if (v.Slot >= 0)
         {
@@ -383,24 +395,34 @@ public static partial class ExpressionCompiler
             return null;
 
         var constantCount = tree.ClosureConstants.Count;
-        var ctx = new FlatCtx { NextSlot = constantCount };
-        var slotCount = constantCount + tree.LambdaCount - 1; // the slot per nested lambda for its open delegate
-        if (slotCount != 0)
+        // the context is reused per thread to not allocate it (the capture buffer is big); the compile is not re-entrant
+        var ctx = _flatCtx ??= new FlatCtx();
+        ctx.NextSlot = constantCount;
+        ctx.Captures.Count = 0;
+        try
         {
-            ctx.Constants = new object[slotCount];
-            for (var i = 0; i < constantCount; ++i)
-                ctx.Constants[i] = tree.ClosureConstants[i];
-        }
+            var slotCount = constantCount + tree.LambdaCount - 1; // the slot per nested lambda for its open delegate
+            if (slotCount != 0)
+            {
+                ctx.Constants = new object[slotCount];
+                for (var i = 0; i < constantCount; ++i)
+                    ctx.Constants[i] = tree.ClosureConstants[i];
+            }
 
-        if (tree.LambdaCount > 1)
+            if (tree.LambdaCount > 1)
+            {
+                var declared = default(SmallList<(ushort Id, int Depth), Stack8<(ushort Id, int Depth)>, NoArrayPool<(ushort Id, int Depth)>>);
+                var lambdas = default(SmallList<int, Stack8<int>, NoArrayPool<int>>);
+                FlatFindCaptures(ref tree, tree.RootIdx, ctx, ref declared, ref lambdas);
+            }
+
+            var closure = ctx.Constants == null ? EmptyArrayClosure : new ArrayClosure(ctx.Constants);
+            return (TDelegate)(object)EmitFlatLambda(ref tree, tree.RootIdx, ctx, typeof(TDelegate), closure);
+        }
+        finally
         {
-            var declared = default(SmallList<(ushort Id, int Depth), Stack8<(ushort Id, int Depth)>, NoArrayPool<(ushort Id, int Depth)>>);
-            var lambdas = default(SmallList<int, Stack8<int>, NoArrayPool<int>>);
-            FlatFindCaptures(ref tree, tree.RootIdx, ctx, ref declared, ref lambdas);
+            ctx.Constants = null; // do not keep the constants alive
         }
-
-        var closure = ctx.Constants == null ? EmptyArrayClosure : new ArrayClosure(ctx.Constants);
-        return (TDelegate)(object)EmitFlatLambda(ref tree, tree.RootIdx, ctx, typeof(TDelegate), closure);
     }
 
     /// <summary>Emits the lambda into its own DynamicMethod. The root is closed over the closure; the nested one
@@ -424,7 +446,7 @@ public static partial class ExpressionCompiler
                 var box = FlatNewBox(il, par.Type);
                 il.Emit(OpCodes.Ldloc, box);
                 il.Emit(OpCodes.Ldarg, (short)i);
-                il.Emit(OpCodes.Stfld, FlatBoxType(par.Type).GetField("Value"));
+                il.Emit(OpCodes.Stfld, FlatBox(par.Type).Value);
                 vars.Add(new FlatVar { Id = par.ChildIdx, Type = par.Type, Arg = -1, Local = box, Slot = -1, Boxed = true });
             }
             else
@@ -494,7 +516,7 @@ public static partial class ExpressionCompiler
                             result = il.DeclareLocal(v.Type);
                             il.Emit(OpCodes.Stloc, result);
                         }
-                        il.Emit(OpCodes.Stfld, FlatBoxType(v.Type).GetField("Value"));
+                        il.Emit(OpCodes.Stfld, FlatBox(v.Type).Value);
                         if (result != null)
                             il.Emit(OpCodes.Ldloc, result);
                         return;
