@@ -285,12 +285,39 @@ public static partial class ExpressionCompiler
             ref var n = ref tree.Nodes.GetSurePresentRef(i);
             if (n.Kind == ExprNodeKind.BlockExprs)
                 continue;
+            if (n.Kind == ExprNodeKind.MemberAssignment)
+            {
+                // the instance field or the property with the setter, the binding is emitted by the MemberInit
+                if (!IsFlatType(n.Type) || !(n.Obj is FieldInfo bf && !bf.IsInitOnly && !bf.IsLiteral && !bf.IsStatic ||
+                    n.Obj is PropertyInfo bp && bp.GetSetMethod(true) is { IsStatic: false }))
+                    return Result.NotSupported_UnknownExpression;
+                continue;
+            }
             if (n.Kind != ExprNodeKind.Expression)
                 return Result.NotSupported_UnknownExpression;
 
             var t = n.Type;
             switch (n.NodeType)
             {
+                case ExprType.MemberInit:
+                    if (!IsFlatType(t)) return Result.NotSupported_UnknownExpression;
+                    break;
+                case ExprType.NewArrayInit:
+                    if (!t.IsArray || !IsFlatType(t.GetElementType())) return Result.NotSupported_UnknownExpression;
+                    break;
+                case ExprType.ArrayIndex:
+                    {
+                        ref var arr = ref tree.Nodes.GetSurePresentRef(n.ChildIdx);
+                        if (!arr.Type.IsArray || arr.Type.GetArrayRank() != 1 || !IsFlatType(t) ||
+                            tree.Nodes.GetSurePresentRef(arr.NextIdx).Type != typeof(int))
+                            return Result.NotSupported_UnknownExpression;
+                        break;
+                    }
+                case ExprType.Convert:
+                    // the reference cast only, no user-defined conversion method, no boxing and no numeric conversions
+                    if (n.Obj != null || t.IsValueType || !IsFlatType(t) || tree.Nodes.GetSurePresentRef(n.ChildIdx).Type.IsValueType)
+                        return Result.NotSupported_UnknownExpression;
+                    break;
                 case ExprType.Add:
                 case ExprType.Subtract:
                 case ExprType.Multiply:
@@ -563,6 +590,57 @@ public static partial class ExpressionCompiler
                         var getter = ((PropertyInfo)n.Obj).GetGetMethod(true);
                         il.Emit(getter.IsStatic ? OpCodes.Call : OpCodes.Callvirt, getter);
                     }
+                    break;
+                }
+
+            case ExprType.MemberInit:
+                {
+                    EmitFlat(ref tree, n.ChildIdx, il, ref vars, ctx, false);
+                    var bindingIdx = tree.Nodes.GetSurePresentRef(n.ChildIdx).NextIdx;
+                    for (var i = 1; i < n.ChildCount; ++i)
+                    {
+                        ref var binding = ref tree.Nodes.GetSurePresentRef(bindingIdx);
+                        il.Emit(OpCodes.Dup);
+                        EmitFlat(ref tree, binding.ChildIdx, il, ref vars, ctx, false);
+                        if (binding.Obj is FieldInfo field)
+                            il.Emit(OpCodes.Stfld, field);
+                        else
+                            il.Emit(OpCodes.Callvirt, ((PropertyInfo)binding.Obj).GetSetMethod(true));
+                        bindingIdx = binding.NextIdx;
+                    }
+                    break;
+                }
+
+            case ExprType.NewArrayInit:
+                {
+                    var elemType = n.Type.GetElementType();
+                    EmittingVisitor.EmitLoadConstantInt(il, n.ChildCount);
+                    il.Emit(OpCodes.Newarr, elemType);
+                    var elemIdx = n.ChildIdx;
+                    for (var i = 0; i < n.ChildCount; ++i)
+                    {
+                        il.Emit(OpCodes.Dup);
+                        EmittingVisitor.EmitLoadConstantInt(il, i);
+                        EmitFlat(ref tree, elemIdx, il, ref vars, ctx, false);
+                        il.Emit(elemType == typeof(int) ? OpCodes.Stelem_I4 : elemType == typeof(bool) ? OpCodes.Stelem_I1 : OpCodes.Stelem_Ref);
+                        elemIdx = tree.Nodes.GetSurePresentRef(elemIdx).NextIdx;
+                    }
+                    break;
+                }
+
+            case ExprType.ArrayIndex:
+                {
+                    EmitFlat(ref tree, n.ChildIdx, il, ref vars, ctx, false);
+                    EmitFlat(ref tree, tree.Nodes.GetSurePresentRef(n.ChildIdx).NextIdx, il, ref vars, ctx, false);
+                    il.Emit(n.Type == typeof(int) ? OpCodes.Ldelem_I4 : n.Type == typeof(bool) ? OpCodes.Ldelem_U1 : OpCodes.Ldelem_Ref);
+                    break;
+                }
+
+            case ExprType.Convert:
+                {
+                    EmitFlat(ref tree, n.ChildIdx, il, ref vars, ctx, false);
+                    if (!n.Type.IsAssignableFrom(tree.Nodes.GetSurePresentRef(n.ChildIdx).Type))
+                        il.Emit(OpCodes.Castclass, n.Type);
                     break;
                 }
 
