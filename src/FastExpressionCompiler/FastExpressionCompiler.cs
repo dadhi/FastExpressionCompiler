@@ -2194,7 +2194,9 @@ namespace FastExpressionCompiler
                             var arrIndexExpr = (BinaryExpression)expr;
                             return TryEmit(arrIndexExpr.Left, il, ref context, parent | ParentFlags.IndexAccess)
                                 && TryEmit(arrIndexExpr.Right, il, ref context, parent | ParentFlags.IndexAccess) // #265
-                                && TryEmitArrayIndexGet(il, exprType, ref context, parent);
+                                && (IsNonVectorArray(arrIndexExpr.Left.Type)
+                                    ? EmitMethodCallOrVirtualCallCheckForNull(il, arrIndexExpr.Left.Type.FindMethod("Get")) // the lower bound is not zero
+                                    : TryEmitArrayIndexGet(il, exprType, ref context, parent));
 
                         case ExpressionType.ArrayLength:
                             if (!TryEmit(((UnaryExpression)expr).Operand, il, ref context, parent))
@@ -2827,7 +2829,7 @@ namespace FastExpressionCompiler
                 var indexerProp = indexExpr.Indexer;
                 return indexerProp != null
                     ? EmitMethodCallOrVirtualCallCheckForNull(il, indexerProp.GetMethod)
-                    : indexArgCount == 1
+                    : indexArgCount == 1 && !IsNonVectorArray(objExpr.Type)
                         ? TryEmitArrayIndexGet(il, indexExpr.Type, ref context, parent) // one-dimensional array
                         : EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod("Get")); // multi-dimensional array
             }
@@ -4773,7 +4775,7 @@ namespace FastExpressionCompiler
                                 Debug.Assert(orLeftIndexExpr != null);
                                 if (objExpr != null)
                                 {
-                                    var isIndexerAMethodCall = indexArgCount > 1 | orLeftIndexExpr.Indexer != null;
+                                    var isIndexerAMethodCall = indexArgCount > 1 | orLeftIndexExpr.Indexer != null || IsNonVectorArray(objExpr.Type);
                                     var objFlags = isIndexerAMethodCall ? ParentFlags.InstanceCall : ParentFlags.InstanceAccess | ParentFlags.IndexAccess;
                                     if (!TryEmit(objExpr, il, ref context, objFlags | ParentFlags.AssignmentLeftValue))
                                         return false;
@@ -4805,7 +4807,7 @@ namespace FastExpressionCompiler
                             {
                                 var ok = orLeftIndexExpr.Indexer != null
                                     ? EmitMethodCallOrVirtualCallCheckForNull(il, orLeftIndexExpr.Indexer.SetMethod)
-                                    : indexArgCount == 1
+                                    : indexArgCount == 1 && !IsNonVectorArray(objExpr.Type)
                                         ? TryEmitArrayIndexSet(il, orLeftIndexExpr.Type) // one-dimensional array
                                         : EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod("Set")); // multi-dimensional array
                                 if (!ok)
@@ -4835,7 +4837,8 @@ namespace FastExpressionCompiler
                         else // if (leftIndexExpr != null)
                         {
                             // determine is the index essentially the method call to get/set value
-                            var isIndexerAMethodCall = indexArgCount > 1 | orLeftIndexExpr.Indexer != null;
+                            // objExpr is not null when there is no Indexer, because then it is an array access, so `||` short-circuits before the `.Type`
+                            var isIndexerAMethodCall = indexArgCount > 1 | orLeftIndexExpr.Indexer != null || IsNonVectorArray(objExpr.Type);
                             var objVar = -1;
                             var objVarByAddress = false;
                             if (objExpr != null)
@@ -5017,7 +5020,7 @@ namespace FastExpressionCompiler
                         {
                             var ok = orLeftIndexExpr.Indexer != null
                                 ? EmitMethodCallOrVirtualCallCheckForNull(il, orLeftIndexExpr.Indexer.SetMethod)
-                                : indexArgCount == 1
+                                : indexArgCount == 1 && !IsNonVectorArray(objExpr.Type)
                                     ? TryEmitArrayIndexSet(il, orLeftIndexExpr.Type) // one-dimensional array
                                     : EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod("Set")); // multi-dimensional array
                             if (!ok)
@@ -5401,6 +5404,9 @@ namespace FastExpressionCompiler
                         break;
                 }
             }
+
+            // The one-dimensional array with the non-zero lower bound, e.g. Array.CreateInstance(typeof(int), new[] { 3 }, new[] { -1 }), is not the T[] vector and has no ldelem
+            private static bool IsNonVectorArray(Type type) => type.IsArray && type.GetArrayRank() == 1 && type != type.GetElementType().MakeArrayType();
 
             private static bool TryEmitArrayIndexGet(ILGenerator il, Type type, ref CompilerContext closure, ParentFlags parent)
             {
@@ -7143,7 +7149,17 @@ namespace FastExpressionCompiler
                 if (opCode.Equals(OpCodes.Call))
                     il.Demit(OpCodes.Call, typeof(Math).FindMethod("Pow"));
                 else
+                {
                     il.Demit(opCode);
+                    // the 16-bit values are computed as 32-bit, so the range check of the narrow result is left to do
+                    if (arithmeticNodeType is ExpressionType.AddChecked or ExpressionType.SubtractChecked or ExpressionType.MultiplyChecked)
+                    {
+                        if (exprType == typeof(short))
+                            il.Demit(OpCodes.Conv_Ovf_I2);
+                        else if (exprType == typeof(ushort))
+                            il.Demit(OpCodes.Conv_Ovf_U2_Un);
+                    }
+                }
                 return true;
             }
 

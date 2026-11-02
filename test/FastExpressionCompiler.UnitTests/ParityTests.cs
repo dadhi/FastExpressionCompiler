@@ -65,6 +65,7 @@ namespace FastExpressionCompiler.UnitTests
             Member_bindings_on_the_struct_property_and_inside_try_are_the_same_as_system(t);
             Reference_equality_of_the_boxed_values_and_equal_objects_is_the_same_as_system(t);
             Type_is_and_equal_with_the_void(t);
+            Checked_narrow_arithmetic_overflows_and_non_zero_based_array_access(t);
         }
 
         private static int _sideEffectCalls;
@@ -1597,6 +1598,27 @@ namespace FastExpressionCompiler.UnitTests
             var expected = new[] { true, false, false, true, false };
             for (var i = 0; i < cases.Length; i++)
                 t.AreEqual(expected[i], cases[i].CompileFast(true)());
+        }
+        public void Checked_narrow_arithmetic_overflows_and_non_zero_based_array_access(TestContext t)
+        {
+            var a = Parameter(typeof(short));
+            var b = Parameter(typeof(short));
+            var ua = Parameter(typeof(ushort));
+            var ub = Parameter(typeof(ushort));
+            t.Throws<OverflowException>(() => Lambda<Func<short, short, short>>(AddChecked(a, b), a, b).CompileFast(true)(short.MaxValue, 1));
+            t.Throws<OverflowException>(() => Lambda<Func<short, short, short>>(SubtractChecked(a, b), a, b).CompileFast(true)(short.MinValue, 1));
+            t.Throws<OverflowException>(() => Lambda<Func<short, short, short>>(MultiplyChecked(a, b), a, b).CompileFast(true)(short.MaxValue, 2));
+            t.Throws<OverflowException>(() => Lambda<Func<ushort, ushort, ushort>>(AddChecked(ua, ub), ua, ub).CompileFast(true)(ushort.MaxValue, 1));
+            t.Throws<OverflowException>(() => Lambda<Func<ushort, ushort, ushort>>(SubtractChecked(ua, ub), ua, ub).CompileFast(true)(0, 1));
+            t.AreEqual(5, Lambda<Func<short, short, short>>(AddChecked(a, b), a, b).CompileFast(true)(2, 3));
+            t.AreEqual(ushort.MaxValue, Lambda<Func<ushort, ushort, ushort>>(AddChecked(ua, ub), ua, ub).CompileFast(true)(ushort.MaxValue, 0));
+
+            var arr = Array.CreateInstance(typeof(int), new[] { 3 }, new[] { -1 });
+            arr.SetValue(7, -1);
+            var get = Lambda<Func<int>>(ArrayIndex(Constant(arr), Constant(-1))).CompileFast(true);
+            t.AreEqual(7, get());
+            t.AreEqual(9, Lambda<Func<int>>(Block(Assign(ArrayAccess(Constant(arr), Constant(0)), Constant(9)), ArrayAccess(Constant(arr), Constant(0)))).CompileFast(true)());
+            t.AreEqual(7, Lambda<Func<int>>(ArrayAccess(Constant(arr), Constant(-1))).CompileFast(true)());
         }
         public static int AddPlusOne(int a, int b) => a + b + 1;
         public class IntBox { public int Value = 25; public int[] Arr = { 25 }; }
