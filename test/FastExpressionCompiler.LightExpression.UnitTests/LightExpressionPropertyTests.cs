@@ -140,13 +140,18 @@ public partial class LightExpressionTests
         Ensure(fe2.CompileFast<Func<int, Func<int>>>()(41)() == 42, "readme 2 result");
         Ensure(((FastExpressionCompiler.LightExpression.LambdaExpression)fe1.ToLightExpression()).CompileFast<Func<ReadmeB, ReadmeX>>(true)(bb).A == a, "readme 1 direct");
 
-        const int reps = 2000;
+        const int reps = 300;
         void Time(string name, Action body)
         {
             for (var i = 0; i < 100; ++i) body();
-            var sw = System.Diagnostics.Stopwatch.StartNew();
-            for (var i = 0; i < reps; ++i) body();
-            Console.WriteLine($"//flat-readme {name,-36} {sw.Elapsed.TotalMilliseconds * 1000 / reps,9:F2} us");
+            var best = double.MaxValue; // the min of the rounds, the DynamicMethod garbage makes the single run noisy
+            for (var round = 0; round < 9; ++round)
+            {
+                var sw = System.Diagnostics.Stopwatch.StartNew();
+                for (var i = 0; i < reps; ++i) body();
+                best = Math.Min(best, sw.Elapsed.TotalMilliseconds * 1000 / reps);
+            }
+            Console.WriteLine($"//flat-readme {name,-36} {best,9:F2} us");
         }
 
         Time("1 light FEC", () => l1.CompileFast(true));
@@ -160,6 +165,18 @@ public partial class LightExpressionTests
         Time("2 flat->light->FEC (CompileFast)", () => fe2.CompileFast<Func<int, Func<int>>>());
         Time("2 flat->light only", () => fe2.ToLightExpression());
         Time("2 flat native (nested lambda)", () => fe2.TryCompileFlat<Func<int, Func<int>>>());
+        Time("floor: collect only", () => fe2.TryCollectFlatInfo());
+        Time("floor: 2 bare DynamicMethods", () =>
+        {
+            for (var k = 0; k < 2; ++k)
+            {
+                var dm = new System.Reflection.Emit.DynamicMethod(string.Empty, typeof(int), new[] { typeof(FastExpressionCompiler.LightExpression.ExpressionCompiler.ArrayClosure), typeof(int) }, typeof(FastExpressionCompiler.LightExpression.ExpressionCompiler.ArrayClosure), true);
+                var il = dm.GetILGenerator();
+                il.Emit(System.Reflection.Emit.OpCodes.Ldc_I4_1);
+                il.Emit(System.Reflection.Emit.OpCodes.Ret);
+                dm.CreateDelegate(typeof(Func<int, int>), null);
+            }
+        });
     }
 
     public class FlatPoint
@@ -292,6 +309,23 @@ public partial class LightExpressionTests
             p6);
         var f6 = fe6.TryCompileFlat<Func<int, Func<int>>>();
         Ensure(f6 != null && f6(5)() == 10 + 5 + 7, "the captured block variable and the closure constant in the nested lambda");
+
+        // the never-assigned reference-type parameter is captured by value
+        var fe8 = default(ExprTree);
+        var s8 = fe8.ParameterOf<string>("s");
+        fe8.RootIdx = fe8.Lambda<Func<string, Func<string>>>(fe8.Lambda<Func<string>>(s8), s8);
+        var f8 = fe8.TryCompileFlat<Func<string, Func<string>>>();
+        Ensure(f8 != null && f8("abc")() == "abc", "captured string by value");
+
+        // x => (y, z) => x + y + z: the nested lambda with two parameters and a by-value capture
+        var fe9 = default(ExprTree);
+        var x9 = fe9.ParameterOf<int>("x");
+        var y9 = fe9.ParameterOf<int>("y");
+        var z9 = fe9.ParameterOf<int>("z");
+        fe9.RootIdx = fe9.Lambda<Func<int, Func<int, int, int>>>(
+            fe9.Lambda<Func<int, int, int>>(fe9.Add(fe9.Add(x9, y9), z9), y9, z9), x9);
+        var f9 = fe9.TryCompileFlat<Func<int, Func<int, int, int>>>();
+        Ensure(f9 != null && f9(1)(10, 100) == 111, "nested lambda with two parameters");
 
         // the custom delegate type of the nested lambda is outside the subset and falls back
         var fe7 = default(ExprTree);

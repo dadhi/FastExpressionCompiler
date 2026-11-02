@@ -44,3 +44,12 @@ flat->sys->light->FEC 64-108us, System.Compile 169-198us.
 - Cost: recursive capture pre-pass + per-compile lists, only when lambdas > 1.
 - Measured (noisy, Release): README 2 flat native ~30us vs Light FEC ~29us, so no win yet; the DynamicMethod per lambda dominates. README 1 stays ~3x faster natively.
 - Todo: Convert, value types, Invoke, arrays, loops/labels/try, native-vs-System fuzzer for new nodes, linear capture scan via construction-time parent links.
+
+## Step 7: construction helps for the nested lambdas (tried, measured)
+- 1 LambdaCount at construction: DONE. Collect no longer counts, the constants array is sized upfront.
+- 2 linear capture scan by index range: REJECTED, unsound. The nodes of a subtree are not contiguous (shared nodes are built earlier, clones are appended later). Instead: the same top-down pass but with no allocations (SmallList on the stack, one FlatCtx object).
+- 3 AssignedParams recorded by Assign: DONE. The never-assigned captured variable goes by value (boxed in NonPassedParams, no StrongBox, plain local in the declaring lambda). Separate list, not a node flag, because the comparer/hash read the flags.
+- 4 counts per tree: DONE with 1 (closure constants count was already known).
+- 5 SOA of the nodes: NOT TRIED. The collect scan of README 2 is 0.23 us of ~7 us, the floor of 2 bare DynamicMethods is 3 us; the layout is not the bottleneck.
+- Biggest win was not structural: the per-delegate-type cache (Invoke, param types, open Func type, Curry method). Collect 0.71 -> 0.23 us, README 2 native 9.5 -> ~6.6 us (Light FEC ~10-11, min of 9 rounds).
+- Todo: the remaining ~3 us over the DynamicMethod floor (IL token resolution, ctx), Convert, value types, Invoke, arrays, loops/try, native-vs-System fuzzer.
