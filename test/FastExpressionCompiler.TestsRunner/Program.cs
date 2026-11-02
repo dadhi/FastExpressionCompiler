@@ -148,6 +148,8 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new LightExpression.UnitTests.BinaryExpressionTests().Run);
                 Run(new BlockTests().Run);
                 Run(new LightExpression.UnitTests.BlockTests().Run);
+                Run(new CallTests().Run);
+                Run(new LightExpression.UnitTests.CallTests().Run);
                 Run(new ClosureConstantTests().Run);
                 Run(new LightExpression.UnitTests.ClosureConstantTests().Run);
                 Run(new CoalesceTests().Run);
