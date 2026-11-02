@@ -343,6 +343,7 @@ public static partial class ExpressionCompiler
                     if (!IsFlatType(t) || tree.Nodes.GetSurePresentRef(n.ChildIdx).NodeType != ExprType.Parameter) return Result.NotSupported_UnknownExpression;
                     break;
                 case ExprType.Parameter:
+                    // by-ref parameters are rejected here and Assign is the only emitted mutation, so `AssignedParams` is the complete list for the by-value captures
                     if (!IsFlatType(t) || n.Flags != 0) return Result.NotSupported_UnknownExpression;
                     break;
                 case ExprType.New:
@@ -350,10 +351,14 @@ public static partial class ExpressionCompiler
                     if (!IsFlatType(t) || n.Obj is not ConstructorInfo) return Result.NotSupported_UnknownExpression;
                     break;
                 case ExprType.Call:
-                    if (!IsFlatType(t) || n.Obj is not MethodInfo m || m.IsGenericMethodDefinition) return Result.NotSupported_UnknownExpression;
+                    // the instance of the value type needs the address and the constrained call, so the Light handles it
+                    if (!IsFlatType(t) || n.Obj is not MethodInfo m || m.IsGenericMethodDefinition ||
+                        !m.IsStatic && tree.Nodes.GetSurePresentRef(n.ChildIdx).Type.IsValueType)
+                        return Result.NotSupported_UnknownExpression;
                     break;
                 case ExprType.MemberAccess:
-                    if (!IsFlatType(t) || !(n.Obj is FieldInfo f && !f.IsLiteral || n.Obj is PropertyInfo p && p.CanRead))
+                    if (!IsFlatType(t) || !(n.Obj is FieldInfo f && !f.IsLiteral || n.Obj is PropertyInfo p && p.CanRead) ||
+                        n.ChildCount != 0 && tree.Nodes.GetSurePresentRef(n.ChildIdx).Type.IsValueType)
                         return Result.NotSupported_UnknownExpression;
                     break;
                 case ExprType.Constant:
@@ -536,12 +541,12 @@ public static partial class ExpressionCompiler
                 if (ignoreResult)
                     return;
                 if (ReferenceEquals(n.Obj, ExprNode.InlineValueMarker))
-                    il.Emit(OpCodes.Ldc_I4, (int)n.InlineValue);
+                    EmittingVisitor.EmitLoadConstantInt(il, (int)n.InlineValue);
                 else if (ReferenceEquals(n.Obj, ExprTree.ClosureConstantMarker))
                 {
                     il.Emit(OpCodes.Ldarg_0);
                     il.Emit(OpCodes.Ldfld, ArrayClosureArrayField);
-                    il.Emit(OpCodes.Ldc_I4, (int)n.ChildIdx);
+                    EmittingVisitor.EmitLoadConstantInt(il, n.ChildIdx);
                     il.Emit(OpCodes.Ldelem_Ref);
                     if (n.Type != typeof(object))
                         il.Emit(OpCodes.Castclass, n.Type);

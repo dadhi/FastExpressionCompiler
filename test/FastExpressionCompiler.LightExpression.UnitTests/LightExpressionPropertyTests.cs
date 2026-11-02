@@ -295,6 +295,13 @@ public partial class LightExpressionTests
             ff.Not(ff.MakeBinary(ExpressionType.Equal, ff.ConstantInt(1), ff.ConstantInt(2)))));
         var folded = ff.TryCompileFlat<Func<bool>>();
         Ensure(folded != null && folded() && ReferenceEquals(folded, FastExpressionCompiler.LightExpression.ExpressionCompiler.Interpreter.TrueFunc), "the constant bool is folded");
+
+        // the instance method of the int needs the address: not emitted natively, the Light fallback does it
+        var fs = default(ExprTree);
+        var ns = fs.ParameterOf<int>("n");
+        fs.RootIdx = fs.Lambda<Func<int, string>>(fs.Call(ns, typeof(int).GetMethod("ToString", Type.EmptyTypes)), ns);
+        Ensure(fs.TryCompileFlat<Func<int, string>>() == null, "the value type instance is not native");
+        Ensure(fs.CompileFast<Func<int, string>>()(5) == "5", "the value type instance via the fallback");
     }
 
     public class FlatPoint

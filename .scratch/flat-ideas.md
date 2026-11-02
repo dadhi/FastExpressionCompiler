@@ -79,3 +79,8 @@ flat->sys->light->FEC 64-108us, System.Compile 169-198us.
 - FEC closure info: nothing more to take, FEC allocates the same ArrayClosure + object[] and the NestedLambdaInfo objects that flat does not need.
 - Create+compile Release (us / B): README 1 flat 3.3 / 1128 vs Light 4.6 / 1210; README 2 flat 7.1 / 2608 vs Light 11.8 / 3144; Complex flat 7.1 / 1448 vs Light 9.9 / 2176. The flat tree build itself allocates 0 B.
 - Todo: README 1 / hoisted compile is still 48-184 B above Light prebuilt; profile the rest (ArrayClosure + constants copy + delegate + DynamicMethod).
+
+## Step 12: 3 ponytails review rounds over all the Flat code
+- R1 (compiler): Call/MemberAccess on a value-type instance (int.ToString) emitted callvirt on the value = invalid IL. FIXED: collect rejects it, falls back to Light (test added). Constants now use EmitLoadConstantInt (short IL forms). Rejected: the delegate-type check before the collect (RootIdx may be unset).
+- R2 (converters): ToLightExpression copies the whole ExprTree into its builder; FromLight allocates ushort[] per call. NOT FIXED, @perf todos (needs ref fields on all targets / SmallList ids). Both are fallback/test paths only.
+- R3 (invariants): by-value capture is sound only because by-ref params are rejected and Assign is the only emitted mutation; now written next to the check. Debug and Release: 1724 pass.

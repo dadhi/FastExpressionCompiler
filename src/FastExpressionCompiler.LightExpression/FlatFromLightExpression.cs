@@ -12,6 +12,7 @@ using LElementInit = FastExpressionCompiler.LightExpression.ElementInit;
 
 public partial struct ExprTree
 {
+    // todo: @perf the ushort[] per call, use the SmallList of the child ids as the ToLightExpression does
     [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
     private ushort[] AddLightArguments(LightExpression.IArgumentProvider args)
     {
