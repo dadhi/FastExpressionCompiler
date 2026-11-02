@@ -66,6 +66,7 @@ namespace FastExpressionCompiler.UnitTests
             Reference_equality_of_the_boxed_values_and_equal_objects_is_the_same_as_system(t);
             Type_is_and_equal_with_the_void(t);
             Checked_narrow_arithmetic_overflows_and_non_zero_based_array_access(t);
+            Unsigned_division_ref_char_and_ignored_list_init(t);
         }
 
         private static int _sideEffectCalls;
@@ -1951,5 +1952,35 @@ namespace FastExpressionCompiler.UnitTests
             t.AreEqual(null, fast(null));
             t.AreEqual(null, sys(null));
         }
+        public void Unsigned_division_ref_char_and_ignored_list_init(TestContext t)
+        {
+            var u = Parameter(typeof(uint));
+            var v = Parameter(typeof(uint));
+            t.AreEqual(uint.MaxValue / 3, Lambda<Func<uint, uint, uint>>(Divide(u, v), u, v).CompileFast(true)(uint.MaxValue, 3));
+            var ul = Parameter(typeof(ulong));
+            var vl = Parameter(typeof(ulong));
+            t.AreEqual(ulong.MaxValue / 3, Lambda<Func<ulong, ulong, ulong>>(Divide(ul, vl), ul, vl).CompileFast(true)(ulong.MaxValue, 3));
+            var nu = Parameter(typeof(uint?));
+            var nv = Parameter(typeof(uint?));
+            t.AreEqual(uint.MaxValue / 3, Lambda<Func<uint?, uint?, uint?>>(Divide(nu, nv), nu, nv).CompileFast(true)(uint.MaxValue, 3));
+            t.AreEqual(uint.MaxValue / 3, Lambda<Func<uint, uint>>(Block(DivideAssign(u, Constant(3u)), u), u).CompileFast(true)(uint.MaxValue));
+
+            var c = Parameter(typeof(char).MakeByRefType());
+            var setChar = Lambda<ActionRefChar>(Assign(c, Constant('\u20AC')), c).CompileFast(true);
+            var ch = 'a';
+            setChar(ref ch);
+            t.AreEqual('\u20AC', ch);
+            var getChar = Lambda<FuncRefChar>(c, c).CompileFast(true);
+            t.AreEqual('\u20AC', getChar(ref ch));
+
+            var add = typeof(HashSet<int>).GetMethod("Add");
+            var list = Lambda<Func<int>>(Block(
+                ListInit(New(typeof(HashSet<int>)), ElementInit(add, Constant(1))),
+                Constant(5))).CompileFast(true);
+            t.AreEqual(5, list());
+        }
+
+        public delegate void ActionRefChar(ref char c);
+        public delegate char FuncRefChar(ref char c);
     }
 }
