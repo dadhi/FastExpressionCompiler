@@ -5380,13 +5380,13 @@ public sealed class LoopExpression : Expression
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitLoop(this);
 #endif
     internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
+        ContinueLabel != null
+        ? SysExpr.Loop(Body.ToExpression(ref exprsConverted),
+            BreakLabel?.ToSystemLabelTarget(ref exprsConverted),
+            ContinueLabel.ToSystemLabelTarget(ref exprsConverted)) :
         BreakLabel == null
-        ? SysExpr.Loop(Body.ToExpression(ref exprsConverted)) :
-        ContinueLabel == null
-        ? SysExpr.Loop(Body.ToExpression(ref exprsConverted), BreakLabel.ToSystemLabelTarget(ref exprsConverted)) :
-        SysExpr.Loop(Body.ToExpression(ref exprsConverted),
-            BreakLabel.ToSystemLabelTarget(ref exprsConverted),
-            ContinueLabel.ToSystemLabelTarget(ref exprsConverted));
+        ? SysExpr.Loop(Body.ToExpression(ref exprsConverted))
+        : SysExpr.Loop(Body.ToExpression(ref exprsConverted), BreakLabel.ToSystemLabelTarget(ref exprsConverted));
 }
 
 public class TryExpression : Expression
