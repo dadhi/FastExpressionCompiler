@@ -60,3 +60,10 @@ flat->sys->light->FEC 64-108us, System.Compile 169-198us.
 - Release (noisy), us / bytes per op: README 1 flat 4.4 / 1544 vs Light 7.7 / 1080 (prebuilt); Complex flat native 9.7 / 2016 vs Light FEC 13.8 / 1656; hoisted flat 5.1 / 1832 vs Light 7.6 / 1232. Two bare DynamicMethods floor: 2304 B.
 - Allocation: flat allocates more than Light on one-lambda trees (FlatCtx, constants copy, delegate closure), but nothing here is above the DynamicMethod floor. TRIED nothing more; caching StrongBox Value/ctor lookups NOT DONE (only on assigned-captured path, not in README cases).
 - Todo: alloc of FlatCtx (struct on stack), skip constants copy when the tree constants array can be reused, value-type members, Invoke, loops/try, native-vs-System fuzzer.
+
+## Step 9: allocations (done, measured)
+- FlatCtx is one [ThreadStatic] instance (it embeds the 8-slot capture buffer, was allocated per compile); Constants is cleared after the compile. DONE.
+- StrongBox type/ctor/Value field cached per variable type (FlatBox). DONE.
+- Release B/op before -> after: README 1 flat 1544 -> 1368, README 2 3024 -> 2848, Complex 2016 -> 1840, hoisted 1832 -> 1656. Light FEC: 1080 / 3000 / 1656 / 1232. Floor of one DynamicMethod is ~1150 B.
+- Left: object[] constants copy (could reuse the tree array if ImTools SmallList exposed its heap array), the ArrayClosure + delegate (needed), ILGenerator/LocalBuilder (BCL). Flat is now ~290 B over Light on one-lambda trees, below Light on README 2.
+- Todo: ImTools SmallList hand-over of its backing array to skip the copy; check what else allocates in the 290 B with an allocation profiler.
