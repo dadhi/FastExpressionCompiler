@@ -52,7 +52,30 @@ namespace FastExpressionCompiler.UnitTests
 
             var testXStopwatch = Stopwatch.StartNew();
             var st = new TestRun(TestFlags.RethrowException);
+            var lt = new LightExpression.TestRun(LightExpression.TestFlags.RethrowException);
 
+            // the Light tests run on the thread pool in parallel with the System ones
+            var ltTime = 0L;
+            var ltTask = Task.Run(() =>
+            {
+                var ltStopwatch = Stopwatch.StartNew();
+#if NET8_0_OR_GREATER
+                lt.Run(new LightExpression.IssueTests.Issue490_Regression_in_compiling_lambdas_with_ref_struct_parameters());
+#endif
+
+                lt.Run(new LightExpression.IssueTests.Issue398_Optimize_Switch_with_OpCodes_Switch());
+                lt.Run(new LightExpression.IssueTests.Issue431_Add_structural_equality_comparison_to_LightExpression());
+                lt.Run(new LightExpression.IssueTests.Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET());
+                lt.Run(new LightExpression.IssueTests.Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_expressions_during_the_compilation());
+                lt.Run(new LightExpression.IssueTests.Issue473_InvalidProgramException_when_using_Expression_Condition_with_converted_decimal_expression());
+                lt.Run(new LightExpression.IssueTests.Issue476_System_ExecutionEngineException_with_nullables_on_repeated_calls_to_ConcurrentDictionary());
+                lt.Run(new LightExpression.IssueTests.Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
+                lt.Run(new LightExpression.IssueTests.Issue561_NonBooleanEqualityOperator());
+                lt.Run(new LightExpression.UnitTests.ParityTests());
+                ltTime = ltStopwatch.ElapsedMilliseconds;
+            });
+
+            var stStopwatch = Stopwatch.StartNew();
             st.Run(new Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
             st.Run(new Issue561_NonBooleanEqualityOperator());
             st.Run(new ParityTests());
@@ -65,28 +88,16 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new Issue475_Reuse_DynamicMethod_if_possible());
 #endif
 
-            var lt = new LightExpression.TestRun(LightExpression.TestFlags.RethrowException);
 
-#if NET8_0_OR_GREATER
-            lt.Run(new LightExpression.IssueTests.Issue490_Regression_in_compiling_lambdas_with_ref_struct_parameters());
-#endif
-
-            lt.Run(new LightExpression.IssueTests.Issue398_Optimize_Switch_with_OpCodes_Switch());
-            lt.Run(new LightExpression.IssueTests.Issue431_Add_structural_equality_comparison_to_LightExpression());
-            lt.Run(new LightExpression.IssueTests.Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET());
-            lt.Run(new LightExpression.IssueTests.Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_expressions_during_the_compilation());
-            lt.Run(new LightExpression.IssueTests.Issue473_InvalidProgramException_when_using_Expression_Condition_with_converted_decimal_expression());
-            lt.Run(new LightExpression.IssueTests.Issue476_System_ExecutionEngineException_with_nullables_on_repeated_calls_to_ConcurrentDictionary());
-            lt.Run(new LightExpression.IssueTests.Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
-            lt.Run(new LightExpression.IssueTests.Issue561_NonBooleanEqualityOperator());
-            lt.Run(new LightExpression.UnitTests.ParityTests());
+            var stTime = stStopwatch.ElapsedMilliseconds;
+            ltTask.Wait();
 
             if (st.FailedTestCount > 0 || lt.FailedTestCount > 0)
             {
                 Console.WriteLine("ERROR: Some TestX tests are FAILED!");
                 Environment.Exit(1);
             }
-            Console.WriteLine($"//TestX: {st.TotalTestCount + lt.TotalTestCount} tests are passing in {testXStopwatch.ElapsedMilliseconds} ms.");
+            Console.WriteLine($"//TestX: {st.TotalTestCount + lt.TotalTestCount} tests are passing in {testXStopwatch.ElapsedMilliseconds} ms (System: {st.TotalTestCount} in {stTime} ms, Light: {lt.TotalTestCount} in {ltTime} ms, in parallel).");
 
             RunAllTests();
         }
