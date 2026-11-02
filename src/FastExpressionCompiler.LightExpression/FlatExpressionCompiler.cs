@@ -25,7 +25,7 @@ public static partial class ExpressionCompiler
         public ushort Id;
         public Type Type;
         public short Arg; // the argument index (the closure is 0) or -1
-        public LocalBuilder Local; // the local, or the local StrongBox if Boxed
+        public int Local; // the local index (no LocalBuilder allocated), or the local StrongBox if Boxed
         public short Slot; // the item of the closure NonPassedParams if the variable is captured from the outer lambda, or -1
         public bool Boxed; // the variable is assigned and used by a nested lambda, so it lives in the StrongBox shared with that lambda
     }
@@ -219,13 +219,12 @@ public static partial class ExpressionCompiler
         return FlatBoxes.GetOrAdd(t, new FlatBoxInfo { Type = boxType, Ctor = boxType.GetConstructor(Type.EmptyTypes), Value = boxType.GetField("Value") });
     }
 
-    private static LocalBuilder FlatNewBox(ILGenerator il, Type t)
+    /// <summary>Creates the StrongBox and stores it into the new local, returns the local index.</summary>
+    private static int FlatNewBox(ILGenerator il, Type t)
     {
         var info = FlatBox(t);
-        var box = il.DeclareLocal(info.Type);
         il.Emit(OpCodes.Newobj, info.Ctor);
-        il.Emit(OpCodes.Stloc, box);
-        return box;
+        return EmittingVisitor.EmitStoreLocalVariable(il, info.Type);
     }
 
     /// <summary>Loads the item of the closure NonPassedParams: the StrongBox or the boxed value of the captured variable.</summary>
@@ -241,7 +240,7 @@ public static partial class ExpressionCompiler
     {
         if (v.Slot < 0)
         {
-            il.Emit(OpCodes.Ldloc, v.Local);
+            EmittingVisitor.EmitLoadLocalVariable(il, v.Local);
             return;
         }
         FlatLoadNonPassed(il, v.Slot);
@@ -261,7 +260,7 @@ public static partial class ExpressionCompiler
             il.Emit(OpCodes.Unbox_Any, v.Type);
         }
         else if (v.Arg >= 0) il.Emit(OpCodes.Ldarg, v.Arg);
-        else il.Emit(OpCodes.Ldloc, v.Local);
+        else EmittingVisitor.EmitLoadLocalVariable(il, v.Local);
     }
 
     private static FlatVar FlatFindVar(ref SmallList<FlatVar, Stack8<FlatVar>, NoArrayPool<FlatVar>> vars, ushort id)
@@ -385,6 +384,60 @@ public static partial class ExpressionCompiler
         return tree.LambdaCount != 0 && tree.Nodes.GetSurePresentRef(tree.RootIdx).NodeType == ExprType.Lambda ? Result.OK : Result.NotSupported_UnknownExpression;
     }
 
+    /// <summary>Folds the tree of the inline int/bool constants and the operations over them (the bool as 0/1). False if anything else is inside.</summary>
+    private static bool FlatFold(ref ExprTree tree, int idx, out int result)
+    {
+        ref var n = ref tree.Nodes.GetSurePresentRef(idx);
+        result = 0;
+        if (n.Kind != ExprNodeKind.Expression)
+            return false;
+        if (n.NodeType == ExprType.Constant)
+        {
+            if (!ReferenceEquals(n.Obj, ExprNode.InlineValueMarker))
+                return false;
+            result = (int)n.InlineValue;
+            return true;
+        }
+        if (n.NodeType == ExprType.Not)
+        {
+            if (!FlatFold(ref tree, n.ChildIdx, out var v))
+                return false;
+            result = v == 0 ? 1 : 0;
+            return true;
+        }
+        if (n.NodeType == ExprType.Conditional)
+        {
+            var ifTrueIdx = tree.Nodes.GetSurePresentRef(n.ChildIdx).NextIdx;
+            var ifFalseIdx = tree.Nodes.GetSurePresentRef(ifTrueIdx).NextIdx;
+            return FlatFold(ref tree, n.ChildIdx, out var test) && FlatFold(ref tree, test != 0 ? ifTrueIdx : ifFalseIdx, out result);
+        }
+
+        var nodeType = n.NodeType;
+        if (nodeType != ExprType.AndAlso && nodeType != ExprType.OrElse && nodeType != ExprType.Add && nodeType != ExprType.Subtract &&
+            nodeType != ExprType.Multiply && nodeType != ExprType.Equal && nodeType != ExprType.GreaterThan)
+            return false;
+        if (!FlatFold(ref tree, n.ChildIdx, out var l))
+            return false;
+        var rightIdx = tree.Nodes.GetSurePresentRef(n.ChildIdx).NextIdx;
+        if (nodeType == ExprType.AndAlso && l == 0 || nodeType == ExprType.OrElse && l != 0)
+        {
+            result = l; // short-circuit, the right is not even looked at, same as the emit
+            return true;
+        }
+        if (!FlatFold(ref tree, rightIdx, out var r))
+            return false;
+        result = nodeType switch
+        {
+            ExprType.Add => l + r,
+            ExprType.Subtract => l - r,
+            ExprType.Multiply => l * r,
+            ExprType.Equal => l == r ? 1 : 0,
+            ExprType.GreaterThan => l > r ? 1 : 0,
+            _ => r // AndAlso / OrElse with the left not short-circuiting
+        };
+        return true;
+    }
+
     /// <summary>Returns null if the tree is not the supported subset or the delegate type is not the lambda type.</summary>
     public static TDelegate TryCompileFlat<TDelegate>(this ref ExprTree tree) where TDelegate : class
     {
@@ -393,6 +446,10 @@ public static partial class ExpressionCompiler
 
         if (tree.Nodes.GetSurePresentRef(tree.RootIdx).Type != typeof(TDelegate))
             return null;
+
+        // the constant bool lambda needs no DynamicMethod at all, same as FEC does with its Interpreter
+        if (typeof(TDelegate) == typeof(Func<bool>) && FlatFold(ref tree, tree.Nodes.GetSurePresentRef(tree.RootIdx).ChildIdx, out var folded))
+            return (TDelegate)(object)(folded != 0 ? ExpressionCompiler.Interpreter.TrueFunc : ExpressionCompiler.Interpreter.FalseFunc);
 
         var constantCount = tree.ClosureConstants.Count;
         // the context is reused per thread to not allocate it (the capture buffer is big); the compile is not re-entrant
@@ -444,7 +501,7 @@ public static partial class ExpressionCompiler
             if (ctx.IsBoxed(par.ChildIdx))
             {
                 var box = FlatNewBox(il, par.Type);
-                il.Emit(OpCodes.Ldloc, box);
+                EmittingVisitor.EmitLoadLocalVariable(il, box);
                 il.Emit(OpCodes.Ldarg, (short)i);
                 il.Emit(OpCodes.Stfld, FlatBox(par.Type).Value);
                 vars.Add(new FlatVar { Id = par.ChildIdx, Type = par.Type, Arg = -1, Local = box, Slot = -1, Boxed = true });
@@ -511,22 +568,21 @@ public static partial class ExpressionCompiler
                     {
                         FlatLoadBox(il, in v);
                         EmitFlat(ref tree, rightIdx, il, ref vars, ctx, false);
-                        LocalBuilder result = null;
+                        var result = -1;
                         if (!ignoreResult)
                         {
                             il.Emit(OpCodes.Dup);
-                            result = il.DeclareLocal(v.Type);
-                            il.Emit(OpCodes.Stloc, result);
+                            result = EmittingVisitor.EmitStoreLocalVariable(il, v.Type);
                         }
                         il.Emit(OpCodes.Stfld, FlatBox(v.Type).Value);
-                        if (result != null)
-                            il.Emit(OpCodes.Ldloc, result);
+                        if (result != -1)
+                            EmittingVisitor.EmitLoadLocalVariable(il, result);
                         return;
                     }
                     EmitFlat(ref tree, rightIdx, il, ref vars, ctx, false);
                     if (!ignoreResult)
                         il.Emit(OpCodes.Dup);
-                    if (v.Arg >= 0) il.Emit(OpCodes.Starg, v.Arg); else il.Emit(OpCodes.Stloc, v.Local);
+                    if (v.Arg >= 0) il.Emit(OpCodes.Starg, v.Arg); else EmittingVisitor.EmitStoreLocalVariable(il, v.Local);
                     return;
                 }
 
@@ -721,7 +777,7 @@ public static partial class ExpressionCompiler
                         if (ctx.IsBoxed(v.ChildIdx))
                             vars.Add(new FlatVar { Id = v.ChildIdx, Type = v.Type, Arg = -1, Local = FlatNewBox(il, v.Type), Slot = -1, Boxed = true });
                         else
-                            vars.Add(new FlatVar { Id = v.ChildIdx, Type = v.Type, Arg = -1, Local = il.DeclareLocal(v.Type), Slot = -1 });
+                            vars.Add(new FlatVar { Id = v.ChildIdx, Type = v.Type, Arg = -1, Local = il.GetNextLocalVarIndex(v.Type), Slot = -1 });
                         varIdx = v.NextIdx;
                     }
 
