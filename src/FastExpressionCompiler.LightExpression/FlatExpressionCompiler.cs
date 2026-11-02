@@ -3,7 +3,7 @@
 namespace FastExpressionCompiler.LightExpression;
 
 using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
@@ -26,56 +26,45 @@ public static partial class ExpressionCompiler
         public Type Type;
         public short Arg; // the argument index (the closure is 0) or -1
         public LocalBuilder Local; // the local, or the local StrongBox if Boxed
-        public short Slot; // for Boxed: the StrongBox is the item of the closure NonPassedParams, or -1 if it is the Local
-        public bool Boxed; // the variable is used by a nested lambda, so it lives in the StrongBox shared with that lambda
+        public short Slot; // the item of the closure NonPassedParams if the variable is captured from the outer lambda, or -1
+        public bool Boxed; // the variable is assigned and used by a nested lambda, so it lives in the StrongBox shared with that lambda
     }
 
-    /// <summary>The nested lambda and the outer variables it uses, the closure NonPassedParams are in this order.</summary>
-    private sealed class FlatLambda
+    /// <summary>The outer variable used by the nested lambda. The closure NonPassedParams of the lambda are its captures in the list order.
+    /// ByValue: the variable is never assigned, so the NonPassedParams item is the (boxed) value, otherwise it is the StrongBox.</summary>
+    private struct FlatCapture
     {
-        public int Idx;
-        public List<(ushort Id, Type Type)> Captures = new();
+        public int LambdaIdx;
+        public ushort Id;
+        public Type Type;
+        public bool ByValue;
     }
 
-    /// <summary>The state of one compilation. The lists are only created when there are nested lambdas.</summary>
+    /// <summary>The state of one compilation. The only allocation is this object, and the constants array if any.</summary>
     private sealed class FlatCtx
     {
         public object[] Constants; // the closure constants, then the open delegates of the nested lambdas
         public int NextSlot;
-        public List<(ushort Id, Type Type)> Captured; // all variables used by the nested lambdas
-        public List<FlatLambda> Lambdas;
-        public List<(ushort Id, int Depth)> Declared; // scratch of the captures search
-        public List<FlatLambda> Stack; // scratch of the captures search
+        public SmallList<FlatCapture, Stack8<FlatCapture>, NoArrayPool<FlatCapture>> Captures;
 
-        public bool IsCaptured(ushort id)
+        public bool IsBoxed(ushort id)
         {
-            if (Captured != null)
-                for (var i = 0; i < Captured.Count; ++i)
-                    if (Captured[i].Id == id) return true;
+            for (var i = 0; i < Captures.Count; ++i)
+            {
+                ref var c = ref Captures.GetSurePresentRef(i);
+                if (c.Id == id && !c.ByValue) return true;
+            }
             return false;
-        }
-
-        public FlatLambda FindLambda(int idx)
-        {
-            if (Lambdas != null)
-                for (var i = 0; i < Lambdas.Count; ++i)
-                    if (Lambdas[i].Idx == idx) return Lambdas[i];
-            return null;
         }
     }
 
     private static readonly ConstructorInfo FlatArrayClosureCtor = typeof(ArrayClosure).GetConstructors()[0];
 
-    private static void FlatAddCapture(List<(ushort Id, Type Type)> list, ushort id, Type type)
-    {
-        for (var i = 0; i < list.Count; ++i)
-            if (list[i].Id == id) return;
-        list.Add((id, type));
-    }
-
     /// <summary>Finds which variables are used by the lambdas other than the declaring one. Recursive but only run for the nested lambdas.
     /// The variable is declared by the lambda parameter or the block variable, the usage is the Parameter node with the same id.</summary>
-    private static void FlatFindCaptures(ref ExprTree tree, int idx, FlatCtx ctx)
+    private static void FlatFindCaptures(ref ExprTree tree, int idx, FlatCtx ctx,
+        ref SmallList<(ushort Id, int Depth), Stack8<(ushort Id, int Depth)>, NoArrayPool<(ushort Id, int Depth)>> declared,
+        ref SmallList<int, Stack8<int>, NoArrayPool<int>> lambdas)
     {
         ref var n = ref tree.Nodes.GetSurePresentRef(idx);
         switch (n.NodeType)
@@ -85,57 +74,62 @@ public static partial class ExpressionCompiler
 
             case ExprType.Parameter:
                 {
-                    var d = ctx.Declared.Count - 1;
-                    while (d >= 0 && ctx.Declared[d].Id != n.ChildIdx) --d;
+                    var d = declared.Count - 1;
+                    while (d >= 0 && declared.GetSurePresentRef(d).Id != n.ChildIdx) --d;
                     if (d < 0)
                         return; // not in scope, the emit throws
                     // the lambdas deeper than the declaring one are capturing it
-                    for (var k = ctx.Declared[d].Depth; k < ctx.Stack.Count; ++k)
+                    for (var k = declared.GetSurePresentRef(d).Depth; k < lambdas.Count; ++k)
                     {
-                        FlatAddCapture(ctx.Stack[k].Captures, n.ChildIdx, n.Type);
-                        FlatAddCapture(ctx.Captured, n.ChildIdx, n.Type);
+                        var lambdaIdx = lambdas.GetSurePresentRef(k);
+                        var found = false;
+                        for (var c = 0; c < ctx.Captures.Count && !found; ++c)
+                        {
+                            ref var cap = ref ctx.Captures.GetSurePresentRef(c);
+                            found = cap.LambdaIdx == lambdaIdx && cap.Id == n.ChildIdx;
+                        }
+                        if (!found)
+                            ctx.Captures.Add(new FlatCapture { LambdaIdx = lambdaIdx, Id = n.ChildIdx, Type = n.Type, ByValue = !tree.IsAssigned(n.ChildIdx) });
                     }
                     return;
                 }
 
             case ExprType.Lambda:
                 {
-                    var lambda = new FlatLambda { Idx = idx };
-                    ctx.Lambdas.Add(lambda);
-                    ctx.Stack.Add(lambda);
-                    var scope = ctx.Declared.Count;
+                    lambdas.Add(idx);
+                    var scope = declared.Count;
                     var bodyIdx = n.ChildIdx;
                     var parIdx = tree.Nodes.GetSurePresentRef(bodyIdx).NextIdx;
                     for (var i = 1; i < n.ChildCount; ++i)
                     {
                         ref var par = ref tree.Nodes.GetSurePresentRef(parIdx);
-                        ctx.Declared.Add((par.ChildIdx, ctx.Stack.Count));
+                        declared.Add((par.ChildIdx, lambdas.Count));
                         parIdx = par.NextIdx;
                     }
-                    FlatFindCaptures(ref tree, bodyIdx, ctx);
-                    ctx.Declared.RemoveRange(scope, ctx.Declared.Count - scope);
-                    ctx.Stack.RemoveAt(ctx.Stack.Count - 1);
+                    FlatFindCaptures(ref tree, bodyIdx, ctx, ref declared, ref lambdas);
+                    declared.Count = scope;
+                    --lambdas.Count;
                     return;
                 }
 
             case ExprType.Block:
                 {
                     ref var exprs = ref tree.Nodes.GetSurePresentRef(n.ChildIdx);
-                    var scope = ctx.Declared.Count;
+                    var scope = declared.Count;
                     var varIdx = exprs.NextIdx;
                     for (var i = 1; i < n.ChildCount; ++i)
                     {
                         ref var v = ref tree.Nodes.GetSurePresentRef(varIdx);
-                        ctx.Declared.Add((v.ChildIdx, ctx.Stack.Count));
+                        declared.Add((v.ChildIdx, lambdas.Count));
                         varIdx = v.NextIdx;
                     }
                     var exprIdx = exprs.ChildIdx;
                     for (var i = 0; i < exprs.ChildCount; ++i)
                     {
-                        FlatFindCaptures(ref tree, exprIdx, ctx);
+                        FlatFindCaptures(ref tree, exprIdx, ctx, ref declared, ref lambdas);
                         exprIdx = tree.Nodes.GetSurePresentRef(exprIdx).NextIdx;
                     }
-                    ctx.Declared.RemoveRange(scope, ctx.Declared.Count - scope);
+                    declared.Count = scope;
                     return;
                 }
 
@@ -144,7 +138,7 @@ public static partial class ExpressionCompiler
                     var childIdx = n.ChildIdx;
                     for (var i = 0; i < n.ChildCount; ++i)
                     {
-                        FlatFindCaptures(ref tree, childIdx, ctx);
+                        FlatFindCaptures(ref tree, childIdx, ctx, ref declared, ref lambdas);
                         childIdx = tree.Nodes.GetSurePresentRef(childIdx).NextIdx;
                     }
                     return;
@@ -152,31 +146,63 @@ public static partial class ExpressionCompiler
         }
     }
 
-    /// <summary>The lambda return and parameter types must be flat and be the same as the delegate has. The nested lambda
-    /// delegate must be the Func (the closure is curried into it) with the supported number of parameters.</summary>
+    /// <summary>The delegate type facts, found once per type: the reflection (Invoke, the Func types, the Curry method) is the biggest
+    /// part of the compile of the small lambda. The open delegate and the Curry are only for the nested lambda: the Func (the closure
+    /// is curried into it) with the supported number of parameters, otherwise they are null.</summary>
+    private sealed class FlatDelegateInfo
+    {
+        public Type ReturnType;
+        public Type[] ParamTypes;
+        public Type[] ClosureParamTypes; // the closure then the parameters, for the DynamicMethod
+        public Type OpenType; // Func<closure, params, return>
+        public MethodInfo CurryMethod;
+    }
+
+    // the cache keeps the delegate types alive, same as the other FEC type caches
+    private static readonly ConcurrentDictionary<Type, FlatDelegateInfo> FlatDelegates = new();
+
+    private static FlatDelegateInfo FlatGetDelegateInfo(Type delegateType)
+    {
+        if (FlatDelegates.TryGetValue(delegateType, out var info))
+            return info;
+
+        var invoke = delegateType.GetMethod("Invoke");
+        if (invoke != null)
+        {
+            var pars = invoke.GetParameters();
+            info = new FlatDelegateInfo { ReturnType = invoke.ReturnType, ParamTypes = new Type[pars.Length], ClosureParamTypes = new Type[pars.Length + 1] };
+            info.ClosureParamTypes[0] = typeof(ArrayClosure);
+            for (var i = 0; i < pars.Length; ++i)
+                info.ParamTypes[i] = info.ClosureParamTypes[i + 1] = pars[i].ParameterType;
+
+            if (pars.Length <= 5 && info.ReturnType != typeof(void) && Tools.GetFuncOrActionType(info.ParamTypes, info.ReturnType) == delegateType) // 5 is the CurryClosureFuncs max
+            {
+                info.OpenType = Tools.GetFuncOrActionType(info.ClosureParamTypes, info.ReturnType);
+                info.CurryMethod = CurryClosureFuncs.Methods[pars.Length].MakeGenericMethod(info.OpenType.GetGenericArguments());
+            }
+        }
+        return FlatDelegates.GetOrAdd(delegateType, info);
+    }
+
+    /// <summary>The lambda return and parameter types must be flat and be the same as the delegate has.</summary>
     private static bool FlatLambdaFits(ref ExprTree tree, ref ExprNode lambda, bool nested)
     {
-        var invoke = lambda.Type.GetMethod("Invoke");
-        if (invoke == null)
+        var info = FlatGetDelegateInfo(lambda.Type);
+        if (info == null)
             return false;
         ref var body = ref tree.Nodes.GetSurePresentRef(lambda.ChildIdx);
-        var returnType = invoke.ReturnType;
-        var pars = invoke.GetParameters();
-        if (!IsFlatType(returnType) || !FlatFits(returnType, body.Type) || pars.Length != lambda.ChildCount - 1)
+        if (!IsFlatType(info.ReturnType) || !FlatFits(info.ReturnType, body.Type) || info.ParamTypes.Length != lambda.ChildCount - 1)
             return false;
 
-        var types = nested ? new Type[pars.Length] : null;
         var parIdx = body.NextIdx;
-        for (var i = 0; i < pars.Length; ++i)
+        for (var i = 0; i < info.ParamTypes.Length; ++i)
         {
             ref var par = ref tree.Nodes.GetSurePresentRef(parIdx);
-            if (par.Type != pars[i].ParameterType)
+            if (par.Type != info.ParamTypes[i])
                 return false;
-            if (nested)
-                types[i] = par.Type;
             parIdx = par.NextIdx;
         }
-        return !nested || pars.Length <= 5 && Tools.GetFuncOrActionType(types, returnType) == lambda.Type; // 5 is the CurryClosureFuncs max
+        return !nested || info.OpenType != null;
     }
 
     private static Type FlatBoxType(Type t) => typeof(StrongBox<>).MakeGenericType(t);
@@ -190,6 +216,15 @@ public static partial class ExpressionCompiler
         return box;
     }
 
+    /// <summary>Loads the item of the closure NonPassedParams: the StrongBox or the boxed value of the captured variable.</summary>
+    private static void FlatLoadNonPassed(ILGenerator il, int slot)
+    {
+        il.Emit(OpCodes.Ldarg_0);
+        il.Emit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
+        EmittingVisitor.EmitLoadConstantInt(il, slot);
+        il.Emit(OpCodes.Ldelem_Ref);
+    }
+
     private static void FlatLoadBox(ILGenerator il, in FlatVar v)
     {
         if (v.Slot < 0)
@@ -197,11 +232,24 @@ public static partial class ExpressionCompiler
             il.Emit(OpCodes.Ldloc, v.Local);
             return;
         }
-        il.Emit(OpCodes.Ldarg_0);
-        il.Emit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
-        il.Emit(OpCodes.Ldc_I4, (int)v.Slot);
-        il.Emit(OpCodes.Ldelem_Ref);
+        FlatLoadNonPassed(il, v.Slot);
         il.Emit(OpCodes.Castclass, FlatBoxType(v.Type));
+    }
+
+    private static void FlatLoadVar(ILGenerator il, in FlatVar v)
+    {
+        if (v.Boxed)
+        {
+            FlatLoadBox(il, in v);
+            il.Emit(OpCodes.Ldfld, FlatBoxType(v.Type).GetField("Value"));
+        }
+        else if (v.Slot >= 0)
+        {
+            FlatLoadNonPassed(il, v.Slot);
+            il.Emit(OpCodes.Unbox_Any, v.Type);
+        }
+        else if (v.Arg >= 0) il.Emit(OpCodes.Ldarg, v.Arg);
+        else il.Emit(OpCodes.Ldloc, v.Local);
     }
 
     private static FlatVar FlatFindVar(ref SmallList<FlatVar, Stack8<FlatVar>, NoArrayPool<FlatVar>> vars, ushort id)
@@ -224,11 +272,10 @@ public static partial class ExpressionCompiler
     /// What the tree construction already guarantees is not checked here: the child counts, the not-null children, the parameter
     /// and label ids, the closure constants (they are in the separate list, so `IsClosureBoundConstant` is already answered).
     /// Returns `OK` if the tree is the int/bool subset which <see cref="TryCompileFlat{TDelegate}"/> can emit.</summary>
-    public static Result TryCollectFlatInfo(this ref ExprTree tree) => tree.CollectFlat(out _);
+    public static Result TryCollectFlatInfo(this ref ExprTree tree) => tree.CollectFlat();
 
-    private static Result CollectFlat(this ref ExprTree tree, out int lambdas)
+    private static Result CollectFlat(this ref ExprTree tree)
     {
-        lambdas = 0;
         var count = tree.Nodes.Count;
         if (count < 2)
             return Result.NotSupported_UnknownExpression;
@@ -289,7 +336,6 @@ public static partial class ExpressionCompiler
                     if (t != typeof(bool)) return Result.NotSupported_UnknownExpression;
                     break;
                 case ExprType.Lambda:
-                    ++lambdas;
                     if (!FlatLambdaFits(ref tree, ref n, i != tree.RootIdx)) return Result.NotSupported_UnknownExpression;
                     break;
                 default:
@@ -297,13 +343,13 @@ public static partial class ExpressionCompiler
             }
         }
 
-        return lambdas != 0 && tree.Nodes.GetSurePresentRef(tree.RootIdx).NodeType == ExprType.Lambda ? Result.OK : Result.NotSupported_UnknownExpression;
+        return tree.LambdaCount != 0 && tree.Nodes.GetSurePresentRef(tree.RootIdx).NodeType == ExprType.Lambda ? Result.OK : Result.NotSupported_UnknownExpression;
     }
 
     /// <summary>Returns null if the tree is not the supported subset or the delegate type is not the lambda type.</summary>
     public static TDelegate TryCompileFlat<TDelegate>(this ref ExprTree tree) where TDelegate : class
     {
-        if (tree.CollectFlat(out var lambdas) != Result.OK)
+        if (tree.CollectFlat() != Result.OK)
             return null;
 
         if (tree.Nodes.GetSurePresentRef(tree.RootIdx).Type != typeof(TDelegate))
@@ -311,7 +357,7 @@ public static partial class ExpressionCompiler
 
         var constantCount = tree.ClosureConstants.Count;
         var ctx = new FlatCtx { NextSlot = constantCount };
-        var slotCount = constantCount + lambdas - 1; // the slot per nested lambda for its open delegate
+        var slotCount = constantCount + tree.LambdaCount - 1; // the slot per nested lambda for its open delegate
         if (slotCount != 0)
         {
             ctx.Constants = new object[slotCount];
@@ -319,13 +365,11 @@ public static partial class ExpressionCompiler
                 ctx.Constants[i] = tree.ClosureConstants[i];
         }
 
-        if (lambdas > 1)
+        if (tree.LambdaCount > 1)
         {
-            ctx.Captured = new();
-            ctx.Lambdas = new();
-            ctx.Declared = new();
-            ctx.Stack = new();
-            FlatFindCaptures(ref tree, tree.RootIdx, ctx); // todo: @perf the recursive pass, the parent links and the flags at construction would make it a linear scan
+            var declared = default(SmallList<(ushort Id, int Depth), Stack8<(ushort Id, int Depth)>, NoArrayPool<(ushort Id, int Depth)>>);
+            var lambdas = default(SmallList<int, Stack8<int>, NoArrayPool<int>>);
+            FlatFindCaptures(ref tree, tree.RootIdx, ctx, ref declared, ref lambdas);
         }
 
         var closure = ctx.Constants == null ? EmptyArrayClosure : new ArrayClosure(ctx.Constants);
@@ -338,27 +382,17 @@ public static partial class ExpressionCompiler
     {
         ref var lambda = ref tree.Nodes.GetSurePresentRef(lambdaIdx);
         var bodyIdx = lambda.ChildIdx;
-        var paramCount = lambda.ChildCount - 1;
-        var paramTypes = new Type[paramCount + 1];
-        paramTypes[0] = typeof(ArrayClosure);
+        var info = FlatGetDelegateInfo(lambda.Type);
+        var paramCount = info.ParamTypes.Length;
+        var dynMethod = new DynamicMethod(string.Empty, info.ReturnType, info.ClosureParamTypes, typeof(ArrayClosure), true);
+        var il = dynMethod.GetILGenerator();
+
+        var vars = default(SmallList<FlatVar, Stack8<FlatVar>, NoArrayPool<FlatVar>>);
         var parIdx = tree.Nodes.GetSurePresentRef(bodyIdx).NextIdx;
         for (var i = 1; i <= paramCount; ++i)
         {
             ref var par = ref tree.Nodes.GetSurePresentRef(parIdx);
-            paramTypes[i] = par.Type;
-            parIdx = par.NextIdx;
-        }
-
-        var returnType = lambda.Type.GetMethod("Invoke").ReturnType;
-        var dynMethod = new DynamicMethod(string.Empty, returnType, paramTypes, typeof(ArrayClosure), true);
-        var il = dynMethod.GetILGenerator();
-
-        var vars = default(SmallList<FlatVar, Stack8<FlatVar>, NoArrayPool<FlatVar>>);
-        parIdx = tree.Nodes.GetSurePresentRef(bodyIdx).NextIdx;
-        for (var i = 1; i <= paramCount; ++i)
-        {
-            ref var par = ref tree.Nodes.GetSurePresentRef(parIdx);
-            if (ctx.IsCaptured(par.ChildIdx))
+            if (ctx.IsBoxed(par.ChildIdx))
             {
                 var box = FlatNewBox(il, par.Type);
                 il.Emit(OpCodes.Ldloc, box);
@@ -371,16 +405,16 @@ public static partial class ExpressionCompiler
             parIdx = par.NextIdx;
         }
 
-        var captures = ctx.FindLambda(lambdaIdx)?.Captures;
-        for (var j = 0; captures != null && j < captures.Count; ++j)
-            vars.Add(new FlatVar { Id = captures[j].Id, Type = captures[j].Type, Arg = -1, Slot = (short)j, Boxed = true });
-
+        for (int c = 0, slot = 0; c < ctx.Captures.Count; ++c)
+        {
+            ref var cap = ref ctx.Captures.GetSurePresentRef(c);
+            if (cap.LambdaIdx == lambdaIdx)
+                vars.Add(new FlatVar { Id = cap.Id, Type = cap.Type, Arg = -1, Slot = (short)slot++, Boxed = !cap.ByValue });
+        }
         EmitFlat(ref tree, bodyIdx, il, ref vars, ctx, false);
         il.Emit(OpCodes.Ret);
 
-        return delegateType != null
-            ? dynMethod.CreateDelegate(delegateType, closure)
-            : dynMethod.CreateDelegate(Tools.GetFuncOrActionType(paramTypes, returnType), null);
+        return dynMethod.CreateDelegate(delegateType ?? info.OpenType, closure);
     }
 
     private static void EmitFlat(ref ExprTree tree, int idx, ILGenerator il,
@@ -411,18 +445,10 @@ public static partial class ExpressionCompiler
                 return;
 
             case ExprType.Parameter:
-                {
-                    if (ignoreResult)
-                        return;
-                    var v = FlatFindVar(ref vars, n.ChildIdx);
-                    if (v.Boxed)
-                    {
-                        FlatLoadBox(il, in v);
-                        il.Emit(OpCodes.Ldfld, FlatBoxType(v.Type).GetField("Value"));
-                    }
-                    else if (v.Arg >= 0) il.Emit(OpCodes.Ldarg, v.Arg); else il.Emit(OpCodes.Ldloc, v.Local);
+                if (ignoreResult)
                     return;
-                }
+                FlatLoadVar(il, FlatFindVar(ref vars, n.ChildIdx));
+                return;
 
             case ExprType.Assign:
                 {
@@ -458,37 +484,52 @@ public static partial class ExpressionCompiler
                     if (ignoreResult)
                         return;
                     // the nested lambda is the separate method; at run-time the open delegate is curried with the new closure
-                    // made of the shared constants and the StrongBoxes of the used outer variables
-                    var captures = ctx.FindLambda(idx).Captures;
+                    // made of the shared constants and the captured variables: the StrongBox, or the boxed value if never assigned
+                    var info = FlatGetDelegateInfo(n.Type);
                     var open = EmitFlatLambda(ref tree, idx, ctx, null, null);
-                    var openType = open.GetType();
                     var slot = ctx.NextSlot++;
                     ctx.Constants[slot] = open;
 
                     il.Emit(OpCodes.Ldarg_0);
                     il.Emit(OpCodes.Ldfld, ArrayClosureArrayField);
-                    il.Emit(OpCodes.Ldc_I4, slot);
+                    EmittingVisitor.EmitLoadConstantInt(il, slot);
                     il.Emit(OpCodes.Ldelem_Ref);
-                    il.Emit(OpCodes.Castclass, openType);
+                    il.Emit(OpCodes.Castclass, info.OpenType);
 
-                    if (captures.Count != 0)
+                    var captureCount = 0;
+                    for (var c = 0; c < ctx.Captures.Count; ++c)
+                        if (ctx.Captures.GetSurePresentRef(c).LambdaIdx == idx) ++captureCount;
+
+                    if (captureCount != 0)
                     {
-                        il.Emit(OpCodes.Ldc_I4, captures.Count);
+                        EmittingVisitor.EmitLoadConstantInt(il, captureCount);
                         il.Emit(OpCodes.Newarr, typeof(object));
-                        for (var j = 0; j < captures.Count; ++j)
+                        for (int c = 0, j = 0; c < ctx.Captures.Count; ++c)
                         {
+                            ref var cap = ref ctx.Captures.GetSurePresentRef(c);
+                            if (cap.LambdaIdx != idx)
+                                continue;
                             il.Emit(OpCodes.Dup);
-                            il.Emit(OpCodes.Ldc_I4, j);
-                            FlatLoadBox(il, FlatFindVar(ref vars, captures[j].Id));
+                            EmittingVisitor.EmitLoadConstantInt(il, j++);
+                            var v = FlatFindVar(ref vars, cap.Id);
+                            if (v.Slot >= 0) // captured by the outer lambda too, pass the item through
+                                FlatLoadNonPassed(il, v.Slot);
+                            else if (v.Boxed)
+                                FlatLoadBox(il, in v);
+                            else
+                            {
+                                FlatLoadVar(il, in v);
+                                if (v.Type.IsValueType)
+                                    il.Emit(OpCodes.Box, v.Type);
+                            }
                             il.Emit(OpCodes.Stelem_Ref);
                         }
                     }
                     il.Emit(OpCodes.Ldarg_0);
                     il.Emit(OpCodes.Ldfld, ArrayClosureArrayField);
-                    il.Emit(OpCodes.Newobj, captures.Count != 0 ? ArrayClosureWithNonPassedParamsAndConstantsCtor : FlatArrayClosureCtor);
+                    il.Emit(OpCodes.Newobj, captureCount != 0 ? ArrayClosureWithNonPassedParamsAndConstantsCtor : FlatArrayClosureCtor);
 
-                    var typeArgs = openType.GetGenericArguments();
-                    il.Emit(OpCodes.Call, CurryClosureFuncs.Methods[typeArgs.Length - 2].MakeGenericMethod(typeArgs));
+                    il.Emit(OpCodes.Call, info.CurryMethod);
                     return;
                 }
 
@@ -575,7 +616,7 @@ public static partial class ExpressionCompiler
                     for (var i = 1; i < n.ChildCount; ++i)
                     {
                         ref var v = ref tree.Nodes.GetSurePresentRef(varIdx);
-                        if (ctx.IsCaptured(v.ChildIdx))
+                        if (ctx.IsBoxed(v.ChildIdx))
                             vars.Add(new FlatVar { Id = v.ChildIdx, Type = v.Type, Arg = -1, Local = FlatNewBox(il, v.Type), Slot = -1, Boxed = true });
                         else
                             vars.Add(new FlatVar { Id = v.ChildIdx, Type = v.Type, Arg = -1, Local = il.DeclareLocal(v.Type), Slot = -1 });
