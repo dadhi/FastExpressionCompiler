@@ -38,3 +38,9 @@ flat->sys->light->FEC 64-108us, System.Compile 169-198us.
 - `dropped (for now): closure-constant usage counts` - trivial in the collect scan, ClosureConstants.Count==0 already covers the no-closure case.
 - `dropped (for now): parameter declaring owner alone` - weak without a parent link; parent index replaces it.
 - `deferred: label id table` - conflicts with the "drop info lists" direction.
+
+## Step 6: closures / nested lambdas (tried)
+- Design: captured vars live in StrongBox (shared mutation), nested lambda = separate DynamicMethod, open delegate stored in the shared constants array, curried at run-time with ArrayClosureWithNonPassedParams (same as FEC).
+- Cost: recursive capture pre-pass + per-compile lists, only when lambdas > 1.
+- Measured (noisy, Release): README 2 flat native ~30us vs Light FEC ~29us, so no win yet; the DynamicMethod per lambda dominates. README 1 stays ~3x faster natively.
+- Todo: Convert, value types, Invoke, arrays, loops/labels/try, native-vs-System fuzzer for new nodes, linear capture scan via construction-time parent links.

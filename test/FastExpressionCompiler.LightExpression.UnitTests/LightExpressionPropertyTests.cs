@@ -159,7 +159,7 @@ public partial class LightExpressionTests
         Time("2 light FEC", () => l2.CompileFast(true));
         Time("2 flat->light->FEC (CompileFast)", () => fe2.CompileFast<Func<int, Func<int>>>());
         Time("2 flat->light only", () => fe2.ToLightExpression());
-        Time("2 flat native probe (falls back)", () => fe2.TryCompileFlat<Func<int, Func<int>>>());
+        Time("2 flat native (nested lambda)", () => fe2.TryCompileFlat<Func<int, Func<int>>>());
     }
 
     public class FlatPoint
@@ -226,6 +226,82 @@ public partial class LightExpressionTests
         fe6.RootIdx = fe6.Lambda<Func<FlatPoint, FlatPoint>>(fe6.ConstantNull(t), p6);
         Ensure(fe6.TryCompileFlat<Func<FlatPoint, FlatPoint>>()(null) == null, "null constant native");
     }
+
+    /// <summary>The nested lambdas: no capture, the captured parameter and block variable (the shared StrongBox, so the mutation is seen
+    /// both ways), the capture through the middle lambda, and the closure constants inside the nested lambda.</summary>
+    public void Flat_compile_handles_nested_lambdas_and_captured_variables_natively()
+    {
+        // n => () => n + 1, the README expression
+        var fe1 = default(ExprTree);
+        var n1 = fe1.ParameterOf<int>("n");
+        fe1.RootIdx = fe1.Lambda<Func<int, Func<int>>>(fe1.Lambda<Func<int>>(fe1.Add(n1, fe1.ConstantInt(1))), n1);
+        var f1 = fe1.TryCompileFlat<Func<int, Func<int>>>();
+        Ensure(f1 != null && f1(41)() == 42, "readme: n => () => n + 1");
+
+        // x => y => x + y
+        var fe2 = default(ExprTree);
+        var x2 = fe2.ParameterOf<int>("x");
+        var y2 = fe2.ParameterOf<int>("y");
+        fe2.RootIdx = fe2.Lambda<Func<int, Func<int, int>>>(fe2.Lambda<Func<int, int>>(fe2.Add(x2, y2), y2), x2);
+        var f2 = fe2.TryCompileFlat<Func<int, Func<int, int>>>();
+        var add3 = f2(3);
+        var add10 = f2(10);
+        Ensure(add3(4) == 7 && add10(4) == 14 && add3(1) == 4, "x => y => x + y");
+
+        // n => () => n = n + 1: every outer call has its own n, the nested calls share it
+        var fe3 = default(ExprTree);
+        var n3 = fe3.ParameterOf<int>("n");
+        fe3.RootIdx = fe3.Lambda<Func<int, Func<int>>>(
+            fe3.Lambda<Func<int>>(fe3.Assign(n3, fe3.Add(n3, fe3.ConstantInt(1)))), n3);
+        var f3 = fe3.TryCompileFlat<Func<int, Func<int>>>();
+        var inc = f3(10);
+        var inc0 = f3(0);
+        Ensure(inc() == 11 && inc() == 12 && inc0() == 1 && inc() == 13, "mutated captured parameter");
+
+        // n => { var f = () => n; n = 5; f }: the lambda sees the later assignment
+        var fe4 = default(ExprTree);
+        var n4 = fe4.ParameterOf<int>("n");
+        var f4v = fe4.Variable(typeof(Func<int>), "f");
+        fe4.RootIdx = fe4.Lambda<Func<int, Func<int>>>(
+            fe4.Block(typeof(Func<int>), new[] { f4v },
+                fe4.Assign(f4v, fe4.Lambda<Func<int>>(n4)),
+                fe4.Assign(n4, fe4.ConstantInt(5)),
+                f4v),
+            n4);
+        var f4 = fe4.TryCompileFlat<Func<int, Func<int>>>();
+        Ensure(f4 != null && f4(1)() == 5, "the lambda sees the assignment after its creation");
+
+        // a => () => () => a + 1: the middle lambda passes the capture through
+        var fe5 = default(ExprTree);
+        var a5 = fe5.ParameterOf<int>("a");
+        fe5.RootIdx = fe5.Lambda<Func<int, Func<Func<int>>>>(
+            fe5.Lambda<Func<Func<int>>>(fe5.Lambda<Func<int>>(fe5.Add(a5, fe5.ConstantInt(1)))), a5);
+        var f5 = fe5.TryCompileFlat<Func<int, Func<Func<int>>>>();
+        Ensure(f5 != null && f5(1)()() == 2, "the capture through the middle lambda");
+
+        // p => { var v = p * 2; () => v + p + Constant(held).X }
+        var held = new FlatPoint(7, 8);
+        var fe6 = default(ExprTree);
+        var p6 = fe6.ParameterOf<int>("p");
+        var v6 = fe6.Variable(typeof(int), "v");
+        fe6.RootIdx = fe6.Lambda<Func<int, Func<int>>>(
+            fe6.Block(typeof(Func<int>), new[] { v6 },
+                fe6.Assign(v6, fe6.MakeBinary(ExpressionType.Multiply, p6, fe6.ConstantInt(2))),
+                fe6.Lambda<Func<int>>(
+                    fe6.Add(fe6.Add(v6, p6), fe6.Field(fe6.Constant(held, typeof(FlatPoint)), typeof(FlatPoint).GetField("X"))))),
+            p6);
+        var f6 = fe6.TryCompileFlat<Func<int, Func<int>>>();
+        Ensure(f6 != null && f6(5)() == 10 + 5 + 7, "the captured block variable and the closure constant in the nested lambda");
+
+        // the custom delegate type of the nested lambda is outside the subset and falls back
+        var fe7 = default(ExprTree);
+        var n7 = fe7.ParameterOf<int>("n");
+        fe7.RootIdx = fe7.Lambda<Func<int, FlatCustomDelegate>>(fe7.Lambda<FlatCustomDelegate>(n7), n7);
+        Ensure(fe7.TryCompileFlat<Func<int, FlatCustomDelegate>>() == null, "custom delegate is outside the subset");
+        Ensure(fe7.CompileFast<Func<int, FlatCustomDelegate>>()(3)() == 3, "custom delegate falls back");
+    }
+
+    public delegate int FlatCustomDelegate();
 
     /// <summary>Fuzzes presence/absence of every optional child (switch default/cases, try finally/catch, catch variable/filter,
     /// loop break/continue, goto value, label default): the bits decide what is present; the flat tree must report exactly that.</summary>
@@ -629,6 +705,7 @@ public partial class LightExpressionTests
     public void Flat_compile_handles_bool_result_and_falls_back_outside_the_subset() { }
     public void Experiment_compare_flat_and_light_compile_phases() { }
     public void Flat_compile_handles_new_call_and_member_access_natively() { }
+    public void Flat_compile_handles_nested_lambdas_and_captured_variables_natively() { }
     public void Flat_compiles_the_readme_expressions_and_compares_the_time() { }
 #endif
 }
