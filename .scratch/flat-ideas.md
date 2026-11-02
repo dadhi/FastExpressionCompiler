@@ -84,3 +84,6 @@ flat->sys->light->FEC 64-108us, System.Compile 169-198us.
 - R1 (compiler): Call/MemberAccess on a value-type instance (int.ToString) emitted callvirt on the value = invalid IL. FIXED: collect rejects it, falls back to Light (test added). Constants now use EmitLoadConstantInt (short IL forms). Rejected: the delegate-type check before the collect (RootIdx may be unset).
 - R2 (converters): ToLightExpression copies the whole ExprTree into its builder; FromLight allocates ushort[] per call. NOT FIXED, @perf todos (needs ref fields on all targets / SmallList ids). Both are fallback/test paths only.
 - R3 (invariants): by-value capture is sound only because by-ref params are rejected and Assign is the only emitted mutation; now written next to the check. Debug and Release: 1724 pass.
+
+## Step 13: native fuzzers
+CsCheck fuzzers compare native flat vs System: closures (shared StrongBox, by-value capture, 2 instances) and objects (New/Call/Field/Property/MemberInit/ref Conditional). Both assert no fallback.

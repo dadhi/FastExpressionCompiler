@@ -42,6 +42,8 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Flat_compile_handles_bool_result_and_falls_back_outside_the_subset();
             Flat_compile_handles_new_call_and_member_access_natively();
             Flat_compiles_all_the_readme_examples_natively();
+            Can_fuzz_nested_lambdas_with_captured_variables_natively();
+            Can_fuzz_objects_and_members_natively();
             Flat_compile_handles_nested_lambdas_and_captured_variables_natively();
             Experiment_compare_flat_and_light_compile_phases();
             Flat_compiles_the_readme_expressions_and_compares_the_time();

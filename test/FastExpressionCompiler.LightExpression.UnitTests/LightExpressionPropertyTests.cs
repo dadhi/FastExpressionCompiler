@@ -304,6 +304,140 @@ public partial class LightExpressionTests
         Ensure(fs.CompileFast<Func<int, string>>()(5) == "5", "the value type instance via the fallback");
     }
 
+    /// <summary>The generated closures (outer variables read and assigned by the nested lambda and by the outer one afterwards)
+    /// must compile natively and agree with System.Linq on the repeated calls, so the shared StrongBox and the by-value capture are checked.</summary>
+    public void Can_fuzz_nested_lambdas_with_captured_variables_natively()
+    {
+        Gen.Int[0, int.MaxValue / 2].Sample(seed =>
+            {
+                var lambda = GenerateClosureLambda(seed);
+                var fe = lambda.ToFlatExpression();
+                var native = fe.TryCompileFlat<Func<int, Func<int, int>>>();
+                Ensure(native != null, "closure: native compile");
+                var expected = lambda.Compile();
+                for (var arg = -2; arg <= 2; ++arg)
+                {
+                    var n = native(arg);
+                    var e = expected(arg);
+                    var n2 = native(arg); // the second instance has its own variables
+                    var e2 = expected(arg);
+                    for (var y = -1; y <= 3; ++y)
+                    {
+                        Ensure(n(y) == e(y), $"closure: result for {arg},{y}");
+                        Ensure(n2(y + 1) == e2(y + 1), $"closure: the second instance for {arg},{y}");
+                    }
+                }
+                return true;
+            },
+            iter: 300, threads: 1, seed: "0N0XIzNsQ0O2", print: seed => $"{seed}: {GenerateClosureLambda(seed)}");
+    }
+
+    // x => { int a = 0, b = 0; f = y => <expr over x, y, a, b with the assignments>; a = <expr over x, a, b>; f }
+    private static System.Linq.Expressions.Expression<Func<int, Func<int, int>>> GenerateClosureLambda(int seed)
+    {
+        var rnd = new Random(seed);
+        var x = SysExpr.Parameter(typeof(int), "x");
+        var y = SysExpr.Parameter(typeof(int), "y");
+        var a = SysExpr.Variable(typeof(int), "a");
+        var b = SysExpr.Variable(typeof(int), "b");
+        var f = SysExpr.Variable(typeof(Func<int, int>), "f");
+
+        SysExpr Gen(int depth, SysExpr[] leaves)
+        {
+            if (depth == 0 || rnd.Next(4) == 0)
+                return rnd.Next(5) == 0 ? SysExpr.Constant(rnd.Next(-3, 4)) : leaves[rnd.Next(leaves.Length)];
+            switch (rnd.Next(5))
+            {
+                case 0: return SysExpr.Add(Gen(depth - 1, leaves), Gen(depth - 1, leaves));
+                case 1: return SysExpr.Subtract(Gen(depth - 1, leaves), Gen(depth - 1, leaves));
+                case 2: return SysExpr.Multiply(Gen(depth - 1, leaves), Gen(depth - 1, leaves));
+                case 3: return SysExpr.Condition(SysExpr.GreaterThan(Gen(depth - 1, leaves), Gen(depth - 1, leaves)), Gen(depth - 1, leaves), Gen(depth - 1, leaves));
+                default: // assign the captured variable, the value is the result
+                    return SysExpr.Assign(rnd.Next(2) == 0 ? a : b, Gen(depth - 1, leaves));
+            }
+        }
+
+        var inner = SysExpr.Lambda<Func<int, int>>(Gen(3, new SysExpr[] { x, y, a, b }), y);
+        var body = SysExpr.Block(typeof(Func<int, int>), new[] { a, b, f },
+            SysExpr.Assign(f, inner),
+            SysExpr.Assign(a, Gen(2, new SysExpr[] { x, a, b })),
+            f);
+        return SysExpr.Lambda<Func<int, Func<int, int>>>(body, x);
+    }
+
+    /// <summary>The generated New, Call, Field and Property, MemberInit, and the reference Conditional must compile natively and agree with System.Linq.</summary>
+    public void Can_fuzz_objects_and_members_natively()
+    {
+        Gen.Int[0, int.MaxValue / 2].Sample(seed =>
+            {
+                var lambda = GenerateObjectLambda(seed);
+                var fe = lambda.ToFlatExpression();
+                var native = fe.TryCompileFlat<Func<FlatPoint, int, FlatPoint>>();
+                Ensure(native != null, "objects: native compile");
+                var expected = lambda.Compile();
+                for (var k = -2; k <= 2; ++k)
+                {
+                    var p = new FlatPoint(k * 3, k + 7);
+                    var nr = native(p, k);
+                    var er = expected(p, k);
+                    Ensure(nr.X == er.X && nr.Y == er.Y, $"objects: result for {k}");
+                }
+                return true;
+            },
+            iter: 300, threads: 1, seed: "0N0XIzNsQ0O2", print: seed => $"{seed}: {GenerateObjectLambda(seed)}");
+    }
+
+    private static System.Linq.Expressions.Expression<Func<FlatPoint, int, FlatPoint>> GenerateObjectLambda(int seed)
+    {
+        var rnd = new Random(seed);
+        var t = typeof(FlatPoint);
+        var ctor = t.GetConstructor(new[] { typeof(int), typeof(int) });
+        var p = SysExpr.Parameter(t, "p");
+        var k = SysExpr.Parameter(typeof(int), "k");
+        var q = SysExpr.Variable(t, "q");
+        var v = SysExpr.Variable(typeof(int), "v");
+
+        SysExpr Ref(int depth)
+        {
+            if (depth == 0 || rnd.Next(3) == 0)
+                return rnd.Next(2) == 0 ? p : q;
+            switch (rnd.Next(3))
+            {
+                case 0: return SysExpr.Property(Ref(depth - 1), "Self");
+                case 1: return SysExpr.New(ctor, Int(depth - 1), Int(depth - 1));
+                default: return SysExpr.Condition(SysExpr.GreaterThan(Int(depth - 1), Int(depth - 1)), Ref(depth - 1), Ref(depth - 1));
+            }
+        }
+
+        SysExpr Int(int depth)
+        {
+            if (depth == 0 || rnd.Next(4) == 0)
+                return rnd.Next(3) == 0 ? SysExpr.Constant(rnd.Next(-3, 4)) : rnd.Next(2) == 0 ? k : v;
+            switch (rnd.Next(8))
+            {
+                case 0: return SysExpr.Add(Int(depth - 1), Int(depth - 1));
+                case 1: return SysExpr.Multiply(Int(depth - 1), Int(depth - 1));
+                case 2: return SysExpr.Field(Ref(depth - 1), "X");
+                case 3: return SysExpr.Property(Ref(depth - 1), "Y");
+                case 4: return SysExpr.Call(t.GetMethod("Twice"), Int(depth - 1));
+                case 5: return SysExpr.Call(Ref(depth - 1), t.GetMethod("Sum"), Int(depth - 1));
+                case 6: return SysExpr.Assign(v, Int(depth - 1));
+                default: return SysExpr.Condition(SysExpr.Equal(Int(depth - 1), Int(depth - 1)), Int(depth - 1), Int(depth - 1));
+            }
+        }
+
+        var result = rnd.Next(2) == 0
+            ? SysExpr.MemberInit(SysExpr.New(ctor, Int(2), Int(2)), SysExpr.Bind(t.GetProperty("Y"), Int(2)), SysExpr.Bind(t.GetField("X"), Int(2)))
+            : (SysExpr)SysExpr.New(ctor, Int(3), Int(3));
+        var body = SysExpr.Block(t, new[] { q, v },
+            SysExpr.Assign(q, p), // q must not be null when Ref reads it
+            SysExpr.Assign(v, k),
+            SysExpr.Assign(q, Ref(2)),
+            SysExpr.Assign(v, Int(2)),
+            result);
+        return SysExpr.Lambda<Func<FlatPoint, int, FlatPoint>>(body, p, k);
+    }
+
     public class FlatPoint
     {
         public int X;
@@ -868,6 +1002,8 @@ public partial class LightExpressionTests
     public void Experiment_compare_flat_and_light_compile_phases() { }
     public void Flat_compile_handles_new_call_and_member_access_natively() { }
     public void Flat_compiles_all_the_readme_examples_natively() { }
+    public void Can_fuzz_nested_lambdas_with_captured_variables_natively() { }
+    public void Can_fuzz_objects_and_members_natively() { }
     public void Flat_compile_handles_nested_lambdas_and_captured_variables_natively() { }
     public void Flat_compiles_the_readme_expressions_and_compares_the_time() { }
 #endif
