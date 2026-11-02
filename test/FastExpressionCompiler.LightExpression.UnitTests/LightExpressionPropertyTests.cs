@@ -100,7 +100,7 @@ public partial class LightExpressionTests
         Time("collect: light TryCollectInfo", reps * 10, i =>
         {
             var ctx = new ExpressionCompiler.CompilerContext(ExpressionCompiler.ClosureStatus.ToBeCollected, (FastExpressionCompiler.LightExpression.IParameterProvider)lights[i], CompilerFlags.Default);
-            ExpressionCompiler.TryCollectInfo(ref ctx, lights[i].Body, null, ref ctx.NestedLambdas);
+            ExpressionCompiler.TryCollectInfo(ref ctx, lights[i].Body, null, ref ctx.NestedLambdas, 0, true);
         });
         Time("compile: flat native (collect+emit)", reps, i => flats[i].TryCompileFlat<Func<int, int>>());
         Time("compile: light FEC (collect+emit)", reps, i => lights[i].CompileFast(ifFastFailedReturnNull: true));
