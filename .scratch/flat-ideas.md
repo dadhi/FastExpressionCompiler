@@ -72,3 +72,10 @@ flat->sys->light->FEC 64-108us, System.Compile 169-198us.
 - Learned from FEC TryCompileBoundToFirstClosureParam: it rents/frees the per-thread ILGenerator (DynamicMethodHacks.RentPooledOrNewILGenerator/FreePooledILGenerator), pools the closure+param types arrays, interprets Func<bool> constants, and sizes one object[] for constants+nested lambdas. Flat now uses the ILGenerator pool. DONE: -240 B per compile.
 - Release B/op now: README 1 flat 1128 (Light 1080), README 2 2608 (3000), Complex 1448 (1656), hoisted 1416 (1232). Time: flat 3.1 / 6.6 / 6.6 / 3.3 us vs Light 4.1 / 10.9 / 9.2 / 4.8.
 - Todo: Func<bool> interpreter shortcut (Interpreter is FEC's), the pooled local-var path (GetNextLocalVarLocation), create+compile rows (tree building cost is not measured yet), the nested ILGenerator is not pooled while the parent holds it (same as FEC).
+
+## Step 11: Func<bool> fold, FEC local indexes, create+compile rows (done, measured)
+- Func<bool> over inline int/bool constants is folded (FlatFold) to the shared Interpreter.TrueFunc/FalseFunc, no DynamicMethod. DONE (FEC does the same with its Expression-bound Interpreter, which cannot read flat nodes, so the folder is a small flat one).
+- Locals use FEC il.GetNextLocalVarIndex + EmitLoad/StoreLocalVariable: no LocalBuilder object, short opcodes. DONE (no change on the README cases, they have no locals; saves 1 LocalBuilder per block variable / box / assign result).
+- FEC closure info: nothing more to take, FEC allocates the same ArrayClosure + object[] and the NestedLambdaInfo objects that flat does not need.
+- Create+compile Release (us / B): README 1 flat 3.3 / 1128 vs Light 4.6 / 1210; README 2 flat 7.1 / 2608 vs Light 11.8 / 3144; Complex flat 7.1 / 1448 vs Light 9.9 / 2176. The flat tree build itself allocates 0 B.
+- Todo: README 1 / hoisted compile is still 48-184 B above Light prebuilt; profile the rest (ArrayClosure + constants copy + delegate + DynamicMethod).

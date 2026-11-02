@@ -177,6 +177,34 @@ public partial class LightExpressionTests
         Time("2 flat native (nested lambda)", () => fe2.TryCompileFlat<Func<int, Func<int>>>());
         Time("floor: collect only", () => fe2.TryCollectFlatInfo());
 
+        // the whole cost: create the tree and compile it
+        Time("1 create+compile light FEC", () =>
+        {
+            var p = Parameter(typeof(ReadmeB), "b");
+            Lambda<Func<ReadmeB, ReadmeX>>(New(ctor, Constant(a, typeof(ReadmeA)), p), p).CompileFast(true);
+        });
+        Time("1 create+compile flat native", () =>
+        {
+            var f = default(ExprTree);
+            var p = f.ParameterOf<ReadmeB>("b");
+            f.RootIdx = f.Lambda<Func<ReadmeB, ReadmeX>>(f.New(ctor, f.Constant(a, typeof(ReadmeA)), p), p);
+            f.TryCompileFlat<Func<ReadmeB, ReadmeX>>();
+        });
+        Time("2 create+compile light FEC", () =>
+        {
+            var p = Parameter(typeof(int), "n");
+            Lambda<Func<int, Func<int>>>(Lambda<Func<int>>(Add(p, Constant(1))), p).CompileFast(true);
+        });
+        Time("2 create+compile flat native", () =>
+        {
+            var f = default(ExprTree);
+            var p = f.ParameterOf<int>("n");
+            f.RootIdx = f.Lambda<Func<int, Func<int>>>(f.Lambda<Func<int>>(f.MakeBinary(ExpressionType.Add, p, f.ConstantInt(1))), p);
+            f.TryCompileFlat<Func<int, Func<int>>>();
+        });
+        Time("C create+compile light FEC", () => CreateComplexLightExpression().CompileFast(true));
+        Time("C create+compile flat native", () => { var f = CreateComplexFlatExpression(); f.TryCompileFlat<Func<object[], object>>(); });
+
         var cLight = CreateComplexLightExpression();
         var cFlat = CreateComplexFlatExpression();
         Time("C light FEC", () => cLight.CompileFast(true));
@@ -259,6 +287,14 @@ public partial class LightExpressionTests
         fa.RootIdx = fa.Lambda<Func<int[], int>>(
             fa.Add(fa.ArrayIndex(arr, fa.ConstantInt(1)), fa.ArrayIndex(fa.NewArrayInit(typeof(int), fa.ConstantInt(5), fa.ConstantInt(6)), fa.ConstantInt(0))), arr);
         Ensure(fa.TryCompileFlat<Func<int[], int>>()?.Invoke(new[] { 1, 2 }) == 7, "int array index and init");
+
+        // the constant bool lambda is folded without the compile, FEC does the same with its Interpreter
+        var ff = default(ExprTree);
+        ff.RootIdx = ff.Lambda<Func<bool>>(ff.MakeBinary(ExpressionType.AndAlso,
+            ff.MakeBinary(ExpressionType.GreaterThan, ff.MakeBinary(ExpressionType.Add, ff.ConstantInt(2), ff.ConstantInt(3)), ff.ConstantInt(4)),
+            ff.Not(ff.MakeBinary(ExpressionType.Equal, ff.ConstantInt(1), ff.ConstantInt(2)))));
+        var folded = ff.TryCompileFlat<Func<bool>>();
+        Ensure(folded != null && folded() && ReferenceEquals(folded, FastExpressionCompiler.LightExpression.ExpressionCompiler.Interpreter.TrueFunc), "the constant bool is folded");
     }
 
     public class FlatPoint
