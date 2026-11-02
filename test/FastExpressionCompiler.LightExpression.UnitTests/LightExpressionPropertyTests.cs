@@ -63,6 +63,13 @@ public partial class LightExpressionTests
         Ensure(fe2.CompileFast<Func<int, Type>>()(1) == typeof(string), "fallback result");
     }
 
+    // the slower oracles of the direct conversions: through System.Linq expressions
+    static FastExpressionCompiler.LightExpression.Expression FlatToLightViaSystem(ref ExprTree tree) =>
+        FromSysExpressionConverter.ToLightExpression(tree.ToExpression());
+
+    static void LightToFlatViaSystem(ref ExprTree tree, FastExpressionCompiler.LightExpression.Expression light) =>
+        tree.FromSysExpr(light.ToExpression());
+
     /// <summary>Prints how long the phases of the compilation take on the flat and on the light trees; asserts nothing but the agreement.</summary>
     public void Experiment_compare_flat_and_light_compile_phases()
     {
@@ -97,10 +104,10 @@ public partial class LightExpressionTests
         });
         Time("compile: flat native (collect+emit)", reps, i => flats[i].TryCompileFlat<Func<int, int>>());
         Time("compile: light FEC (collect+emit)", reps, i => lights[i].CompileFast(ifFastFailedReturnNull: true));
-        Time("compile: flat->sys->light->FEC", reps, i => ((FastExpressionCompiler.LightExpression.LambdaExpression)flats[i].ToLightExpressionViaSystem()).CompileFast<Func<int, int>>(true));
-        Time("convert only: flat->sys->light", reps, i => flats[i].ToLightExpressionViaSystem());
+        Time("compile: flat->sys->light->FEC", reps, i => ((FastExpressionCompiler.LightExpression.LambdaExpression)FlatToLightViaSystem(ref flats[i])).CompileFast<Func<int, int>>(true));
+        Time("convert only: flat->sys->light", reps, i => FlatToLightViaSystem(ref flats[i]));
         Time("convert only: flat->light direct", reps, i => flats[i].ToLightExpression());
-        Time("convert only: light->sys->flat", reps, i => { var t = default(ExprTree); t.FromLightExprViaSystem(lights[i]); });
+        Time("convert only: light->sys->flat", reps, i => { var t = default(ExprTree); LightToFlatViaSystem(ref t, lights[i]); });
         Time("convert only: light->flat direct", reps, i => { var t = default(ExprTree); t.FromLightExpr(lights[i]); });
         Time("compile: flat->light->FEC", reps, i => ((FastExpressionCompiler.LightExpression.LambdaExpression)flats[i].ToLightExpression()).CompileFast<Func<int, int>>(true));
         Time("compile: System.Compile", 1, i => lights[i].CompileSys());
@@ -151,7 +158,10 @@ public partial class LightExpressionTests
                 for (var i = 0; i < reps; ++i) body();
                 best = Math.Min(best, sw.Elapsed.TotalMilliseconds * 1000 / reps);
             }
-            Console.WriteLine($"//flat-readme {name,-36} {best,9:F2} us");
+            var allocated = GC.GetAllocatedBytesForCurrentThread();
+            for (var i = 0; i < reps; ++i) body();
+            allocated = (GC.GetAllocatedBytesForCurrentThread() - allocated) / reps;
+            Console.WriteLine($"//flat-readme {name,-36} {best,9:F2} us {allocated,7} B");
         }
 
         Time("1 light FEC", () => l1.CompileFast(true));
@@ -166,6 +176,20 @@ public partial class LightExpressionTests
         Time("2 flat->light only", () => fe2.ToLightExpression());
         Time("2 flat native (nested lambda)", () => fe2.TryCompileFlat<Func<int, Func<int>>>());
         Time("floor: collect only", () => fe2.TryCollectFlatInfo());
+
+        var cLight = CreateComplexLightExpression();
+        var cFlat = CreateComplexFlatExpression();
+        Time("C light FEC", () => cLight.CompileFast(true));
+        Time("C flat->light->FEC (CompileFast)", () => cFlat.CompileFast<Func<object[], object>>());
+        Time("C flat->light only", () => cFlat.ToLightExpression());
+        Time("C flat native", () => cFlat.TryCompileFlat<Func<object[], object>>());
+
+        var hoistedB = new ReadmeB();
+        System.Linq.Expressions.Expression<Func<ReadmeX>> hoisted = () => new ReadmeX(a, hoistedB);
+        var hFlat = hoisted.ToFlatExpression();
+        var hLight = (FastExpressionCompiler.LightExpression.LambdaExpression)hFlat.ToLightExpression();
+        Time("H light FEC", () => hLight.CompileFast<Func<ReadmeX>>(true));
+        Time("H flat native", () => hFlat.TryCompileFlat<Func<ReadmeX>>());
         Time("floor: 2 bare DynamicMethods", () =>
         {
             for (var k = 0; k < 2; ++k)
@@ -177,6 +201,64 @@ public partial class LightExpressionTests
                 dm.CreateDelegate(typeof(Func<int, int>), null);
             }
         });
+    }
+
+    /// <summary>All README examples and the complex benchmark expression (MemberInit, Convert, ArrayIndex, NewArrayInit) compile natively, no fallback.</summary>
+    public void Flat_compiles_all_the_readme_examples_natively()
+    {
+        var a = new ReadmeA();
+        var b = new ReadmeB();
+
+        // hoisted: () => new X(a, b), the closure fields of the C# compiler display class
+        System.Linq.Expressions.Expression<Func<ReadmeX>> hoisted = () => new ReadmeX(a, b);
+        var hFlat = hoisted.ToFlatExpression();
+        var hf = hFlat.TryCompileFlat<Func<ReadmeX>>();
+        Ensure(hf != null, "hoisted: native");
+        var hx = hf();
+        Ensure(hx.A == a && hx.B == b, "hoisted: result");
+
+        // manually composed, System expression converted to flat
+        var bp = SysExpr.Parameter(typeof(ReadmeB), "b");
+        var manual = SysExpr.Lambda<Func<ReadmeB, ReadmeX>>(
+            SysExpr.New(typeof(ReadmeX).GetConstructors()[0], SysExpr.Constant(a, typeof(ReadmeA)), bp), bp);
+        var mFlat = manual.ToFlatExpression();
+        var mf = mFlat.TryCompileFlat<Func<ReadmeB, ReadmeX>>();
+        Ensure(mf != null && mf(b).A == a && mf(b).B == b, "manual: native");
+
+        // the complex expression
+        var cFlat = CreateComplexFlatExpression();
+        var cf = cFlat.TryCompileFlat<Func<object[], object>>();
+        Ensure(cf != null, "complex: native");
+        var input = new object[12];
+        for (var i = 0; i < input.Length; ++i)
+            input[i] = i + "";
+        var cx = (A)cf(input);
+        Ensure(cx.Sop == "11" && cx.Prop != null && cx.Bop != null, "complex: result");
+        Ensure(cf(input) != cx, "complex: a new object on each call");
+
+        // the same complex expression made of the System expression
+        var cSys = CreateComplexExpression().ToFlatExpression();
+        var cf2 = cSys.TryCompileFlat<Func<object[], object>>();
+        Ensure(cf2 != null && ((A)cf2(input)).Sop == "11", "complex from System: native");
+
+        // the bad cast throws the same as the System does
+        input[11] = 42;
+        var threw = false;
+        try { cf(input); } catch (InvalidCastException) { threw = true; }
+        Ensure(threw, "complex: the bad cast throws");
+
+        // n => () => n + 1
+        var fe = default(ExprTree);
+        var n = fe.ParameterOf<int>("n");
+        fe.RootIdx = fe.Lambda<Func<int, Func<int>>>(fe.Lambda<Func<int>>(fe.Add(n, fe.ConstantInt(1))), n);
+        Ensure(fe.TryCompileFlat<Func<int, Func<int>>>()?.Invoke(41)() == 42, "n => () => n + 1: native");
+
+        // the array of ints and bools, the index, the element type fits
+        var fa = default(ExprTree);
+        var arr = fa.ParameterOf<int[]>("arr");
+        fa.RootIdx = fa.Lambda<Func<int[], int>>(
+            fa.Add(fa.ArrayIndex(arr, fa.ConstantInt(1)), fa.ArrayIndex(fa.NewArrayInit(typeof(int), fa.ConstantInt(5), fa.ConstantInt(6)), fa.ConstantInt(0))), arr);
+        Ensure(fa.TryCompileFlat<Func<int[], int>>()?.Invoke(new[] { 1, 2 }) == 7, "int array index and init");
     }
 
     public class FlatPoint
@@ -219,7 +301,10 @@ public partial class LightExpressionTests
         var held = new FlatPoint(7, 8);
         fe2.RootIdx = fe2.Lambda<Func<FlatPoint, object[]>>(
             fe2.NewArrayInit(typeof(object), fe2.Constant(held, t), fe2.Constant("s"), fe2.ConstantNull(t), p2), p2);
-        Ensure(fe2.TryCompileFlat<Func<FlatPoint, object[]>>() == null, "the array init is outside the subset");
+        var arrFn = fe2.TryCompileFlat<Func<FlatPoint, object[]>>();
+        Ensure(arrFn != null, "the array init is native");
+        var arrRes = arrFn(held);
+        Ensure(arrRes.Length == 4 && arrRes[0] == held && (string)arrRes[1] == "s" && arrRes[2] == null && arrRes[3] == held, "the array init result");
 
         var fe3 = default(ExprTree);
         var p3 = fe3.ParameterOf<FlatPoint>("p");
@@ -412,7 +497,7 @@ public partial class LightExpressionTests
         var light = fe.ToLightExpression();
         Ensure(fe.Equals(light.ToFlatExpression()), "flat->light->flat roundtrip");
         var viaSys = default(ExprTree);
-        viaSys.FromLightExprViaSystem(light);
+        LightToFlatViaSystem(ref viaSys, light);
         Ensure(viaSys.Equals(light.ToFlatExpression()), "direct light->flat equals via-system");
 
         int Count(Func<ExprNode, bool> match)
@@ -739,6 +824,7 @@ public partial class LightExpressionTests
     public void Flat_compile_handles_bool_result_and_falls_back_outside_the_subset() { }
     public void Experiment_compare_flat_and_light_compile_phases() { }
     public void Flat_compile_handles_new_call_and_member_access_natively() { }
+    public void Flat_compiles_all_the_readme_examples_natively() { }
     public void Flat_compile_handles_nested_lambdas_and_captured_variables_natively() { }
     public void Flat_compiles_the_readme_expressions_and_compares_the_time() { }
 #endif
