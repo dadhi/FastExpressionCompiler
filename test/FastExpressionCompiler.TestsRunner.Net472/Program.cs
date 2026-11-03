@@ -63,6 +63,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new Issue495_Incomplete_pattern_detection_for_NotSupported_1007_Return_goto_from_TryCatch_with_Assign_generates_invalid_IL());
             fecTests.Run(new Issue498_InvalidProgramException_when_using_loop());
             fecTests.Run(new Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
+            fecTests.Run(new ReductionProgressRegressionTests());
             fecTests.Run(new ParityTests());
 
 
