@@ -46,6 +46,7 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.ByRefConversionRegressionTests());
                 t.Run(new LightExpression.UnitTests.RuntimeTypeConstantRegressionTests());
                 t.Run(new LightExpression.UnitTests.ExtensionReductionIdentityRegressionTests());
+                t.Run(new LightExpression.UnitTests.IntegerSwitchDispatchRegressionTests());
                 t.Run(new LightExpression.UnitTests.ParityTests());
 
                 Console.WriteLine($"Just LightExpression tests are passing in {justLightTestsStopwatch.ElapsedMilliseconds} ms.");
@@ -71,6 +72,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new RuntimeTypeConstantRegressionTests());
             fecTests.Run(new CustomReducibleNodeRegressionTests());
             fecTests.Run(new ExtensionReductionIdentityRegressionTests());
+            fecTests.Run(new IntegerSwitchDispatchRegressionTests());
             fecTests.Run(new ParityTests());
 
 
