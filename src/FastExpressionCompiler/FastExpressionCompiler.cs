@@ -1694,7 +1694,10 @@ namespace FastExpressionCompiler
                         return r;
 
                     case ExpressionType.Extension:
-                        expr = expr.Reduce();
+                        var reduced = expr.Reduce();
+                        if (reduced == null || ReferenceEquals(reduced, expr))
+                            return Result.NotSupported_UnknownExpression;
+                        expr = reduced;
                         enterable = false;
                         continue;
 
@@ -2673,7 +2676,10 @@ namespace FastExpressionCompiler
                             return TryEmitSwitch((SwitchExpression)expr, il, ref context, parent);
 
                         case ExpressionType.Extension:
-                            expr = expr.Reduce();
+                            var reduced = expr.Reduce();
+                            if (reduced == null || ReferenceEquals(reduced, expr))
+                                return false;
+                            expr = reduced;
                             continue;
 
                         case ExpressionType.DebugInfo: // todo: @feature - is not supported yet
