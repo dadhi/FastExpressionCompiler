@@ -5562,13 +5562,11 @@ namespace FastExpressionCompiler
                 var ok = true;
                 if (!objIsValueType)
                     ok = EmitMethodCallOrVirtualCall(il, method);
-                else if (method.DeclaringType != typeof(Enum) &&
-                    (!method.IsVirtual ||
-                    method.DeclaringType == objExpr.Type ||
-                    objExpr is ParameterExpression pe && pe.IsByRef))
+                else if (method.DeclaringType == objExpr.Type)
                     ok = EmitMethodCall(il, method);
                 else
                 {
+                    // method on base class (System.Enum, System.Object) or interface
                     il.Demit(OpCodes.Constrained, objExpr.Type);
                     ok = EmitVirtualMethodCall(il, method);
                 }
