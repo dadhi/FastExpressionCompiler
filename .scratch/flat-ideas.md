@@ -87,3 +87,6 @@ flat->sys->light->FEC 64-108us, System.Compile 169-198us.
 
 ## Step 13: native fuzzers
 CsCheck fuzzers compare native flat vs System: closures (shared StrongBox, by-value capture, 2 instances) and objects (New/Call/Field/Property/MemberInit/ref Conditional). Both assert no fallback.
+
+## Step 14: FlatCtx is a stack struct
+FlatCtx is a local struct passed by ref (as FEC does with its ClosureInfo); no ThreadStatic, no cleanup. Allocation is unchanged (1128/2608/1448 B).
