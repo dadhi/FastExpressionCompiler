@@ -4543,6 +4543,8 @@ namespace FastExpressionCompiler
 
                 var inits = expr.Initializers;
                 var initCount = inits.Count;
+                MethodInfo lastAddMethod = null;
+                ParameterInfo[] methodParams = null;
                 for (var i = 0; i < initCount; ++i)
                 {
                     if (valueVarIndex != -1) // load local value address, to set its members
@@ -4550,17 +4552,25 @@ namespace FastExpressionCompiler
                     else
                         il.Demit(OpCodes.Dup); // duplicate member owner on stack
 
-                    if (!EmitElementInit(inits.GetArgument(i), exprType, il, ref context, parent))
+                    var elemInit = inits.GetArgument(i);
+                    var method = elemInit.AddMethod;
+                    if (!ReferenceEquals(method, lastAddMethod))
+                    {
+                        lastAddMethod = method;
+                        methodParams = method.GetParameters();
+                    }
+                    if (!EmitElementInit(elemInit, exprType, il, ref context, parent, methodParams))
                         return false;
                 }
 
                 if (valueVarIndex != -1)
                     EmitLoadLocalVariable(il, valueVarIndex);
+                context.LastEmitIsAddress = false;
                 return il.EmitPopIfIgnoreResult(parent);
             }
 
             // The owner (the reference or the address of the value type) is on the stack and is consumed
-            private static bool EmitElementInit(ElementInit elemInit, Type ownerType, ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            private static bool EmitElementInit(ElementInit elemInit, Type ownerType, ILGenerator il, ref CompilerContext context, ParentFlags parent, ParameterInfo[] methodParams = null)
             {
                 // see the TryEmitMethodCall for the reason of the callFlags
                 var callFlags = (parent
@@ -4568,7 +4578,8 @@ namespace FastExpressionCompiler
                         ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
                     | ParentFlags.Call;
                 var method = elemInit.AddMethod;
-                var methodParams = method.GetParameters();
+                if (methodParams == null)
+                    methodParams = method.GetParameters();
                 var addArgs = elemInit.GetArgExprs();
                 var addArgCount = addArgs.GetArgCount();
 

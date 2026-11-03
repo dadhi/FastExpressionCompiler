@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -67,9 +68,11 @@ namespace FastExpressionCompiler.UnitTests
             Type_is_and_equal_with_the_void(t);
             Checked_narrow_arithmetic_overflows_and_non_zero_based_array_access(t);
             Unsigned_division_ref_char_and_ignored_list_init(t);
+            Non_void_list_initializers_preserve_results_and_effects(t);
         }
 
         private static int _sideEffectCalls;
+        private static string _listInitTrace = string.Empty;
         private static bool? SideEffect(bool? value) { ++_sideEffectCalls; return value; }
 
         public void Can_compile_goto_with_value_of_all_kinds(TestContext t)
@@ -1985,6 +1988,109 @@ namespace FastExpressionCompiler.UnitTests
                 ListInit(New(typeof(HashSet<int>)), ElementInit(add, Constant(1))),
                 Constant(5))).CompileFast(true);
             t.AreEqual(5, list());
+        }
+
+        public void Non_void_list_initializers_preserve_results_and_effects(TestContext t)
+        {
+            var hashSetExpr = Lambda<Func<HashSet<int>>>(ListInit(New(typeof(HashSet<int>)),
+                ElementInit(typeof(HashSet<int>).GetMethod("Add"), Constant(1)),
+                ElementInit(typeof(HashSet<int>).GetMethod("Add"), Constant(2)),
+                ElementInit(typeof(HashSet<int>).GetMethod("Add"), Constant(2))));
+            var hashSetFast = hashSetExpr.CompileFast(true);
+            t.IsNotNull(hashSetFast);
+            var hashSet = hashSetFast();
+            t.AreEqual(2, hashSet.Count);
+            t.IsTrue(hashSet.Contains(1));
+            t.IsTrue(hashSet.Contains(2));
+
+            var structExpr = Lambda<Func<ListInitValueList>>(CreateListInit(typeof(ListInitValueList), 5, 6, 7, 8));
+            var structFast = structExpr.CompileFast(true);
+            t.IsNotNull(structFast);
+            _listInitTrace = string.Empty;
+            var structResult = structFast();
+            t.AreEqual("5;6;7;8;", _listInitTrace);
+            t.AreEqual(4, structResult.Count);
+            t.AreEqual(5, structResult[0]);
+            t.AreEqual(8, structResult[3]);
+
+            foreach (var type in new[] { typeof(ListInitReferenceList), typeof(ListInitValueList) })
+            {
+                var body = CreateListInit(type, 5, 6);
+                var lambda = Lambda<Action>(Block(body, Empty()));
+                var sys = lambda.CompileSys();
+                var fast = lambda.CompileFast(true);
+                t.IsNotNull(fast);
+                _listInitTrace = string.Empty;
+                sys();
+                var sysTrace = _listInitTrace;
+                _listInitTrace = string.Empty;
+                fast();
+                t.AreEqual(sysTrace, _listInitTrace);
+                t.AreEqual("5;6;", _listInitTrace);
+            }
+
+            var memberAccess = Property(CreateListInit(typeof(ListInitValueList), 5, 6), nameof(ListInitValueList.Count));
+            var memberLambda = Lambda<Func<int>>(memberAccess);
+            var memberFast = memberLambda.CompileFast(true);
+            t.IsNotNull(memberFast);
+            t.AreEqual(memberLambda.CompileSys()(), memberFast());
+            t.AreEqual(2, memberFast());
+
+            var addInt = typeof(ListInitOverloadedList).GetMethod("Add", new[] { typeof(int) });
+            var addString = typeof(ListInitOverloadedList).GetMethod("Add", new[] { typeof(string) });
+            var overloadExpr = Lambda<Func<ListInitOverloadedList>>(ListInit(New(typeof(ListInitOverloadedList)),
+                ElementInit(addInt, Constant(1)),
+                ElementInit(addString, Constant("x")),
+                ElementInit(addInt, Constant(2))));
+            var overloadSys = overloadExpr.CompileSys();
+            var overloadFast = overloadExpr.CompileFast(true);
+            t.IsNotNull(overloadFast);
+            _listInitTrace = string.Empty;
+            overloadSys();
+            var expectedTrace = _listInitTrace;
+            _listInitTrace = string.Empty;
+            overloadFast();
+            t.AreEqual(expectedTrace, _listInitTrace);
+            t.AreEqual("1;x;2;", _listInitTrace);
+        }
+
+        private static Expression CreateListInit(Type type, params int[] values)
+        {
+            var add = type.GetMethod("Add", new[] { typeof(int) });
+            var initializers = new ElementInit[values.Length];
+            for (var i = 0; i < values.Length; ++i)
+                initializers[i] = ElementInit(add, Constant(values[i]));
+            return ListInit(New(type), initializers);
+        }
+
+        public class ListInitOverloadedList : IEnumerable<int>
+        {
+            public bool Add(int value) { _listInitTrace += value + ";"; return true; }
+            public void Add(string value) { _listInitTrace += value + ";"; }
+            public IEnumerator<int> GetEnumerator() => ((IEnumerable<int>)Array.Empty<int>()).GetEnumerator();
+            IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+        }
+
+        public class ListInitReferenceList : IEnumerable<int>
+        {
+            public int Add(int value) { _listInitTrace += value + ";"; return value; }
+            public IEnumerator<int> GetEnumerator() => ((IEnumerable<int>)Array.Empty<int>()).GetEnumerator();
+            IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+        }
+
+        public struct ListInitValueList : IEnumerable<int>
+        {
+            private List<int> _values;
+            public int Add(int value)
+            {
+                _listInitTrace += value + ";";
+                (_values ??= new List<int>()).Add(value);
+                return value;
+            }
+            public int Count => _values?.Count ?? 0;
+            public int this[int index] => _values[index];
+            public IEnumerator<int> GetEnumerator() => (_values ?? new List<int>()).GetEnumerator();
+            IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
         }
 
         public delegate void ActionRefChar(ref char c);
