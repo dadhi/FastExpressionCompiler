@@ -83,6 +83,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
             st.Run(new Issue561_NonBooleanEqualityOperator());
             st.Run(new ReductionProgressRegressionTests());
+            st.Run(new CustomReducibleNodeRegressionTests());
             st.Run(new ParityTests());
             st.Run(new Issue498_InvalidProgramException_when_using_loop());
             st.Run(new Issue495_Incomplete_pattern_detection_for_NotSupported_1007_Return_goto_from_TryCatch_with_Assign_generates_invalid_IL());

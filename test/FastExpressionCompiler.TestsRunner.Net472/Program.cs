@@ -64,6 +64,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new Issue498_InvalidProgramException_when_using_loop());
             fecTests.Run(new Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
             fecTests.Run(new ReductionProgressRegressionTests());
+            fecTests.Run(new CustomReducibleNodeRegressionTests());
             fecTests.Run(new ParityTests());
 
 
