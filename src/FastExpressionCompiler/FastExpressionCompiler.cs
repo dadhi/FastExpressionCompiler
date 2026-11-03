@@ -649,6 +649,10 @@ namespace FastExpressionCompiler
             /// The map of inlined invocations collected in TryCollect and then used in TryEmit
             internal SmallMap4<InvocationExpression, Expression, RefEq<InvocationExpression>> InlinedLambdaInvocation;
 
+#if !LIGHT_EXPRESSION
+            internal CustomNodeReductionCache CustomNodeReductions;
+#endif
+
             /// New or Call expressions containing the complex expression, e.g. inlined Lambda Invoke or Try with Finally
             internal SmallSet4<Expression, RefEq<Expression>> ArgsContainingComplexExpression;
 
@@ -1748,7 +1752,7 @@ namespace FastExpressionCompiler
                         }
 
 #if !LIGHT_EXPRESSION
-                        var customReduced = TryReduceCustomNode(expr);
+                        var customReduced = TryReduceCustomNode(expr, ref context);
                         if (customReduced != null)
                         {
                             expr = customReduced;
@@ -1762,10 +1766,33 @@ namespace FastExpressionCompiler
         }
 
 #if !LIGHT_EXPRESSION
-        // Unknown node kinds are a cold path; leave reduction validation outside the common visitors.
+        internal sealed class CustomNodeReductionCache
+        {
+            internal SmallMap4<Expression, Expression, RefEq<Expression>> Reductions;
+        }
+
+        // Collection and emission must use the same reduced tree: Reduce may create fresh locals,
+        // constants, or nested lambdas. Allocate the cache only for reducible custom node kinds.
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static Expression TryReduceCustomNode(Expression expression) =>
-            expression.CanReduce ? expression.ReduceAndCheck() : null;
+        private static Expression TryReduceCustomNode(Expression expression, ref CompilerContext context)
+        {
+            var cache = context.CustomNodeReductions;
+            if (cache != null)
+            {
+                ref var cached = ref cache.Reductions.Map.TryGetValueRef(expression, out var found);
+                if (found)
+                    return cached;
+            }
+
+            if (!expression.CanReduce)
+                return null;
+
+            var reduced = expression.ReduceAndCheck();
+            if (cache == null)
+                context.CustomNodeReductions = cache = new CustomNodeReductionCache();
+            cache.Reductions.Map.AddOrGetValueRef(expression, out _) = reduced;
+            return reduced;
+        }
 #endif
 
         private static Expression CreateInlinedLambdaInvocationExpression(ArgExprs invokeArgs, LambdaExpression lambdaExpr)
@@ -2704,7 +2731,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.Quote:     // todo: @feature - is not supported yet
                         default:
 #if !LIGHT_EXPRESSION
-                            var customReduced = TryReduceCustomNode(expr);
+                            var customReduced = TryReduceCustomNode(expr, ref context);
                             if (customReduced != null)
                             {
                                 expr = customReduced;
