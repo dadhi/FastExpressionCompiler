@@ -40,10 +40,8 @@ public static partial class ExpressionCompiler
         public bool ByValue;
     }
 
-    [ThreadStatic] private static FlatCtx _flatCtx;
-
-    /// <summary>The state of one compilation, one instance per thread.</summary>
-    private sealed class FlatCtx
+    /// <summary>The state of one compilation, a local of the TryCompileFlat passed by ref.</summary>
+    private struct FlatCtx
     {
         public object[] Constants; // the closure constants, then the open delegates of the nested lambdas
         public int NextSlot;
@@ -64,7 +62,7 @@ public static partial class ExpressionCompiler
 
     /// <summary>Finds which variables are used by the lambdas other than the declaring one. Recursive but only run for the nested lambdas.
     /// The variable is declared by the lambda parameter or the block variable, the usage is the Parameter node with the same id.</summary>
-    private static void FlatFindCaptures(ref ExprTree tree, int idx, FlatCtx ctx,
+    private static void FlatFindCaptures(ref ExprTree tree, int idx, ref FlatCtx ctx,
         ref SmallList<(ushort Id, int Depth), Stack8<(ushort Id, int Depth)>, NoArrayPool<(ushort Id, int Depth)>> declared,
         ref SmallList<int, Stack8<int>, NoArrayPool<int>> lambdas)
     {
@@ -108,7 +106,7 @@ public static partial class ExpressionCompiler
                         declared.Add((par.ChildIdx, lambdas.Count));
                         parIdx = par.NextIdx;
                     }
-                    FlatFindCaptures(ref tree, bodyIdx, ctx, ref declared, ref lambdas);
+                    FlatFindCaptures(ref tree, bodyIdx, ref ctx, ref declared, ref lambdas);
                     declared.Count = scope;
                     --lambdas.Count;
                     return;
@@ -128,7 +126,7 @@ public static partial class ExpressionCompiler
                     var exprIdx = exprs.ChildIdx;
                     for (var i = 0; i < exprs.ChildCount; ++i)
                     {
-                        FlatFindCaptures(ref tree, exprIdx, ctx, ref declared, ref lambdas);
+                        FlatFindCaptures(ref tree, exprIdx, ref ctx, ref declared, ref lambdas);
                         exprIdx = tree.Nodes.GetSurePresentRef(exprIdx).NextIdx;
                     }
                     declared.Count = scope;
@@ -140,7 +138,7 @@ public static partial class ExpressionCompiler
                     var childIdx = n.ChildIdx;
                     for (var i = 0; i < n.ChildCount; ++i)
                     {
-                        FlatFindCaptures(ref tree, childIdx, ctx, ref declared, ref lambdas);
+                        FlatFindCaptures(ref tree, childIdx, ref ctx, ref declared, ref lambdas);
                         childIdx = tree.Nodes.GetSurePresentRef(childIdx).NextIdx;
                     }
                     return;
@@ -457,39 +455,29 @@ public static partial class ExpressionCompiler
             return (TDelegate)(object)(folded != 0 ? ExpressionCompiler.Interpreter.TrueFunc : ExpressionCompiler.Interpreter.FalseFunc);
 
         var constantCount = tree.ClosureConstants.Count;
-        // the context is reused per thread to not allocate it (the capture buffer is big); the compile is not re-entrant
-        var ctx = _flatCtx ??= new FlatCtx();
-        ctx.NextSlot = constantCount;
-        ctx.Captures.Count = 0;
-        try
+        var ctx = new FlatCtx { NextSlot = constantCount };
+        var slotCount = constantCount + tree.LambdaCount - 1; // the slot per nested lambda for its open delegate
+        if (slotCount != 0)
         {
-            var slotCount = constantCount + tree.LambdaCount - 1; // the slot per nested lambda for its open delegate
-            if (slotCount != 0)
-            {
-                ctx.Constants = new object[slotCount];
-                for (var i = 0; i < constantCount; ++i)
-                    ctx.Constants[i] = tree.ClosureConstants[i];
-            }
-
-            if (tree.LambdaCount > 1)
-            {
-                var declared = default(SmallList<(ushort Id, int Depth), Stack8<(ushort Id, int Depth)>, NoArrayPool<(ushort Id, int Depth)>>);
-                var lambdas = default(SmallList<int, Stack8<int>, NoArrayPool<int>>);
-                FlatFindCaptures(ref tree, tree.RootIdx, ctx, ref declared, ref lambdas);
-            }
-
-            var closure = ctx.Constants == null ? EmptyArrayClosure : new ArrayClosure(ctx.Constants);
-            return (TDelegate)(object)EmitFlatLambda(ref tree, tree.RootIdx, ctx, typeof(TDelegate), closure);
+            ctx.Constants = new object[slotCount];
+            for (var i = 0; i < constantCount; ++i)
+                ctx.Constants[i] = tree.ClosureConstants[i];
         }
-        finally
+
+        if (tree.LambdaCount > 1)
         {
-            ctx.Constants = null; // do not keep the constants alive
+            var declared = default(SmallList<(ushort Id, int Depth), Stack8<(ushort Id, int Depth)>, NoArrayPool<(ushort Id, int Depth)>>);
+            var lambdas = default(SmallList<int, Stack8<int>, NoArrayPool<int>>);
+            FlatFindCaptures(ref tree, tree.RootIdx, ref ctx, ref declared, ref lambdas);
         }
+
+        var closure = ctx.Constants == null ? EmptyArrayClosure : new ArrayClosure(ctx.Constants);
+        return (TDelegate)(object)EmitFlatLambda(ref tree, tree.RootIdx, ref ctx, typeof(TDelegate), closure);
     }
 
     /// <summary>Emits the lambda into its own DynamicMethod. The root is closed over the closure; the nested one
     /// (the delegate type is null) becomes the open delegate with the closure as the first parameter, to be curried at run-time.</summary>
-    private static Delegate EmitFlatLambda(ref ExprTree tree, int lambdaIdx, FlatCtx ctx, Type delegateType, object closure)
+    private static Delegate EmitFlatLambda(ref ExprTree tree, int lambdaIdx, ref FlatCtx ctx, Type delegateType, object closure)
     {
         ref var lambda = ref tree.Nodes.GetSurePresentRef(lambdaIdx);
         var bodyIdx = lambda.ChildIdx;
@@ -522,7 +510,7 @@ public static partial class ExpressionCompiler
             if (cap.LambdaIdx == lambdaIdx)
                 vars.Add(new FlatVar { Id = cap.Id, Type = cap.Type, Arg = -1, Slot = (short)slot++, Boxed = !cap.ByValue });
         }
-        EmitFlat(ref tree, bodyIdx, il, ref vars, ctx, false);
+        EmitFlat(ref tree, bodyIdx, il, ref vars, ref ctx, false);
         il.Emit(OpCodes.Ret);
 
         var result = dynMethod.CreateDelegate(delegateType ?? info.OpenType, closure);
@@ -531,7 +519,7 @@ public static partial class ExpressionCompiler
     }
 
     private static void EmitFlat(ref ExprTree tree, int idx, ILGenerator il,
-        ref SmallList<FlatVar, Stack8<FlatVar>, NoArrayPool<FlatVar>> vars, FlatCtx ctx, bool ignoreResult)
+        ref SmallList<FlatVar, Stack8<FlatVar>, NoArrayPool<FlatVar>> vars, ref FlatCtx ctx, bool ignoreResult)
     {
         ref var n = ref tree.Nodes.GetSurePresentRef(idx);
         var nodeType = n.NodeType;
@@ -572,7 +560,7 @@ public static partial class ExpressionCompiler
                     if (v.Boxed)
                     {
                         FlatLoadBox(il, in v);
-                        EmitFlat(ref tree, rightIdx, il, ref vars, ctx, false);
+                        EmitFlat(ref tree, rightIdx, il, ref vars, ref ctx, false);
                         var result = -1;
                         if (!ignoreResult)
                         {
@@ -584,7 +572,7 @@ public static partial class ExpressionCompiler
                             EmittingVisitor.EmitLoadLocalVariable(il, result);
                         return;
                     }
-                    EmitFlat(ref tree, rightIdx, il, ref vars, ctx, false);
+                    EmitFlat(ref tree, rightIdx, il, ref vars, ref ctx, false);
                     if (!ignoreResult)
                         il.Emit(OpCodes.Dup);
                     if (v.Arg >= 0) il.Emit(OpCodes.Starg, v.Arg); else EmittingVisitor.EmitStoreLocalVariable(il, v.Local);
@@ -598,7 +586,7 @@ public static partial class ExpressionCompiler
                     // the nested lambda is the separate method; at run-time the open delegate is curried with the new closure
                     // made of the shared constants and the captured variables: the StrongBox, or the boxed value if never assigned
                     var info = FlatGetDelegateInfo(n.Type);
-                    var open = EmitFlatLambda(ref tree, idx, ctx, null, null);
+                    var open = EmitFlatLambda(ref tree, idx, ref ctx, null, null);
                     var slot = ctx.NextSlot++;
                     ctx.Constants[slot] = open;
 
@@ -651,7 +639,7 @@ public static partial class ExpressionCompiler
                     var argIdx = n.ChildIdx;
                     for (var i = 0; i < n.ChildCount; ++i)
                     {
-                        EmitFlat(ref tree, argIdx, il, ref vars, ctx, false);
+                        EmitFlat(ref tree, argIdx, il, ref vars, ref ctx, false);
                         argIdx = tree.Nodes.GetSurePresentRef(argIdx).NextIdx;
                     }
                     if (nodeType == ExprType.New)
@@ -667,7 +655,7 @@ public static partial class ExpressionCompiler
             case ExprType.MemberAccess:
                 {
                     if (n.ChildCount != 0)
-                        EmitFlat(ref tree, n.ChildIdx, il, ref vars, ctx, false);
+                        EmitFlat(ref tree, n.ChildIdx, il, ref vars, ref ctx, false);
                     if (n.Obj is FieldInfo field)
                         il.Emit(field.IsStatic ? OpCodes.Ldsfld : OpCodes.Ldfld, field);
                     else
@@ -680,13 +668,13 @@ public static partial class ExpressionCompiler
 
             case ExprType.MemberInit:
                 {
-                    EmitFlat(ref tree, n.ChildIdx, il, ref vars, ctx, false);
+                    EmitFlat(ref tree, n.ChildIdx, il, ref vars, ref ctx, false);
                     var bindingIdx = tree.Nodes.GetSurePresentRef(n.ChildIdx).NextIdx;
                     for (var i = 1; i < n.ChildCount; ++i)
                     {
                         ref var binding = ref tree.Nodes.GetSurePresentRef(bindingIdx);
                         il.Emit(OpCodes.Dup);
-                        EmitFlat(ref tree, binding.ChildIdx, il, ref vars, ctx, false);
+                        EmitFlat(ref tree, binding.ChildIdx, il, ref vars, ref ctx, false);
                         if (binding.Obj is FieldInfo field)
                             il.Emit(OpCodes.Stfld, field);
                         else
@@ -706,7 +694,7 @@ public static partial class ExpressionCompiler
                     {
                         il.Emit(OpCodes.Dup);
                         EmittingVisitor.EmitLoadConstantInt(il, i);
-                        EmitFlat(ref tree, elemIdx, il, ref vars, ctx, false);
+                        EmitFlat(ref tree, elemIdx, il, ref vars, ref ctx, false);
                         il.Emit(elemType == typeof(int) ? OpCodes.Stelem_I4 : elemType == typeof(bool) ? OpCodes.Stelem_I1 : OpCodes.Stelem_Ref);
                         elemIdx = tree.Nodes.GetSurePresentRef(elemIdx).NextIdx;
                     }
@@ -715,22 +703,22 @@ public static partial class ExpressionCompiler
 
             case ExprType.ArrayIndex:
                 {
-                    EmitFlat(ref tree, n.ChildIdx, il, ref vars, ctx, false);
-                    EmitFlat(ref tree, tree.Nodes.GetSurePresentRef(n.ChildIdx).NextIdx, il, ref vars, ctx, false);
+                    EmitFlat(ref tree, n.ChildIdx, il, ref vars, ref ctx, false);
+                    EmitFlat(ref tree, tree.Nodes.GetSurePresentRef(n.ChildIdx).NextIdx, il, ref vars, ref ctx, false);
                     il.Emit(n.Type == typeof(int) ? OpCodes.Ldelem_I4 : n.Type == typeof(bool) ? OpCodes.Ldelem_U1 : OpCodes.Ldelem_Ref);
                     break;
                 }
 
             case ExprType.Convert:
                 {
-                    EmitFlat(ref tree, n.ChildIdx, il, ref vars, ctx, false);
+                    EmitFlat(ref tree, n.ChildIdx, il, ref vars, ref ctx, false);
                     if (!n.Type.IsAssignableFrom(tree.Nodes.GetSurePresentRef(n.ChildIdx).Type))
                         il.Emit(OpCodes.Castclass, n.Type);
                     break;
                 }
 
             case ExprType.Not:
-                EmitFlat(ref tree, n.ChildIdx, il, ref vars, ctx, false);
+                EmitFlat(ref tree, n.ChildIdx, il, ref vars, ref ctx, false);
                 il.Emit(OpCodes.Ldc_I4_0);
                 il.Emit(OpCodes.Ceq);
                 break;
@@ -742,12 +730,12 @@ public static partial class ExpressionCompiler
                     var ifFalseIdx = tree.Nodes.GetSurePresentRef(ifTrueIdx).NextIdx;
                     var elseLabel = il.DefineLabel();
                     var endLabel = il.DefineLabel();
-                    EmitFlat(ref tree, testIdx, il, ref vars, ctx, false);
+                    EmitFlat(ref tree, testIdx, il, ref vars, ref ctx, false);
                     il.Emit(OpCodes.Brfalse, elseLabel);
-                    EmitFlat(ref tree, ifTrueIdx, il, ref vars, ctx, ignoreResult);
+                    EmitFlat(ref tree, ifTrueIdx, il, ref vars, ref ctx, ignoreResult);
                     il.Emit(OpCodes.Br, endLabel);
                     il.MarkLabel(elseLabel);
-                    EmitFlat(ref tree, ifFalseIdx, il, ref vars, ctx, ignoreResult);
+                    EmitFlat(ref tree, ifFalseIdx, il, ref vars, ref ctx, ignoreResult);
                     il.MarkLabel(endLabel);
                     return;
                 }
@@ -759,9 +747,9 @@ public static partial class ExpressionCompiler
                     var rightIdx = tree.Nodes.GetSurePresentRef(n.ChildIdx).NextIdx;
                     var shortCircuit = il.DefineLabel();
                     var endLabel = il.DefineLabel();
-                    EmitFlat(ref tree, n.ChildIdx, il, ref vars, ctx, false);
+                    EmitFlat(ref tree, n.ChildIdx, il, ref vars, ref ctx, false);
                     il.Emit(isAnd ? OpCodes.Brfalse : OpCodes.Brtrue, shortCircuit);
-                    EmitFlat(ref tree, rightIdx, il, ref vars, ctx, false);
+                    EmitFlat(ref tree, rightIdx, il, ref vars, ref ctx, false);
                     il.Emit(OpCodes.Br, endLabel);
                     il.MarkLabel(shortCircuit);
                     il.Emit(isAnd ? OpCodes.Ldc_I4_0 : OpCodes.Ldc_I4_1);
@@ -790,7 +778,7 @@ public static partial class ExpressionCompiler
                     var exprIdx = exprs.ChildIdx;
                     for (var i = 0; i <= last; ++i)
                     {
-                        EmitFlat(ref tree, exprIdx, il, ref vars, ctx, i != last || ignoreResult);
+                        EmitFlat(ref tree, exprIdx, il, ref vars, ref ctx, i != last || ignoreResult);
                         exprIdx = tree.Nodes.GetSurePresentRef(exprIdx).NextIdx;
                     }
                     vars.Count = scopeStart; // the block variables go out of the scope
@@ -799,8 +787,8 @@ public static partial class ExpressionCompiler
 
             default: // the binary int/bool operations
                 {
-                    EmitFlat(ref tree, n.ChildIdx, il, ref vars, ctx, false);
-                    EmitFlat(ref tree, tree.Nodes.GetSurePresentRef(n.ChildIdx).NextIdx, il, ref vars, ctx, false);
+                    EmitFlat(ref tree, n.ChildIdx, il, ref vars, ref ctx, false);
+                    EmitFlat(ref tree, tree.Nodes.GetSurePresentRef(n.ChildIdx).NextIdx, il, ref vars, ref ctx, false);
                     switch (nodeType)
                     {
                         case ExprType.Add: il.Emit(OpCodes.Add); break;
