@@ -77,16 +77,16 @@ def render(report, artifact_url=None, warning=3.0, regression=5.0):
     confirmed = sum(classify(r, warning, regression)[2] for r in rows)
     title = "Inconclusive" if not complete else "Potential regressions detected" if confirmed else "Comparison complete"
     lines = [f"### {c['runtime']}: {title} (reporting only)", "",
-             f"Base `{c['base_sha'][:12]}` Ã¢â€ â€™ PR `{c['head_sha'][:12]}`; SDK `{c['sdk']}`; harness `{c['harness_sha'][:12]}` ({c['harness_source']}).", ""]
+             f"Base `{c['base_sha'][:12]}` -> PR `{c['head_sha'][:12]}`; SDK `{c['sdk']}`; harness `{c['harness_sha'][:12]}` ({c['harness_source']}).", ""]
     if not complete: lines += ["Missing or invalid benchmark results. This is not evidence of a performance pass.", ""]
     if c["harness_source"] == "bootstrap": lines += ["Bootstrap: the base does not contain this harness yet. One candidate harness was used for both revisions; later PRs use the base-branch harness.", ""]
-    lines += ["| Backend / phase / workload | Base ns | PR ns | Time change | B/op: base Ã¢â€ â€™ PR | Assessment |", "| --- | ---: | ---: | ---: | ---: | --- |"]
+    lines += ["| Backend / phase / workload | Base ns | PR ns | Time change | B/op: base -> PR | Assessment |", "| --- | ---: | ---: | ---: | ---: | --- |"]
     for r in rows:
         means = {v: statistics.median(rd[v]["mean"] for rd in r["rounds"]) for v in ("baseline", "candidate")}
         allocations = {v: statistics.median(rd[v]["bytes"] for rd in r["rounds"]) for v in means}
         delta, status, _ = classify(r, warning, regression)
-        lines.append(f"| {r['backend']} / {r['method']} / {r['shape']} | {means['baseline']:.2f} | {means['candidate']:.2f} | {delta:+.1f}% | {allocations['baseline']:.2f} Ã¢â€ â€™ {allocations['candidate']:.2f} | {status} |")
-    lines += ["", f"Two opposite-order process rounds on one GitHub-hosted runner; BDN confidence intervals must be separated in both rounds to classify a >{regression:g}% time regression. A Ã¢â€°Â¥3% change without that evidence is a warning, not proof. Five measurement iterations/round; hosted-runner noise remains.", "",
+        lines.append(f"| {r['backend']} / {r['method']} / {r['shape']} | {means['baseline']:.2f} | {means['candidate']:.2f} | {delta:+.1f}% | {allocations['baseline']:.2f} -> {allocations['candidate']:.2f} | {status} |")
+    lines += ["", f"Two opposite-order process rounds on one GitHub-hosted runner; BDN confidence intervals must be separated in both rounds to classify a >{regression:g}% time regression. A >=3% change without that evidence is a warning, not proof. Five measurement iterations/round; hosted-runner noise remains.", "",
               "Compile excludes delegate invocation; CompileAndFirstInvoke includes the first call/JIT of a new delegate. Invoke is warmed; closure invocation includes creating and calling the returned delegate. MemoryDiagnoser reports managed B/op. Loop/checksum overhead is shared by both revisions."]
     if artifact_url: lines += ["", f"[Workflow run and complete raw artifacts]({artifact_url})"]
     return "\n".join(lines) + "\n"

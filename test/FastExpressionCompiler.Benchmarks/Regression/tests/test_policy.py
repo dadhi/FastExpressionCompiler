@@ -29,6 +29,12 @@ class PolicyTests(unittest.TestCase):
         self.assertTrue(compare.validate_report(report()))
         self.assertIn("Comparison complete", compare.render(report()))
 
+    def test_rendered_report_is_ascii(self):
+        rendered = compare.render(report())
+        self.assertTrue(rendered.isascii())
+        self.assertIn("-> PR", rendered)
+        self.assertIn("B/op: base -> PR", rendered)
+
     def test_significance_required_in_both_rounds(self):
         row = report()["rows"][0]
         row["rounds"][0]["candidate"] = stats(120,119,121)
