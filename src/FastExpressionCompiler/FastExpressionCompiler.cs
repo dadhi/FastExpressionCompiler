@@ -1752,10 +1752,26 @@ namespace FastExpressionCompiler
                             continue;
                         }
 
+#if !LIGHT_EXPRESSION
+                        var customReduced = TryReduceCustomNode(expr);
+                        if (customReduced != null)
+                        {
+                            expr = customReduced;
+                            enterable = false;
+                            continue;
+                        }
+#endif
                         return Result.NotSupported_UnknownExpression;
                 }
             }
         }
+
+#if !LIGHT_EXPRESSION
+        // Unknown node kinds are a cold path; leave reduction validation outside the common visitors.
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static Expression TryReduceCustomNode(Expression expression) =>
+            expression.CanReduce ? expression.ReduceAndCheck() : null;
+#endif
 
         private static Expression CreateInlinedLambdaInvocationExpression(ArgExprs invokeArgs, LambdaExpression lambdaExpr)
         {
@@ -2692,6 +2708,14 @@ namespace FastExpressionCompiler
 
                         case ExpressionType.Quote:     // todo: @feature - is not supported yet
                         default:
+#if !LIGHT_EXPRESSION
+                            var customReduced = TryReduceCustomNode(expr);
+                            if (customReduced != null)
+                            {
+                                expr = customReduced;
+                                continue;
+                            }
+#endif
                             return false;
 
                     }
