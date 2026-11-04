@@ -1104,10 +1104,15 @@ namespace FastExpressionCompiler
                 (t1, t2, t3, t4, t5, t6, t7, t8, t9, t10) => f(c, t1, t2, t3, t4, t5, t6, t7, t8, t9, t10);
         }
 
+        // Only the real RuntimeType can be emitted via ldtoken; TypeDelegator/TypeBuilder
+        // must stay in the closure to preserve identity.
+        private static readonly Type RuntimeType = typeof(object).GetType();
+
         /// Helps to identify constants as the one to be put into the Closure
         public static bool IsClosureBoundConstant(object value, Type type) =>
             value is Delegate || type.IsArray ||
-            !type.IsPrimitive && !type.IsEnum && value is string == false && value is Type == false && value is decimal == false;
+            !type.IsPrimitive && !type.IsEnum && value is string == false &&
+            (value is Type == false || type != RuntimeType) && value is decimal == false;
 
         public enum Result
         {
