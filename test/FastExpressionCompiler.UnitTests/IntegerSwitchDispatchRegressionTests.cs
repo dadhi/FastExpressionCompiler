@@ -11,6 +11,7 @@ public struct IntegerSwitchDispatchRegressionTests : ITestX
 {
     public void Run(TestRun t)
     {
+        Small_integer_switches_match_system(t);
         Duplicate_switch_tests_choose_the_first_case(t);
         Wide_switch_values_do_not_alias_low_bits(t);
         Negative_and_unsigned_table_origins_match_system(t);
@@ -20,6 +21,32 @@ public struct IntegerSwitchDispatchRegressionTests : ITestX
     public enum SignedKind : long { One = 1, Two = 2, Three = 3, Max = long.MaxValue }
     public enum UnsignedKind : ulong { One = 1, Two = 2, Three = 3, Max = ulong.MaxValue }
     public enum SmallKind { One = 1, Two = 2, Three = 3, Max = int.MaxValue }
+
+    public enum SByteKind : sbyte { One = 1, Two = 2, Three = 3 }
+    public enum ByteKind : byte { One = 1, Two = 2, Three = 3 }
+    public enum Int16Kind : short { One = 1, Two = 2, Three = 3 }
+    public enum UInt16Kind : ushort { One = 1, Two = 2, Three = 3 }
+    public enum UInt32Kind : uint { One = 1, Two = 2, Three = 3 }
+
+    public void Small_integer_switches_match_system(TestContext t)
+    {
+        foreach (var type in new[] { typeof(char), typeof(sbyte), typeof(byte), typeof(short), typeof(ushort),
+            typeof(int), typeof(uint), typeof(SByteKind), typeof(ByteKind), typeof(Int16Kind),
+            typeof(UInt16Kind), typeof(SmallKind), typeof(UInt32Kind) })
+        {
+            object Value(int value) => type.IsEnum ? Enum.ToObject(type, value) : Convert.ChangeType(value, type);
+            var parameter = SysExpr.Parameter(type);
+            var expression = SysExpr.Lambda(SysExpr.Switch(parameter, SysExpr.Constant(-1),
+                SysExpr.SwitchCase(SysExpr.Constant(10), SysExpr.Constant(Value(1), type)),
+                SysExpr.SwitchCase(SysExpr.Constant(20), SysExpr.Constant(Value(2), type)),
+                SysExpr.SwitchCase(SysExpr.Constant(30), SysExpr.Constant(Value(3), type))), parameter);
+            var fast = expression.FromSysExpression().CompileFast(true);
+            if (!t.IsNotNull(fast)) return;
+            var expected = expression.Compile();
+            for (var value = 0; value <= 4; ++value)
+                t.AreEqual(expected.DynamicInvoke(Value(value)), fast.DynamicInvoke(Value(value)));
+        }
+    }
 
     private static object AsValue(Type type, ulong value) => type.IsEnum
         ? Enum.ToObject(type, value)

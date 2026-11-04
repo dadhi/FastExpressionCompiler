@@ -5995,8 +5995,7 @@ namespace FastExpressionCompiler
                 Debug.Assert(minSwitchTableSize >= 3); // The later code will assume at least so few of the cases count
                 // The IL switch index and the normalization arithmetic must use 32-bit values.
                 // Wider operands retain the ordered comparison dispatch below.
-                if (customEqualMethod == null && caseCount >= minSwitchTableSize && switchValueType.IsIntegerOrUnderlyingInteger() &&
-                    Type.GetTypeCode(switchValueType) is not (TypeCode.Int64 or TypeCode.UInt64))
+                if (customEqualMethod == null && caseCount >= minSwitchTableSize && switchValueType.IsIntegerOrUnderlyingIntegerUpTo32bits())
                 {
                     var multipleTestValuesLabelsId = 0;
                     var hasDuplicateTestValue = false;
@@ -9141,6 +9140,12 @@ namespace FastExpressionCompiler
         internal static bool IsIntegerOrUnderlyingInteger(this Type type) =>
             type.IsPrimitive && type.IsInteger() ||
             type.IsEnum && Enum.GetUnderlyingType(type).IsInteger();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static bool IsIntegerOrUnderlyingIntegerUpTo32bits(this Type type) =>
+            (type.IsPrimitive || type.IsEnum) && Type.GetTypeCode(type) is
+                TypeCode.Char or TypeCode.SByte or TypeCode.Byte or
+                TypeCode.Int16 or TypeCode.UInt16 or TypeCode.Int32 or TypeCode.UInt32;
 
         internal static bool IsPrimitiveWithZeroDefaultExceptDecimal(this Type type)
         {
