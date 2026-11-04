@@ -77,6 +77,7 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.IssueTests.Issue561_NonBooleanEqualityOperator());
                 lt.Run(new LightExpression.UnitTests.ByRefConversionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.RuntimeTypeConstantRegressionTests());
+                lt.Run(new LightExpression.UnitTests.MethodBasedNotRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ExtensionReductionIdentityRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ParityTests());
                 ltTime = ltStopwatch.ElapsedMilliseconds;
@@ -88,6 +89,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new ReductionProgressRegressionTests());
             st.Run(new ByRefConversionRegressionTests());
             st.Run(new RuntimeTypeConstantRegressionTests());
+            st.Run(new MethodBasedNotRegressionTests());
             st.Run(new CustomReducibleNodeRegressionTests());
             st.Run(new ExtensionReductionIdentityRegressionTests());
             st.Run(new ParityTests());
