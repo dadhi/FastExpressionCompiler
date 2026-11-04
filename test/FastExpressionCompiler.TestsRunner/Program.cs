@@ -287,6 +287,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new RuntimeTypeConstantRegressionTests());
             st.Run(new MethodBasedNotRegressionTests());
             st.Run(new CustomReducibleNodeRegressionTests());
+            st.Run(new DynamicQuotedReductionRegressionTests());
             st.Run(new ExtensionReductionIdentityRegressionTests());
             st.Run(new IntegerSwitchDispatchRegressionTests());
             st.Run(new ParityTests());
