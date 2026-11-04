@@ -3198,10 +3198,16 @@ namespace FastExpressionCompiler
                     var isNonExceptionTest = catchTest != typeof(object) && !typeof(Exception).IsAssignableFrom(catchTest);
                     if (isNonExceptionTest && catchTest.IsValueType)
                         return false;
-                    if (catchFilter != null | isNonExceptionTest)
+#if !NETFRAMEWORK
+                    var unwrapRuntimeWrappedException = catchTest == typeof(object) || catchTest == typeof(Exception) ||
+                        catchTest == typeof(RuntimeWrappedException);
+#else
+                    var unwrapRuntimeWrappedException = false;
+#endif
+                    if (catchFilter != null | isNonExceptionTest | unwrapRuntimeWrappedException)
                     {
                         il.BeginExceptFilterBlock();
-                        if (isNonExceptionTest)
+                        if (isNonExceptionTest | unwrapRuntimeWrappedException)
                         {
                             var notWrappedLabel = il.DefineLabel();
                             il.Demit(OpCodes.Dup);

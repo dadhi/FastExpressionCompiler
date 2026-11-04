@@ -72,6 +72,9 @@ namespace FastExpressionCompiler.UnitTests
             Nullable_values_convert_to_compatible_reference_types(t);
             ValueType_sources_unbox_to_value_types(t);
             Decimal_constants_preserve_scale_and_sign(t);
+#if !NETFRAMEWORK
+            Non_exception_throws_match_handlers_by_the_original_object(t);
+#endif
         }
 
         private static int _sideEffectCalls;
@@ -2118,6 +2121,32 @@ namespace FastExpressionCompiler.UnitTests
                 t.IsNotNull(fast);
                 t.AreEqual(expectedFlags[i], decimal.GetBits(fast())[3]);
             }
+        }
+
+        public void Non_exception_throws_match_handlers_by_the_original_object(TestContext t)
+        {
+            var inner = TryCatch(
+                Throw(Constant("1234567890"), typeof(int)),
+                Catch(typeof(RuntimeWrappedException), Constant(1)),
+                Catch(typeof(Exception), Constant(2)));
+            var ex = Variable(typeof(object));
+            var outer = TryCatch(
+                inner,
+                Catch(ex, Property(Convert(ex, typeof(string)), nameof(string.Length))));
+            var lambda = Lambda<Func<int>>(outer);
+            var fast = lambda.CompileFast(true);
+            t.IsNotNull(fast);
+            t.AreEqual(10, fast());
+            t.AreEqual(lambda.CompileSys()(), fast());
+
+            var uncaught = Lambda<Action>(TryCatch(
+                Throw(Constant("Boo!")),
+                Catch(typeof(RuntimeWrappedException), Empty())));
+            var uncaughtFast = uncaught.CompileFast(true);
+            t.IsNotNull(uncaughtFast);
+            var fastException = t.Throws<RuntimeWrappedException>(() => uncaughtFast());
+            var systemException = t.Throws<RuntimeWrappedException>(() => uncaught.CompileSys()());
+            t.AreEqual(systemException.WrappedException, fastException.WrappedException);
         }
 
         private enum NullableCastEnum { Value = 42 }
