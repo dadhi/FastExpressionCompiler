@@ -5729,8 +5729,9 @@ namespace FastExpressionCompiler
                         // we don't need to duplicate the instance if we are working with the field address to save to it directly,
                         // so the field address should be Dupped instead for loading and then storing by-ref for assignment (see below).
                         // (don't forget to Pop if the assignment should be skipped for nullable with `null` value)
-                        if ((parent & ParentFlags.DupIt) != 0 &
-                            (!isByAddress | (parent & ParentFlags.AssignmentLeftValue) == 0))
+                        var dupIt = (parent & ParentFlags.DupIt) != 0;
+                        var dupAddress = dupIt && isByAddress && (parent & ParentFlags.AssignmentLeftValue) != 0;
+                        if (dupIt && !dupAddress)
                             il.Demit(OpCodes.Dup);
 
                         context.LastEmitIsAddress = isByAddress;
@@ -5743,7 +5744,7 @@ namespace FastExpressionCompiler
                         else
                         {
                             il.Demit(OpCodes.Ldflda, field);
-                            if ((parent & ParentFlags.AssignmentLeftValue) != 0)
+                            if (dupAddress)
                                 il.Demit(OpCodes.Dup);
                         }
                     }
