@@ -4365,7 +4365,12 @@ namespace FastExpressionCompiler
 
             private static void EmitDecimalConstant(decimal value, ILGenerator il)
             {
-                if (value == 0 | value == 1)
+                var parts = decimal.GetBits(value);
+                var flags = parts[3];
+                var scale = (byte)((flags >> 16) & 0x7F);
+                var negativeZero = value == 0 & flags < 0;
+
+                if (flags == 0 && (value == 0 | value == 1))
                 {
                     // emit Decimal.Zero or Decimal.One instead of new Decimal(0) or new Decimal(1)
                     var field = value == 0 ?
@@ -4376,16 +4381,16 @@ namespace FastExpressionCompiler
                 }
 
                 //check if decimal has decimal places, if not use shorter IL code (constructor from int or long)
-                if (value % 1 == 0)
+                if (scale == 0 & !negativeZero & value % 1 == 0)
                 {
-                    if (value >= int.MinValue && value <= int.MaxValue)
+                    if (value >= int.MinValue & value <= int.MaxValue)
                     {
                         EmitLoadConstantInt(il, decimal.ToInt32(value));
                         il.Demit(OpCodes.Newobj, _decimalIntCtor ?? (_decimalIntCtor = typeof(decimal).FindSingleParamConstructor(typeof(int))));
                         return;
                     }
 
-                    if (value >= long.MinValue && value <= long.MaxValue)
+                    if (value >= long.MinValue & value <= long.MaxValue)
                     {
                         il.Demit(OpCodes.Ldc_I8, decimal.ToInt64(value));
                         il.Demit(OpCodes.Newobj, _decimalLongCtor ?? (_decimalLongCtor = typeof(decimal).FindSingleParamConstructor(typeof(long))));
@@ -4405,9 +4410,7 @@ namespace FastExpressionCompiler
                     return;
                 }
 
-                var parts = decimal.GetBits(value);
-                var sign = (parts[3] & 0x80000000) != 0;
-                var scale = (byte)((parts[3] >> 16) & 0x7F);
+                var sign = flags < 0;
 
                 EmitLoadConstantInt(il, parts[0]);
                 EmitLoadConstantInt(il, parts[1]);

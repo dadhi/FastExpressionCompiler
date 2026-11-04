@@ -71,6 +71,7 @@ namespace FastExpressionCompiler.UnitTests
             Non_void_list_initializers_preserve_results_and_effects(t);
             Nullable_values_convert_to_compatible_reference_types(t);
             ValueType_sources_unbox_to_value_types(t);
+            Decimal_constants_preserve_scale_and_sign(t);
         }
 
         private static int _sideEffectCalls;
@@ -2104,6 +2105,19 @@ namespace FastExpressionCompiler.UnitTests
             t.IsNotNull(wrongTypeFast);
             t.Throws<InvalidCastException>(() => wrongTypeFast());
             t.Throws<InvalidCastException>(() => wrongType.CompileSys()());
+        }
+
+        public void Decimal_constants_preserve_scale_and_sign(TestContext t)
+        {
+            var values = new[] { -0.000m, 1.000m };
+            var expectedFlags = new[] { unchecked((int)0x80030000), 0x00030000 };
+            for (var i = 0; i < values.Length; i++)
+            {
+                var lambda = Lambda<Func<decimal>>(Constant(values[i]));
+                var fast = lambda.CompileFast(true);
+                t.IsNotNull(fast);
+                t.AreEqual(expectedFlags[i], decimal.GetBits(fast())[3]);
+            }
         }
 
         private enum NullableCastEnum { Value = 42 }
