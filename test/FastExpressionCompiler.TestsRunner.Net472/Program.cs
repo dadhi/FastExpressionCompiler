@@ -45,6 +45,7 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.IssueTests.Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
                 t.Run(new LightExpression.UnitTests.ByRefConversionRegressionTests());
                 t.Run(new LightExpression.UnitTests.RuntimeTypeConstantRegressionTests());
+                t.Run(new LightExpression.UnitTests.ExtensionReductionIdentityRegressionTests());
                 t.Run(new LightExpression.UnitTests.ParityTests());
 
                 Console.WriteLine($"Just LightExpression tests are passing in {justLightTestsStopwatch.ElapsedMilliseconds} ms.");
@@ -68,6 +69,8 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new ReductionProgressRegressionTests());
             fecTests.Run(new ByRefConversionRegressionTests());
             fecTests.Run(new RuntimeTypeConstantRegressionTests());
+            fecTests.Run(new CustomReducibleNodeRegressionTests());
+            fecTests.Run(new ExtensionReductionIdentityRegressionTests());
             fecTests.Run(new ParityTests());
 
 

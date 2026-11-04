@@ -9,7 +9,7 @@ public struct ReductionProgressRegressionTests : ITestX
     {
         Self_reductions_follow_the_strict_rejection_contract(t);
         Null_reductions_follow_the_strict_rejection_contract(t);
-        Emission_rejects_a_reduction_that_stops_progressing(t);
+        Emission_reuses_the_valid_collected_reduction(t);
         Valid_reduction_chains_keep_parameters(t);
         Compile_to_IL_rejects_nonprogressing_reductions(t);
     }
@@ -32,11 +32,13 @@ public struct ReductionProgressRegressionTests : ITestX
             .CompileFast(true, CompilerFlags.ThrowOnNotSupportedExpression));
         t.Throws<ArgumentException>(() => Expression.Lambda<Func<int>>(new NullReduction()).CompileFast());
     }
-    public void Emission_rejects_a_reduction_that_stops_progressing(TestContext t)
+    public void Emission_reuses_the_valid_collected_reduction(TestContext t)
     {
         var node = new BoundedSelf(true, firstValue: true);
-        t.IsNull(Expression.Lambda<Func<int>>(node).CompileFast(true));
-        t.AreEqual(2, node.Count);
+        // Collection already supplied a valid tree; emission must reuse it.
+        var fast = Expression.Lambda<Func<int>>(node).CompileFast(true);
+        if (t.IsNotNull(fast)) t.AreEqual(42, fast());
+        t.AreEqual(1, node.Count);
     }
     public void Valid_reduction_chains_keep_parameters(TestContext t)
     {
