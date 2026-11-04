@@ -508,6 +508,47 @@ public partial class LightExpressionTests
 
     /// <summary>The nested lambdas: no capture, the captured parameter and block variable (the shared StrongBox, so the mutation is seen
     /// both ways), the capture through the middle lambda, and the closure constants inside the nested lambda.</summary>
+    /// <summary>The ListInit is emitted by the skeleton shared with the System/Light compiler (EmittingVisitor.EmitListInit), through the Flat view.</summary>
+    public void Flat_compiles_list_init_through_the_shared_emitter()
+    {
+#if NET9_0_OR_GREATER
+        var fe = default(ExprTree);
+        var n = fe.ParameterOf<int>("n");
+        var list = typeof(System.Collections.Generic.List<int>);
+        var add = list.GetMethod("Add");
+        // n => new List<int> { n, n * 2, 7 }
+        fe.RootIdx = fe.Lambda<Func<int, System.Collections.Generic.List<int>>>(
+            fe.ListInit(fe.New(list.GetConstructor(Type.EmptyTypes)),
+                fe.ElementInit(add, n), fe.ElementInit(add, fe.MakeBinary(ExpressionType.Multiply, n, fe.ConstantInt(2))), fe.ElementInit(add, fe.ConstantInt(7))), n);
+        Ensure(fe.TryCollectFlatInfo() == ExpressionCompiler.Result.OK, "list init collect");
+        var f = fe.TryCompileFlat<Func<int, System.Collections.Generic.List<int>>>();
+        Ensure(f != null, "list init native");
+        var r = f(5);
+        Ensure(r.Count == 3 && r[0] == 5 && r[1] == 10 && r[2] == 7, "list init result");
+
+        // n => new Dictionary<int, int> { { n, 1 }, { 2, n } }, the Add with two arguments and the ignored Add result is the bool for HashSet
+        var dict = typeof(System.Collections.Generic.Dictionary<int, int>);
+        var dadd = dict.GetMethod("Add");
+        var fe2 = default(ExprTree);
+        var n2 = fe2.ParameterOf<int>("n");
+        fe2.RootIdx = fe2.Lambda<Func<int, System.Collections.Generic.Dictionary<int, int>>>(
+            fe2.ListInit(fe2.New(dict.GetConstructor(Type.EmptyTypes)),
+                fe2.ElementInit(dadd, n2, fe2.ConstantInt(1)), fe2.ElementInit(dadd, fe2.ConstantInt(2), n2)), n2);
+        var f2 = fe2.TryCompileFlat<Func<int, System.Collections.Generic.Dictionary<int, int>>>();
+        Ensure(f2 != null, "dictionary init native");
+        var d = f2(9);
+        Ensure(d.Count == 2 && d[9] == 1 && d[2] == 9, "dictionary init result");
+
+        var set = typeof(System.Collections.Generic.HashSet<int>);
+        var fe3 = default(ExprTree);
+        var n3 = fe3.ParameterOf<int>("n");
+        fe3.RootIdx = fe3.Lambda<Func<int, System.Collections.Generic.HashSet<int>>>(
+            fe3.ListInit(fe3.New(set.GetConstructor(Type.EmptyTypes)), fe3.ElementInit(set.GetMethod("Add"), n3)), n3);
+        var f3 = fe3.TryCompileFlat<Func<int, System.Collections.Generic.HashSet<int>>>();
+        Ensure(f3 != null && f3(4).Contains(4), "hash set init: the bool result of Add is popped");
+#endif
+    }
+
     public void Flat_compile_handles_nested_lambdas_and_captured_variables_natively()
     {
         // n => () => n + 1, the README expression
@@ -1005,6 +1046,7 @@ public partial class LightExpressionTests
     public void Can_fuzz_nested_lambdas_with_captured_variables_natively() { }
     public void Can_fuzz_objects_and_members_natively() { }
     public void Flat_compile_handles_nested_lambdas_and_captured_variables_natively() { }
+    public void Flat_compiles_list_init_through_the_shared_emitter() { }
     public void Flat_compiles_the_readme_expressions_and_compares_the_time() { }
 #endif
 }

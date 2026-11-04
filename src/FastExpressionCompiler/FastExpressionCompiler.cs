@@ -4572,27 +4572,41 @@ namespace FastExpressionCompiler
                 member is FieldInfo field ? EmitFieldSet(il, field) :
                 false;
 
-            private static bool TryEmitListInit(ListInitExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            /// <summary>The expression flavor (System, Light, Flat) is the only thing which differs in emitting the ListInit: how to read its parts
+            /// and how to emit its child expressions. The IL skeleton below is shared and generic over this view, so the JIT specializes it per flavor.</summary>
+            public interface IListInitView<TCtx>
+            {
+                Type Type { get; }
+                /// <summary>Null for the value type created without the constructor.</summary>
+                ConstructorInfo Constructor { get; }
+                int InitCount { get; }
+                MethodInfo GetAddMethod(int i);
+                /// <summary>Emits the arguments of the constructor.</summary>
+                [RequiresUnreferencedCode(Trimming.Message)]
+                bool TryEmitNewArgs(ILGenerator il, ref TCtx ctx);
+                /// <summary>Emits the arguments of the i-th Add call.</summary>
+                [RequiresUnreferencedCode(Trimming.Message)]
+                bool TryEmitAddArgs(int i, ILGenerator il, ref TCtx ctx, ParameterInfo[] addParams);
+            }
+
+            /// <summary>Leaves the new collection on the stack (the caller pops it if the result is ignored).</summary>
+            public static bool EmitListInit<TView, TCtx>(ref TView view, ILGenerator il, ref TCtx ctx) where TView : IListInitView<TCtx>
+#if NET9_0_OR_GREATER
+                , allows ref struct
+#endif
             {
                 var valueVarIndex = -1;
-                var exprType = expr.Type;
+                var exprType = view.Type;
                 if (exprType.IsValueType)
                     valueVarIndex = il.GetNextLocalVarIndex(exprType);
 
-                var newExpr = expr.NewExpression;
-                var argExprs = newExpr.GetArgExprs();
-                var argCount = argExprs.GetArgCount();
-                if (argCount > 0)
-                {
-                    var args = newExpr.Constructor.GetParameters();
-                    for (var i = 0; i < argCount; i++)
-                        if (!TryEmit(argExprs.GetArgument(i), il, ref context, parent, args[i].ParameterType.IsByRef ? i : -1))
-                            return false;
-                }
+                if (!view.TryEmitNewArgs(il, ref ctx))
+                    return false;
 
-                if (newExpr.Constructor != null)
+                var ctor = view.Constructor;
+                if (ctor != null)
                 {
-                    il.Demit(OpCodes.Newobj, newExpr.Constructor);
+                    il.Demit(OpCodes.Newobj, ctor);
                     if (valueVarIndex != -1)
                         EmitStoreLocalVariable(il, valueVarIndex);
                 }
@@ -4601,8 +4615,7 @@ namespace FastExpressionCompiler
                 else
                     return false; // null constructor and not a value type, better to fallback
 
-                var inits = expr.Initializers;
-                var initCount = inits.Count;
+                var initCount = view.InitCount;
                 MethodInfo lastAddMethod = null;
                 ParameterInfo[] methodParams = null;
                 for (var i = 0; i < initCount; ++i)
@@ -4612,41 +4625,77 @@ namespace FastExpressionCompiler
                     else
                         il.Demit(OpCodes.Dup); // duplicate member owner on stack
 
-                    var elemInit = inits.GetArgument(i);
-                    var method = elemInit.AddMethod;
+                    var method = view.GetAddMethod(i);
                     if (!ReferenceEquals(method, lastAddMethod))
                     {
                         lastAddMethod = method;
                         methodParams = method.GetParameters();
                     }
-                    if (!EmitElementInit(elemInit, exprType, il, ref context, parent, methodParams))
+                    if (!view.TryEmitAddArgs(i, il, ref ctx, methodParams) || !EmitAddCall(il, exprType, method))
                         return false;
                 }
 
                 if (valueVarIndex != -1)
                     EmitLoadLocalVariable(il, valueVarIndex);
+                return true;
+            }
+
+            private struct ListInitView : IListInitView<CompilerContext>
+            {
+                public ListInitExpression Expr;
+                public ParentFlags Parent;
+                public Type Type => Expr.Type;
+                public ConstructorInfo Constructor => Expr.NewExpression.Constructor;
+                public int InitCount => Expr.Initializers.Count;
+                public MethodInfo GetAddMethod(int i) => Expr.Initializers.GetArgument(i).AddMethod;
+
+                [RequiresUnreferencedCode(Trimming.Message)]
+                public bool TryEmitNewArgs(ILGenerator il, ref CompilerContext context)
+                {
+                    var argExprs = Expr.NewExpression.GetArgExprs();
+                    var argCount = argExprs.GetArgCount();
+                    if (argCount > 0)
+                    {
+                        var args = Expr.NewExpression.Constructor.GetParameters();
+                        for (var i = 0; i < argCount; i++)
+                            if (!TryEmit(argExprs.GetArgument(i), il, ref context, Parent, args[i].ParameterType.IsByRef ? i : -1))
+                                return false;
+                    }
+                    return true;
+                }
+
+                [RequiresUnreferencedCode(Trimming.Message)]
+                public bool TryEmitAddArgs(int i, ILGenerator il, ref CompilerContext context, ParameterInfo[] addParams) =>
+                    TryEmitElementInitArgs(Expr.Initializers.GetArgument(i), il, ref context, Parent, addParams);
+            }
+
+            private static bool TryEmitListInit(ListInitExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            {
+                var view = new ListInitView { Expr = expr, Parent = parent };
+                if (!EmitListInit(ref view, il, ref context))
+                    return false;
                 context.LastEmitIsAddress = false;
                 return il.EmitPopIfIgnoreResult(parent);
             }
 
-            // The owner (the reference or the address of the value type) is on the stack and is consumed
-            private static bool EmitElementInit(ElementInit elemInit, Type ownerType, ILGenerator il, ref CompilerContext context, ParentFlags parent, ParameterInfo[] methodParams = null)
+            private static bool TryEmitElementInitArgs(ElementInit elemInit, ILGenerator il, ref CompilerContext context, ParentFlags parent, ParameterInfo[] methodParams)
             {
                 // see the TryEmitMethodCall for the reason of the callFlags
                 var callFlags = (parent
                     & ~(ParentFlags.IgnoreResult | ParentFlags.MemberAccess | ParentFlags.InstanceAccess |
                         ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
                     | ParentFlags.Call;
-                var method = elemInit.AddMethod;
-                if (methodParams == null)
-                    methodParams = method.GetParameters();
                 var addArgs = elemInit.GetArgExprs();
                 var addArgCount = addArgs.GetArgCount();
-
                 for (var a = 0; a < addArgCount; ++a)
                     if (!TryEmit(addArgs.GetArgument(a), il, ref context, callFlags, methodParams[a].ParameterType.IsByRef ? a : -1))
                         return false;
+                return true;
+            }
 
+            // The owner (the reference or the address of the value type) and the arguments are on the stack and consumed
+            private static bool EmitAddCall(ILGenerator il, Type ownerType, MethodInfo method)
+            {
                 bool ok;
                 if (!ownerType.IsValueType)
                     ok = EmitMethodCallOrVirtualCall(il, method);
@@ -4661,6 +4710,14 @@ namespace FastExpressionCompiler
                 if (ok && method.ReturnType != typeof(void))
                     il.Demit(OpCodes.Pop);
                 return ok;
+            }
+
+            // The owner (the reference or the address of the value type) is on the stack and is consumed
+            private static bool EmitElementInit(ElementInit elemInit, Type ownerType, ILGenerator il, ref CompilerContext context, ParentFlags parent, ParameterInfo[] methodParams = null)
+            {
+                var method = elemInit.AddMethod;
+                return TryEmitElementInitArgs(elemInit, il, ref context, parent, methodParams ?? method.GetParameters())
+                    && EmitAddCall(il, ownerType, method);
             }
 
             // The owner (the reference or the address of the value type) is on the stack and is consumed

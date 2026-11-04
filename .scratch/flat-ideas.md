@@ -90,3 +90,10 @@ CsCheck fuzzers compare native flat vs System: closures (shared StrongBox, by-va
 
 ## Step 14: FlatCtx is a stack struct
 FlatCtx is a local struct passed by ref (as FEC does with its ClosureInfo); no ThreadStatic, no cleanup. Allocation is unchanged (1128/2608/1448 B).
+
+## Step 15: option A experiment, ListInit through a shared generic emitter
+FEC's TryEmitListInit is split into the IL skeleton EmittingVisitor.EmitListInit<TView,TCtx> (shared, no #if for the flavor) and a view
+(IListInitView<TCtx>) which reads the parts and emits the children. System/Light view = ListInitView (struct over ListInitExpression).
+Flat view = FlatListInitView (ref struct over ref ExprTree, cursor over the ElementInit nodes). The JIT specializes per view, no allocation.
+Cost: only NET9+ (ref struct implementing an interface, allows ref struct), so the Flat ListInit is under #if NET9_0_OR_GREATER and falls back elsewhere.
+Findings: the skeleton is ~45 lines, the view is ~10 lines per flavor; the children recursion stays in the flavor (TryEmit vs EmitFlat).

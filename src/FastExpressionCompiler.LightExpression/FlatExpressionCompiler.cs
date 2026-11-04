@@ -4,6 +4,7 @@ namespace FastExpressionCompiler.LightExpression;
 
 using System;
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
@@ -272,6 +273,56 @@ public static partial class ExpressionCompiler
         throw new InvalidOperationException("The parameter is not in scope"); // todo: @wip by construction check
     }
 
+#if NET9_0_OR_GREATER
+    /// <summary>The Flat view for the shared <see cref="EmittingVisitor.EmitListInit{TView, TCtx}"/>: the New node is the first child,
+    /// then the ElementInit nodes (the Add method in Obj, the arguments as the children). The cursor walks them in the order the skeleton asks.</summary>
+    private ref struct FlatListInitView : EmittingVisitor.IListInitView<FlatCtx>
+    {
+        public ref ExprTree Tree;
+        public ref SmallList<FlatVar, Stack8<FlatVar>, NoArrayPool<FlatVar>> Vars;
+        public int NewIdx;
+        private int _initIdx; // 0 until the first Add call is asked for
+
+        public Type Type => Tree.Nodes.GetSurePresentRef(NewIdx).Type;
+        public ConstructorInfo Constructor => (ConstructorInfo)Tree.Nodes.GetSurePresentRef(NewIdx).Obj;
+        public int InitCount { get; set; }
+
+        public MethodInfo GetAddMethod(int i)
+        {
+            if (i == 0)
+                _initIdx = Tree.Nodes.GetSurePresentRef(NewIdx).NextIdx;
+            return (MethodInfo)Tree.Nodes.GetSurePresentRef(_initIdx).Obj;
+        }
+
+        [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
+        public bool TryEmitNewArgs(ILGenerator il, ref FlatCtx ctx)
+        {
+            ref var newNode = ref Tree.Nodes.GetSurePresentRef(NewIdx);
+            var argIdx = newNode.ChildIdx;
+            for (var i = 0; i < newNode.ChildCount; ++i)
+            {
+                EmitFlat(ref Tree, argIdx, il, ref Vars, ref ctx, false);
+                argIdx = Tree.Nodes.GetSurePresentRef(argIdx).NextIdx;
+            }
+            return true;
+        }
+
+        [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
+        public bool TryEmitAddArgs(int i, ILGenerator il, ref FlatCtx ctx, ParameterInfo[] addParams)
+        {
+            ref var init = ref Tree.Nodes.GetSurePresentRef(_initIdx);
+            var argIdx = init.ChildIdx;
+            for (var a = 0; a < init.ChildCount; ++a)
+            {
+                EmitFlat(ref Tree, argIdx, il, ref Vars, ref ctx, false);
+                argIdx = Tree.Nodes.GetSurePresentRef(argIdx).NextIdx;
+            }
+            _initIdx = init.NextIdx;
+            return true;
+        }
+    }
+#endif
+
     private static bool IsFlatType(Type t) => t == typeof(int) || t == typeof(bool) || !t.IsValueType && !t.IsByRef && !t.IsPointer;
 
     // the lambda and delegate return/parameter types are checked once per compile, not per node
@@ -294,6 +345,14 @@ public static partial class ExpressionCompiler
             ref var n = ref tree.Nodes.GetSurePresentRef(i);
             if (n.Kind == ExprNodeKind.BlockExprs)
                 continue;
+#if NET9_0_OR_GREATER
+            if (n.Kind == ExprNodeKind.ElementInit)
+            {
+                if (n.Obj is MethodInfo am && !am.IsStatic && !am.IsGenericMethodDefinition)
+                    continue;
+                return Result.NotSupported_UnknownExpression;
+            }
+#endif
             if (n.Kind == ExprNodeKind.MemberAssignment)
             {
                 // the instance field or the property with the setter, the binding is emitted by the MemberInit
@@ -309,6 +368,9 @@ public static partial class ExpressionCompiler
             switch (n.NodeType)
             {
                 case ExprType.MemberInit:
+#if NET9_0_OR_GREATER
+                case ExprType.ListInit: // emitted by the shared EmittingVisitor.EmitListInit through the FlatListInitView
+#endif
                     if (!IsFlatType(t)) return Result.NotSupported_UnknownExpression;
                     break;
                 case ExprType.NewArrayInit:
@@ -683,6 +745,16 @@ public static partial class ExpressionCompiler
                     }
                     break;
                 }
+
+#if NET9_0_OR_GREATER
+            case ExprType.ListInit:
+                {
+                    var view = new FlatListInitView { Tree = ref tree, Vars = ref vars, NewIdx = n.ChildIdx, InitCount = n.ChildCount - 1 };
+                    if (!EmittingVisitor.EmitListInit(ref view, il, ref ctx))
+                        throw new InvalidOperationException("The collect accepted the ListInit which cannot be emitted");
+                    break;
+                }
+#endif
 
             case ExprType.NewArrayInit:
                 {
