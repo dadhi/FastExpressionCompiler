@@ -48,7 +48,7 @@ public partial class LightExpressionTests
     }
 
     /// <summary>The bool body compiles natively; the tree outside the subset (the string constant) falls back and still works.</summary>
-    public void Flat_compile_handles_bool_result_and_falls_back_outside_the_subset()
+    private void Flat_compile_handles_bool_result_and_falls_back_outside_the_subset()
     {
         var fe = default(ExprTree);
         var p = fe.ParameterOf<int>("p");
@@ -302,6 +302,12 @@ public partial class LightExpressionTests
         fs.RootIdx = fs.Lambda<Func<int, string>>(fs.Call(ns, typeof(int).GetMethod("ToString", Type.EmptyTypes)), ns);
         Ensure(fs.TryCompileFlat<Func<int, string>>() == null, "the value type instance is not native");
         Ensure(fs.CompileFast<Func<int, string>>()(5) == "5", "the value type instance via the fallback");
+
+    // the rest of the native shapes: bool result and fallback, New/Call/Member, closure constants, ListInit, nested lambdas with captures
+        Flat_compile_handles_bool_result_and_falls_back_outside_the_subset();
+        Flat_compile_handles_new_call_and_member_access_natively();
+        Flat_compiles_list_init_through_the_shared_emitter();
+        Flat_compile_handles_nested_lambdas_and_captured_variables_natively();
     }
 
     /// <summary>The generated closures (outer variables read and assigned by the nested lambda and by the outer one afterwards)
@@ -450,7 +456,7 @@ public partial class LightExpressionTests
 
     /// <summary>The native subset with the reference types: New, static and instance Call, Field and Property, the reference-typed
     /// parameter, local and result; the same tree with a closure constant must fall back.</summary>
-    public void Flat_compile_handles_new_call_and_member_access_natively()
+    private void Flat_compile_handles_new_call_and_member_access_natively()
     {
         var t = typeof(FlatPoint);
         var ctor = t.GetConstructor(new[] { typeof(int), typeof(int) });
@@ -506,10 +512,8 @@ public partial class LightExpressionTests
         Ensure(fe6.TryCompileFlat<Func<FlatPoint, FlatPoint>>()(null) == null, "null constant native");
     }
 
-    /// <summary>The nested lambdas: no capture, the captured parameter and block variable (the shared StrongBox, so the mutation is seen
-    /// both ways), the capture through the middle lambda, and the closure constants inside the nested lambda.</summary>
     /// <summary>The ListInit is emitted by the skeleton shared with the System/Light compiler (EmittingVisitor.EmitListInit), through the Flat view.</summary>
-    public void Flat_compiles_list_init_through_the_shared_emitter()
+    private void Flat_compiles_list_init_through_the_shared_emitter()
     {
 #if NET9_0_OR_GREATER
         var fe = default(ExprTree);
@@ -549,7 +553,9 @@ public partial class LightExpressionTests
 #endif
     }
 
-    public void Flat_compile_handles_nested_lambdas_and_captured_variables_natively()
+    /// <summary>The nested lambdas: no capture, the captured parameter and block variable (the shared StrongBox, so the mutation is seen
+    /// both ways), the capture through the middle lambda, and the closure constants inside the nested lambda.</summary>
+    private void Flat_compile_handles_nested_lambdas_and_captured_variables_natively()
     {
         // n => () => n + 1, the README expression
         var fe1 = default(ExprTree);
@@ -1039,14 +1045,10 @@ public partial class LightExpressionTests
     public void Can_property_test_generated_flat_expression_roundtrip_structurally() { }
     public void Can_fuzz_optional_children_presence_in_flat_expression() { }
     public void Can_compile_generated_flat_expression_natively() { }
-    public void Flat_compile_handles_bool_result_and_falls_back_outside_the_subset() { }
     public void Experiment_compare_flat_and_light_compile_phases() { }
-    public void Flat_compile_handles_new_call_and_member_access_natively() { }
     public void Flat_compiles_all_the_readme_examples_natively() { }
     public void Can_fuzz_nested_lambdas_with_captured_variables_natively() { }
     public void Can_fuzz_objects_and_members_natively() { }
-    public void Flat_compile_handles_nested_lambdas_and_captured_variables_natively() { }
-    public void Flat_compiles_list_init_through_the_shared_emitter() { }
     public void Flat_compiles_the_readme_expressions_and_compares_the_time() { }
 #endif
 }
