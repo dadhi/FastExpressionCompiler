@@ -649,9 +649,7 @@ namespace FastExpressionCompiler
             /// The map of inlined invocations collected in TryCollect and then used in TryEmit
             internal SmallMap4<InvocationExpression, Expression, RefEq<InvocationExpression>> InlinedLambdaInvocation;
 
-#if !LIGHT_EXPRESSION
-            internal CustomNodeReductionCache CustomNodeReductions;
-#endif
+            internal ExpressionReductionCache ReducedExpressions;
 
             /// New or Call expressions containing the complex expression, e.g. inlined Lambda Invoke or Try with Finally
             internal SmallSet4<Expression, RefEq<Expression>> ArgsContainingComplexExpression;
@@ -1698,8 +1696,8 @@ namespace FastExpressionCompiler
                         return r;
 
                     case ExpressionType.Extension:
-                        var reduced = expr.Reduce();
-                        if (reduced == null || ReferenceEquals(reduced, expr))
+                        var reduced = TryReduceNode(expr, ref context);
+                        if (reduced == null)
                             return Result.NotSupported_UnknownExpression;
                         expr = reduced;
                         enterable = false;
@@ -1752,7 +1750,7 @@ namespace FastExpressionCompiler
                         }
 
 #if !LIGHT_EXPRESSION
-                        var customReduced = TryReduceCustomNode(expr, ref context);
+                        var customReduced = TryReduceNode(expr, ref context);
                         if (customReduced != null)
                         {
                             expr = customReduced;
@@ -1765,18 +1763,17 @@ namespace FastExpressionCompiler
             }
         }
 
-#if !LIGHT_EXPRESSION
-        internal sealed class CustomNodeReductionCache
+        internal sealed class ExpressionReductionCache
         {
             internal SmallMap4<Expression, Expression, RefEq<Expression>> Reductions;
         }
 
         // Collection and emission must use the same reduced tree: Reduce may create fresh locals,
-        // constants, or nested lambdas. Allocate the cache only for reducible custom node kinds.
+        // constants, labels, or nested lambdas. Allocate the cache only when reducing a node.
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static Expression TryReduceCustomNode(Expression expression, ref CompilerContext context)
+        private static Expression TryReduceNode(Expression expression, ref CompilerContext context)
         {
-            var cache = context.CustomNodeReductions;
+            var cache = context.ReducedExpressions;
             if (cache != null)
             {
                 ref var cached = ref cache.Reductions.Map.TryGetValueRef(expression, out var found);
@@ -1784,16 +1781,22 @@ namespace FastExpressionCompiler
                     return cached;
             }
 
-            if (!expression.CanReduce)
+#if !LIGHT_EXPRESSION
+            // System's unknown node kinds use its validation contract. Extension nodes keep
+            // the existing Reduce/null/self contract shared with LightExpression.
+            var reduced = expression.NodeType != ExpressionType.Extension
+                ? expression.CanReduce ? expression.ReduceAndCheck() : null
+                : expression.Reduce();
+#else
+            var reduced = expression.Reduce();
+#endif
+            if (reduced == null || ReferenceEquals(reduced, expression))
                 return null;
-
-            var reduced = expression.ReduceAndCheck();
             if (cache == null)
-                context.CustomNodeReductions = cache = new CustomNodeReductionCache();
+                context.ReducedExpressions = cache = new ExpressionReductionCache();
             cache.Reductions.Map.AddOrGetValueRef(expression, out _) = reduced;
             return reduced;
         }
-#endif
 
         private static Expression CreateInlinedLambdaInvocationExpression(ArgExprs invokeArgs, LambdaExpression lambdaExpr)
         {
@@ -2719,8 +2722,8 @@ namespace FastExpressionCompiler
                             return TryEmitSwitch((SwitchExpression)expr, il, ref context, parent);
 
                         case ExpressionType.Extension:
-                            var reduced = expr.Reduce();
-                            if (reduced == null || ReferenceEquals(reduced, expr))
+                            var reduced = TryReduceNode(expr, ref context);
+                            if (reduced == null)
                                 return false;
                             expr = reduced;
                             continue;
@@ -2731,7 +2734,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.Quote:     // todo: @feature - is not supported yet
                         default:
 #if !LIGHT_EXPRESSION
-                            var customReduced = TryReduceCustomNode(expr, ref context);
+                            var customReduced = TryReduceNode(expr, ref context);
                             if (customReduced != null)
                             {
                                 expr = customReduced;
