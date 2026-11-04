@@ -264,6 +264,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new MemberConstructorExceptionTests());
             fecTests.Run(new MethodBasedNotRegressionTests());
             fecTests.Run(new CustomReducibleNodeRegressionTests());
+            fecTests.Run(new DynamicQuotedReductionRegressionTests());
             fecTests.Run(new ExtensionReductionIdentityRegressionTests());
             fecTests.Run(new LiftedOperandEvaluationRegressionTests());
             fecTests.Run(new StringReferenceIdentityTests());

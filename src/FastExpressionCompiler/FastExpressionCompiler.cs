@@ -3384,7 +3384,7 @@ namespace FastExpressionCompiler
                             return true;               // todo: @unclear - just ignoring the info for now
 
                         case ExpressionType.Quote:
-                            var quoted = context.QuotedExpressions.Map.TryGetValueRef(((UnaryExpression)expr).Operand, out var foundQuote);
+                            ref var quoted = ref context.QuotedExpressions.Map.TryGetValueRef(((UnaryExpression)expr).Operand, out var foundQuote);
                             if (!foundQuote) return false;
                             if (quoted.Variables.Length == 0)
                                 return TryEmitConstant(true, exprType, quoted.Template.GetType(), quoted.Template, il, ref context) &&
@@ -3398,7 +3398,7 @@ namespace FastExpressionCompiler
                         case ExpressionType.Dynamic:
                             if (context.DynamicExpressions == null)
                                 return false;
-                            var dynamicOccurrences = context.DynamicExpressions.Expressions.Map.TryGetValueRef(expr, out var foundDynamic);
+                            ref var dynamicOccurrences = ref context.DynamicExpressions.Expressions.Map.TryGetValueRef(expr, out var foundDynamic);
                             if (!foundDynamic || dynamicOccurrences.Emitted >= dynamicOccurrences.Reduced.Count)
                                 return false;
                             var dynamicOccurrence = dynamicOccurrences.Reduced.Items[dynamicOccurrences.Emitted++];
