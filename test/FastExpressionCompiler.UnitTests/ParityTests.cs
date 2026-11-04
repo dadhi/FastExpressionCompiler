@@ -69,6 +69,8 @@ namespace FastExpressionCompiler.UnitTests
             Checked_narrow_arithmetic_overflows_and_non_zero_based_array_access(t);
             Unsigned_division_ref_char_and_ignored_list_init(t);
             Non_void_list_initializers_preserve_results_and_effects(t);
+            Nullable_values_convert_to_compatible_reference_types(t);
+            ValueType_sources_unbox_to_value_types(t);
         }
 
         private static int _sideEffectCalls;
@@ -2052,6 +2054,65 @@ namespace FastExpressionCompiler.UnitTests
             overloadFast();
             t.AreEqual(expectedTrace, _listInitTrace);
             t.AreEqual("1;x;2;", _listInitTrace);
+        }
+
+        public void Nullable_values_convert_to_compatible_reference_types(TestContext t)
+        {
+            var enumExpr = Lambda<Func<Enum>>(Convert(Constant((NullableCastEnum?)null, typeof(NullableCastEnum?)), typeof(Enum)));
+            var enumFast = enumExpr.CompileFast(true);
+            t.IsNotNull(enumFast);
+            t.IsNull(enumFast());
+            t.IsNull(enumExpr.CompileSys()());
+
+            var enumValueExpr = Lambda<Func<Enum>>(Convert(Constant((NullableCastEnum?)NullableCastEnum.Value, typeof(NullableCastEnum?)), typeof(Enum)));
+            var enumValueFast = enumValueExpr.CompileFast(true);
+            t.IsNotNull(enumValueFast);
+            t.AreEqual(enumValueExpr.CompileSys()(), enumValueFast());
+
+            var interfaceExpr = Lambda<Func<IEquatable<NullableCastStruct>>>(Convert(
+                Constant((NullableCastStruct?)null, typeof(NullableCastStruct?)), typeof(IEquatable<NullableCastStruct>)));
+            var interfaceFast = interfaceExpr.CompileFast(true);
+            t.IsNotNull(interfaceFast);
+            t.IsNull(interfaceFast());
+            t.IsNull(interfaceExpr.CompileSys()());
+
+            var interfaceValueExpr = Lambda<Func<IEquatable<NullableCastStruct>>>(Convert(
+                Constant((NullableCastStruct?)new NullableCastStruct(42), typeof(NullableCastStruct?)), typeof(IEquatable<NullableCastStruct>)));
+            var interfaceValueFast = interfaceValueExpr.CompileFast(true);
+            t.IsNotNull(interfaceValueFast);
+            t.AreEqual(interfaceValueExpr.CompileSys()(), interfaceValueFast());
+        }
+
+        public void ValueType_sources_unbox_to_value_types(TestContext t)
+        {
+            var nullToInt = Lambda<Func<int>>(Convert(Constant((ValueType)null, typeof(ValueType)), typeof(int)));
+            var nullToIntFast = nullToInt.CompileFast(true);
+            t.IsNotNull(nullToIntFast);
+            t.Throws<NullReferenceException>(() => nullToIntFast());
+            t.Throws<NullReferenceException>(() => nullToInt.CompileSys()());
+
+            var nullToStruct = Lambda<Func<NullableCastStruct>>(Convert(
+                Constant((ValueType)null, typeof(ValueType)), typeof(NullableCastStruct)));
+            var nullToStructFast = nullToStruct.CompileFast(true);
+            t.IsNotNull(nullToStructFast);
+            t.Throws<NullReferenceException>(() => nullToStructFast());
+            t.Throws<NullReferenceException>(() => nullToStruct.CompileSys()());
+
+            var wrongType = Lambda<Func<int>>(Convert(
+                Constant((ValueType)new NullableCastStruct(42), typeof(ValueType)), typeof(int)));
+            var wrongTypeFast = wrongType.CompileFast(true);
+            t.IsNotNull(wrongTypeFast);
+            t.Throws<InvalidCastException>(() => wrongTypeFast());
+            t.Throws<InvalidCastException>(() => wrongType.CompileSys()());
+        }
+
+        private enum NullableCastEnum { Value = 42 }
+
+        private readonly struct NullableCastStruct : IEquatable<NullableCastStruct>
+        {
+            private readonly int _value;
+            public NullableCastStruct(int value) => _value = value;
+            public bool Equals(NullableCastStruct other) => _value == other._value;
         }
 
         private static Expression CreateListInit(Type type, params int[] values)

@@ -2282,7 +2282,7 @@ namespace FastExpressionCompiler
                             return EmitMemberInit((MemberInitExpression)expr, il, ref context, parent);
 
                         case ExpressionType.ListInit:
-                            return TryEmitListInit((ListInitExpression)expr, il, ref context, parent);
+                            return TryEmitListInit((ListInitExpression)expr, exprType, il, ref context, parent);
 
                         case ExpressionType.Lambda:
                             return TryEmitNestedLambda((LambdaExpression)expr, il, ref context);
@@ -3798,7 +3798,15 @@ namespace FastExpressionCompiler
                         return il.EmitPopIfIgnoreResult(parent);
                     }
 
-                    if (sourceType == typeof(object) && targetType.IsValueType ||
+                    if (underlyingNullableSourceType != null && !targetType.IsValueType &&
+                        targetType.IsAssignableFrom(underlyingNullableSourceType))
+                    {
+                        il.Demit(OpCodes.Box, sourceType);
+                        il.Demit(OpCodes.Castclass, targetType);
+                        return il.EmitPopIfIgnoreResult(parent);
+                    }
+
+                    if ((sourceType == typeof(object) || sourceType == typeof(ValueType)) && targetType.IsValueType ||
                         sourceType.IsInterface && targetType.IsValueType && sourceType.IsAssignableFrom(targetType) ||
                         sourceType == typeof(Enum) && targetType.IsEnum // a special case, see the AutoMapper test `StringToEnumConverter.Should_work`
                     )
@@ -4572,10 +4580,9 @@ namespace FastExpressionCompiler
                 member is FieldInfo field ? EmitFieldSet(il, field) :
                 false;
 
-            private static bool TryEmitListInit(ListInitExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            private static bool TryEmitListInit(ListInitExpression expr, Type exprType, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var valueVarIndex = -1;
-                var exprType = expr.Type;
                 if (exprType.IsValueType)
                     valueVarIndex = il.GetNextLocalVarIndex(exprType);
 
