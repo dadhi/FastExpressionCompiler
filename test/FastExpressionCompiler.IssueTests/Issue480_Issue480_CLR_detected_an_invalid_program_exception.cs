@@ -36,7 +36,7 @@ public struct Issue480_CLR_detected_an_invalid_program_exception : ITestX
         var a = fs();
         t.IsNull(a);
 
-        var ff = expr.CompileFast(); // uses System fallback
+        var ff = expr.CompileFast(true);
         ff.PrintIL(format: ILDecoder.ILFormat.AssertOpCodes);
         var b = ff();
         t.IsNull(b);
@@ -57,7 +57,7 @@ public struct Issue480_CLR_detected_an_invalid_program_exception : ITestX
         var a = fs();
         t.IsTrue((bool)a);
 
-        var ff = expr.CompileFast(); // uses System fallback
+        var ff = expr.CompileFast(true);
         ff.PrintIL(format: ILDecoder.ILFormat.AssertOpCodes);
         var b = ff();
         t.IsTrue((bool)b);
@@ -77,7 +77,7 @@ public struct Issue480_CLR_detected_an_invalid_program_exception : ITestX
         var a = fs();
         t.IsTrue((bool)a);
 
-        var ff = expr.CompileFast(); // uses System fallback
+        var ff = expr.CompileFast(true);
         ff.PrintIL(format: ILDecoder.ILFormat.AssertOpCodes);
         var b = ff();
         t.IsTrue((bool)b);
@@ -98,7 +98,7 @@ public struct Issue480_CLR_detected_an_invalid_program_exception : ITestX
         var a = fs(true);
         t.IsTrue((bool)a);
 
-        var ff = expr.CompileFast(); // uses System fallback
+        var ff = expr.CompileFast(true);
         ff.PrintIL(format: ILDecoder.ILFormat.AssertOpCodes);
         var b = ff(true);
         t.IsTrue((bool)b);

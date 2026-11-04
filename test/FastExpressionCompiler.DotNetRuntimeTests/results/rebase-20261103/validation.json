@@ -1,0 +1,63 @@
+{
+  "date": "2026-11-03",
+  "base": "4683482e929f98a528b12a1c7fee8e232ecc36c2",
+  "validatedCodeRevision": "acc011ed62270870b9e7572b608cb6a316d2b028",
+  "previousPublishedHead": "caef6b45d2d77bc52b47f9e6df9601601601a709",
+  "commits": 115,
+  "mergeCommits": 0,
+  "native": {
+    "native10.log": {
+      "testX": 1173,
+      "legacy": 1724
+    },
+    "native8.log": {
+      "testX": 1173,
+      "legacy": 1723
+    },
+    "framework.log": {
+      "testX": 1133,
+      "legacy": 1607
+    }
+  },
+  "runtime": {
+    "counters": {
+      "total": "35147",
+      "executed": "35088",
+      "passed": "35088",
+      "failed": "0",
+      "error": "0",
+      "timeout": "0",
+      "aborted": "0",
+      "inconclusive": "0",
+      "passedButRunAborted": "0",
+      "notRunnable": "0",
+      "notExecuted": "0",
+      "disconnected": "0",
+      "warning": "0",
+      "completed": "0",
+      "inProgress": "0",
+      "pending": "0"
+    },
+    "skippedResults": 59,
+    "total": 35147
+  },
+  "logsSha256": {
+    "build-final.log": "aad924cd949b34cf895e6cac8517ff1816a28d2022024e5ed290e9c0381a8f65",
+    "native10.log": "6350c211604a71008e3ea0141cf644482564eb7677a0455177a45c8add854c92",
+    "native8.log": "cce5bcc88c230fd1a415de46bca39534d549f562a8555f687655697dfefd3616",
+    "framework.log": "301344a3a4ba3dd0e4bf747941ff3b2b3abb4b32e2bb9f9e4fa95a160af3f196",
+    "runtime-current.log": "8cd1889c7920d2398aa4aeceb93961b30bb124497f36c16ca7992b694e39ffb1",
+    "runtime.trx": "03c4bc298493e2791774586fecd09b4676867fc526d73c11bf85d050249bd6f1"
+  },
+  "newSkips": 0,
+  "performanceMeasured": false,
+  "notes": "Final documentation-only amendment follows the recorded code revision. Framework runner uses Windows PowerShell and en-US culture. History-only consolidation reduces 188 commits to 115; production/test tree unchanged.",
+  "historyConsolidation": {
+    "previousHead": "796c135699d917db6a27ec70351001665e0df8c9",
+    "newHeadBeforeDocumentation": "622c40b4b5318e0bc97d53f99dd809d12961b29f",
+    "base": "4683482e929f98a528b12a1c7fee8e232ecc36c2",
+    "oldCount": 188,
+    "newCount": 115,
+    "identicalFullTree": true
+  }
+}

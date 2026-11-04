@@ -161,7 +161,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Equal(4, func().InnerField.Value);
         }
 
-        [Theory, ClassData(typeof(CompilationTypes))]
+        [VerifiedCompilerLayoutTheory("VerifiedCompilerRepresentationBehaviorTests.StaticInnerPropertyBinding"), ClassData(typeof(CompilationTypes))]
         public void StaticInnerProperty(bool useInterpreter)
         {
             Expression<Func<Outer>> exp = Expression.Lambda<Func<Outer>>(
@@ -176,7 +176,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Throws<InvalidProgramException>(() => exp.CompileForFec(useInterpreter));
         }
 
-        [Theory, ClassData(typeof(CompilationTypes))]
+        [VerifiedCompilerLayoutTheory("VerifiedCompilerRepresentationBehaviorTests.StaticInnerFieldBinding"), ClassData(typeof(CompilationTypes))]
         public void StaticInnerField(bool useInterpreter)
         {
             Expression<Func<Outer>> exp = Expression.Lambda<Func<Outer>>(
@@ -223,7 +223,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Equal(8, func().ReadonlyInnerField.Value);
         }
 
-        [Theory, ClassData(typeof(CompilationTypes))]
+        [VerifiedCompilerLayoutTheory("VerifiedCompilerRepresentationBehaviorTests.StaticReadonlyInnerPropertyBinding"), ClassData(typeof(CompilationTypes))]
         public void StaticReadonlyInnerProperty(bool useInterpreter)
         {
             Expression<Func<Outer>> exp = Expression.Lambda<Func<Outer>>(
@@ -238,7 +238,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Throws<InvalidProgramException>(() => exp.CompileForFec(useInterpreter));
         }
 
-        [Theory, ClassData(typeof(CompilationTypes))]
+        [VerifiedCompilerLayoutTheory("VerifiedCompilerRepresentationBehaviorTests.StaticReadonlyInnerFieldBinding"), ClassData(typeof(CompilationTypes))]
         public void StaticReadonlyInnerField(bool useInterpreter)
         {
             Expression<Func<Outer>> exp = Expression.Lambda<Func<Outer>>(

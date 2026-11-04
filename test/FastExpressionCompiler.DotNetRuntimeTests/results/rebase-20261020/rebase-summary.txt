@@ -1,0 +1,7 @@
+ README.md                                          |  4 +--
+ .../FastExpressionCompiler.cs                      | 22 ++++++-------
+ src/FastExpressionCompiler/ImTools.cs              | 15 +++------
+ ...es_on_repeated_calls_to_ConcurrentDictionary.cs |  2 +-
+ .../CompoundAssignmentRoundTripTests.cs            | 38 ++++++++++++++++++++++
+ .../LightExpressionTests.cs                        |  4 ++-
+ 6 files changed, 59 insertions(+), 26 deletions(-)

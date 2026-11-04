@@ -404,7 +404,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Equal(42, f());
         }
 
-        [Fact]
+        [VerifiedCompilerLayoutFact("System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_IndexAssignment_Eval")]
         public static void Spill_RefInstance_IndexAssignment_CodeGen()
         {
             Expression<Func<int>> e = Spill_RefInstance_IndexAssignment();
@@ -507,7 +507,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Equal(42, f());
         }
 
-        [Fact]
+        [VerifiedCompilerLayoutFact("System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_Index_Eval")]
         public static void Spill_RefInstance_Index_CodeGen()
         {
             Expression<Func<int>> e = Spill_RefInstance_Index();
@@ -602,7 +602,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Equal(42, f());
         }
 
-        [Fact]
+        [VerifiedCompilerLayoutFact("System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_MemberAssignment_Eval")]
         public static void Spill_RefInstance_MemberAssignment_CodeGen()
         {
             Expression<Func<int>> e = Spill_RefInstance_MemberAssignment();
@@ -707,7 +707,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Equal(42, f());
         }
 
-        [Fact]
+        [VerifiedCompilerLayoutFact("System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_Call_Eval")]
         public static void Spill_RefInstance_Call_CodeGen()
         {
             Expression<Func<int>> e = Spill_RefInstance_Call();
@@ -801,7 +801,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Equal(42, f());
         }
 
-        [Fact]
+        [VerifiedCompilerLayoutFact("System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefArgs_Call_Eval")]
         public static void Spill_RefArgs_Call_CodeGen()
         {
             Expression<Func<int>> e = Spill_RefArgs_Call();
@@ -893,7 +893,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Equal(42, f());
         }
 
-        [Fact]
+        [VerifiedCompilerLayoutFact("System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefArgs_New_Eval")]
         public static void Spill_RefArgs_New_CodeGen()
         {
             Expression<Func<int>> e = Spill_RefArgs_New();
@@ -976,7 +976,7 @@ namespace System.Linq.Expressions.Tests
             return e;
         }
 
-        [Fact]
+        [VerifiedCompilerLayoutFact("System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefArgs_Invoke_Eval")]
         public static void Spill_RefArgs_Invoke_CodeGen()
         {
             Expression<Func<int>> e = Spill_RefArgs_Invoke();
@@ -1087,7 +1087,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Equal(42, f());
         }
 
-        [Fact]
+        [VerifiedCompilerLayoutFact("System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefArgs_Invoke_Inline_Eval")]
         public static void Spill_RefArgs_Invoke_Inline_CodeGen()
         {
             Expression<Func<int>> e = Spill_RefArgs_Invoke_Inline();
@@ -1193,7 +1193,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Equal(42, f()[0]);
         }
 
-        [Fact]
+        [VerifiedCompilerLayoutFact("System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_ListInit_Eval")]
         public static void Spill_RefInstance_ListInit_CodeGen()
         {
             Expression<Func<ValueList>> e = Spill_RefInstance_ListInit();
@@ -1300,7 +1300,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Equal(42, f().Baz);
         }
 
-        [Fact]
+        [VerifiedCompilerLayoutFact("System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_MemberInit_Assign_Field_Eval")]
         public static void Spill_RefInstance_MemberInit_Assign_Field_CodeGen()
         {
             Expression<Func<ValueBar>> e = Spill_RefInstance_MemberInit_Assign_Field();
@@ -1407,7 +1407,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Equal(42, f().Foo);
         }
 
-        [Fact]
+        [VerifiedCompilerLayoutFact("System.Linq.Expressions.Tests.StackSpillerTests.Spill_RefInstance_MemberInit_Assign_Property_Eval")]
         public static void Spill_RefInstance_MemberInit_Assign_Property_CodeGen()
         {
             Expression<Func<ValueBar>> e = Spill_RefInstance_MemberInit_Assign_Property();
@@ -1504,7 +1504,7 @@ namespace System.Linq.Expressions.Tests
             return e;
         }
 
-        [Fact]
+        [VerifiedCompilerLayoutFact("NestedMemberBindingLayoutBehaviorRegressionTests.Struct_member_binding_spill_preserves_runtime_result")]
         public static void Spill_RefInstance_MemberInit_MemberBind_CodeGen()
         {
             Expression<Func<ValueBar>> e = Spill_RefInstance_MemberInit_MemberBind();
@@ -1596,7 +1596,7 @@ namespace System.Linq.Expressions.Tests
             return e;
         }
 
-        [Fact]
+        [VerifiedCompilerLayoutFact("NestedMemberBindingLayoutBehaviorRegressionTests.Struct_list_binding_spill_preserves_null_receiver_exception")]
         public static void Spill_RefInstance_MemberInit_ListBind_CodeGen()
         {
             Expression<Func<ValueBar>> e = Spill_RefInstance_MemberInit_ListBind();
@@ -1676,7 +1676,7 @@ namespace System.Linq.Expressions.Tests
                     }");
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("CompilerLayoutBehaviorRegressionTests.Constant_index_assignment_spill_preserves_behavior")]
         public static void Spill_Optimizations_Constant()
         {
             ParameterExpression xs = Expression.Parameter(typeof(int[]));
@@ -1734,7 +1734,7 @@ namespace System.Linq.Expressions.Tests
             );
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("CompilerLayoutBehaviorRegressionTests.Default_index_assignment_spill_preserves_behavior")]
         public static void Spill_Optimizations_Default()
         {
             ParameterExpression xs = Expression.Parameter(typeof(int[]));
@@ -1792,7 +1792,7 @@ namespace System.Linq.Expressions.Tests
             );
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("CompilerLayoutBehaviorRegressionTests.Literal_field_spill_preserves_behavior")]
         public static void Spill_Optimizations_LiteralField_NotNetFramework()
         {
             Expression<Func<double>> e =
@@ -1840,7 +1840,7 @@ namespace System.Linq.Expressions.Tests
             );
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("CompilerLayoutBehaviorRegressionTests.Static_readonly_field_spill_preserves_behavior")]
         public static void Spill_Optimizations_StaticReadOnlyField()
         {
             Expression<Func<string>> e =
@@ -1889,7 +1889,7 @@ namespace System.Linq.Expressions.Tests
             );
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("VerifiedCompilerRepresentationBehaviorTests.EmptyRuntimeVariablesSpillBehavior", typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
         public static void Spill_Optimizations_RuntimeVariables1()
         {
             ParameterExpression f = Expression.Parameter(typeof(Action<IRuntimeVariables, int>));
@@ -1948,7 +1948,7 @@ namespace System.Linq.Expressions.Tests
             );
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("VerifiedCompilerRepresentationBehaviorTests.CapturedRuntimeVariablesSpillBehavior", typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
         public static void Spill_Optimizations_RuntimeVariables2()
         {
             ParameterExpression f = Expression.Parameter(typeof(Action<IRuntimeVariables, int>));
@@ -2026,7 +2026,7 @@ namespace System.Linq.Expressions.Tests
             );
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("InvocationExceptionSpillRegressionTests.Try_arguments_preserve_delegate_invocation_behavior")]
         public static void Spill_Optimizations_NoSpillBeyondSpillSite1()
         {
             ParameterExpression f = Expression.Parameter(typeof(Func<int, int, int, int>));
@@ -2099,7 +2099,7 @@ namespace System.Linq.Expressions.Tests
                 }");
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("CompilerLayoutBehaviorRegressionTests.Arithmetic_operands_after_spill_preserve_behavior")]
         public static void Spill_Optimizations_NoSpillBeyondSpillSite2()
         {
             ParameterExpression f = Expression.Parameter(typeof(Func<int, int, int, int>));

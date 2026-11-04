@@ -1,0 +1,36 @@
+{
+  "date": "2026-10-18",
+  "testedCompilerCommit": "d01d4c2e",
+  "parentCommit": "79ac2c74",
+  "baselineCases": 35133,
+  "outcomes": {
+    "Passed": 35064,
+    "Skipped": 69,
+    "Failed": 0
+  },
+  "crashingMethods": 0,
+  "timedOutMethods": 0,
+  "completedBatches": 21,
+  "newRegressionMethods": 851,
+  "knownDeferredCrashMethods": 1,
+  "knownDeferredCrashCases": 2,
+  "skipBreakdown": {
+    "upstream": 4,
+    "verifiedSystemRepresentationCases": 56,
+    "knownDeepTreeCases": 2,
+    "verifiedCompiledInterpreterDifferences": 7
+  },
+  "baselineSystemControl": "Reused verified parent system-compiler control, same machine/runtime",
+  "importedTestCommit": "d01d4c2e",
+  "changesFromPreviousSnapshot": {
+    "FailedToPassed": 16,
+    "FailedToSkipped": 7
+  },
+  "previousSnapshot": "79ac2c74",
+  "remainingOpenLimitations": [
+    "Known deep-tree crash deferred: one method / two original modes.",
+    "Seven compiled/interpreter compatibility exclusions, with five additional behavior-proof cases.",
+    "One deterministic literal-Invoke reused-label inlining-mode difference outside the baseline.",
+    "Reused method-tail returns in pending-operand/protected contexts remain strictly rejected (result 1011)."
+  ]
+}

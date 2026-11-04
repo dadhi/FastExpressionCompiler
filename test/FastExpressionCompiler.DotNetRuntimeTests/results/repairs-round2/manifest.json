@@ -1,0 +1,9 @@
+{
+  "source": "db640cba760028d1c49ad5e4abf67f38fe683bbf",
+  "controls": {
+    "before": "e4c232da108d98790f0ca73f23ec90756da0cad7",
+    "published": "6487c9b2380d24709ddf2b31361374773c6b3ecf"
+  },
+  "runtime": "Windows ARM64 VM; .NET8.0.28 /10.0.9; Framework4.8.1 targetingnet472",
+  "method": "Release, sequential measurement processes; modern tiering/ReadyToRun disabled; managed allocation counters. Two opposite-order process rounds, 7 samples/phase, 47 scenarios. Separate paired causal experiments retain all observations, including regressions. Native/JIT/retained-memory totals are not measured."
+}

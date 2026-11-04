@@ -1,0 +1,350 @@
+[
+  {
+    "flavor": "Std",
+    "tfm": "net8.0",
+    "shape": "scalar",
+    "before-fec": {
+      "compileNs": 1099.0625,
+      "compileBytes": 872.08,
+      "runtimeNs": 2.022858333333333,
+      "runtimeBytes": 0.0
+    },
+    "before-system": {
+      "compileNs": 10113.770833333334,
+      "compileBytes": 4024.16,
+      "runtimeNs": 1.2380583333333335,
+      "runtimeBytes": 0.0
+    },
+    "after-fec": {
+      "compileNs": 1086.875,
+      "compileBytes": 872.08,
+      "runtimeNs": 2.054575,
+      "runtimeBytes": 0.0
+    },
+    "after-system": {
+      "compileNs": 10338.5,
+      "compileBytes": 4024.16,
+      "runtimeNs": 1.260275,
+      "runtimeBytes": 0.0
+    }
+  },
+  {
+    "flavor": "Std",
+    "tfm": "net8.0",
+    "shape": "converted-add-eh",
+    "before-fec": {
+      "compileNs": 12013.833333333334,
+      "compileBytes": 1480.16,
+      "runtimeNs": 1.21825,
+      "runtimeBytes": 0.0
+    },
+    "before-system": {
+      "compileNs": 14591.229166666666,
+      "compileBytes": 5336.48,
+      "runtimeNs": 1.2410333333333334,
+      "runtimeBytes": 0.0
+    },
+    "after-fec": {
+      "compileNs": 11982.916666666666,
+      "compileBytes": 1472.16,
+      "runtimeNs": 1.2341,
+      "runtimeBytes": 0.0
+    },
+    "after-system": {
+      "compileNs": 15337.895833333334,
+      "compileBytes": 5336.48,
+      "runtimeNs": 1.24795,
+      "runtimeBytes": 0.0
+    }
+  },
+  {
+    "flavor": "Std",
+    "tfm": "net8.0",
+    "shape": "converted-method-eh",
+    "before-fec": {
+      "compileNs": 14483.270833333334,
+      "compileBytes": 1504.16,
+      "runtimeNs": 1.2319083333333334,
+      "runtimeBytes": 0.0
+    },
+    "before-system": {
+      "compileNs": 17857.916666666668,
+      "compileBytes": 5408.48,
+      "runtimeNs": 1.2365416666666667,
+      "runtimeBytes": 0.0
+    },
+    "after-fec": {
+      "compileNs": 13193.916666666666,
+      "compileBytes": 1504.16,
+      "runtimeNs": 1.2626916666666665,
+      "runtimeBytes": 0.0
+    },
+    "after-system": {
+      "compileNs": 17459.479166666668,
+      "compileBytes": 5408.48,
+      "runtimeNs": 1.2439916666666666,
+      "runtimeBytes": 0.0
+    }
+  },
+  {
+    "flavor": "Std",
+    "tfm": "net10.0",
+    "shape": "scalar",
+    "before-fec": {
+      "compileNs": 1003.5416666666666,
+      "compileBytes": 872.084,
+      "runtimeNs": 1.68745,
+      "runtimeBytes": 0.0
+    },
+    "before-system": {
+      "compileNs": 11211.208333333334,
+      "compileBytes": 4024.168,
+      "runtimeNs": 1.6809416666666668,
+      "runtimeBytes": 0.0
+    },
+    "after-fec": {
+      "compileNs": 1015.9583333333334,
+      "compileBytes": 872.084,
+      "runtimeNs": 1.6885166666666669,
+      "runtimeBytes": 0.0
+    },
+    "after-system": {
+      "compileNs": 10879.520833333334,
+      "compileBytes": 4024.168,
+      "runtimeNs": 1.6871833333333333,
+      "runtimeBytes": 0.0
+    }
+  },
+  {
+    "flavor": "Std",
+    "tfm": "net10.0",
+    "shape": "converted-add-eh",
+    "before-fec": {
+      "compileNs": 14152.541666666666,
+      "compileBytes": 1480.168,
+      "runtimeNs": 1.687225,
+      "runtimeBytes": 0.0
+    },
+    "before-system": {
+      "compileNs": 16596.0625,
+      "compileBytes": 5336.504,
+      "runtimeNs": 1.7095083333333332,
+      "runtimeBytes": 0.0
+    },
+    "after-fec": {
+      "compileNs": 13727.3125,
+      "compileBytes": 1472.168,
+      "runtimeNs": 1.6941666666666668,
+      "runtimeBytes": 0.0
+    },
+    "after-system": {
+      "compileNs": 16444.791666666664,
+      "compileBytes": 5336.504,
+      "runtimeNs": 1.6863833333333331,
+      "runtimeBytes": 0.0
+    }
+  },
+  {
+    "flavor": "Std",
+    "tfm": "net10.0",
+    "shape": "converted-method-eh",
+    "before-fec": {
+      "compileNs": 16542.708333333336,
+      "compileBytes": 1504.168,
+      "runtimeNs": 1.68665,
+      "runtimeBytes": 0.0
+    },
+    "before-system": {
+      "compileNs": 19648.4375,
+      "compileBytes": 5408.504,
+      "runtimeNs": 1.6932916666666669,
+      "runtimeBytes": 0.0
+    },
+    "after-fec": {
+      "compileNs": 16082.166666666666,
+      "compileBytes": 1504.168,
+      "runtimeNs": 1.6955833333333332,
+      "runtimeBytes": 0.0
+    },
+    "after-system": {
+      "compileNs": 19290.479166666668,
+      "compileBytes": 5408.504,
+      "runtimeNs": 1.73895,
+      "runtimeBytes": 0.0
+    }
+  },
+  {
+    "flavor": "Light",
+    "tfm": "net8.0",
+    "shape": "scalar",
+    "before-fec": {
+      "compileNs": 1071.5208333333333,
+      "compileBytes": 872.08,
+      "runtimeNs": 2.011191666666667,
+      "runtimeBytes": 0.0
+    },
+    "before-system": {
+      "compileNs": 9703.666666666666,
+      "compileBytes": 4024.16,
+      "runtimeNs": 1.2380083333333334,
+      "runtimeBytes": 0.0
+    },
+    "after-fec": {
+      "compileNs": 1098.875,
+      "compileBytes": 872.08,
+      "runtimeNs": 2.006883333333333,
+      "runtimeBytes": 0.0
+    },
+    "after-system": {
+      "compileNs": 9479.854166666666,
+      "compileBytes": 4024.16,
+      "runtimeNs": 1.244175,
+      "runtimeBytes": 0.0
+    }
+  },
+  {
+    "flavor": "Light",
+    "tfm": "net8.0",
+    "shape": "converted-add-eh",
+    "before-fec": {
+      "compileNs": 12264.083333333334,
+      "compileBytes": 1480.16,
+      "runtimeNs": 1.2386583333333334,
+      "runtimeBytes": 0.0
+    },
+    "before-system": {
+      "compileNs": 15111.875,
+      "compileBytes": 5336.48,
+      "runtimeNs": 1.2361,
+      "runtimeBytes": 0.0
+    },
+    "after-fec": {
+      "compileNs": 12603.354166666666,
+      "compileBytes": 1472.16,
+      "runtimeNs": 1.23655,
+      "runtimeBytes": 0.0
+    },
+    "after-system": {
+      "compileNs": 14549.145833333334,
+      "compileBytes": 5336.48,
+      "runtimeNs": 1.24425,
+      "runtimeBytes": 0.0
+    }
+  },
+  {
+    "flavor": "Light",
+    "tfm": "net8.0",
+    "shape": "converted-method-eh",
+    "before-fec": {
+      "compileNs": 14466.520833333334,
+      "compileBytes": 1504.16,
+      "runtimeNs": 1.2281833333333334,
+      "runtimeBytes": 0.0
+    },
+    "before-system": {
+      "compileNs": 17326.145833333332,
+      "compileBytes": 5408.48,
+      "runtimeNs": 1.240725,
+      "runtimeBytes": 0.0
+    },
+    "after-fec": {
+      "compileNs": 14025.1875,
+      "compileBytes": 1504.16,
+      "runtimeNs": 1.2353916666666667,
+      "runtimeBytes": 0.0
+    },
+    "after-system": {
+      "compileNs": 16630.916666666664,
+      "compileBytes": 5408.48,
+      "runtimeNs": 1.2405666666666666,
+      "runtimeBytes": 0.0
+    }
+  },
+  {
+    "flavor": "Light",
+    "tfm": "net10.0",
+    "shape": "scalar",
+    "before-fec": {
+      "compileNs": 1097.7083333333333,
+      "compileBytes": 872.084,
+      "runtimeNs": 1.333575,
+      "runtimeBytes": 0.0
+    },
+    "before-system": {
+      "compileNs": 11697.083333333334,
+      "compileBytes": 4024.168,
+      "runtimeNs": 1.7092,
+      "runtimeBytes": 0.0
+    },
+    "after-fec": {
+      "compileNs": 1110.5833333333333,
+      "compileBytes": 872.084,
+      "runtimeNs": 1.343025,
+      "runtimeBytes": 0.0
+    },
+    "after-system": {
+      "compileNs": 12271.3125,
+      "compileBytes": 4024.168,
+      "runtimeNs": 1.716175,
+      "runtimeBytes": 0.0
+    }
+  },
+  {
+    "flavor": "Light",
+    "tfm": "net10.0",
+    "shape": "converted-add-eh",
+    "before-fec": {
+      "compileNs": 14440.520833333334,
+      "compileBytes": 1480.168,
+      "runtimeNs": 1.664875,
+      "runtimeBytes": 0.0
+    },
+    "before-system": {
+      "compileNs": 16468.041666666664,
+      "compileBytes": 5336.504,
+      "runtimeNs": 1.708208333333333,
+      "runtimeBytes": 0.0
+    },
+    "after-fec": {
+      "compileNs": 14059.458333333334,
+      "compileBytes": 1472.168,
+      "runtimeNs": 1.6817,
+      "runtimeBytes": 0.0
+    },
+    "after-system": {
+      "compileNs": 16049.6875,
+      "compileBytes": 5336.504,
+      "runtimeNs": 1.6896583333333333,
+      "runtimeBytes": 0.0
+    }
+  },
+  {
+    "flavor": "Light",
+    "tfm": "net10.0",
+    "shape": "converted-method-eh",
+    "before-fec": {
+      "compileNs": 16913.770833333332,
+      "compileBytes": 1504.168,
+      "runtimeNs": 1.689325,
+      "runtimeBytes": 0.0
+    },
+    "before-system": {
+      "compileNs": 18866.958333333332,
+      "compileBytes": 5408.504,
+      "runtimeNs": 1.6826916666666667,
+      "runtimeBytes": 0.0
+    },
+    "after-fec": {
+      "compileNs": 17376.5,
+      "compileBytes": 1504.168,
+      "runtimeNs": 1.7251083333333332,
+      "runtimeBytes": 0.0
+    },
+    "after-system": {
+      "compileNs": 18808.854166666668,
+      "compileBytes": 5408.504,
+      "runtimeNs": 1.7213083333333332,
+      "runtimeBytes": 0.0
+    }
+  }
+]

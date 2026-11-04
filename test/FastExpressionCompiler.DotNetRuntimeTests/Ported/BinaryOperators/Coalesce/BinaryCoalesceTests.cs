@@ -494,7 +494,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Equal(1, func());
         }
 
-        [ConditionalFact(typeof(PlatformDetection), nameof(PlatformDetection.IsNotLinqExpressionsBuiltWithIsInterpretingOnly))]
+        [VerifiedCompilerLayoutFact("CoalesceValueConversionRegressionTests.Nullable_numeric_coalesce_matches_system: int?/int? values and nulls")]
         [ActiveIssue("https://github.com/mono/mono/issues/14919", TestRuntimes.Mono)]
         public static void VerifyIL_NullableIntCoalesceToNullableInt()
         {

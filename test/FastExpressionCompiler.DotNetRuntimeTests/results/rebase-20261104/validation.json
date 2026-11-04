@@ -1,0 +1,65 @@
+{
+  "date": "2026-11-04",
+  "base": "6dbc0cbcc9e09e0011256a5cfc3e627f7cc05fd8",
+  "previousPublishedHead": "bf908bd05c9e5ada3e8ada3e2f432b031b9e1524",
+  "validatedCodeRevision": "1b83ed65076965f1cb4af6a5c4ac12f78cb7a9ae",
+  "codeRevisionAfterWhitespaceCleanup": "1c05f97c600fdedc4427ed60cf3ada653b3ad34b",
+  "commits": 110,
+  "mergeCommits": 0,
+  "native": {
+    "native-net10.0": {
+      "testX": 1202,
+      "legacy": 1756
+    },
+    "native-net8.0": {
+      "testX": 1202,
+      "legacy": 1755
+    },
+    "framework": {
+      "testX": 1162,
+      "legacy": 1639
+    }
+  },
+  "runtime": {
+    "counters": {
+      "total": "35147",
+      "executed": "35088",
+      "passed": "35088",
+      "failed": "0",
+      "error": "0",
+      "timeout": "0",
+      "aborted": "0",
+      "inconclusive": "0",
+      "passedButRunAborted": "0",
+      "notRunnable": "0",
+      "notExecuted": "0",
+      "disconnected": "0",
+      "warning": "0",
+      "completed": "0",
+      "inProgress": "0",
+      "pending": "0"
+    },
+    "skippedResults": 59
+  },
+  "newSkips": 0,
+  "performanceMeasured": false,
+  "upstreamFixturesUnchanged": [
+    "RuntimeTypeConstantRegressionTests",
+    "CustomReducibleNodeRegressionTests",
+    "ByRefConversionRegressionTests",
+    "MethodBasedNotRegressionTests",
+    "IntegerSwitchDispatchRegressionTests",
+    "ExtensionReductionIdentityRegressionTests",
+    "ReductionProgressRegressionTests"
+  ],
+  "logsSha256": {
+    "solution-build.log": "95f4eb0a131ddd237efd1bacc3879bc9f0300d1c81f090c5a73f537788ab1899",
+    "native-net10.0.log": "4c0f7924416b3ed700b1dc3c471331d36cf1db02ef2e0a4165ce293c9ca8431d",
+    "native-net8.0.log": "a5133bb86cdcf8fc64d1b1e47e204c314f98927303fe9a57d3c50aee5f6c498d",
+    "framework.log": "d0cf854ed71a720ad6c27ef4da18f73d8537c315593dc8d034f2f4eb9a455134",
+    "imported-build.log": "4059d01d71467bd26d152f4bffc58e730c5d1446188870dd4afaf6daef54792f",
+    "runtime.log": "cba738760f777d988c86f3dc327c68a7c2366b2a020c50d652ca46ed953d613a",
+    "runtime.trx": "89b5af16ad45a042d9166992d51969d94ce5efa4982a83e34600f3c67fb24dfb"
+  },
+  "notes": "Final amendment adds documentation only. The difference from the tested revision before documentation is a single indentation correction; git diff --ignore-all-space is empty for production and native tests. No fallback, skip or assertion weakening introduced."
+}

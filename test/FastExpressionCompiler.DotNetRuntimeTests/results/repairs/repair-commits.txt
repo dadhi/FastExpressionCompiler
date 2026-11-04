@@ -1,0 +1,46 @@
+498255c800938cdaab8bf3faf3ac0ec6a585d7e6 Reuse collected delegate invocation parameters
+a87e445f04254ee5c0b9c834ff09efd0ae0f8cd9 Avoid eager scope and exception metadata allocations on label-free paths
+4a96eebc676ddbfb341d2dac450e1f6c57322ef1 Preserve upstream null conversion handling in Light round trips
+66570cf4e3df367106467d4a64f764db16a8ba53 Reuse collected reductions for dynamic and quoted extension nodes
+c6fdd3ed75839edff618f422a079b438b7b25116 Reuse hoisted capture reflection metadata within each compilation
+9baa364c1ec3065b59fd06ac45c0d2147e2b5895 Keep lazy JIT with anonymous catch policy on modern runtimes
+47140b9a382d1275e2e461c2d77a6eeaa081dec9 Keep provably readonly captures in existing value closure slots
+42bc504bdcb474167cf6e844ded8725a6a50d3a6 Fold immutable constant string lengths without capturing string storage
+4b2852b96c347ce43ecdb99495402e769e8f3370 Reuse transient scope buffers and skip terminal-node scope tracking
+9170b8de2c626c9711a9108c523b7cb5ae0b6302 Analyze capture storage mutations once per compilation root
+748c90caecac150ef7d310282a250a0797b99751 Reuse capture call signatures and avoid cells for value arguments
+fc018b2ef097cf9356cec0729390b341ac4156d2 Collect switch test values without enumerator allocations
+8e0d5e951ad34547a6ab52faf212e007701310bf Allocate hoisted type cache only for actual shared cells
+6eb3704eb9267f7b9d2be05e139d1c5245c8b149 Identify vector arrays directly on modern runtimes
+2d7690aa392937ed62ba7842ac4da0cb721e498f Keep lexical and exception ancestry in inline indexed metadata
+94da30bf5d5acfa9bf4eedab2a930648ca5e2847 Collect terminal expression nodes before tracking lexical scopes
+85b93bea93a29a602bd7c7901f3ab95bf16744c5 Keep quote and dynamic emission maps off ordinary compiler contexts
+4750498d973daa769692d6875f28718a99036325 Allocate invocation spill metadata only for arguments with jumps
+5dc6cde19872991136433ff39a5fc185df2fbe10 Preserve readonly capture layout through control flow and initializers
+5a74d332f8372be3facd8b650b161a15f70a9a3d Keep primitive arithmetic emission outside lifted-operation handling
+1732296846f7726d935506f5a5b82adabc8a8043 Track capture slot writes precisely and scan simple initializers once
+c902f0aa8a309afd97d146c15fffbc361e29f6a1 Reuse cleared capture metadata rentals and resolve constructor handles
+135ac531f1690ba4833714af7fcd88ccbe03e9dc Cover captures alongside static indexed property access
+ac819914d830919be2e6d88099e7d8ed397f5950 Skip scoped label helpers while emitting label-free blocks
+c7f9d423a1333bd2b5379da79b0ac1d107588b0e Share root capture analysis before propagating nested parameters
+de72c4cc68f87e05e17b38e076d00e08365ac290 Remove exception cleanup regions from internal collector recursion
+02b76c490327dd0a0246a400af9a6c7121e27385 Keep common scope compression and unchanged-depth returns inline
+528e3f1c85a2c644ec50bd2318d0c1b722ecbe29 Avoid primitive arithmetic spills for atomic operands after EH
+17053de54aa68ed916417c6703a6d8dae408d7f7 Inline the empty capture-parameter cache path
+6afcf12fc74cdda3409a1735e32a3a00f324ec93 Reuse operand types in scalar arithmetic emission
+9cc6cac480771ebbe750492ca417f95ca08c870a Keep private mutable reference captures in their sole child value slot
+aa1ba44d614beeccf0eded94533982143bb88b4c Use native boxed storage for live nonnullable value captures
+db495433f84ce48734e7fa173256ba91d44d9837 Recognize only known intrinsic storage shapes before capture emission
+c909484afe2b97d504b8dccf2a766fcc6a14fb36 Cover live boxed struct receivers with exception-block call arguments
+1794d6a4468125a58aa4552953d3a3a38a4cf785 Keep Framework mutable captures in verifiable typed cells
+95a5123b056610c7c666bfd0a6681de6355dfc51 Exercise hoisted metadata overflow clearing with native boxed captures
+242dfcf57f57c18659932b6ad9596a32c9022d12 Batch collection of consecutive single-expression block scopes
+0d337dcc3e028086083e4461a65ed5ab8d2738c7 Reuse the initial node type during collection
+52f0e97c614a9c6fe30171e264df569db7d1e720 Avoid root capture scans when typed storage is already required
+09050fe06c92e4d51b2791e97de20c1a8aeb27b2 Reuse private reference slots through constructor and array containers
+20d3174b52c86a680ce47f9a5e3454e8a39f5fcd Establish the actual capture-analysis root before intrinsic collection
+0fa003b9c51a9392f61142abe1485462c9cd8af5 Avoid materializing Light array operands during private capture analysis
+14abbb461b05a0944111ea79b68eda59e2368516 Restore typed reference loads for verified Framework closure slots
+0ec7a13574598693ed54e1ed9bcda6eda2369ebc Defer quote and runtime-variable metadata on unrelated compilation paths
+127a7c268b15a42392778e6f67385ca96436bf24 Declare trimming requirement for lazy quote metadata holder
+6676ab49b27c9fc13220eb20980282b5597b438f Keep scope overflow arrays in compact geometric pool buckets

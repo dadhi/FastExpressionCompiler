@@ -1,0 +1,56 @@
+{
+  "source": "db640cba760028d1c49ad5e4abf67f38fe683bbf",
+  "codes": {
+    "FastExpressionCompiler": 0,
+    "FastExpressionCompiler.LightExpression": 0,
+    "native-net10.0": 0,
+    "native-net8.0": 0,
+    "framework-build": 0,
+    "framework-run": 0,
+    "imported-build": 0,
+    "imported-full": 0
+  },
+  "imported": {
+    "batches": 21,
+    "counters": {
+      "passed": 35064,
+      "failed": 0,
+      "error": 0,
+      "timeout": 0,
+      "aborted": 0,
+      "executed": 35064,
+      "total": 35122
+    },
+    "observedCrashes": 0,
+    "fixedOriginalDenominator": 35133,
+    "existingExclusions": 69
+  },
+  "native": {
+    "native-net10.0": {
+      "legacy": [
+        1712
+      ],
+      "testX": []
+    },
+    "native-net8.0": {
+      "legacy": [
+        1711
+      ],
+      "testX": []
+    },
+    "framework-run": {
+      "legacy": [
+        1595
+      ],
+      "testX": [
+        1012
+      ]
+    }
+  },
+  "snapshot": {
+    "commit": "db640cba760028d1c49ad5e4abf67f38fe683bbf",
+    "compilerSha256": "a6c82fe91843a19cfbf36b81692aefa08ace922c44fab45d13d881f857feafbc",
+    "assemblySha256": "1ce5b67ed74e4946bd77146175fabd49e493cbc7b01e85f765d492b7d6c4ff16"
+  },
+  "rawArchive": "validation-logs.zip"
+}

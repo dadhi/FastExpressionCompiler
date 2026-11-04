@@ -1,0 +1,35 @@
+Framework isolated stages (read/parse only)
+Timings descriptive; use final integrated matrix for end-to-end conclusions.
+
+framework_constructor_metadata | agent 89f3f1b8 | main 3ca5ad44
+  capture8: 7832.64 -> 7832.64 B; time ratio 1.0453
+  capture_mutable: 5272.0 -> 5080.0 B; time ratio 0.9268
+  capture_reference: 4408.0 -> 4408.0 B; time ratio 0.9486
+  capture_try: 15572.408 -> 15571.876 B; time ratio 0.9965 [private-type confound; not a causal allocation claim]
+
+typed_existing_rented_signatures | agent 7a871c4d | main 0197699d
+  action: 5128.0 -> 5064.0 B; time ratio 0.9934
+  dead: 2944.16 -> 2944.16 B; time ratio 1.0269
+  func: 4440.32 -> 4320.32 B; time ratio 1.0715
+  tryfunc: 5104.32 -> 4984.32 B; time ratio 0.7121
+
+owned_boxed_value_cells | agent 25955bb5 | main 23deab6f
+  capture_mutable: 5080.0 -> 4760.0 B; time ratio 0.9545
+  capture8: 7832.64 -> 7832.64 B; time ratio 1.0161
+  capture_reference: 4408.0 -> 4408.0 B; time ratio 1.1100
+  capture_try: 5096.0 -> 5096.0 B; time ratio 0.9022
+
+owned_delegate_cast | agent 3320b13e | main 4eac9c2a
+  capture_mutable: 4760.0 -> 4728.0 B; time ratio 0.8872
+  capture8: 7832.64 -> 7800.64 B; time ratio 1.0268
+  capture_reference: 4408.0 -> 4376.0 B; time ratio 0.9647
+  capture_try: 5096.0 -> 5096.0 B; time ratio 1.0265
+
+owned_closure_cast | agent a554a433 | main db640cba
+  capture_mutable: 4728.0 -> 4520.0 B; time ratio 0.9065
+  capture8: 7800.64 -> 7536.64 B; time ratio 1.1282
+  capture_reference: 4376.0 -> 4256.0 B; time ratio 1.0988
+  capture_try: 5096.0 -> 5096.0 B; time ratio 1.1032
+
+Remaining pre-PR mutable: compile4376->4520 B (+144); nested mutation24->0 B; factory+mutation208->184 B.
+Wrapper ldloc/pop cleanup rejected: higher cold allocation mode, causality unproved.

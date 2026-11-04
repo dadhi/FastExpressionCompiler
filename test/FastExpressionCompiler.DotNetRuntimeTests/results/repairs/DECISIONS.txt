@@ -1,0 +1,338 @@
+Source: 6676ab49b27c9fc13220eb20980282b5597b438f
+Substantial repairs pass validation; before-PR performance and allocation parity is not achieved.
+
+All current strict measurement errors: 0. Imported: {'passed': 35064, 'failed': 0, 'crashes': 0, 'batches': 21}. Native counts are parsed from the frozen validation logs in validation.json. The existing imported exclusions and user-deferred deep-tree cases remain; no new exclusion is inferred here.
+
+Modern paired results use matched alternating before/fixed samples. Full modern independent-process matrix includes published and System. Framework before/System controls are preserved from the earlier final20d run; current samples are fresh. Their time ratios are descriptive, not paired causal estimates. Cold points are fresh processes; compile plus first invocation must be considered together. Managed allocation excludes native/JIT and retained memory.
+
+Accepted repairs retain the direct IL emitter and object[] closure layout: lazy per-compilation metadata sharing, conservative capture analysis, native boxed live value cells on modern runtimes (typed cells retained for quotes/runtime variables/unknown roots and Framework), private reference proof, allocation-free Light array operand access, typed reference casts for the Framework verified host, collector/scope state sharing and bounded cleared pools. Logical commits are archived separately.
+
+The historical20d broad matrix found four Framework capture_try failures (two flavors/two rounds) and Light private array-capture +352 B. Historical raw data and errors are preserved; the final source/matrix supersede those cases, never silently overwrite them. The Frame reference casts repair verified object[] loads; no host/security-policy workaround was used.
+
+Framework EH +16 B per compile was isolated with same-assembly constructor controls: restricted anonymous DynamicMethod captures CompressedStack. Earlier +128 B reports were stale; finally IL was byte identical. No security-policy change accepted.
+
+Shared lazy metadata cache causal and cold-allocation controls are packaged separately. The three-holder alternative introduced +192 B cold storage and was rejected. Cross-compilation weak cache (~135 B fresh-type cost), custom Framework module (~2.7 KB), and additional whole-tree scope scans were rejected. Historical explanatory files are not latest measurement claims.
+
+Actual finalized-delegate resolver IL is in capture8-finalized-il.zip. The obsolete pooled ILGenerator dump is excluded; matching managed IL does not prove identical native code or eliminate a measured runtime residual.
+
+No commit, push, or GitHub write is performed by this publisher.
+
+Prominent remaining costs (latest measured source)
+{
+  "framework_compile": [
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "capture1",
+      "before B": "4,169.57",
+      "fixed B": "4,307.21",
+      "delta B": "137.64"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "capture8",
+      "before B": "7,547.62",
+      "fixed B": "7,836.77",
+      "delta B": "289.15"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "capture_array",
+      "before B": "4,392.00",
+      "fixed B": "4,440.00",
+      "delta B": "48.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "capture_call",
+      "before B": "4,288.00",
+      "fixed B": "4,432.00",
+      "delta B": "144.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "capture_ctor",
+      "before B": "4,448.00",
+      "fixed B": "4,504.00",
+      "delta B": "56.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "capture_invoke",
+      "before B": "4,768.00",
+      "fixed B": "4,824.00",
+      "delta B": "56.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "capture_mutable",
+      "before B": "4,376.00",
+      "fixed B": "5,272.00",
+      "delta B": "896.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "capture_mutable_reference",
+      "before B": "7,552.00",
+      "fixed B": "7,664.00",
+      "delta B": "112.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "capture_mutable_reference_array",
+      "before B": "7,736.00",
+      "fixed B": "7,848.00",
+      "delta B": "112.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "capture_mutable_reference_ctor",
+      "before B": "7,800.00",
+      "fixed B": "7,912.00",
+      "delta B": "112.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "capture_reference",
+      "before B": "4,264.00",
+      "fixed B": "4,408.00",
+      "delta B": "144.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "capture_try",
+      "before B": "4,912.00",
+      "fixed B": "5,096.00",
+      "delta B": "184.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "invoke_try_argument",
+      "before B": "2,041.76",
+      "fixed B": "2,057.86",
+      "delta B": "16.10"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "nested_eh32",
+      "before B": "17,256.00",
+      "fixed B": "17,272.00",
+      "delta B": "16.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "nested_eh8",
+      "before B": "5,144.00",
+      "fixed B": "5,160.00",
+      "delta B": "16.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "try_catch",
+      "before B": "1,890.08",
+      "fixed B": "1,906.68",
+      "delta B": "16.60"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "light",
+      "scenario": "try_finally",
+      "before B": "1,857.97",
+      "fixed B": "1,875.02",
+      "delta B": "17.05"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "standard",
+      "scenario": "capture1",
+      "before B": "4,169.01",
+      "fixed B": "4,306.70",
+      "delta B": "137.68"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "standard",
+      "scenario": "capture8",
+      "before B": "7,547.15",
+      "fixed B": "7,838.00",
+      "delta B": "290.85"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "standard",
+      "scenario": "capture_array",
+      "before B": "4,394.92",
+      "fixed B": "4,441.95",
+      "delta B": "47.03"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "standard",
+      "scenario": "capture_call",
+      "before B": "4,288.00",
+      "fixed B": "4,432.00",
+      "delta B": "144.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "standard",
+      "scenario": "capture_ctor",
+      "before B": "4,448.00",
+      "fixed B": "4,504.00",
+      "delta B": "56.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "standard",
+      "scenario": "capture_invoke",
+      "before B": "4,768.00",
+      "fixed B": "4,824.00",
+      "delta B": "56.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "standard",
+      "scenario": "capture_mutable",
+      "before B": "4,376.00",
+      "fixed B": "5,272.00",
+      "delta B": "896.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "standard",
+      "scenario": "capture_reference",
+      "before B": "4,264.00",
+      "fixed B": "4,408.00",
+      "delta B": "144.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "standard",
+      "scenario": "capture_try",
+      "before B": "4,912.00",
+      "fixed B": "5,096.00",
+      "delta B": "184.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "standard",
+      "scenario": "invoke_try_argument",
+      "before B": "2,497.29",
+      "fixed B": "2,514.30",
+      "delta B": "17.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "standard",
+      "scenario": "nested_eh32",
+      "before B": "17,256.00",
+      "fixed B": "17,272.00",
+      "delta B": "16.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "standard",
+      "scenario": "nested_eh8",
+      "before B": "5,144.00",
+      "fixed B": "5,160.00",
+      "delta B": "16.00"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "standard",
+      "scenario": "try_catch",
+      "before B": "1,892.80",
+      "fixed B": "1,907.83",
+      "delta B": "15.04"
+    },
+    {
+      "runtime": ".NET Framework 4.8.1",
+      "flavor": "standard",
+      "scenario": "try_finally",
+      "before B": "1,860.03",
+      "fixed B": "1,877.54",
+      "delta B": "17.51"
+    }
+  ],
+  "cold_compile_first": [
+    {
+      "runtime": "10.0.9",
+      "scenario": "nested_mixed128",
+      "before B": "68,896.00",
+      "fixed B": "79,224.00",
+      "delta B": "10,328.00",
+      "time ratio": "1.5451"
+    },
+    {
+      "runtime": "10.0.9",
+      "scenario": "try_catch",
+      "before B": "42,984.00",
+      "fixed B": "44,208.00",
+      "delta B": "1,224.00",
+      "time ratio": "1.4955"
+    },
+    {
+      "runtime": "10.0.9",
+      "scenario": "try_finally",
+      "before B": "42,952.00",
+      "fixed B": "44,176.00",
+      "delta B": "1,224.00",
+      "time ratio": "1.1785"
+    },
+    {
+      "runtime": "8.0.28",
+      "scenario": "nested_mixed128",
+      "before B": "73,672.00",
+      "fixed B": "84,000.00",
+      "delta B": "10,328.00",
+      "time ratio": "1.4567"
+    },
+    {
+      "runtime": "8.0.28",
+      "scenario": "try_catch",
+      "before B": "47,376.00",
+      "fixed B": "48,624.00",
+      "delta B": "1,248.00",
+      "time ratio": "1.5569"
+    },
+    {
+      "runtime": "8.0.28",
+      "scenario": "try_finally",
+      "before B": "47,344.00",
+      "fixed B": "48,592.00",
+      "delta B": "1,248.00",
+      "time ratio": "1.5780"
+    }
+  ],
+  "cold_totals": [
+    {
+      "runtime": "10.0.9",
+      "phase": "cold compile + first invoke",
+      "median scenario time ratio": "1.5688",
+      "allocation increases": "3/10"
+    },
+    {
+      "runtime": "8.0.28",
+      "phase": "cold compile + first invoke",
+      "median scenario time ratio": "1.4850",
+      "allocation increases": "3/10"
+    }
+  ]
+}
+Framework capture allocation costs are additional to the isolated EH host +16 B: mutable capture approximately +896 B, capture8 approximately +289–291 B, reference/call captures +144 B, capture_try +184 B, capture_array +48 B. Framework retains typed StrongBox cells for verifier correctness; the modern boxed-value optimization is not applied there. Fractional per-operation noise is preserved separately from these material changes. Cold compile-plus-first allocation increases affect 3/10 shapes on each runtime: nested_mixed128 +10,328 B and EH shapes +1,248 B (.NET 8) / +1,224 B (.NET 10). Cold time ratios are descriptive independent-process observations, not causal paired estimates.
+The initial paired-analysis parser rejected PASS marker lines in the saved paired JSONL. The scratch parser was corrected; resume-analysis.py reran analysis and actual finalized-delegate IL extraction only. No benchmark was remeasured and the raw measurement inputs remained unchanged. Strict analysis now passes; input hashes and raw samples are archived.

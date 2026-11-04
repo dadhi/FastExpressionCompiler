@@ -1,0 +1,160 @@
+diff --git a/src/FastExpressionCompiler/FastExpressionCompiler.cs b/src/FastExpressionCompiler/FastExpressionCompiler.cs
+index b0604f1a..b992ea67 100644
+--- a/src/FastExpressionCompiler/FastExpressionCompiler.cs
++++ b/src/FastExpressionCompiler/FastExpressionCompiler.cs
+@@ -763,7 +763,7 @@ namespace FastExpressionCompiler
+             internal SmallMap4<InvocationExpression, Expression, RefEq<InvocationExpression>> InlinedLambdaInvocation;
+ 
+             /// New or Call expressions containing the complex expression, e.g. inlined Lambda Invoke or Try with Finally
+-            internal SmallMap4<Expression, NoValue, RefEq<Expression>> ArgsContainingComplexExpression;
++            internal SmallSet4<Expression, RefEq<Expression>> ArgsContainingComplexExpression;
+ 
+             internal bool HasComplexExpression;
+             internal bool HasExceptionBlock;
+@@ -972,11 +972,11 @@ namespace FastExpressionCompiler
+             internal void MarkInvocationArgumentsWithJumps(Expression expression)
+             {
+                 ExpressionFeatures ??= new ExpressionFeatureCache();
+-                ExpressionFeatures.InvocationArgumentsWithJumps.Map.AddOrGetEntryRef(expression, out _);
++                ExpressionFeatures.InvocationArgumentsWithJumps.Set.AddOrGetEntryRef(expression, out _);
+             }
+ 
+             internal bool InvocationArgumentsHaveJumps(Expression expression) =>
+-                ExpressionFeatures != null && ExpressionFeatures.InvocationArgumentsWithJumps.Map.ContainsKey(expression);
++                ExpressionFeatures != null && ExpressionFeatures.InvocationArgumentsWithJumps.Set.ContainsKey(expression);
+ #if LIGHT_EXPRESSION
+             internal QuoteConversionCache QuoteConversions;
+ #endif
+@@ -1542,7 +1542,7 @@ namespace FastExpressionCompiler
+         internal sealed class ExpressionFeatureCache
+         {
+             internal SmallMap4<Expression, DynamicExpressionOccurrences, RefEq<Expression>> Expressions;
+-            internal SmallMap4<Expression, NoValue, RefEq<Expression>> InvocationArgumentsWithJumps;
++            internal SmallSet4<Expression, RefEq<Expression>> InvocationArgumentsWithJumps;
+             internal SmallMap4<Expression, int, RefEq<Expression>> LambdaEmissionIndexes;
+             internal SmallMap4<Expression, ReducedExtensionOccurrences, RefEq<Expression>> Extensions;
+         }
+@@ -2575,7 +2575,7 @@ namespace FastExpressionCompiler
+                             if (hasComplexExpression)
+                             {
+                                 context.HasComplexExpression = true;
+-                                context.ArgsContainingComplexExpression.Map.AddOrGetValueRef(callExpr, out _);
++                                context.ArgsContainingComplexExpression.Set.AddOrGetEntryRef(callExpr, out _);
+                             }
+                             context.HasComplexExpression |= outerHasComplexExpression;
+                             return RestoreScopeAndReturn(ref context, scopeDepth, r);
+@@ -2612,7 +2612,7 @@ namespace FastExpressionCompiler
+                             if (hasComplexExpression)
+                             {
+                                 context.HasComplexExpression = true;
+-                                context.ArgsContainingComplexExpression.Map.AddOrGetEntryRef(newExpr, out _);
++                                context.ArgsContainingComplexExpression.Set.AddOrGetEntryRef(newExpr, out _);
+                             }
+ 
+                             context.HasComplexExpression |= outerHasComplexExpression;
+@@ -2768,7 +2768,7 @@ namespace FastExpressionCompiler
+                                     if ((r = TryCollectInfo(ref context, invokeArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas, false, false)) != Result.OK)
+                                         return RestoreScopeAndReturn(ref context, scopeDepth, r);
+                                 if (argumentScope.RequiresSpill || context.HasExceptionBlock)
+-                                    context.ArgsContainingComplexExpression.Map.AddOrGetEntryRef(invokeExpr, out _);
++                                    context.ArgsContainingComplexExpression.Set.AddOrGetEntryRef(invokeExpr, out _);
+                                 context.HasExceptionBlock |= outerHasExceptionBlock;
+                                 if (context.ExceptionGotos.Count != argumentJumpCount)
+                                     context.MarkInvocationArgumentsWithJumps(invokeExpr);
+@@ -4216,7 +4216,7 @@ namespace FastExpressionCompiler
+                     }
+                     else
+                     {
+-                        if (!context.HasExceptionBlock && !context.ArgsContainingComplexExpression.Map.ContainsKey(newExpr))
++                        if (!context.HasExceptionBlock && !context.ArgsContainingComplexExpression.Set.ContainsKey(newExpr))
+                         {
+                             for (var i = 0; i < argCount; ++i)
+                                 if (!TryEmitCallArgument(argExprs.GetArgument(i), pars[i].ParameterType, i, il, ref context, flags))
+@@ -7797,7 +7797,7 @@ namespace FastExpressionCompiler
+ 
+ #if NETFRAMEWORK
+                 if (objExpr?.NodeType == ExpressionType.Unbox && objExpr.Type.IsValueType && !objExpr.Type.IsNullable() &&
+-                    context.ArgsContainingComplexExpression.Map.ContainsKey(callExpr))
++                    context.ArgsContainingComplexExpression.Set.ContainsKey(callExpr))
+                     return TryEmitCallWithWritebacks(objExpr, callArguments, method, null, il, ref context, parent, byRefIndex);
+ #endif
+ 
+@@ -7824,7 +7824,7 @@ namespace FastExpressionCompiler
+ #else
+                     var callArgs = callExpr.Arguments;
+ #endif
+-                    if (!context.ArgsContainingComplexExpression.Map.ContainsKey(callExpr))
++                    if (!context.ArgsContainingComplexExpression.Set.ContainsKey(callExpr))
+                     {
+                         if (loadObjByAddress)
+                             EmitStoreAndLoadLocalVariableAddress(il, objExpr.Type);
+@@ -8219,7 +8219,7 @@ namespace FastExpressionCompiler
+                 // Invoking runtime Expression<TDelegate> data intrinsically compiles that value.
+                 // This is part of Invoke semantics, not a fallback from outer FEC compilation.
+                 var compileMethod = invokedExpr.Type.FindExpressionCompileMethod();
+-                var deferCompile = compileMethod != null && (context.ArgsContainingComplexExpression.Map.ContainsKey(expr) ||
++                var deferCompile = compileMethod != null && (context.ArgsContainingComplexExpression.Set.ContainsKey(expr) ||
+                     context.InvocationArgumentsHaveJumps(expr));
+                 var delegateType = compileMethod?.ReturnType ?? invokedExpr.Type;
+                 var delegateInvokeMethod = delegateType.FindDelegateInvokeMethod();
+diff --git a/src/FastExpressionCompiler/ImTools.cs b/src/FastExpressionCompiler/ImTools.cs
+index 12f05eb5..dcb723fd 100644
+--- a/src/FastExpressionCompiler/ImTools.cs
++++ b/src/FastExpressionCompiler/ImTools.cs
+@@ -1330,9 +1330,6 @@ public static class SmallMap
+ 
+     internal const int MinEntriesCapacity = 2;
+ 
+-    /// <summary>For now to use in the Set as a value</summary>
+-    public readonly struct NoValue { }
+-
+     /// <summary>Stores the entries in a single dynamically reallocated growing array</summary>
+     [DebuggerDisplay("{Capacity:_entries?.Length ?? 0} of {_entries?[0]}, {_entries?[1]}, ...")]
+     public struct SingleArrayEntries<K, TEntry, TEq> : IEntries<K, TEntry, TEq>
+@@ -1427,9 +1424,7 @@ public static class SmallMap
+         return ref RefTools<TEntry>.GetNullRef();
+     }
+ 
+-    /// <summary>Gets the ref to the existing entry.Value by the provided key (found == true),
+-    /// or adds a new entry (found == false) and returns it.Value by ref. 
+-    /// So the method always return a non-null ref to the value, either existing or added</summary>
++    /// <summary>A sugar to return the ref to the Value of the entry directly, no need for the Set</summary>
+     [MethodImpl((MethodImplOptions)256)]
+     public static ref V AddOrGetValueRef<K, V, TEq, TStackCap, TStackHashes, TStackEntries, TEntries>(
+         this ref SmallMap<K, Entry<K, V>, TEq, TStackCap, TStackHashes, TStackEntries, TEntries> map, K key, out bool found)
+@@ -1440,11 +1435,9 @@ public static class SmallMap
+         where TEntries : struct, IEntries<K, Entry<K, V>, TEq> =>
+         ref map.AddOrGetEntryRef(key, out found).Value;
+ 
+-    /// <summary>Adds an entry for sure absent key.
+-    /// Provides the performance in scenarios where you look for the present key, and using it, and if ABSENT then add the new one.
+-    /// So this method optimized NOT to look for the present item for the second time</summary>
++    /// <summary>A sugar to add a default entry for a sure absent key and return the ref to its Value directly, no need for the Set</summary>
+     [MethodImpl((MethodImplOptions)256)]
+-    public static ref V AddSureAbsentDefaultAndGetRef<K, V, TEq, TStackCap, TStackHashes, TStackEntries, TEntries>(
++    public static ref V AddSureAbsentDefaultAndGetValueRef<K, V, TEq, TStackCap, TStackHashes, TStackEntries, TEntries>(
+         this ref SmallMap<K, Entry<K, V>, TEq, TStackCap, TStackHashes, TStackEntries, TEntries> map, K key)
+         where TEq : struct, IEq<K>
+         where TStackCap : struct, ISize2Plus
+@@ -1453,7 +1446,7 @@ public static class SmallMap
+         where TEntries : struct, IEntries<K, Entry<K, V>, TEq>
+         => ref map.AddSureAbsentDefaultEntryAndGetRef(key).Value;
+ 
+-    /// <summary>Lookups for the stored entry by key. Returns the ref to the found entry.Value or the null ref</summary>
++    /// <summary>A sugar to lookup for the stored entry by key. Returns the ref to the found entry.Value or the null ref. No need for the Set</summary>
+     [MethodImpl((MethodImplOptions)256)]
+     public static ref V TryGetValueRef<K, V, TEq, TStackCap, TStackHashes, TStackEntries, TEntries>(
+         this ref SmallMap<K, Entry<K, V>, TEq, TStackCap, TStackHashes, TStackEntries, TEntries> map, K key, out bool found)
+diff --git a/test/FastExpressionCompiler.IssueTests/Issue476_System_ExecutionEngineException_with_nullables_on_repeated_calls_to_ConcurrentDictionary.cs b/test/FastExpressionCompiler.IssueTests/Issue476_System_ExecutionEngineException_with_nullables_on_repeated_calls_to_ConcurrentDictionary.cs
+index ee318943..03587fcb 100644
+--- a/test/FastExpressionCompiler.IssueTests/Issue476_System_ExecutionEngineException_with_nullables_on_repeated_calls_to_ConcurrentDictionary.cs
++++ b/test/FastExpressionCompiler.IssueTests/Issue476_System_ExecutionEngineException_with_nullables_on_repeated_calls_to_ConcurrentDictionary.cs
+@@ -100,7 +100,7 @@ public struct Issue476_System_ExecutionEngineException_with_nullables_on_repeate
+             // Collisions also exercise the displaced-entry hash/index mask.
+             var key = i * 32;
+             if (sureAbsent)
+-                map.Map.AddSureAbsentDefaultAndGetRef(key) = i;
++                map.Map.AddSureAbsentDefaultAndGetValueRef(key) = i;
+             else
+             {
+                 ref var value = ref map.Map.AddOrGetValueRef(key, out var found);

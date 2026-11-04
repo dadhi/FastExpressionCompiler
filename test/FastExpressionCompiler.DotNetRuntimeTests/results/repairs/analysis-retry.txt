@@ -1,0 +1,1 @@
+The initial paired-analysis parser rejected PASS marker lines in the saved paired JSONL. The scratch parser was corrected; resume-analysis.py reran analysis and actual finalized-delegate IL extraction only. No benchmark was remeasured and the raw measurement inputs remained unchanged. Strict analysis now passes; input hashes and raw samples are archived.

@@ -1,0 +1,1046 @@
+{
+  "partition": "final-validation",
+  "finalState": {
+    "status": "Final70f297cb validated; bounded combined and map measurements complete. Universal performance/allocation parity not established.",
+    "final_code_head": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "accepted_arithmetic_commit": "44ee17d7f3fd5d363b7088158cc97b2cc60f7da7",
+    "try_value_commit": "6d397bc6255ddf406f5586c405ddd04cff7d4cdd",
+    "final_validation": {
+      "codeHead": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+      "codes": {
+        "FastExpressionCompiler": 0,
+        "FastExpressionCompiler.LightExpression": 0,
+        "native-net10.0": 0,
+        "native-net8.0": 0,
+        "framework-build": 0,
+        "framework-run": 0,
+        "imported-build": 0,
+        "imported-full": 0
+      },
+      "imported": {
+        "batches": 21,
+        "crashes": 0,
+        "counters": {
+          "total": 35122,
+          "executed": 35064,
+          "passed": 35064,
+          "failed": 0,
+          "error": 0,
+          "timeout": 0,
+          "aborted": 0,
+          "notExecuted": 0
+        },
+        "originalDenominator": 35133,
+        "exclusions": 69,
+        "newExclusions": 0
+      },
+      "native": {
+        "net10": "All runner suites pass; legacy1712",
+        "net8": "All runner suites pass; legacy1711",
+        "framework": "TestX1037 plus legacy1595 pass"
+      },
+      "priorAttempt": {
+        "head": "6d397bc6",
+        "result": "Interrupted after managed stack proved preexisting SmallMap16 promotion hang; fixed3be541d3; no Trycontrolflow regression"
+      },
+      "snapshot": {
+        "commit": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+        "compilerSha256": "4239ac0a6f673fba71eead86d2eae40e7eec79f0a52241f2c9d8ac2669ada237",
+        "assemblySha256": "6ddb580a9826a3494ff3bdc863d3af73d58ba836d2a7754ecc9f7afd698521d1"
+      }
+    },
+    "notes": "Historical42f/isolated snapshots retain their exact sources. Old6d validation was interrupted by unchanged-prePR SmallMap capacity bug, not a Try-value regression;70f includes its fix and supported EH-host correction.",
+    "combined_expected": true,
+    "validation_path": "pr558-repair/validation-70f297cb",
+    "candidate_code_head": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "combined_snapshot_head": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "combined_measurements_state": "Complete:12474 raw rows/198 groups,0 errors;21 rotated samples, all short samples retained. Compile independently calibrated; FEC other phases use common counts, System independently calibrated.",
+    "map_capacity_commit": "3be541d3aeba0d58560b0a49d78206bb108edbfc",
+    "supported_host_commit": "70f297cbd5b2f232fd16ec0753b52f5c9ef387a0",
+    "combined_path": "pr558-round4/combined-final-bounded",
+    "historical_combined_path": "pr558-round4/combined-final",
+    "map_capacity_path": "pr558-round4/map-capacity",
+    "supported_host_path": "pr558-round4/supported-eh-host",
+    "review_reply_paths": [
+      "pr558-round4/dadhi-host-reply.json",
+      "pr558-round4/dadhi-host-reply-published.json"
+    ],
+    "official_source_urls": [
+      "https://github.com/dotnet/runtime/blob/v10.0.9/src/libraries/System.Private.CoreLib/src/System/Reflection/Emit/DynamicMethod.cs#L228-L240",
+      "https://github.com/dotnet/runtime/blob/v10.0.9/src/coreclr/System.Private.CoreLib/src/System/Reflection/Emit/DynamicMethod.CoreCLR.cs#L41-L56"
+    ],
+    "allocation_confirmation_path": "allocation-confirmation-round4",
+    "allocation_confirmation_state": "Complete:2970 raw rows/198 groups;5 samples x200 operations after40warmups;164 unchanged,26 decreased,8 increased. Six FrameworkLight approximately192B residual plus two FrameworkStandard0.8B groups retained. No elapsed claims.",
+    "validation_reproduction_paths": [
+      "pr558-repair/validate.py",
+      "pr558-repair/summarize-validation.py",
+      "fec-round12/Run-Full.py",
+      "pr558-repair/frozen-70f297cb",
+      "fec-fixes/FrameworkRunner/Program.cs",
+      "fec-fixes/FrameworkRunner/FrameworkRunner.csproj"
+    ],
+    "allocation_confirmation_summary": {
+      "complete": true,
+      "counts": {
+        "unchanged": 164,
+        "decreased": 26,
+        "increased": 8
+      },
+      "primaryPositiveReconfirmation": {
+        "primary_positive": 28,
+        "positive_again": 6,
+        "now_equal": 21,
+        "now_decreased": 1
+      },
+      "errors": []
+    }
+  },
+  "files": {
+    "fec-fixes/FrameworkRunner/FrameworkRunner.csproj": {
+      "bytes": 178,
+      "sha256": "c479e1bc45dc2aea9fb041ba77dc25820422ab45ba30d1cac0d09e092e1d4d1b"
+    },
+    "fec-fixes/FrameworkRunner/Program.cs": {
+      "bytes": 509,
+      "sha256": "2be748d5fce6e17fdc82caf4b43a365295f00a6054969eb2d4e83231ae09d967"
+    },
+    "fec-round12/Run-Full.py": {
+      "bytes": 8552,
+      "sha256": "08f6159f1095925f2f9c6abc694a66c8514bb11ce6c837c4ae14e423dae18674"
+    },
+    "pr558-repair/frozen-70f297cb/.msCoverageSourceRootsMapping_FastExpressionCompiler.DotNetRuntimeTests": {
+      "bytes": 924,
+      "sha256": "8a2a691c7273ad7c8e5da7ee320a8a0267967b1f2446c7143218c9995c47d544"
+    },
+    "pr558-repair/frozen-70f297cb/FastExpressionCompiler.DotNetRuntimeTests.deps.json": {
+      "bytes": 18053,
+      "sha256": "801f172fa3da521e9d50a219af6881b0853510c9260046f6a471e5e7686c3da0"
+    },
+    "pr558-repair/frozen-70f297cb/FastExpressionCompiler.DotNetRuntimeTests.dll": {
+      "bytes": 3198464,
+      "sha256": "6ddb580a9826a3494ff3bdc863d3af73d58ba836d2a7754ecc9f7afd698521d1"
+    },
+    "pr558-repair/frozen-70f297cb/FastExpressionCompiler.DotNetRuntimeTests.dll.config": {
+      "bytes": 32984,
+      "sha256": "44118dfc5023a38f45545a54e5874559dd09244e45512e0a8eb09963a9f92cfb"
+    },
+    "pr558-repair/frozen-70f297cb/FastExpressionCompiler.DotNetRuntimeTests.pdb": {
+      "bytes": 993328,
+      "sha256": "0a32e1d8f5db54c8c353dafc41bb070a57988ec28fd50aa28fb0f870ffb1d3ca"
+    },
+    "pr558-repair/frozen-70f297cb/FastExpressionCompiler.DotNetRuntimeTests.runtimeconfig.json": {
+      "bytes": 390,
+      "sha256": "a217d17be0661abf2717a26937c6e379c33542cb6f292fd3fc5a2d5113a9d6dc"
+    },
+    "pr558-repair/frozen-70f297cb/FastExpressionCompiler.dll": {
+      "bytes": 293376,
+      "sha256": "4239ac0a6f673fba71eead86d2eae40e7eec79f0a52241f2c9d8ac2669ada237"
+    },
+    "pr558-repair/frozen-70f297cb/FastExpressionCompiler.dll.config": {
+      "bytes": 28302,
+      "sha256": "50dcfb121cbcd12f8311e0086467856efc5a5624482d3bed1745d101130a3cb9"
+    },
+    "pr558-repair/frozen-70f297cb/FastExpressionCompiler.pdb": {
+      "bytes": 123132,
+      "sha256": "6836015a6c60ecac640c64e337fc17fb45d3b7e3c02e869035f41c595a835a0b"
+    },
+    "pr558-repair/frozen-70f297cb/FastExpressionCompiler.xml": {
+      "bytes": 104637,
+      "sha256": "f4e5daa0d11ac3993d5eb47530d508485588b8cf7d040335facc352a0e807bd5"
+    },
+    "pr558-repair/frozen-70f297cb/Microsoft.TestPlatform.CommunicationUtilities.dll": {
+      "bytes": 137776,
+      "sha256": "e38a359aa502bb1867d6092dca9aba5c130dd6f9111decea8156aa746b2c69e6"
+    },
+    "pr558-repair/frozen-70f297cb/Microsoft.TestPlatform.CoreUtilities.dll": {
+      "bytes": 98336,
+      "sha256": "f6e2495c44640d8915b2aefc938f391c970300266da014350ff35512a448ee84"
+    },
+    "pr558-repair/frozen-70f297cb/Microsoft.TestPlatform.CrossPlatEngine.dll": {
+      "bytes": 316960,
+      "sha256": "d55399bc66dc5b451d60ad82662452ca4a5f735918135dfc91ca9b5e3e38a6ab"
+    },
+    "pr558-repair/frozen-70f297cb/Microsoft.TestPlatform.PlatformAbstractions.dll": {
+      "bytes": 51232,
+      "sha256": "7b919ce4429c3b7b8fa2c36fd641b70b2f459a30ecb7c65fd80f437673cec930"
+    },
+    "pr558-repair/frozen-70f297cb/Microsoft.TestPlatform.Utilities.dll": {
+      "bytes": 67104,
+      "sha256": "01ffd64d25a4bd905aef9594d2aa700e020273a90a77a8720af6bec8b4fd5444"
+    },
+    "pr558-repair/frozen-70f297cb/Microsoft.VisualStudio.CodeCoverage.Shim.dll": {
+      "bytes": 17464,
+      "sha256": "a753bc15f23a957f4f91a059376e4472c6bacd1503622de4b9b2b079ad8ea289"
+    },
+    "pr558-repair/frozen-70f297cb/Microsoft.VisualStudio.TestPlatform.Common.dll": {
+      "bytes": 248352,
+      "sha256": "059aa2f335c3f7b14ac3fb7caa1625bc2767581b9548e9ff53a246c7f2f94d6a"
+    },
+    "pr558-repair/frozen-70f297cb/Microsoft.VisualStudio.TestPlatform.ObjectModel.dll": {
+      "bytes": 334392,
+      "sha256": "f83e38ee9020baa42e284e2299e233070ffa86ce4b10213583f9b7c8a521bcd0"
+    },
+    "pr558-repair/frozen-70f297cb/Newtonsoft.Json.dll": {
+      "bytes": 712464,
+      "sha256": "22c649f75fce5be7c7ccda8880473b634ef69ecf33f5d1ab8ad892caf47d5a07"
+    },
+    "pr558-repair/frozen-70f297cb/System.IO.Hashing.dll": {
+      "bytes": 56104,
+      "sha256": "cea6795cf9f7b139b2215ff6de794a6f6e44e78640fb30fa4c0d5fa8472df8e5"
+    },
+    "pr558-repair/frozen-70f297cb/cs/Microsoft.TestPlatform.CommunicationUtilities.resources.dll": {
+      "bytes": 16440,
+      "sha256": "b983773dc5112854fe411fa22223e929c7fa230a1a843fcc58023237aca326f4"
+    },
+    "pr558-repair/frozen-70f297cb/cs/Microsoft.TestPlatform.CoreUtilities.resources.dll": {
+      "bytes": 16944,
+      "sha256": "26be9bb3a8932ba04014e4ae9b8f20a0222a3e2c1a1b41cec11d49bff609ce72"
+    },
+    "pr558-repair/frozen-70f297cb/cs/Microsoft.TestPlatform.CrossPlatEngine.resources.dll": {
+      "bytes": 21040,
+      "sha256": "2f776bf0e946ffcd3f8a38af2653137785eb55db3cdb0c5a392bbe07d2ccc082"
+    },
+    "pr558-repair/frozen-70f297cb/cs/Microsoft.VisualStudio.TestPlatform.Common.resources.dll": {
+      "bytes": 20520,
+      "sha256": "cd637384e1b3973be3c18409ed886f8234e2e3c3a65edf7d721d154e26aa64f3"
+    },
+    "pr558-repair/frozen-70f297cb/cs/Microsoft.VisualStudio.TestPlatform.ObjectModel.resources.dll": {
+      "bytes": 23624,
+      "sha256": "12b0829d24f6f53f0e22fcbe370d3f91b67bbcaca7f0d82323d08cd7752f4519"
+    },
+    "pr558-repair/frozen-70f297cb/de/Microsoft.TestPlatform.CommunicationUtilities.resources.dll": {
+      "bytes": 16928,
+      "sha256": "d11f2a5262947fc1b6d426a6e1828325cedf40fee28e29ed856804ec9ef3f15c"
+    },
+    "pr558-repair/frozen-70f297cb/de/Microsoft.TestPlatform.CoreUtilities.resources.dll": {
+      "bytes": 16952,
+      "sha256": "403e0eaf8528656c0b47c31cd5fe9a25b8fd733adccb8e6d47a09f28658b5283"
+    },
+    "pr558-repair/frozen-70f297cb/de/Microsoft.TestPlatform.CrossPlatEngine.resources.dll": {
+      "bytes": 21048,
+      "sha256": "7ad3c45f58aa4d030fd5d65d9d4ac9cabbc06d79d071c29727b5376cd3459d77"
+    },
+    "pr558-repair/frozen-70f297cb/de/Microsoft.VisualStudio.TestPlatform.Common.resources.dll": {
+      "bytes": 21064,
+      "sha256": "ca308a5d314fa7d7e9cae94083cc1f62375ac225094d289961d9bce49b564b65"
+    },
+    "pr558-repair/frozen-70f297cb/de/Microsoft.VisualStudio.TestPlatform.ObjectModel.resources.dll": {
+      "bytes": 24136,
+      "sha256": "e91489bb7ec3e2e97d19cf32bc5e3f7fc57e994e0315f0870fd2024ccb2cf337"
+    },
+    "pr558-repair/frozen-70f297cb/es/Microsoft.TestPlatform.CommunicationUtilities.resources.dll": {
+      "bytes": 16928,
+      "sha256": "ddbdd3bf9afe6ddd3babd4f0358ab2f4697fc5d5ec72b60cb772085af9bf9859"
+    },
+    "pr558-repair/frozen-70f297cb/es/Microsoft.TestPlatform.CoreUtilities.resources.dll": {
+      "bytes": 16952,
+      "sha256": "7ec8e83494a8a50f1158c85d29b98e87c85d74ad5c4d94e2e9656e1cf60b0dff"
+    },
+    "pr558-repair/frozen-70f297cb/es/Microsoft.TestPlatform.CrossPlatEngine.resources.dll": {
+      "bytes": 21032,
+      "sha256": "67063a36cfcae95b3ea4646b88c3cf3642f0914dfc06ecc5fc4d3f77e0e97e64"
+    },
+    "pr558-repair/frozen-70f297cb/es/Microsoft.VisualStudio.TestPlatform.Common.resources.dll": {
+      "bytes": 21040,
+      "sha256": "b5340851bd9cb979d497f67123d09f91ba20ac9d2b3e0e17076fd2abd615c933"
+    },
+    "pr558-repair/frozen-70f297cb/es/Microsoft.VisualStudio.TestPlatform.ObjectModel.resources.dll": {
+      "bytes": 24120,
+      "sha256": "f19c11474e9074d5407f9b5a78cfb0bc1b4aeb90ffec819a676f63509cec443a"
+    },
+    "pr558-repair/frozen-70f297cb/fr/Microsoft.TestPlatform.CommunicationUtilities.resources.dll": {
+      "bytes": 16952,
+      "sha256": "044cf1373cc4527fff78adb5ad70489532303b58ba0de2c059c422926af46c4b"
+    },
+    "pr558-repair/frozen-70f297cb/fr/Microsoft.TestPlatform.CoreUtilities.resources.dll": {
+      "bytes": 16944,
+      "sha256": "78d675cbab45a56cc8916466ba13f16fab18a44fd3ad4481c8f5f4e13b1f8b5d"
+    },
+    "pr558-repair/frozen-70f297cb/fr/Microsoft.TestPlatform.CrossPlatEngine.resources.dll": {
+      "bytes": 21040,
+      "sha256": "3fe869c312793444f9509af17ca0b14f444cbddef60a47251f441a5d7859a05f"
+    },
+    "pr558-repair/frozen-70f297cb/fr/Microsoft.VisualStudio.TestPlatform.Common.resources.dll": {
+      "bytes": 21048,
+      "sha256": "5a8f4f4ea8b5a332883a67202877bd19100b21d766bf0443ffec21610dfb2ecf"
+    },
+    "pr558-repair/frozen-70f297cb/fr/Microsoft.VisualStudio.TestPlatform.ObjectModel.resources.dll": {
+      "bytes": 24096,
+      "sha256": "ba030af725dea6bceb72c4eb49ccc3520222a97ea0fae812e16b7ba78450b98a"
+    },
+    "pr558-repair/frozen-70f297cb/it/Microsoft.TestPlatform.CommunicationUtilities.resources.dll": {
+      "bytes": 16928,
+      "sha256": "b023b85f510d1e5c6d5183ba51614ea1b6dee5c25ab287773bebc8cdb36e3168"
+    },
+    "pr558-repair/frozen-70f297cb/it/Microsoft.TestPlatform.CoreUtilities.resources.dll": {
+      "bytes": 16928,
+      "sha256": "a1ac732615a7dc5c59e01a1570da23210ede65ef24d5bb101294cf68481fe984"
+    },
+    "pr558-repair/frozen-70f297cb/it/Microsoft.TestPlatform.CrossPlatEngine.resources.dll": {
+      "bytes": 21048,
+      "sha256": "b6b4b25e77f51f4ef5252512d1ea2cd8025ff388852ea93897b136bcc33bb5e0"
+    },
+    "pr558-repair/frozen-70f297cb/it/Microsoft.VisualStudio.TestPlatform.Common.resources.dll": {
+      "bytes": 21040,
+      "sha256": "b9f6be59cc1c05594f9b19db9e72add58d6b37661397f81a62d4fee37e7be621"
+    },
+    "pr558-repair/frozen-70f297cb/it/Microsoft.VisualStudio.TestPlatform.ObjectModel.resources.dll": {
+      "bytes": 24096,
+      "sha256": "93911f7a3c20cecd88ddb85dfdaaa9bf768e72a0fa5f745f3f3ae40dc78da66b"
+    },
+    "pr558-repair/frozen-70f297cb/ja/Microsoft.TestPlatform.CommunicationUtilities.resources.dll": {
+      "bytes": 16928,
+      "sha256": "5db61a11e8c40176f0293658e48bc955ebed6a3dd46d3808aacc762f71732544"
+    },
+    "pr558-repair/frozen-70f297cb/ja/Microsoft.TestPlatform.CoreUtilities.resources.dll": {
+      "bytes": 17440,
+      "sha256": "1ded53cdfde469bbb90d12f371891d3789a835e976557541c43166f027f7f111"
+    },
+    "pr558-repair/frozen-70f297cb/ja/Microsoft.TestPlatform.CrossPlatEngine.resources.dll": {
+      "bytes": 22088,
+      "sha256": "f6d2748ee250f131374c306d7dc8a905464dbda3f75e857d333946c7ff89494c"
+    },
+    "pr558-repair/frozen-70f297cb/ja/Microsoft.VisualStudio.TestPlatform.Common.resources.dll": {
+      "bytes": 21552,
+      "sha256": "c55083e71e3a5bb8dbe36e10eb12b301ccfd809e8fe1187350beb6774c7f794b"
+    },
+    "pr558-repair/frozen-70f297cb/ja/Microsoft.VisualStudio.TestPlatform.ObjectModel.resources.dll": {
+      "bytes": 24632,
+      "sha256": "c2c077136e3ccfd8a249758979c0f754fe3c8a35b0c6478aa7a87ea38a817690"
+    },
+    "pr558-repair/frozen-70f297cb/ko/Microsoft.TestPlatform.CommunicationUtilities.resources.dll": {
+      "bytes": 16944,
+      "sha256": "7026d9d93b3fb7b521fc4a35fcb8348020fe466c054309e8ec0d27e84a555cb9"
+    },
+    "pr558-repair/frozen-70f297cb/ko/Microsoft.TestPlatform.CoreUtilities.resources.dll": {
+      "bytes": 16936,
+      "sha256": "fdc5422bb6f99cb357515ac6edd47c6f495da1da0eca43b7f85fdb7fd1c2492a"
+    },
+    "pr558-repair/frozen-70f297cb/ko/Microsoft.TestPlatform.CrossPlatEngine.resources.dll": {
+      "bytes": 21560,
+      "sha256": "e5231e879c215210cfe0b6d8f5740f8ecb2b08afa98ee4055fff6ba10ddac96c"
+    },
+    "pr558-repair/frozen-70f297cb/ko/Microsoft.VisualStudio.TestPlatform.Common.resources.dll": {
+      "bytes": 21048,
+      "sha256": "e90ac368f79ea0e99f44fe1133db10af08c3653749056362822b2c8f414ccd64"
+    },
+    "pr558-repair/frozen-70f297cb/ko/Microsoft.VisualStudio.TestPlatform.ObjectModel.resources.dll": {
+      "bytes": 24120,
+      "sha256": "4f427ed5c7c78043c7a9a7c9dc659133d96f6100ca9ba8719857709832e4bb58"
+    },
+    "pr558-repair/frozen-70f297cb/pl/Microsoft.TestPlatform.CommunicationUtilities.resources.dll": {
+      "bytes": 16928,
+      "sha256": "0d1c05f1c3dfa21fbaca7537910bea9a54a52a9a800caf1c7d46691fb3a41eaa"
+    },
+    "pr558-repair/frozen-70f297cb/pl/Microsoft.TestPlatform.CoreUtilities.resources.dll": {
+      "bytes": 16936,
+      "sha256": "4b7843359aea21962c73c7474d374410fe8d039a30ac7902f5f09a19a52c778a"
+    },
+    "pr558-repair/frozen-70f297cb/pl/Microsoft.TestPlatform.CrossPlatEngine.resources.dll": {
+      "bytes": 21536,
+      "sha256": "2f82d58fb67a8261ad060a2633b872c7867f48608368144db3a93bf4debe2444"
+    },
+    "pr558-repair/frozen-70f297cb/pl/Microsoft.VisualStudio.TestPlatform.Common.resources.dll": {
+      "bytes": 21048,
+      "sha256": "911ef37ee7d78eb7132581aeaeb7753e81589600535c3c2244b1c447b61e1a5a"
+    },
+    "pr558-repair/frozen-70f297cb/pl/Microsoft.VisualStudio.TestPlatform.ObjectModel.resources.dll": {
+      "bytes": 24136,
+      "sha256": "88993b0056f183385a9e9e67931932bce0e564d288164ad43b2cc1bf6cacfb1c"
+    },
+    "pr558-repair/frozen-70f297cb/pt-BR/Microsoft.TestPlatform.CommunicationUtilities.resources.dll": {
+      "bytes": 16416,
+      "sha256": "f2292ef0dd72f1a95892714f17e5d49259452e27332d54dbff308236a50d7d40"
+    },
+    "pr558-repair/frozen-70f297cb/pt-BR/Microsoft.TestPlatform.CoreUtilities.resources.dll": {
+      "bytes": 16928,
+      "sha256": "119f896f964ce17da4558c72b728d832fa19abc2dcf12bbed7cc386b741edd6b"
+    },
+    "pr558-repair/frozen-70f297cb/pt-BR/Microsoft.TestPlatform.CrossPlatEngine.resources.dll": {
+      "bytes": 21048,
+      "sha256": "ea5d8ecffcb9371d3e559e1d477ebdf5e7c3bd0663746fdccebd9330df2b9008"
+    },
+    "pr558-repair/frozen-70f297cb/pt-BR/Microsoft.VisualStudio.TestPlatform.Common.resources.dll": {
+      "bytes": 21048,
+      "sha256": "b33e6b979805fa9047ebfb7722c4c3b07b1d3706acc108883b8c30d77d10db72"
+    },
+    "pr558-repair/frozen-70f297cb/pt-BR/Microsoft.VisualStudio.TestPlatform.ObjectModel.resources.dll": {
+      "bytes": 24120,
+      "sha256": "976fae7c172b9170340633a3fe1a3f0ec6fc0731f4bf089ddaf611d60d446f40"
+    },
+    "pr558-repair/frozen-70f297cb/ru/Microsoft.TestPlatform.CommunicationUtilities.resources.dll": {
+      "bytes": 17440,
+      "sha256": "4b29d6fadb5b709c5c90f25a8934e6c3c58027cf35aa28c6ef7100ab30f9cd39"
+    },
+    "pr558-repair/frozen-70f297cb/ru/Microsoft.TestPlatform.CoreUtilities.resources.dll": {
+      "bytes": 17464,
+      "sha256": "67820043048cca339e29b563b1ed9da9f7d702b67c0cadd0b643f5781bc78789"
+    },
+    "pr558-repair/frozen-70f297cb/ru/Microsoft.TestPlatform.CrossPlatEngine.resources.dll": {
+      "bytes": 23072,
+      "sha256": "4970c26bed952eccea42fbd3c7064bdd690eb5a7e538a77ce78ffed487877d9b"
+    },
+    "pr558-repair/frozen-70f297cb/ru/Microsoft.VisualStudio.TestPlatform.Common.resources.dll": {
+      "bytes": 23096,
+      "sha256": "fcaedb770d94be752a6c9befe5d2b8219bb8d1bfce83f2dc9011fa4b7eebd00a"
+    },
+    "pr558-repair/frozen-70f297cb/ru/Microsoft.VisualStudio.TestPlatform.ObjectModel.resources.dll": {
+      "bytes": 26168,
+      "sha256": "f7084df5889cd4a8d141f73be63b267519ae4daa75c6394cf39c4a96fba35d68"
+    },
+    "pr558-repair/frozen-70f297cb/testhost.dll": {
+      "bytes": 49696,
+      "sha256": "92cbdf52db5249112f9f53f1fcdaf9f9aa3fce467141c688a31a7fe095e4d304"
+    },
+    "pr558-repair/frozen-70f297cb/testhost.exe": {
+      "bytes": 150576,
+      "sha256": "fb63eb314f25584a532683de7abf4ca8a0b43103f3699f5d5d87317338eeda76"
+    },
+    "pr558-repair/frozen-70f297cb/tr/Microsoft.TestPlatform.CommunicationUtilities.resources.dll": {
+      "bytes": 16952,
+      "sha256": "ef6bf78a0fd4613b1ffe8dc560b0f2f5cf2c05724fc8aed314f9ced18a90cf03"
+    },
+    "pr558-repair/frozen-70f297cb/tr/Microsoft.TestPlatform.CoreUtilities.resources.dll": {
+      "bytes": 16928,
+      "sha256": "a4d0c1d36f10425e39cdaade487220a9808e6f6954998644c57011fbeb3a33a0"
+    },
+    "pr558-repair/frozen-70f297cb/tr/Microsoft.TestPlatform.CrossPlatEngine.resources.dll": {
+      "bytes": 21024,
+      "sha256": "6ad665b04f30253b05acdbcf02196af45332a95091e112e55d2f2379273d9cac"
+    },
+    "pr558-repair/frozen-70f297cb/tr/Microsoft.VisualStudio.TestPlatform.Common.resources.dll": {
+      "bytes": 20536,
+      "sha256": "96efbcb535b02ad348598505210ae60b3d24ba7b8d364547ec89d353e891fae2"
+    },
+    "pr558-repair/frozen-70f297cb/tr/Microsoft.VisualStudio.TestPlatform.ObjectModel.resources.dll": {
+      "bytes": 23608,
+      "sha256": "5a392fba8650b4b574e5e7c42615f5c6d2a879c3838cf5b5219856185b33c8f5"
+    },
+    "pr558-repair/frozen-70f297cb/xunit.abstractions.dll": {
+      "bytes": 21928,
+      "sha256": "3166dc70323fb30ccf1cedb0fe86f2ad122c46d254542342d90386efc4c9285c"
+    },
+    "pr558-repair/frozen-70f297cb/xunit.assert.dll": {
+      "bytes": 187088,
+      "sha256": "bcd9711b22d227ac8cd4c1568e72433a0f576d2ec8aae64ac508081892015b1d"
+    },
+    "pr558-repair/frozen-70f297cb/xunit.core.dll": {
+      "bytes": 70352,
+      "sha256": "2f7feeec8c6dec7df684c25fb80aadb292b963d09723460f03d53c5ad2088acc"
+    },
+    "pr558-repair/frozen-70f297cb/xunit.execution.dotnet.dll": {
+      "bytes": 279760,
+      "sha256": "e70febe547c15f8155db3e2d95c3ba4445a59cbc21a3e7541ab22ed49d3dcf7b"
+    },
+    "pr558-repair/frozen-70f297cb/xunit.runner.visualstudio.testadapter.dll": {
+      "bytes": 1251840,
+      "sha256": "98a7395cd6abd03d0ac8eeb82d720c24db00602f047ca49bd6e88e77fc6d1153"
+    },
+    "pr558-repair/frozen-70f297cb/zh-Hans/Microsoft.TestPlatform.CommunicationUtilities.resources.dll": {
+      "bytes": 16416,
+      "sha256": "61e5b362940ca90e3b89a452218fb1d3882aea679a1b73e6ad868d0ac1bb88fc"
+    },
+    "pr558-repair/frozen-70f297cb/zh-Hans/Microsoft.TestPlatform.CoreUtilities.resources.dll": {
+      "bytes": 16928,
+      "sha256": "4a8c0ef1c60069942082fa7493dbe683033e14e15dff09c8ba8c230e2a4443c6"
+    },
+    "pr558-repair/frozen-70f297cb/zh-Hans/Microsoft.TestPlatform.CrossPlatEngine.resources.dll": {
+      "bytes": 20008,
+      "sha256": "0b12a586cd3759757f641a6219f491aff7c5fbdf603a6339b98faa57ce6eb7c0"
+    },
+    "pr558-repair/frozen-70f297cb/zh-Hans/Microsoft.VisualStudio.TestPlatform.Common.resources.dll": {
+      "bytes": 20040,
+      "sha256": "8fb34ecf4343a77647006f0ad1fb41e8c4dd48cf38fe97b93c345b743f538908"
+    },
+    "pr558-repair/frozen-70f297cb/zh-Hans/Microsoft.VisualStudio.TestPlatform.ObjectModel.resources.dll": {
+      "bytes": 23072,
+      "sha256": "396cc3c959cfc9f24bbe7a2d38846dfb97b696a9610eb95234306cbcdebd4f06"
+    },
+    "pr558-repair/frozen-70f297cb/zh-Hant/Microsoft.TestPlatform.CommunicationUtilities.resources.dll": {
+      "bytes": 16416,
+      "sha256": "b411fe26d281ec982d0432f1b0bce2c1c86f200d17e837bbbe91086f8e38270f"
+    },
+    "pr558-repair/frozen-70f297cb/zh-Hant/Microsoft.TestPlatform.CoreUtilities.resources.dll": {
+      "bytes": 16952,
+      "sha256": "a9012f419d3b66a730d635760f63fea1721a63b2105a4146c2d1309bb6f31b14"
+    },
+    "pr558-repair/frozen-70f297cb/zh-Hant/Microsoft.TestPlatform.CrossPlatEngine.resources.dll": {
+      "bytes": 20552,
+      "sha256": "540bee11c69534fc48bb4a9626683a6203e9f1f4bae15ff72069eaf9f65f5e81"
+    },
+    "pr558-repair/frozen-70f297cb/zh-Hant/Microsoft.VisualStudio.TestPlatform.Common.resources.dll": {
+      "bytes": 20024,
+      "sha256": "d69e7127de46141b6406fd968d4a66271dda99271701f912d56ce6813af48cf2"
+    },
+    "pr558-repair/frozen-70f297cb/zh-Hant/Microsoft.VisualStudio.TestPlatform.ObjectModel.resources.dll": {
+      "bytes": 23096,
+      "sha256": "b90f264a4d72987fd0aa0d11fc51dd248f831740bcd72d281045e16936fda16b"
+    },
+    "pr558-repair/summarize-validation.py": {
+      "bytes": 1431,
+      "sha256": "d3f25d755301383136739f8d233d0b3609938ca09fc4cc37775f435f165e9a77"
+    },
+    "pr558-repair/validate.py": {
+      "bytes": 2639,
+      "sha256": "076d9afc25b5cb6d3cb90aaf45855e25168a21a3c6499642e8fe02c08c1cd3a3"
+    },
+    "pr558-repair/validation-70f297cb/FastExpressionCompiler.LightExpression.log": {
+      "bytes": 1036,
+      "sha256": "a2650dd71a9a94f6bd688e0116e013a86978c65a8f90f0539c2940002439ed04"
+    },
+    "pr558-repair/validation-70f297cb/FastExpressionCompiler.log": {
+      "bytes": 828,
+      "sha256": "af7f2b048152af4b033032a8e7ade4b52fad69aa17bfb889c735dcce9af36d5e"
+    },
+    "pr558-repair/validation-70f297cb/codes.json": {
+      "bytes": 225,
+      "sha256": "ceb7bde5297d0612f401de15f0198a46b25f729367c5ece2d1e449250cfa364b"
+    },
+    "pr558-repair/validation-70f297cb/framework-build.log": {
+      "bytes": 1457,
+      "sha256": "ee91396f8d8ba797aaf43787fac5715b0d1e8ec8c2d0fc226162d327cb2935d8"
+    },
+    "pr558-repair/validation-70f297cb/framework-run.log": {
+      "bytes": 580,
+      "sha256": "8f67db35cdbe18f8965758b04bbca76b3a80e2f7f7e7dd93c7e8dbf9e8c0c8a0"
+    },
+    "pr558-repair/validation-70f297cb/imported-build.log": {
+      "bytes": 14848,
+      "sha256": "cfdadd6a3ecc13eeb1deb2b75a4c58c55fae74f5642f480d7bcd2920e4a5dde5"
+    },
+    "pr558-repair/validation-70f297cb/imported-full.log": {
+      "bytes": 474,
+      "sha256": "e76f734db6e200d90acf0768de5ab03848f0d548faa7a31b30fdb3483dec0bb7"
+    },
+    "pr558-repair/validation-70f297cb/native-net10.0.log": {
+      "bytes": 197,
+      "sha256": "22f146512ceb1c4b585d356ffef19dc7909bcf7932762f873456195f23fbc249"
+    },
+    "pr558-repair/validation-70f297cb/native-net8.0.log": {
+      "bytes": 197,
+      "sha256": "6dc4cfe49de4db0c3968a5986ab145c5e1ecb57e952e74fb6be2adec21c8d465"
+    },
+    "pr558-repair/validation-70f297cb/snapshot.json": {
+      "bytes": 238,
+      "sha256": "2c29f710394d430f1044733e9b7b92628d63c7cc7e9dff425a65aaff2c32b501"
+    },
+    "pr558-repair/validation-70f297cb/suite/assembly-manifest.json": {
+      "bytes": 336,
+      "sha256": "19ecf803ab8d4211f7316ca67c6198c17a589f5932ef2b0b042c99cbcb5e9037"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-01/01-observations.jsonl": {
+      "bytes": 230756,
+      "sha256": "6b34ccea2ae95586b21b05c176d6d6781e4d2cd94c343848b1cd655ae6646e8c"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-01/01.log": {
+      "bytes": 402,
+      "sha256": "fe3f6e388437e2e88a8fd97c5ce029fd3f91023fe35edddbfc54bab680a09dc6"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-01/01.trx": {
+      "bytes": 3324887,
+      "sha256": "2bee3e25a967884c3a69d95a33c3db6d81089b0685587bcbb9dcc2375511a110"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-01/current.txt": {
+      "bytes": 96,
+      "sha256": "29ccd28b72ecffa002821882c67cc77769aad9fdcff8e0cc96f5c46132e6e77c"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-01/run.json": {
+      "bytes": 1099,
+      "sha256": "08c34d932a7cfc43f545225633fbb24717c582c032f5609015a7284fa2fe17be"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-02/01-observations.jsonl": {
+      "bytes": 85711,
+      "sha256": "706e4b2dea510e2c90a335853be7b4f7ea856d8e0392cf6be9f96294080861d0"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-02/01.log": {
+      "bytes": 405,
+      "sha256": "469462e6956d215e76ccfa954c0954ab7bff8df361dd64b29773dba065dfe165"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-02/01.trx": {
+      "bytes": 1084165,
+      "sha256": "25ac05f6e470e1401bad094002c6530efb17e8799a1e53003f7a39edf23ebb7a"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-02/current.txt": {
+      "bytes": 83,
+      "sha256": "24e05d720b5c343c017a103f675ba3b2d0a730ca7259c09f3cfd5b149187ae83"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-02/run.json": {
+      "bytes": 1108,
+      "sha256": "d5646b772cf02dc5bd5264563ce1f34670af36a12228e16b76641735e16699de"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-03/01-observations.jsonl": {
+      "bytes": 504389,
+      "sha256": "cb373b1fd365571fb778ee147a36e712ade83b04ac2ab9d5f55926ba221908c0"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-03/01.log": {
+      "bytes": 403,
+      "sha256": "e12547ae3f3b53e1581e9a25eecacd0e314530849cc7210ac54a86da8becdd9b"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-03/01.trx": {
+      "bytes": 4628060,
+      "sha256": "a852ce2496892fe71354c9778e217acf7f08be7a28133d44ae33b31536e8184a"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-03/current.txt": {
+      "bytes": 61,
+      "sha256": "1269c01abb38251d1d1a980438383264269e8b1f0f1d9595a17587e53daa83a3"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-03/run.json": {
+      "bytes": 1118,
+      "sha256": "2336992d203911e7e1cb6048be2276c7cd344a1ab534d9e83fd8c40166d8c78d"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-04/01-observations.jsonl": {
+      "bytes": 70542,
+      "sha256": "9d9fe06f0f6b286a92bde38e0c780cc2922942db123d181332c1e786ce163c9e"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-04/01.log": {
+      "bytes": 402,
+      "sha256": "929a95e509a06af9235a3446fc2637157521d4bf504fa418c0a8f1b382925a18"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-04/01.trx": {
+      "bytes": 847309,
+      "sha256": "12b26c6484f1fc5dc0642f6b4e7ee9188d4d2df8689fc2af309ae46e873917ee"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-04/current.txt": {
+      "bytes": 78,
+      "sha256": "a9a3af4c7e833d51bf6c7015eae0675c5c15b42b2a6eb83bb0ec67ff2d7dbb2a"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-04/run.json": {
+      "bytes": 1178,
+      "sha256": "cb785cf0dd56be4d7fd217a208b166967183a07cd649b9fe20750ecd3f5d9fe1"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-05/01-observations.jsonl": {
+      "bytes": 25417,
+      "sha256": "9fbe254dbc0fe33eb7e8b011ddec1723f9710f6f73dd753df48eacd8ccbb9c45"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-05/01.log": {
+      "bytes": 402,
+      "sha256": "bff8020010105a1dec8988f591cc70acc1714ae07ab72947ee3386cd25fed3b5"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-05/01.trx": {
+      "bytes": 321961,
+      "sha256": "f5f73eba7fc5f53321de009ee1b943b0d2b981718ba7f99a40b7f40eb92e914d"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-05/current.txt": {
+      "bytes": 63,
+      "sha256": "d3e830ca8c1084af3a7541f732c15b711bedfc75d8b82ecf0fcb7108cfb9e7cd"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-05/run.json": {
+      "bytes": 1196,
+      "sha256": "99b1c3e660424f833cfbea438cc48ba5918094da2e9ed06c3c55e97c0f2c9e23"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-06/01-observations.jsonl": {
+      "bytes": 143100,
+      "sha256": "b359c35e04f1ad02f7646a6e4c269aa539abe9daa8576f85ee3c1bb92c77dfbc"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-06/01.log": {
+      "bytes": 402,
+      "sha256": "b97ea7a4eefef0c19698702ac5725a890bec829029e5192988d9f6cccc820572"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-06/01.trx": {
+      "bytes": 1363131,
+      "sha256": "919a2605b16e44d7a24b681e3a08dab919aa76efe92bac909dc13732cbdfcdee"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-06/current.txt": {
+      "bytes": 91,
+      "sha256": "26c269ce3c07fe5f82c542d3376ebc9a34eefe3ec099730315c38c2e482ba729"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-06/run.json": {
+      "bytes": 1098,
+      "sha256": "26acb2cd1acee060efa0fccb6f3102e9b37271463cea7d67ce3f5a815db5139a"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-07/01-observations.jsonl": {
+      "bytes": 431544,
+      "sha256": "46c2dcb7e925f565d201cd65760d5d25c6adcfd53e501921bf076c9a8c054d2e"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-07/01.log": {
+      "bytes": 402,
+      "sha256": "ea80a413560003970eea07ef25914fe0f1a6dcdee601686ad00189e8fa370e57"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-07/01.trx": {
+      "bytes": 5384614,
+      "sha256": "8b2d9a82c5d58e7f6587a499b6039fdd7c9dc14b9717f9c406ee52e87003d797"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-07/current.txt": {
+      "bytes": 85,
+      "sha256": "ad8c09b4b1a4f2784666713a60978eec1f17f889870a4c8c2c8b3b7aa67cd917"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-07/run.json": {
+      "bytes": 1133,
+      "sha256": "92f07fbe7dcba787c610160e11131a0032862874741f37121704750b64f3f066"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-08/01-observations.jsonl": {
+      "bytes": 119086,
+      "sha256": "21b3018f89c0a390b7bf94b2b8117a5c60a4eb43a1678920001ff2631411f0bb"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-08/01.log": {
+      "bytes": 402,
+      "sha256": "f8d2916a1cd71d9efb8b282e57025d7520245161cf770e29881a1de539a42d1e"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-08/01.trx": {
+      "bytes": 1495283,
+      "sha256": "0b5c2b4e62650a47ce3111002461b6e801f95f634f79a1b5b855a365bd305e08"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-08/current.txt": {
+      "bytes": 60,
+      "sha256": "2b7c37cadad7fc50b1154dccd2a6be13120212a3ebaba7a1f4ea6732d1431199"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-08/run.json": {
+      "bytes": 1166,
+      "sha256": "5a9e83280add76b98239444da22ff5e967e41edc014be56ac8b7fdf66615cad4"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-09/01-observations.jsonl": {
+      "bytes": 47801,
+      "sha256": "7561d9c2f5f036861030640837bb8ec8ffc1983949669302b67d0f498187a37e"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-09/01.log": {
+      "bytes": 402,
+      "sha256": "de0a6db19d9b3a640b95627f6d7e28836cfd1ca09d71d3405a6104ac3c6d6ada"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-09/01.trx": {
+      "bytes": 603749,
+      "sha256": "aaa2f2a8c6382e07a6c0faf176f24322dc9d9a923df18dfbf3f87dba72d4ce90"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-09/current.txt": {
+      "bytes": 55,
+      "sha256": "10fac9eda7abf63cf91126fb4f128b6f851ecb70194afa2beb586dcbcc7418c3"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-09/run.json": {
+      "bytes": 1119,
+      "sha256": "384d9115613b4f8cb550bf39e73d6f3e81ec573e4be139d1a304fba0b339ddb1"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-10/01-observations.jsonl": {
+      "bytes": 33596,
+      "sha256": "6a56d200b23e585a596e0d11c5283f254ea10712002ed7cb7775c2a3eb886160"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-10/01.log": {
+      "bytes": 403,
+      "sha256": "158e7399ff665584927d1427b8f9eacbe3e6fc0161e3a78e2b1371cd26094ae0"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-10/01.trx": {
+      "bytes": 403668,
+      "sha256": "2cff9e9971d0804fc0593f4718dedb67e95979641b93ffc20c6619c289338cf7"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-10/current.txt": {
+      "bytes": 72,
+      "sha256": "be0416f203c05c3f9329baa901c889212651689642e3629106b3d0c45e64b5fd"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-10/run.json": {
+      "bytes": 1184,
+      "sha256": "86db272001a3261a37d2ba565112639c4f69141b0be1a79a09e851867d42e6cb"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-11/01-observations.jsonl": {
+      "bytes": 29867,
+      "sha256": "74920ad32ef8da558bd9f4bfcc982bf1ad026f47971ae51777c611c0f6a5edd1"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-11/01.log": {
+      "bytes": 402,
+      "sha256": "46e73a4cdb1c26add0a7b556ccdd7807b2426f6b1434d79c5859e72f96019561"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-11/01.trx": {
+      "bytes": 370674,
+      "sha256": "597a5e4c259f77c37d62376d003030b2d5349a7a65774c65aee10b6d393e13f1"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-11/current.txt": {
+      "bytes": 75,
+      "sha256": "3459c3d0a7a0ede6e596e3334ef39a522e5265650a6e9465152850612b358c30"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-11/run.json": {
+      "bytes": 1220,
+      "sha256": "a26d0610d009dc6e50b2ee63b12783d89315aedc785041bafd7ab190df3f45b1"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-12/01-observations.jsonl": {
+      "bytes": 36680,
+      "sha256": "0ee0e9a230cb82d46e8621fd3d1352d44c10779b340371fdf979ee2ee10a51e2"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-12/01.log": {
+      "bytes": 402,
+      "sha256": "dc16b9d654ec473512b2bb83eeda8102ddcbcc48800d6831165966e4939a1440"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-12/01.trx": {
+      "bytes": 384820,
+      "sha256": "0e0ff8ffc022c41c7bfbe636224830595d7dc48d39a47e8e03871b8edceb3ddf"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-12/current.txt": {
+      "bytes": 92,
+      "sha256": "1e5e4cbaa64356ce233b2134d59e2406714cbdb93adcfbbde3fbaccd33fa92ac"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-12/run.json": {
+      "bytes": 1322,
+      "sha256": "68419ab6e5c75e9d79361fb9eaf72878be93dcc54bcdf4a7d28791a265072779"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-13/01-observations.jsonl": {
+      "bytes": 41447,
+      "sha256": "7dcee30eff920e17fa4c85c6573eefee85764260971733cdb3822bccab554675"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-13/01.log": {
+      "bytes": 402,
+      "sha256": "7bf444f348e1b53a807efcaf71c7517cbd64a4c6a67533ad9bcc39c6baab6eb7"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-13/01.trx": {
+      "bytes": 510518,
+      "sha256": "56e8a030891e865fef96b1216daf901a87f9e35933b8e84cb4e1a37e0fb05be8"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-13/current.txt": {
+      "bytes": 93,
+      "sha256": "cc49a9ca51c950fbd507fcdc79b516342b51da55e35f13c92a420f69137cf3a9"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-13/run.json": {
+      "bytes": 1151,
+      "sha256": "96f7894662172016368cd3c5d7a6ff9e2c12c8951ebc3c88b4204525348d383d"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-14/01-observations.jsonl": {
+      "bytes": 99489,
+      "sha256": "1b152299aaf16a36cc307b643182252660ae2cbd643f32b8fdcdda617255b29c"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-14/01.log": {
+      "bytes": 402,
+      "sha256": "45d892102cada4ec198bc8f8457e4a24530eff0e1b07bc9174cca9fd90246129"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-14/01.trx": {
+      "bytes": 899731,
+      "sha256": "45949734fe6daf0a71529069d49d1aa2a4c952f4a1614e933d990894bf2266c0"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-14/current.txt": {
+      "bytes": 61,
+      "sha256": "15a9f771edb86f1b519f4274d19ba6c54a95f535ee34b21be7bed0413de49b5b"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-14/run.json": {
+      "bytes": 1235,
+      "sha256": "ed2dab8fecc4455c9322ecbbe2074f7f0f843a2e3e13fcabe9050afb0220bdd4"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-15/01-observations.jsonl": {
+      "bytes": 168103,
+      "sha256": "b3e29b2fcb7fca84603cd621e3e732bb0c05f28a8dcc45bcb5bdf0e86a289b1b"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-15/01.log": {
+      "bytes": 402,
+      "sha256": "0d960989c478904947d35a7a58b9928aa53c4c89cb95dd462e01bf59884c9cee"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-15/01.trx": {
+      "bytes": 1574173,
+      "sha256": "309a95b3cb8deb571085b00fe5aa020950460e1575edbd23c79f4cce638a387e"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-15/current.txt": {
+      "bytes": 108,
+      "sha256": "5238e8adc35f0eab4efb2b44841938c7660f3c4be7b5a022b2d7a26c3c995f06"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-15/run.json": {
+      "bytes": 1247,
+      "sha256": "d5e0fbc0eccef3d9cdf388d178f495e50da5314464216b6c7ab9ce72c2f8e007"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-16/01-observations.jsonl": {
+      "bytes": 295966,
+      "sha256": "3952e7ba085e24b8f91fb284e2e724de6ecc0da81069f6a98181fe4c799d55b9"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-16/01.log": {
+      "bytes": 402,
+      "sha256": "02096a61f41383310f1d924df5411952590395ab38651b867d0fd8343615db13"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-16/01.trx": {
+      "bytes": 3759378,
+      "sha256": "70e1a28bd96d4b681ed7528bb592e465e1e276761a632e44fa4a318ee356f0b1"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-16/current.txt": {
+      "bytes": 74,
+      "sha256": "e78ed545846daa288d872f55542f5c4318905f62af9d15f376ea1d3cf38960f7"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-16/run.json": {
+      "bytes": 1171,
+      "sha256": "62b1b2027310f671f5bd72fb85af7c446650fcea2eb338d91146fca588f1c1be"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-17/01-observations.jsonl": {
+      "bytes": 46713,
+      "sha256": "901d0a0e57aaba8b5cdc787444007cf96fe7e89cfe100bb9f4b961bf6e1b861d"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-17/01.log": {
+      "bytes": 402,
+      "sha256": "1b663e928ceac336af015a7f719d67fc648ec7411d982ff014e3893b096fe21d"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-17/01.trx": {
+      "bytes": 620643,
+      "sha256": "e44e62340a87beae13e87d8c22df531a9461736a94936465c9f2bafe1a706cc2"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-17/current.txt": {
+      "bytes": 68,
+      "sha256": "bd0810526a3a053936c0837252a8daad81e070ccf25a28f0e7162d84b9bf921a"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-17/run.json": {
+      "bytes": 1208,
+      "sha256": "292a1a136e575e487b6e5abee05066d5bc4b2cabd2e0848f9cf780142ba24aaa"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-18/01-observations.jsonl": {
+      "bytes": 1139954,
+      "sha256": "85416f1b45fac3d3ee55dca4d38b3b6912b39ed7aac001875ed2d342ed9cdaa1"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-18/01.log": {
+      "bytes": 402,
+      "sha256": "75f26067869cc45aa4f68a12b553540ebe0d15f1850f2ce36b193853ef0d5911"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-18/01.trx": {
+      "bytes": 9167865,
+      "sha256": "94f9ca323bfd9d34186345c28c512bf822757eefe0b223e203839f4f833ac30f"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-18/current.txt": {
+      "bytes": 76,
+      "sha256": "15d7a7c17b4b76ee3680d3a524ce958c09a597bd39f075686463987aacf6faac"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-18/run.json": {
+      "bytes": 1301,
+      "sha256": "8971c3b329c9cacee219079bc842f88a20f607cf118addebe8fdce8bb696fad1"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-19/01-observations.jsonl": {
+      "bytes": 32722,
+      "sha256": "8cf87f46c09500196cfc1e9c2ada04a3707ac961471e72a10058c787eea13b0b"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-19/01.log": {
+      "bytes": 405,
+      "sha256": "dbb34b5dddebb617e3d49bc325f637bb2a50388a09d7520bf1514b25ac717617"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-19/01.trx": {
+      "bytes": 359470,
+      "sha256": "20b3b80a9004d072e8a7c49691825e95ab8c1cc9cbf64f429ecc7753c75cfc76"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-19/current.txt": {
+      "bytes": 87,
+      "sha256": "b67f9567fe8c137b364bd35712fec6d2f394a73383ab7846a311883ddafb81a2"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-19/run.json": {
+      "bytes": 1195,
+      "sha256": "d03fb3b08f3f047db71da8a40cdd1cff1228d67175da79dde4ad7b0bae977b63"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-20/01-observations.jsonl": {
+      "bytes": 48761,
+      "sha256": "1414211c69886b84fc0672615684283bceff884c815dd065c38efb4d52438cb5"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-20/01.log": {
+      "bytes": 405,
+      "sha256": "2233a15e7208a7385cd3f5af05ca2a001ab891cc9de866afa2dfd06e8c48fe36"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-20/01.trx": {
+      "bytes": 675068,
+      "sha256": "6893fb16fa4887999197f365757e4b3e9d3af1b61cc91e33d7ff14f1650e5e6f"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-20/current.txt": {
+      "bytes": 80,
+      "sha256": "3443384e2ff868c52313d980cea8afcf176234960cb894f7ee2c5cc632d068ae"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-20/run.json": {
+      "bytes": 1160,
+      "sha256": "e83c10cc503a46f9118937697d17d3fe55b2853033c34bf96048cd298e590a9c"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-21/01-observations.jsonl": {
+      "bytes": 1471,
+      "sha256": "0f4409c66abdd9cbccba15538c397740869c1eef54022c2c6e1647df53231b3b"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-21/01.log": {
+      "bytes": 404,
+      "sha256": "25ad13ae09f64ee8870f26a50a49467ada06874852fa3cebefdbeb4ab4eec4d2"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-21/01.trx": {
+      "bytes": 19676,
+      "sha256": "280ee127de571fa24d002687ae89b656c64feca618bcbce6507cd416613799a7"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-21/current.txt": {
+      "bytes": 74,
+      "sha256": "31e92e6ac1c895bc6bd49bf24dcd996e42d9e2eaf94582bd3696efaddcf782be"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/batch-21/run.json": {
+      "bytes": 707,
+      "sha256": "91ea9621eaa5b96be9f9fb6f3f3b81fc0eb476d0fa89635271eb7d5b36c845e2"
+    },
+    "pr558-repair/validation-70f297cb/suite/fec/run.json": {
+      "bytes": 27599,
+      "sha256": "719eaad4e526e93ac55aff201b00aef6b8e1579a01e29924c34d68a82fcc58e3"
+    },
+    "pr558-repair/validation-70f297cb/suite/stress/fec/run.json": {
+      "bytes": 45,
+      "sha256": "6185ebff8c112b8abba9645cde345bcc4152065c4883f1572f0ba350b045a997"
+    },
+    "pr558-repair/validation-70f297cb/suite/stress/fec/stress.log": {
+      "bytes": 405,
+      "sha256": "9a35bc0dce60c2de74ba7b0573b0581b4d3d9ad706c87dffb99b26ce15106360"
+    },
+    "pr558-repair/validation-70f297cb/suite/stress/fec/stress.trx": {
+      "bytes": 4077,
+      "sha256": "c7d9f695bf51c95c64ddf043087256a1069a9ca374fbdeb3cc1c9275d5e427dd"
+    },
+    "pr558-repair/validation-70f297cb/validation.json": {
+      "bytes": 1297,
+      "sha256": "78e1302c963e2a51ef74e1ab01723ae768a66a582345aa0f22640b68259d1497"
+    },
+    "pr558-round4/publication/GenerateReport.py": {
+      "bytes": 33793,
+      "sha256": "95d107ecfd559477a5f4af597b4297c323993aa208af4d73128ff8bca0eb5af4"
+    },
+    "pr558-round4/publication/Package.py": {
+      "bytes": 8038,
+      "sha256": "4a8b631f9d346eefbe3c5aa952517beefecf8a01c24ab4e0d7fb0ea8a5d82490"
+    },
+    "pr558-round4/publication/README.txt": {
+      "bytes": 2583,
+      "sha256": "6491550dd0b48eff5f9b8d152ae814176fcf7c91f6dd2a927b19e8df7ad8308c"
+    },
+    "pr558-round4/publication/REPORT.txt": {
+      "bytes": 6503,
+      "sha256": "6c732c1649241113b54ec192d54cdc0dcd289b42f035d803ae42c0f44a3f542d"
+    },
+    "pr558-round4/publication/VALIDATION-REPRODUCTION.txt": {
+      "bytes": 1707,
+      "sha256": "bfa2e93c4896474aa4dda6a5dae1a94299d50ec730840ff34f72dc5b8857ba54"
+    },
+    "pr558-round4/publication/final-state.json": {
+      "bytes": 4265,
+      "sha256": "9d4a134f2cdd83497c6fb1c265d4de36c12b0523cf547199c86b8d60dcac09ef"
+    },
+    "pr558-round4/publication/hash-inventory.json": {
+      "bytes": 572127,
+      "sha256": "a75f6299dcb71d845cba6f614e06138eebf69ac80680fb71ce5af0353c84708e"
+    },
+    "pr558-round4/publication/inventory-summary.log": {
+      "bytes": 1573,
+      "sha256": "535a8cf1c0237b4eab6e13b36f17cb255285d7d0a3b1c6758180227b24e94794"
+    },
+    "pr558-round4/publication/package-inventory.json": {
+      "bytes": 3587,
+      "sha256": "80e458624c6549ed3805b8642ba0cc2561af679febf32cff8456f84d337f8ba3"
+    },
+    "pr558-round4/publication/pr558-before-body.txt": {
+      "bytes": 18099,
+      "sha256": "f1fe5d161ef8a5b33d9ca8ba8c39ee97c1cb9c0effa3ba531a2458168beea4e0"
+    },
+    "pr558-round4/publication/pr558-before.json": {
+      "bytes": 18467,
+      "sha256": "fd708e3a12c5c77b93753ac2b095e3f47cffdc6ade91e6448e0c17be3f965eca"
+    },
+    "pr558-round4/publication/pr558-description-draft.txt": {
+      "bytes": 24637,
+      "sha256": "0941981bde2e3e0fb8617fe4a9f2e41cb09d1e65e822947a1b068c8c186d0223"
+    },
+    "pr558-round4/publication/pr558-measurement-comment-draft.txt": {
+      "bytes": 6188,
+      "sha256": "33f31e71147a8390e19f6a7ad0b8363c9512b91f234335bea43d6e4f11503b11"
+    },
+    "pr558-round4/publication/report-data.json": {
+      "bytes": 4820,
+      "sha256": "f6d2e64403644476282f77c2236905ae0f45846e7316d353dbcf39de5259cd19"
+    },
+    "pr558-round4/publication/report.html": {
+      "bytes": 755166,
+      "sha256": "6b135b317407aac32edfc55d81bbea8e31b5132b4303d7fada84169155c533c6"
+    }
+  },
+  "excludedDirectories": [
+    ".git",
+    ".vs",
+    "__pycache__",
+    "artifacts",
+    "node_modules",
+    "obj"
+  ],
+  "excludedSuffixes": [
+    ".dmp",
+    ".etlx",
+    ".zip"
+  ],
+  "scope": "Archives preserve measured snapshots, raw rows, binaries and relative layouts. Frozen42f evidence is not relabeled as final combined code performance."
+}

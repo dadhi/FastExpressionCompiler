@@ -951,7 +951,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Equal(9, func());
         }
 
-        [Theory, InlineData(true)]
+        [SystemInterpreterOnlyFilterTheory("VerifiedCompilerCompatibilityBehaviorTests.NestedFilterRegionsAreRejectedByCompiledBackends"), InlineData(true)]
         public void TryFinallyWithinFilter(bool useInterpreter)
         {
             TryExpression tryExp = Expression.TryCatch(
@@ -1015,7 +1015,7 @@ namespace System.Linq.Expressions.Tests
             }
         }
 
-        [Theory, InlineData(true)]
+        [SystemInterpreterOnlyFilterTheory("VerifiedCompilerCompatibilityBehaviorTests.NestedFilterRegionsAreRejectedByCompiledBackends"), InlineData(true)]
         public void TryCatchWithinFilter(bool useInterpreter)
         {
             TryExpression tryExp = Expression.TryCatch(
@@ -1045,7 +1045,7 @@ namespace System.Linq.Expressions.Tests
             TryCatchWithinFilter(false);
         }
 
-        [Theory, InlineData(true)]
+        [SystemInterpreterOnlyFilterTheory("VerifiedCompilerCompatibilityBehaviorTests.NestedFilterRegionsAreRejectedByCompiledBackends"), InlineData(true)]
         public void TryCatchThrowingWithinFilter(bool useInterpreter)
         {
             TryExpression tryExp = Expression.TryCatch(

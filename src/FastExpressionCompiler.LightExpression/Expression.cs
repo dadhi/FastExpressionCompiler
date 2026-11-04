@@ -1340,20 +1340,21 @@ public abstract class Expression
     public static ElementInit ElementInit(MethodInfo addMethod, IEnumerable<Expression> arguments) =>
         ElementInit(addMethod, arguments.AsReadOnlyList());
 
+    [RequiresUnreferencedCode(Trimming.Message)]
+    // The outer tree still consists of LightExpression nodes. A parameter or constant
+    // may hold a System Expression<TDelegate> as runtime data; Invoke compiles that
+    // value and invokes its delegate. This does not mix System nodes into the tree.
+    private static Type GetInvocationReturnType(Expression expression) =>
+        expression is LambdaExpression directLambda ? directLambda.ReturnType :
+        expression is UnaryExpression quote && quote.NodeType == ExpressionType.Quote && quote.Operand is LambdaExpression lambda
+            ? lambda.ReturnType
+            : (expression.Type.FindExpressionCompileMethod()?.ReturnType ?? expression.Type).FindDelegateInvokeMethod().ReturnType;
+
     public static InvocationExpression Invoke(LambdaExpression expression) =>
         new NotNullExpressionInvocationExpression(expression);
 
     public static InvocationExpression Invoke(LambdaExpression expression, Expression a0) =>
         new OneArgumentInvocationExpression(expression, a0);
-
-    [MethodImpl((MethodImplOptions)256)]
-    [RequiresUnreferencedCode(Trimming.Message)]
-    private static Type GetInvocationReturnType(Expression expression) =>
-        expression is LambdaExpression lambda
-            ? lambda.ReturnType
-            : expression is UnaryExpression unExpr && unExpr.NodeType == ExpressionType.Quote && unExpr.Operand is LambdaExpression quotedLambda
-                ? quotedLambda.ReturnType
-                : expression.Type.FindDelegateInvokeMethod().ReturnType;
 
     [RequiresUnreferencedCode(Trimming.Message)]
     public static InvocationExpression Invoke(Expression expression, Expression a0) =>
@@ -6063,11 +6064,10 @@ public sealed class TypedReturnManyParametersExpression<TDelegate> : ManyParamet
         : base(body, parameters) => ReturnType = returnType;
 }
 
-// todo: @feature is not supported yet
 public sealed class DynamicExpression : Expression
 {
     public override ExpressionType NodeType => ExpressionType.Dynamic;
-    public override Type Type { get;}
+    public override Type Type { get; }
     public Type DelegateType { get; }
     public CallSiteBinder Binder { get; }
     public IReadOnlyList<Expression> Arguments { get; }

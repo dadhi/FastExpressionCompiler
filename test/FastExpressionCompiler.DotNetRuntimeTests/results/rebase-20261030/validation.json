@@ -1,0 +1,52 @@
+{
+  "date": "2026-10-30",
+  "base": "6702eab6e7dbd4141b0cafedeb7b5360d547aa1d",
+  "validated_code_revision": "e5a8c804915560c9f0e5d75a02320509585179ed",
+  "previous_published_head": "02a794a9ae45395027372bd71022411cab06b64c",
+  "commits_above_master": 188,
+  "merge_commits": 0,
+  "solution_build": "passed",
+  "native_net10": {
+    "registered_testx": "passed",
+    "legacy_passed": 1760
+  },
+  "native_net8": {
+    "registered_testx": "passed",
+    "legacy_passed": 1759
+  },
+  "native_net472": {
+    "testx_passed": 1045,
+    "legacy_passed": 1643,
+    "culture": "en-US"
+  },
+  "runtime_suite": {
+    "trx_counters": {
+      "total": "35147",
+      "executed": "35088",
+      "passed": "35088",
+      "failed": "0",
+      "error": "0",
+      "timeout": "0",
+      "aborted": "0",
+      "inconclusive": "0",
+      "passedButRunAborted": "0",
+      "notRunnable": "0",
+      "notExecuted": "0",
+      "disconnected": "0",
+      "warning": "0",
+      "completed": "0",
+      "inProgress": "0",
+      "pending": "0"
+    },
+    "skipped_results": 59
+  },
+  "new_skips": 0,
+  "performance_measured_on_this_rebase": false,
+  "log_sha256": {
+    "build.log": "c2fc5a946617531705ad49f19eb362ac8e80b7a76e01df8d882df0cedf990542",
+    "native-net10.log": "b03c119575e0e38f48afd1689847afe83dc124667e09c30f59b6eb0b80886be3",
+    "native-net8.log": "4889e75470a1c05093901bf253ba192a97734605e3b6d89ed6d64d5ed6b392fc",
+    "native-net472.log": "6d8ac338198162fdab65fa06f7b9780ddbf21b19d6e2b1512074d0007528a7f9",
+    "runtime-final.log": "062858895b827a86a32b2aa13477d830908377522bb2d9c3eb27bad13e88ce02"
+  }
+}
