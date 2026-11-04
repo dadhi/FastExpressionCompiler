@@ -63,6 +63,7 @@ namespace FastExpressionCompiler.UnitTests
             var ltTask = Task.Run(() =>
             {
                 var ltStopwatch = Stopwatch.StartNew();
+                lt.Run(new LightExpression.UnitTests.ExcessiveArityRegressionTests());
 #if NET8_0_OR_GREATER
                 lt.Run(new LightExpression.UnitTests.NestedStructFieldAddressRegressionTests());
                 lt.Run(new LightExpression.IssueTests.Issue490_Regression_in_compiling_lambdas_with_ref_struct_parameters());
@@ -86,6 +87,7 @@ namespace FastExpressionCompiler.UnitTests
             });
 
             var stStopwatch = Stopwatch.StartNew();
+            st.Run(new ExcessiveArityRegressionTests());
             st.Run(new NestedStructFieldAddressRegressionTests());
             st.Run(new Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
             st.Run(new Issue561_NonBooleanEqualityOperator());
