@@ -482,8 +482,11 @@ namespace FastExpressionCompiler
             var count = paramExprs.GetParamCount();
             if (count == 0)
                 return _closureAsASingleParamType;
-
-            var pooledOrNew = count < 8 ? Interlocked.Exchange(ref _paramTypesPoolWithElem0OfLength1[count], null) ?? new Type[count + 1] : new Type[count + 1];
+            // The hidden closure argument also counts toward the CLI signature limit.
+            // The pooled small-signature path is already below that limit.
+            var pooledOrNew = count < 8 ? Interlocked.Exchange(ref _paramTypesPoolWithElem0OfLength1[count], null) ?? new Type[count + 1] :
+                count < ushort.MaxValue ? new Type[count + 1] :
+                throw new InvalidProgramException("The lambda and its closure exceed the maximum method parameter count.");
             pooledOrNew[0] = typeof(ArrayClosure);
             for (var i = 0; i < count; i++)
             {
