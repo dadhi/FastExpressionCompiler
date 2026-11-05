@@ -25,6 +25,9 @@ namespace FastExpressionCompiler.UnitTests
             Given_composed_expr_with_closure_over_2_parameters_used_in_2_levels_of_nested_lambda();
             Given_composed_expr_with_closure_over_2_same_parameters_used_in_2_levels_of_nested_lambda();
             Two_same_nested_lambdas_should_compile_once();
+#if LIGHT_EXPRESSION
+            Invoke_constant_System_lambda();
+#endif
 
             Nested_Hoisted_Func_using_outer_parameter();
             Nested_Hoisted_Func_using_outer_parameter_and_closed_value();
@@ -32,7 +35,7 @@ namespace FastExpressionCompiler.UnitTests
             Nested_Hoisted_lambda_using_outer_parameter_and_closed_value_deeply_nested_lambda();
             Given_hoisted_expr_with_closure_over_parameters_in_nested_lambda_should_work();
 
-            return 17;
+            return 18;
         }
 
 
@@ -387,6 +390,35 @@ namespace FastExpressionCompiler.UnitTests
             Asserts.IsNotNull(f);
             Asserts.AreEqual(50, f());
         }
+
+#if LIGHT_EXPRESSION
+        public void Invoke_constant_System_lambda()
+        {
+            System.Linq.Expressions.LambdaExpression lambda =
+                System.Linq.Expressions.Expression.Lambda<Func<int>>(
+                    System.Linq.Expressions.Expression.Constant(42));
+            var zeroArgExpr = Lambda<Func<int>>(Invoke(Constant(lambda)));
+
+            var zeroArgFunc = zeroArgExpr.CompileFast(true);
+            Asserts.IsNotNull(zeroArgFunc);
+            Asserts.AreEqual(42, zeroArgFunc());
+
+            var value = System.Linq.Expressions.Expression.Parameter(typeof(int), "value");
+            lambda = System.Linq.Expressions.Expression.Lambda<Func<int, int>>(
+                System.Linq.Expressions.Expression.Add(value, System.Linq.Expressions.Expression.Constant(2)),
+                value);
+            var arg = Parameter(typeof(int), "arg");
+            var oneArgExpr = Lambda<Func<int, int>>(Invoke(Constant(lambda), arg), arg);
+
+            var oneArgFunc = oneArgExpr.CompileFast(true);
+            Asserts.IsNotNull(oneArgFunc);
+            Asserts.AreEqual(42, oneArgFunc(40));
+
+            oneArgFunc = oneArgExpr.CompileFast(true, CompilerFlags.NoInvocationLambdaInlining);
+            Asserts.IsNotNull(oneArgFunc);
+            Asserts.AreEqual(42, oneArgFunc(40));
+        }
+#endif
 
 
         public void Hmm_I_can_use_the_same_parameter_for_outer_and_nested_lambda()

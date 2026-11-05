@@ -1353,6 +1353,8 @@ public abstract class Expression
             ? lambda.ReturnType
             : expression is UnaryExpression unExpr && unExpr.NodeType == ExpressionType.Quote && unExpr.Operand is LambdaExpression quotedLambda
                 ? quotedLambda.ReturnType
+                : expression is ConstantExpression constantExpr && constantExpr.Value is System.Linq.Expressions.LambdaExpression sysLambda
+                    ? sysLambda.ReturnType
                 : expression.Type.FindDelegateInvokeMethod().ReturnType;
 
     [RequiresUnreferencedCode(Trimming.Message)]
