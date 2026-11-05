@@ -7,6 +7,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests;
 namespace FastExpressionCompiler.UnitTests;
 #endif
 
+[RunTestX]
 public struct IntegerSwitchDispatchRegressionTests : ITestX
 {
     public void Run(TestRun t)

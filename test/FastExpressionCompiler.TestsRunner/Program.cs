@@ -63,9 +63,8 @@ namespace FastExpressionCompiler.UnitTests
             var ltTask = Task.Run(() =>
             {
                 var ltStopwatch = Stopwatch.StartNew();
-                lt.Run(new LightExpression.UnitTests.ExcessiveArityRegressionTests());
+                LightExpression.UnitTests.RegisteredTestX.Run(lt);
 #if NET8_0_OR_GREATER
-                lt.Run(new LightExpression.UnitTests.NestedStructFieldAddressRegressionTests());
                 lt.Run(new LightExpression.IssueTests.Issue490_Regression_in_compiling_lambdas_with_ref_struct_parameters());
 #endif
 
@@ -77,27 +76,14 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.IssueTests.Issue476_System_ExecutionEngineException_with_nullables_on_repeated_calls_to_ConcurrentDictionary());
                 lt.Run(new LightExpression.IssueTests.Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
                 lt.Run(new LightExpression.IssueTests.Issue561_NonBooleanEqualityOperator());
-                lt.Run(new LightExpression.UnitTests.ByRefConversionRegressionTests());
-                lt.Run(new LightExpression.UnitTests.RuntimeTypeConstantRegressionTests());
-                lt.Run(new LightExpression.UnitTests.MethodBasedNotRegressionTests());
-                lt.Run(new LightExpression.UnitTests.ExtensionReductionIdentityRegressionTests());
-                lt.Run(new LightExpression.UnitTests.IntegerSwitchDispatchRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ParityTests());
                 ltTime = ltStopwatch.ElapsedMilliseconds;
             });
 
             var stStopwatch = Stopwatch.StartNew();
-            st.Run(new ExcessiveArityRegressionTests());
-            st.Run(new NestedStructFieldAddressRegressionTests());
+            RegisteredTestX.Run(st);
             st.Run(new Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
             st.Run(new Issue561_NonBooleanEqualityOperator());
-            st.Run(new ReductionProgressRegressionTests());
-            st.Run(new ByRefConversionRegressionTests());
-            st.Run(new RuntimeTypeConstantRegressionTests());
-            st.Run(new MethodBasedNotRegressionTests());
-            st.Run(new CustomReducibleNodeRegressionTests());
-            st.Run(new ExtensionReductionIdentityRegressionTests());
-            st.Run(new IntegerSwitchDispatchRegressionTests());
             st.Run(new ParityTests());
             st.Run(new Issue498_InvalidProgramException_when_using_loop());
             st.Run(new Issue495_Incomplete_pattern_detection_for_NotSupported_1007_Return_goto_from_TryCatch_with_Assign_generates_invalid_IL());

@@ -2,6 +2,7 @@ using System;
 #if !LIGHT_EXPRESSION
 using System.Linq.Expressions;
 namespace FastExpressionCompiler.UnitTests;
+[RunTestX]
 public struct CustomReducibleNodeRegressionTests : ITestX
 {
     public void Run(TestRun t)

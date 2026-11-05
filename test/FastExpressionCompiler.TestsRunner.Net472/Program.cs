@@ -34,8 +34,7 @@ namespace FastExpressionCompiler.UnitTests
                 var justLightTestsStopwatch = Stopwatch.StartNew();
 
                 var t = (LightExpression.TestRun)state;
-                t.Run(new LightExpression.UnitTests.ExcessiveArityRegressionTests());
-                t.Run(new LightExpression.UnitTests.NestedStructFieldAddressRegressionTests());
+                LightExpression.UnitTests.RegisteredTestX.Run(t);
                 t.Run(new LightExpression.IssueTests.Issue183_NullableDecimal());
                 t.Run(new LightExpression.IssueTests.Issue398_Optimize_Switch_with_OpCodes_Switch());
                 t.Run(new LightExpression.IssueTests.Issue431_Add_structural_equality_comparison_to_LightExpression());
@@ -45,11 +44,6 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.IssueTests.Issue476_System_ExecutionEngineException_with_nullables_on_repeated_calls_to_ConcurrentDictionary());
                 t.Run(new LightExpression.IssueTests.Issue498_InvalidProgramException_when_using_loop());
                 t.Run(new LightExpression.IssueTests.Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
-                t.Run(new LightExpression.UnitTests.ByRefConversionRegressionTests());
-                t.Run(new LightExpression.UnitTests.RuntimeTypeConstantRegressionTests());
-                t.Run(new LightExpression.UnitTests.MethodBasedNotRegressionTests());
-                t.Run(new LightExpression.UnitTests.ExtensionReductionIdentityRegressionTests());
-                t.Run(new LightExpression.UnitTests.IntegerSwitchDispatchRegressionTests());
                 t.Run(new LightExpression.UnitTests.ParityTests());
 
                 Console.WriteLine($"Just LightExpression tests are passing in {justLightTestsStopwatch.ElapsedMilliseconds} ms.");
@@ -61,8 +55,7 @@ namespace FastExpressionCompiler.UnitTests
             var fecTestsStopwatch = Stopwatch.StartNew();
 
             var fecTests = new TestRun();
-            fecTests.Run(new ExcessiveArityRegressionTests());
-            fecTests.Run(new NestedStructFieldAddressRegressionTests());
+            RegisteredTestX.Run(fecTests);
             fecTests.Run(new Issue183_NullableDecimal());
             fecTests.Run(new Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET());
             fecTests.Run(new Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_expressions_during_the_compilation());
@@ -72,13 +65,6 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new Issue495_Incomplete_pattern_detection_for_NotSupported_1007_Return_goto_from_TryCatch_with_Assign_generates_invalid_IL());
             fecTests.Run(new Issue498_InvalidProgramException_when_using_loop());
             fecTests.Run(new Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
-            fecTests.Run(new ReductionProgressRegressionTests());
-            fecTests.Run(new ByRefConversionRegressionTests());
-            fecTests.Run(new RuntimeTypeConstantRegressionTests());
-            fecTests.Run(new MethodBasedNotRegressionTests());
-            fecTests.Run(new CustomReducibleNodeRegressionTests());
-            fecTests.Run(new ExtensionReductionIdentityRegressionTests());
-            fecTests.Run(new IntegerSwitchDispatchRegressionTests());
             fecTests.Run(new ParityTests());
 
 

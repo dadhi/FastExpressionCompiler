@@ -10,6 +10,7 @@ using Expr = System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests;
 #endif
 
+[RunTestX]
 public struct ByRefConversionRegressionTests : ITestX
 {
     public void Run(TestRun t)
