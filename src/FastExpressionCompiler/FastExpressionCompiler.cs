@@ -7224,11 +7224,11 @@ namespace FastExpressionCompiler
                 var opCode = arithmeticNodeType switch
                 {
                     ExpressionType.Add => OpCodes.Add,
-                    ExpressionType.AddChecked => exprType.IsUnsigned() ? OpCodes.Add_Ovf_Un : OpCodes.Add_Ovf,
+                    ExpressionType.AddChecked => exprType.IsFloatingPoint() ? OpCodes.Add : exprType.IsUnsigned() ? OpCodes.Add_Ovf_Un : OpCodes.Add_Ovf,
                     ExpressionType.Subtract => OpCodes.Sub,
-                    ExpressionType.SubtractChecked => exprType.IsUnsigned() ? OpCodes.Sub_Ovf_Un : OpCodes.Sub_Ovf,
+                    ExpressionType.SubtractChecked => exprType.IsFloatingPoint() ? OpCodes.Sub : exprType.IsUnsigned() ? OpCodes.Sub_Ovf_Un : OpCodes.Sub_Ovf,
                     ExpressionType.Multiply => OpCodes.Mul,
-                    ExpressionType.MultiplyChecked => exprType.IsUnsigned() ? OpCodes.Mul_Ovf_Un : OpCodes.Mul_Ovf,
+                    ExpressionType.MultiplyChecked => exprType.IsFloatingPoint() ? OpCodes.Mul : exprType.IsUnsigned() ? OpCodes.Mul_Ovf_Un : OpCodes.Mul_Ovf,
                     ExpressionType.Divide => exprType.IsUnsigned() ? OpCodes.Div_Un : OpCodes.Div,
                     ExpressionType.Modulo => exprType.IsUnsigned() ? OpCodes.Rem_Un : OpCodes.Rem,
                     ExpressionType.And => OpCodes.And,
