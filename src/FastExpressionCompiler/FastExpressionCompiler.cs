@@ -4467,6 +4467,7 @@ namespace FastExpressionCompiler
                         var underlyingType = Nullable.GetUnderlyingType(boundType);
                         if (underlyingType != null)
                         {
+                            // Value unwraps the length and throws for null; the HasValue helper leaves only a Boolean.
                             EmitStoreAndLoadLocalVariableAddress(il, boundType);
                             EmitMethodCall(il, boundType.GetNullableValueGetterMethod());
                             boundType = underlyingType;
