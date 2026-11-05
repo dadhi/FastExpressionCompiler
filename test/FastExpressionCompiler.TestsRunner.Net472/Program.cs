@@ -34,6 +34,7 @@ namespace FastExpressionCompiler.UnitTests
                 var justLightTestsStopwatch = Stopwatch.StartNew();
 
                 var t = (LightExpression.TestRun)state;
+                t.Run(new LightExpression.UnitTests.NestedStructFieldAddressRegressionTests());
                 t.Run(new LightExpression.IssueTests.Issue183_NullableDecimal());
                 t.Run(new LightExpression.IssueTests.Issue398_Optimize_Switch_with_OpCodes_Switch());
                 t.Run(new LightExpression.IssueTests.Issue431_Add_structural_equality_comparison_to_LightExpression());
@@ -59,6 +60,7 @@ namespace FastExpressionCompiler.UnitTests
             var fecTestsStopwatch = Stopwatch.StartNew();
 
             var fecTests = new TestRun();
+            fecTests.Run(new NestedStructFieldAddressRegressionTests());
             fecTests.Run(new Issue183_NullableDecimal());
             fecTests.Run(new Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET());
             fecTests.Run(new Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_expressions_during_the_compilation());
