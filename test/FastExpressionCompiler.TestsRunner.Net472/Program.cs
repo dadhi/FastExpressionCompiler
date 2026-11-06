@@ -35,6 +35,8 @@ namespace FastExpressionCompiler.UnitTests
 
                 var t = (LightExpression.TestRun)state;
                 t.Run(new LightExpression.UnitTests.ComparisonReductionRegressionTests());
+                t.Run(new LightExpression.UnitTests.ArrayBoundConversionRegressionTests());
+                t.Run(new LightExpression.UnitTests.CheckedFloatingArithmeticRegressionTests());
                 t.Run(new LightExpression.UnitTests.ExcessiveArityRegressionTests());
                 t.Run(new LightExpression.UnitTests.NestedStructFieldAddressRegressionTests());
                 t.Run(new LightExpression.IssueTests.Issue183_NullableDecimal());
@@ -63,6 +65,8 @@ namespace FastExpressionCompiler.UnitTests
 
             var fecTests = new TestRun();
             fecTests.Run(new ComparisonReductionRegressionTests());
+            fecTests.Run(new ArrayBoundConversionRegressionTests());
+            fecTests.Run(new CheckedFloatingArithmeticRegressionTests());
             fecTests.Run(new ExcessiveArityRegressionTests());
             fecTests.Run(new NestedStructFieldAddressRegressionTests());
             fecTests.Run(new Issue183_NullableDecimal());
