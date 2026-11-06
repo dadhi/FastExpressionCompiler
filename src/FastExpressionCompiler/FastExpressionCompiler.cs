@@ -3749,11 +3749,18 @@ namespace FastExpressionCompiler
             private static bool TryEmitNot(UnaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var op = expr.Operand;
-                if (op.NodeType == ExpressionType.Equal)
+                if (op.NodeType == ExpressionType.Equal && Tools.IsPrimitiveOrEnumEquality((BinaryExpression)op))
                     return TryEmitComparison(((BinaryExpression)op).Left, ((BinaryExpression)op).Right,
                         expr.Type, ExpressionType.NotEqual, il, ref context, parent);
 
-                if (!TryEmit(op, il, ref context, parent & ~ParentFlags.IgnoreResult))
+                // Preserve nullable equality's direct emitter, but negate its result instead
+                // of resolving an inequality operator that may have different semantics.
+                var emitted = op is BinaryExpression eq && eq.NodeType == ExpressionType.Equal &&
+                    eq.Method == null && eq.Left.Type.IsNullable() && eq.Right.Type.IsNullable()
+                    ? TryEmitComparison(eq.Left, eq.Right, expr.Type, ExpressionType.Equal,
+                        il, ref context, parent & ~ParentFlags.IgnoreResult)
+                    : TryEmit(op, il, ref context, parent & ~ParentFlags.IgnoreResult);
+                if (!emitted)
                     return false;
 
                 if ((parent & ParentFlags.IgnoreResult) != 0)
@@ -7319,6 +7326,15 @@ namespace FastExpressionCompiler
             private static bool TryEmitConditional(Expression testExpr, Expression ifTrueExpr, Expression ifFalseExpr,
                 ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
+                // Negate the branch, not the operator. This also avoids constructing an
+                // inverted comparison node and preserves the originally selected method.
+                var negateTest = false;
+                while (testExpr is UnaryExpression not && not.NodeType == ExpressionType.Not &&
+                    not.Method == null && not.Type == typeof(bool))
+                {
+                    negateTest = !negateTest;
+                    testExpr = not.Operand;
+                }
                 testExpr = Tools.TryReduceConditionalTest(testExpr);
                 var testNodeType = testExpr.NodeType;
 
@@ -7338,7 +7354,7 @@ namespace FastExpressionCompiler
 
                 var useBrFalseOrTrue = -1; // 0 - is comparison with Zero (0, null, false), 1 - is comparison with (true)
                 Type nullOfValueType = null;
-                if (testExpr is BinaryExpression tb &&
+                if (testExpr is BinaryExpression tb && tb.Method == null &&
                     (testNodeType == ExpressionType.Equal | testNodeType == ExpressionType.NotEqual))
                 {
                     var testLeftExpr = tb.Left;
@@ -7402,8 +7418,8 @@ namespace FastExpressionCompiler
 
                 // todo: @perf try to recognize the patterns like `b == 1` and replace Ceq, Brtrue with Beq, and respectively Ceq, Brfalse with Bne_Un
                 // for this we need to inline here the logic from the TryEmitComparison.
-                if ((testNodeType == ExpressionType.Equal & useBrFalseOrTrue == 0) ||
-                    (testNodeType == ExpressionType.NotEqual & useBrFalseOrTrue == 1))
+                if (((testNodeType == ExpressionType.Equal & useBrFalseOrTrue == 0) ||
+                    (testNodeType == ExpressionType.NotEqual & useBrFalseOrTrue == 1)) != negateTest)
                     il.Demit(OpCodes.Brtrue, labelIfFalse);
                 else
                     il.Demit(OpCodes.Brfalse, labelIfFalse);
@@ -9627,6 +9643,18 @@ namespace FastExpressionCompiler
 
         public static T GetFirst<T>(this T[] source) => source.Length == 0 ? default : source[0];
 
+        // Equality and inequality methods need not be inverses. Rebuilding reference
+        // comparisons can also select an overloaded operator instead of reference identity.
+        [MethodImpl((MethodImplOptions)256)]
+        internal static bool IsPrimitiveOrEnumEquality(BinaryExpression expr)
+        {
+            if (expr.Method != null)
+                return false;
+            var left = expr.Left.Type;
+            var right = expr.Right.Type;
+            return (left.IsPrimitive || left.IsEnum) && (right.IsPrimitive || right.IsEnum);
+        }
+
         public static Expression TryReduceConditionalTest(Expression testExpr)
         {
             // removing Not by turning Equal -> NotEqual, NotEqual -> Equal
@@ -9635,15 +9663,11 @@ namespace FastExpressionCompiler
                 // simplify the not `==` -> `!=`, `!=` -> `==`
                 var op = TryReduceConditionalTest(((UnaryExpression)testExpr).Operand);
                 var nodeType = op.NodeType;
-                if (nodeType == ExpressionType.Equal) // ensures that it is a BinaryExpression
+                if ((nodeType == ExpressionType.Equal || nodeType == ExpressionType.NotEqual) &&
+                    IsPrimitiveOrEnumEquality((BinaryExpression)op))
                 {
                     var binOp = (BinaryExpression)op;
-                    return NotEqual(binOp.Left, binOp.Right);
-                }
-                else if (nodeType == ExpressionType.NotEqual) // ensures that it is a BinaryExpression
-                {
-                    var binOp = (BinaryExpression)op;
-                    return Equal(binOp.Left, binOp.Right);
+                    return nodeType == ExpressionType.Equal ? NotEqual(binOp.Left, binOp.Right) : Equal(binOp.Left, binOp.Right);
                 }
             }
             else if (testExpr is BinaryExpression b)
@@ -9674,7 +9698,7 @@ namespace FastExpressionCompiler
         public static Expression TryReduceConditional(ConditionalExpression condExpr)
         {
             var testExpr = TryReduceConditionalTest(condExpr.Test);
-            if (testExpr is BinaryExpression bi && (bi.NodeType == ExpressionType.Equal || bi.NodeType == ExpressionType.NotEqual))
+            if (testExpr is BinaryExpression bi && bi.Method == null && (bi.NodeType == ExpressionType.Equal || bi.NodeType == ExpressionType.NotEqual))
             {
                 var left = bi.Left;
                 var right = bi.Right;
