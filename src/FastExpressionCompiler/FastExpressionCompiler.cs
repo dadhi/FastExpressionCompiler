@@ -856,7 +856,11 @@ namespace FastExpressionCompiler
                 for (var i = 0; i < varCount; ++i)
                 {
                     ref var varBlocks = ref _varInBlock.Map.GetSurePresentEntryRef(i);
-                    if (varBlocks.Value.Count == _blockCount)
+                    // Each entry packs the declaring block index in the high 16 bits and the local index in the low 16.
+                    // Push records the index before incrementing _blockCount, so we are leaving block _blockCount - 1.
+                    // A variable's binding count measures its redeclarations, not block depth: intervening blocks may
+                    // declare other variables. Pop only this block's binding to restore any outer declaration.
+                    if (varBlocks.Value.Count != 0 && (varBlocks.Value.GetLastSurePresentRef() >>> 16) == _blockCount - 1)
                         varBlocks.Value.RemoveLastSurePresent();
                 }
                 --_blockCount;
