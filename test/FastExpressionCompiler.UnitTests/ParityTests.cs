@@ -72,6 +72,7 @@ namespace FastExpressionCompiler.UnitTests
             Nullable_values_convert_to_compatible_reference_types(t);
             ValueType_sources_unbox_to_value_types(t);
             Decimal_constants_preserve_scale_and_sign(t);
+            Quote_requires_a_lambda_and_preserves_its_delegate_type(t);
 #if !NETFRAMEWORK
             Non_exception_throws_match_handlers_by_the_original_object(t);
 #endif
@@ -2147,6 +2148,17 @@ namespace FastExpressionCompiler.UnitTests
             var fastException = t.Throws<RuntimeWrappedException>(() => uncaughtFast());
             var systemException = t.Throws<RuntimeWrappedException>(() => uncaught.CompileSys()());
             t.AreEqual(systemException.WrappedException, fastException.WrappedException);
+        }
+
+        public void Quote_requires_a_lambda_and_preserves_its_delegate_type(TestContext t)
+        {
+            t.Throws<ArgumentNullException>(() => Quote(null));
+            t.Throws<ArgumentException>(() => Quote(Constant((Func<int>)(() => 1))));
+            var lambda = Lambda<Func<int>>(Constant(2));
+            var quote = Quote(lambda);
+            t.AreEqual(ExpressionType.Quote, quote.NodeType);
+            t.AreEqual(typeof(System.Linq.Expressions.Expression<Func<int>>), quote.Type);
+            t.AreSame(lambda, quote.Operand);
         }
 
         private enum NullableCastEnum { Value = 42 }

@@ -791,9 +791,15 @@ public abstract class Expression
         new NodeTypedUnaryExpression(ExpressionType.PostDecrementAssign, expression);
 
     /// <summary>Creates a UnaryExpression that represents an expression that has a constant value of type Expression.</summary>
-    public static UnaryExpression Quote(Expression expression) =>
-        new TypedUnaryExpression(ExpressionType.Quote, expression,
+    public static UnaryExpression Quote(Expression expression)
+    {
+        if (expression == null)
+            throw new ArgumentNullException(nameof(expression));
+        if (expression is not LambdaExpression)
+            throw new ArgumentException("Quoted expression must be a lambda.", nameof(expression));
+        return new TypedUnaryExpression(ExpressionType.Quote, expression,
             typeof(System.Linq.Expressions.Expression<>).MakeGenericType(expression.Type));
+    }
 
     /// <summary>Creates a UnaryExpression that represents a unary plus operation.</summary>
     public static UnaryExpression UnaryPlus(Expression expression) =>
