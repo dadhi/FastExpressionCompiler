@@ -34,6 +34,7 @@ namespace FastExpressionCompiler.UnitTests
                 var justLightTestsStopwatch = Stopwatch.StartNew();
 
                 var t = (LightExpression.TestRun)state;
+                t.Run(new LightExpression.UnitTests.VoidSwitchConversionRegressionTests());
                 t.Run(new LightExpression.UnitTests.ReadonlyRefFieldRegressionTests());
                 t.Run(new LightExpression.UnitTests.VoidLabelValueRegressionTests());
                 t.Run(new LightExpression.UnitTests.ReferenceInstanceCallRegressionTests());

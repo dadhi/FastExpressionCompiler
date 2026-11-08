@@ -63,6 +63,7 @@ namespace FastExpressionCompiler.UnitTests
             var ltTask = Task.Run(() =>
             {
                 var ltStopwatch = Stopwatch.StartNew();
+                lt.Run(new LightExpression.UnitTests.VoidSwitchConversionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ReadonlyRefFieldRegressionTests());
                 lt.Run(new LightExpression.UnitTests.VoidLabelValueRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ReferenceInstanceCallRegressionTests());
