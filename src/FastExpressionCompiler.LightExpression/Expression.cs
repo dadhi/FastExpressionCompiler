@@ -5707,12 +5707,24 @@ public class SwitchExpression : Expression // todo: @perf implement IArgumentPro
     [RequiresUnreferencedCode(Trimming.Message)]
     protected internal override Expression Accept(ExpressionVisitor visitor) => visitor.VisitSwitch(this);
 #endif
-    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted) =>
-        SysExpr.Switch(Type,
-            SwitchValue.ToExpression(ref exprsConverted),
-            DefaultBody?.ToExpression(ref exprsConverted),
-            Comparison,
-            ToSwitchCaseExpressions(_cases, ref exprsConverted));
+    internal override SysExpr CreateSysExpression(ref SmallList<LightAndSysExpr> exprsConverted)
+    {
+        var type = Type;
+        var value = SwitchValue.ToExpression(ref exprsConverted);
+        var fallback = DefaultBody?.ToExpression(ref exprsConverted);
+        var comparison = Comparison;
+        var cases = ToSwitchCaseExpressions(_cases, ref exprsConverted);
+        if (type == typeof(void))
+        {
+            // Make discarded results explicit for System runtimes requiring void branch bodies.
+            if (fallback != null && fallback.Type != typeof(void))
+                fallback = SysExpr.Block(typeof(void), fallback);
+            for (var i = 0; i < cases.Length; ++i)
+                if (cases[i].Body.Type != typeof(void))
+                    cases[i] = SysExpr.SwitchCase(SysExpr.Block(typeof(void), cases[i].Body), cases[i].TestValues);
+        }
+        return SysExpr.Switch(type, value, fallback, comparison, cases);
+    }
 
     internal static System.Linq.Expressions.SwitchCase ToSwitchCase(ref SwitchCase sw, ref SmallList<LightAndSysExpr> exprsConverted) =>
         SysExpr.SwitchCase(sw.Body.ToExpression(ref exprsConverted), ToExpressions(sw.TestValues, ref exprsConverted));
