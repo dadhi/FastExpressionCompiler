@@ -35,6 +35,7 @@ namespace FastExpressionCompiler.UnitTests
 
                 var t = (LightExpression.TestRun)state;
                 t.Run(new LightExpression.UnitTests.MultiRankArrayReceiverRegressionTests());
+                t.Run(new LightExpression.UnitTests.ReadonlyValueReceiverRegressionTests());
                 t.Run(new LightExpression.UnitTests.BlockVariableBindingRegressionTests());
                 t.Run(new LightExpression.UnitTests.ComparisonReductionRegressionTests());
                 t.Run(new LightExpression.UnitTests.ArrayBoundConversionRegressionTests());
@@ -67,6 +68,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var fecTests = new TestRun();
             fecTests.Run(new MultiRankArrayReceiverRegressionTests());
+            fecTests.Run(new ReadonlyValueReceiverRegressionTests());
             fecTests.Run(new BlockVariableBindingRegressionTests());
             fecTests.Run(new ComparisonReductionRegressionTests());
             fecTests.Run(new ArrayBoundConversionRegressionTests());

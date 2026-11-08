@@ -5779,7 +5779,14 @@ namespace FastExpressionCompiler
                         }
                         else
                         {
-                            il.Demit(OpCodes.Ldflda, field);
+                            if (field.IsInitOnly && byRefIndex == -1 && (parent & ParentFlags.AssignmentLeftValue) == 0)
+                            {
+                                // A readonly struct receiver must mutate a defensive copy.
+                                il.Demit(OpCodes.Ldfld, field);
+                                EmitStoreAndLoadLocalVariableAddress(il, field.FieldType);
+                            }
+                            else
+                                il.Demit(OpCodes.Ldflda, field);
                             if (dupAddress)
                                 il.Demit(OpCodes.Dup);
                         }
