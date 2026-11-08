@@ -34,6 +34,7 @@ namespace FastExpressionCompiler.UnitTests
                 var justLightTestsStopwatch = Stopwatch.StartNew();
 
                 var t = (LightExpression.TestRun)state;
+                t.Run(new LightExpression.UnitTests.ReferenceInstanceCallRegressionTests());
                 t.Run(new LightExpression.UnitTests.MultiRankArrayReceiverRegressionTests());
                 t.Run(new LightExpression.UnitTests.ReadonlyValueReceiverRegressionTests());
                 t.Run(new LightExpression.UnitTests.BlockVariableBindingRegressionTests());
@@ -67,6 +68,7 @@ namespace FastExpressionCompiler.UnitTests
             var fecTestsStopwatch = Stopwatch.StartNew();
 
             var fecTests = new TestRun();
+            fecTests.Run(new ReferenceInstanceCallRegressionTests());
             fecTests.Run(new MultiRankArrayReceiverRegressionTests());
             fecTests.Run(new ReadonlyValueReceiverRegressionTests());
             fecTests.Run(new BlockVariableBindingRegressionTests());

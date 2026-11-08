@@ -5684,7 +5684,8 @@ namespace FastExpressionCompiler
 
                 var ok = true;
                 if (!objIsValueType)
-                    ok = EmitMethodCallOrVirtualCall(il, method);
+                    // callvirt also checks null for nonvirtual reference-instance methods.
+                    ok = objExpr == null ? EmitMethodCallOrVirtualCall(il, method) : EmitVirtualMethodCall(il, method);
                 else if (method.DeclaringType == objExpr.Type)
                     ok = EmitMethodCall(il, method);
                 else
