@@ -5783,9 +5783,9 @@ namespace FastExpressionCompiler
                         }
                         else
                         {
-                            if (field.IsInitOnly && byRefIndex == -1 && (parent & ParentFlags.AssignmentLeftValue) == 0)
+                            if (field.IsInitOnly && (parent & ParentFlags.AssignmentLeftValue) == 0)
                             {
-                                // A readonly struct receiver must mutate a defensive copy.
+                                // Readonly receivers and ref arguments must use a copy, never the field storage.
                                 il.Demit(OpCodes.Ldfld, field);
                                 EmitStoreAndLoadLocalVariableAddress(il, field.FieldType);
                             }
