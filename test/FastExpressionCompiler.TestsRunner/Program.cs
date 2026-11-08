@@ -63,6 +63,7 @@ namespace FastExpressionCompiler.UnitTests
             var ltTask = Task.Run(() =>
             {
                 var ltStopwatch = Stopwatch.StartNew();
+                lt.Run(new LightExpression.UnitTests.MultiRankArrayReceiverRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ReadonlyValueReceiverRegressionTests());
                 lt.Run(new LightExpression.UnitTests.BlockVariableBindingRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ComparisonReductionRegressionTests());
@@ -92,6 +93,7 @@ namespace FastExpressionCompiler.UnitTests
             });
 
             var stStopwatch = Stopwatch.StartNew();
+            st.Run(new MultiRankArrayReceiverRegressionTests());
             st.Run(new ReadonlyValueReceiverRegressionTests());
             st.Run(new BlockVariableBindingRegressionTests());
             st.Run(new ComparisonReductionRegressionTests());
