@@ -2900,11 +2900,16 @@ namespace FastExpressionCompiler
                         return false;
 
                 var indexerProp = indexExpr.Indexer;
-                return indexerProp != null
-                    ? EmitMethodCallOrVirtualCallCheckForNull(il, indexerProp.GetMethod)
-                    : indexArgCount == 1 && !IsNonVectorArray(objExpr.Type)
-                        ? TryEmitArrayIndexGet(il, indexExpr.Type, ref context, parent) // one-dimensional array
-                        : EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod("Get")); // multi-dimensional array
+                if (indexerProp != null)
+                    return EmitMethodCallOrVirtualCallCheckForNull(il, indexerProp.GetMethod);
+                if (indexArgCount == 1 && !IsNonVectorArray(objExpr.Type))
+                    return TryEmitArrayIndexGet(il, indexExpr.Type, ref context, parent);
+                // Struct members need the element storage, rather than a copy returned by Get.
+                var byAddress = indexExpr.Type.IsValueType &&
+                    (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess | ParentFlags.AssignmentByRef)) != 0;
+                var ok = EmitMethodCallOrVirtualCallCheckForNull(il, objExpr.Type.FindMethod(byAddress ? "Address" : "Get"));
+                context.LastEmitIsAddress = byAddress && !parent.IgnoresResult();
+                return ok && il.EmitPopIfIgnoreResult(parent);
             }
 
             private static bool TryEmitLabel(LabelExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
@@ -5682,7 +5687,8 @@ namespace FastExpressionCompiler
 
                 var ok = true;
                 if (!objIsValueType)
-                    ok = EmitMethodCallOrVirtualCall(il, method);
+                    // callvirt also checks null for nonvirtual reference-instance methods.
+                    ok = objExpr == null ? EmitMethodCallOrVirtualCall(il, method) : EmitVirtualMethodCall(il, method);
                 else if (method.DeclaringType == objExpr.Type)
                     ok = EmitMethodCall(il, method);
                 else
@@ -5777,7 +5783,14 @@ namespace FastExpressionCompiler
                         }
                         else
                         {
-                            il.Demit(OpCodes.Ldflda, field);
+                            if (field.IsInitOnly && byRefIndex == -1 && (parent & ParentFlags.AssignmentLeftValue) == 0)
+                            {
+                                // A readonly struct receiver must mutate a defensive copy.
+                                il.Demit(OpCodes.Ldfld, field);
+                                EmitStoreAndLoadLocalVariableAddress(il, field.FieldType);
+                            }
+                            else
+                                il.Demit(OpCodes.Ldflda, field);
                             if (dupAddress)
                                 il.Demit(OpCodes.Dup);
                         }
