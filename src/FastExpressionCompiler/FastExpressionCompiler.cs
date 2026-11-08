@@ -2423,6 +2423,9 @@ namespace FastExpressionCompiler
                                     logical.Left.Type == typeof(bool?) && logical.Right.Type == typeof(bool?))
                                     return TryEmitNullableBooleanShortCircuit(logical.Left, logical.Right, nodeType == ExpressionType.AndAlso, il, ref context, parent);
 
+                                if (!exprType.IsPrimitive && logical.IsLifted)
+                                    return TryEmitLiftedUserDefinedLogicalOperator(logical, nodeType, il, ref context, parent);
+
                                 var logicalMethod = logical.Method;
                                 if (logicalMethod != null && !exprType.IsPrimitive)
                                 {
@@ -7302,6 +7305,62 @@ namespace FastExpressionCompiler
                     }
                 }
                 return true;
+            }
+
+            private static bool TryEmitLiftedUserDefinedLogicalOperator(BinaryExpression expr, ExpressionType nodeType,
+                ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            {
+                var type = expr.Left.Type;
+                var operandType = Nullable.GetUnderlyingType(type);
+                var method = expr.Method ?? FindBinaryOperandMethod(
+                    nodeType == ExpressionType.AndAlso ? "op_BitwiseAnd" : "op_BitwiseOr", operandType, operandType,
+                    Nullable.GetUnderlyingType(expr.Right.Type) ?? expr.Right.Type, operandType);
+                if (operandType == null || method == null || method.ContainsGenericParameters)
+                    return false;
+                var test = method.DeclaringType.GetMethod(nodeType == ExpressionType.AndAlso ? "op_False" : "op_True",
+                    BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy,
+                    null, new[] { operandType }, null);
+                if (test == null || test.ReturnType != typeof(bool))
+                    return false;
+
+                var flags = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
+                    ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue;
+                if (!TryEmit(expr.Left, il, ref context, flags))
+                    return false;
+                var left = EmitStoreLocalVariable(il, type);
+                var skipRight = il.DefineLabel();
+                EmitLoadLocalVariableAddress(il, left);
+                EmitMethodCall(il, type.GetNullableHasValueGetterMethod());
+                il.Demit(OpCodes.Brfalse, skipRight);
+                EmitLoadLocalVariableAddress(il, left);
+                il.Demit(OpCodes.Ldfld, type.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                EmitMethodCall(il, test);
+                il.Demit(OpCodes.Brtrue, skipRight);
+
+                // A null or decisive left operand skips the right. Otherwise evaluate it on an empty stack.
+                if (!TryEmit(expr.Right, il, ref context, flags))
+                    return false;
+                var right = EmitStoreLocalVariable(il, type);
+                var rightIsNull = il.DefineLabel();
+                EmitLoadLocalVariableAddress(il, right);
+                EmitMethodCall(il, type.GetNullableHasValueGetterMethod());
+                il.Demit(OpCodes.Brfalse, rightIsNull);
+                EmitLoadLocalVariableAddress(il, left);
+                il.Demit(OpCodes.Ldfld, type.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                EmitLoadLocalVariableAddress(il, right);
+                il.Demit(OpCodes.Ldfld, type.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                EmitMethodCall(il, method);
+                il.Demit(OpCodes.Newobj, type.GetNullableConstructor());
+                var done = il.DefineLabel();
+                il.Demit(OpCodes.Br, done);
+                il.DmarkLabel(skipRight);
+                EmitLoadLocalVariable(il, left);
+                il.Demit(OpCodes.Br, done);
+                il.DmarkLabel(rightIsNull);
+                EmitDefault(il, type);
+                il.DmarkLabel(done);
+                context.LastEmitIsAddress = false;
+                return il.EmitPopIfIgnoreResult(parent);
             }
 
             private static bool TryEmitLogicalOperator(BinaryExpression expr, ExpressionType nodeType,

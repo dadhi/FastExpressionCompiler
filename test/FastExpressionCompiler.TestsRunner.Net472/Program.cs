@@ -36,6 +36,7 @@ namespace FastExpressionCompiler.UnitTests
                 var t = (LightExpression.TestRun)state;
                 t.Run(new LightExpression.UnitTests.VoidSwitchConversionRegressionTests());
                 t.Run(new LightExpression.UnitTests.ReadonlyRefFieldRegressionTests());
+                t.Run(new LightExpression.UnitTests.LiftedUserDefinedLogicalRegressionTests());
                 t.Run(new LightExpression.UnitTests.VoidLabelValueRegressionTests());
                 t.Run(new LightExpression.UnitTests.ReferenceInstanceCallRegressionTests());
                 t.Run(new LightExpression.UnitTests.MultiRankArrayReceiverRegressionTests());
@@ -72,6 +73,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var fecTests = new TestRun();
             fecTests.Run(new ReadonlyRefFieldRegressionTests());
+            fecTests.Run(new LiftedUserDefinedLogicalRegressionTests());
             fecTests.Run(new VoidLabelValueRegressionTests());
             fecTests.Run(new ReferenceInstanceCallRegressionTests());
             fecTests.Run(new MultiRankArrayReceiverRegressionTests());
