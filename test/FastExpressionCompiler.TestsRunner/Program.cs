@@ -63,6 +63,7 @@ namespace FastExpressionCompiler.UnitTests
             var ltTask = Task.Run(() =>
             {
                 var ltStopwatch = Stopwatch.StartNew();
+                lt.Run(new LightExpression.UnitTests.VoidLabelValueRegressionTests());
                 lt.Run(new LightExpression.UnitTests.BlockVariableBindingRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ComparisonReductionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ArrayBoundConversionRegressionTests());
@@ -91,6 +92,7 @@ namespace FastExpressionCompiler.UnitTests
             });
 
             var stStopwatch = Stopwatch.StartNew();
+            st.Run(new VoidLabelValueRegressionTests());
             st.Run(new BlockVariableBindingRegressionTests());
             st.Run(new ComparisonReductionRegressionTests());
             st.Run(new ArrayBoundConversionRegressionTests());
