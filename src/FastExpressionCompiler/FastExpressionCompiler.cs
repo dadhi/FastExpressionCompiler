@@ -2669,7 +2669,8 @@ namespace FastExpressionCompiler
                                                         // emitting the double `OpCodes.Ret` (usually for not the last statement in block), so we can safely emit our own `Ret` here.
                                                         // And vice-versa, if `IgnoreResult` not set then the external code planning to emit `Ret` (the last block statement),
                                                         // so we should avoid it on our side.
-                                                        if ((parent & ParentFlags.IgnoreResult) != 0)
+                                                        // A void return targets the end of this block, not the enclosing method.
+                                                        if (!isVoidTarget && (parent & ParentFlags.IgnoreResult) != 0)
                                                             il.Demit(OpCodes.Ret);
                                                     }
                                                 }
@@ -2964,14 +2965,16 @@ namespace FastExpressionCompiler
                     throw new InvalidOperationException($"Cannot jump, no labels found for the target `{expr.Target}`");
                 }
                 var gotoValue = expr.Value;
-                if (gotoValue != null)
+                if (expr.Target.Type == typeof(void))
                 {
-                    var isVoidTarget = expr.Target.Type == typeof(void); // the value is evaluated and dropped, so no value is left on the stack
-                    if (!TryEmit(gotoValue, il, ref context, isVoidTarget ? parent | ParentFlags.IgnoreResult : parent & ~ParentFlags.IgnoreResult))
+                    // A void target still receives control; the value supplies only side effects.
+                    if (gotoValue != null && !TryEmit(gotoValue, il, ref context, parent | ParentFlags.IgnoreResult))
                         return false;
-                    if (isVoidTarget)
-                        gotoValue = null;
+                    il.Demit((parent & ParentFlags.TryCatch) != 0 ? OpCodes.Leave : OpCodes.Br, labelInfo.GetOrDefineLabel(il));
+                    return true;
                 }
+                if (gotoValue != null && !TryEmit(gotoValue, il, ref context, parent & ~ParentFlags.IgnoreResult))
+                    return false;
 
                 switch (expr.Kind)
                 {
