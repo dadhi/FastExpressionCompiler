@@ -4927,7 +4927,7 @@ namespace FastExpressionCompiler
                                 Debug.Assert(orLeftIndexExpr != null);
                                 if (objExpr != null)
                                 {
-                                    var isIndexerAMethodCall = indexArgCount > 1 | orLeftIndexExpr.Indexer != null || IsNonVectorArray(objExpr.Type);
+                                    var isIndexerAMethodCall = indexArgCount > 1 | orLeftIndexExpr.Indexer != null || !IsVectorArray(objExpr.Type);
                                     var objFlags = isIndexerAMethodCall ? ParentFlags.InstanceCall : ParentFlags.InstanceAccess | ParentFlags.IndexAccess;
                                     if (!TryEmit(objExpr, il, ref context, objFlags | ParentFlags.AssignmentLeftValue))
                                         return false;
@@ -4990,7 +4990,7 @@ namespace FastExpressionCompiler
                         {
                             // determine is the index essentially the method call to get/set value
                             // objExpr is not null when there is no Indexer, because then it is an array access, so `||` short-circuits before the `.Type`
-                            var isIndexerAMethodCall = indexArgCount > 1 | orLeftIndexExpr.Indexer != null || IsNonVectorArray(objExpr.Type);
+                            var isIndexerAMethodCall = indexArgCount > 1 | orLeftIndexExpr.Indexer != null || !IsVectorArray(objExpr.Type);
                             var objVar = -1;
                             var objVarByAddress = false;
                             if (objExpr != null)
@@ -5557,9 +5557,6 @@ namespace FastExpressionCompiler
                 }
             }
 
-            // The one-dimensional array with the non-zero lower bound, e.g. Array.CreateInstance(typeof(int), new[] { 3 }, new[] { -1 }), is not the T[] vector and has no ldelem
-            private static bool IsNonVectorArray(Type type) => type.IsArray && type.GetArrayRank() == 1 && type != type.GetElementType().MakeArrayType();
-
             private static bool TryEmitArrayIndexGet(ILGenerator il, Type type, ref CompilerContext closure, ParentFlags parent)
             {
                 if ((parent & ParentFlags.AssignmentByRef) != 0)
@@ -5695,9 +5692,9 @@ namespace FastExpressionCompiler
                     else
                     {
                         // don't forget to store the object into the variable first, before emitting the arguments
-                        var objVarType = objExpr != null && objExpr.Type.IsValueType && context.LastEmitIsAddress
-                            ? objExpr.Type.MakeByRefType() : objExpr?.Type;
-                        var objVar = objExpr == null ? -1 : EmitStoreLocalVariable(il, objVarType);
+                        var objVar = objExpr == null ? -1 : EmitStoreLocalVariable(il,
+                            objExpr.Type.IsValueType && context.LastEmitIsAddress
+                                ? objExpr.Type.MakeByRefType() : objExpr.Type);
 
                         SmallList<int, Stack8<int>, NoArrayPool<int>> argVars = default;
                         for (var i = 0; i < methodParams.Length; i++)
