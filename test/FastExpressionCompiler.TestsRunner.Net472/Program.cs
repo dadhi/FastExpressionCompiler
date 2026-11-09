@@ -79,6 +79,7 @@ namespace FastExpressionCompiler.UnitTests
             var fecTestsStopwatch = Stopwatch.StartNew();
 
             var fecTests = new TestRun();
+            fecTests.Run(new LiftedRefConversionRegressionTests());
             fecTests.Run(new RuntimeSwitchCaseRegressionTests());
             fecTests.Run(new StaticFieldAddressRegressionTests());
             fecTests.Run(new MultidimensionalGetStorageRegressionTests());
