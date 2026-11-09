@@ -658,6 +658,8 @@ namespace FastExpressionCompiler
             internal SmallSet4<Expression, RefEq<Expression>> ArgsContainingComplexExpression;
 
             internal bool HasComplexExpression;
+            internal bool InExceptionFilter;
+            internal int TryExpressionCount;
 
             /// Set if the same label target is defined by the several Label expressions, so each definition needs its own IL label
             internal bool HasLabelDefinedTwice;
@@ -1628,9 +1630,12 @@ namespace FastExpressionCompiler
                         var indexExpr = (IndexExpression)expr;
                         var indexArgs = indexExpr.GetArgExprs();
                         var indexArgCount = indexArgs.GetArgCount();
+                        var precedingTryCount = context.TryExpressionCount;
                         for (var i = 0; i < indexArgCount; i++)
                             if ((r = TryCollectInfo(ref context, indexArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                                 return r;
+                        if (context.TryExpressionCount != precedingTryCount)
+                            context.ArgsContainingComplexExpression.Set.AddOrGetEntryRef(indexExpr, out _);
                         if (indexExpr.Object == null)
                             return r;
                         expr = indexExpr.Object;
@@ -1639,6 +1644,7 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Try:
                         {
+                            ++context.TryExpressionCount;
                             context.HasComplexExpression = false;
                             r = TryCollectTryExprInfo(ref context, (TryExpression)expr, nestedLambda, ref rootNestedLambdas, scopeIdx);
                             context.HasComplexExpression = true;
@@ -2085,6 +2091,9 @@ namespace FastExpressionCompiler
         private static Result TryCollectTryExprInfo(ref CompilerContext context, TryExpression tryExpr,
             NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
         {
+            if (context.InExceptionFilter)
+                return Result.NotSupported_ExceptionCatchFilter;
+
             var r = Result.OK;
             if ((r = TryCollectInfo(ref context, tryExpr.Body, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                 return r;
@@ -2101,9 +2110,14 @@ namespace FastExpressionCompiler
                         return r;
                 }
 
-                if (catchBlock.Filter != null &&
-                    (r = TryCollectInfo(ref context, catchBlock.Filter, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
-                    return r;
+                if (catchBlock.Filter != null)
+                {
+                    context.InExceptionFilter = true;
+                    r = TryCollectInfo(ref context, catchBlock.Filter, nestedLambda, ref rootNestedLambdas, scopeIdx);
+                    context.InExceptionFilter = false;
+                    if (r != Result.OK)
+                        return r;
+                }
 
                 var catchScopeIdx = (short)context.Scopes.Add(new LabelScope { Parent = new ScopeIdx(scopeIdx, false), ExceptionRegion = ExceptionRegion.Catch });
                 if ((r = TryCollectInfo(ref context, catchBlock.Body, nestedLambda, ref rootNestedLambdas, catchScopeIdx)) != Result.OK)
@@ -2879,6 +2893,8 @@ namespace FastExpressionCompiler
             // similar code is used by the TryEmitArithmeticAndOrAssign, so don't forget to modify it as well
             private static bool TryEmitIndexGet(IndexExpression indexExpr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
+                if (context.ArgsContainingComplexExpression.Set.ContainsKey(indexExpr))
+                    return false;
                 var p = parent & ~ParentFlags.IgnoreResult | ParentFlags.IndexAccess;
 
                 var objExpr = indexExpr.Object;
@@ -3213,6 +3229,9 @@ namespace FastExpressionCompiler
 #endif
                     if (catchFilter != null | isNonExceptionTest | unwrapRuntimeWrappedException)
                     {
+#if NETFRAMEWORK
+                        return false; // DynamicMethod does not support exception filters on .NET Framework.
+#else
                         il.BeginExceptFilterBlock();
                         if (isNonExceptionTest | unwrapRuntimeWrappedException)
                         {
@@ -3246,6 +3265,7 @@ namespace FastExpressionCompiler
 
                         il.BeginCatchBlock(null); // emits the `endfilter`
                         il.Demit(OpCodes.Pop); // the exception object, the variable is already set by the filter
+#endif
                     }
                     else
                     {
@@ -4848,6 +4868,8 @@ namespace FastExpressionCompiler
                         ArgExprs indexArgs = null;
                         if (orLeftIndexExpr != null)
                         {
+                            if (context.ArgsContainingComplexExpression.Set.ContainsKey(orLeftIndexExpr))
+                                return false;
                             indexArgs = orLeftIndexExpr.GetArgExprs();
                             indexArgCount = indexArgs.GetArgCount();
                             if (indexArgCount > 4)
