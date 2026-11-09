@@ -63,6 +63,7 @@ namespace FastExpressionCompiler.UnitTests
             var ltTask = Task.Run(() =>
             {
                 var ltStopwatch = Stopwatch.StartNew();
+                lt.Run(new LightExpression.UnitTests.RuntimeSwitchCaseRegressionTests());
                 lt.Run(new LightExpression.UnitTests.StaticFieldAddressRegressionTests());
                 lt.Run(new LightExpression.UnitTests.MultidimensionalGetStorageRegressionTests());
                 lt.Run(new LightExpression.UnitTests.AbstractConstructorRegressionTests());
@@ -105,6 +106,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var stStopwatch = Stopwatch.StartNew();
             st.Run(new LiftedRefConversionRegressionTests());
+            st.Run(new RuntimeSwitchCaseRegressionTests());
             st.Run(new StaticFieldAddressRegressionTests());
             st.Run(new MultidimensionalGetStorageRegressionTests());
             st.Run(new AbstractConstructorRegressionTests());
