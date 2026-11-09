@@ -5629,7 +5629,9 @@ namespace FastExpressionCompiler
                     else
                     {
                         // don't forget to store the object into the variable first, before emitting the arguments
-                        var objVar = objExpr == null ? -1 : EmitStoreLocalVariable(il, objExpr.Type);
+                        var objVarType = objExpr != null && objExpr.Type.IsValueType && context.LastEmitIsAddress
+                            ? objExpr.Type.MakeByRefType() : objExpr?.Type;
+                        var objVar = objExpr == null ? -1 : EmitStoreLocalVariable(il, objVarType);
 
                         SmallList<int, Stack8<int>, NoArrayPool<int>> argVars = default;
                         for (var i = 0; i < methodParams.Length; i++)
@@ -5778,7 +5780,17 @@ namespace FastExpressionCompiler
                     {
                         if (parent.IgnoresResult())
                             return true; // do nothing
-                        il.Demit(OpCodes.Ldsfld, field);
+                        var byAddress = byRefIndex != -1 || field.FieldType.IsValueType &&
+                            (parent & ParentFlags.InstanceAccess) != 0;
+                        if (byAddress && !field.IsInitOnly)
+                            il.Demit(OpCodes.Ldsflda, field);
+                        else
+                        {
+                            il.Demit(OpCodes.Ldsfld, field);
+                            if (byAddress)
+                                EmitStoreAndLoadLocalVariableAddress(il, field.FieldType);
+                        }
+                        context.LastEmitIsAddress = byAddress;
                     }
                     return true;
                 }
