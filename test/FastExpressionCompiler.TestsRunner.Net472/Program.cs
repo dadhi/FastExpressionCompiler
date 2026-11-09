@@ -34,6 +34,7 @@ namespace FastExpressionCompiler.UnitTests
                 var justLightTestsStopwatch = Stopwatch.StartNew();
 
                 var t = (LightExpression.TestRun)state;
+                t.Run(new LightExpression.UnitTests.InvokeRefArgumentRegressionTests());
                 t.Run(new LightExpression.UnitTests.RuntimeSwitchCaseRegressionTests());
                 t.Run(new LightExpression.UnitTests.StaticFieldAddressRegressionTests());
                 t.Run(new LightExpression.UnitTests.MultidimensionalGetStorageRegressionTests());
@@ -41,6 +42,7 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.DirectLogicalFactoryRegressionTests());
                 t.Run(new LightExpression.UnitTests.TryResultValueRegressionTests());
                 t.Run(new LightExpression.UnitTests.NonVectorArrayRegressionTests());
+                t.Run(new LightExpression.UnitTests.UnboxStorageRegressionTests());
                 t.Run(new LightExpression.UnitTests.VoidSwitchConversionRegressionTests());
                 t.Run(new LightExpression.UnitTests.ReadonlyRefFieldRegressionTests());
                 t.Run(new LightExpression.UnitTests.LiftedUserDefinedLogicalRegressionTests());
@@ -80,6 +82,8 @@ namespace FastExpressionCompiler.UnitTests
             var fecTestsStopwatch = Stopwatch.StartNew();
 
             var fecTests = new TestRun();
+            fecTests.Run(new InvokeRefArgumentRegressionTests());
+            fecTests.Run(new LiftedRefConversionRegressionTests());
             fecTests.Run(new RuntimeSwitchCaseRegressionTests());
             fecTests.Run(new StaticFieldAddressRegressionTests());
             fecTests.Run(new MultidimensionalGetStorageRegressionTests());
@@ -87,6 +91,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new DirectLogicalFactoryRegressionTests());
             fecTests.Run(new TryResultValueRegressionTests());
             fecTests.Run(new NonVectorArrayRegressionTests());
+            fecTests.Run(new UnboxStorageRegressionTests());
             fecTests.Run(new ReadonlyRefFieldRegressionTests());
             fecTests.Run(new LiftedUserDefinedLogicalRegressionTests());
             fecTests.Run(new UserDefinedLogicalRegressionTests());
