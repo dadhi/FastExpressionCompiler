@@ -5629,9 +5629,9 @@ namespace FastExpressionCompiler
                     else
                     {
                         // don't forget to store the object into the variable first, before emitting the arguments
-                        var objVarType = objExpr != null && objExpr.Type.IsValueType && context.LastEmitIsAddress
-                            ? objExpr.Type.MakeByRefType() : objExpr?.Type;
-                        var objVar = objExpr == null ? -1 : EmitStoreLocalVariable(il, objVarType);
+                        var objVar = objExpr == null ? -1 : EmitStoreLocalVariable(il,
+                            objExpr.Type.IsValueType && context.LastEmitIsAddress
+                                ? objExpr.Type.MakeByRefType() : objExpr.Type);
 
                         SmallList<int, Stack8<int>, NoArrayPool<int>> argVars = default;
                         for (var i = 0; i < methodParams.Length; i++)
