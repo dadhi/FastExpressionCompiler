@@ -2204,6 +2204,14 @@ namespace FastExpressionCompiler
         [RequiresUnreferencedCode(Trimming.Message)]
         public static class EmittingVisitor
         {
+            private const ParentFlags OperandParentFlagsToClear = ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
+                ParentFlags.LambdaCall | ParentFlags.ReturnByRef;
+
+            // A value result must not inherit an outer address request; keep IgnoreResult.
+            private const ParentFlags ValueResultFlagsToClear = ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
+                ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef | ParentFlags.DupIt |
+                ParentFlags.LambdaCall | ParentFlags.ReturnByRef;
+
             // todo: @perf use UnsafeAccessAttribute
             /// <summary>Get a type from handle</summary>
             public static readonly MethodInfo GetTypeFromHandleMethod =
@@ -3153,9 +3161,7 @@ namespace FastExpressionCompiler
                 var exprType = tryExpr.Type;
                 var returnsByRef = exprType.IsByRef;
                 var valueParent = returnsByRef ? parent :
-                    (parent & ~(ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
-                        ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef | ParentFlags.DupIt |
-                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue;
+                    (parent & ~ValueResultFlagsToClear) | ParentFlags.AssignmentRightValue;
                 il.BeginExceptionBlock();
 
                 if (!TryEmit(tryExpr.Body, il, ref context, valueParent))
@@ -3519,8 +3525,7 @@ namespace FastExpressionCompiler
                     (method == null || method.GetParameters()[0].ParameterType != operType)) // the method takes the underlying type, so the call is lifted
                 {
                     var liftedFlags = (parent
-                        & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
-                            ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
+                        & ~OperandParentFlagsToClear)
                         | ParentFlags.Arithmetic;
                     return TryEmit(oper, il, ref context, liftedFlags) &&
                         EmitLiftedUnaryOperation(il, nodeType, exprType, operType, method) &&
@@ -4845,8 +4850,7 @@ namespace FastExpressionCompiler
                         // Remove the InstanceCall because we need to operate on the (nullable) field value and not on `ref` to return the value.
                         // We may avoid it in case of not returning the value or PreIncrement/PreDecrement, but let's do less checks and branching.
                         var baseFlags = parent &
-                            ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
-                              ParentFlags.LambdaCall | ParentFlags.ReturnByRef);
+                            ~OperandParentFlagsToClear;
                         var rightOnlyFlags = baseFlags | ParentFlags.AssignmentRightValue;
 
 
@@ -6490,8 +6494,7 @@ namespace FastExpressionCompiler
                 ref CompilerContext context, ParentFlags parent)
             {
                 var flags = parent
-                    & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
-                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef);
+                    & ~OperandParentFlagsToClear;
 
                 if (!TryEmit(expr.Left, il, ref context, flags) ||
                     !TryEmit(expr.Right, il, ref context, flags))
@@ -6830,8 +6833,7 @@ namespace FastExpressionCompiler
                 ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var flags = (parent
-                    & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
-                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
+                    & ~OperandParentFlagsToClear)
                     | ParentFlags.Arithmetic;
 
                 var noNullableValueLabel = default(Label);
@@ -7006,8 +7008,7 @@ namespace FastExpressionCompiler
                     return TryEmitComparisonMethod(left, right, method, il, ref context, parent);
 
                 var flags = (parent
-                    & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
-                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
+                    & ~OperandParentFlagsToClear)
                     | ParentFlags.Arithmetic;
 
                 // Both operands are evaluated and stored first, as System does, then the nullable ones are checked for the value
@@ -7058,8 +7059,7 @@ namespace FastExpressionCompiler
                 ref CompilerContext context, ParentFlags parent)
             {
                 var flags = (parent
-                    & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
-                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
+                    & ~OperandParentFlagsToClear)
                     | ParentFlags.Arithmetic;
 
                 if (!TryEmit(left, il, ref context, flags))
@@ -7105,8 +7105,7 @@ namespace FastExpressionCompiler
                 Expression operand, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var flags = (parent
-                    & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
-                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
+                    & ~OperandParentFlagsToClear)
                     | ParentFlags.Arithmetic;
 
                 if (!TryEmit(operand, il, ref context, flags))
@@ -7139,8 +7138,7 @@ namespace FastExpressionCompiler
                 ref CompilerContext context, ParentFlags parent)
             {
                 var flags = (parent
-                    & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
-                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
+                    & ~OperandParentFlagsToClear)
                     | ParentFlags.Arithmetic;
 
                 if (!TryEmit(left, il, ref context, flags))
