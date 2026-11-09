@@ -34,6 +34,17 @@ namespace FastExpressionCompiler.UnitTests
                 var justLightTestsStopwatch = Stopwatch.StartNew();
 
                 var t = (LightExpression.TestRun)state;
+                t.Run(new LightExpression.UnitTests.StaticFieldAddressRegressionTests());
+                t.Run(new LightExpression.UnitTests.MultidimensionalGetStorageRegressionTests());
+                t.Run(new LightExpression.UnitTests.AbstractConstructorRegressionTests());
+                t.Run(new LightExpression.UnitTests.VoidSwitchConversionRegressionTests());
+                t.Run(new LightExpression.UnitTests.ReadonlyRefFieldRegressionTests());
+                t.Run(new LightExpression.UnitTests.LiftedUserDefinedLogicalRegressionTests());
+                t.Run(new LightExpression.UnitTests.UserDefinedLogicalRegressionTests());
+                t.Run(new LightExpression.UnitTests.VoidLabelValueRegressionTests());
+                t.Run(new LightExpression.UnitTests.ReferenceInstanceCallRegressionTests());
+                t.Run(new LightExpression.UnitTests.MultiRankArrayReceiverRegressionTests());
+                t.Run(new LightExpression.UnitTests.ReadonlyValueReceiverRegressionTests());
                 t.Run(new LightExpression.UnitTests.BlockVariableBindingRegressionTests());
                 t.Run(new LightExpression.UnitTests.ComparisonReductionRegressionTests());
                 t.Run(new LightExpression.UnitTests.ArrayBoundConversionRegressionTests());
@@ -65,6 +76,16 @@ namespace FastExpressionCompiler.UnitTests
             var fecTestsStopwatch = Stopwatch.StartNew();
 
             var fecTests = new TestRun();
+            fecTests.Run(new StaticFieldAddressRegressionTests());
+            fecTests.Run(new MultidimensionalGetStorageRegressionTests());
+            fecTests.Run(new AbstractConstructorRegressionTests());
+            fecTests.Run(new ReadonlyRefFieldRegressionTests());
+            fecTests.Run(new LiftedUserDefinedLogicalRegressionTests());
+            fecTests.Run(new UserDefinedLogicalRegressionTests());
+            fecTests.Run(new VoidLabelValueRegressionTests());
+            fecTests.Run(new ReferenceInstanceCallRegressionTests());
+            fecTests.Run(new MultiRankArrayReceiverRegressionTests());
+            fecTests.Run(new ReadonlyValueReceiverRegressionTests());
             fecTests.Run(new BlockVariableBindingRegressionTests());
             fecTests.Run(new ComparisonReductionRegressionTests());
             fecTests.Run(new ArrayBoundConversionRegressionTests());

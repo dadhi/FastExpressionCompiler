@@ -63,6 +63,17 @@ namespace FastExpressionCompiler.UnitTests
             var ltTask = Task.Run(() =>
             {
                 var ltStopwatch = Stopwatch.StartNew();
+                lt.Run(new LightExpression.UnitTests.StaticFieldAddressRegressionTests());
+                lt.Run(new LightExpression.UnitTests.MultidimensionalGetStorageRegressionTests());
+                lt.Run(new LightExpression.UnitTests.AbstractConstructorRegressionTests());
+                lt.Run(new LightExpression.UnitTests.VoidSwitchConversionRegressionTests());
+                lt.Run(new LightExpression.UnitTests.ReadonlyRefFieldRegressionTests());
+                lt.Run(new LightExpression.UnitTests.LiftedUserDefinedLogicalRegressionTests());
+                lt.Run(new LightExpression.UnitTests.UserDefinedLogicalRegressionTests());
+                lt.Run(new LightExpression.UnitTests.VoidLabelValueRegressionTests());
+                lt.Run(new LightExpression.UnitTests.ReferenceInstanceCallRegressionTests());
+                lt.Run(new LightExpression.UnitTests.MultiRankArrayReceiverRegressionTests());
+                lt.Run(new LightExpression.UnitTests.ReadonlyValueReceiverRegressionTests());
                 lt.Run(new LightExpression.UnitTests.BlockVariableBindingRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ComparisonReductionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ArrayBoundConversionRegressionTests());
@@ -91,6 +102,16 @@ namespace FastExpressionCompiler.UnitTests
             });
 
             var stStopwatch = Stopwatch.StartNew();
+            st.Run(new StaticFieldAddressRegressionTests());
+            st.Run(new MultidimensionalGetStorageRegressionTests());
+            st.Run(new AbstractConstructorRegressionTests());
+            st.Run(new ReadonlyRefFieldRegressionTests());
+            st.Run(new LiftedUserDefinedLogicalRegressionTests());
+            st.Run(new UserDefinedLogicalRegressionTests());
+            st.Run(new VoidLabelValueRegressionTests());
+            st.Run(new ReferenceInstanceCallRegressionTests());
+            st.Run(new MultiRankArrayReceiverRegressionTests());
+            st.Run(new ReadonlyValueReceiverRegressionTests());
             st.Run(new BlockVariableBindingRegressionTests());
             st.Run(new ComparisonReductionRegressionTests());
             st.Run(new ArrayBoundConversionRegressionTests());

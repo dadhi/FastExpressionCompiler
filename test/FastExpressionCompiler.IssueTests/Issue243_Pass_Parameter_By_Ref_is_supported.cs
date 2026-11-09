@@ -139,7 +139,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ldind_Ref,
                 OpCodes.Ldarg_2,
                 OpCodes.Ldind_Ref,
-                OpCodes.Call,
+                OpCodes.Callvirt,
                 OpCodes.Ret);
 
             var b = "test";
