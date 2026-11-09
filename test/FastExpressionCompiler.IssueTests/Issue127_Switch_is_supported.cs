@@ -10,6 +10,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 
+    [RunTest]
     public class Issue127_Switch_is_supported : ITest
     {
         public int Run()

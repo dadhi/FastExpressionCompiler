@@ -7,6 +7,9 @@ using System.Linq.Expressions;
 namespace FastExpressionCompiler.IssueTests
 {
 
+#if !LIGHT_EXPRESSION
+    [RunTest]
+#endif
     public class Issue67_Equality_comparison_with_nullables_throws_at_delegate_invoke : ITest
     {
         public int Run()

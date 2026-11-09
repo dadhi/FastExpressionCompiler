@@ -3,6 +3,7 @@ using System;
 using System.Linq.Expressions;
 using System.Reflection.Emit;
 namespace FastExpressionCompiler.UnitTests;
+[RunTest]
 public struct ReductionProgressRegressionTests : ITestX
 {
     public void Run(TestRun t)

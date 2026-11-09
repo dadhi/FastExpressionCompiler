@@ -12,6 +12,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 
+    [RunTest]
     public class Issue179_Add_something_like_LambdaExpression_CompileToMethod : ITest
     {
         public int Run()

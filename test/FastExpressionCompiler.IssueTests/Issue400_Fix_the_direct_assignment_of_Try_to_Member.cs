@@ -15,6 +15,7 @@ namespace FastExpressionCompiler.IssueTests;
 #endif
 
 
+[RunTest]
 public class Issue400_Fix_the_direct_assignment_of_Try_to_Member : ITest
 {
   public int Run()

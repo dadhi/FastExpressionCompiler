@@ -11,6 +11,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 
+    [RunTest]
     public class Nested_lambdas_assigned_to_vars : ITest
     {
         public int Run()

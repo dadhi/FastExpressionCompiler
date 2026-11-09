@@ -10,6 +10,9 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
+#if (!LIGHT_EXPRESSION && (NETFRAMEWORK)) || LIGHT_EXPRESSION
+[RunTest]
+#endif
 public struct Issue472_TryInterpret_and_Reduce_primitive_arithmetic_and_logical_expressions_during_the_compilation : ITestX
 {
     public void Run(TestRun t)

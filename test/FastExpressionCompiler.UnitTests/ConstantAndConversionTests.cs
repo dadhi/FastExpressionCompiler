@@ -10,6 +10,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests;
 #endif
 
+[RunTest]
 public class ConstantAndConversionTests : ITest
 {
     public int Run()

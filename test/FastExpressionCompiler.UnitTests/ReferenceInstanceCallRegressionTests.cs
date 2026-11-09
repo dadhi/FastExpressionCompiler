@@ -7,6 +7,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests;
 namespace FastExpressionCompiler.UnitTests;
 #endif
 
+[RunTest]
 public struct ReferenceInstanceCallRegressionTests : ITestX
 {
     public void Run(TestRun t)

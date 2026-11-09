@@ -10,6 +10,7 @@ namespace FastExpressionCompiler.UnitTests
 #endif
 {
 
+    [RunTest]
     public class GotoTests : ITest
     {
         public int Run()

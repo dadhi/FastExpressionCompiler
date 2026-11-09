@@ -16,6 +16,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
+    [RunTest]
     public sealed class Issue83_linq2db : ITest
     {
         public int Run()

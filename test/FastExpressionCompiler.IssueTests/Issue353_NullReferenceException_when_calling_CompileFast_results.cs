@@ -17,6 +17,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 
+    [RunTest]
     public class Issue353_NullReferenceException_when_calling_CompileFast_results : ITest
     {
         public int Run()

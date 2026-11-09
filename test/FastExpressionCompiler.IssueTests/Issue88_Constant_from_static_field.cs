@@ -10,6 +10,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
+    [RunTest]
     public class Issue88_Constant_from_static_field : ITest
     {
         public int Run()

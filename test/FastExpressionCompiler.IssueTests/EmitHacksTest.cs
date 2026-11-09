@@ -10,6 +10,7 @@ using System.Runtime.CompilerServices;
 namespace FastExpressionCompiler.IssueTests
 {
     
+    [RunTest]
     public class EmitHacksTest : ITest
     {
         public int Run()

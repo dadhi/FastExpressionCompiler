@@ -10,6 +10,7 @@ using System;
 using System.Linq.Expressions;
 using System.Reflection.Emit;
 
+[RunTest]
 public struct Issue461_InvalidProgramException_when_null_checking_type_by_ref : ITest
 {
     public int Run()

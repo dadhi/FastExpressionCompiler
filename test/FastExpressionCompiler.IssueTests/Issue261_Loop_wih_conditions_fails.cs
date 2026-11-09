@@ -20,6 +20,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
+[RunTest]
 public class Issue261_Loop_wih_conditions_fails : ITest
 {
   public int Run()

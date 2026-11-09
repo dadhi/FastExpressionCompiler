@@ -10,6 +10,7 @@ using Expr = System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests;
 #endif
 
+[RunTest]
 public struct ArrayBoundConversionRegressionTests : ITestX
 {
     public void Run(TestRun t)

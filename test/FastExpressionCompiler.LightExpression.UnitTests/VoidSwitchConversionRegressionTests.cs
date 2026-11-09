@@ -5,6 +5,9 @@ using static FastExpressionCompiler.LightExpression.Expression;
 
 namespace FastExpressionCompiler.LightExpression.UnitTests;
 
+#if LIGHT_EXPRESSION
+[RunTest]
+#endif
 public struct VoidSwitchConversionRegressionTests : ITestX
 {
     public void Run(TestRun t)

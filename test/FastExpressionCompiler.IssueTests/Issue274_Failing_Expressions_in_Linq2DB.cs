@@ -17,6 +17,7 @@ namespace FastExpressionCompiler.IssueTests;
 #endif
 
 
+[RunTest]
 public class Issue274_Failing_Expressions_in_Linq2DB : ITest
 {
     public int Run()

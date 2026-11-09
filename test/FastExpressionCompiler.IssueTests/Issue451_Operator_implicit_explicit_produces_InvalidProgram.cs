@@ -15,6 +15,7 @@ using System.Linq.Expressions;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
+[RunTest]
 public class Issue451_Operator_implicit_explicit_produces_InvalidProgram : ITest
 {
     public int Run()

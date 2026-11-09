@@ -13,6 +13,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 
+    [RunTest]
     public class Issue404_String_plus_parameter_causes_Exception_in_target_invocation : ITest
     {
         public int Run()

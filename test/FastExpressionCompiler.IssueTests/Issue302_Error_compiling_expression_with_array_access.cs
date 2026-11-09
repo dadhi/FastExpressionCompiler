@@ -11,6 +11,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 
+    [RunTest]
     public class Issue302_Error_compiling_expression_with_array_access : ITest
     {
         public int Run()

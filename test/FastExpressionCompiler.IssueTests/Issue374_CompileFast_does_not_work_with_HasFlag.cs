@@ -12,6 +12,7 @@ namespace FastExpressionCompiler.IssueTests;
 #endif
 
 
+[RunTest]
 public class Issue374_CompileFast_does_not_work_with_HasFlag : ITest
 {
     public int Run()

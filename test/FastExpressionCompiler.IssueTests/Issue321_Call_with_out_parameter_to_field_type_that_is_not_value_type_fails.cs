@@ -9,6 +9,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
+    [RunTest]
     public class Issue321_Call_with_out_parameter_to_field_type_that_is_not_value_type_fails : ITest
     {
         public int Run()

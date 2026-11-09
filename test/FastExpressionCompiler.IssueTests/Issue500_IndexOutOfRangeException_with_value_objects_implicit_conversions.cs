@@ -12,6 +12,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
+[RunTest]
 public class Issue500_IndexOutOfRangeException_with_value_objects_implicit_conversions : ITest
 {
     public int Run()

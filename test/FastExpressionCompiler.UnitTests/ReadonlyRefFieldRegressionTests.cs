@@ -7,6 +7,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests;
 namespace FastExpressionCompiler.UnitTests;
 #endif
 
+[RunTest]
 public struct ReadonlyRefFieldRegressionTests : ITestX
 {
     public void Run(TestRun t) => Readonly_instance_fields_supply_temporary_references(t);

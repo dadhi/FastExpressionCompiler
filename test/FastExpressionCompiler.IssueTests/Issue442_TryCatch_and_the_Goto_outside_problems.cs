@@ -10,6 +10,7 @@ namespace FastExpressionCompiler.IssueTests;
 #endif
 
 
+[RunTest]
 public class Issue442_TryCatch_and_the_Goto_outside_problems : ITest
 {
     public int Run()

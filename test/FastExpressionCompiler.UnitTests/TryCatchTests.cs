@@ -12,6 +12,7 @@ namespace FastExpressionCompiler.UnitTests
 #endif
 {
 
+    [RunTest]
     public class TryCatchTests : ITest
     {
         public int Run()

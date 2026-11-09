@@ -13,6 +13,7 @@ namespace FastExpressionCompiler.IssueTests;
 #endif
 
 
+[RunTest]
 public class Issue196_AutoMapper_tests_are_failing_when_using_FEC : ITest
 {
     public int Run()

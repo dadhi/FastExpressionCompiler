@@ -13,6 +13,7 @@ namespace FastExpressionCompiler.IssueTests;
 #endif
 
 
+[RunTest]
 public class Issue420_Nullable_DateTime_comparison_differs_from_Expression_Compile : ITest
 {
     public int Run()

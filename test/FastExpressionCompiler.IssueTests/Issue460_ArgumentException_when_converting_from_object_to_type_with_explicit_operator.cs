@@ -9,6 +9,7 @@ using System.Linq.Expressions;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
+[RunTest]
 public struct Issue460_ArgumentException_when_converting_from_object_to_type_with_explicit_operator : ITest
 {
     public int Run()

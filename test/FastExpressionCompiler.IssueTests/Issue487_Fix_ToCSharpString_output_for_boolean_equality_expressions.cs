@@ -15,6 +15,9 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
+#if (!LIGHT_EXPRESSION && (NET8_0_OR_GREATER))
+[RunTest]
+#endif
 public struct Issue487_Fix_ToCSharpString_output_for_boolean_equality_expressions : ITestX
 {
     public void Run(TestRun t)

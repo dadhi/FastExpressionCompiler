@@ -8,6 +8,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests;
 using E = System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests;
 #endif
+[RunTest]
 public struct RuntimeTypeConstantRegressionTests : ITestX
 {
     public void Run(TestRun t) { Nonruntime_type_constants_preserve_identity(t); Runtime_type_constants_keep_token_semantics(t); }

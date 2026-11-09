@@ -16,6 +16,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
     // considers in/out/ref in C# represented by ByRef in expressions (i.e. single representation for 3 C# keywords)
+    [RunTest]
     public class Issue55_CompileFast_crash_with_ref_parameter : ITest
     {
         public int Run()

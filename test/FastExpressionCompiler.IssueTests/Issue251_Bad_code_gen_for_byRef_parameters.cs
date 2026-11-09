@@ -10,6 +10,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 
+    [RunTest]
     public class Issue251_Bad_code_gen_for_byRef_parameters : ITest
     {
         public int Run()

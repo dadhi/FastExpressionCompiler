@@ -11,6 +11,9 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
+#if NET8_0_OR_GREATER
+[RunTest]
+#endif
 public class Issue341_Equality_comparison_between_nullable_and_null_inside_Any_produces_incorrect_compiled_expression : ITest
 {
     public int Run()

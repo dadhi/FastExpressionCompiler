@@ -9,6 +9,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 
+    [RunTest]
     public class Issue252_Bad_code_gen_for_comparison_of_nullable_type_to_null : ITest
     {
         public int Run()

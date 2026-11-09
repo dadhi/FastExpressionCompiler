@@ -8,6 +8,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
+    [RunTest]
     public class LoopTests : ITest
     {
         public int Run()

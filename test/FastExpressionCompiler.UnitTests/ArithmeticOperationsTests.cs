@@ -11,6 +11,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
+    [RunTest]
     public class ArithmeticOperationsTests : ITest
     {
         public int Run()

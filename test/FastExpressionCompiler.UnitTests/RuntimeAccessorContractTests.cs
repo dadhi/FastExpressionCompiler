@@ -15,6 +15,7 @@ namespace FastExpressionCompiler.UnitTests;
 
 // These are intentionally strict contracts for the CoreCLR versions exercised by CI.
 // A runtime update must not silently disable an optimization while correctness tests pass.
+[RunTest(TestRegistrationGroup.RuntimeContracts)]
 public struct RuntimeAccessorContractTests : ITestX
 {
     private const BindingFlags NonPublicStatic = BindingFlags.NonPublic | BindingFlags.Static;

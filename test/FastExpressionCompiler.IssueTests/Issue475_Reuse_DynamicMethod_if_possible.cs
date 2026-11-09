@@ -15,6 +15,9 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
+#if (!LIGHT_EXPRESSION && (NET8_0_OR_GREATER))
+[RunTest]
+#endif
 public class Issue475_Reuse_DynamicMethod_if_possible : ITestX
 {
     public void Run(TestRun t)

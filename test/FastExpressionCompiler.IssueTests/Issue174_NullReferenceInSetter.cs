@@ -9,6 +9,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
+    [RunTest]
     public class Issue174_NullReferenceInSetter : ITest
     {
         public int Run()

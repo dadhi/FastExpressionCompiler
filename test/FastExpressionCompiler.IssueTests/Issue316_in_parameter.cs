@@ -15,6 +15,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 
+    [RunTest]
     public class Issue316_in_parameter : ITest
     {
         public int Run()

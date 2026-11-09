@@ -13,6 +13,9 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
+#if (LIGHT_EXPRESSION && (NET8_0_OR_GREATER))
+[RunTest]
+#endif
 public struct Issue490_Regression_in_compiling_lambdas_with_ref_struct_parameters : ITestX
 {
     public void Run(TestRun t)

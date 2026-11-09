@@ -13,6 +13,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 
+    [RunTest]
     public class Issue14_String_constant_comparisons_fail : ITest
     {
         public int Run()

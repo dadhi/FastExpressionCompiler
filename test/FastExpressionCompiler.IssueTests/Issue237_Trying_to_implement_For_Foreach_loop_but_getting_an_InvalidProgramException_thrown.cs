@@ -17,6 +17,7 @@ namespace FastExpressionCompiler.IssueTests
 {
     public delegate bool DeserializerDlg<in T>(ref ReadOnlySequence<byte> seq, T value, out long bytesRead);
 
+    [RunTest]
     public class Issue237_Trying_to_implement_For_Foreach_loop_but_getting_an_InvalidProgramException_thrown : ITest
     {
         private static readonly MethodInfo _tryRead = typeof(ReaderExtensions).GetMethod(nameof(ReaderExtensions.TryReadValue));

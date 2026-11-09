@@ -10,6 +10,7 @@ namespace FastExpressionCompiler.UnitTests
 #endif
 {
 
+    [RunTest]
     public class CoalesceTests : ITest
     {
         public int Run()

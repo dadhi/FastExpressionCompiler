@@ -17,6 +17,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 
+    [RunTest]
     public class Issue355_Error_with_converting_to_from_signed_unsigned_integers : ITest
     {
         public int Run()

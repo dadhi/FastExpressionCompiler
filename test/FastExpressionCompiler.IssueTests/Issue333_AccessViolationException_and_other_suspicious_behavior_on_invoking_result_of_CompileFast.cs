@@ -13,6 +13,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 
+    [RunTest]
     public class Issue333_AccessViolationException_and_other_suspicious_behavior_on_invoking_result_of_CompileFast : ITest
     {
         public int Run()

@@ -13,6 +13,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 
 
+[RunTest]
 public class Issue390_405_406_Mapster_tests : ITest
 {
     public int Run()

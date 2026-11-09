@@ -10,6 +10,9 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
+#if (!LIGHT_EXPRESSION && (NETFRAMEWORK)) || LIGHT_EXPRESSION
+[RunTest]
+#endif
 public struct Issue468_Optimize_the_delegate_access_to_the_Closure_object_for_the_modern_NET : ITestX
 {
     public void Run(TestRun t)

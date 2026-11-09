@@ -14,6 +14,9 @@ using FastExpressionCompiler.ImTools;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
+#if (!LIGHT_EXPRESSION && (NET8_0_OR_GREATER)) || LIGHT_EXPRESSION
+[RunTest]
+#endif
 public struct Issue431_Add_structural_equality_comparison_to_LightExpression : ITestX
 {
     public static readonly ConstructorInfo CtorOfA = typeof(A).GetTypeInfo().DeclaredConstructors.First();

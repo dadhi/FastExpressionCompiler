@@ -11,6 +11,9 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
+#if !LIGHT_EXPRESSION || (LIGHT_EXPRESSION && (NETFRAMEWORK))
+[RunTest]
+#endif
 public struct Issue498_InvalidProgramException_when_using_loop : ITestX
 {
     public void Run(TestRun t)

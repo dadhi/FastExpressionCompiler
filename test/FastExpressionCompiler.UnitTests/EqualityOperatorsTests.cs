@@ -11,6 +11,7 @@ namespace FastExpressionCompiler.UnitTests
 #endif
 {
 
+    [RunTest]
     public class EqualityOperatorsTests : ITest
     {
         public int Run()

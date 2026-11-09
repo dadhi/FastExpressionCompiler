@@ -12,6 +12,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 
+    [RunTest]
     public class Issue101_Not_supported_Assign_Modes : ITest
     {
         public int Run()

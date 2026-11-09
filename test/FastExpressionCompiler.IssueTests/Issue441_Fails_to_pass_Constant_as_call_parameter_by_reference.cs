@@ -10,6 +10,7 @@ namespace FastExpressionCompiler.IssueTests;
 #endif
 
 
+[RunTest]
 public class Issue441_Fails_to_pass_Constant_as_call_parameter_by_reference : ITest
 {
     public int Run()

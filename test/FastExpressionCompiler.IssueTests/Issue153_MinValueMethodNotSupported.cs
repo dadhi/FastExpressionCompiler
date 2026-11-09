@@ -11,6 +11,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 
+    [RunTest]
     public class Issue153_MinValueMethodNotSupported : ITest
     {
         public int Run()

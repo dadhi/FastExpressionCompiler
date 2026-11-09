@@ -9,6 +9,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
+[RunTest]
 public class Issue553_CompileFast_returns_wrong_values_when_a_member_is_accessed_on_an_interface_converted_to_a_struct : ITest
 {
     public int Run()

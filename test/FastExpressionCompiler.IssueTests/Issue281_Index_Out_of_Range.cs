@@ -14,6 +14,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 
+    [RunTest]
     public class Issue281_Index_Out_of_Range : ITest
     {
         public int Run()

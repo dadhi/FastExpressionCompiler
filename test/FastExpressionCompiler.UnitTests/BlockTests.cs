@@ -14,6 +14,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
+    [RunTest]
     public class BlockTests : ITest
     {
         public int Run()

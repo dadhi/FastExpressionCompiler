@@ -15,6 +15,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 
+    [RunTest]
     public class Issue147_int_try_parse : ITest
     {
         public int Run()

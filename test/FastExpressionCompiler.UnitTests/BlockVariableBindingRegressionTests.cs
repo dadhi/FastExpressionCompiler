@@ -7,6 +7,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests;
 namespace FastExpressionCompiler.UnitTests;
 #endif
 
+[RunTest]
 public struct BlockVariableBindingRegressionTests : ITestX
 {
     private static readonly CompilerFlags[] Flags =

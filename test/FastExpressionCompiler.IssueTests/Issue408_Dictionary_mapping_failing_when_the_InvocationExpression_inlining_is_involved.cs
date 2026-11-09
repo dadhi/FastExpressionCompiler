@@ -16,6 +16,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 
+  [RunTest]
   public class Issue408_Dictionary_mapping_failing_when_the_InvocationExpression_inlining_is_involved : ITest
   {
     public int Run()

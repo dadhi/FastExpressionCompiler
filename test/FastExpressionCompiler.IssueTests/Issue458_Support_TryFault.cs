@@ -11,6 +11,9 @@ namespace FastExpressionCompiler.IssueTests;
 
 // Note: Try Fault is not support by the .NET Framework, but it is supported by .NET Core+.
 
+#if NET8_0_OR_GREATER
+[RunTest]
+#endif
 public struct Issue458_Support_TryFault : ITest
 {
     public int Run()

@@ -13,6 +13,7 @@ namespace FastExpressionCompiler.IssueTests;
 #endif
 
 
+[RunTest]
 public class Issue443_Nested_Calls_with_lambda_parameters : ITest
 {
     public int Run()

@@ -11,6 +11,7 @@ namespace FastExpressionCompiler.UnitTests
 #endif
 {
 
+    [RunTest]
     public class HoistedLambdaExprTests : ITest
     {
         public int Run()

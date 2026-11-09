@@ -5,6 +5,7 @@ using System.Reflection.Emit;
 using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.IssueTests;
 
+[RunTest]
 public class Issue365_Working_with_ref_return_values : ITest
 {
     public int Run()

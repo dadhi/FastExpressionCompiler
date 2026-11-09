@@ -12,6 +12,9 @@ using SysExpr = System.Linq.Expressions.Expression;
 
 namespace FastExpressionCompiler.LightExpression.UnitTests
 {
+#if LIGHT_EXPRESSION
+    [RunTest]
+#endif
     public partial class LightExpressionTests : ITest
     {
         public int Run()

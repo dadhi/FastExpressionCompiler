@@ -9,6 +9,9 @@ using Microsoft.Extensions.Internal;
 namespace FastExpressionCompiler.IssueTests
 {
 
+#if !LIGHT_EXPRESSION
+    [RunTest]
+#endif
     public class Issue72_Try_CompileFast_for_MS_Extensions_ObjectMethodExecutor : ITest
     {
         public int Run()

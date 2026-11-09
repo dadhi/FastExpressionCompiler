@@ -9,6 +9,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
+    [RunTest]
     public class Issue76_Expression_Convert_causing_signature_or_security_transparency_is_not_compatible_exception : ITest
     {
         public int Run()

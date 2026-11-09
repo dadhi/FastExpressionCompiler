@@ -12,6 +12,7 @@ namespace FastExpressionCompiler.UnitTests
 #endif
 {
 
+    [RunTest]
     public class ClosureConstantTests : ITest
     {
         public int Run()

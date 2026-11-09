@@ -9,6 +9,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
+    [RunTest]
     public class Issue156_InvokeAction : ITest
     {
         public int Run()

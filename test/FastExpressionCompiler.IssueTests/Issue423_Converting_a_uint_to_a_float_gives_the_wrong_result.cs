@@ -11,6 +11,7 @@ namespace FastExpressionCompiler.IssueTests;
 #endif
 
 
+[RunTest]
 public class Issue423_Converting_a_uint_to_a_float_gives_the_wrong_result : ITest
 {
     public int Run()

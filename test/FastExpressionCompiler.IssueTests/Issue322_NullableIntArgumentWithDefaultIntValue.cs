@@ -13,6 +13,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 
+    [RunTest]
     public class Issue322_NullableIntArgumentWithDefaultIntValue : ITest
     {
         public int Run()

@@ -11,6 +11,9 @@ namespace FastExpressionCompiler.IssueTests;
 #endif
 
 
+#if !LIGHT_EXPRESSION
+[RunTest]
+#endif
 public class Issue421_Date_difference_is_giving_wrong_negative_value : ITest
 {
     public int Run()

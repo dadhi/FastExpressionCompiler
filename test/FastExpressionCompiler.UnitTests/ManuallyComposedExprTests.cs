@@ -13,6 +13,7 @@ namespace FastExpressionCompiler.UnitTests
 #endif
 {
 
+    [RunTest]
     public class ManuallyComposedExprTests : ITest
     {
         public int Run()

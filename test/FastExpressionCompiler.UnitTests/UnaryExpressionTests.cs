@@ -16,6 +16,7 @@ namespace FastExpressionCompiler.UnitTests
 #endif
 {
 
+    [RunTest]
     public class UnaryExpressionTests : ITest
     {
         public int Run()

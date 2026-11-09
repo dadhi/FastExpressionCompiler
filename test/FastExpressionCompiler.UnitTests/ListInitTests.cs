@@ -14,6 +14,7 @@ namespace FastExpressionCompiler.UnitTests
 #endif
 {
 
+    [RunTest]
     public class ListInitTests : ITest
     {
         public int Run()

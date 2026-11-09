@@ -12,6 +12,7 @@ namespace FastExpressionCompiler.UnitTests
 #endif
 {
 
+    [RunTest]
     public class ConditionalOperatorsTests : ITest
     {
         public int Run()

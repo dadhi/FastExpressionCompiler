@@ -11,6 +11,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 
+    [RunTest]
     public class Issue44_Conversion_To_Nullable_Throws_Exception : ITest
     {
         public int Run()

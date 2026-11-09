@@ -15,6 +15,7 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
     using System.Reflection;
 
 
+    [RunTest]
     public class Issue150_New_AttemptToReadProtectedMemory : ITest
     {
         public int Run()

@@ -16,6 +16,7 @@ using FastExpressionCompiler.ILDecoder;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
+[RunTest]
 public struct Issue561_NonBooleanEqualityOperator : ITestX
 {
     public void Run(TestRun t)

@@ -12,6 +12,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
+    [RunTest]
     public class Issue320_Bad_label_content_in_ILGenerator_when_creating_through_DynamicModule : ITest
     {
         public int Run()

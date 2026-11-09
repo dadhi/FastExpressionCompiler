@@ -8,6 +8,9 @@ using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.IssueTests
 {
 
+#if LIGHT_EXPRESSION
+    [RunTest]
+#endif
     public class Issue363_ActionFunc16Generics : ITest
     {
         public static readonly object[] TestCases = Enumerable.Range(0, 16).Cast<object>().ToArray();

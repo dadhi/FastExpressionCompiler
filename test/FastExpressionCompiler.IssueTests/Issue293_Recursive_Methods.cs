@@ -11,6 +11,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 
+    [RunTest]
     public class Issue293_Recursive_Methods : ITest
     {
         public int Run()

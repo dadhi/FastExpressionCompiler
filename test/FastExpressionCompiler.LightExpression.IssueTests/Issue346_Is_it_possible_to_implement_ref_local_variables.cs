@@ -7,6 +7,9 @@ namespace FastExpressionCompiler.LightExpression.IssueTests
 {
 
 
+#if LIGHT_EXPRESSION
+    [RunTest]
+#endif
     public class Issue346_Is_it_possible_to_implement_ref_local_variables : ITest
     {
         public int Run()

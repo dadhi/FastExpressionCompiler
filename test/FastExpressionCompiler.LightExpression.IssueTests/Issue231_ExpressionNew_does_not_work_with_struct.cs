@@ -4,6 +4,9 @@
 namespace FastExpressionCompiler.LightExpression.IssueTests
 {
 
+#if (LIGHT_EXPRESSION && (NET8_0_OR_GREATER))
+    [RunTest]
+#endif
     public class Issue231_ExpressionNew_does_not_work_with_struct : ITest
     {
         public int Run()

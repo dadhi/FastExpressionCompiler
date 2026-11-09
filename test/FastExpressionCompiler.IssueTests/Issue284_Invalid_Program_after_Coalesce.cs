@@ -12,6 +12,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
+    [RunTest]
     public class Issue284_Invalid_Program_after_Coalesce : ITest
     {
         public int Run()

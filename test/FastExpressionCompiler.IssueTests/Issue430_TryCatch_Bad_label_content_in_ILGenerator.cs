@@ -10,6 +10,7 @@ namespace FastExpressionCompiler.IssueTests;
 #endif
 
 
+[RunTest]
 public class Issue430_TryCatch_Bad_label_content_in_ILGenerator : ITest
 {
     public int Run()

@@ -9,6 +9,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests
 #endif
 {
+    [RunTest]
     public class ValueTypeTests : ITest
     {
         public int Run()

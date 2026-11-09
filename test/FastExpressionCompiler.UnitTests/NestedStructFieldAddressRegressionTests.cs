@@ -7,6 +7,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests;
 namespace FastExpressionCompiler.UnitTests;
 #endif
 
+[RunTest]
 public struct NestedStructFieldAddressRegressionTests : ITestX
 {
     public struct Counter { public int Value; }

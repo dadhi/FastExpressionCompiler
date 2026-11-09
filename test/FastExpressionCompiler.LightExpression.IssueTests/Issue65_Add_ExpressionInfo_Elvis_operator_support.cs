@@ -5,6 +5,9 @@ using static FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.IssueTests
 {
 
+#if (LIGHT_EXPRESSION && (NET8_0_OR_GREATER))
+    [RunTest]
+#endif
     public class Issue65_Add_LightExpression_Elvis_operator_support : ITest
     {
         public int Run()

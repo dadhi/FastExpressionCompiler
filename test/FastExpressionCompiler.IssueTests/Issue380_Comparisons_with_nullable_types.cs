@@ -14,6 +14,7 @@ namespace FastExpressionCompiler.IssueTests;
 #endif
 
 
+[RunTest]
 public class Issue380_Comparisons_with_nullable_types : ITest
 {
     public int Run()

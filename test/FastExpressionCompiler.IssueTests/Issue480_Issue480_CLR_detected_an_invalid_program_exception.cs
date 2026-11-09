@@ -10,6 +10,9 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
+#if !LIGHT_EXPRESSION
+[RunTest]
+#endif
 public struct Issue480_CLR_detected_an_invalid_program_exception : ITestX
 {
     public void Run(TestRun t)

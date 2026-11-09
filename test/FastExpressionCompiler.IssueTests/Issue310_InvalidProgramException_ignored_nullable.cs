@@ -10,6 +10,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 
+    [RunTest]
     public class Issue310_InvalidProgramException_ignored_nullable
     {
         public int Run()

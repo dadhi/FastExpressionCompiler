@@ -10,6 +10,9 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
+#if (!LIGHT_EXPRESSION && (NET8_0_OR_GREATER))
+    [RunTest]
+#endif
     public class Issue357_Invalid_program_exception : ITest
     {
         public int Run()

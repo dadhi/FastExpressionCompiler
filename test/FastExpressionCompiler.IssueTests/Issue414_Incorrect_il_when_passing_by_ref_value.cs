@@ -10,6 +10,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
+[RunTest]
 public class Issue414_Incorrect_il_when_passing_by_ref_value : ITest
 {
     public int Run()

@@ -10,6 +10,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 
+    [RunTest]
     public class Issue309_InvalidProgramException_with_MakeBinary_liftToNull_true : ITest
     {
         public int Run()

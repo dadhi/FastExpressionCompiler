@@ -17,4 +17,10 @@
     <ItemGroup>
         <PackageReference Include="NUnit" Version="3.14.0"/>
     </ItemGroup>
+    <ItemGroup>
+        <Compile Include="..\GeneratedTests.cs" Link="GeneratedTests.cs" />
+        <ProjectReference Include="..\FastExpressionCompiler.TestRegistrationGenerator\FastExpressionCompiler.TestRegistrationGenerator.csproj"
+                          OutputItemType="Analyzer" ReferenceOutputAssembly="false"
+                          Condition="'$(EnableTestRegistrationGenerator)' != 'false'" />
+    </ItemGroup>
 </Project>

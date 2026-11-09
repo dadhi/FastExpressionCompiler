@@ -11,6 +11,7 @@ namespace FastExpressionCompiler.IssueTests;
 #endif
 
 
+[RunTest]
 public class Issue440_Errors_with_simplified_Switch_cases : ITest
 {
     public int Run()

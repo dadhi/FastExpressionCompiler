@@ -11,6 +11,7 @@ namespace FastExpressionCompiler.IssueTests;
 #endif
 
 
+[RunTest]
 public class Issue426_Directly_passing_a_method_result_to_another_method_by_ref_fails_with_InvalidProgramException : ITest
 {
     public int Run()

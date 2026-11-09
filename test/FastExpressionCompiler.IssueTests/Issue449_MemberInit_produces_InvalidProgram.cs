@@ -12,6 +12,7 @@ namespace FastExpressionCompiler.IssueTests;
 #endif
 
 
+[RunTest]
 public class Issue449_MemberInit_produces_InvalidProgram : ITest
 {
     public int Run()

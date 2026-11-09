@@ -11,6 +11,9 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
+#if (!LIGHT_EXPRESSION && (NETFRAMEWORK)) || LIGHT_EXPRESSION
+[RunTest]
+#endif
 public struct Issue476_System_ExecutionEngineException_with_nullables_on_repeated_calls_to_ConcurrentDictionary : ITestX
 {
     public void Run(TestRun t)

@@ -10,6 +10,9 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
+#if !LIGHT_EXPRESSION
+[RunTest]
+#endif
 public struct Issue495_Incomplete_pattern_detection_for_NotSupported_1007_Return_goto_from_TryCatch_with_Assign_generates_invalid_IL : ITestX
 {
     public void Run(TestRun t)

@@ -11,6 +11,7 @@ namespace FastExpressionCompiler.IssueTests;
 #endif
 
 
+[RunTest]
 public class Issue418_Wrong_output_when_comparing_NaN_value : ITest
 {
     public int Run()

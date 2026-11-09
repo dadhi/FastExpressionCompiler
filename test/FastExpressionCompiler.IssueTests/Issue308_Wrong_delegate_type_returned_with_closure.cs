@@ -9,6 +9,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 
+    [RunTest]
     public class Issue308_Wrong_delegate_type_returned_with_closure : ITest
     {
         public int Run()

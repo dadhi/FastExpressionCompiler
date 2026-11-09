@@ -9,6 +9,9 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
+#if (!LIGHT_EXPRESSION && (NETFRAMEWORK)) || LIGHT_EXPRESSION
+[RunTest]
+#endif
 public struct Issue473_InvalidProgramException_when_using_Expression_Condition_with_converted_decimal_expression : ITestX
 {
     public void Run(TestRun t)

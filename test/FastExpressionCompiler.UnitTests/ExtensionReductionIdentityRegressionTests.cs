@@ -8,6 +8,7 @@ using E = System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests;
 #endif
 
+[RunTest]
 public struct ExtensionReductionIdentityRegressionTests : ITestX
 {
     private static readonly CompilerFlags[] Flags =

@@ -11,6 +11,7 @@ namespace FastExpressionCompiler.IssueTests;
 #endif
 
 
+[RunTest]
 public class Issue439_Support_unused_Field_access_in_Block : ITest
 {
     public int Run()

@@ -11,6 +11,7 @@ namespace FastExpressionCompiler.IssueTests;
 #endif
 
 
+[RunTest]
 public class Issue437_Shared_variables_with_nested_lambdas_returning_incorrect_values : ITest
 {
     public int Run()

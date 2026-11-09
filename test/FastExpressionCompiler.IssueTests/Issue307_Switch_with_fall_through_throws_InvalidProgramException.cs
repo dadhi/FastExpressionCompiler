@@ -9,6 +9,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 
+    [RunTest]
     public class Issue307_Switch_with_fall_through_throws_InvalidProgramException : ITest
     {
         public int Run()

@@ -13,6 +13,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
+    [RunTest]
     public class Issue78_blocks_with_constant_return : ITest
     {
         public int Run()

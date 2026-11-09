@@ -11,6 +11,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests
 #endif
 {
+    [RunTest]
     public class Issue159_NumericConversions : ITest
     {
         public int Run()

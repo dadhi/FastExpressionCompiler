@@ -10,6 +10,7 @@ using System.Linq.Dynamic.Core.Parser;
 namespace FastExpressionCompiler.IssueTests;
 
 
+[RunTest]
 public class Issue366_FEC334_gives_incorrect_results_in_some_linq_operations : ITest
 {
     public int Run()

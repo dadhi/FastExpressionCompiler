@@ -13,6 +13,7 @@ namespace FastExpressionCompiler.IssueTests;
 #endif
 
 
+[RunTest]
 public class Issue386_Value_can_not_be_null_in_Nullable_convert : ITest
 {
     public int Run()

@@ -6,6 +6,9 @@ using static FastExpressionCompiler.LightExpression.Expression;
 
 namespace FastExpressionCompiler.LightExpression.UnitTests;
 
+#if LIGHT_EXPRESSION
+[RunTest]
+#endif
 public class NestedLambdasSharedToExpressionCodeStringTest : ITest
 {
     public int Run()

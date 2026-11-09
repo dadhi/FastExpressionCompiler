@@ -11,6 +11,9 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
+#if NETFRAMEWORK
+[RunTest]
+#endif
 public struct Issue183_NullableDecimal : ITestX
 {
     public void Run(TestRun t)

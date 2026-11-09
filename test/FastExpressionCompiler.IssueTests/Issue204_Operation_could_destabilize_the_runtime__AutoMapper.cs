@@ -10,6 +10,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 
+    [RunTest]
     public class Issue204_Operation_could_destabilize_the_runtime__AutoMapper : ITest
     {
         public int Run()

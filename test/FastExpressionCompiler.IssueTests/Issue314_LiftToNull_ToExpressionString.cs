@@ -10,6 +10,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 
+    [RunTest]
     public class Issue314_LiftToNull_ToExpressionString
     {
         public int Run()

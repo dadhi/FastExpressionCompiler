@@ -11,6 +11,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
+[RunTest]
 public struct Issue499_InvalidProgramException_for_Sorting_and_comparison_function : ITestX
 {
     public void Run(TestRun t)

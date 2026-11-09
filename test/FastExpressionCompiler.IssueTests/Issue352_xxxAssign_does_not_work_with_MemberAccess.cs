@@ -18,6 +18,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 
+    [RunTest]
     public class Issue352_xxxAssign_does_not_work_with_MemberAccess : ITest
     {
         public int Run()

@@ -18,6 +18,7 @@ namespace FastExpressionCompiler.UnitTests
 #endif
 {
     /// <summary>Compiles with the FEC and with the System and compares the results, runs for both the System and the LightExpression</summary>
+    [RunTest]
     public struct ParityTests : ITestX
     {
         public void Run(TestRun t)

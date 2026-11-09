@@ -9,6 +9,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests;
 namespace FastExpressionCompiler.UnitTests;
 #endif
 
+[RunTest]
 public struct CheckedFloatingArithmeticRegressionTests : ITestX
 {
     public void Run(TestRun t) => Checked_floating_arithmetic_matches_system(t);

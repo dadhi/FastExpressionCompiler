@@ -12,6 +12,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
+[RunTest]
 public class Issue428_Expression_Switch_without_a_default_case_incorrectly_calls_first_case_for_unmatched_values : ITest
 {
     public int Run()

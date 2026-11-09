@@ -10,6 +10,7 @@ using static System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.IssueTests;
 #endif
 
+[RunTest]
 public class Issue422_InvalidProgramException_when_having_TryCatch_Default_in_Catch : ITest
 {
     public int Run()

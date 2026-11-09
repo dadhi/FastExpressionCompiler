@@ -11,6 +11,7 @@ namespace FastExpressionCompiler.IssueTests
 #endif
 {
 
+    [RunTest]
     public class Issue305_CompileFast_generates_incorrect_code_with_arrays_and_printing : ITest
     {
         public int Run()

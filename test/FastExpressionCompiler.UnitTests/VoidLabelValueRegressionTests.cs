@@ -8,6 +8,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests;
 namespace FastExpressionCompiler.UnitTests;
 #endif
 
+[RunTest]
 public struct VoidLabelValueRegressionTests : ITestX
 {
     public void Run(TestRun t)
