@@ -2269,7 +2269,7 @@ namespace FastExpressionCompiler
                             {
                                 var unaryExpr = (UnaryExpression)expr;
                                 var oper = unaryExpr.Operand;
-                                return TryEmitSimpleUnary(exprType, oper, oper.Type, unaryExpr.Method, nodeType, il, ref context, parent);
+                                return TryEmitSimpleUnary(exprType, oper, oper.Type, unaryExpr.Method, nodeType, il, ref context, parent, byRefIndex);
                             }
                         case ExpressionType.TypeIs:
                         case ExpressionType.TypeEqual:
@@ -3537,8 +3537,32 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitSimpleUnary(Type exprType, Expression oper, Type operType, MethodInfo method,
-                ExpressionType nodeType, ILGenerator il, ref CompilerContext context, ParentFlags parent)
+                ExpressionType nodeType, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex = -1)
             {
+                if (nodeType == ExpressionType.Unbox)
+                {
+                    if (exprType.IsNullable() && (parent & ParentFlags.ReturnByRef) != 0)
+                        return false;
+                    var valueFlags = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.InstanceCall |
+                        ParentFlags.MemberAccess | ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef |
+                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue;
+                    if (!TryEmit(oper, il, ref context, valueFlags))
+                        return false;
+                    var byAddress = !parent.IgnoresResult() && exprType.IsValueType && (byRefIndex != -1 ||
+                        (parent & (ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
+                            ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef | ParentFlags.ReturnByRef)) != 0);
+                    if (byAddress && !exprType.IsNullable())
+                        il.Demit(OpCodes.Unbox, exprType);
+                    else
+                    {
+                        il.Demit(OpCodes.Unbox_Any, exprType);
+                        if (byAddress)
+                            EmitStoreAndLoadLocalVariableAddress(il, exprType);
+                    }
+                    context.LastEmitIsAddress = byAddress;
+                    return il.EmitPopIfIgnoreResult(parent);
+                }
+
                 if (operType.IsNullable() & nodeType != ExpressionType.TypeAs & nodeType != ExpressionType.Unbox &&
                     (method == null || method.GetParameters()[0].ParameterType != operType)) // the method takes the underlying type, so the call is lifted
                 {
@@ -3560,8 +3584,6 @@ namespace FastExpressionCompiler
                     if (exprType.IsValueType)
                         il.Demit(OpCodes.Unbox_Any, exprType);
                 }
-                else if (nodeType == ExpressionType.Unbox)
-                    il.Demit(OpCodes.Unbox_Any, exprType);
                 else if (!EmitUnaryOperation(il, nodeType, operType, method))
                     return false;
 
