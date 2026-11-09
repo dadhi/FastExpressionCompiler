@@ -32,6 +32,9 @@ jobs:
       - name: Build
         run: dotnet build -c:Release
 
+      - name: Test registration generator
+        run: dotnet test --no-build -c Release test/FastExpressionCompiler.TestRegistrationGenerator.Tests
+
       - name: Tests - net10.0
         run: dotnet run --no-build -c:Release -f:net10.0 --project test/FastExpressionCompiler.TestsRunner/FastExpressionCompiler.TestsRunner.csproj
 

@@ -17,4 +17,9 @@
         <ProjectReference Include="..\FastExpressionCompiler.UnitTests\FastExpressionCompiler.UnitTests.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+        <ProjectReference Include="..\FastExpressionCompiler.TestRegistrationGenerator\FastExpressionCompiler.TestRegistrationGenerator.csproj"
+                          OutputItemType="Analyzer" ReferenceOutputAssembly="false"
+                          Condition="'$(EnableTestRegistrationGenerator)' != 'false'" />
+    </ItemGroup>
 </Project>

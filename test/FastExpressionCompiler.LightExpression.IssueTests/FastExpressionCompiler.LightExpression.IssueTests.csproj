@@ -24,4 +24,9 @@
         <PackageReference Include="Mapster" Version="10.0.12" />
     </ItemGroup>
 
+    <ItemGroup>
+        <ProjectReference Include="..\FastExpressionCompiler.TestRegistrationGenerator\FastExpressionCompiler.TestRegistrationGenerator.csproj"
+                          OutputItemType="Analyzer" ReferenceOutputAssembly="false"
+                          Condition="'$(EnableTestRegistrationGenerator)' != 'false'" />
+    </ItemGroup>
 </Project>

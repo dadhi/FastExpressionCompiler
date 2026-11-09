@@ -23,4 +23,9 @@
       <PackageReference Include="CsCheck" Version="4.8.0" />
     </ItemGroup>
 
+    <ItemGroup>
+        <ProjectReference Include="..\FastExpressionCompiler.TestRegistrationGenerator\FastExpressionCompiler.TestRegistrationGenerator.csproj"
+                          OutputItemType="Analyzer" ReferenceOutputAssembly="false"
+                          Condition="'$(EnableTestRegistrationGenerator)' != 'false'" />
+    </ItemGroup>
 </Project>
