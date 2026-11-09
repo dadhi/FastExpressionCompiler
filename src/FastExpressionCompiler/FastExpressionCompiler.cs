@@ -2236,6 +2236,8 @@ namespace FastExpressionCompiler
                 ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef | ParentFlags.DupIt |
                 ParentFlags.LambdaCall | ParentFlags.ReturnByRef;
 
+            private const ParentFlags ValueOperandFlagsToClear = ValueResultFlagsToClear | ParentFlags.IgnoreResult;
+
             // todo: @perf use UnsafeAccessorAttribute
             /// <summary>Get a type from handle</summary>
             public static readonly MethodInfo GetTypeFromHandleMethod =
@@ -3093,8 +3095,7 @@ namespace FastExpressionCompiler
                 var labelDone = il.DefineLabel();
 
                 // we won't OpCodes.Pop inside the Coalesce as it may leave the Il in invalid state - instead we will pop at the end here (#284)
-                var flags = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
-                    ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.Coalesce | ParentFlags.AssignmentRightValue;
+                var flags = (parent & ~CallArgumentFlagsToClear) | ParentFlags.Coalesce | ParentFlags.AssignmentRightValue;
 
                 if (!TryEmit(left, il, ref context, flags))
                     return false;
@@ -3594,9 +3595,7 @@ namespace FastExpressionCompiler
                 if (operType.IsNullable() & nodeType != ExpressionType.TypeAs & nodeType != ExpressionType.Unbox &&
                     (method == null || method.GetParameters()[0].ParameterType != operType)) // the method takes the underlying type, so the call is lifted
                 {
-                    var liftedFlags = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
-                        ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef | ParentFlags.DupIt |
-                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue;
+                    var liftedFlags = (parent & ~ValueOperandFlagsToClear) | ParentFlags.AssignmentRightValue;
                     if (!TryEmit(oper, il, ref context, liftedFlags) ||
                         !EmitLiftedUnaryOperation(il, nodeType, exprType, operType, method))
                         return false;
@@ -3604,9 +3603,7 @@ namespace FastExpressionCompiler
                     return il.EmitPopIfIgnoreResult(parent);
                 }
 
-                if (!TryEmit(oper, il, ref context, (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
-                        ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef | ParentFlags.DupIt |
-                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue))
+                if (!TryEmit(oper, il, ref context, (parent & ~ValueOperandFlagsToClear) | ParentFlags.AssignmentRightValue))
                     return false;
 
                 if (nodeType == ExpressionType.TypeAs)
@@ -3725,7 +3722,7 @@ namespace FastExpressionCompiler
 
             private static bool TryEmitTypeIsOrEqual(TypeBinaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
-                var valueFlags = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess | ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef | ParentFlags.DupIt | ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue;
+                var valueFlags = (parent & ~ValueOperandFlagsToClear) | ParentFlags.AssignmentRightValue;
                 var operand = expr.Expression;
                 var operandType = operand.Type;
                 var typeOperand = expr.TypeOperand;
@@ -3818,9 +3815,7 @@ namespace FastExpressionCompiler
             private static bool TryEmitNot(UnaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 // Methods and lifted operands use the shared unary emitter in the dispatch above.
-                var operandFlags = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
-                    ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef | ParentFlags.DupIt |
-                    ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue;
+                var operandFlags = (parent & ~ValueOperandFlagsToClear) | ParentFlags.AssignmentRightValue;
                 var op = expr.Operand;
                 if (op.NodeType == ExpressionType.Equal && Tools.IsPrimitiveOrEnumEquality((BinaryExpression)op))
                 {
@@ -3863,9 +3858,7 @@ namespace FastExpressionCompiler
                         return TryEmit(opExpr, il, ref context, parent & ~ParentFlags.InstanceAccess);
 
                     // Emit the operand before going to the fast checks below
-                    if (!TryEmit(opExpr, il, ref context, (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
-                        ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef | ParentFlags.DupIt |
-                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue))
+                    if (!TryEmit(opExpr, il, ref context, (parent & ~ValueOperandFlagsToClear) | ParentFlags.AssignmentRightValue))
                         return false;
 
                     if (sourceType == targetType)
@@ -3946,9 +3939,7 @@ namespace FastExpressionCompiler
                         ? (parent & ~CallArgumentFlagsToClear) | ParentFlags.AssignmentRightValue
                         : isByRefParam
                             ? parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess
-                            : (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
-                                ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef | ParentFlags.DupIt |
-                                ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue;
+                            : (parent & ~ValueOperandFlagsToClear) | ParentFlags.AssignmentRightValue;
                     if (!TryEmit(opExpr, il, ref context, operandFlags,
                         isByRefParam && !(opExpr is ParameterExpression { IsByRef: true } && sourceType.IsNullable()) ? 0 : -1))
                         return false;
