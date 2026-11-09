@@ -49,6 +49,7 @@ namespace FastExpressionCompiler.UnitTests
             Switch_with_duplicate_test_values_and_void_type_are_the_same_as_system(t);
             Label_and_rethrow_validation_walks_all_node_kinds_the_same_as_system(t);
             Catch_filter_non_exception_catch_and_rethrow_rules_are_the_same_as_system(t);
+            Unsupported_exception_regions_fall_back_to_system(t);
             Inc_dec_assign_of_primitives_and_nullables_are_the_same_as_system(t);
             Inc_dec_assign_of_block_variable_compared_and_returned_via_label_are_the_same_as_system(t);
 #if NET7_0_OR_GREATER
@@ -1513,6 +1514,75 @@ namespace FastExpressionCompiler.UnitTests
                 t.IsTrue(sysThrows);
                 t.IsTrue(fecThrows);
             }
+        }
+
+        public void Unsupported_exception_regions_fall_back_to_system(TestContext t)
+        {
+            var list = Parameter(typeof(List<int>));
+            var indexer = typeof(List<int>).GetProperty("Item");
+            var effect = Call(typeof(ParityTests).GetMethod(nameof(SideEffect), BindingFlags.Static | BindingFlags.NonPublic),
+                Constant((bool?)true, typeof(bool?)));
+            var index = MakeIndex(list, indexer, new Expression[]
+            {
+                Add(TryFinally(Constant(0), Block(effect, Empty())), Call(typeof(Math).GetMethod(nameof(Math.Abs), new[] { typeof(int) }), Constant(0)))
+            });
+            var expressions = new Expression[] { index, Assign(index, Constant(7)), AddAssign(index, Constant(7)) };
+            foreach (var expression in expressions)
+            {
+                var lambda = Lambda<Func<List<int>, int>>(expression, list);
+                t.IsTrue(lambda.CompileFast(true) == null);
+                var expectedList = new List<int> { 3 };
+                var actualList = new List<int> { 3 };
+                _sideEffectCalls = 0;
+                t.AreEqual(lambda.CompileSys()(expectedList), lambda.CompileFast()(actualList));
+                t.AreEqual(expectedList[0], actualList[0]);
+                t.AreEqual(2, _sideEffectCalls);
+            }
+
+            var safeIndex = MakeIndex(list, indexer, new Expression[] { Constant(0) });
+            t.AreEqual(3, Lambda<Func<List<int>, int>>(safeIndex, list).CompileFast(true)(new List<int> { 3 }));
+            var array = Parameter(typeof(int[]));
+            var arrayIndex = ArrayAccess(array, TryFinally(Constant(0), Empty()));
+            var arrayAssign = Lambda<Func<int[], int>>(Assign(arrayIndex, Constant(9)), array);
+            t.IsTrue(arrayAssign.CompileFast(true) == null);
+            var values = new[] { 3 };
+            t.AreEqual(9, arrayAssign.CompileFast()(values));
+            t.AreEqual(9, values[0]);
+
+            var ex = Parameter(typeof(Exception));
+            var filter = Equal(TryFinally(Constant(1), Empty()), Constant(1));
+            var filtered = Lambda<Func<int>>(TryCatch(Throw(New(typeof(Exception)), typeof(int)),
+                MakeCatchBlock(typeof(Exception), ex, Constant(42), filter)));
+            t.IsTrue(filtered.CompileFast(true) == null);
+            var sysThrows = false;
+            var fallbackThrows = false;
+#if NETFRAMEWORK
+            try { filtered.CompileSys(); } catch (NotSupportedException) { sysThrows = true; }
+            try { filtered.CompileFast(); } catch (NotSupportedException) { fallbackThrows = true; }
+#else
+            try { filtered.CompileSys(); } catch (InvalidOperationException) { sysThrows = true; }
+            try { filtered.CompileFast(); } catch (InvalidOperationException) { fallbackThrows = true; }
+#endif
+            t.IsTrue(sysThrows);
+            t.IsTrue(fallbackThrows);
+
+#if !NETFRAMEWORK
+            var inner = Lambda<Func<bool>>(TryFinally(Constant(true), Empty()));
+            var separateMethod = Lambda<Func<int>>(TryCatch(Throw(New(typeof(Exception)), typeof(int)),
+                MakeCatchBlock(typeof(Exception), ex, Constant(42), Invoke(inner))));
+            t.AreEqual(42, separateMethod.CompileFast(true, CompilerFlags.NoInvocationLambdaInlining)());
+#endif
+
+#if NETFRAMEWORK
+            var simpleFilter = Lambda<Func<int>>(TryCatch(Throw(New(typeof(Exception)), typeof(int)),
+                MakeCatchBlock(typeof(Exception), ex, Constant(42), Constant(true))));
+            t.IsTrue(simpleFilter.CompileFast(true) == null);
+            sysThrows = fallbackThrows = false;
+            try { simpleFilter.CompileSys(); } catch (NotSupportedException) { sysThrows = true; }
+            try { simpleFilter.CompileFast(); } catch (NotSupportedException) { fallbackThrows = true; }
+            t.IsTrue(sysThrows);
+            t.IsTrue(fallbackThrows);
+#endif
         }
         public class BindInner { public int X; public List<int> Items = new List<int>(); public HashSet<int> Set = new HashSet<int>(); public static int S; }
         public class BindOuter { public BindInner Inner = new BindInner(); public BindInner Prop { get; } = new BindInner(); }

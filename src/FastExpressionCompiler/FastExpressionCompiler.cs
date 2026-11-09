@@ -658,6 +658,8 @@ namespace FastExpressionCompiler
             internal SmallSet4<Expression, RefEq<Expression>> ArgsContainingComplexExpression;
 
             internal bool HasComplexExpression;
+            internal bool InExceptionFilter;
+            internal int TryExpressionCount;
 
             /// Set if the same label target is defined by the several Label expressions, so each definition needs its own IL label
             internal bool HasLabelDefinedTwice;
@@ -1628,9 +1630,12 @@ namespace FastExpressionCompiler
                         var indexExpr = (IndexExpression)expr;
                         var indexArgs = indexExpr.GetArgExprs();
                         var indexArgCount = indexArgs.GetArgCount();
+                        var precedingTryCount = context.TryExpressionCount;
                         for (var i = 0; i < indexArgCount; i++)
                             if ((r = TryCollectInfo(ref context, indexArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                                 return r;
+                        if (context.TryExpressionCount != precedingTryCount)
+                            context.ArgsContainingComplexExpression.Set.AddOrGetEntryRef(indexExpr, out _);
                         if (indexExpr.Object == null)
                             return r;
                         expr = indexExpr.Object;
@@ -1639,6 +1644,7 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Try:
                         {
+                            ++context.TryExpressionCount;
                             context.HasComplexExpression = false;
                             r = TryCollectTryExprInfo(ref context, (TryExpression)expr, nestedLambda, ref rootNestedLambdas, scopeIdx);
                             context.HasComplexExpression = true;
@@ -2085,6 +2091,9 @@ namespace FastExpressionCompiler
         private static Result TryCollectTryExprInfo(ref CompilerContext context, TryExpression tryExpr,
             NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
         {
+            if (context.InExceptionFilter)
+                return Result.NotSupported_ExceptionCatchFilter;
+
             var r = Result.OK;
             if ((r = TryCollectInfo(ref context, tryExpr.Body, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                 return r;
@@ -2101,9 +2110,14 @@ namespace FastExpressionCompiler
                         return r;
                 }
 
-                if (catchBlock.Filter != null &&
-                    (r = TryCollectInfo(ref context, catchBlock.Filter, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
-                    return r;
+                if (catchBlock.Filter != null)
+                {
+                    context.InExceptionFilter = true;
+                    r = TryCollectInfo(ref context, catchBlock.Filter, nestedLambda, ref rootNestedLambdas, scopeIdx);
+                    context.InExceptionFilter = false;
+                    if (r != Result.OK)
+                        return r;
+                }
 
                 var catchScopeIdx = (short)context.Scopes.Add(new LabelScope { Parent = new ScopeIdx(scopeIdx, false), ExceptionRegion = ExceptionRegion.Catch });
                 if ((r = TryCollectInfo(ref context, catchBlock.Body, nestedLambda, ref rootNestedLambdas, catchScopeIdx)) != Result.OK)
@@ -2208,7 +2222,15 @@ namespace FastExpressionCompiler
             private const ParentFlags CallArgumentFlagsToClear = ParentFlags.IgnoreResult | ParentFlags.InstanceAccess |
                 ParentFlags.MemberAccess | ParentFlags.LambdaCall | ParentFlags.ReturnByRef;
 
-            // todo: @perf use UnsafeAccessAttribute
+            private const ParentFlags OperandParentFlagsToClear = ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
+                ParentFlags.LambdaCall | ParentFlags.ReturnByRef;
+
+            // A value result must not inherit an outer address request; keep IgnoreResult.
+            private const ParentFlags ValueResultFlagsToClear = ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
+                ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef | ParentFlags.DupIt |
+                ParentFlags.LambdaCall | ParentFlags.ReturnByRef;
+
+            // todo: @perf use UnsafeAccessorAttribute
             /// <summary>Get a type from handle</summary>
             public static readonly MethodInfo GetTypeFromHandleMethod =
                 ((Func<RuntimeTypeHandle, Type>)Type.GetTypeFromHandle).Method;
@@ -2848,6 +2870,8 @@ namespace FastExpressionCompiler
             // similar code is used by the TryEmitArithmeticAndOrAssign, so don't forget to modify it as well
             private static bool TryEmitIndexGet(IndexExpression indexExpr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
+                if (context.ArgsContainingComplexExpression.Set.ContainsKey(indexExpr))
+                    return false;
                 var p = parent & ~ParentFlags.IgnoreResult | ParentFlags.IndexAccess;
 
                 var objExpr = indexExpr.Object;
@@ -3147,12 +3171,16 @@ namespace FastExpressionCompiler
 #if DEMIT
                 Debug.WriteLine("try {");
 #endif
+                // Exception body results are stored as values before use by an outer receiver.
+                var exprType = tryExpr.Type;
+                var returnsByRef = exprType.IsByRef;
+                var valueParent = returnsByRef ? parent :
+                    (parent & ~ValueResultFlagsToClear) | ParentFlags.AssignmentRightValue;
                 il.BeginExceptionBlock();
 
-                if (!TryEmit(tryExpr.Body, il, ref context, parent))
+                if (!TryEmit(tryExpr.Body, il, ref context, valueParent))
                     return false;
 
-                var exprType = tryExpr.Type;
                 var returnsResult = exprType != typeof(void) && !parent.IgnoresResult();
                 var resultVarIndex = -1;
 
@@ -3189,6 +3217,9 @@ namespace FastExpressionCompiler
 #endif
                     if (catchFilter != null | isNonExceptionTest | unwrapRuntimeWrappedException)
                     {
+#if NETFRAMEWORK
+                        return false; // DynamicMethod does not support exception filters on .NET Framework.
+#else
                         il.BeginExceptFilterBlock();
                         if (isNonExceptionTest | unwrapRuntimeWrappedException)
                         {
@@ -3222,6 +3253,7 @@ namespace FastExpressionCompiler
 
                         il.BeginCatchBlock(null); // emits the `endfilter`
                         il.Demit(OpCodes.Pop); // the exception object, the variable is already set by the filter
+#endif
                     }
                     else
                     {
@@ -3234,7 +3266,7 @@ namespace FastExpressionCompiler
                     Debug.WriteLine($"}} catch {{");
 #endif
 
-                    if (!TryEmit(catchBlock.Body, il, ref context, parent))
+                    if (!TryEmit(catchBlock.Body, il, ref context, valueParent))
                         return false;
 
                     if (exVarExpr != null)
@@ -3276,6 +3308,8 @@ namespace FastExpressionCompiler
                 if (returnsResult)
                     EmitLoadLocalVariable(il, resultVarIndex);
 
+                if (!returnsByRef)
+                    context.LastEmitIsAddress = false;
                 return true;
             }
 
@@ -3509,8 +3543,7 @@ namespace FastExpressionCompiler
                     (method == null || method.GetParameters()[0].ParameterType != operType)) // the method takes the underlying type, so the call is lifted
                 {
                     var liftedFlags = (parent
-                        & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
-                            ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
+                        & ~OperandParentFlagsToClear)
                         | ParentFlags.Arithmetic;
                     return TryEmit(oper, il, ref context, liftedFlags) &&
                         EmitLiftedUnaryOperation(il, nodeType, exprType, operType, method) &&
@@ -4821,6 +4854,8 @@ namespace FastExpressionCompiler
                         ArgExprs indexArgs = null;
                         if (orLeftIndexExpr != null)
                         {
+                            if (context.ArgsContainingComplexExpression.Set.ContainsKey(orLeftIndexExpr))
+                                return false;
                             indexArgs = orLeftIndexExpr.GetArgExprs();
                             indexArgCount = indexArgs.GetArgCount();
                             if (indexArgCount > 4)
@@ -4832,8 +4867,7 @@ namespace FastExpressionCompiler
                         // Remove the InstanceCall because we need to operate on the (nullable) field value and not on `ref` to return the value.
                         // We may avoid it in case of not returning the value or PreIncrement/PreDecrement, but let's do less checks and branching.
                         var baseFlags = parent &
-                            ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
-                              ParentFlags.LambdaCall | ParentFlags.ReturnByRef);
+                            ~OperandParentFlagsToClear;
                         var rightOnlyFlags = baseFlags | ParentFlags.AssignmentRightValue;
 
 
@@ -5785,7 +5819,17 @@ namespace FastExpressionCompiler
                     {
                         if (parent.IgnoresResult())
                             return true; // do nothing
-                        il.Demit(OpCodes.Ldsfld, field);
+                        var byAddress = byRefIndex != -1 || field.FieldType.IsValueType &&
+                            (parent & ParentFlags.InstanceAccess) != 0;
+                        if (byAddress && !field.IsInitOnly)
+                            il.Demit(OpCodes.Ldsflda, field);
+                        else
+                        {
+                            il.Demit(OpCodes.Ldsfld, field);
+                            if (byAddress)
+                                EmitStoreAndLoadLocalVariableAddress(il, field.FieldType);
+                        }
+                        context.LastEmitIsAddress = byAddress;
                     }
                     return true;
                 }
@@ -6477,8 +6521,7 @@ namespace FastExpressionCompiler
                 ref CompilerContext context, ParentFlags parent)
             {
                 var flags = parent
-                    & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
-                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef);
+                    & ~OperandParentFlagsToClear;
 
                 if (!TryEmit(expr.Left, il, ref context, flags) ||
                     !TryEmit(expr.Right, il, ref context, flags))
@@ -6817,8 +6860,7 @@ namespace FastExpressionCompiler
                 ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var flags = (parent
-                    & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
-                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
+                    & ~OperandParentFlagsToClear)
                     | ParentFlags.Arithmetic;
 
                 var noNullableValueLabel = default(Label);
@@ -6993,8 +7035,7 @@ namespace FastExpressionCompiler
                     return TryEmitComparisonMethod(left, right, method, il, ref context, parent);
 
                 var flags = (parent
-                    & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
-                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
+                    & ~OperandParentFlagsToClear)
                     | ParentFlags.Arithmetic;
 
                 // Both operands are evaluated and stored first, as System does, then the nullable ones are checked for the value
@@ -7045,8 +7086,7 @@ namespace FastExpressionCompiler
                 ref CompilerContext context, ParentFlags parent)
             {
                 var flags = (parent
-                    & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
-                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
+                    & ~OperandParentFlagsToClear)
                     | ParentFlags.Arithmetic;
 
                 if (!TryEmit(left, il, ref context, flags))
@@ -7092,8 +7132,7 @@ namespace FastExpressionCompiler
                 Expression operand, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var flags = (parent
-                    & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
-                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
+                    & ~OperandParentFlagsToClear)
                     | ParentFlags.Arithmetic;
 
                 if (!TryEmit(operand, il, ref context, flags))
@@ -7126,8 +7165,7 @@ namespace FastExpressionCompiler
                 ref CompilerContext context, ParentFlags parent)
             {
                 var flags = (parent
-                    & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
-                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
+                    & ~OperandParentFlagsToClear)
                     | ParentFlags.Arithmetic;
 
                 if (!TryEmit(left, il, ref context, flags))
