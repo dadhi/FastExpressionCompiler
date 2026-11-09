@@ -2204,6 +2204,10 @@ namespace FastExpressionCompiler
         [RequiresUnreferencedCode(Trimming.Message)]
         public static class EmittingVisitor
         {
+            // Arguments must not inherit the outer receiver or return context.
+            private const ParentFlags CallArgumentFlagsToClear = ParentFlags.IgnoreResult | ParentFlags.InstanceAccess |
+                ParentFlags.MemberAccess | ParentFlags.LambdaCall | ParentFlags.ReturnByRef;
+
             // todo: @perf use UnsafeAccessAttribute
             /// <summary>Get a type from handle</summary>
             public static readonly MethodInfo GetTypeFromHandleMethod =
@@ -4652,10 +4656,7 @@ namespace FastExpressionCompiler
             private static bool EmitElementInit(ElementInit elemInit, Type ownerType, ILGenerator il, ref CompilerContext context, ParentFlags parent, ParameterInfo[] methodParams = null)
             {
                 // see the TryEmitMethodCall for the reason of the callFlags
-                var callFlags = (parent
-                    & ~(ParentFlags.IgnoreResult | ParentFlags.MemberAccess | ParentFlags.InstanceAccess |
-                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
-                    | ParentFlags.Call;
+                var callFlags = (parent & ~CallArgumentFlagsToClear) | ParentFlags.Call;
                 var method = elemInit.AddMethod;
                 if (methodParams == null)
                     methodParams = method.GetParameters();
@@ -7301,8 +7302,7 @@ namespace FastExpressionCompiler
                 if (test == null || isLifted && test.ReturnType != typeof(bool))
                     return false;
 
-                var flags = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
-                    ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue;
+                var flags = (parent & ~CallArgumentFlagsToClear) | ParentFlags.AssignmentRightValue;
                 if (!TryEmit(expr.Left, il, ref context, flags))
                     return false;
                 var left = EmitStoreLocalVariable(il, type);
