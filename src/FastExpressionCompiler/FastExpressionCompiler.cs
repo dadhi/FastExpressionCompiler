@@ -2222,6 +2222,12 @@ namespace FastExpressionCompiler
             private const ParentFlags CallArgumentFlagsToClear = ParentFlags.IgnoreResult | ParentFlags.InstanceAccess |
                 ParentFlags.MemberAccess | ParentFlags.LambdaCall | ParentFlags.ReturnByRef;
 
+            private const ParentFlags UnboxOperandFlagsToClear = CallArgumentFlagsToClear | ParentFlags.Call |
+                ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef;
+
+            private const ParentFlags UnboxAddressFlags = ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
+                ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef | ParentFlags.ReturnByRef;
+
             private const ParentFlags OperandParentFlagsToClear = ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
                 ParentFlags.LambdaCall | ParentFlags.ReturnByRef;
 
@@ -3543,14 +3549,11 @@ namespace FastExpressionCompiler
                 {
                     if (exprType.IsNullable() && (parent & ParentFlags.ReturnByRef) != 0)
                         return false;
-                    var valueFlags = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.InstanceCall |
-                        ParentFlags.MemberAccess | ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef |
-                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue;
+                    var valueFlags = (parent & ~UnboxOperandFlagsToClear) | ParentFlags.AssignmentRightValue;
                     if (!TryEmit(oper, il, ref context, valueFlags))
                         return false;
                     var byAddress = !parent.IgnoresResult() && exprType.IsValueType && (byRefIndex != -1 ||
-                        (parent & (ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
-                            ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef | ParentFlags.ReturnByRef)) != 0);
+                        (parent & UnboxAddressFlags) != 0);
                     if (byAddress && !exprType.IsNullable())
                         il.Demit(OpCodes.Unbox, exprType);
                     else
@@ -5690,9 +5693,9 @@ namespace FastExpressionCompiler
                     else
                     {
                         // don't forget to store the object into the variable first, before emitting the arguments
-                        var objVarType = objExpr != null && objExpr.Type.IsValueType && context.LastEmitIsAddress
-                            ? objExpr.Type.MakeByRefType() : objExpr?.Type;
-                        var objVar = objExpr == null ? -1 : EmitStoreLocalVariable(il, objVarType);
+                        var objVar = objExpr == null ? -1 : EmitStoreLocalVariable(il,
+                            objExpr.Type.IsValueType && context.LastEmitIsAddress
+                                ? objExpr.Type.MakeByRefType() : objExpr.Type);
 
                         SmallList<int, Stack8<int>, NoArrayPool<int>> argVars = default;
                         for (var i = 0; i < methodParams.Length; i++)
