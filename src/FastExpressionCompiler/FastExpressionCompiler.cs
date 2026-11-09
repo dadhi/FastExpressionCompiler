@@ -406,7 +406,7 @@ namespace FastExpressionCompiler
         {
             var closureAndParamTypes = RentPooledOrNewClosureTypeToParamTypes(paramExprs);
 #if LIGHT_EXPRESSION
-            if (bodyExpr is NoArgsNewClassIntrinsicExpression newExpr)
+            if (bodyExpr is NoArgsNewClassIntrinsicExpression newExpr && !newExpr.Type.IsAbstract)
             {
                 var lambdaNew = CompileNoArgsNew(newExpr, delegateType, closureAndParamTypes, returnType, flags);
                 FreePooledClosureTypeAndParamTypes(closureAndParamTypes); // fixes #563
@@ -1944,7 +1944,7 @@ namespace FastExpressionCompiler
             var nestedLambdaParamExprs = nestedLambdaExpr.GetParamExprs();
 
 #if LIGHT_EXPRESSION
-            if (nestedLambdaBody is NoArgsNewClassIntrinsicExpression newExpr)
+            if (nestedLambdaBody is NoArgsNewClassIntrinsicExpression newExpr && !newExpr.Type.IsAbstract)
             {
                 var paramTypes = RentPooledOrNewClosureTypeToParamTypes(nestedLambdaParamExprs);
                 nestedLambdaInfo.Lambda = CompileNoArgsNew(newExpr, nestedLambdaExpr.Type, paramTypes, nestedReturnType, nestedLambdaContext.CompilerFlags);
@@ -2219,7 +2219,9 @@ namespace FastExpressionCompiler
                     context.LastEmitIsAddress = false;
 #if LIGHT_EXPRESSION
                     if (expr.IsIntrinsic)
-                        return expr.TryEmit(ref context, il, parent, byRefIndex);
+                        return expr is NewExpression && exprType.IsAbstract
+                            ? TryEmitNew(expr, il, ref context, parent)
+                            : expr.TryEmit(ref context, il, parent, byRefIndex);
 #endif
                     var nodeType = expr.NodeType;
                     switch (nodeType)
@@ -2733,6 +2735,8 @@ namespace FastExpressionCompiler
                 var argExprs = newExpr.GetArgExprs();
                 var argCount = argExprs.GetArgCount();
                 var ctor = newExpr.Constructor;
+                if (ctor != null && ctor.DeclaringType.IsAbstract)
+                    throw new InvalidOperationException("Cannot construct an abstract type.");
                 if (argCount != 0)
                 {
                     var pars = ctor.GetParameters();
