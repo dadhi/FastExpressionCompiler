@@ -2426,13 +2426,7 @@ namespace FastExpressionCompiler
                                     return TryEmitNullableBooleanShortCircuit(logical.Left, logical.Right, nodeType == ExpressionType.AndAlso, il, ref context, parent);
 
                                 if (!exprType.IsPrimitive)
-                                {
-                                    var isLifted = logical.IsLifted;
-                                    if (isLifted || logical.Method != null)
-                                        return TryEmitUserDefinedLogicalOperator(logical, nodeType, isLifted, il, ref context, parent);
-                                    Debug.WriteLine("Unsupported: non-primitive result in || or && (other than `bool?` operands without a method), see #480: " + expr);
-                                    return false;
-                                }
+                                    return TryEmitUserDefinedLogicalOperator(logical, nodeType, logical.IsLifted, il, ref context, parent);
                                 if (Interpreter.TryInterpretBool(out var resultBool, expr, context.CompilerFlags))
                                 {
                                     if ((parent & ParentFlags.IgnoreResult) == 0)
@@ -7292,7 +7286,7 @@ namespace FastExpressionCompiler
                 var type = expr.Left.Type;
                 var operandType = isLifted ? Nullable.GetUnderlyingType(type) : type;
                 var method = expr.Method;
-                if (isLifted && method == null)
+                if (method == null)
                     method = FindBinaryOperandMethod(
                         nodeType == ExpressionType.AndAlso ? "op_BitwiseAnd" : "op_BitwiseOr", operandType, operandType,
                         Nullable.GetUnderlyingType(expr.Right.Type) ?? expr.Right.Type, operandType);
@@ -7307,10 +7301,8 @@ namespace FastExpressionCompiler
                 if (test == null || isLifted && test.ReturnType != typeof(bool))
                     return false;
 
-                var flags = isLifted
-                    ? (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
-                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue
-                    : parent & ~ParentFlags.IgnoreResult;
+                var flags = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
+                    ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue;
                 if (!TryEmit(expr.Left, il, ref context, flags))
                     return false;
                 var left = EmitStoreLocalVariable(il, type);
@@ -7363,8 +7355,7 @@ namespace FastExpressionCompiler
                     EmitDefault(il, type);
                 }
                 il.DmarkLabel(done);
-                if (isLifted)
-                    context.LastEmitIsAddress = false;
+                context.LastEmitIsAddress = false;
                 return il.EmitPopIfIgnoreResult(parent);
             }
 
