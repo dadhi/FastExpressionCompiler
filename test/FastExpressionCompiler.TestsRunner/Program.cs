@@ -99,6 +99,7 @@ namespace FastExpressionCompiler.UnitTests
             });
 
             var stStopwatch = Stopwatch.StartNew();
+            st.Run(new LiftedRefConversionRegressionTests());
             st.Run(new ReadonlyRefFieldRegressionTests());
             st.Run(new LiftedUserDefinedLogicalRegressionTests());
             st.Run(new UserDefinedLogicalRegressionTests());
