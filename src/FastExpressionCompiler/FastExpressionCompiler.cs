@@ -2218,6 +2218,10 @@ namespace FastExpressionCompiler
         [RequiresUnreferencedCode(Trimming.Message)]
         public static class EmittingVisitor
         {
+            // Arguments must not inherit the outer receiver or return context.
+            private const ParentFlags CallArgumentFlagsToClear = ParentFlags.IgnoreResult | ParentFlags.InstanceAccess |
+                ParentFlags.MemberAccess | ParentFlags.LambdaCall | ParentFlags.ReturnByRef;
+
             private const ParentFlags OperandParentFlagsToClear = ParentFlags.IgnoreResult | ParentFlags.InstanceCall |
                 ParentFlags.LambdaCall | ParentFlags.ReturnByRef;
 
@@ -2226,7 +2230,7 @@ namespace FastExpressionCompiler
                 ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef | ParentFlags.DupIt |
                 ParentFlags.LambdaCall | ParentFlags.ReturnByRef;
 
-            // todo: @perf use UnsafeAccessAttribute
+            // todo: @perf use UnsafeAccessorAttribute
             /// <summary>Get a type from handle</summary>
             public static readonly MethodInfo GetTypeFromHandleMethod =
                 ((Func<RuntimeTypeHandle, Type>)Type.GetTypeFromHandle).Method;
@@ -2448,13 +2452,7 @@ namespace FastExpressionCompiler
                                     return TryEmitNullableBooleanShortCircuit(logical.Left, logical.Right, nodeType == ExpressionType.AndAlso, il, ref context, parent);
 
                                 if (!exprType.IsPrimitive)
-                                {
-                                    var isLifted = logical.IsLifted;
-                                    if (isLifted || logical.Method != null)
-                                        return TryEmitUserDefinedLogicalOperator(logical, nodeType, isLifted, il, ref context, parent);
-                                    Debug.WriteLine("Unsupported: non-primitive result in || or && (other than `bool?` operands without a method), see #480: " + expr);
-                                    return false;
-                                }
+                                    return TryEmitUserDefinedLogicalOperator(logical, nodeType, logical.IsLifted, il, ref context, parent);
                                 if (Interpreter.TryInterpretBool(out var resultBool, expr, context.CompilerFlags))
                                 {
                                     if ((parent & ParentFlags.IgnoreResult) == 0)
@@ -4691,10 +4689,7 @@ namespace FastExpressionCompiler
             private static bool EmitElementInit(ElementInit elemInit, Type ownerType, ILGenerator il, ref CompilerContext context, ParentFlags parent, ParameterInfo[] methodParams = null)
             {
                 // see the TryEmitMethodCall for the reason of the callFlags
-                var callFlags = (parent
-                    & ~(ParentFlags.IgnoreResult | ParentFlags.MemberAccess | ParentFlags.InstanceAccess |
-                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef))
-                    | ParentFlags.Call;
+                var callFlags = (parent & ~CallArgumentFlagsToClear) | ParentFlags.Call;
                 var method = elemInit.AddMethod;
                 if (methodParams == null)
                     methodParams = method.GetParameters();
@@ -7330,7 +7325,7 @@ namespace FastExpressionCompiler
                 var type = expr.Left.Type;
                 var operandType = isLifted ? Nullable.GetUnderlyingType(type) : type;
                 var method = expr.Method;
-                if (isLifted && method == null)
+                if (method == null)
                     method = FindBinaryOperandMethod(
                         nodeType == ExpressionType.AndAlso ? "op_BitwiseAnd" : "op_BitwiseOr", operandType, operandType,
                         Nullable.GetUnderlyingType(expr.Right.Type) ?? expr.Right.Type, operandType);
@@ -7345,10 +7340,7 @@ namespace FastExpressionCompiler
                 if (test == null || isLifted && test.ReturnType != typeof(bool))
                     return false;
 
-                var flags = isLifted
-                    ? (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
-                        ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue
-                    : parent & ~ParentFlags.IgnoreResult;
+                var flags = (parent & ~CallArgumentFlagsToClear) | ParentFlags.AssignmentRightValue;
                 if (!TryEmit(expr.Left, il, ref context, flags))
                     return false;
                 var left = EmitStoreLocalVariable(il, type);
@@ -7401,8 +7393,7 @@ namespace FastExpressionCompiler
                     EmitDefault(il, type);
                 }
                 il.DmarkLabel(done);
-                if (isLifted)
-                    context.LastEmitIsAddress = false;
+                context.LastEmitIsAddress = false;
                 return il.EmitPopIfIgnoreResult(parent);
             }
 
