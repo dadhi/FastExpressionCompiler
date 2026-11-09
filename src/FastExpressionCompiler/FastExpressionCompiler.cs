@@ -5584,6 +5584,16 @@ namespace FastExpressionCompiler
                 var callExpr = (MethodCallExpression)expr;
                 var objExpr = callExpr.Object;
                 var method = callExpr.Method;
+                var isArrayAddress = method.DeclaringType?.IsArray == true && method.Name == "Get" &&
+                    (byRefIndex != -1 || (parent & ParentFlags.AssignmentByRef) != 0 ||
+                        method.ReturnType.IsValueType && (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess |
+                            ParentFlags.InstanceCall | ParentFlags.AssignmentLeftValue | ParentFlags.ReturnByRef)) != 0);
+                if (isArrayAddress)
+                {
+                    method = method.DeclaringType.GetMethod("Address", BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+                    if (method == null)
+                        return false;
+                }
                 var methodParams = method.GetParameters(); // todo: @perf @mem find how to avoid the call, look at `NewNoByRefArgs` expressions as example
 
                 var objIsValueType = false;
@@ -5625,7 +5635,9 @@ namespace FastExpressionCompiler
                     else
                     {
                         // don't forget to store the object into the variable first, before emitting the arguments
-                        var objVar = objExpr == null ? -1 : EmitStoreLocalVariable(il, objExpr.Type);
+                        var objVarType = objExpr != null && objExpr.Type.IsValueType && context.LastEmitIsAddress
+                            ? objExpr.Type.MakeByRefType() : objExpr?.Type;
+                        var objVar = objExpr == null ? -1 : EmitStoreLocalVariable(il, objVarType);
 
                         SmallList<int, Stack8<int>, NoArrayPool<int>> argVars = default;
                         for (var i = 0; i < methodParams.Length; i++)
@@ -5664,13 +5676,13 @@ namespace FastExpressionCompiler
                     ok = EmitVirtualMethodCall(il, method);
                 }
 
-                if (byRefIndex != -1)
+                if (byRefIndex != -1 && !isArrayAddress)
                     EmitStoreAndLoadLocalVariableAddress(il, method.ReturnType);
 
                 if (parent.IgnoresResult() && method.ReturnType != typeof(void))
                     il.Demit(OpCodes.Pop);
 
-                context.LastEmitIsAddress = false;
+                context.LastEmitIsAddress = isArrayAddress && !parent.IgnoresResult();
                 return ok;
             }
 
