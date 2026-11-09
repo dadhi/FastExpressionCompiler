@@ -6045,8 +6045,7 @@ namespace FastExpressionCompiler
                             var testValExpr = testValues[v];
                             if (testValExpr is not ConstantExpression && testValExpr is not DefaultExpression)
                             {
-                                Debug.Assert(false, $"Not supported non-constant,non-default switch case value expression: `{testValExpr}`");
-                                return false;
+                                goto OrderedDispatch;
                             }
                             var testValueLong = testValExpr is ConstantExpression constExpr ? ConvertValueObjectToLong(constExpr.Value) : 0L;
 
@@ -6296,6 +6295,7 @@ namespace FastExpressionCompiler
                     }
                 }
 
+            OrderedDispatch:
                 var switchValueIsNullable = switchValueType.IsNullable();
                 Type switchNullableUnderlyingValueType = null;
                 MethodInfo switchNullableHasValueMethod = null;
@@ -8645,7 +8645,8 @@ namespace FastExpressionCompiler
                         var testValues = cases[i].TestValues;
                         for (var j = 0; j < testValues.Count; j++)
                         {
-                            if (testValues[j] is not ConstantExpression testConst || testConst.Value == null) continue;
+                            if (testValues[j] is not ConstantExpression testConst) return false;
+                            if (testConst.Value == null) continue;
                             if (switchValLong == ConvertValueObjectToLong(testConst.Value)) { matchedBody = cases[i].Body; return true; }
                         }
                     }
