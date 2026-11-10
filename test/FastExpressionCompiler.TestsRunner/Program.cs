@@ -84,6 +84,7 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.UnitTests.ComparisonReductionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ArrayBoundConversionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.CheckedFloatingArithmeticRegressionTests());
+                lt.Run(new LightExpression.UnitTests.OperandValueContextRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ExcessiveArityRegressionTests());
 #if NET8_0_OR_GREATER
                 lt.Run(new LightExpression.UnitTests.NestedStructFieldAddressRegressionTests());
@@ -129,6 +130,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new ComparisonReductionRegressionTests());
             st.Run(new ArrayBoundConversionRegressionTests());
             st.Run(new CheckedFloatingArithmeticRegressionTests());
+            st.Run(new OperandValueContextRegressionTests());
             st.Run(new ExcessiveArityRegressionTests());
             st.Run(new NestedStructFieldAddressRegressionTests());
             st.Run(new Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
