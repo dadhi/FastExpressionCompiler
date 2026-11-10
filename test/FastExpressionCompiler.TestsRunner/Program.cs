@@ -79,6 +79,7 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.UnitTests.ReadonlyRefFieldRegressionTests());
                 lt.Run(new LightExpression.UnitTests.LiftedUserDefinedLogicalRegressionTests());
                 lt.Run(new LightExpression.UnitTests.UserDefinedLogicalRegressionTests());
+                lt.Run(new LightExpression.UnitTests.RuntimeSwitchExceptionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.VoidLabelValueRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ReferenceInstanceCallRegressionTests());
                 lt.Run(new LightExpression.UnitTests.MultiRankArrayReceiverRegressionTests());
@@ -128,6 +129,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new ReadonlyRefFieldRegressionTests());
             st.Run(new LiftedUserDefinedLogicalRegressionTests());
             st.Run(new UserDefinedLogicalRegressionTests());
+            st.Run(new RuntimeSwitchExceptionRegressionTests());
             st.Run(new VoidLabelValueRegressionTests());
             st.Run(new ReferenceInstanceCallRegressionTests());
             st.Run(new MultiRankArrayReceiverRegressionTests());
