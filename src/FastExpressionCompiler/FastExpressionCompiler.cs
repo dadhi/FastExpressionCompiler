@@ -3385,8 +3385,7 @@ namespace FastExpressionCompiler
                 var paramExprCount = paramExprs.GetParamCount();
                 var paramType = paramExpr.Type;
                 var isValueType = paramType.IsValueType;
-                var isParamOrVarByRef = paramExpr.IsByRef &&
-                    (!paramType.IsNullable() || (parent & (ParentFlags.Arithmetic | ParentFlags.AssignmentRightValue)) != 0); // #461 member access uses the nullable address; value operations dereference it
+                var isParamOrVarByRef = paramExpr.IsByRef;
                 var isPassedRef = byRefIndex != -1;
 
                 // Parameter may represent a variable, so first look if this is the case,
@@ -6771,7 +6770,10 @@ namespace FastExpressionCompiler
                 {
                     if (leftIsNullable & rightIsNull)
                     {
-                        if (!TryEmit(left, il, ref context, operandParent))
+                        var leftParent = left is PE { IsByRef: true }
+                            ? (operandParent & ~(ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.InstanceCall
+                            : operandParent;
+                        if (!TryEmit(left, il, ref context, leftParent))
                             return false;
 
                         // See #341 `Nullable_decimal_parameter_with_decimal_constant_comparison_cases`
@@ -6779,6 +6781,7 @@ namespace FastExpressionCompiler
                             EmitStoreAndLoadLocalVariableAddress(il, leftType);
 
                         EmitMethodCall(il, leftType.GetNullableHasValueGetterMethod());
+                        context.LastEmitIsAddress = false;
                         if (nodeType == ExpressionType.Equal)
                             EmitEqualToZeroOrNull(il);
                         return il.EmitPopIfIgnoreResult(parent);
@@ -6786,13 +6789,17 @@ namespace FastExpressionCompiler
 
                     if (leftIsNull && rightType.IsNullable())
                     {
-                        if (!TryEmit(right, il, ref context, operandParent))
+                        var rightParent = right is PE { IsByRef: true }
+                            ? (operandParent & ~(ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.InstanceCall
+                            : operandParent;
+                        if (!TryEmit(right, il, ref context, rightParent))
                             return false;
 
                         if (!context.LastEmitIsAddress && !(right is ParameterExpression p && p.IsByRef))
                             EmitStoreAndLoadLocalVariableAddress(il, rightType);
 
                         EmitMethodCall(il, rightType.GetNullableHasValueGetterMethod());
+                        context.LastEmitIsAddress = false;
                         if (nodeType == ExpressionType.Equal)
                             EmitEqualToZeroOrNull(il);
                         return il.EmitPopIfIgnoreResult(parent);
