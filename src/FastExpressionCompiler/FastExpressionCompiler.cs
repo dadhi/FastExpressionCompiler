@@ -4958,10 +4958,12 @@ namespace FastExpressionCompiler
                             return false;
 
                         var indexArgCount = -1;
+                        var spillIndexOperands = false;
                         ArgExprs indexArgs = null;
                         if (orLeftIndexExpr != null)
                         {
-                            if (context.ArgsContainingComplexExpression.Set.ContainsKey(orLeftIndexExpr))
+                            spillIndexOperands = context.ArgsContainingComplexExpression.Set.ContainsKey(orLeftIndexExpr);
+                            if (nodeType == ExpressionType.Assign && spillIndexOperands)
                                 return false;
                             indexArgs = orLeftIndexExpr.GetArgExprs();
                             indexArgCount = indexArgs.GetArgCount();
@@ -5090,12 +5092,14 @@ namespace FastExpressionCompiler
                                 objVarByAddress = !context.LastEmitIsAddress && objType.IsValueType && // todo: @better avoid ad-hocking with parameter here
                                     (objExpr.NodeType != ExpressionType.Parameter || !((ParameterExpression)objExpr).IsByRef);
                                 if (objVarByAddress)
-                                    objVar = EmitStoreAndLoadLocalVariableAddress(il, objType);
+                                    objVar = spillIndexOperands ? EmitStoreLocalVariable(il, objType)
+                                        : EmitStoreAndLoadLocalVariableAddress(il, objType);
                                 else
                                 {
-                                    if (objExpr is ParameterExpression pe && pe.IsByRef)
+                                    if (context.LastEmitIsAddress || objExpr is ParameterExpression pe && pe.IsByRef)
                                         objType = objType.MakeByRefType();
-                                    objVar = EmitStoreAndLoadLocalVariable(il, objType);
+                                    objVar = spillIndexOperands ? EmitStoreLocalVariable(il, objType)
+                                        : EmitStoreAndLoadLocalVariable(il, objType);
                                 }
                             }
 
@@ -5105,11 +5109,29 @@ namespace FastExpressionCompiler
                                 var indexArg = indexArgs.GetArgument(i);
                                 if (!TryEmit(indexArg, il, ref context, baseFlags))
                                     return false;
-                                var indexArgVar = EmitStoreAndLoadLocalVariable(il, indexArg.Type);
+                                var indexArgVar = spillIndexOperands ? EmitStoreLocalVariable(il, indexArg.Type)
+                                    : EmitStoreAndLoadLocalVariable(il, indexArg.Type);
                                 if (i == 0) indexArgVar0 = indexArgVar;
                                 else if (i == 1) indexArgVar1 = indexArgVar;
                                 else if (i == 2) indexArgVar2 = indexArgVar;
                                 else if (i == 3) indexArgVar3 = indexArgVar;
+                            }
+
+                            // An index may enter an exception region. Reload the assignment
+                            // target only after all index expressions have been evaluated.
+                            if (spillIndexOperands)
+                            {
+                                if (objExpr != null)
+                                {
+                                    if (objVarByAddress)
+                                        EmitLoadLocalVariableAddress(il, objVar);
+                                    else
+                                        EmitLoadLocalVariable(il, objVar);
+                                }
+                                EmitLoadLocalVariable(il, indexArgVar0);
+                                if (indexArgVar1 != -1) EmitLoadLocalVariable(il, indexArgVar1);
+                                if (indexArgVar2 != -1) EmitLoadLocalVariable(il, indexArgVar2);
+                                if (indexArgVar3 != -1) EmitLoadLocalVariable(il, indexArgVar3);
                             }
 
                             // repeat the load of the obj and index variables for the assignment here to avoid store and load of the right value
