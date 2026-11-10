@@ -108,6 +108,7 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.UnitTests.RuntimeTypeConstantRegressionTests());
                 lt.Run(new LightExpression.UnitTests.MethodBasedNotRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ExtensionReductionIdentityRegressionTests());
+                lt.Run(new LightExpression.UnitTests.LiftedOperandEvaluationRegressionTests());
                 lt.Run(new LightExpression.UnitTests.IntegerSwitchDispatchRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ParityTests());
                 ltTime = ltStopwatch.ElapsedMilliseconds;
@@ -151,6 +152,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new MethodBasedNotRegressionTests());
             st.Run(new CustomReducibleNodeRegressionTests());
             st.Run(new ExtensionReductionIdentityRegressionTests());
+            st.Run(new LiftedOperandEvaluationRegressionTests());
             st.Run(new IntegerSwitchDispatchRegressionTests());
             st.Run(new ParityTests());
             st.Run(new Issue498_InvalidProgramException_when_using_loop());

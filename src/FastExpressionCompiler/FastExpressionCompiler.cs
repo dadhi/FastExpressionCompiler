@@ -7013,6 +7013,7 @@ namespace FastExpressionCompiler
                 var leftIsNullable = leftType.IsNullable();
                 var leftVar = -1;
                 var leftValueVar = -1;
+                var cachedRight = -1;
                 if (leftIsNullable)
                 {
                     noNullableValueLabel = il.DefineLabel();
@@ -7021,7 +7022,18 @@ namespace FastExpressionCompiler
                     if (context.LastEmitIsAddress || left is ParameterExpression { IsByRef: true }) // see #461, the nullable by-ref parameter does not set the flag
                         EmitLoadIndirectlyByRef(il, leftType); // the nullable value is needed here and not its address
 
-                    leftVar = EmitNullableVarAddressAndHasValue(il, leftType);
+                    leftVar = EmitStoreLocalVariable(il, leftType);
+                    // Lifted operators evaluate both operands before propagating null.
+                    if (right != null)
+                    {
+                        if (!TryEmit(right, il, ref context, flags | ParentFlags.AssignmentRightValue))
+                            return false;
+                        if (context.LastEmitIsAddress)
+                            EmitLoadIndirectlyByRef(il, right.Type);
+                        cachedRight = EmitStoreLocalVariable(il, right.Type);
+                    }
+                    EmitLoadLocalVariableAddress(il, leftVar);
+                    EmitMethodCall(il, leftType.GetNullableHasValueGetterMethod());
                     il.Demit(OpCodes.Brfalse, noNullableValueLabel);
                     EmitLoadLocalVariableAddress(il, leftVar);
                     il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
@@ -7059,17 +7071,27 @@ namespace FastExpressionCompiler
                                 leftValueVar = EmitStoreLocalVariable(il, leftType);
                         }
 
-                        if (!TryEmit(right, il, ref context, flags | ParentFlags.InstanceCall))
-                            return false;
-                        if (context.LastEmitIsAddress || right is ParameterExpression { IsByRef: true })
-                            EmitLoadIndirectlyByRef(il, rightType);
-
-                        rightVar = EmitNullableVarAddressAndHasValue(il, rightType);
+                        if (cachedRight != -1)
+                        {
+                            rightVar = cachedRight;
+                            EmitLoadLocalVariableAddress(il, rightVar);
+                            EmitMethodCall(il, rightType.GetNullableHasValueGetterMethod());
+                        }
+                        else
+                        {
+                            if (!TryEmit(right, il, ref context, flags | ParentFlags.InstanceCall))
+                                return false;
+                            if (context.LastEmitIsAddress || right is ParameterExpression { IsByRef: true })
+                                EmitLoadIndirectlyByRef(il, rightType);
+                            rightVar = EmitNullableVarAddressAndHasValue(il, rightType);
+                        }
                         il.Demit(OpCodes.Brfalse, noNullableValueLabel);
                         EmitLoadLocalVariableAddress(il, rightVar);
                         il.Demit(OpCodes.Ldfld, rightType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
                         rightValueVar = EmitStoreLocalVariable(il, Nullable.GetUnderlyingType(rightType));
                     }
+                    else if (cachedRight != -1)
+                        rightValueVar = cachedRight;
                     else if (!TryEmit(right, il, ref context, flags))
                         return false;
 
@@ -7114,6 +7136,8 @@ namespace FastExpressionCompiler
                 il.EmitPopIfIgnoreResult(parent);
                 return true;
             }
+
+
 
             // The variant for the already stored nullable variable
             [MethodImpl((MethodImplOptions)256)]
