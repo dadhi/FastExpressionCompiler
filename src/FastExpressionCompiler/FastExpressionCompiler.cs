@@ -2058,10 +2058,13 @@ namespace FastExpressionCompiler
             if ((r = TryCollectInfo(ref context, newExpr, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                 return r;
 
+            var precedingTryCount = context.TryExpressionCount;
             var count = binds.GetBindingCount();
             for (var i = 0; i < count; ++i)
                 if ((r = TryCollectBindingInfo(ref context, binds.GetArgument(i), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                     return r;
+            if (context.TryExpressionCount != precedingTryCount)
+                context.ArgsContainingComplexExpression.Set.AddOrGetEntryRef(expr, out _);
             return r;
         }
 
@@ -2070,7 +2073,14 @@ namespace FastExpressionCompiler
         {
             var r = Result.OK;
             if (b.BindingType == MemberBindingType.Assignment)
-                return TryCollectInfo(ref context, ((MemberAssignment)b).Expression, nestedLambda, ref rootNestedLambdas, scopeIdx);
+            {
+                var value = ((MemberAssignment)b).Expression;
+                var precedingTryCount = context.TryExpressionCount;
+                r = TryCollectInfo(ref context, value, nestedLambda, ref rootNestedLambdas, scopeIdx);
+                if (context.TryExpressionCount != precedingTryCount)
+                    context.ArgsContainingComplexExpression.Set.AddOrGetEntryRef(value, out _);
+                return r;
+            }
 
             if (b.BindingType == MemberBindingType.MemberBinding)
             {
@@ -4725,7 +4735,7 @@ namespace FastExpressionCompiler
                 var valueFlags = (parent & ~CallArgumentFlagsToClear) | ParentFlags.AssignmentRightValue;
                 var valueVarIndex = -1;
                 var exprType = expr.Type;
-                if (exprType.IsValueType)
+                if (exprType.IsValueType || context.HasComplexArguments(expr))
                     valueVarIndex = il.GetNextLocalVarIndex(exprType);
 
                 var newExpr = expr.NewExpression;
@@ -4767,8 +4777,8 @@ namespace FastExpressionCompiler
                 for (var i = 0; i < bindCount; i++)
                 {
                     var binding = bindings.GetArgument(i);
-                    if (valueVarIndex != -1) // load local value address, to set its members
-                        EmitLoadLocalVariableAddress(il, valueVarIndex);
+                    if (valueVarIndex != -1)
+                        EmitLoadLocalVariableOrAddress(il, valueVarIndex, exprType.IsValueType);
                     else
                         il.Demit(OpCodes.Dup); // duplicate member owner on stack
 
@@ -4879,8 +4889,18 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Pop); // the static member does not need the owner
 
                 if (binding.BindingType == MemberBindingType.Assignment)
-                    return TryEmit(((MemberAssignment)binding).Expression, il, ref context, parent) &&
-                        EmitMemberSet(il, member);
+                {
+                    var value = ((MemberAssignment)binding).Expression;
+                    if (isStatic || !context.HasComplexArguments(value))
+                        return TryEmit(value, il, ref context, parent) && EmitMemberSet(il, member);
+                    var ownerType = member.DeclaringType;
+                    var owner = EmitStoreLocalVariable(il, ownerType.IsValueType ? ownerType.MakeByRefType() : ownerType);
+                    if (!TryEmit(value, il, ref context, parent)) return false;
+                    var result = EmitStoreLocalVariable(il, value.Type);
+                    EmitLoadLocalVariable(il, owner);
+                    EmitLoadLocalVariable(il, result);
+                    return EmitMemberSet(il, member);
+                }
 
                 // load the member value, or the address for the value type, as the owner of the nested bindings
                 var memberType = member is FieldInfo f ? f.FieldType : ((PropertyInfo)member).PropertyType;
