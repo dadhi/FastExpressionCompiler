@@ -2306,8 +2306,15 @@ namespace FastExpressionCompiler
                             var arrayFlags = ParentFlags.IndexAccess | ParentFlags.AssignmentRightValue;
                             if (!TryEmit(arrIndexExpr.Left, il, ref context, arrayFlags))
                                 return false;
+                            var arrayVar = (context.TryExpressionCount != 0) ? EmitStoreLocalVariable(il, arrIndexExpr.Left.Type) : -1;
                             if (!TryEmit(arrIndexExpr.Right, il, ref context, arrayFlags))
                                 return false;
+                            if (arrayVar != -1)
+                            {
+                                var indexVar = EmitStoreLocalVariable(il, typeof(int));
+                                EmitLoadLocalVariable(il, arrayVar);
+                                EmitLoadLocalVariable(il, indexVar);
+                            }
                             return TryEmitArrayElementGet(il, arrIndexExpr.Left.Type, exprType, ref context,
                                 byRefIndex >= 0 ? parent | ParentFlags.AssignmentByRef : parent);
 
