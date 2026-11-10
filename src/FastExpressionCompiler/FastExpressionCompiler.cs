@@ -2300,8 +2300,11 @@ namespace FastExpressionCompiler
                             var arrayFlags = ParentFlags.IndexAccess | ParentFlags.AssignmentRightValue;
                             if (!TryEmit(arrIndexExpr.Left, il, ref context, arrayFlags))
                                 return false;
+                            var arrayVar = (context.TryExpressionCount != 0) ? EmitStoreLocalVariable(il, arrIndexExpr.Left.Type) : -1;
                             if (!TryEmit(arrIndexExpr.Right, il, ref context, arrayFlags))
                                 return false;
+                            if (arrayVar != -1)
+                                EmitLoadLeftAndRight(il, arrayVar, typeof(int));
                             return TryEmitArrayElementGet(il, arrIndexExpr.Left.Type, exprType, ref context,
                                 byRefIndex >= 0 ? parent | ParentFlags.AssignmentByRef : parent);
 
@@ -7115,12 +7118,7 @@ namespace FastExpressionCompiler
                     // Means that it was complex right and the result of the left operation was stored
                     // and should be restored now, so the left and right go in order before the arithmetic operation
                     if (leftValueVar != -1)
-                    {
-                        if (rightValueVar == -1)
-                            rightValueVar = EmitStoreLocalVariable(il, rightType);
-                        EmitLoadLocalVariable(il, leftValueVar);
-                        EmitLoadLocalVariable(il, rightValueVar);
-                    }
+                        EmitLoadLeftAndRight(il, leftValueVar, rightType, rightValueVar);
 
                     if (!TryEmitArithmeticOperation(leftType, rightType, nodeType, exprType, il))
                         return false;
@@ -7821,6 +7819,17 @@ namespace FastExpressionCompiler
                     EmitLoadConstantInt(il, (int)i);
                 else
                     il.Demit(OpCodes.Ldc_I8, i);
+            }
+
+            // Restore a saved left operand below the right operand. The right is either
+            // already in a local or still on the stack and must first be saved.
+            [MethodImpl((MethodImplOptions)256)]
+            private static void EmitLoadLeftAndRight(ILGenerator il, int leftVar, Type rightType, int rightVar = -1)
+            {
+                if (rightVar == -1)
+                    rightVar = EmitStoreLocalVariable(il, rightType);
+                EmitLoadLocalVariable(il, leftVar);
+                EmitLoadLocalVariable(il, rightVar);
             }
 
             [MethodImpl((MethodImplOptions)256)]
