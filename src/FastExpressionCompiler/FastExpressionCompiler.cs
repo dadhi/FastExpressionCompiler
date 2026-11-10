@@ -3985,7 +3985,7 @@ namespace FastExpressionCompiler
                 // see #73, #451 for examples
                 Type methodReturnType = null;
                 Type methodParamType = null;
-                var liftedByRefMethod = false;
+                var methodParameterIsByRef = false;
                 if (convertMethod != null)
                 {
                     methodReturnType = convertMethod.ReturnType;
@@ -3993,26 +3993,19 @@ namespace FastExpressionCompiler
                     var mParams = convertMethod.GetParameters();
                     Debug.Assert(mParams.Length == 1, $"Expected for the conversion operator to have a single param, but found {mParams.Length}");
                     methodParamType = mParams[0].ParameterType;
-                    if (methodParamType.IsByRef && sourceType.IsNullable() && methodParamType.GetElementType() != sourceType)
-                    {
-                        liftedByRefMethod = true;
+                    methodParameterIsByRef = methodParamType.IsByRef;
+                    if (methodParameterIsByRef)
                         methodParamType = methodParamType.GetElementType();
-                    }
-
-                    // todo: @wip check if we need to add the ParentFlags.Call here?
-                    var isByRefParam = methodParamType.IsByRef;
-                    var operandFlags = liftedByRefMethod
-                        ? (parent & ~CallArgumentFlagsToClear) | ParentFlags.AssignmentRightValue
-                        : isByRefParam
-                            ? parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess
-                            : (parent & ~ValueOperandFlagsToClear) | ParentFlags.AssignmentRightValue;
-                    if (!TryEmit(opExpr, il, ref context, operandFlags,
-                        isByRefParam && !(opExpr is ParameterExpression { IsByRef: true } && sourceType.IsNullable()) ? 0 : -1))
+                    var passSourceByRef = methodParameterIsByRef && methodParamType == sourceType;
+                    var operandFlags = passSourceByRef
+                        ? (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
+                            ParentFlags.AssignmentRightValue | ParentFlags.Arithmetic | ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.Call
+                        : (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
+                            ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef | ParentFlags.DupIt |
+                            ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue;
+                    if (!TryEmit(opExpr, il, ref context, operandFlags, passSourceByRef ? 0 : -1))
                         return false;
 
-                    // The by-ref param of the method needs the address of the operand, the nullable by-ref parameter is already the address
-                    if (isByRefParam && !context.LastEmitIsAddress && !(opExpr is ParameterExpression { IsByRef: true }))
-                        EmitStoreAndLoadLocalVariableAddress(il, sourceType);
                 }
                 else
                 {
@@ -4091,9 +4084,9 @@ namespace FastExpressionCompiler
                         il.DmarkLabel(labelSourceHasValue);
                         EmitLoadLocalVariableAddress(il, sourceVarIndex);
                         il.Demit(OpCodes.Ldfld, sourceType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
-                        if (liftedByRefMethod)
-                            EmitStoreAndLoadLocalVariableAddress(il, methodParamType);
 
+                        if (methodParameterIsByRef)
+                            EmitStoreAndLoadLocalVariableAddress(il, methodParamType);
                         EmitMethodCallOrVirtualCall(il, convertMethod);
 
                         // Wrap the conversion result into the target type only if the conversion method return the underlying target type,
@@ -4102,6 +4095,7 @@ namespace FastExpressionCompiler
                             il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
 
                         il.DmarkLabel(labelConversionDone);
+                        context.LastEmitIsAddress = false;
                         return il.EmitPopIfIgnoreResult(parent);
                     }
 
@@ -4128,9 +4122,10 @@ namespace FastExpressionCompiler
                             $"Expected the conversion operator parameter type `{methodParamType}` to be either Nullable<{sourceType}> or a base type of `{sourceType}`");
                     }
 
-                    if (liftedByRefMethod)
+                    if (methodParameterIsByRef && methodParamType != sourceType)
                         EmitStoreAndLoadLocalVariableAddress(il, methodParamType);
                     EmitMethodCallOrVirtualCall(il, convertMethod);
+                    context.LastEmitIsAddress = false;
 
                     if (methodReturnType == underlyingNullableTargetType)
                         il.Demit(OpCodes.Newobj, targetType.GetNullableConstructor());
