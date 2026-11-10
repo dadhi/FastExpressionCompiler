@@ -1442,6 +1442,18 @@ namespace FastExpressionCompiler
 #endif
                         if (elemCount == 0)
                             return r;
+                        if (expr.NodeType == ExpressionType.NewArrayBounds)
+                        {
+                            for (var i = 0; i < elemCount; ++i)
+                            {
+                                var precedingArrayElementTryCount = context.TryExpressionCount;
+                                if ((r = TryCollectInfo(ref context, arrElems.GetArgument(i), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
+                                    return r;
+                                if (i != 0 && context.TryExpressionCount != precedingArrayElementTryCount)
+                                    context.ArgsContainingComplexExpression.Set.AddOrGetEntryRef(expr, out _);
+                            }
+                            return r;
+                        }
                         for (var i = 0; i < elemCount - 1; i++)
                             if ((r = TryCollectInfo(ref context, arrElems.GetArgument(i), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                                 return r;
@@ -4548,6 +4560,8 @@ namespace FastExpressionCompiler
                 var bounds = expr.GetArgExprs();
                 var boundCount = bounds.GetArgCount();
                 var flags = ParentFlags.CtorCall;
+                SmallList<int, Stack8<int>, NoArrayPool<int>> boundVars = default;
+                var spillBounds = context.ArgsContainingComplexExpression.Set.ContainsKey(expr);
                 for (var i = 0; i < boundCount; i++)
                 {
                     var bound = bounds.GetArgument(i);
@@ -4567,7 +4581,12 @@ namespace FastExpressionCompiler
                         if (boundType != typeof(int) && !TryEmitPrimitiveValueConvert(boundType, typeof(int), il, isChecked: true))
                             return false;
                     }
+                    if (spillBounds)
+                        boundVars.Add(EmitStoreLocalVariable(il, typeof(int)));
                 }
+                if (spillBounds)
+                    for (var i = 0; i < boundCount; ++i)
+                        EmitLoadLocalVariable(il, boundVars[i]);
                 if (boundCount == 1)
                 {
                     var elemType = expr.Type.GetElementType();
