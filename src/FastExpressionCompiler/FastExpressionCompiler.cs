@@ -2905,7 +2905,7 @@ namespace FastExpressionCompiler
 
                 var indexerProp = indexExpr.Indexer;
                 if (indexerProp != null)
-                    return EmitMethodCallOrVirtualCallCheckForNull(il, indexerProp.GetMethod);
+                    return EmitInstanceMethodCall(il, indexerProp.GetMethod, objExpr?.Type) && il.EmitPopIfIgnoreResult(parent);
                 return TryEmitArrayElementGet(il, objExpr.Type, indexExpr.Type, ref context,
                     byRefIndex >= 0 ? parent | ParentFlags.AssignmentByRef : parent);
             }
@@ -4830,17 +4830,7 @@ namespace FastExpressionCompiler
                     if (!TryEmit(addArgs.GetArgument(a), il, ref context, callFlags, methodParams[a].ParameterType.IsByRef ? a : -1))
                         return false;
 
-                bool ok;
-                if (!ownerType.IsValueType)
-                    ok = EmitMethodCallOrVirtualCall(il, method);
-                else if (!method.IsVirtual // #251 - no need for constrained or virtual call because it is already by-ref
-                    || method.DeclaringType == ownerType)
-                    ok = EmitMethodCall(il, method);
-                else
-                {
-                    il.Demit(OpCodes.Constrained, ownerType); // todo: @clarify it is a value type so... can we de-virtualize the call?
-                    ok = EmitVirtualMethodCall(il, method);
-                }
+                var ok = EmitInstanceMethodCall(il, method, ownerType);
                 if (ok && method.ReturnType != typeof(void))
                     il.Demit(OpCodes.Pop);
                 return ok;
@@ -5836,18 +5826,7 @@ namespace FastExpressionCompiler
                     }
                 }
 
-                var ok = true;
-                if (!objIsValueType)
-                    // callvirt also checks null for nonvirtual reference-instance methods.
-                    ok = objExpr == null ? EmitMethodCallOrVirtualCall(il, method) : EmitVirtualMethodCall(il, method);
-                else if (method.DeclaringType == objExpr.Type)
-                    ok = EmitMethodCall(il, method);
-                else
-                {
-                    // method on base class (System.Enum, System.Object) or interface
-                    il.Demit(OpCodes.Constrained, objExpr.Type);
-                    ok = EmitVirtualMethodCall(il, method);
-                }
+                var ok = EmitInstanceMethodCall(il, method, objExpr?.Type);
 
                 if (byRefIndex != -1 && !isArrayAddress)
                     EmitStoreAndLoadLocalVariableAddress(il, method.ReturnType);
@@ -5857,6 +5836,25 @@ namespace FastExpressionCompiler
 
                 context.LastEmitIsAddress = isArrayAddress && !parent.IgnoresResult();
                 return ok;
+            }
+
+            // The receiver (an address for value types) and arguments are already on the stack.
+            private static bool EmitInstanceMethodCall(ILGenerator il, MethodInfo method, Type instanceType)
+            {
+                if (method == null)
+                    return false;
+                if (instanceType == null)
+                    return EmitMethodCallOrVirtualCall(il, method);
+                if (instanceType.IsByRef)
+                    instanceType = instanceType.GetElementType();
+                // callvirt checks a reference receiver even when the method itself is non-virtual.
+                if (!instanceType.IsValueType)
+                    return EmitVirtualMethodCall(il, method);
+                if (method.DeclaringType == instanceType)
+                    return EmitMethodCall(il, method);
+                // Method on a base class (System.Enum, System.Object) or interface.
+                il.Demit(OpCodes.Constrained, instanceType);
+                return EmitVirtualMethodCall(il, method);
             }
 
             public static bool TryEmitMemberGet(MemberExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex = -1)
@@ -5885,7 +5883,7 @@ namespace FastExpressionCompiler
                     }
 
                     context.LastEmitIsAddress = false;
-                    return EmitMethodCallOrVirtualCall(il, prop.GetMethod);
+                    return EmitInstanceMethodCall(il, prop.GetMethod, objExpr?.Type) && il.EmitPopIfIgnoreResult(parent);
                 }
 
                 if (expr.Member is FieldInfo field)
