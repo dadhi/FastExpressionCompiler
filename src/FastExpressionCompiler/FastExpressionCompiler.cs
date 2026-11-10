@@ -6510,10 +6510,20 @@ namespace FastExpressionCompiler
 
                     foreach (var caseTestValue in cs.TestValues)
                     {
+                        var cachedTestValue = -1;
+                        if ((context.TryExpressionCount != 0))
+                        {
+                            if (!TryEmit(caseTestValue, il, ref context, switchValueParent, param1ByRefIndex))
+                                return false;
+                            var testType = param1ByRefIndex == -1 ? caseTestValue.Type : caseTestValue.Type.MakeByRefType();
+                            cachedTestValue = EmitStoreLocalVariable(il, testType);
+                        }
                         if (!switchValueIsNullable)
                         {
                             EmitLoadLocalVariable(il, switchValueVar);
-                            if (!TryEmit(caseTestValue, il, ref context, switchValueParent, param1ByRefIndex))
+                            if (cachedTestValue != -1)
+                                EmitLoadLocalVariable(il, cachedTestValue);
+                            else if (!TryEmit(caseTestValue, il, ref context, switchValueParent, param1ByRefIndex))
                                 return false;
                             if (equalityMethod == null)
                             {
@@ -6530,8 +6540,11 @@ namespace FastExpressionCompiler
                         if (equalityMethod != null & !isEqualityMethodForUnderlyingNullable)
                         {
                             EmitLoadLocalVariable(il, switchValueVar);
-                            if (!TryEmit(caseTestValue, il, ref context, switchValueParent, param1ByRefIndex) ||
-                                !EmitMethodCall(il, equalityMethod))
+                            if (cachedTestValue != -1)
+                                EmitLoadLocalVariable(il, cachedTestValue);
+                            else if (!TryEmit(caseTestValue, il, ref context, switchValueParent, param1ByRefIndex))
+                                return false;
+                            if (!EmitMethodCall(il, equalityMethod))
                                 return false;
                             il.Demit(OpCodes.Brtrue, caseBodyLabel);
                             continue;
@@ -6552,7 +6565,9 @@ namespace FastExpressionCompiler
                         // Compare the switch value with the case value via Ceq or comparison method and then compare the HasValue of both
                         EmitLoadLocalVariableAddress(il, switchValueVar);
                         il.Demit(OpCodes.Ldfld, switchNullableUnsafeValueField);
-                        if (!TryEmit(caseTestValue, il, ref context, switchValueParent, param1ByRefIndex))
+                        if (cachedTestValue != -1)
+                            EmitLoadLocalVariable(il, cachedTestValue);
+                        else if (!TryEmit(caseTestValue, il, ref context, switchValueParent, param1ByRefIndex))
                             return false;
                         var caseValueVar = EmitStoreAndLoadLocalVariableAddress(il, switchValueType);
                         il.Demit(OpCodes.Ldfld, switchNullableUnsafeValueField);
