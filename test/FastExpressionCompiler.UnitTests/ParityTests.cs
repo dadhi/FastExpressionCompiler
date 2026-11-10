@@ -1530,7 +1530,7 @@ namespace FastExpressionCompiler.UnitTests
             foreach (var expression in expressions)
             {
                 var lambda = Lambda<Func<List<int>, int>>(expression, list);
-                if (expression.NodeType == ExpressionType.Index) t.IsNotNull(lambda.CompileFast(true));
+                if (expression.NodeType == ExpressionType.Index || expression.NodeType == ExpressionType.AddAssign) t.IsNotNull(lambda.CompileFast(true));
                 else t.IsTrue(lambda.CompileFast(true) == null);
                 var expectedList = new List<int> { 3 };
                 var actualList = new List<int> { 3 };

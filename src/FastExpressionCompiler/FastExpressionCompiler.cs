@@ -657,6 +657,9 @@ namespace FastExpressionCompiler
             /// New or Call expressions containing the complex expression, e.g. inlined Lambda Invoke or Try with Finally
             internal SmallSet4<Expression, RefEq<Expression>> ArgsContainingComplexExpression;
 
+            [MethodImpl((MethodImplOptions)256)]
+            internal bool HasComplexArguments(Expression expr) => ArgsContainingComplexExpression.Set.ContainsKey(expr);
+
             internal bool HasComplexExpression;
             internal bool InExceptionFilter;
             internal int TryExpressionCount;
@@ -2793,7 +2796,7 @@ namespace FastExpressionCompiler
                     }
                     else
                     {
-                        if (!context.ArgsContainingComplexExpression.Set.ContainsKey(newExpr))
+                        if (!context.HasComplexArguments(newExpr))
                         {
                             for (var i = 0; i < argCount; ++i)
                                 if (!TryEmit(argExprs.GetArgument(i), il, ref context, flags, pars[i].ParameterType.IsByRef ? i : -1))
@@ -2897,7 +2900,7 @@ namespace FastExpressionCompiler
                 var indexArgs = indexExpr.GetArgExprs();
                 var argParent = p & ~ParentFlags.InstanceAccess;
                 if (!TryEmitIndexOperands(objExpr, indexArgs, ParentFlags.InstanceCall, argParent, il, ref context,
-                    context.ArgsContainingComplexExpression.Set.ContainsKey(indexExpr)))
+                    context.HasComplexArguments(indexExpr)))
                     return false;
 
                 var indexerProp = indexExpr.Indexer;
@@ -4574,7 +4577,7 @@ namespace FastExpressionCompiler
                 var boundCount = bounds.GetArgCount();
                 var flags = ParentFlags.CtorCall;
                 SmallList<int, Stack8<int>, NoArrayPool<int>> boundVars = default;
-                var spillBounds = context.ArgsContainingComplexExpression.Set.ContainsKey(expr);
+                var spillBounds = context.HasComplexArguments(expr);
                 for (var i = 0; i < boundCount; i++)
                 {
                     var bound = bounds.GetArgument(i);
@@ -4978,10 +4981,12 @@ namespace FastExpressionCompiler
                             return false;
 
                         var indexArgCount = -1;
+                        var spillIndexOperands = false;
                         ArgExprs indexArgs = null;
                         if (orLeftIndexExpr != null)
                         {
-                            if (context.ArgsContainingComplexExpression.Set.ContainsKey(orLeftIndexExpr))
+                            spillIndexOperands = context.HasComplexArguments(orLeftIndexExpr);
+                            if (nodeType == ExpressionType.Assign && spillIndexOperands)
                                 return false;
                             indexArgs = orLeftIndexExpr.GetArgExprs();
                             indexArgCount = indexArgs.GetArgCount();
@@ -5110,12 +5115,14 @@ namespace FastExpressionCompiler
                                 objVarByAddress = !context.LastEmitIsAddress && objType.IsValueType && // todo: @better avoid ad-hocking with parameter here
                                     (objExpr.NodeType != ExpressionType.Parameter || !((ParameterExpression)objExpr).IsByRef);
                                 if (objVarByAddress)
-                                    objVar = EmitStoreAndLoadLocalVariableAddress(il, objType);
+                                    objVar = spillIndexOperands ? EmitStoreLocalVariable(il, objType)
+                                        : EmitStoreAndLoadLocalVariableAddress(il, objType);
                                 else
                                 {
-                                    if (objExpr is ParameterExpression pe && pe.IsByRef)
+                                    if (context.LastEmitIsAddress || objExpr is ParameterExpression pe && pe.IsByRef)
                                         objType = objType.MakeByRefType();
-                                    objVar = EmitStoreAndLoadLocalVariable(il, objType);
+                                    objVar = spillIndexOperands ? EmitStoreLocalVariable(il, objType)
+                                        : EmitStoreAndLoadLocalVariable(il, objType);
                                 }
                             }
 
@@ -5125,21 +5132,29 @@ namespace FastExpressionCompiler
                                 var indexArg = indexArgs.GetArgument(i);
                                 if (!TryEmit(indexArg, il, ref context, baseFlags))
                                     return false;
-                                var indexArgVar = EmitStoreAndLoadLocalVariable(il, indexArg.Type);
+                                var indexArgVar = spillIndexOperands ? EmitStoreLocalVariable(il, indexArg.Type)
+                                    : EmitStoreAndLoadLocalVariable(il, indexArg.Type);
                                 if (i == 0) indexArgVar0 = indexArgVar;
                                 else if (i == 1) indexArgVar1 = indexArgVar;
                                 else if (i == 2) indexArgVar2 = indexArgVar;
                                 else if (i == 3) indexArgVar3 = indexArgVar;
                             }
 
+                            // An index may enter an exception region. Reload the assignment
+                            // target only after all index expressions have been evaluated.
+                            if (spillIndexOperands)
+                            {
+                                if (objExpr != null)
+                                    EmitLoadLocalVariableOrAddress(il, objVar, objVarByAddress);
+                                EmitLoadLocalVariable(il, indexArgVar0);
+                                if (indexArgVar1 != -1) EmitLoadLocalVariable(il, indexArgVar1);
+                                if (indexArgVar2 != -1) EmitLoadLocalVariable(il, indexArgVar2);
+                                if (indexArgVar3 != -1) EmitLoadLocalVariable(il, indexArgVar3);
+                            }
+
                             // repeat the load of the obj and index variables for the assignment here to avoid store and load of the right value
                             if (objExpr != null)
-                            {
-                                if (!objVarByAddress)
-                                    EmitLoadLocalVariable(il, objVar);
-                                else
-                                    EmitLoadLocalVariableAddress(il, objVar);
-                            }
+                                EmitLoadLocalVariableOrAddress(il, objVar, objVarByAddress);
 
                             EmitLoadLocalVariable(il, indexArgVar0); // there is always at least one index argument
                             if (indexArgVar1 != -1)
@@ -5782,7 +5797,7 @@ namespace FastExpressionCompiler
 #else
                     var callArgs = callExpr.Arguments;
 #endif
-                    if (!context.ArgsContainingComplexExpression.Set.ContainsKey(callExpr))
+                    if (!context.HasComplexArguments(callExpr))
                     {
                         if (loadObjByAddress)
                             EmitStoreAndLoadLocalVariableAddress(il, objExpr.Type);
@@ -5814,12 +5829,7 @@ namespace FastExpressionCompiler
 
                         // restore the object and the args from the variables in the proper order to emit the call
                         if (objExpr != null)
-                        {
-                            if (loadObjByAddress)
-                                EmitLoadLocalVariableAddress(il, objVar);
-                            else
-                                EmitLoadLocalVariable(il, objVar);
-                        }
+                            EmitLoadLocalVariableOrAddress(il, objVar, loadObjByAddress);
 
                         for (var i = 0; i < methodParams.Length; i++)
                             EmitLoadLocalVariable(il, argVars[i]);
@@ -7830,6 +7840,15 @@ namespace FastExpressionCompiler
                     rightVar = EmitStoreLocalVariable(il, rightType);
                 EmitLoadLocalVariable(il, leftVar);
                 EmitLoadLocalVariable(il, rightVar);
+            }
+
+            [MethodImpl((MethodImplOptions)256)]
+            private static void EmitLoadLocalVariableOrAddress(ILGenerator il, int location, bool loadAddress)
+            {
+                if (loadAddress)
+                    EmitLoadLocalVariableAddress(il, location);
+                else
+                    EmitLoadLocalVariable(il, location);
             }
 
             [MethodImpl((MethodImplOptions)256)]
