@@ -71,6 +71,7 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.UnitTests.MultidimensionalGetStorageRegressionTests());
                 lt.Run(new LightExpression.UnitTests.AbstractConstructorRegressionTests());
                 lt.Run(new LightExpression.UnitTests.DirectLogicalFactoryRegressionTests());
+                lt.Run(new LightExpression.UnitTests.ArrayBoundsExceptionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.TryResultValueRegressionTests());
                 lt.Run(new LightExpression.UnitTests.NonVectorArrayRegressionTests());
                 lt.Run(new LightExpression.UnitTests.UnboxStorageRegressionTests());
@@ -120,6 +121,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new MultidimensionalGetStorageRegressionTests());
             st.Run(new AbstractConstructorRegressionTests());
             st.Run(new DirectLogicalFactoryRegressionTests());
+            st.Run(new ArrayBoundsExceptionRegressionTests());
             st.Run(new TryResultValueRegressionTests());
             st.Run(new NonVectorArrayRegressionTests());
             st.Run(new UnboxStorageRegressionTests());
