@@ -4682,6 +4682,7 @@ namespace FastExpressionCompiler
 
             private static bool EmitMemberInit(MemberInitExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
+                var valueFlags = (parent & ~CallArgumentFlagsToClear) | ParentFlags.AssignmentRightValue;
                 var valueVarIndex = -1;
                 var exprType = expr.Type;
                 if (exprType.IsValueType)
@@ -4691,7 +4692,7 @@ namespace FastExpressionCompiler
 #if LIGHT_EXPRESSION
                 if (newExpr == null)
                 {
-                    if (!TryEmit(expr.Expression, il, ref context, parent))
+                    if (!TryEmit(expr.Expression, il, ref context, valueFlags))
                         return false;
                     if (valueVarIndex != -1)
                         EmitStoreLocalVariable(il, valueVarIndex);
@@ -4705,7 +4706,7 @@ namespace FastExpressionCompiler
                     {
                         var args = newExpr.Constructor.GetParameters();
                         for (var i = 0; i < argCount; i++)
-                            if (!TryEmit(argExprs.GetArgument(i), il, ref context, parent, args[i].ParameterType.IsByRef ? i : -1))
+                            if (!TryEmit(argExprs.GetArgument(i), il, ref context, valueFlags, args[i].ParameterType.IsByRef ? i : -1))
                                 return false;
                     }
 
@@ -4731,12 +4732,13 @@ namespace FastExpressionCompiler
                     else
                         il.Demit(OpCodes.Dup); // duplicate member owner on stack
 
-                    if (!EmitBinding(binding, il, ref context, parent))
+                    if (!EmitBinding(binding, il, ref context, valueFlags))
                         return false;
                 }
                 if (valueVarIndex != -1)
                     EmitLoadLocalVariable(il, valueVarIndex);
-                return true;
+                context.LastEmitIsAddress = false;
+                return il.EmitPopIfIgnoreResult(parent);
             }
 
             [MethodImpl((MethodImplOptions)256)]
