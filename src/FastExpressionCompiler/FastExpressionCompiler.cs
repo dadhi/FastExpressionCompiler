@@ -2066,14 +2066,27 @@ namespace FastExpressionCompiler
 
             var inits = ((MemberListBinding)b).Initializers;
             for (var i = 0; i < inits.Count; ++i)
-            {
-                var args = inits[i].GetArgExprs();
-                for (var a = 0; a < args.GetArgCount(); ++a)
-                    if ((r = TryCollectInfo(ref context, args.GetArgument(a), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
-                        return r;
-            }
+                if ((r = TryCollectElementInitInfo(ref context, inits[i], nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
+                    return r;
             return r;
         }
+        [MethodImpl((MethodImplOptions)256)]
+        private static Result TryCollectElementInitInfo(ref CompilerContext context, ElementInit init,
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
+        {
+            var args = init.GetArgExprs();
+            for (var a = 0; a < args.GetArgCount(); ++a)
+            {
+                var argument = args.GetArgument(a);
+                var precedingTryCount = context.TryExpressionCount;
+                var r = TryCollectInfo(ref context, argument, nestedLambda, ref rootNestedLambdas, scopeIdx);
+                if (r != Result.OK) return r;
+                if (context.TryExpressionCount != precedingTryCount)
+                    context.ArgsContainingComplexExpression.Set.AddOrGetEntryRef(argument, out _);
+            }
+            return Result.OK;
+        }
+
         private static Result TryCollectListInitExprConstants(ref CompilerContext context, ListInitExpression expr,
             NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
         {
@@ -2085,15 +2098,12 @@ namespace FastExpressionCompiler
             if ((r = TryCollectInfo(ref context, newExpr, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                 return r;
 
+            var precedingTryCount = context.TryExpressionCount;
             for (var i = 0; i < count; ++i)
-            {
-                var elemInit = inits.GetArgument(i);
-                var args = elemInit.Arguments;
-                var argCount = args.Count;
-                for (var a = 0; a < argCount; ++a)
-                    if ((r = TryCollectInfo(ref context, args.GetArgument(a), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
-                        return r;
-            }
+                if ((r = TryCollectElementInitInfo(ref context, inits.GetArgument(i), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
+                    return r;
+            if (context.TryExpressionCount != precedingTryCount)
+                context.ArgsContainingComplexExpression.Set.AddOrGetEntryRef(expr, out _);
             return r;
         }
 
@@ -4635,7 +4645,7 @@ namespace FastExpressionCompiler
                 il.Demit(OpCodes.Newarr, elemType);
 
                 var isElemOfValueType = elemType.IsValueType;
-                if (context.ArgsContainingComplexExpression.Set.ContainsKey(expr))
+                if (context.HasComplexArguments(expr))
                 {
                     var array = EmitStoreLocalVariable(il, arrayType);
                     var value = il.GetNextLocalVarIndex(elemType);
@@ -4761,40 +4771,19 @@ namespace FastExpressionCompiler
 
             private static bool TryEmitListInit(ListInitExpression expr, Type exprType, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
-                var valueVarIndex = -1;
-                if (exprType.IsValueType)
-                    valueVarIndex = il.GetNextLocalVarIndex(exprType);
-
-                var newExpr = expr.NewExpression;
-                var argExprs = newExpr.GetArgExprs();
-                var argCount = argExprs.GetArgCount();
-                if (argCount > 0)
-                {
-                    var args = newExpr.Constructor.GetParameters();
-                    for (var i = 0; i < argCount; i++)
-                        if (!TryEmit(argExprs.GetArgument(i), il, ref context, parent, args[i].ParameterType.IsByRef ? i : -1))
-                            return false;
-                }
-
-                if (newExpr.Constructor != null)
-                {
-                    il.Demit(OpCodes.Newobj, newExpr.Constructor);
-                    if (valueVarIndex != -1)
-                        EmitStoreLocalVariable(il, valueVarIndex);
-                }
-                else if (valueVarIndex != -1)
-                    InitValueTypeVariable(il, exprType, valueVarIndex);
-                else
-                    return false; // null constructor and not a value type, better to fallback
-
+                var valueVarIndex = exprType.IsValueType || context.HasComplexArguments(expr) ? il.GetNextLocalVarIndex(exprType) : -1;
+                if (!TryEmitNew(expr.NewExpression, il, ref context, ParentFlags.CtorCall))
+                    return false;
+                if (valueVarIndex != -1)
+                    EmitStoreLocalVariable(il, valueVarIndex);
                 var inits = expr.Initializers;
                 var initCount = inits.Count;
                 MethodInfo lastAddMethod = null;
                 ParameterInfo[] methodParams = null;
                 for (var i = 0; i < initCount; ++i)
                 {
-                    if (valueVarIndex != -1) // load local value address, to set its members
-                        EmitLoadLocalVariableAddress(il, valueVarIndex);
+                    if (valueVarIndex != -1)
+                        EmitLoadLocalVariableOrAddress(il, valueVarIndex, exprType.IsValueType);
                     else
                         il.Demit(OpCodes.Dup); // duplicate member owner on stack
 
@@ -4808,7 +4797,6 @@ namespace FastExpressionCompiler
                     if (!EmitElementInit(elemInit, exprType, il, ref context, parent, methodParams))
                         return false;
                 }
-
                 if (valueVarIndex != -1)
                     EmitLoadLocalVariable(il, valueVarIndex);
                 context.LastEmitIsAddress = false;
@@ -4819,16 +4807,30 @@ namespace FastExpressionCompiler
             private static bool EmitElementInit(ElementInit elemInit, Type ownerType, ILGenerator il, ref CompilerContext context, ParentFlags parent, ParameterInfo[] methodParams = null)
             {
                 // see the TryEmitMethodCall for the reason of the callFlags
-                var callFlags = (parent & ~CallArgumentFlagsToClear) | ParentFlags.Call;
+                var callFlags = (parent & ~CallArgumentFlagsToClear) | ParentFlags.Call | ParentFlags.AssignmentRightValue;
                 var method = elemInit.AddMethod;
                 if (methodParams == null)
                     methodParams = method.GetParameters();
                 var addArgs = elemInit.GetArgExprs();
                 var addArgCount = addArgs.GetArgCount();
 
+                var spillArguments = false;
+                if (context.TryExpressionCount != 0)
+                    for (var a = 0; a < addArgCount && !spillArguments; ++a)
+                        spillArguments = context.HasComplexArguments(addArgs.GetArgument(a));
+                var receiver = spillArguments ? EmitStoreLocalVariable(il, ownerType.IsValueType ? ownerType.MakeByRefType() : ownerType) : -1;
+                SmallList<int, Stack8<int>, NoArrayPool<int>> argVars = default;
                 for (var a = 0; a < addArgCount; ++a)
-                    if (!TryEmit(addArgs.GetArgument(a), il, ref context, callFlags, methodParams[a].ParameterType.IsByRef ? a : -1))
-                        return false;
+                {
+                    var type = methodParams[a].ParameterType;
+                    if (!TryEmit(addArgs.GetArgument(a), il, ref context, callFlags, type.IsByRef ? a : -1)) return false;
+                    if (spillArguments) argVars.Add(EmitStoreLocalVariable(il, type));
+                }
+                if (spillArguments)
+                {
+                    EmitLoadLocalVariable(il, receiver);
+                    for (var a = 0; a < addArgCount; ++a) EmitLoadLocalVariable(il, argVars[a]);
+                }
 
                 var ok = EmitInstanceMethodCall(il, method, ownerType);
                 if (ok && method.ReturnType != typeof(void))
