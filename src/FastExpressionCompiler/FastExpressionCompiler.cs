@@ -3878,17 +3878,13 @@ namespace FastExpressionCompiler
                         return il.EmitPopIfIgnoreResult(parent);
                     }
 
-                    if (targetType == typeof(object) && sourceType.IsValueType)
+                    if (sourceType.IsValueType && (targetType == typeof(object) ||
+                        underlyingNullableSourceType != null && !targetType.IsValueType &&
+                        (targetType.IsInterface || targetType.IsAssignableFrom(underlyingNullableSourceType))))
                     {
                         il.Demit(OpCodes.Box, sourceType);
-                        return il.EmitPopIfIgnoreResult(parent);
-                    }
-
-                    if (underlyingNullableSourceType != null && !targetType.IsValueType &&
-                        targetType.IsAssignableFrom(underlyingNullableSourceType))
-                    {
-                        il.Demit(OpCodes.Box, sourceType);
-                        il.Demit(OpCodes.Castclass, targetType);
+                        if (targetType.IsInterface && !targetType.IsAssignableFrom(underlyingNullableSourceType ?? sourceType))
+                            il.Demit(OpCodes.Castclass, targetType);
                         return il.EmitPopIfIgnoreResult(parent);
                     }
 

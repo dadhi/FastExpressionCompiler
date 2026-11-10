@@ -35,6 +35,7 @@ namespace FastExpressionCompiler.UnitTests
 
                 var t = (LightExpression.TestRun)state;
                 t.Run(new LightExpression.UnitTests.InvokeRefArgumentRegressionTests());
+                t.Run(new LightExpression.UnitTests.NullableBoxingRegressionTests());
                 t.Run(new LightExpression.UnitTests.RuntimeSwitchCaseRegressionTests());
                 t.Run(new LightExpression.UnitTests.StaticFieldAddressRegressionTests());
                 t.Run(new LightExpression.UnitTests.MultidimensionalGetStorageRegressionTests());
@@ -84,6 +85,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var fecTests = new TestRun();
             fecTests.Run(new InvokeRefArgumentRegressionTests());
+            fecTests.Run(new NullableBoxingRegressionTests());
             fecTests.Run(new LiftedRefConversionRegressionTests());
             fecTests.Run(new RuntimeSwitchCaseRegressionTests());
             fecTests.Run(new StaticFieldAddressRegressionTests());
