@@ -2894,32 +2894,54 @@ namespace FastExpressionCompiler
             // similar code is used by the TryEmitArithmeticAndOrAssign, so don't forget to modify it as well
             private static bool TryEmitIndexGet(IndexExpression indexExpr, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex = -1)
             {
-                if (context.ArgsContainingComplexExpression.Set.ContainsKey(indexExpr))
-                    return false;
                 var p = parent & ~ParentFlags.IgnoreResult | ParentFlags.IndexAccess;
 
                 var objExpr = indexExpr.Object;
-                if (objExpr != null &&
-                    !TryEmit(objExpr, il, ref context, p | ParentFlags.InstanceAccess))
-                    return false;
-
                 var indexArgs = indexExpr.GetArgExprs();
-                var indexArgCount = indexArgs.GetArgCount();
-                // Strip InstanceAccess when emitting arguments: they are parameters to the indexer
-                // getter method, not instances. Without this, a nested IndexExpression like
-                // `list[i][j]` leaks the outer InstanceAccess into the inner indexer's argument
-                // emission, causing value-type args (e.g. int) to be loaded by address (ldloca)
-                // instead of by value (ldloc), producing invalid IL. See #499.
                 var argParent = p & ~ParentFlags.InstanceAccess;
-                for (var i = 0; i < indexArgCount; i++)
-                    if (!TryEmit(indexArgs.GetArgument(i), il, ref context, argParent, -1))
-                        return false;
+                if (!TryEmitIndexOperands(objExpr, indexArgs, ParentFlags.InstanceCall, argParent, il, ref context,
+                    context.ArgsContainingComplexExpression.Set.ContainsKey(indexExpr)))
+                    return false;
 
                 var indexerProp = indexExpr.Indexer;
                 if (indexerProp != null)
                     return EmitMethodCallOrVirtualCallCheckForNull(il, indexerProp.GetMethod);
                 return TryEmitArrayElementGet(il, objExpr.Type, indexExpr.Type, ref context,
                     byRefIndex >= 0 ? parent | ParentFlags.AssignmentByRef : parent);
+            }
+
+            private static bool TryEmitIndexOperands(Expression objExpr, ArgExprs indexArgs, ParentFlags objFlags,
+                ParentFlags argFlags, ILGenerator il, ref CompilerContext context, bool spillOperands)
+            {
+                var objVar = -1;
+                if (objExpr != null)
+                {
+                    if (!TryEmit(objExpr, il, ref context, objFlags))
+                        return false;
+                    if (objExpr.Type.IsValueType && !context.LastEmitIsAddress && !(objExpr is PE pe && pe.IsByRef))
+                        EmitStoreAndLoadLocalVariableAddress(il, objExpr.Type);
+                    if (spillOperands)
+                        objVar = EmitStoreLocalVariable(il, objExpr.Type.IsValueType ? objExpr.Type.MakeByRefType() : objExpr.Type);
+                }
+
+                SmallList<int, Stack8<int>, NoArrayPool<int>> argVars = default;
+                var count = indexArgs.GetArgCount();
+                for (var i = 0; i < count; ++i)
+                {
+                    var argument = indexArgs.GetArgument(i);
+                    if (!TryEmit(argument, il, ref context, argFlags, -1))
+                        return false;
+                    if (spillOperands)
+                        argVars.Add(EmitStoreLocalVariable(il, argument.Type));
+                }
+                if (spillOperands)
+                {
+                    if (objVar != -1)
+                        EmitLoadLocalVariable(il, objVar);
+                    for (var i = 0; i < count; ++i)
+                        EmitLoadLocalVariable(il, argVars[i]);
+                }
+                return true;
             }
 
             private static bool IsVectorArray(Type type)
