@@ -122,7 +122,7 @@ namespace FastExpressionCompiler.IssueTests
 
             actual.Method.AssertOpCodes(
                 OpCodes.Ldarg_1,
-                OpCodes.Call,   // get_Value getter
+                OpCodes.Callvirt, // get_Value getter, including the receiver null check
                 OpCodes.Stloc_0,
                 OpCodes.Ldloca_S,
                 OpCodes.Ldfld,  // GetValueOrDefault
@@ -319,7 +319,7 @@ namespace FastExpressionCompiler.IssueTests
 
             compiledFast.AssertOpCodes(
                 OpCodes.Ldarg_1,
-                OpCodes.Call,
+                OpCodes.Callvirt,
                 OpCodes.Ldsfld,
                 OpCodes.Call,
                 OpCodes.Clt_Un,
@@ -351,7 +351,7 @@ namespace FastExpressionCompiler.IssueTests
 
             compiledFast.AssertOpCodes(
                 OpCodes.Ldarg_1,
-                OpCodes.Call,
+                OpCodes.Callvirt,
                 OpCodes.Ldsfld,
                 OpCodes.Call,
                 OpCodes.Clt_Un,
@@ -359,7 +359,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ceq,
                 OpCodes.Brfalse,
                 OpCodes.Ldarg_1,
-                OpCodes.Call,
+                OpCodes.Callvirt,
                 OpCodes.Ldsfld,
                 OpCodes.Call,
                 OpCodes.Cgt_Un,
@@ -638,7 +638,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Stloc_0, // todo: can be replaced with dup #
                 OpCodes.Ldloc_0, // 
                 OpCodes.Ldarg_1,
-                OpCodes.Call, // ValueHolder<int?>.get_Value
+                OpCodes.Callvirt, // ValueHolder<int?>.get_Value
                 OpCodes.Stloc_1,
                 OpCodes.Ldloca_S,
                 OpCodes.Call, // int?.get_Value
@@ -669,7 +669,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Newobj,
                 OpCodes.Dup,
                 OpCodes.Ldarg_1,
-                OpCodes.Call, // ValueHolder<int?>.get_Value
+                OpCodes.Callvirt, // ValueHolder<int?>.get_Value
                 OpCodes.Stloc_0,
                 OpCodes.Ldloca_S,
                 OpCodes.Call, // int?.get_Value
@@ -708,7 +708,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Stloc_0, // todo: can be simplified with dup #173
                 OpCodes.Ldloc_0,
                 OpCodes.Ldarg_1,
-                OpCodes.Call, // ValueHolder<decimal?>.get_Value
+                OpCodes.Callvirt, // ValueHolder<decimal?>.get_Value
                 OpCodes.Stloc_1,
                 OpCodes.Ldloca_S,
                 OpCodes.Call, // decimal?.get_Value
@@ -748,7 +748,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Stloc_0, // todo: can be simplified with dup #173
                 OpCodes.Ldloc_0,
                 OpCodes.Ldarg_1,
-                OpCodes.Call,    // ValueHolder<decimal>.get_Value
+                OpCodes.Callvirt,    // ValueHolder<decimal>.get_Value
                 OpCodes.Call,    // double Decimal.op_Explicit() 
                 OpCodes.Newobj,  // new Nullable<double>()
                 OpCodes.Call,    // ValueHolder<double?>.set_Value

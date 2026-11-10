@@ -5829,6 +5829,22 @@ namespace FastExpressionCompiler
                 return ok;
             }
 
+            private static bool EmitInstanceMethodCall(ILGenerator il, MethodInfo method, Type instanceType)
+            {
+                if (instanceType == null)
+                    return EmitMethodCallOrVirtualCall(il, method);
+                if (instanceType.IsByRef)
+                    instanceType = instanceType.GetElementType();
+                // callvirt checks a reference receiver even when the method itself is non-virtual.
+                if (!instanceType.IsValueType)
+                    return EmitVirtualMethodCall(il, method);
+                if (method.DeclaringType == instanceType)
+                    return EmitMethodCall(il, method);
+                // Method on a base class (System.Enum, System.Object) or interface.
+                il.Demit(OpCodes.Constrained, instanceType);
+                return EmitVirtualMethodCall(il, method);
+            }
+
             public static bool TryEmitMemberGet(MemberExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex = -1)
             {
                 var objExpr = expr.Expression;
@@ -5855,7 +5871,7 @@ namespace FastExpressionCompiler
                     }
 
                     context.LastEmitIsAddress = false;
-                    return EmitMethodCallOrVirtualCall(il, prop.GetMethod);
+                    return EmitInstanceMethodCall(il, prop.GetMethod, objExpr?.Type) && il.EmitPopIfIgnoreResult(parent);
                 }
 
                 if (expr.Member is FieldInfo field)

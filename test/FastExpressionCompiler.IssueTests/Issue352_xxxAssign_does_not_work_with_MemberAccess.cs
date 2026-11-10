@@ -1143,7 +1143,7 @@ namespace FastExpressionCompiler.IssueTests
             ff.AssertOpCodes(
                 OpCodes.Ldarg_1,
                 OpCodes.Dup,
-                OpCodes.Call,       // Box.get_NullableProp
+                OpCodes.Callvirt,   // Box.get_NullableProp, including the receiver null check
                 OpCodes.Stloc_0,
                 OpCodes.Ldc_I4_S,   // 33
                 OpCodes.Newobj,     // Nullable`1..ctor
