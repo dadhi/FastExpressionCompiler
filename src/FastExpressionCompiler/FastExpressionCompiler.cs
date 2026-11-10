@@ -2978,6 +2978,14 @@ namespace FastExpressionCompiler
                 var label = labelInfo.GetOrDefineLabel(il);
                 il.DmarkLabel(label);
 
+                // A backward jump must use the same result local and label as a forward jump.
+                if (context.GotoTargets.Count != 0 && expr.Target.Type != typeof(void) && (labelInfo.ReturnVariableIndexPlusOneAndIsDefined >>> 1) == 0)
+                {
+                    var result = il.GetNextLocalVarIndex(expr.Target.Type);
+                    labelInfo.ReturnVariableIndexPlusOneAndIsDefined = (short)((result + 1) << 1);
+                    labelInfo.ReturnLabel = il.DefineLabel();
+                }
+
                 var defaultValue = expr.DefaultValue;
                 if (defaultValue != null && !TryEmit(defaultValue, il, ref context, parent))
                     return false;
