@@ -3888,10 +3888,8 @@ namespace FastExpressionCompiler
                         return il.EmitPopIfIgnoreResult(parent);
                     }
 
-                    if ((sourceType == typeof(object) || sourceType == typeof(ValueType)) && targetType.IsValueType ||
-                        sourceType.IsInterface && targetType.IsValueType && sourceType.IsAssignableFrom(targetType) ||
-                        sourceType == typeof(Enum) && targetType.IsEnum // a special case, see the AutoMapper test `StringToEnumConverter.Should_work`
-                    )
+                    if (!sourceType.IsValueType && targetType.IsValueType &&
+                        (sourceType.IsInterface || sourceType.IsAssignableFrom(underlyingNullableTargetType ?? targetType)))
                     {
                         il.Demit(OpCodes.Unbox_Any, targetType);
                         return il.EmitPopIfIgnoreResult(parent);
