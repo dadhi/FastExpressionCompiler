@@ -1442,24 +1442,18 @@ namespace FastExpressionCompiler
 #endif
                         if (elemCount == 0)
                             return r;
-                        if (expr.NodeType == ExpressionType.NewArrayBounds)
+                        var isArrayInitializer = expr.NodeType == ExpressionType.NewArrayInit;
+                        for (var i = 0; i < elemCount; ++i)
                         {
-                            for (var i = 0; i < elemCount; ++i)
-                            {
-                                var precedingArrayElementTryCount = context.TryExpressionCount;
-                                if ((r = TryCollectInfo(ref context, arrElems.GetArgument(i), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
-                                    return r;
-                                if (i != 0 && context.TryExpressionCount != precedingArrayElementTryCount)
-                                    context.ArgsContainingComplexExpression.Set.AddOrGetEntryRef(expr, out _);
-                            }
-                            return r;
-                        }
-                        for (var i = 0; i < elemCount - 1; i++)
+                            var precedingArrayElementTryCount = context.TryExpressionCount;
                             if ((r = TryCollectInfo(ref context, arrElems.GetArgument(i), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                                 return r;
-                        expr = arrElems.GetArgument(elemCount - 1);
-                        enterable = false;
-                        continue;
+                            // Initializers keep the array on the stack; bounds only have
+                            // preceding values after the first bound has been evaluated.
+                            if ((isArrayInitializer || i != 0) && context.TryExpressionCount != precedingArrayElementTryCount)
+                                context.ArgsContainingComplexExpression.Set.AddOrGetEntryRef(expr, out _);
+                        }
+                        return r;
 
                     case ExpressionType.MemberInit:
                         return TryCollectMemberInitExprConstants(ref context, (MemberInitExpression)expr, nestedLambda, ref rootNestedLambdas, scopeIdx);
@@ -4635,6 +4629,29 @@ namespace FastExpressionCompiler
                 il.Demit(OpCodes.Newarr, elemType);
 
                 var isElemOfValueType = elemType.IsValueType;
+                if (context.ArgsContainingComplexExpression.Set.ContainsKey(expr))
+                {
+                    var array = EmitStoreLocalVariable(il, arrayType);
+                    var value = il.GetNextLocalVarIndex(elemType);
+                    for (var i = 0; i < elemCount; ++i)
+                    {
+                        if (!TryEmit(elems.GetArgument(i), il, ref context, ParentFlags.AssignmentRightValue))
+                            return false;
+                        EmitStoreLocalVariable(il, value);
+                        EmitLoadLocalVariable(il, array);
+                        EmitLoadConstantInt(il, i);
+                        if (isElemOfValueType)
+                            il.Demit(OpCodes.Ldelema, elemType);
+                        EmitLoadLocalVariable(il, value);
+                        if (isElemOfValueType)
+                            il.Demit(OpCodes.Stobj, elemType);
+                        else
+                            il.Demit(OpCodes.Stelem_Ref);
+                    }
+                    EmitLoadLocalVariable(il, array);
+                    context.LastEmitIsAddress = false;
+                    return il.EmitPopIfIgnoreResult(parent);
+                }
                 for (var i = 0; i < elemCount; i++)
                 {
                     il.Demit(OpCodes.Dup);
