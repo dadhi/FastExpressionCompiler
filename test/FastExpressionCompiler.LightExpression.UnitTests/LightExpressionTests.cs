@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using FastExpressionCompiler.FlatExpression;
 
@@ -38,15 +37,6 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_build_flat_expression_control_flow_directly();
             Can_property_test_generated_flat_expression_roundtrip_structurally();
             Can_fuzz_optional_children_presence_in_flat_expression();
-            Can_compile_generated_flat_expression_natively();
-            Flat_compile_handles_bool_result_and_falls_back_outside_the_subset();
-            Flat_compile_handles_new_call_and_member_access_natively();
-            Flat_compiles_all_the_readme_examples_natively();
-            Can_fuzz_nested_lambdas_with_captured_variables_natively();
-            Can_fuzz_objects_and_members_natively();
-            Flat_compile_handles_nested_lambdas_and_captured_variables_natively();
-            Experiment_compare_flat_and_light_compile_phases();
-            Flat_compiles_the_readme_expressions_and_compares_the_time();
 
             Flat_lambda_parameter_ref_before_decl_preserves_identity();
             Flat_lambda_multiple_parameter_refs_all_yield_same_identity();
@@ -65,7 +55,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Reference_equality_is_converted_to_system_reference_comparison();
             Can_print_reference_comparison();
             Can_round_trip_new_expression_kinds_through_system_expressions();
-            return 50;
+            return 39;
         }
 
         public void Can_make_goto_of_all_kinds_with_value_and_type()

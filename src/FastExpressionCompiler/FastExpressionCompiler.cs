@@ -2104,10 +2104,9 @@ namespace FastExpressionCompiler
         private static Result TryCollectElementInitInfo(ref CompilerContext context, ElementInit init,
             NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
         {
-            var args = init.GetArgExprs();
-            for (var a = 0; a < args.GetArgCount(); ++a)
+            for (var a = 0; a < init.GetArgCount(); ++a)
             {
-                var argument = args.GetArgument(a);
+                var argument = init.GetArgument(a);
                 var precedingTryCount = context.TryExpressionCount;
                 var r = TryCollectInfo(ref context, argument, nestedLambda, ref rootNestedLambdas, scopeIdx);
                 if (r != Result.OK) return r;
@@ -4850,19 +4849,18 @@ namespace FastExpressionCompiler
                 var method = elemInit.AddMethod;
                 if (methodParams == null)
                     methodParams = method.GetParameters();
-                var addArgs = elemInit.GetArgExprs();
-                var addArgCount = addArgs.GetArgCount();
+                var addArgCount = elemInit.GetArgCount();
 
                 var spillArguments = false;
                 if (context.TryExpressionCount != 0)
                     for (var a = 0; a < addArgCount && !spillArguments; ++a)
-                        spillArguments = context.HasComplexArguments(addArgs.GetArgument(a));
+                        spillArguments = context.HasComplexArguments(elemInit.GetArgument(a));
                 var receiver = spillArguments ? EmitStoreLocalVariable(il, ownerType.IsValueType ? ownerType.MakeByRefType() : ownerType) : -1;
                 SmallList<int, Stack8<int>, NoArrayPool<int>> argVars = default;
                 for (var a = 0; a < addArgCount; ++a)
                 {
                     var type = methodParams[a].ParameterType;
-                    if (!TryEmit(addArgs.GetArgument(a), il, ref context, callFlags, type.IsByRef ? a : -1)) return false;
+                    if (!TryEmit(elemInit.GetArgument(a), il, ref context, callFlags, type.IsByRef ? a : -1)) return false;
                     if (spillArguments) argVars.Add(EmitStoreLocalVariable(il, type));
                 }
                 if (spillArguments)
@@ -14236,6 +14234,12 @@ namespace FastExpressionCompiler
         public static Bindings GetBindings(this MemberInitExpression expr) => expr.Bindings;
         [MethodImpl((MethodImplOptions)256)]
         public static int GetBindingCount(this Bindings b) => b.Count;
+
+        // shortcut: System ElementInit has no public ArgumentCount; upgrade when BCL IArgumentProvider is callable without an alloc
+        [MethodImpl((MethodImplOptions)256)]
+        public static int GetArgCount(this ElementInit init) => init.Arguments.Count;
+        [MethodImpl((MethodImplOptions)256)]
+        public static Expression GetArgument(this ElementInit init, int index) => init.Arguments[index];
 #endif
     }
 

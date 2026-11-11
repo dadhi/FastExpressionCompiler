@@ -17,8 +17,6 @@ using SysParameterExpression = System.Linq.Expressions.ParameterExpression;
 using SysSwitchCase = System.Linq.Expressions.SwitchCase;
 using ChildIdxs = LightExpression.ImTools.SmallList<ushort, LightExpression.ImTools.Stack8<ushort>, LightExpression.ImTools.NoArrayPool<ushort>>;
 
-// todo: @wip using Idx = ushort
-
 /// <summary>Kind if the node payload.</summary>
 public enum ExprNodeKind : byte
 {
@@ -189,23 +187,6 @@ public partial struct ExprTree : IEquatable<ExprTree>
 
     /// <summary>Gets or sets closure constants that are referenced from constant nodes.</summary>
     public SmallList<object, Stack16<object>, NoArrayPool<object>> ClosureConstants;
-
-    /// <summary>The number of the lambdas built so far, so the compile does not count them and knows the nested lambdas slots upfront.</summary>
-    public ushort LambdaCount;
-
-    /// <summary>The ids of the parameters and variables that are assigned, recorded by <see cref="Assign"/>. The compile passes
-    /// the never-assigned captured variable to the nested lambda by value, without the StrongBox. Any other node that mutates
-    /// the variable (increment, compound assign) must record it here too, once the compile supports it.
-    /// It is the separate list, not the node flag, so the structural equality and hash are untouched.</summary>
-    internal SmallList<ushort, Stack8<ushort>, NoArrayPool<ushort>> AssignedParams;
-
-    internal bool IsAssigned(ushort id)
-    {
-        for (var i = 0; i < AssignedParams.Count; ++i)
-            if (AssignedParams.GetSurePresentRef(i) == id)
-                return true;
-        return false;
-    }
 
     // Import-only identity maps (valid during FromSysExpr / FromLightExpr).
     private SmallMap16<object, int, RefEq<object>> _parameterIds;
@@ -575,20 +556,10 @@ public partial struct ExprTree : IEquatable<ExprTree>
     /// <summary>Adds a binary node of the specified kind.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ushort MakeBinary(ExpressionType nodeType, ushort left, ushort right, bool isLiftedToNull = false,
-        MethodInfo method = null, ushort conversion = 0, Type type = null)
-    {
-        var idx = WithThreeChildren(
+        MethodInfo method = null, ushort conversion = 0, Type type = null) =>
+        WithThreeChildren(
             nodeType, type ?? GetBinaryResultType(nodeType, Nodes[left].Type, method), method, isLiftedToNull ? BinaryLiftedToNullFlag : (byte)0, default,
             left, right, conversion);
-
-        if (nodeType == ExpressionType.Assign)
-        {
-            ref var target = ref Nodes.GetSurePresentRef(left);
-            if (target.NodeType == ExpressionType.Parameter && !IsAssigned(target.ChildIdx))
-                AssignedParams.Add(target.ChildIdx);
-        }
-        return idx;
-    }
 
     /// <summary>Adds a one-dimensional array index node.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -671,7 +642,6 @@ public partial struct ExprTree : IEquatable<ExprTree>
         pars ??= Array.Empty<ushort>();
 #endif
         EnsureIndexZeroSentinel();
-        ++LambdaCount;
         ref var lambdaRef = ref Nodes.AddDefaultAndGetRef(out var idx);
         ExprNode.Set(ref lambdaRef, ExpressionType.Lambda, delegateType);
         var lambdaIdx = (ushort)idx;

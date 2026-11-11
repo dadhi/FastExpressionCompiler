@@ -181,13 +181,14 @@ public partial struct ExprTree
                             return LExpr.TryFault(ReadExpression(children[0]), ReadExpression(children[1]));
 
                         var hasFinally = node.HasFlag(TryHasFinallyFlag);
-                        var @finally = hasFinally ? ReadExpression(children[1]) : null;
                         var handlerStart = hasFinally ? 2 : 1;
-
                         var handlers = new LCatchBlock[children.Count - handlerStart];
                         for (var i = 0; i < handlers.Length; ++i)
                             handlers[i] = ReadCatchBlock(children[handlerStart + i]);
-                        return LExpr.TryCatchFinally(ReadExpression(children[0]), @finally, handlers);
+                        var body = ReadExpression(children[0]);
+                        return hasFinally
+                            ? LExpr.TryCatchFinally(body, ReadExpression(children[1]), handlers)
+                            : LExpr.TryCatch(body, handlers);
                     }
                 case ExpressionType.MemberInit:
                     {
