@@ -85,6 +85,7 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.ByRefConversionRegressionTests());
                 t.Run(new LightExpression.UnitTests.PropertyGetterReceiverRegressionTests());
                 t.Run(new LightExpression.UnitTests.RuntimeTypeConstantRegressionTests());
+                t.Run(new LightExpression.UnitTests.MemberConstructorExceptionTests());
                 t.Run(new LightExpression.UnitTests.MethodBasedNotRegressionTests());
                 t.Run(new LightExpression.UnitTests.ExtensionReductionIdentityRegressionTests());
                 t.Run(new LightExpression.UnitTests.LiftedOperandEvaluationRegressionTests());
@@ -154,6 +155,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new ByRefConversionRegressionTests());
             fecTests.Run(new PropertyGetterReceiverRegressionTests());
             fecTests.Run(new RuntimeTypeConstantRegressionTests());
+            fecTests.Run(new MemberConstructorExceptionTests());
             fecTests.Run(new MethodBasedNotRegressionTests());
             fecTests.Run(new CustomReducibleNodeRegressionTests());
             fecTests.Run(new ExtensionReductionIdentityRegressionTests());

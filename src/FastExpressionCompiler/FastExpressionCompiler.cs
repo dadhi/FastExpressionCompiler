@@ -4752,13 +4752,12 @@ namespace FastExpressionCompiler
                     var argCount = argExprs.GetArgCount();
                     if (argCount > 0)
                     {
-                        var args = newExpr.Constructor.GetParameters();
-                        for (var i = 0; i < argCount; i++)
-                            if (!TryEmit(argExprs.GetArgument(i), il, ref context, valueFlags, args[i].ParameterType.IsByRef ? i : -1))
-                                return false;
+                        if (!TryEmitNew(newExpr, il, ref context, valueFlags))
+                            return false;
+                        if (valueVarIndex != -1)
+                            EmitStoreLocalVariable(il, valueVarIndex);
                     }
-
-                    if (newExpr.Constructor != null)
+                    else if (newExpr.Constructor != null)
                     {
                         il.Demit(OpCodes.Newobj, newExpr.Constructor);
                         if (valueVarIndex != -1)
