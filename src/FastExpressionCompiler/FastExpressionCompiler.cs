@@ -660,6 +660,9 @@ namespace FastExpressionCompiler
             [MethodImpl((MethodImplOptions)256)]
             internal bool HasComplexArguments(Expression expr) => ArgsContainingComplexExpression.Set.ContainsKey(expr);
 
+            [MethodImpl((MethodImplOptions)256)]
+            internal void MarkComplexArguments(Expression expr) => ArgsContainingComplexExpression.Set.AddOrGetEntryRef(expr, out _);
+
             internal bool HasComplexExpression;
             internal bool InExceptionFilter;
             internal int TryExpressionCount;
@@ -1407,7 +1410,7 @@ namespace FastExpressionCompiler
                             if (hasComplexExpression)
                             {
                                 context.HasComplexExpression = true;
-                                context.ArgsContainingComplexExpression.Set.AddOrGetEntryRef(callExpr, out _);
+                                context.MarkComplexArguments(callExpr);
                             }
                             return r;
                         }
@@ -1443,7 +1446,7 @@ namespace FastExpressionCompiler
                             if (hasComplexExpression)
                             {
                                 context.HasComplexExpression = true;
-                                context.ArgsContainingComplexExpression.Set.AddOrGetEntryRef(newExpr, out _);
+                                context.MarkComplexArguments(newExpr);
                             }
 
                             return r;
@@ -1471,7 +1474,7 @@ namespace FastExpressionCompiler
                             // Initializers keep the array on the stack; bounds only have
                             // preceding values after the first bound has been evaluated.
                             if ((isArrayInitializer || i != 0) && context.TryExpressionCount != precedingArrayElementTryCount)
-                                context.ArgsContainingComplexExpression.Set.AddOrGetEntryRef(expr, out _);
+                                context.MarkComplexArguments(expr);
                         }
                         return r;
 
@@ -1661,7 +1664,7 @@ namespace FastExpressionCompiler
                             if ((r = TryCollectInfo(ref context, indexArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                                 return r;
                         if (context.TryExpressionCount != precedingTryCount)
-                            context.ArgsContainingComplexExpression.Set.AddOrGetEntryRef(indexExpr, out _);
+                            context.MarkComplexArguments(indexExpr);
                         if (indexExpr.Object == null)
                             return r;
                         expr = indexExpr.Object;
@@ -2064,7 +2067,7 @@ namespace FastExpressionCompiler
                 if ((r = TryCollectBindingInfo(ref context, binds.GetArgument(i), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                     return r;
             if (context.TryExpressionCount != precedingTryCount)
-                context.ArgsContainingComplexExpression.Set.AddOrGetEntryRef(expr, out _);
+                context.MarkComplexArguments(expr);
             return r;
         }
 
@@ -2078,7 +2081,7 @@ namespace FastExpressionCompiler
                 var precedingTryCount = context.TryExpressionCount;
                 r = TryCollectInfo(ref context, value, nestedLambda, ref rootNestedLambdas, scopeIdx);
                 if (context.TryExpressionCount != precedingTryCount)
-                    context.ArgsContainingComplexExpression.Set.AddOrGetEntryRef(value, out _);
+                    context.MarkComplexArguments(value);
                 return r;
             }
 
@@ -2109,7 +2112,7 @@ namespace FastExpressionCompiler
                 var r = TryCollectInfo(ref context, argument, nestedLambda, ref rootNestedLambdas, scopeIdx);
                 if (r != Result.OK) return r;
                 if (context.TryExpressionCount != precedingTryCount)
-                    context.ArgsContainingComplexExpression.Set.AddOrGetEntryRef(argument, out _);
+                    context.MarkComplexArguments(argument);
             }
             return Result.OK;
         }
@@ -2130,7 +2133,7 @@ namespace FastExpressionCompiler
                 if ((r = TryCollectElementInitInfo(ref context, inits.GetArgument(i), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                     return r;
             if (context.TryExpressionCount != precedingTryCount)
-                context.ArgsContainingComplexExpression.Set.AddOrGetEntryRef(expr, out _);
+                context.MarkComplexArguments(expr);
             return r;
         }
 
@@ -4896,9 +4899,7 @@ namespace FastExpressionCompiler
                     var ownerType = member.DeclaringType;
                     var owner = EmitStoreLocalVariable(il, ownerType.IsValueType ? ownerType.MakeByRefType() : ownerType);
                     if (!TryEmit(value, il, ref context, parent)) return false;
-                    var result = EmitStoreLocalVariable(il, value.Type);
-                    EmitLoadLocalVariable(il, owner);
-                    EmitLoadLocalVariable(il, result);
+                    EmitLoadLeftAndRight(il, owner, value.Type);
                     return EmitMemberSet(il, member);
                 }
 
