@@ -4865,7 +4865,13 @@ namespace FastExpressionCompiler
                 var memberType = member is FieldInfo f ? f.FieldType : ((PropertyInfo)member).PropertyType;
                 var copyVar = -1;
                 if (member is FieldInfo field)
-                    il.Demit(isStatic ? (memberType.IsValueType ? OpCodes.Ldsflda : OpCodes.Ldsfld) : memberType.IsValueType ? OpCodes.Ldflda : OpCodes.Ldfld, field);
+                {
+                    // Readonly value fields are initialized through a defensive copy.
+                    var address = memberType.IsValueType && !field.IsInitOnly;
+                    il.Demit(isStatic ? (address ? OpCodes.Ldsflda : OpCodes.Ldsfld) : address ? OpCodes.Ldflda : OpCodes.Ldfld, field);
+                    if (memberType.IsValueType && !address)
+                        EmitStoreAndLoadLocalVariableAddress(il, memberType);
+                }
                 else if (memberType.IsValueType)
                 {
                     // the getter returns a copy, so change the local copy and write it back by the setter
