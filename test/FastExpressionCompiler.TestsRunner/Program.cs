@@ -141,6 +141,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new BackwardTypedLabelTests());
             st.Run(new TryResultValueRegressionTests());
             st.Run(new NonVectorArrayRegressionTests());
+            st.Run(new RefConversionStorageTests());
             st.Run(new UnboxStorageRegressionTests());
             st.Run(new ArrayInitializerExceptionRegressionTests());
             st.Run(new ReadonlyRefFieldRegressionTests());

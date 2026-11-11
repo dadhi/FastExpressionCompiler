@@ -115,6 +115,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new BackwardTypedLabelTests());
             fecTests.Run(new TryResultValueRegressionTests());
             fecTests.Run(new NonVectorArrayRegressionTests());
+            fecTests.Run(new RefConversionStorageTests());
             fecTests.Run(new UnboxStorageRegressionTests());
             fecTests.Run(new ArrayInitializerExceptionRegressionTests());
             fecTests.Run(new ReadonlyRefFieldRegressionTests());
