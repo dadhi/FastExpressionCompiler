@@ -2403,7 +2403,11 @@ namespace FastExpressionCompiler
                                 }
 #if LIGHT_EXPRESSION
                                 if (cmp is LogicalBinaryExpression { IsReferenceComparison: true })
+                                {
+                                    if (cmpRight.IsComplexExpression())
+                                        return TryEmitComparison(cmpLeft, cmpRight, exprType, nodeType, il, ref context, parent, true);
                                     return TryEmitReferenceComparison(cmp, nodeType == ExpressionType.NotEqual, il, ref context, parent);
+                                }
 #endif
                                 if (exprType.IsPrimitive && Interpreter.TryInterpretBool(out var boolResult, expr, context.CompilerFlags))
                                 {
@@ -6832,7 +6836,7 @@ namespace FastExpressionCompiler
                 else if (!TryEmit(right, il, ref context, operandParent))
                     return false;
 
-                if (comparingToLeftNull | comparingToRightNull ||
+                if (referenceComparison || comparingToLeftNull | comparingToRightNull ||
                     (leftType != rightType && leftType.IsClass && rightType.IsClass &&
                     (leftType == typeof(object) | rightType == typeof(object))))
                 {
