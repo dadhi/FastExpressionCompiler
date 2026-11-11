@@ -3968,12 +3968,13 @@ namespace FastExpressionCompiler
                         : isByRefParam
                             ? parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess
                             : (parent & ~ValueOperandFlagsToClear) | ParentFlags.AssignmentRightValue;
+                    var isByRefParamButNotArg = isByRefParam && !(opExpr is ParameterExpression { IsByRef: true });
                     if (!TryEmit(opExpr, il, ref context, operandFlags,
-                        isByRefParam && !(opExpr is ParameterExpression { IsByRef: true } && sourceType.IsNullable()) ? 0 : -1))
+                        isByRefParamButNotArg || isByRefParam && !sourceType.IsNullable() ? 0 : -1))
                         return false;
 
                     // The by-ref param of the method needs the address of the operand, the nullable by-ref parameter is already the address
-                    if (isByRefParam && !context.LastEmitIsAddress && !(opExpr is ParameterExpression { IsByRef: true }))
+                    if (isByRefParamButNotArg && !context.LastEmitIsAddress)
                         EmitStoreAndLoadLocalVariableAddress(il, sourceType);
                 }
                 else
