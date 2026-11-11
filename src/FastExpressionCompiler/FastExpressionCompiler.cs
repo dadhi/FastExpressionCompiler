@@ -1125,9 +1125,24 @@ namespace FastExpressionCompiler
         /// Helps to identify constants as the one to be put into the Closure
         public static bool IsClosureBoundConstant(object value, Type type) =>
             value is Delegate || type.IsArray ||
-            !type.IsPrimitive && !type.IsEnum && value is string == false &&
+            !type.IsPrimitive && !type.IsEnum &&
+            (value is not string text || !ReferenceEquals(string.IsInterned(text), text)) &&
             (value is Type == false || type != RuntimeType) && value is decimal == false;
 
+        private static bool TryGetConstantStringLength(MemberExpression expression, out int length)
+        {
+            // String is immutable and sealed. Reading Length of a non-null constant has
+            // no user code, side effects, or reference-identity observation to preserve.
+            if (expression.Expression is ConstantExpression constant && constant.Value is string text &&
+                expression.Member is PropertyInfo property && property.DeclaringType == typeof(string) &&
+                property.Name == nameof(string.Length))
+            {
+                length = text.Length;
+                return true;
+            }
+            length = 0;
+            return false;
+        }
         public enum Result
         {
             OK = 0,
@@ -1398,6 +1413,8 @@ namespace FastExpressionCompiler
                         }
 
                     case ExpressionType.MemberAccess:
+                        if (TryGetConstantStringLength((MemberExpression)expr, out _))
+                            return r;
                         var memberExpr = ((MemberExpression)expr).Expression;
                         if (memberExpr == null)
                             return r;
@@ -4298,6 +4315,8 @@ namespace FastExpressionCompiler
             {
                 if (exprType == null)
                     exprType = constType;
+                if (!considerClosure && constValue is string && IsClosureBoundConstant(constValue, constType))
+                    return false; // ldstr cannot preserve the identity of a noninterned string.
                 var keepBox = constType.IsValueType && !exprType.IsValueType; // see the constant collecting
 #if LIGHT_EXPRESSION
                 if (considerClosure && (refField != null || keepBox || IsClosureBoundConstant(constValue, constType)))
@@ -5880,6 +5899,12 @@ namespace FastExpressionCompiler
 
             public static bool TryEmitMemberGet(MemberExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex = -1)
             {
+                if (TryGetConstantStringLength(expr, out var length))
+                {
+                    context.LastEmitIsAddress = false;
+                    if (!parent.IgnoresResult()) EmitLoadConstantInt(il, length);
+                    return true;
+                }
                 var objExpr = expr.Expression;
                 if (expr.Member is PropertyInfo prop)
                 {
@@ -5974,6 +5999,11 @@ namespace FastExpressionCompiler
                         if (parent.IgnoresResult())
                             return true; // do nothing
                         var fieldValue = field.GetValue(null);
+                        if (fieldValue is string literal)
+                        {
+                            il.Demit(literal, OpCodes.Ldstr);
+                            return true;
+                        }
                         if (fieldValue != null)
                             return TryEmitConstant(false, null, field.FieldType, fieldValue, il, ref context);
                         il.Demit(OpCodes.Ldnull);
