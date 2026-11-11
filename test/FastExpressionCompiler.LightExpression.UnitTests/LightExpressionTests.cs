@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+#if NET8_0_OR_GREATER
 using FastExpressionCompiler.FlatExpression;
+#endif
 
 using static FastExpressionCompiler.LightExpression.Expression;
 using System.Linq.Expressions;
@@ -30,6 +32,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Light_loop_with_continue_label_and_no_break_label_keeps_the_continue_label_in_the_system_expression();
             Expression_produced_by_ToExpressionString_should_compile();
             Multiple_methods_in_block_should_be_aligned_when_output_to_csharp();
+#if NET8_0_OR_GREATER
             Can_roundtrip_light_expression_through_flat_expression();
             Flat_expression_preserves_parameter_and_label_identity_and_collects_closure_constants();
             Can_convert_dynamic_runtime_variables_and_debug_info_to_light_expression_and_flat_expression();
@@ -49,13 +52,18 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Flat_equal_nested_lambdas_with_captures_are_structurally_equal_and_hash_equal();
             Flat_standalone_parameters_use_name_in_structural_equality();
             Flat_structural_hash_supports_dictionary_lookup();
+#endif
             Can_round_trip_more_expression_kinds_through_system_expressions();
             Can_make_goto_of_all_kinds_with_value_and_type();
             Can_print_new_expression_kinds();
             Reference_equality_is_converted_to_system_reference_comparison();
             Can_print_reference_comparison();
             Can_round_trip_new_expression_kinds_through_system_expressions();
+#if NET8_0_OR_GREATER
             return 39;
+#else
+            return 21;
+#endif
         }
 
         public void Can_make_goto_of_all_kinds_with_value_and_type()
@@ -621,6 +629,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             return expr;
         }
 
+#if NET8_0_OR_GREATER
         public static ExprTree CreateComplexFlatExpression(string parameterName = null)
         {
             var fe = default(ExprTree);
@@ -642,6 +651,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             fe.RootIdx = fe.Lambda<Func<object[], object>>(body, stateParamExpr);
             return fe;
         }
+#endif
 
         public void Can_compile_complex_expr_with_Arrays_and_Casts()
         {
@@ -761,6 +771,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
         public static void SayHi(int i, int j) { }
 
+#if NET8_0_OR_GREATER
         public void Can_roundtrip_light_expression_through_flat_expression()
         {
             var expr = CreateComplexExpression("state");
@@ -860,6 +871,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.AreSame(sysLambda.Parameters[0], gotoExpr.Value);
             Asserts.AreSame(gotoExpr.Target, label.Target);
         }
+#endif
 
         public class A
         {
@@ -894,6 +906,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
         // Tests for decl vs ref nodes and out-of-order decl in lambdas/blocks
 
+#if NET8_0_OR_GREATER
         /// <summary>
         /// In the flat encoding, a lambda stores body first then parameters.
         /// So when reading, parameter refs in the body are encountered BEFORE
@@ -1132,5 +1145,6 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.IsTrue(dict.TryGetValue(lookup, out var value));
             Asserts.AreEqual("found", value);
         }
+#endif
     }
 }

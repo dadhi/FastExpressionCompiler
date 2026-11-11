@@ -49,6 +49,10 @@
         <Compile Include="..\FastExpressionCompiler\ILReader.cs"/>
         <Compile Include="..\FastExpressionCompiler\TestTools.cs"/>
     </ItemGroup>
+    <!-- FlatExpression uses ref fields; net8+ only -->
+    <ItemGroup Condition="!$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0'))">
+        <Compile Remove="Flat*.cs" />
+    </ItemGroup>
 
     <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.1' ">
         <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.7.0"/>

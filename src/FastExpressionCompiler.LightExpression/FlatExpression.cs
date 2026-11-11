@@ -1194,7 +1194,7 @@ public partial struct ExprTree : IEquatable<ExprTree>
         Justification = "Flat expression round-trip stores the runtime type metadata explicitly for reconstruction.")]
     public SysExpr ToExpression() =>
         Nodes.Count != 0
-            ? new SysExprBuilder(this).ReadExpression(RootIdx)
+            ? new SysExprBuilder(ref this).ReadExpression(RootIdx)
             : throw new InvalidOperationException("Flat expression tree is empty.");
 
     /// <summary>Structurally compares two flat expression trees.</summary>
@@ -1697,15 +1697,15 @@ public partial struct ExprTree : IEquatable<ExprTree>
     }
 
     /// <summary>Reconstructs System.Linq nodes from the flat representation while reusing parameter and label identities.</summary>
-    private struct SysExprBuilder
+    private ref struct SysExprBuilder
     {
-        private readonly ExprTree _tree;
+        private ref readonly ExprTree _tree;
         private SmallMap16<int, SysParameterExpression, IntEq> _parametersById;
         private SmallMap16<int, SysLabelTarget, IntEq> _labelsById;
 
-        public SysExprBuilder(ExprTree tree)
+        public SysExprBuilder(ref readonly ExprTree tree)
         {
-            _tree = tree;
+            _tree = ref tree;
             _parametersById = default;
             _labelsById = default;
         }

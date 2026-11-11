@@ -21,21 +21,20 @@ public partial struct ExprTree
     /// <summary>Reconstructs the flat tree as a LightExpression tree directly, without the System.Linq expressions in between.
     /// Mirrors <c>SysExprBuilder</c>: keep the two in sync.</summary>
     [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
-    // todo: @perf the builder copies the whole ExprTree (the big Stack32 inside); take it by ref when the ref fields are available on all the targets
     public LightExpression.Expression ToLightExpression() =>
         Nodes.Count != 0
-            ? new LightExprBuilder(this).ReadExpression(RootIdx)
+            ? new LightExprBuilder(ref this).ReadExpression(RootIdx)
             : throw new InvalidOperationException("Flat expression tree is empty.");
 
-    private struct LightExprBuilder
+    private ref struct LightExprBuilder
     {
-        private readonly ExprTree _tree;
+        private ref readonly ExprTree _tree;
         private SmallMap16<int, LParameter, IntEq> _parametersById;
         private SmallMap16<int, LLabelTarget, IntEq> _labelsById;
 
-        public LightExprBuilder(ExprTree tree)
+        public LightExprBuilder(ref readonly ExprTree tree)
         {
-            _tree = tree;
+            _tree = ref tree;
             _parametersById = default;
             _labelsById = default;
         }

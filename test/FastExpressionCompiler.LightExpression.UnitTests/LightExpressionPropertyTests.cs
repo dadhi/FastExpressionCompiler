@@ -6,15 +6,12 @@ using SysExpr = System.Linq.Expressions.Expression;
 using SysSwitchCase = System.Linq.Expressions.SwitchCase;
 using SysCatchBlock = System.Linq.Expressions.CatchBlock;
 using static FastExpressionCompiler.LightExpression.Expression;
-#if NET8_0_OR_GREATER
 using CsCheck;
-#endif
 
 namespace FastExpressionCompiler.LightExpression.UnitTests;
 
 public partial class LightExpressionTests
 {
-#if NET8_0_OR_GREATER
     public void Can_property_test_generated_flat_expression_roundtrip_structurally()
     {
         Gen.Int[0, int.MaxValue / 2]
@@ -421,8 +418,4 @@ public partial class LightExpressionTests
             return equal;
         }
     }
-#else
-    public void Can_property_test_generated_flat_expression_roundtrip_structurally() { }
-    public void Can_fuzz_optional_children_presence_in_flat_expression() { }
-#endif
 }
