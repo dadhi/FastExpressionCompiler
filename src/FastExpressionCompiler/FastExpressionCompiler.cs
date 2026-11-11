@@ -2258,6 +2258,9 @@ namespace FastExpressionCompiler
             private const ParentFlags CallArgumentFlagsToClear = ParentFlags.IgnoreResult | ParentFlags.InstanceAccess |
                 ParentFlags.MemberAccess | ParentFlags.LambdaCall | ParentFlags.ReturnByRef;
 
+            private const ParentFlags ByRefArgumentFlagsToClear = CallArgumentFlagsToClear |
+                ParentFlags.AssignmentRightValue | ParentFlags.Arithmetic;
+
             private const ParentFlags UnboxOperandFlagsToClear = CallArgumentFlagsToClear | ParentFlags.Call |
                 ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef;
 
@@ -3998,11 +4001,8 @@ namespace FastExpressionCompiler
                         methodParamType = methodParamType.GetElementType();
                     var passSourceByRef = methodParameterIsByRef && methodParamType == sourceType;
                     var operandFlags = passSourceByRef
-                        ? (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
-                            ParentFlags.AssignmentRightValue | ParentFlags.Arithmetic | ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.Call
-                        : (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.MemberAccess |
-                            ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef | ParentFlags.DupIt |
-                            ParentFlags.LambdaCall | ParentFlags.ReturnByRef)) | ParentFlags.AssignmentRightValue;
+                        ? (parent & ~ByRefArgumentFlagsToClear) | ParentFlags.Call
+                        : (parent & ~ValueOperandFlagsToClear) | ParentFlags.AssignmentRightValue;
                     if (!TryEmit(opExpr, il, ref context, operandFlags, passSourceByRef ? 0 : -1))
                         return false;
 
