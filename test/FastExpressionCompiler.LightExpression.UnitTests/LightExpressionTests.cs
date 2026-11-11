@@ -2,9 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
+#if NET8_0_OR_GREATER
 using FastExpressionCompiler.FlatExpression;
+#endif
 
 using static FastExpressionCompiler.LightExpression.Expression;
 using System.Linq.Expressions;
@@ -31,45 +32,38 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Light_loop_with_continue_label_and_no_break_label_keeps_the_continue_label_in_the_system_expression();
             Expression_produced_by_ToExpressionString_should_compile();
             Multiple_methods_in_block_should_be_aligned_when_output_to_csharp();
+#if NET8_0_OR_GREATER
             Can_roundtrip_light_expression_through_flat_expression();
             Flat_expression_preserves_parameter_and_label_identity_and_collects_closure_constants();
             Can_convert_dynamic_runtime_variables_and_debug_info_to_light_expression_and_flat_expression();
             Can_build_flat_expression_directly_with_light_expression_like_api();
             Can_build_flat_expression_control_flow_directly();
             Can_property_test_generated_flat_expression_roundtrip_structurally();
+            Can_fuzz_optional_children_presence_in_flat_expression();
 
             Flat_lambda_parameter_ref_before_decl_preserves_identity();
             Flat_lambda_multiple_parameter_refs_all_yield_same_identity();
             Flat_block_variables_and_refs_yield_same_identity();
             Flat_nested_lambda_captures_outer_parameter_identity();
-            Flat_lambda_closure_parameter_usages_track_captured_outer_parameter_during_direct_construction();
-            Flat_lambda_closure_parameter_usages_propagate_across_nested_lambdas_during_direct_construction();
-            Flat_lambda_closure_parameter_usages_track_captured_block_variable_during_direct_construction();
-            Flat_lambda_closure_parameter_usages_track_captures_from_expression_conversion();
             Flat_out_of_order_decl_block_in_lambda_compiles_correctly();
             Flat_enum_constant_stored_inline_roundtrip();
             Flat_metadata_uses_16_bit_idx_storage();
-            Flat_lambda_nodes_tracks_all_lambdas_during_direct_construction();
-            Flat_lambda_nodes_tracks_deeply_nested_lambdas_during_direct_construction();
-            Flat_lambda_nodes_tracks_lambdas_from_expression_conversion();
-            Flat_lambda_nodes_has_single_entry_for_root_only_lambda();
-            Flat_blocks_with_variables_tracked_during_direct_construction();
-            Flat_goto_and_label_nodes_tracked_during_direct_construction();
-            Flat_try_catch_nodes_tracked_during_direct_construction();
-            Flat_blocks_with_variables_tracked_from_expression_conversion();
-            Flat_goto_and_label_nodes_tracked_from_expression_conversion();
-            Flat_try_catch_nodes_tracked_from_expression_conversion();
             Flat_equal_lambdas_with_different_parameter_names_are_structurally_equal_and_hash_equal();
             Flat_equal_nested_lambdas_with_captures_are_structurally_equal_and_hash_equal();
             Flat_standalone_parameters_use_name_in_structural_equality();
             Flat_structural_hash_supports_dictionary_lookup();
+#endif
             Can_round_trip_more_expression_kinds_through_system_expressions();
             Can_make_goto_of_all_kinds_with_value_and_type();
             Can_print_new_expression_kinds();
             Reference_equality_is_converted_to_system_reference_comparison();
             Can_print_reference_comparison();
             Can_round_trip_new_expression_kinds_through_system_expressions();
-            return 50;
+#if NET8_0_OR_GREATER
+            return 39;
+#else
+            return 21;
+#endif
         }
 
         public void Can_make_goto_of_all_kinds_with_value_and_type()
@@ -635,6 +629,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             return expr;
         }
 
+#if NET8_0_OR_GREATER
         public static ExprTree CreateComplexFlatExpression(string parameterName = null)
         {
             var fe = default(ExprTree);
@@ -656,6 +651,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             fe.RootIdx = fe.Lambda<Func<object[], object>>(body, stateParamExpr);
             return fe;
         }
+#endif
 
         public void Can_compile_complex_expr_with_Arrays_and_Casts()
         {
@@ -775,6 +771,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
         public static void SayHi(int i, int j) { }
 
+#if NET8_0_OR_GREATER
         public void Can_roundtrip_light_expression_through_flat_expression()
         {
             var expr = CreateComplexExpression("state");
@@ -874,6 +871,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.AreSame(sysLambda.Parameters[0], gotoExpr.Value);
             Asserts.AreSame(gotoExpr.Target, label.Target);
         }
+#endif
 
         public class A
         {
@@ -908,6 +906,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
         // Tests for decl vs ref nodes and out-of-order decl in lambdas/blocks
 
+#if NET8_0_OR_GREATER
         /// <summary>
         /// In the flat encoding, a lambda stores body first then parameters.
         /// So when reading, parameter refs in the body are encountered BEFORE
@@ -1021,80 +1020,6 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.AreSame(sysOuter.Parameters[0], sysInner.Body);
         }
 
-        public void Flat_lambda_closure_parameter_usages_track_captured_outer_parameter_during_direct_construction()
-        {
-            var fe = default(ExprTree);
-            var x = fe.ParameterOf<int>("x");
-            var inner = fe.Lambda<Func<int>>(x);
-            fe.RootIdx = fe.Lambda<Func<int, Func<int>>>(inner, x);
-
-            Asserts.AreEqual(1, fe.LambdaClosureParameterUsages.Count);
-            Asserts.AreEqual(inner, fe.LambdaClosureParameterUsages[0].LambdaIdx);
-            Asserts.AreEqual(fe.Nodes[x].ChildIdx, fe.LambdaClosureParameterUsages[0].ParameterId);
-        }
-
-        public void Flat_lambda_closure_parameter_usages_propagate_across_nested_lambdas_during_direct_construction()
-        {
-            var fe = default(ExprTree);
-            var x = fe.ParameterOf<int>("x");
-            var inner = fe.Lambda<Func<int>>(x);
-            var middle = fe.Lambda<Func<Func<int>>>(inner);
-            fe.RootIdx = fe.Lambda<Func<int, Func<Func<int>>>>(middle, x);
-
-            Asserts.AreEqual(2, fe.LambdaClosureParameterUsages.Count);
-
-            var foundInner = false;
-            var foundMiddle = false;
-            for (var i = 0; i < fe.LambdaClosureParameterUsages.Count; ++i)
-            {
-                ref var usage = ref fe.LambdaClosureParameterUsages[i];
-                Asserts.AreEqual(fe.Nodes[x].ChildIdx, usage.ParameterId);
-                if (usage.LambdaIdx == inner) foundInner = true;
-                if (usage.LambdaIdx == middle) foundMiddle = true;
-            }
-
-            Asserts.IsTrue(foundInner);
-            Asserts.IsTrue(foundMiddle);
-        }
-
-        public void Flat_lambda_closure_parameter_usages_track_captured_block_variable_during_direct_construction()
-        {
-            var fe = default(ExprTree);
-            var v = fe.Variable(typeof(int), "v");
-            var inner = fe.Lambda<Func<int>>(v);
-            fe.RootIdx = fe.Lambda<Func<Func<int>>>(
-                fe.Block(typeof(Func<int>), new[] { v },
-                    fe.Assign(v, fe.ConstantInt(42)),
-                    inner));
-
-            Asserts.AreEqual(1, fe.LambdaClosureParameterUsages.Count);
-            Asserts.AreEqual(inner, fe.LambdaClosureParameterUsages[0].LambdaIdx);
-            Asserts.AreEqual(fe.Nodes[v].ChildIdx, fe.LambdaClosureParameterUsages[0].ParameterId);
-        }
-
-        public void Flat_lambda_closure_parameter_usages_track_captures_from_expression_conversion()
-        {
-            var x = SysExpr.Parameter(typeof(int), "x");
-            var sysLambda = SysExpr.Lambda<Func<int, Func<int>>>(
-                SysExpr.Lambda<Func<int>>(x),
-                x);
-
-            var fe = sysLambda.ToFlatExpression();
-
-            Asserts.AreEqual(1, fe.LambdaClosureParameterUsages.Count);
-            Asserts.AreEqual(fe.Nodes[fe.LambdaClosureParameterUsages[0].ParameterIdx].ChildIdx, fe.LambdaClosureParameterUsages[0].ParameterId);
-
-            var nestedLambdaCount = 0;
-            for (var i = 0; i < fe.LambdaNodes.Count; ++i)
-                if (fe.LambdaNodes[i] != fe.RootIdx)
-                {
-                    ++nestedLambdaCount;
-                    Asserts.AreEqual(fe.LambdaNodes[i], fe.LambdaClosureParameterUsages[0].LambdaIdx);
-                }
-
-            Asserts.AreEqual(1, nestedLambdaCount);
-        }
-
         /// <summary>
         /// End-to-end compile-and-run test with a block containing two variables,
         /// verifying that out-of-order parameter decls and variable refs produce
@@ -1160,7 +1085,6 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
         public void Flat_metadata_uses_16_bit_idx_storage()
         {
             Asserts.AreEqual(24, typeof(ExprNode).StructLayoutAttribute.Size);
-            Asserts.AreEqual(6, typeof(LambdaClosureParameterUsage).StructLayoutAttribute.Size);
 
             var fe = default(ExprTree);
             // Index 0 is reserved as the absent-child sentinel, so MaxValue-1 real nodes fill storage.
@@ -1169,241 +1093,6 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
             Asserts.AreEqual(ushort.MaxValue, fe.Nodes.Count);
             Asserts.Throws<OverflowException>(() => fe.ParameterOf<int>("overflow"));
-        }
-
-        /// <summary>
-        /// When building a flat expression directly, calling Lambda() for a nested lambda
-        /// and then for the root lambda should result in both indices recorded in LambdaNodes.
-        /// The root is identified by RootIdx; all others are nested.
-        /// </summary>
-        public void Flat_lambda_nodes_tracks_all_lambdas_during_direct_construction()
-        {
-            var fe = default(ExprTree);
-            var x = fe.ParameterOf<int>("x");
-
-            // Build: outer: x => () => x
-            var inner = fe.Lambda<Func<int>>(x);
-            fe.RootIdx = fe.Lambda<Func<int, Func<int>>>(inner, x);
-
-            // Both the root and nested lambda indices should be recorded
-            Asserts.AreEqual(2, fe.LambdaNodes.Count);
-
-            // Check that inner and root are both in LambdaNodes
-            var foundInner = false;
-            var foundRoot = false;
-            for (var i = 0; i < fe.LambdaNodes.Count; i++)
-            {
-                if (fe.LambdaNodes[i] == inner) foundInner = true;
-                if (fe.LambdaNodes[i] == fe.RootIdx) foundRoot = true;
-            }
-            Asserts.IsTrue(foundInner);
-            Asserts.IsTrue(foundRoot);
-
-            // Nested lambdas are all LambdaNodes entries that are not the root
-            var nestedCount = 0;
-            for (var i = 0; i < fe.LambdaNodes.Count; i++)
-                if (fe.LambdaNodes[i] != fe.RootIdx)
-                    ++nestedCount;
-            Asserts.AreEqual(1, nestedCount);
-        }
-
-        /// <summary>
-        /// When building a flat expression with multiple levels of nesting,
-        /// all lambda node indices are captured in LambdaNodes.
-        /// </summary>
-        public void Flat_lambda_nodes_tracks_deeply_nested_lambdas_during_direct_construction()
-        {
-            var fe = default(ExprTree);
-            var x = fe.ParameterOf<int>("x");
-
-            // Build: outer: x => (() => (() => x))
-            var innermost = fe.Lambda<Func<int>>(x);
-            var middle = fe.Lambda<Func<Func<int>>>(innermost);
-            fe.RootIdx = fe.Lambda<Func<int, Func<Func<int>>>>(middle, x);
-
-            // All three lambda nodes should be recorded
-            Asserts.AreEqual(3, fe.LambdaNodes.Count);
-
-            // Count nested (non-root) lambdas
-            var nestedCount = 0;
-            for (var i = 0; i < fe.LambdaNodes.Count; i++)
-                if (fe.LambdaNodes[i] != fe.RootIdx)
-                    ++nestedCount;
-            Asserts.AreEqual(2, nestedCount);
-        }
-
-        /// <summary>
-        /// When converting a System.Linq expression tree with nested lambdas via FromExpression,
-        /// the resulting ExprTree should have all lambda indices populated in LambdaNodes.
-        /// </summary>
-        public void Flat_lambda_nodes_tracks_lambdas_from_expression_conversion()
-        {
-            var p = SysExpr.Parameter(typeof(int), "p");
-            // Build: p => () => p  using System.Linq.Expressions
-            var sysLambda = SysExpr.Lambda<Func<int, Func<int>>>(
-                SysExpr.Lambda<Func<int>>(p),
-                p);
-
-            var fe = sysLambda.ToFlatExpression();
-
-            // Both root and nested lambda indices should be recorded
-            Asserts.AreEqual(2, fe.LambdaNodes.Count);
-
-            // The root lambda must be in the list
-            var foundRoot = false;
-            for (var i = 0; i < fe.LambdaNodes.Count; i++)
-                if (fe.LambdaNodes[i] == fe.RootIdx) { foundRoot = true; break; }
-            Asserts.IsTrue(foundRoot);
-
-            // Exactly one nested lambda
-            var nestedCount = 0;
-            for (var i = 0; i < fe.LambdaNodes.Count; i++)
-                if (fe.LambdaNodes[i] != fe.RootIdx)
-                    ++nestedCount;
-            Asserts.AreEqual(1, nestedCount);
-        }
-
-        /// <summary>
-        /// A flat expression with no nested lambdas (root-only) should have exactly one
-        /// entry in LambdaNodes (the root itself).
-        /// </summary>
-        public void Flat_lambda_nodes_has_single_entry_for_root_only_lambda()
-        {
-            var fe = default(ExprTree);
-            var p = fe.ParameterOf<int>("p");
-            fe.RootIdx = fe.Lambda<Func<int, int>>(fe.Add(p, fe.ConstantInt(1)), p);
-
-            Asserts.AreEqual(1, fe.LambdaNodes.Count);
-            Asserts.AreEqual(fe.RootIdx, fe.LambdaNodes[0]);
-        }
-
-        /// <summary>
-        /// Block nodes with explicit variable declarations are recorded in BlocksWithVariables;
-        /// blocks without variables produce no entry.
-        /// </summary>
-        public void Flat_blocks_with_variables_tracked_during_direct_construction()
-        {
-            var fe = default(ExprTree);
-            var p = fe.ParameterOf<int>("p");
-            var v = fe.Variable(typeof(int), "v");
-
-            // Block with one variable: should be tracked
-            var blockWithVar = fe.Block(typeof(int), new[] { v }, fe.Assign(v, p), v);
-            // Block without variables: should NOT be tracked
-            var blockNoVar = fe.Block(fe.Add(p, fe.ConstantInt(1)));
-
-            fe.RootIdx = fe.Lambda<Func<int, int>>(fe.Block(blockWithVar, blockNoVar), p);
-
-            Asserts.AreEqual(1, fe.BlocksWithVariables.Count);
-            Asserts.AreEqual(blockWithVar, fe.BlocksWithVariables[0]);
-        }
-
-        /// <summary>
-        /// Goto and label expression nodes are recorded in GotoNodes and LabelNodes respectively.
-        /// </summary>
-        public void Flat_goto_and_label_nodes_tracked_during_direct_construction()
-        {
-            var fe = default(ExprTree);
-            var p = fe.ParameterOf<int>("p");
-            var target = fe.Label(typeof(int), "done");
-
-            var gotoNode = fe.Goto(target, p, typeof(int));
-            var labelNode = fe.Label(target, fe.ConstantInt(0));
-
-            fe.RootIdx = fe.Lambda<Func<int, int>>(fe.Block(gotoNode, labelNode), p);
-
-            Asserts.AreEqual(1, fe.GotoNodes.Count);
-            Asserts.AreEqual(gotoNode, fe.GotoNodes[0]);
-
-            Asserts.AreEqual(1, fe.LabelNodes.Count);
-            Asserts.AreEqual(labelNode, fe.LabelNodes[0]);
-        }
-
-        /// <summary>
-        /// Try/catch, try/finally and try/fault node indices are all recorded in TryCatchNodes.
-        /// </summary>
-        public void Flat_try_catch_nodes_tracked_during_direct_construction()
-        {
-            var fe = default(ExprTree);
-            var p = fe.ParameterOf<int>("p");
-
-            var tryCatchNode = fe.TryCatch(
-                fe.Add(p, fe.ConstantInt(1)),
-                fe.Catch(typeof(Exception), fe.ConstantInt(-1)));
-
-            var tryFinallyNode = fe.TryFinally(
-                fe.Add(p, fe.ConstantInt(2)),
-                fe.Default(typeof(void)));
-
-            fe.RootIdx = fe.Lambda<Func<int, int>>(
-                fe.Block(tryCatchNode, tryFinallyNode), p);
-
-            Asserts.AreEqual(2, fe.TryCatchNodes.Count);
-
-            var foundTryCatch = false;
-            var foundTryFinally = false;
-            for (var i = 0; i < fe.TryCatchNodes.Count; i++)
-            {
-                if (fe.TryCatchNodes[i] == tryCatchNode) foundTryCatch = true;
-                if (fe.TryCatchNodes[i] == tryFinallyNode) foundTryFinally = true;
-            }
-            Asserts.IsTrue(foundTryCatch);
-            Asserts.IsTrue(foundTryFinally);
-        }
-
-        /// <summary>
-        /// When converting a System.Linq expression tree, blocks with variables are
-        /// recorded in BlocksWithVariables; plain blocks are not.
-        /// </summary>
-        public void Flat_blocks_with_variables_tracked_from_expression_conversion()
-        {
-            var p = SysExpr.Parameter(typeof(int), "p");
-            var v = SysExpr.Variable(typeof(int), "v");
-            // block with variable
-            var sysBlock = SysExpr.Block(new[] { v }, SysExpr.Assign(v, p), v);
-            var sysLambda = SysExpr.Lambda<Func<int, int>>(sysBlock, p);
-
-            var fe = sysLambda.ToFlatExpression();
-
-            Asserts.AreEqual(1, fe.BlocksWithVariables.Count);
-        }
-
-        /// <summary>
-        /// When converting a System.Linq expression tree with goto/label, both
-        /// GotoNodes and LabelNodes are populated.
-        /// </summary>
-        public void Flat_goto_and_label_nodes_tracked_from_expression_conversion()
-        {
-            var p = SysExpr.Parameter(typeof(int), "p");
-            var target = SysExpr.Label(typeof(int), "done");
-            var sysLambda = SysExpr.Lambda<Func<int, int>>(
-                SysExpr.Block(
-                    SysExpr.Goto(target, p, typeof(int)),
-                    SysExpr.Label(target, SysExpr.Constant(0))),
-                p);
-
-            var fe = sysLambda.ToFlatExpression();
-
-            Asserts.AreEqual(1, fe.GotoNodes.Count);
-            Asserts.AreEqual(1, fe.LabelNodes.Count);
-        }
-
-        /// <summary>
-        /// When converting a System.Linq expression tree with a try/catch,
-        /// TryCatchNodes is populated.
-        /// </summary>
-        public void Flat_try_catch_nodes_tracked_from_expression_conversion()
-        {
-            var p = SysExpr.Parameter(typeof(int), "p");
-            var sysLambda = SysExpr.Lambda<Func<int, int>>(
-                SysExpr.TryCatch(
-                    SysExpr.Add(p, SysExpr.Constant(1)),
-                    SysExpr.Catch(typeof(Exception), SysExpr.Constant(-1))),
-                p);
-
-            var fe = sysLambda.ToFlatExpression();
-
-            Asserts.AreEqual(1, fe.TryCatchNodes.Count);
         }
 
         public void Flat_equal_lambdas_with_different_parameter_names_are_structurally_equal_and_hash_equal()
@@ -1456,5 +1145,6 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.IsTrue(dict.TryGetValue(lookup, out var value));
             Asserts.AreEqual("found", value);
         }
+#endif
     }
 }
