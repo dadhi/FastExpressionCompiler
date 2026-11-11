@@ -1414,15 +1414,15 @@ namespace FastExpressionCompiler
                         // todo: @feature multi-dimensional array initializers are not supported yet, they also are not supported by the hoisted expression
                         if (expr.NodeType == ExpressionType.NewArrayInit && expr.Type.GetArrayRank() > 1)
                             return Result.NotSupported_NewArrayInit_MultidimensionalArray;
-                        var arrElems = ((NewArrayExpression)expr).GetArgs();
-                        var elemCount = arrElems.Count;
+                        var arrExpr = (NewArrayExpression)expr;
+                        var elemCount = arrExpr.GetArgCount();
                         if (elemCount == 0)
                             return r;
                         var isArrayInitializer = expr.NodeType == ExpressionType.NewArrayInit;
                         for (var i = 0; i < elemCount; ++i)
                         {
                             var precedingArrayElementTryCount = context.TryExpressionCount;
-                            if ((r = TryCollectInfo(ref context, arrElems.GetArgument(i), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
+                            if ((r = TryCollectInfo(ref context, arrExpr.GetArgument(i), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                                 return r;
                             // Initializers keep the array on the stack; bounds only have
                             // preceding values after the first bound has been evaluated.
@@ -2913,9 +2913,8 @@ namespace FastExpressionCompiler
                 var p = parent & ~ParentFlags.IgnoreResult | ParentFlags.IndexAccess;
 
                 var objExpr = indexExpr.Object;
-                var indexArgs = indexExpr.GetArgs();
                 var argParent = p & ~ParentFlags.InstanceAccess;
-                if (!TryEmitIndexOperands(objExpr, indexArgs, ParentFlags.InstanceCall, argParent, il, ref context,
+                if (!TryEmitIndexOperands(objExpr, indexExpr, ParentFlags.InstanceCall, argParent, il, ref context,
                     context.HasComplexArguments(indexExpr)))
                     return false;
 
@@ -2926,7 +2925,7 @@ namespace FastExpressionCompiler
                     byRefIndex >= 0 ? parent | ParentFlags.AssignmentByRef : parent);
             }
 
-            private static bool TryEmitIndexOperands(Expression objExpr, Args indexArgs, ParentFlags objFlags,
+            private static bool TryEmitIndexOperands(Expression objExpr, IndexExpression indexExpr, ParentFlags objFlags,
                 ParentFlags argFlags, ILGenerator il, ref CompilerContext context, bool spillOperands)
             {
                 var objVar = -1;
@@ -2941,10 +2940,10 @@ namespace FastExpressionCompiler
                 }
 
                 SmallList<int, Stack8<int>, NoArrayPool<int>> argVars = default;
-                var count = indexArgs.Count;
+                var count = indexExpr.GetArgCount();
                 for (var i = 0; i < count; ++i)
                 {
-                    var argument = indexArgs.GetArgument(i);
+                    var argument = indexExpr.GetArgument(i);
                     if (!TryEmit(argument, il, ref context, argFlags, -1))
                         return false;
                     if (spillOperands)
@@ -4590,14 +4589,13 @@ namespace FastExpressionCompiler
 
             private static bool EmitNewArrayBounds(NewArrayExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
-                var bounds = expr.GetArgs();
-                var boundCount = bounds.Count;
+                var boundCount = expr.GetArgCount();
                 var flags = ParentFlags.CtorCall;
                 SmallList<int, Stack8<int>, NoArrayPool<int>> boundVars = default;
                 var spillBounds = context.HasComplexArguments(expr);
                 for (var i = 0; i < boundCount; i++)
                 {
-                    var bound = bounds.GetArgument(i);
+                    var bound = expr.GetArgument(i);
                     if (!TryEmit(bound, il, ref context, flags))
                         return false;
                     var boundType = bound.Type;
@@ -4645,8 +4643,7 @@ namespace FastExpressionCompiler
                 if (elemType == null)
                     return false;
 
-                var elems = expr.GetArgs();
-                var elemCount = elems.Count;
+                var elemCount = expr.GetArgCount();
 
                 EmitLoadConstantInt(il, elemCount); // emit the length of the array calculated from the number of initializer elements
                 il.Demit(OpCodes.Newarr, elemType);
@@ -4658,7 +4655,7 @@ namespace FastExpressionCompiler
                     var value = il.GetNextLocalVarIndex(elemType);
                     for (var i = 0; i < elemCount; ++i)
                     {
-                        if (!TryEmit(elems.GetArgument(i), il, ref context, ParentFlags.AssignmentRightValue))
+                        if (!TryEmit(expr.GetArgument(i), il, ref context, ParentFlags.AssignmentRightValue))
                             return false;
                         EmitStoreLocalVariable(il, value);
                         EmitLoadLocalVariable(il, array);
@@ -4682,13 +4679,13 @@ namespace FastExpressionCompiler
                     if (isElemOfValueType) // loading element address for later copying of value into it.
                     {
                         il.Demit(OpCodes.Ldelema, elemType);
-                        if (!TryEmit(elems.GetArgument(i), il, ref context, ParentFlags.Empty))
+                        if (!TryEmit(expr.GetArgument(i), il, ref context, ParentFlags.Empty))
                             return false;
                         il.Demit(OpCodes.Stobj, elemType); // store element of value type by array element address
                     }
                     else
                     {
-                        if (!TryEmit(elems.GetArgument(i), il, ref context, ParentFlags.Empty))
+                        if (!TryEmit(expr.GetArgument(i), il, ref context, ParentFlags.Empty))
                             return false;
                         il.Demit(OpCodes.Stelem_Ref);
                     }
@@ -4994,14 +4991,12 @@ namespace FastExpressionCompiler
 
                         var indexArgCount = -1;
                         var spillIndexOperands = false;
-                        Args indexArgs = default;
                         if (orLeftIndexExpr != null)
                         {
                             spillIndexOperands = context.HasComplexArguments(orLeftIndexExpr);
                             if (nodeType == ExpressionType.Assign && spillIndexOperands)
                                 return false;
-                            indexArgs = orLeftIndexExpr.GetArgs();
-                            indexArgCount = indexArgs.Count;
+                            indexArgCount = orLeftIndexExpr.GetArgCount();
                             if (indexArgCount > 4)
                                 return false; // todo: @feature more than 4 index arguments are not supported, and probably not need to be supported
                         }
@@ -5056,7 +5051,7 @@ namespace FastExpressionCompiler
                                         return false;
                                 }
                                 for (var i = 0; i < indexArgCount; i++)
-                                    if (!TryEmit(indexArgs.GetArgument(i), il, ref context, baseFlags, -1))
+                                    if (!TryEmit(orLeftIndexExpr.GetArgument(i), il, ref context, baseFlags, -1))
                                         return false;
                             }
 
@@ -5141,7 +5136,7 @@ namespace FastExpressionCompiler
                             int indexArgVar0 = -1, indexArgVar1 = -1, indexArgVar2 = -1, indexArgVar3 = -1; // using stackalloc array?
                             for (var i = 0; i < indexArgCount; i++)
                             {
-                                var indexArg = indexArgs.GetArgument(i);
+                                var indexArg = orLeftIndexExpr.GetArgument(i);
                                 if (!TryEmit(indexArg, il, ref context, baseFlags))
                                     return false;
                                 var indexArgVar = spillIndexOperands ? EmitStoreLocalVariable(il, indexArg.Type)
@@ -5379,8 +5374,7 @@ namespace FastExpressionCompiler
                 else if (left is IndexExpression indexExpr)
                 {
                     var obj = indexExpr.Object;
-                    var indexArgs = indexExpr.GetArgs();
-                    var indexArgCount = indexArgs.Count;
+                    var indexArgCount = indexExpr.GetArgCount();
                     var args = new Expression[indexArgCount];
                     if (obj != null && !(obj is ParameterExpression | obj is ConstantExpression))
                     {
@@ -5393,7 +5387,7 @@ namespace FastExpressionCompiler
                     }
                     for (var i = 0; i < indexArgCount; ++i)
                     {
-                        var arg = indexArgs.GetArgument(i);
+                        var arg = indexExpr.GetArgument(i);
                         if (!(arg is ParameterExpression | arg is ConstantExpression))
                         {
                             var argVar = Expression.Variable(arg.Type);
@@ -6133,12 +6127,8 @@ namespace FastExpressionCompiler
 
             private static bool TryEmitInvoke(InvocationExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex = -1)
             {
-                var paramCount = context.ParamExprs.GetParamCount();
-
-                var argExprs = expr.GetArgs();
-                var argCount = argExprs.Count;
                 var invokedExpr = expr.Expression;
-                if ((context.CompilerFlags & CompilerFlags.NoInvocationLambdaInlining) == 0 && invokedExpr is LambdaExpression lambdaExpr)
+                if ((context.CompilerFlags & CompilerFlags.NoInvocationLambdaInlining) == 0 && invokedExpr is LambdaExpression)
                 {
                     parent |= ParentFlags.InlinedLambdaInvoke;
 
@@ -6180,13 +6170,13 @@ namespace FastExpressionCompiler
                 //    delegateInvokeMethod = ((Delegate)lambdaConst.Value).GetMethodInfo();
                 //else
                 var delegateInvokeMethod = invokedExpr.Type.FindDelegateInvokeMethod(); // todo: @perf slow thingy
-                if (argCount != 0)
+                if (expr.GetArgCount() != 0)
                 {
                     var useResult = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
                     var args = delegateInvokeMethod.GetParameters(); // todo: @perf avoid this if possible
                     for (var i = 0; i < args.Length; ++i)
                     {
-                        var argExpr = argExprs.GetArgument(i);
+                        var argExpr = expr.GetArgument(i);
                         if (!TryEmit(argExpr, il, ref context, useResult, args[i].ParameterType.IsByRef ? i : -1))
                             return false;
                     }
@@ -14137,36 +14127,37 @@ namespace FastExpressionCompiler
     {
 #if LIGHT_EXPRESSION
         readonly IArgumentProvider _p;
-        internal Args(IArgumentProvider p) => _p = p;
+        internal Args(IArgumentProvider p)
+        {
+            Debug.Assert(p != null);
+            _p = p;
+        }
         public int Count => _p.ArgumentCount;
         public Expression GetArgument(int i) => _p.GetArgument(i);
 #else
         readonly object _src;
         readonly int _count;
-        readonly byte _kind; // 1 Call, 2 New, 3 Index, 4 ElementInit, 5 Invoke, 6 NewArray
-        internal Args(object src, int count, byte kind)
+        internal Args(object src, int count)
         {
-            Debug.Assert(kind is >= 1 and <= 6);
+            Debug.Assert(src != null);
             _src = src;
             _count = count;
-            _kind = kind;
         }
         public int Count => _count;
-        public Expression GetArgument(int i) => _kind switch
+        public Expression GetArgument(int i) => _src switch
         {
-            1 => ((MethodCallExpression)_src).GetArgument(i),
-            2 => ((NewExpression)_src).GetArgument(i),
-            3 => ((IndexExpression)_src).GetArgument(i),
-            4 => ((ElementInit)_src).GetArgument(i),
-            5 => ((InvocationExpression)_src).GetArgument(i),
-            _ => ((NewArrayExpression)_src).GetArgument(i)
+            MethodCallExpression e => e.GetArgument(i),
+            NewExpression e => e.GetArgument(i),
+            IndexExpression e => e.GetArgument(i),
+            ElementInit e => e.GetArgument(i),
+            _ => ((InvocationExpression)_src).GetArgument(i)
         };
 #endif
         public Enumerator GetEnumerator() => new(this);
 
         public struct Enumerator
         {
-            Args _a;
+            readonly Args _a;
             int _i;
             public Enumerator(Args a) => _a = a;
             public Expression Current { get; private set; }
@@ -14284,17 +14275,15 @@ namespace FastExpressionCompiler
         public static Expression GetArgument(this NewArrayExpression e, int index) => e.Expressions[index];
 
         [MethodImpl((MethodImplOptions)256)]
-        public static Args GetArgs(this MethodCallExpression e) => new Args(e, e.GetArgCount(), 1);
+        public static Args GetArgs(this MethodCallExpression e) => new Args(e, e.GetArgCount());
         [MethodImpl((MethodImplOptions)256)]
-        public static Args GetArgs(this NewExpression e) => new Args(e, e.GetArgCount(), 2);
+        public static Args GetArgs(this NewExpression e) => new Args(e, e.GetArgCount());
         [MethodImpl((MethodImplOptions)256)]
-        public static Args GetArgs(this IndexExpression e) => new Args(e, e.GetArgCount(), 3);
+        public static Args GetArgs(this IndexExpression e) => new Args(e, e.GetArgCount());
         [MethodImpl((MethodImplOptions)256)]
-        public static Args GetArgs(this ElementInit e) => new Args(e, e.GetArgCount(), 4);
+        public static Args GetArgs(this ElementInit e) => new Args(e, e.GetArgCount());
         [MethodImpl((MethodImplOptions)256)]
-        public static Args GetArgs(this InvocationExpression e) => new Args(e, e.GetArgCount(), 5);
-        [MethodImpl((MethodImplOptions)256)]
-        public static Args GetArgs(this NewArrayExpression e) => new Args(e, e.GetArgCount(), 6);
+        public static Args GetArgs(this InvocationExpression e) => new Args(e, e.GetArgCount());
 #endif
     }
 
