@@ -1646,22 +1646,22 @@ namespace FastExpressionCompiler
             {
                 if (!PrivateCaptureMethodIsByValue(call.Method, ref context) ||
                     !HasOnlyPrivateReferenceUses(call.Object, variable, ref owner, ref declared, inOwner, ref context)) return false;
-                var arguments = call.GetArgExprs();
-                for (var i = 0; i < arguments.GetArgCount(); ++i)
+                var arguments = call.GetArgs();
+                for (var i = 0; i < arguments.Count; ++i)
                     if (!HasOnlyPrivateReferenceUses(arguments.GetArgument(i), variable, ref owner, ref declared, inOwner, ref context)) return false;
                 return true;
             }
             if (expression is NewExpression creation)
             {
                 if (!PrivateCaptureMethodIsByValue(creation.Constructor, ref context)) return false;
-                var arguments = creation.GetArgExprs();
-                for (var i = 0; i < arguments.GetArgCount(); ++i)
+                var arguments = creation.GetArgs();
+                for (var i = 0; i < arguments.Count; ++i)
                     if (!HasOnlyPrivateReferenceUses(arguments.GetArgument(i), variable, ref owner, ref declared, inOwner, ref context)) return false;
                 return true;
             }
             if (expression is NewArrayExpression array)
             {
-                var elements = array.GetArgExprs();
+                var elements = array;
                 for (var i = 0; i < elements.GetArgCount(); ++i)
                     if (!HasOnlyPrivateReferenceUses(elements.GetArgument(i), variable, ref owner, ref declared, inOwner, ref context)) return false;
                 return true;
@@ -1775,9 +1775,9 @@ namespace FastExpressionCompiler
             if (expression is MethodCallExpression call)
             {
                 if (!AnalyzeCaptureStorage(call.Object, ref context, call.Object != null && call.Object.Type.IsValueType)) return false;
-                var arguments = call.GetArgExprs();
-                var parameters = arguments.GetArgCount() == 0 ? null : context.GetCaptureMethodParameters(call.Method, collect: true);
-                for (var i = 0; i < arguments.GetArgCount(); ++i)
+                var arguments = call.GetArgs();
+                var parameters = arguments.Count == 0 ? null : context.GetCaptureMethodParameters(call.Method, collect: true);
+                for (var i = 0; i < arguments.Count; ++i)
                     if (!AnalyzeCaptureStorage(arguments.GetArgument(i), ref context, parameters[i].ParameterType.IsByRef)) return false;
                 return true;
             }
@@ -1816,7 +1816,7 @@ namespace FastExpressionCompiler
             }
             if (expression is NewArrayExpression array)
             {
-                var elements = array.GetArgExprs();
+                var elements = array;
                 for (var i = 0; i < elements.GetArgCount(); ++i)
                     if (!AnalyzeCaptureStorage(elements.GetArgument(i), ref context)) return false;
                 return true;
@@ -1825,8 +1825,8 @@ namespace FastExpressionCompiler
             {
                 if (!AnalyzeCaptureStorage(index.Object, ref context, index.Object != null && index.Object.Type.IsValueType)) return false;
                 // Indexer expression validation forbids by-ref accessor arguments.
-                var arguments = index.GetArgExprs();
-                for (var i = 0; i < arguments.GetArgCount(); ++i)
+                var arguments = index.GetArgs();
+                for (var i = 0; i < arguments.Count; ++i)
                     if (!AnalyzeCaptureStorage(arguments.GetArgument(i), ref context)) return false;
                 return true;
             }
@@ -1844,9 +1844,9 @@ namespace FastExpressionCompiler
             {
                 var invokeMethod = invocation.Expression.Type.GetMethod("Invoke");
                 if (invokeMethod == null || !AnalyzeCaptureStorage(invocation.Expression, ref context)) return false;
-                var arguments = invocation.GetArgExprs();
-                var parameters = arguments.GetArgCount() == 0 ? null : context.GetCaptureMethodParameters(invokeMethod, collect: true);
-                for (var i = 0; i < arguments.GetArgCount(); ++i)
+                var arguments = invocation.GetArgs();
+                var parameters = arguments.Count == 0 ? null : context.GetCaptureMethodParameters(invokeMethod, collect: true);
+                for (var i = 0; i < arguments.Count; ++i)
                     if (!AnalyzeCaptureStorage(arguments.GetArgument(i), ref context, parameters[i].ParameterType.IsByRef)) return false;
                 return true;
             }
@@ -1854,14 +1854,14 @@ namespace FastExpressionCompiler
                 return AnalyzeCaptureStorage(typeTest.Expression, ref context, writable);
             if (expression is NewExpression creation)
             {
-                var arguments = creation.GetArgExprs();
+                var arguments = creation.GetArgs();
 #if LIGHT_EXPRESSION
                 // The intrinsic constructors explicitly promise arguments without by-ref storage.
-                var parameters = arguments.GetArgCount() == 0 || creation.IsIntrinsic ? null : context.GetCaptureMethodParameters(creation.Constructor, collect: true);
+                var parameters = arguments.Count == 0 || creation.IsIntrinsic ? null : context.GetCaptureMethodParameters(creation.Constructor, collect: true);
 #else
-                var parameters = arguments.GetArgCount() == 0 ? null : context.GetCaptureMethodParameters(creation.Constructor, collect: true);
+                var parameters = arguments.Count == 0 ? null : context.GetCaptureMethodParameters(creation.Constructor, collect: true);
 #endif
-                for (var i = 0; i < arguments.GetArgCount(); ++i)
+                for (var i = 0; i < arguments.Count; ++i)
                     if (!AnalyzeCaptureStorage(arguments.GetArgument(i), ref context, parameters != null && parameters[i].ParameterType.IsByRef)) return false;
                 return true;
             }
@@ -1904,9 +1904,9 @@ namespace FastExpressionCompiler
             for (var i = 0; i < initializers.Count; ++i)
             {
                 var initializer = initializers[i];
-                var arguments = initializer.GetArgExprs();
-                var parameters = arguments.GetArgCount() == 0 ? null : context.GetCaptureMethodParameters(initializer.AddMethod, collect: true);
-                for (var a = 0; a < arguments.GetArgCount(); ++a)
+                var arguments = initializer.GetArgs();
+                var parameters = arguments.Count == 0 ? null : context.GetCaptureMethodParameters(initializer.AddMethod, collect: true);
+                for (var a = 0; a < arguments.Count; ++a)
                     if (!AnalyzeCaptureStorage(arguments.GetArgument(a), ref context, parameters[a].ParameterType.IsByRef)) return false;
             }
             return true;
@@ -1955,8 +1955,8 @@ namespace FastExpressionCompiler
             if (expression is MethodCallExpression call)
             {
                 if (!DoesNotAccessVariable(call.Object, variable)) return false;
-                var arguments = call.GetArgExprs();
-                for (var i = 0; i < arguments.GetArgCount(); ++i)
+                var arguments = call.GetArgs();
+                for (var i = 0; i < arguments.Count; ++i)
                     if (!DoesNotAccessVariable(arguments.GetArgument(i), variable)) return false;
                 return true;
             }
@@ -1986,7 +1986,7 @@ namespace FastExpressionCompiler
             }
             if (expression is NewArrayExpression array)
             {
-                var elements = array.GetArgExprs();
+                var elements = array;
                 for (var i = 0; i < elements.GetArgCount(); ++i)
                     if (!DoesNotAccessVariable(elements.GetArgument(i), variable)) return false;
                 return true;
@@ -1994,16 +1994,16 @@ namespace FastExpressionCompiler
             if (expression is IndexExpression index)
             {
                 if (!DoesNotAccessVariable(index.Object, variable)) return false;
-                var arguments = index.GetArgExprs();
-                for (var i = 0; i < arguments.GetArgCount(); ++i)
+                var arguments = index.GetArgs();
+                for (var i = 0; i < arguments.Count; ++i)
                     if (!DoesNotAccessVariable(arguments.GetArgument(i), variable)) return false;
                 return true;
             }
             if (expression is InvocationExpression invocation)
             {
                 if (!DoesNotAccessVariable(invocation.Expression, variable)) return false;
-                var arguments = invocation.GetArgExprs();
-                for (var i = 0; i < arguments.GetArgCount(); ++i)
+                var arguments = invocation.GetArgs();
+                for (var i = 0; i < arguments.Count; ++i)
                     if (!DoesNotAccessVariable(arguments.GetArgument(i), variable)) return false;
                 return true;
             }
@@ -2026,8 +2026,8 @@ namespace FastExpressionCompiler
             if (expression is DebugInfoExpression) return true;
             if (expression is NewExpression creation)
             {
-                var arguments = creation.GetArgExprs();
-                for (var i = 0; i < arguments.GetArgCount(); ++i)
+                var arguments = creation.GetArgs();
+                for (var i = 0; i < arguments.Count; ++i)
                     if (!DoesNotAccessVariable(arguments.GetArgument(i), variable)) return false;
                 return true;
             }
@@ -2052,8 +2052,8 @@ namespace FastExpressionCompiler
         {
             for (var i = 0; i < initializers.Count; ++i)
             {
-                var arguments = initializers[i].GetArgExprs();
-                for (var a = 0; a < arguments.GetArgCount(); ++a)
+                var arguments = initializers[i].GetArgs();
+                for (var a = 0; a < arguments.Count; ++a)
                     if (!DoesNotAccessVariable(arguments.GetArgument(a), variable)) return false;
             }
             return true;
@@ -3019,8 +3019,8 @@ namespace FastExpressionCompiler
                             var reducedDynamic = reducedSystemDynamic;
 #endif
                             var argumentScope = new ArgumentSpillScope();
-                            var reducedArguments = ((InvocationExpression)reducedDynamic).GetArgExprs();
-                            for (var i = 0; i < reducedArguments.GetArgCount(); ++i)
+                            var reducedArguments = ((InvocationExpression)reducedDynamic).GetArgs();
+                            for (var i = 0; i < reducedArguments.Count; ++i)
                                 argumentScope.Visit(reducedArguments.GetArgument(i));
                             var outerHasExceptionBlock = context.HasExceptionBlock;
                             context.HasExceptionBlock = false;
@@ -7914,7 +7914,7 @@ namespace FastExpressionCompiler
                 }
                 var methodParams = context.GetCaptureMethodParameters(method);
 
-                var callArguments = callExpr.GetArgExprs();
+                var callArguments = callExpr.GetArgs();
                 for (var i = 0; i < methodParams.Length; ++i)
                     if (methodParams[i].ParameterType.IsByRef && NeedsByRefWriteback(callExpr.GetArgument(i)))
                         return TryEmitCallWithWritebacks(objExpr, callExpr.GetArgs(), method, null, il, ref context, parent, byRefIndex);
@@ -8280,6 +8280,7 @@ namespace FastExpressionCompiler
             private static bool TryEmitInvoke(InvocationExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex = -1,
                 bool argumentsBeforeReceiver = false)
             {
+                var argCount = expr.GetArgCount();
                 var invokedExpr = expr.Expression;
                 if (invokedExpr is UnaryExpression quote && quote.NodeType == ExpressionType.Quote)
                     invokedExpr = quote.Operand;
