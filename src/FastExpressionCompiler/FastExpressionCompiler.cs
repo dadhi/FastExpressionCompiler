@@ -913,6 +913,17 @@ namespace FastExpressionCompiler
             return label.Label;
         }
 
+        private sealed class EmptyRuntimeVariables : System.Runtime.CompilerServices.IRuntimeVariables
+        {
+            public static readonly EmptyRuntimeVariables Instance = new();
+            public int Count => 0;
+            public object this[int index]
+            {
+                get => throw new IndexOutOfRangeException();
+                set => throw new IndexOutOfRangeException();
+            }
+        }
+
         public static readonly ArrayClosure EmptyArrayClosure = new ArrayClosure(null);
 
         public static FieldInfo ArrayClosureArrayField =
@@ -1717,8 +1728,11 @@ namespace FastExpressionCompiler
                         return Result.NotSupported_Quote;
                     case ExpressionType.Dynamic:          // todo: @feature - is not supported yet
                         return Result.NotSupported_Dynamic;
-                    case ExpressionType.RuntimeVariables: // todo: @feature - is not supported yet
-                        return NotSupported_RuntimeVariables;
+                    case ExpressionType.RuntimeVariables:
+                        if (((RuntimeVariablesExpression)expr).Variables.Count != 0)
+                            return NotSupported_RuntimeVariables;
+                        context.AddConstantOrIncrementUsageCount(EmptyRuntimeVariables.Instance);
+                        return Result.OK;
 
                     case ExpressionType.DebugInfo: // todo: @feature - is not supported yet
                         return r;                  // todo: @unclear - just ignoring the info for now
@@ -2784,6 +2798,10 @@ namespace FastExpressionCompiler
 
                         case ExpressionType.DebugInfo: // todo: @feature - is not supported yet
                             return true;               // todo: @unclear - just ignoring the info for now
+
+                        case ExpressionType.RuntimeVariables:
+                            return ((RuntimeVariablesExpression)expr).Variables.Count == 0 &&
+                                (parent.IgnoresResult() || TryEmitNotNullConstant(true, EmptyRuntimeVariables.Instance, il, ref context));
 
                         case ExpressionType.Quote:     // todo: @feature - is not supported yet
                         default:
