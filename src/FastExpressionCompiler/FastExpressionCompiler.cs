@@ -6227,11 +6227,22 @@ namespace FastExpressionCompiler
                 {
                     var useResult = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
                     var args = delegateInvokeMethod.GetParameters(); // todo: @perf avoid this if possible
+                    var spillArguments = context.TryExpressionCount != 0;
+                    var receiver = spillArguments ? EmitStoreLocalVariable(il, invokedExpr.Type) : -1;
+                    SmallList<int, Stack8<int>, NoArrayPool<int>> argumentVariables = default;
                     for (var i = 0; i < args.Length; ++i)
                     {
                         var argExpr = expr.GetArgument(i);
                         if (!TryEmit(argExpr, il, ref context, useResult, args[i].ParameterType.IsByRef ? i : -1))
                             return false;
+                        if (spillArguments)
+                            argumentVariables.Add(EmitStoreLocalVariable(il, args[i].ParameterType));
+                    }
+                    if (spillArguments)
+                    {
+                        EmitLoadLocalVariable(il, receiver);
+                        for (var i = 0; i < args.Length; ++i)
+                            EmitLoadLocalVariable(il, argumentVariables[i]);
                     }
                 }
 
