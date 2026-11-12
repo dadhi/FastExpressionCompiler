@@ -2275,7 +2275,7 @@ namespace FastExpressionCompiler
                     context.LastEmitIsAddress = false;
 #if LIGHT_EXPRESSION
                     if (expr.IsIntrinsic)
-                        return expr is NewExpression && exprType.IsAbstract
+                        return expr is NewExpression && (context.TryExpressionCount != 0 || exprType.IsAbstract)
                             ? TryEmitNew(expr, il, ref context, parent)
                             : expr.TryEmit(ref context, il, parent, byRefIndex);
 #endif
@@ -2812,7 +2812,12 @@ namespace FastExpressionCompiler
                     }
                     else
                     {
-                        if (!context.HasComplexArguments(newExpr))
+                        if (!context.HasComplexArguments(newExpr)
+#if LIGHT_EXPRESSION
+                            // Intrinsic construction collects operands without marking this owner.
+                            && !(newExpr.IsIntrinsic && context.TryExpressionCount != 0)
+#endif
+                            )
                         {
                             for (var i = 0; i < argCount; ++i)
                                 if (!TryEmit(newExpr.GetArgument(i), il, ref context, flags, pars[i].ParameterType.IsByRef ? i : -1))
