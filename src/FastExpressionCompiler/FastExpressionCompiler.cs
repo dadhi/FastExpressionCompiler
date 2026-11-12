@@ -1950,6 +1950,7 @@ namespace FastExpressionCompiler
             // 1. Try to compile nested lambda in place
             // 2. Check that parameters used in compiled lambda are passed or closed by outer lambda
             // 3. Add the compiled lambda to closure of outer lambda for later invocation
+            ValidateLabels(ref nestedLambdaContext);
             var nestedLambdaExpr = nestedLambdaInfo.LambdaExpression;
             var nestedReturnType = nestedLambdaExpr.ReturnType;
             var nestedLambdaBody = nestedLambdaExpr.Body;
