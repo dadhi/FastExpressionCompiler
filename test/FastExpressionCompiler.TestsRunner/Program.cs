@@ -91,6 +91,7 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.UnitTests.MultiRankArrayReceiverRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ArrayIndexExceptionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ReadonlyValueReceiverRegressionTests());
+                lt.Run(new LightExpression.UnitTests.DirectQuotedInvocationTests());
                 lt.Run(new LightExpression.UnitTests.BlockVariableBindingRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ComparisonReductionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.IndexerReadExceptionRegressionTests());
@@ -157,6 +158,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new MultiRankArrayReceiverRegressionTests());
             st.Run(new ArrayIndexExceptionRegressionTests());
             st.Run(new ReadonlyValueReceiverRegressionTests());
+            st.Run(new DirectQuotedInvocationTests());
             st.Run(new BlockVariableBindingRegressionTests());
             st.Run(new ComparisonReductionRegressionTests());
             st.Run(new IndexerReadExceptionRegressionTests());

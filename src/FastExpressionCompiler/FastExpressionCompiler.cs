@@ -1488,6 +1488,8 @@ namespace FastExpressionCompiler
                             var invokeArgs = invokeExpr.GetArgs();
                             var invokeArgCount = invokeArgs.Count;
                             var invokedExpr = invokeExpr.Expression;
+                            if (invokedExpr is UnaryExpression quote && quote.NodeType == ExpressionType.Quote)
+                                invokedExpr = quote.Operand;
                             if ((context.CompilerFlags & CompilerFlags.NoInvocationLambdaInlining) == 0 && invokedExpr is LambdaExpression lambdaExpr)
                             {
                                 var oldIndex = context.CurrentInlinedLambdaInvokeIndex;
@@ -6128,6 +6130,8 @@ namespace FastExpressionCompiler
             private static bool TryEmitInvoke(InvocationExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex = -1)
             {
                 var invokedExpr = expr.Expression;
+                if (invokedExpr is UnaryExpression quote && quote.NodeType == ExpressionType.Quote)
+                    invokedExpr = quote.Operand;
                 if ((context.CompilerFlags & CompilerFlags.NoInvocationLambdaInlining) == 0 && invokedExpr is LambdaExpression)
                 {
                     parent |= ParentFlags.InlinedLambdaInvoke;
@@ -6165,6 +6169,12 @@ namespace FastExpressionCompiler
 
                 if (!TryEmit(invokedExpr, il, ref context, parent & ~ParentFlags.IgnoreResult)) // removing the IgnoreResult temporary because we need "full" lambda emit and we will re-apply the IgnoreResult later at the end of the method
                     return false;
+
+#if NETFRAMEWORK
+                // Quote operands compile as delegates; retain the verifier's exact receiver type.
+                if (expr.Expression.NodeType == ExpressionType.Quote)
+                    il.Demit(OpCodes.Castclass, invokedExpr.Type);
+#endif
 
                 //if (lambda is ConstantExpression lambdaConst) // todo: @perf opportunity to optimize
                 //    delegateInvokeMethod = ((Delegate)lambdaConst.Value).GetMethodInfo();
