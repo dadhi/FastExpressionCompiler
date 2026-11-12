@@ -2292,6 +2292,9 @@ namespace FastExpressionCompiler
 
             private const ParentFlags ValueOperandFlagsToClear = ValueResultFlagsToClear | ParentFlags.IgnoreResult;
 
+            private const ParentFlags ByRefValueArgumentFlagsToClear =
+                ValueOperandFlagsToClear | ParentFlags.IndexAccess;
+
             // todo: @perf use UnsafeAccessorAttribute
             /// <summary>Get a type from handle</summary>
             public static readonly MethodInfo GetTypeFromHandleMethod =
@@ -5837,6 +5840,8 @@ namespace FastExpressionCompiler
                     return false;
                 if (sameType)
                 {
+                    // TryEmit dispatches to each node's own address/temporary handling.
+                    // The formal argument index requests storage; these cases do not emit identical IL.
                     switch (expression.NodeType)
                     {
                         case ExpressionType.Parameter:
@@ -5852,9 +5857,7 @@ namespace FastExpressionCompiler
                 }
                 // A wider formal reference type denotes a temporary, never an alias or copyback.
                 // Likewise, a value-producing argument has no storage address of its own.
-                var valueFlags = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess |
-                    ParentFlags.MemberAccess | ParentFlags.AssignmentByRef | ParentFlags.AssignmentLeftValue |
-                    ParentFlags.ReturnByRef | ParentFlags.LambdaCall | ParentFlags.DupIt | ParentFlags.IndexAccess)) |
+                var valueFlags = (parent & ~ByRefValueArgumentFlagsToClear) |
                     ParentFlags.Call | ParentFlags.AssignmentRightValue;
                 if (!TryEmit(expression, il, ref context, valueFlags))
                     return false;
