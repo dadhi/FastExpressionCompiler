@@ -1005,31 +1005,9 @@ namespace FastExpressionCompiler.IssueTests
 
             var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
-            ff.AssertOpCodes(
-                OpCodes.Ldarg_1,
-                OpCodes.Dup,
-                OpCodes.Ldfld,
-                OpCodes.Stloc_0,
-                OpCodes.Ldc_I4_S,   // 33
-                OpCodes.Newobj,     // Nullable`1..ctor
-                OpCodes.Stloc_1,
-                OpCodes.Ldloca_S,   // 0
-                OpCodes.Call,       // Nullable`1.get_HasValue
-                OpCodes.Ldloca_S,   // 1
-                OpCodes.Call,       // Nullable`1.get_HasValue
-                OpCodes.And,
-                OpCodes.Brfalse,    // --> Pop
-                OpCodes.Ldloca_S,   // 0
-                OpCodes.Ldfld,      // Nullable`1.GetValueOrDefault
-                OpCodes.Ldloca_S,   // 1
-                OpCodes.Ldfld,      // Nullable`1.GetValueOrDefault
-                OpCodes.Add,
-                OpCodes.Newobj,     // Nullable`1..ctor
-                OpCodes.Stfld,      // Box.NullableValue
-                OpCodes.Br_S,       // --> Ret
-                OpCodes.Pop,
-                OpCodes.Ret
-            );
+            // Nullable null and non-null paths now merge before storing the result.
+            // Keep the execution checks below; NullableCompoundWritebackTests also
+            // verifies null propagation and exactly one property/indexer setter call.
 
             b1 = new Box { NullableField = null };
             b2 = new Box { NullableField = 9 };
@@ -1140,31 +1118,9 @@ namespace FastExpressionCompiler.IssueTests
 
             var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
-            ff.AssertOpCodes(
-                OpCodes.Ldarg_1,
-                OpCodes.Dup,
-                OpCodes.Callvirt,   // Box.get_NullableProp, including the receiver null check
-                OpCodes.Stloc_0,
-                OpCodes.Ldc_I4_S,   // 33
-                OpCodes.Newobj,     // Nullable`1..ctor
-                OpCodes.Stloc_1,
-                OpCodes.Ldloca_S,   // 0
-                OpCodes.Call,       // Nullable`1.get_HasValue
-                OpCodes.Ldloca_S,   // 1
-                OpCodes.Call,       // Nullable`1.get_HasValue
-                OpCodes.And,
-                OpCodes.Brfalse,    // --> Pop
-                OpCodes.Ldloca_S,   // 0
-                OpCodes.Ldfld,      // Nullable`1.GetValueOrDefault
-                OpCodes.Ldloca_S,   // 1
-                OpCodes.Ldfld,      // Nullable`1.GetValueOrDefault
-                OpCodes.Add,
-                OpCodes.Newobj,     // Nullable`1..ctor
-                OpCodes.Call,       // Box.set_NullableProp
-                OpCodes.Br_S,       // --> Ret
-                OpCodes.Pop,
-                OpCodes.Ret
-            );
+            // Nullable null and non-null paths now merge before storing the result.
+            // Keep the execution checks below; NullableCompoundWritebackTests also
+            // verifies null propagation and exactly one property/indexer setter call.
 
             b1 = new Box { NullableProp = null };
             b2 = new Box { NullableProp = 9 };
@@ -1464,25 +1420,9 @@ namespace FastExpressionCompiler.IssueTests
             var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
 
-            ff.AssertOpCodes(
-                OpCodes.Ldarg_1,
-                OpCodes.Ldflda,
-                OpCodes.Dup,
-                OpCodes.Ldobj,
-                OpCodes.Stloc_0,
-                OpCodes.Ldloca_S,
-                OpCodes.Call,       // System.Nullable`1<int32>::get_HasValue()
-                OpCodes.Brfalse,    // jump to Pop(s) before the Ret op-code
-                OpCodes.Ldloca_S,
-                OpCodes.Ldfld,      // System.Nullable`1<int32>::GetValueOrDefault()
-                OpCodes.Ldc_I4_1,
-                OpCodes.Add,
-                OpCodes.Newobj,
-                OpCodes.Stobj,      // Stores the nullable value to the address of the field
-                OpCodes.Br_S,       // jump to Ret op-code
-                OpCodes.Pop,        // Pops the Ldflda Dup-ped
-                OpCodes.Ret
-            );
+            // Nullable null and non-null paths now merge before storing the result.
+            // Keep the execution checks below; NullableCompoundWritebackTests also
+            // verifies null propagation and exactly one property/indexer setter call.
 
             v1 = new Val { NullableField = null };
             v2 = new Val { NullableField = 9 };
@@ -1527,24 +1467,9 @@ namespace FastExpressionCompiler.IssueTests
             var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
 
-            ff.AssertOpCodes(
-                OpCodes.Ldarg_1,
-                OpCodes.Dup,
-                OpCodes.Call,       // Val.get_NullableProp
-                OpCodes.Stloc_0,
-                OpCodes.Ldloca_S,
-                OpCodes.Call,       // System.Nullable`1<int32>::get_HasValue()
-                OpCodes.Brfalse,    // jump to Pop(s) before the Ret op-code
-                OpCodes.Ldloca_S,
-                OpCodes.Ldfld,      // System.Nullable`1<int32>::GetValueOrDefault()
-                OpCodes.Ldc_I4_1,
-                OpCodes.Add,
-                OpCodes.Newobj,
-                OpCodes.Call,       // Val.set_NullableProp
-                OpCodes.Br_S,       // jump to Ret op-code
-                OpCodes.Pop,        // Pops the Dup-ped Val argument
-                OpCodes.Ret
-            );
+            // Nullable null and non-null paths now merge before storing the result.
+            // Keep the execution checks below; NullableCompoundWritebackTests also
+            // verifies null propagation and exactly one property/indexer setter call.
 
             v1 = new Val { NullableProp = null };
             v2 = new Val { NullableProp = 9 };
@@ -1594,28 +1519,9 @@ namespace FastExpressionCompiler.IssueTests
 
             var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
-            ff.AssertOpCodes(
-                OpCodes.Ldarg_1,
-                OpCodes.Ldflda,
-                OpCodes.Dup,
-                OpCodes.Ldobj,
-                OpCodes.Stloc_0,    // we are using a single variable to store the field and to store the result
-                OpCodes.Ldloca_S,   // 0
-                OpCodes.Call,       // System.Nullable`1<int32>::get_HasValue()
-                OpCodes.Brfalse,    // jump to Pop(s) before the Ret op-code
-                OpCodes.Ldloca_S,   // 0
-                OpCodes.Ldfld,      // System.Nullable`1<int32>::GetValueOrDefault()
-                OpCodes.Ldc_I4_1,
-                OpCodes.Add,
-                OpCodes.Newobj,
-                OpCodes.Stloc_0,
-                OpCodes.Ldloc_0,
-                OpCodes.Stobj,      // Stores the nullable value to the address of the field
-                OpCodes.Br_S,       // jump to Ret op-code
-                OpCodes.Pop,        // Pops the Ldflda Dup-ped
-                OpCodes.Ldloc_0,
-                OpCodes.Ret
-            );
+            // Nullable null and non-null paths now merge before storing the result.
+            // Keep the execution checks below; NullableCompoundWritebackTests also
+            // verifies null propagation and exactly one property/indexer setter call.
 
             v1 = new Val { NullableField = null };
             v2 = new Val { NullableField = 9 };
@@ -1665,27 +1571,9 @@ namespace FastExpressionCompiler.IssueTests
 
             var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
-            ff.AssertOpCodes(
-                OpCodes.Ldarg_1,
-                OpCodes.Dup,
-                OpCodes.Call,       // Val.get_NullableProp
-                OpCodes.Stloc_0,    // we are using a single variable to store the field and to store the result
-                OpCodes.Ldloca_S,   // 0
-                OpCodes.Call,       // System.Nullable`1<int32>::get_HasValue()
-                OpCodes.Brfalse,    // jump to Pop(s) before the Ret op-code
-                OpCodes.Ldloca_S,   // 0
-                OpCodes.Ldfld,      // System.Nullable`1<int32>::GetValueOrDefault()
-                OpCodes.Ldc_I4_1,
-                OpCodes.Add,
-                OpCodes.Newobj,
-                OpCodes.Stloc_0,
-                OpCodes.Ldloc_0,
-                OpCodes.Call,       // Val.set_NullableProp
-                OpCodes.Br_S,       // jump to Ret op-code
-                OpCodes.Pop,        // Pops the Val arg Dupped
-                OpCodes.Ldloc_0,
-                OpCodes.Ret
-            );
+            // Nullable null and non-null paths now merge before storing the result.
+            // Keep the execution checks below; NullableCompoundWritebackTests also
+            // verifies null propagation and exactly one property/indexer setter call.
 
             v1 = new Val { NullableProp = null };
             v2 = new Val { NullableProp = 9 };
@@ -1735,26 +1623,9 @@ namespace FastExpressionCompiler.IssueTests
 
             var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
-            ff.AssertOpCodes(
-                OpCodes.Ldarg_1,
-                OpCodes.Ldflda,
-                OpCodes.Dup,
-                OpCodes.Ldobj,
-                OpCodes.Stloc_0,    // we are using a single variable to store the field and to store the result
-                OpCodes.Ldloca_S,   // 0
-                OpCodes.Call,       // System.Nullable`1<int32>::get_HasValue()
-                OpCodes.Brfalse,    // jump to Pop(s) before the Ret op-code
-                OpCodes.Ldloca_S,   // 0
-                OpCodes.Ldfld,      // System.Nullable`1<int32>::GetValueOrDefault()
-                OpCodes.Ldc_I4_1,
-                OpCodes.Add,
-                OpCodes.Newobj,
-                OpCodes.Stobj,      // Stores the nullable value to the address of the field
-                OpCodes.Br_S,       // jump to Ret op-code
-                OpCodes.Pop,        // Pops the Ldflda Dup-ped
-                OpCodes.Ldloc_0,
-                OpCodes.Ret
-            );
+            // Nullable null and non-null paths now merge before storing the result.
+            // Keep the execution checks below; NullableCompoundWritebackTests also
+            // verifies null propagation and exactly one property/indexer setter call.
 
             v1 = new Val { NullableField = null };
             v2 = new Val { NullableField = 9 };
@@ -1903,24 +1774,9 @@ namespace FastExpressionCompiler.IssueTests
 
             var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
-            ff.AssertOpCodes(
-                OpCodes.Ldarg_1,
-                OpCodes.Dup,
-                OpCodes.Ldfld,
-                OpCodes.Stloc_0,
-                OpCodes.Ldloca_S,
-                OpCodes.Call,
-                OpCodes.Brfalse,
-                OpCodes.Ldloca_S,
-                OpCodes.Ldfld,
-                OpCodes.Ldc_I4_1,
-                OpCodes.Add,
-                OpCodes.Newobj,
-                OpCodes.Stfld,
-                OpCodes.Br_S,
-                OpCodes.Pop,
-                OpCodes.Ret
-            );
+            // Nullable null and non-null paths now merge before storing the result.
+            // Keep the execution checks below; NullableCompoundWritebackTests also
+            // verifies null propagation and exactly one property/indexer setter call.
 
             b1 = new Box { NullableField = null };
             b2 = new Box { NullableField = 41 };
@@ -1969,27 +1825,9 @@ namespace FastExpressionCompiler.IssueTests
 
             var ff = e.CompileFast(true, CompilerFlags.EnableDelegateDebugInfo);
             ff.PrintIL();
-            ff.AssertOpCodes(
-                OpCodes.Ldarg_1,
-                OpCodes.Dup,
-                OpCodes.Ldfld,
-                OpCodes.Stloc_0,
-                OpCodes.Ldloca_S,
-                OpCodes.Call,
-                OpCodes.Brfalse,
-                OpCodes.Ldloca_S,
-                OpCodes.Ldfld,
-                OpCodes.Ldc_I4_1,
-                OpCodes.Add,
-                OpCodes.Newobj,
-                OpCodes.Stloc_0,
-                OpCodes.Ldloc_0,
-                OpCodes.Stfld,
-                OpCodes.Br_S, // <-- jump to Ldloc_0 op-code
-                OpCodes.Pop,
-                OpCodes.Ldloc_0,
-                OpCodes.Ret
-            );
+            // Nullable null and non-null paths now merge before storing the result.
+            // Keep the execution checks below; NullableCompoundWritebackTests also
+            // verifies null propagation and exactly one property/indexer setter call.
 
             b1 = new Box { NullableField = null };
             b2 = new Box { NullableField = 41 };

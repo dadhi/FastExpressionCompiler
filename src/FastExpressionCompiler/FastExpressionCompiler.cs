@@ -5285,6 +5285,14 @@ namespace FastExpressionCompiler
                             }
 
                             il.Demit(OpCodes.Newobj, leftType.GetNullableConstructor()); // wrap the result back into the nullable
+                            var nullableResult = il.DefineLabel();
+                            il.Demit(OpCodes.Br, nullableResult);
+                            il.DmarkLabel(leftOrRightNullableAreNullLabel);
+                            // This local already owns a copy of the nullable value.
+                            EmitLoadLocalVariableAddress(il, leftNullableVar);
+                            il.Demit(OpCodes.Initobj, leftType);
+                            EmitLoadLocalVariable(il, leftNullableVar);
+                            il.DmarkLabel(nullableResult);
                             if (resultVar != -1 & !isPost)
                                 EmitStoreAndLoadLocalVariable(il, resultVar);
                         }
@@ -5307,39 +5315,6 @@ namespace FastExpressionCompiler
                                 return false;
                         }
 
-                        if (leftIsNullable)
-                        {
-                            // todo: @perf @simplify avoid the Dup and the Pop for this case via storing and loading local var same as in `TryEmitArithmetic`
-                            if (leftIsByAddress | objExpr != null)
-                            {
-                                var skipPopLeftDuppedInstance = il.DefineLabel();
-                                il.Demit(OpCodes.Br_S, skipPopLeftDuppedInstance);
-                                il.DmarkLabel(leftOrRightNullableAreNullLabel); // jump here if nullables are null after checking them with `!HasValue`
-
-                                il.Demit(OpCodes.Pop); // pop the dupped instance address or the field address, or the array instance address
-
-                                if (orLeftIndexExpr != null)
-                                {
-                                    il.Demit(OpCodes.Pop); // pop the first index argument which is always present
-                                    if (indexArgCount > 1)
-                                    {
-                                        il.Demit(OpCodes.Pop);
-                                        if (indexArgCount > 2)
-                                        {
-                                            il.Demit(OpCodes.Pop);
-                                            if (indexArgCount > 3)
-                                                il.Demit(OpCodes.Pop); // pop the 4th last supported index argument
-                                        }
-                                    }
-                                }
-
-                                il.DmarkLabel(skipPopLeftDuppedInstance);
-                            }
-                            else
-                            {
-                                il.DmarkLabel(leftOrRightNullableAreNullLabel); // jump here if nullables are null after checking them with `!HasValue`
-                            }
-                        }
                         break;
                     default:
                         return false;
