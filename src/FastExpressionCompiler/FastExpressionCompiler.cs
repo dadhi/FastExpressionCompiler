@@ -6210,7 +6210,11 @@ namespace FastExpressionCompiler
                     }
                 }
 
-                if (!TryEmit(invokedExpr, il, ref context, parent & ~ParentFlags.IgnoreResult)) // removing the IgnoreResult temporary because we need "full" lambda emit and we will re-apply the IgnoreResult later at the end of the method
+                // The invocation receiver is a value, including incoming ref delegates.
+                var receiverFlags = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.AssignmentLeftValue |
+                    ParentFlags.AssignmentByRef | ParentFlags.InstanceAccess | ParentFlags.ReturnByRef | ParentFlags.DupIt)) |
+                    ParentFlags.Call | ParentFlags.AssignmentRightValue;
+                if (!TryEmit(invokedExpr, il, ref context, receiverFlags)) // removing the IgnoreResult temporary because we need "full" lambda emit and we will re-apply the IgnoreResult later at the end of the method
                     return false;
 
 #if NETFRAMEWORK
