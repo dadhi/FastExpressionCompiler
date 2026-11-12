@@ -1492,20 +1492,21 @@ namespace FastExpressionCompiler
                                 invokedExpr = quote.Operand;
                             if ((context.CompilerFlags & CompilerFlags.NoInvocationLambdaInlining) == 0 && invokedExpr is LambdaExpression lambdaExpr)
                             {
-                                var oldIndex = context.CurrentInlinedLambdaInvokeIndex;
-                                context.CurrentInlinedLambdaInvokeIndex = context.AddInlinedLambdaInvoke(invokeExpr);
-                                context.HasComplexExpression = false; // switch off because we have entered the inlined lambda
-
                                 ref var inlinedExpr = ref context.InlinedLambdaInvocation.Map.AddOrGetValueRef(invokeExpr, out var found);
                                 if (!found)
-                                    inlinedExpr = CreateInlinedLambdaInvocationExpression(invokeArgs, lambdaExpr);
-
-                                if ((r = TryCollectInfo(ref context, inlinedExpr, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
+                                    // Cache the decision as well as the expression: a null entry uses ordinary invocation.
+                                    inlinedExpr = HasByRefParameters(lambdaExpr) ? null : CreateInlinedLambdaInvocationExpression(invokeArgs, lambdaExpr);
+                                if (inlinedExpr != null)
+                                {
+                                    var oldIndex = context.CurrentInlinedLambdaInvokeIndex;
+                                    context.CurrentInlinedLambdaInvokeIndex = context.AddInlinedLambdaInvoke(invokeExpr);
+                                    context.HasComplexExpression = false;
+                                    if ((r = TryCollectInfo(ref context, inlinedExpr, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
+                                        return r;
+                                    context.HasComplexExpression = true;
+                                    context.CurrentInlinedLambdaInvokeIndex = oldIndex;
                                     return r;
-
-                                context.HasComplexExpression = true;
-                                context.CurrentInlinedLambdaInvokeIndex = oldIndex;
-                                return r;
+                                }
                             }
 
                             // No inlining, collect the normal way
@@ -1766,6 +1767,15 @@ namespace FastExpressionCompiler
         internal sealed class ExpressionReductionCache
         {
             internal SmallMap4<Expression, Expression, RefEq<Expression>> Reductions;
+        }
+
+        private static bool HasByRefParameters(LambdaExpression lambda)
+        {
+            var parameters = lambda.GetParamExprs();
+            for (var i = 0; i < parameters.GetParamCount(); ++i)
+                if (parameters.GetParameter(i).IsByRef)
+                    return true;
+            return false;
         }
 
         // Collection and emission must use the same reduced tree: Reduce may create fresh locals,
@@ -6146,37 +6156,39 @@ namespace FastExpressionCompiler
                     invokedExpr = quote.Operand;
                 if ((context.CompilerFlags & CompilerFlags.NoInvocationLambdaInlining) == 0 && invokedExpr is LambdaExpression)
                 {
-                    parent |= ParentFlags.InlinedLambdaInvoke;
-
                     ref var inlinedExpr = ref context.InlinedLambdaInvocation.Map.AddOrGetValueRef(expr, out var found);
                     Debug.Assert(found, "The invocation expression should be collected in TryCollectInfo but it is not");
                     if (!found)
                         return false;
 
-                    if (!TryEmit(inlinedExpr, il, ref context, parent))
-                        return false;
-
-                    if ((parent & ParentFlags.IgnoreResult) == 0 && inlinedExpr.Type != typeof(void))
+                    if (inlinedExpr != null)
                     {
-                        // find if the variable with the result is exist in the label infos
-                        ref var label = ref context.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(expr, out var labelFound);
-                        if (labelFound)
+                        parent |= ParentFlags.InlinedLambdaInvoke;
+                        if (!TryEmit(inlinedExpr, il, ref context, parent))
+                            return false;
+
+                        if ((parent & ParentFlags.IgnoreResult) == 0 && inlinedExpr.Type != typeof(void))
                         {
-                            var returnVariableIndexPlusOne = label.ReturnVariableIndexPlusOneAndIsDefined >>> 1;
-                            if (returnVariableIndexPlusOne != 0)
+                            // find if the variable with the result is exist in the label infos
+                            ref var label = ref context.LambdaInvokeStackLabels.GetLabelOrInvokeIndexByTarget(expr, out var labelFound);
+                            if (labelFound)
                             {
-                                il.DmarkLabel(label.ReturnLabel);
-                                EmitLoadLocalVariable(il, returnVariableIndexPlusOne - 1);
+                                var returnVariableIndexPlusOne = label.ReturnVariableIndexPlusOneAndIsDefined >>> 1;
+                                if (returnVariableIndexPlusOne != 0)
+                                {
+                                    il.DmarkLabel(label.ReturnLabel);
+                                    EmitLoadLocalVariable(il, returnVariableIndexPlusOne - 1);
+                                }
                             }
                         }
+                        context.LastEmitIsAddress = expr.Type.IsByRef;
+                        if (byRefIndex != -1 && (parent & ParentFlags.IgnoreResult) == 0 && !expr.Type.IsByRef)
+                        {
+                            EmitStoreAndLoadLocalVariableAddress(il, expr.Type);
+                            context.LastEmitIsAddress = true;
+                        }
+                        return true;
                     }
-                    context.LastEmitIsAddress = expr.Type.IsByRef;
-                    if (byRefIndex != -1 && (parent & ParentFlags.IgnoreResult) == 0 && !expr.Type.IsByRef)
-                    {
-                        EmitStoreAndLoadLocalVariableAddress(il, expr.Type);
-                        context.LastEmitIsAddress = true;
-                    }
-                    return true;
                 }
 
                 if (!TryEmit(invokedExpr, il, ref context, parent & ~ParentFlags.IgnoreResult)) // removing the IgnoreResult temporary because we need "full" lambda emit and we will re-apply the IgnoreResult later at the end of the method
