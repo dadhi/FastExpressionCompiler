@@ -70,6 +70,7 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.ReadonlyValueReceiverRegressionTests());
                 t.Run(new LightExpression.UnitTests.BlockVariableBindingRegressionTests());
                 t.Run(new LightExpression.UnitTests.ComparisonReductionRegressionTests());
+                t.Run(new LightExpression.UnitTests.ArithmeticExceptionOperandsTests());
                 t.Run(new LightExpression.UnitTests.IndexerReadExceptionRegressionTests());
                 t.Run(new LightExpression.UnitTests.MemberBindingExceptionTests());
                 t.Run(new LightExpression.UnitTests.ArrayBoundConversionRegressionTests());
@@ -145,6 +146,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new ReadonlyValueReceiverRegressionTests());
             fecTests.Run(new BlockVariableBindingRegressionTests());
             fecTests.Run(new ComparisonReductionRegressionTests());
+            fecTests.Run(new ArithmeticExceptionOperandsTests());
             fecTests.Run(new IndexerReadExceptionRegressionTests());
             fecTests.Run(new MemberBindingExceptionTests());
             fecTests.Run(new ArrayBoundConversionRegressionTests());
