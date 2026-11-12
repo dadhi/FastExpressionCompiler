@@ -2265,6 +2265,11 @@ namespace FastExpressionCompiler
         public static class EmittingVisitor
         {
             // Arguments must not inherit the outer receiver or return context.
+            // Receivers must be values even when their invocation result is used by address.
+            private const ParentFlags InvocationReceiverFlagsToClear = ParentFlags.IgnoreResult |
+                ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef | ParentFlags.InstanceAccess |
+                ParentFlags.ReturnByRef | ParentFlags.DupIt;
+
             private const ParentFlags CallArgumentFlagsToClear = ParentFlags.IgnoreResult | ParentFlags.InstanceAccess |
                 ParentFlags.MemberAccess | ParentFlags.LambdaCall | ParentFlags.ReturnByRef;
 
@@ -6211,8 +6216,7 @@ namespace FastExpressionCompiler
                 }
 
                 // The invocation receiver is a value, including incoming ref delegates.
-                var receiverFlags = (parent & ~(ParentFlags.IgnoreResult | ParentFlags.AssignmentLeftValue |
-                    ParentFlags.AssignmentByRef | ParentFlags.InstanceAccess | ParentFlags.ReturnByRef | ParentFlags.DupIt)) |
+                var receiverFlags = (parent & ~InvocationReceiverFlagsToClear) |
                     ParentFlags.Call | ParentFlags.AssignmentRightValue;
                 if (!TryEmit(invokedExpr, il, ref context, receiverFlags)) // removing the IgnoreResult temporary because we need "full" lambda emit and we will re-apply the IgnoreResult later at the end of the method
                     return false;
