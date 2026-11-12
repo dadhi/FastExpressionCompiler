@@ -4877,7 +4877,7 @@ namespace FastExpressionCompiler
                     // the getter returns a copy, so change the local copy and write it back by the setter
                     var vp = (PropertyInfo)member;
                     if (vp.GetMethod == null || vp.SetMethod == null)
-                        return false;
+                        throw new InvalidOperationException("Cannot initialize members of a value type through a property without a setter.");
                     if (!isStatic)
                         il.Demit(OpCodes.Dup);
                     if (!EmitMethodCallOrVirtualCall(il, vp.GetMethod))
