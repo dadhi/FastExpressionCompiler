@@ -55,6 +55,7 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.LiftedUserDefinedLogicalRegressionTests());
                 t.Run(new LightExpression.UnitTests.UserDefinedLogicalRegressionTests());
                 t.Run(new LightExpression.UnitTests.RuntimeSwitchExceptionRegressionTests());
+                t.Run(new LightExpression.UnitTests.NestedBindingSpillsTests());
                 t.Run(new LightExpression.UnitTests.IgnoredMemberInitializerTests());
                 t.Run(new LightExpression.UnitTests.VoidLabelValueRegressionTests());
                 t.Run(new LightExpression.UnitTests.ReferenceInstanceCallRegressionTests());
@@ -124,6 +125,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new LiftedUserDefinedLogicalRegressionTests());
             fecTests.Run(new UserDefinedLogicalRegressionTests());
             fecTests.Run(new RuntimeSwitchExceptionRegressionTests());
+            fecTests.Run(new NestedBindingSpillsTests());
             fecTests.Run(new IgnoredMemberInitializerTests());
             fecTests.Run(new VoidLabelValueRegressionTests());
             fecTests.Run(new ReferenceInstanceCallRegressionTests());
