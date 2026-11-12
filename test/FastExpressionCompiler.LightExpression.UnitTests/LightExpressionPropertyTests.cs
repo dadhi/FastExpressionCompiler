@@ -26,13 +26,13 @@ public partial class LightExpressionTests
                 print: testCase => $"{testCase.Seed}: {testCase.Spec}");
     }
 
-    /// <summary>Fuzzes presence/absence of every optional child (switch default/cases, try finally/catch, catch variable/filter,
+    /// <summary>Checks every presence/absence combination of the optional children (switch default/cases, try finally/catch, catch variable/filter,
     /// loop break/continue, goto value, label default): the bits decide what is present; the flat tree must report exactly that.</summary>
     public void Can_fuzz_optional_children_presence_in_flat_expression()
     {
-        Gen.Int[0, (1 << 10) - 1].Sample(
-            bits => CheckOptionalChildren(bits),
-            iter: 300, threads: 1, seed: "0N0XIzNsQ0O2", print: bits => System.Convert.ToString(bits, 2).PadLeft(10, '0'));
+        // The input space is finite: exercise every optional-child combination.
+        for (var bits = 0; bits < 1 << 10; ++bits)
+            Ensure(CheckOptionalChildren(bits), $"optional-child mask {bits}");
     }
 
     private static bool CheckOptionalChildren(int bits)
@@ -59,8 +59,8 @@ public partial class LightExpressionTests
 
         var cases = new SysSwitchCase[swCases];
         for (var k = 0; k < cases.Length; ++k)
-            cases[k] = SysExpr.SwitchCase(SysExpr.Assign(r, Int(10 + k)), Int(k));
-        var @switch = SysExpr.Switch(typeof(void), p, swDefault ? SysExpr.Assign(r, Int(7)) : null, null, cases);
+            cases[k] = SysExpr.SwitchCase(SysExpr.Block(SysExpr.Assign(r, Int(10 + k)), SysExpr.Empty()), Int(k));
+        var @switch = SysExpr.Switch(typeof(void), p, swDefault ? SysExpr.Block(SysExpr.Assign(r, Int(7)), SysExpr.Empty()) : null, null, cases);
 
         var tryBody = SysExpr.Condition(SysExpr.LessThan(p, Int(0)), SysExpr.Throw(SysExpr.New(typeof(Exception)), typeof(int)), p);
         var filter = catchFilter ? SysExpr.Equal(Int(1), Int(1)) : null;
