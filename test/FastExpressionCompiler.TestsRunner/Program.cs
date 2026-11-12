@@ -99,6 +99,7 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.UnitTests.CheckedFloatingArithmeticRegressionTests());
                 lt.Run(new LightExpression.UnitTests.CollectionInitializerExceptionTests());
                 lt.Run(new LightExpression.UnitTests.OperandValueContextRegressionTests());
+                lt.Run(new LightExpression.UnitTests.ByrefLambdaInliningTests());
                 lt.Run(new LightExpression.UnitTests.CompoundIndexExceptionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ExcessiveArityRegressionTests());
 #if NET8_0_OR_GREATER
@@ -165,6 +166,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new CheckedFloatingArithmeticRegressionTests());
             st.Run(new CollectionInitializerExceptionTests());
             st.Run(new OperandValueContextRegressionTests());
+            st.Run(new ByrefLambdaInliningTests());
             st.Run(new CompoundIndexExceptionRegressionTests());
             st.Run(new ExcessiveArityRegressionTests());
             st.Run(new NestedStructFieldAddressRegressionTests());
