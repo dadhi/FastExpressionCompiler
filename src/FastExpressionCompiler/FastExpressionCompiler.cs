@@ -5039,6 +5039,8 @@ namespace FastExpressionCompiler
                                 if (objExpr != null &&
                                     !TryEmit(objExpr, il, ref context, leftArLeastFlags | ParentFlags.InstanceAccess))
                                     return false;
+                                if (objExpr != null && objExpr.Type.IsValueType && !context.LastEmitIsAddress && !(objExpr is PE pe && pe.IsByRef))
+                                    EmitStoreAndLoadLocalVariableAddress(il, objExpr.Type);
                             }
                             else
                             {
@@ -5049,6 +5051,8 @@ namespace FastExpressionCompiler
                                     var objFlags = isIndexerAMethodCall ? ParentFlags.InstanceCall : ParentFlags.InstanceAccess | ParentFlags.IndexAccess;
                                     if (!TryEmit(objExpr, il, ref context, objFlags | ParentFlags.AssignmentLeftValue))
                                         return false;
+                                    if (objExpr.Type.IsValueType && !context.LastEmitIsAddress && !(objExpr is PE pe && pe.IsByRef))
+                                        EmitStoreAndLoadLocalVariableAddress(il, objExpr.Type);
                                 }
                                 for (var i = 0; i < indexArgCount; i++)
                                     if (!TryEmit(orLeftIndexExpr.GetArgument(i), il, ref context, baseFlags, -1))
@@ -5070,13 +5074,15 @@ namespace FastExpressionCompiler
 
                             if (leftMemberExpr != null)
                             {
-                                if (!EmitMemberSet(il, leftMemberExpr.Member))
+                                if (!(objExpr?.Type.IsValueType == true && leftMemberExpr.Member is PropertyInfo property
+                                    ? property.SetMethod != null && EmitInstanceMethodCall(il, property.SetMethod, objExpr?.Type)
+                                    : EmitMemberSet(il, leftMemberExpr.Member)))
                                     return false;
                             }
                             else // if (leftIndexExpr != null)
                             {
                                 var ok = orLeftIndexExpr.Indexer != null
-                                    ? EmitMethodCallOrVirtualCallCheckForNull(il, orLeftIndexExpr.Indexer.SetMethod)
+                                    ? (objExpr?.Type.IsValueType == true ? orLeftIndexExpr.Indexer.SetMethod != null && EmitInstanceMethodCall(il, orLeftIndexExpr.Indexer.SetMethod, objExpr.Type) : EmitMethodCallOrVirtualCallCheckForNull(il, orLeftIndexExpr.Indexer.SetMethod))
                                     : IsVectorArray(objExpr.Type)
                                         ? TryEmitArrayIndexSet(il, orLeftIndexExpr.Type) // one-dimensional array
                                         : EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod("Set")); // multi-dimensional array
@@ -5176,7 +5182,7 @@ namespace FastExpressionCompiler
                             var ok = !isIndexerAMethodCall
                                 ? TryEmitArrayIndexGet(il, orLeftIndexExpr.Type, ref context, baseFlags) // one-dimensional array
                                 : orLeftIndexExpr.Indexer != null
-                                    ? EmitMethodCallOrVirtualCallCheckForNull(il, orLeftIndexExpr.Indexer.GetMethod)
+                                    ? (objExpr?.Type.IsValueType == true ? orLeftIndexExpr.Indexer.GetMethod != null && EmitInstanceMethodCall(il, orLeftIndexExpr.Indexer.GetMethod, objExpr.Type) : EmitMethodCallOrVirtualCallCheckForNull(il, orLeftIndexExpr.Indexer.GetMethod))
                                     : EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod("Get")); // multi-dimensional array
                             if (!ok)
                                 return false;
@@ -5293,13 +5299,15 @@ namespace FastExpressionCompiler
                             EmitStoreIndirectlyByRef(il, leftType);
                         else if (leftMemberExpr != null)
                         {
-                            if (!EmitMemberSet(il, leftMemberExpr.Member))
+                            if (!(objExpr?.Type.IsValueType == true && leftMemberExpr.Member is PropertyInfo property
+                                    ? property.SetMethod != null && EmitInstanceMethodCall(il, property.SetMethod, objExpr?.Type)
+                                    : EmitMemberSet(il, leftMemberExpr.Member)))
                                 return false;
                         }
                         else // if (leftIndexExpr != null)
                         {
                             var ok = orLeftIndexExpr.Indexer != null
-                                ? EmitMethodCallOrVirtualCallCheckForNull(il, orLeftIndexExpr.Indexer.SetMethod)
+                                ? (objExpr?.Type.IsValueType == true ? orLeftIndexExpr.Indexer.SetMethod != null && EmitInstanceMethodCall(il, orLeftIndexExpr.Indexer.SetMethod, objExpr.Type) : EmitMethodCallOrVirtualCallCheckForNull(il, orLeftIndexExpr.Indexer.SetMethod))
                                 : IsVectorArray(objExpr.Type)
                                     ? TryEmitArrayIndexSet(il, orLeftIndexExpr.Type) // one-dimensional array
                                     : EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod("Set")); // multi-dimensional array
