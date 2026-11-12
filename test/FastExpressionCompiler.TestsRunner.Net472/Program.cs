@@ -49,6 +49,7 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.ArrayBoundsExceptionRegressionTests());
                 t.Run(new LightExpression.UnitTests.BackwardTypedLabelTests());
                 t.Run(new LightExpression.UnitTests.TryResultValueRegressionTests());
+                t.Run(new LightExpression.UnitTests.FrameworkFilterRejectionTests());
                 t.Run(new LightExpression.UnitTests.NonVectorArrayRegressionTests());
                 t.Run(new LightExpression.UnitTests.UnboxStorageRegressionTests());
                 t.Run(new LightExpression.UnitTests.ArrayInitializerExceptionRegressionTests());
@@ -120,6 +121,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new ArrayBoundsExceptionRegressionTests());
             fecTests.Run(new BackwardTypedLabelTests());
             fecTests.Run(new TryResultValueRegressionTests());
+            fecTests.Run(new FrameworkFilterRejectionTests());
             fecTests.Run(new NonVectorArrayRegressionTests());
             fecTests.Run(new RefConversionStorageTests());
             fecTests.Run(new UnboxStorageRegressionTests());

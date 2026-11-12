@@ -3285,6 +3285,15 @@ namespace FastExpressionCompiler
                 for (var i = 0; i < catchBlocks.Count; i++)
                 {
                     var catchBlock = catchBlocks[i];
+#if NETFRAMEWORK
+                    // Framework DynamicILGenerator cannot emit exception filters.
+                    if (catchBlock.Filter != null)
+                    {
+                        if ((context.CompilerFlags & CompilerFlags.ThrowOnNotSupportedExpression) != 0)
+                            throw new NotSupportedExpressionException(Result.NotSupported_ExceptionCatchFilter);
+                        return false;
+                    }
+#endif
                     var exVarExpr = catchBlock.Variable;
                     var exVarIndex = -1;
                     if (exVarExpr != null)
