@@ -4878,6 +4878,7 @@ namespace FastExpressionCompiler
                 // load the member value, or the address for the value type, as the owner of the nested bindings
                 var memberType = member is FieldInfo f ? f.FieldType : ((PropertyInfo)member).PropertyType;
                 var copyVar = -1;
+                var copyOwner = -1;
                 if (member is FieldInfo field)
                 {
                     // Readonly value fields are initialized through a defensive copy.
@@ -4893,7 +4894,16 @@ namespace FastExpressionCompiler
                     if (vp.GetMethod == null || vp.SetMethod == null)
                         return false;
                     if (!isStatic)
+                    {
                         il.Demit(OpCodes.Dup);
+                        if (context.TryExpressionCount != 0)
+                        {
+                            var ownerType = member.DeclaringType;
+                            copyOwner = EmitStoreLocalVariable(il, ownerType.IsValueType ? ownerType.MakeByRefType() : ownerType);
+                            il.Demit(OpCodes.Pop);
+                            EmitLoadLocalVariable(il, copyOwner);
+                        }
+                    }
                     if (!EmitMethodCallOrVirtualCall(il, vp.GetMethod))
                         return false;
                     copyVar = il.GetNextLocalVarIndex(memberType);
@@ -4903,12 +4913,15 @@ namespace FastExpressionCompiler
                 else if (((PropertyInfo)member).GetMethod == null || !EmitMethodCallOrVirtualCall(il, ((PropertyInfo)member).GetMethod))
                     return false;
 
+                var receiverType = memberType.IsValueType ? memberType.MakeByRefType() : memberType;
+                var receiver = context.TryExpressionCount != 0 ? EmitStoreLocalVariable(il, receiverType) : -1;
                 if (binding.BindingType == MemberBindingType.MemberBinding)
                 {
                     var subs = ((MemberMemberBinding)binding).Bindings;
                     for (var i = 0; i < subs.Count; ++i)
                     {
-                        il.Demit(OpCodes.Dup);
+                        if (receiver == -1) il.Demit(OpCodes.Dup);
+                        else EmitLoadLocalVariable(il, receiver);
                         if (!EmitBinding(subs[i], il, ref context, parent))
                             return false;
                     }
@@ -4918,14 +4931,16 @@ namespace FastExpressionCompiler
                     var inits = ((MemberListBinding)binding).Initializers;
                     for (var i = 0; i < inits.Count; ++i)
                     {
-                        il.Demit(OpCodes.Dup);
+                        if (receiver == -1) il.Demit(OpCodes.Dup);
+                        else EmitLoadLocalVariable(il, receiver);
                         if (!EmitElementInit(inits[i], memberType, il, ref context, parent))
                             return false;
                     }
                 }
-                il.Demit(OpCodes.Pop);
+                if (receiver == -1) il.Demit(OpCodes.Pop);
                 if (copyVar == -1)
                     return true;
+                if (copyOwner != -1) EmitLoadLocalVariable(il, copyOwner);
                 EmitLoadLocalVariable(il, copyVar);
                 return EmitMethodCallOrVirtualCall(il, ((PropertyInfo)member).SetMethod);
             }
