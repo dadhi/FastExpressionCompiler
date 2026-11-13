@@ -2735,6 +2735,8 @@ namespace FastExpressionCompiler
                                                             il.Demit(OpCodes.Ret);
                                                     }
                                                 }
+                                                if (blockVarCount != 0)
+                                                    context.PopBlock();
                                                 return true;
                                             }
                                         }
