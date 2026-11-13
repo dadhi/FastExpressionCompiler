@@ -1197,7 +1197,8 @@ namespace FastExpressionCompiler
         {
             None = 0,
             Catch = 1,
-            FinallyOrFault = 2
+            FinallyOrFault = 2,
+            Lambda = 3
         }
 
         /// <summary>The scope index (-1 for the root) with the `Enterable` flag: can the jump from the outside get into the thing,
@@ -1512,7 +1513,7 @@ namespace FastExpressionCompiler
                                     var oldIndex = context.CurrentInlinedLambdaInvokeIndex;
                                     context.CurrentInlinedLambdaInvokeIndex = context.AddInlinedLambdaInvoke(invokeExpr);
                                     context.HasComplexExpression = false;
-                                    if ((r = TryCollectInfo(ref context, inlinedExpr, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
+                                    if ((r = TryCollectInlinedLambdaInfo(ref context, inlinedExpr, lambdaExpr.Body, invokeArgCount == 0, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                                         return r;
                                     context.HasComplexExpression = true;
                                     context.CurrentInlinedLambdaInvokeIndex = oldIndex;
@@ -1820,6 +1821,35 @@ namespace FastExpressionCompiler
                 context.ReducedExpressions = cache = new ExpressionReductionCache();
             cache.Reductions.Map.AddOrGetValueRef(expression, out _) = reduced;
             return reduced;
+        }
+
+        // Caller arguments retain the caller's catch scope. Only the callee body starts
+        // a new lambda scope, even when emitted inline into the same physical method.
+        private static Result TryCollectInlinedLambdaInfo(ref CompilerContext context, Expression inlined,
+            Expression body, bool bodyOnly, NestedLambdaInfo nestedLambda,
+            ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
+        {
+            if (bodyOnly || ReferenceEquals(inlined, body))
+            {
+                var lambdaScope = (short)context.Scopes.Add(new LabelScope
+                {
+                    Parent = new ScopeIdx(scopeIdx, false), ExceptionRegion = ExceptionRegion.Lambda
+                });
+                return TryCollectInfo(ref context, inlined, nestedLambda, ref rootNestedLambdas, lambdaScope);
+            }
+            var wrapper = (BlockExpression)inlined;
+            var variables = wrapper.Variables;
+            context.PushBlockWithVars(variables);
+            var statements = wrapper.Expressions;
+            var result = Result.OK;
+            for (var i = 0; i < statements.Count - 1; ++i)
+                if ((result = TryCollectInfo(ref context, statements[i], nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
+                    break;
+            if (result == Result.OK)
+                result = TryCollectInlinedLambdaInfo(ref context, statements[statements.Count - 1], body,
+                    false, nestedLambda, ref rootNestedLambdas, scopeIdx);
+            context.PopBlock();
+            return result;
         }
 
         private static Expression CreateInlinedLambdaInvocationExpression(Args invokeArgs, LambdaExpression lambdaExpr)
