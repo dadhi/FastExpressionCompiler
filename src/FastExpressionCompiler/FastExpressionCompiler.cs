@@ -687,6 +687,8 @@ namespace FastExpressionCompiler
             /// Constant expressions to find an index (by reference) of constant expression from compiled expression.
             public SmallList<object> Constants;
 
+            internal CaptureFreeQuoteCache Quotes;
+
             /// Constant usage count and variable index.
             /// It is a separate collection from the Constants because we directly convert later into the closure array
             public SmallList<short, Stack2<short>, NoArrayPool<short>> ConstantUsageThenVarIndex;
@@ -911,6 +913,57 @@ namespace FastExpressionCompiler
                 label.ReturnVariableIndexPlusOneAndIsDefined |= 1;
             }
             return label.Label;
+        }
+
+        internal sealed class CaptureFreeQuoteCache
+        {
+            internal SmallMap4<Expression, System.Linq.Expressions.Expression, RefEq<Expression>> Expressions;
+#if LIGHT_EXPRESSION
+            internal SmallList<LightAndSysExpr> Converted;
+#endif
+        }
+
+        // A quote is executable data. Its locally bound variables must not be confused with
+        // variables captured from the surrounding compiled lambda.
+        private sealed class QuoteVariableScope : System.Linq.Expressions.ExpressionVisitor
+        {
+            private readonly System.Collections.Generic.List<System.Linq.Expressions.ParameterExpression> _bound = new();
+            public bool HasFreeVariables;
+            protected override System.Linq.Expressions.Expression VisitExtension(System.Linq.Expressions.Expression node)
+            {
+                // An opaque extension may refer to variables that cannot be inspected safely.
+                HasFreeVariables = true;
+                return node;
+            }
+            protected override System.Linq.Expressions.Expression VisitParameter(System.Linq.Expressions.ParameterExpression node)
+            {
+                if (!_bound.Contains(node)) HasFreeVariables = true;
+                return node;
+            }
+            protected override System.Linq.Expressions.Expression VisitLambda<T>(System.Linq.Expressions.Expression<T> node)
+            {
+                var count = _bound.Count;
+                _bound.AddRange(node.Parameters);
+                Visit(node.Body);
+                _bound.RemoveRange(count, _bound.Count - count);
+                return node;
+            }
+            protected override System.Linq.Expressions.Expression VisitBlock(System.Linq.Expressions.BlockExpression node)
+            {
+                var count = _bound.Count;
+                _bound.AddRange(node.Variables);
+                foreach (var expression in node.Expressions) Visit(expression);
+                _bound.RemoveRange(count, _bound.Count - count);
+                return node;
+            }
+            protected override System.Linq.Expressions.CatchBlock VisitCatchBlock(System.Linq.Expressions.CatchBlock node)
+            {
+                if (node.Variable != null) _bound.Add(node.Variable);
+                Visit(node.Filter);
+                Visit(node.Body);
+                if (node.Variable != null) _bound.RemoveAt(_bound.Count - 1);
+                return node;
+            }
         }
 
         private sealed class EmptyRuntimeVariables : System.Runtime.CompilerServices.IRuntimeVariables
@@ -1473,6 +1526,7 @@ namespace FastExpressionCompiler
                         }
 
                         var nestedLambdaContext = new CompilerContext(ClosureStatus.ToBeCollected, nestedParamExprs, context.CompilerFlags);
+                        nestedLambdaContext.Quotes = context.Quotes;
                         var newNestedLambda = new NestedLambdaInfo(nestedLambdaExpr);
 
                         if (nestedLambda != null)
@@ -1482,6 +1536,8 @@ namespace FastExpressionCompiler
 
                         if ((r = TryCollectInfo(ref nestedLambdaContext, nestedLambdaExpr.Body, newNestedLambda, ref rootNestedLambdas, 0, true)) != Result.OK)
                             return r;
+
+                        context.Quotes = nestedLambdaContext.Quotes;
 
                         if (newNestedLambda.NonPassedParameters.Count != 0 &&
                             !PropagateNonPassedParamsToOuterLambda(ref context,
@@ -1724,8 +1780,26 @@ namespace FastExpressionCompiler
                         enterable = false;
                         continue;
 
-                    case ExpressionType.Quote:            // todo: @feature - is not supported yet
-                        return Result.NotSupported_Quote;
+                    case ExpressionType.Quote:
+                        var operand = ((UnaryExpression)expr).Operand;
+                        context.Quotes ??= new CaptureFreeQuoteCache();
+                        ref var quoteEntry = ref context.Quotes.Expressions.Map.TryGetValueRef(operand, out var foundQuote);
+                        var quoted = foundQuote ? quoteEntry : null;
+                        if (!foundQuote)
+                        {
+#if LIGHT_EXPRESSION
+                            quoted = operand.ToExpression(ref context.Quotes.Converted);
+#else
+                            quoted = operand;
+#endif
+                            var variables = new QuoteVariableScope();
+                            variables.Visit(quoted);
+                            if (variables.HasFreeVariables)
+                                return Result.NotSupported_Quote;
+                            context.Quotes.Expressions.Map.AddOrGetValueRef(operand, out _) = quoted;
+                        }
+                        context.AddConstantOrIncrementUsageCount(quoted);
+                        return Result.OK;
                     case ExpressionType.Dynamic:          // todo: @feature - is not supported yet
                         return Result.NotSupported_Dynamic;
                     case ExpressionType.RuntimeVariables:
@@ -2810,11 +2884,16 @@ namespace FastExpressionCompiler
                         case ExpressionType.DebugInfo: // todo: @feature - is not supported yet
                             return true;               // todo: @unclear - just ignoring the info for now
 
+                        case ExpressionType.Quote:
+                            if (context.Quotes == null) return false;
+                            ref var quoteValue = ref context.Quotes.Expressions.Map.TryGetValueRef(((UnaryExpression)expr).Operand, out var foundQuote);
+                            return foundQuote && TryEmitConstant(true, exprType, quoteValue.GetType(), quoteValue, il, ref context) &&
+                                il.EmitPopIfIgnoreResult(parent);
+
                         case ExpressionType.RuntimeVariables:
                             return ((RuntimeVariablesExpression)expr).Variables.Count == 0 &&
                                 (parent.IgnoresResult() || TryEmitNotNullConstant(true, EmptyRuntimeVariables.Instance, il, ref context));
 
-                        case ExpressionType.Quote:     // todo: @feature - is not supported yet
                         default:
 #if !LIGHT_EXPRESSION
                             var customReduced = TryReduceNode(expr, ref context);
