@@ -4786,7 +4786,7 @@ namespace FastExpressionCompiler
                     else
                         il.Demit(OpCodes.Dup); // duplicate member owner on stack
 
-                    if (!EmitBinding(binding, il, ref context, valueFlags))
+                    if (!EmitBinding(binding, il, ref context, valueFlags, ownerKnownNotNull: true))
                         return false;
                 }
                 if (valueVarIndex != -1)
@@ -4795,11 +4795,17 @@ namespace FastExpressionCompiler
                 return il.EmitPopIfIgnoreResult(parent);
             }
 
+            // Binding owners use the accessor's declaring type; ordinary calls retain their actual receiver type.
             [MethodImpl((MethodImplOptions)256)]
-            private static bool TryEmitPropertySet(ILGenerator il, PropertyInfo prop)
+            private static bool EmitMemberAccessor(ILGenerator il, MethodInfo accessor, bool ownerKnownNotNull) =>
+                accessor != null && (ownerKnownNotNull
+                    ? EmitMethodCallOrVirtualCall(il, accessor)
+                    : EmitInstanceMethodCall(il, accessor, accessor.IsStatic ? null : accessor.DeclaringType));
+
+            [MethodImpl((MethodImplOptions)256)]
+            private static bool TryEmitPropertySet(ILGenerator il, PropertyInfo prop, bool ownerKnownNotNull = true)
             {
-                var method = prop.SetMethod;
-                return method != null && EmitMethodCallOrVirtualCall(il, method);
+                return EmitMemberAccessor(il, prop.SetMethod, ownerKnownNotNull);
             }
 
             [MethodImpl((MethodImplOptions)256)]
@@ -4810,8 +4816,8 @@ namespace FastExpressionCompiler
             }
 
             [MethodImpl((MethodImplOptions)256)]
-            private static bool EmitMemberSet(ILGenerator il, MemberInfo member) =>
-                member is PropertyInfo pr ? TryEmitPropertySet(il, pr) :
+            private static bool EmitMemberSet(ILGenerator il, MemberInfo member, bool ownerKnownNotNull = true) =>
+                member is PropertyInfo pr ? TryEmitPropertySet(il, pr, ownerKnownNotNull) :
                 member is FieldInfo field ? EmitFieldSet(il, field) :
                 false;
 
@@ -4907,7 +4913,7 @@ namespace FastExpressionCompiler
             }
 
             // The owner (the reference or the address of the value type) is on the stack and is consumed
-            private static bool EmitBinding(MemberBinding binding, ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            private static bool EmitBinding(MemberBinding binding, ILGenerator il, ref CompilerContext context, ParentFlags parent, bool ownerKnownNotNull = false)
             {
                 var member = binding.Member;
                 var isStatic = member is FieldInfo sf ? sf.IsStatic : (((PropertyInfo)member).GetMethod ?? ((PropertyInfo)member).SetMethod).IsStatic;
@@ -4918,12 +4924,12 @@ namespace FastExpressionCompiler
                 {
                     var value = ((MemberAssignment)binding).Expression;
                     if (isStatic || !context.HasComplexArguments(value))
-                        return TryEmit(value, il, ref context, parent) && EmitMemberSet(il, member);
+                        return TryEmit(value, il, ref context, parent) && EmitMemberSet(il, member, ownerKnownNotNull);
                     var ownerType = member.DeclaringType;
                     var owner = EmitStoreLocalVariable(il, ownerType.IsValueType ? ownerType.MakeByRefType() : ownerType);
                     if (!TryEmit(value, il, ref context, parent)) return false;
                     EmitLoadLeftAndRight(il, owner, value.Type);
-                    return EmitMemberSet(il, member);
+                    return EmitMemberSet(il, member, ownerKnownNotNull);
                 }
 
                 // load the member value, or the address for the value type, as the owner of the nested bindings
@@ -4955,13 +4961,13 @@ namespace FastExpressionCompiler
                             EmitLoadLocalVariable(il, copyOwner);
                         }
                     }
-                    if (!EmitMethodCallOrVirtualCall(il, vp.GetMethod))
+                    if (!EmitMemberAccessor(il, vp.GetMethod, ownerKnownNotNull))
                         return false;
                     copyVar = il.GetNextLocalVarIndex(memberType);
                     EmitStoreLocalVariable(il, copyVar);
                     EmitLoadLocalVariableAddress(il, copyVar);
                 }
-                else if (((PropertyInfo)member).GetMethod == null || !EmitMethodCallOrVirtualCall(il, ((PropertyInfo)member).GetMethod))
+                else if (((PropertyInfo)member).GetMethod == null || !EmitMemberAccessor(il, ((PropertyInfo)member).GetMethod, ownerKnownNotNull))
                     return false;
 
                 var receiverType = memberType.IsValueType ? memberType.MakeByRefType() : memberType;
