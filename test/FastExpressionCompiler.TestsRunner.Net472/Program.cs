@@ -41,6 +41,7 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.RuntimeSwitchCaseRegressionTests());
                 t.Run(new LightExpression.UnitTests.RefDelegateReceiversTests());
                 t.Run(new LightExpression.UnitTests.StaticFieldAddressRegressionTests());
+                t.Run(new LightExpression.UnitTests.UnaryParameterAssignmentTests());
                 t.Run(new LightExpression.UnitTests.ReferenceUnboxingRegressionTests());
                 t.Run(new LightExpression.UnitTests.ReferenceComparisonExceptionTests());
                 t.Run(new LightExpression.UnitTests.DelegateExceptionArgumentsTests());
@@ -131,6 +132,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new RuntimeSwitchCaseRegressionTests());
             fecTests.Run(new RefDelegateReceiversTests());
             fecTests.Run(new StaticFieldAddressRegressionTests());
+            fecTests.Run(new UnaryParameterAssignmentTests());
             fecTests.Run(new ReferenceUnboxingRegressionTests());
             fecTests.Run(new ReferenceComparisonExceptionTests());
             fecTests.Run(new DelegateExceptionArgumentsTests());

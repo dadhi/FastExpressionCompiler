@@ -2594,7 +2594,7 @@ namespace FastExpressionCompiler
                                 var incExpr = (UnaryExpression)expr;
                                 var incMethod = incExpr.Method;
                                 return incMethod != null
-                                    ? TryEmitOpAssignWithMethod(incExpr.Operand, null, incMethod, ExpressionType.Add,
+                                    ? TryEmitUnaryAssignWithMethod(incExpr.Operand, null, incMethod, ExpressionType.Add,
                                         nodeType == ExpressionType.PostIncrementAssign, il, ref context, parent)
                                     : TryEmitArithmeticAndOrAssign(incExpr.Operand, null, exprType, ExpressionType.Add,
                                         nodeType == ExpressionType.PostIncrementAssign, il, ref context, parent);
@@ -2606,7 +2606,7 @@ namespace FastExpressionCompiler
                                 var decExpr = (UnaryExpression)expr;
                                 var decMethod = decExpr.Method;
                                 return decMethod != null
-                                    ? TryEmitOpAssignWithMethod(decExpr.Operand, null, decMethod, ExpressionType.Subtract,
+                                    ? TryEmitUnaryAssignWithMethod(decExpr.Operand, null, decMethod, ExpressionType.Subtract,
                                         nodeType == ExpressionType.PostDecrementAssign, il, ref context, parent)
                                     : TryEmitArithmeticAndOrAssign(decExpr.Operand, null, exprType, ExpressionType.Subtract,
                                         nodeType == ExpressionType.PostDecrementAssign, il, ref context, parent);
@@ -5415,6 +5415,50 @@ namespace FastExpressionCompiler
                 if (resultVar != -1)
                     EmitLoadLocalVariable(il, resultVar);
                 return true;
+            }
+
+            private static bool TryEmitUnaryAssignWithMethod(Expression left, Expression right, MethodInfo method,
+                ExpressionType arithmeticType, bool isPost, ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            {
+                // Captured and ref storage retains the existing lowering/writeback path.
+                // An intrinsic operand must retain its collection and emission callbacks.
+                if (left is ParameterExpression parameter && !parameter.IsByRef &&
+                    context.NestedLambdas.Count == 0 && context.NonPassedParameters.Count == 0 &&
+#if LIGHT_EXPRESSION
+                    !parameter.IsIntrinsic &&
+#endif
+                    (!parameter.Type.IsNullable() || method.GetParameters()[0].ParameterType == parameter.Type))
+                {
+                    var local = context.GetDefinedLocalVarOrDefault(parameter);
+                    var argument = context.ParamExprs.GetParamCount() - 1;
+                    if (local == -1)
+                        while (argument != -1 && !ReferenceEquals(context.ParamExprs.GetParameter(argument), parameter))
+                            --argument;
+                    if (local != -1 || argument != -1)
+                    {
+                        if (local != -1)
+                            EmitLoadLocalVariable(il, local);
+                        else
+                        {
+                            if ((context.Status & ClosureStatus.ShouldBeStaticMethod) == 0) ++argument;
+                            EmitLoadArg(il, argument);
+                        }
+                        var result = parent.IgnoresResult() ? -1 : il.GetNextLocalVarIndex(parameter.Type);
+                        if (isPost && result != -1) EmitStoreAndLoadLocalVariable(il, result);
+                        if (!EmitMethodCall(il, method)) return false;
+                        if (!isPost && result != -1) EmitStoreAndLoadLocalVariable(il, result);
+                        if (local != -1) EmitStoreLocalVariable(il, local);
+                        else il.Demit(OpCodes.Starg_S, argument);
+                        context.LastEmitIsAddress = result != -1 && parameter.Type.IsValueType && (parent & ParentFlags.InstanceAccess) != 0;
+                        if (result != -1)
+                        {
+                            if (context.LastEmitIsAddress) EmitLoadLocalVariableAddress(il, result);
+                            else EmitLoadLocalVariable(il, result);
+                        }
+                        return true;
+                    }
+                }
+                return TryEmitOpAssignWithMethod(left, right, method, arithmeticType, isPost, il, ref context, parent);
             }
 
             // Lowers `left op= right` (or `left++` / `left--` when the right is null) with the explicit or user-defined method into
