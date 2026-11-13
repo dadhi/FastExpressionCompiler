@@ -1530,8 +1530,7 @@ namespace FastExpressionCompiler.UnitTests
             foreach (var expression in expressions)
             {
                 var lambda = Lambda<Func<List<int>, int>>(expression, list);
-                if (expression.NodeType == ExpressionType.Index || expression.NodeType == ExpressionType.AddAssign) t.IsNotNull(lambda.CompileFast(true));
-                else t.IsTrue(lambda.CompileFast(true) == null);
+                t.IsNotNull(lambda.CompileFast(true));
                 var expectedList = new List<int> { 3 };
                 var actualList = new List<int> { 3 };
                 _sideEffectCalls = 0;
@@ -1545,9 +1544,9 @@ namespace FastExpressionCompiler.UnitTests
             var array = Parameter(typeof(int[]));
             var arrayIndex = ArrayAccess(array, TryFinally(Constant(0), Empty()));
             var arrayAssign = Lambda<Func<int[], int>>(Assign(arrayIndex, Constant(9)), array);
-            t.IsTrue(arrayAssign.CompileFast(true) == null);
+            t.IsNotNull(arrayAssign.CompileFast(true));
             var values = new[] { 3 };
-            t.AreEqual(9, arrayAssign.CompileFast()(values));
+            t.AreEqual(9, arrayAssign.CompileFast(true)(values));
             t.AreEqual(9, values[0]);
 
             var ex = Parameter(typeof(Exception));

@@ -5083,8 +5083,6 @@ namespace FastExpressionCompiler
                         if (orLeftIndexExpr != null)
                         {
                             spillIndexOperands = context.HasComplexArguments(orLeftIndexExpr);
-                            if (nodeType == ExpressionType.Assign && spillIndexOperands)
-                                return false;
                             indexArgCount = orLeftIndexExpr.GetArgCount();
                             if (indexArgCount > 4)
                                 return false; // todo: @feature more than 4 index arguments are not supported, and probably not need to be supported
@@ -5134,18 +5132,11 @@ namespace FastExpressionCompiler
                             else
                             {
                                 Debug.Assert(orLeftIndexExpr != null);
-                                if (objExpr != null)
-                                {
-                                    var isIndexerAMethodCall = indexArgCount > 1 | orLeftIndexExpr.Indexer != null || !IsVectorArray(objExpr.Type);
-                                    var objFlags = isIndexerAMethodCall ? ParentFlags.InstanceCall : ParentFlags.InstanceAccess | ParentFlags.IndexAccess;
-                                    if (!TryEmit(objExpr, il, ref context, objFlags | ParentFlags.AssignmentLeftValue))
-                                        return false;
-                                    if (objExpr.Type.IsValueType && !context.LastEmitIsAddress && !(objExpr is PE pe && pe.IsByRef))
-                                        EmitStoreAndLoadLocalVariableAddress(il, objExpr.Type);
-                                }
-                                for (var i = 0; i < indexArgCount; i++)
-                                    if (!TryEmit(orLeftIndexExpr.GetArgument(i), il, ref context, baseFlags, -1))
-                                        return false;
+                                var isIndexerAMethodCall = indexArgCount > 1 | orLeftIndexExpr.Indexer != null || objExpr != null && !IsVectorArray(objExpr.Type);
+                                var objFlags = isIndexerAMethodCall ? ParentFlags.InstanceCall : ParentFlags.InstanceAccess | ParentFlags.IndexAccess;
+                                if (!TryEmitIndexOperands(objExpr, orLeftIndexExpr, objFlags | ParentFlags.AssignmentLeftValue,
+                                    baseFlags, il, ref context, spillIndexOperands || context.TryExpressionCount != 0))
+                                    return false;
                             }
 
                             // Load already emitted or emit the right-value normally after the left to be assigned
