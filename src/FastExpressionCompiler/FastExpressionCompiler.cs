@@ -2292,6 +2292,9 @@ namespace FastExpressionCompiler
 
             private const ParentFlags ValueOperandFlagsToClear = ValueResultFlagsToClear | ParentFlags.IgnoreResult;
 
+            private const ParentFlags ByRefValueArgumentFlagsToClear =
+                ValueOperandFlagsToClear | ParentFlags.IndexAccess;
+
             // todo: @perf use UnsafeAccessorAttribute
             /// <summary>Get a type from handle</summary>
             public static readonly MethodInfo GetTypeFromHandleMethod =
@@ -2843,7 +2846,7 @@ namespace FastExpressionCompiler
                     // see the #488 for the details.
                     if (argCount == 1)
                     {
-                        if (!TryEmit(newExpr.GetArgument(0), il, ref context, flags, pars[0].ParameterType.IsByRef ? 0 : -1))
+                        if (!TryEmitCallArgument(newExpr.GetArgument(0), pars[0].ParameterType, 0, il, ref context, flags))
                             return false;
                     }
                     else
@@ -2856,7 +2859,7 @@ namespace FastExpressionCompiler
                             )
                         {
                             for (var i = 0; i < argCount; ++i)
-                                if (!TryEmit(newExpr.GetArgument(i), il, ref context, flags, pars[i].ParameterType.IsByRef ? i : -1))
+                                if (!TryEmitCallArgument(newExpr.GetArgument(i), pars[i].ParameterType, i, il, ref context, flags))
                                     return false;
                         }
                         else
@@ -4863,7 +4866,7 @@ namespace FastExpressionCompiler
                 for (var i = 0; i < arguments.Count; ++i)
                 {
                     var type = parameters[i].ParameterType;
-                    if (!TryEmit(arguments.GetArgument(i), il, ref context, flags, type.IsByRef ? i : -1))
+                    if (!TryEmitCallArgument(arguments.GetArgument(i), type, i, il, ref context, flags))
                         return false;
                     variables.Add(EmitStoreLocalVariable(il, type));
                 }
@@ -4903,7 +4906,7 @@ namespace FastExpressionCompiler
                     for (var a = 0; a < addArgCount; ++a)
                     {
                         var type = methodParams[a].ParameterType;
-                        if (!TryEmit(elemInit.GetArgument(a), il, ref context, callFlags, type.IsByRef ? a : -1)) return false;
+                        if (!TryEmitCallArgument(elemInit.GetArgument(a), type, a, il, ref context, callFlags)) return false;
                     }
 
                 var ok = EmitInstanceMethodCall(il, method, ownerType);
@@ -5831,6 +5834,44 @@ namespace FastExpressionCompiler
                 return true;
             }
 
+            private static bool TryEmitCallArgument(Expression expression, Type parameterType, int index,
+                ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            {
+                if (!parameterType.IsByRef)
+                    return TryEmit(expression, il, ref context, parent);
+                var elementType = parameterType.GetElementType();
+                var sameType = elementType == expression.Type;
+                if (!sameType && (elementType.IsValueType || expression.Type.IsValueType ||
+                    !elementType.IsAssignableFrom(expression.Type)))
+                    return false;
+                if (sameType)
+                {
+                    // TryEmit dispatches to each node's own address/temporary handling.
+                    // The formal argument index requests storage; these cases do not emit identical IL.
+                    switch (expression.NodeType)
+                    {
+                        case ExpressionType.Parameter:
+                        case ExpressionType.MemberAccess:
+                        case ExpressionType.Index:
+                        case ExpressionType.ArrayIndex:
+                        case ExpressionType.Unbox:
+                        case ExpressionType.Call:
+                        case ExpressionType.Invoke:
+                        case ExpressionType.Constant:
+                            return TryEmit(expression, il, ref context, parent, index);
+                    }
+                }
+                // A wider formal reference type denotes a temporary, never an alias or copyback.
+                // Likewise, a value-producing argument has no storage address of its own.
+                var valueFlags = (parent & ~ByRefValueArgumentFlagsToClear) |
+                    ParentFlags.Call | ParentFlags.AssignmentRightValue;
+                if (!TryEmit(expression, il, ref context, valueFlags))
+                    return false;
+                EmitStoreAndLoadLocalVariableAddress(il, elementType);
+                context.LastEmitIsAddress = true;
+                return true;
+            }
+
             private static bool TryEmitMethodCall(Expression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex = -1)
             {
                 var flags = ParentFlags.Call;
@@ -5876,7 +5917,7 @@ namespace FastExpressionCompiler
                         {
                             var argExpr = callExpr.GetArgument(i);
                             var parType = methodParams[i].ParameterType;
-                            if (!TryEmit(argExpr, il, ref context, flags, parType.IsByRef ? i : -1))
+                            if (!TryEmitCallArgument(argExpr, parType, i, il, ref context, flags))
                                 return false;
                         }
                     }
@@ -6259,7 +6300,7 @@ namespace FastExpressionCompiler
                     }
                     else
                         for (var i = 0; i < args.Length; ++i)
-                            if (!TryEmit(expr.GetArgument(i), il, ref context, useResult, args[i].ParameterType.IsByRef ? i : -1))
+                            if (!TryEmitCallArgument(expr.GetArgument(i), args[i].ParameterType, i, il, ref context, useResult))
                                 return false;
                 }
 
