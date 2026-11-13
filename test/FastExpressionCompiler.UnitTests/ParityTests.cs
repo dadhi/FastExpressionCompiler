@@ -49,7 +49,7 @@ namespace FastExpressionCompiler.UnitTests
             Switch_with_duplicate_test_values_and_void_type_are_the_same_as_system(t);
             Label_and_rethrow_validation_walks_all_node_kinds_the_same_as_system(t);
             Catch_filter_non_exception_catch_and_rethrow_rules_are_the_same_as_system(t);
-            Unsupported_exception_regions_fall_back_to_system(t);
+            Exception_regions_preserve_index_behavior_and_reject_invalid_filters(t);
             Inc_dec_assign_of_primitives_and_nullables_are_the_same_as_system(t);
             Inc_dec_assign_of_block_variable_compared_and_returned_via_label_are_the_same_as_system(t);
 #if NET7_0_OR_GREATER
@@ -1516,7 +1516,7 @@ namespace FastExpressionCompiler.UnitTests
             }
         }
 
-        public void Unsupported_exception_regions_fall_back_to_system(TestContext t)
+        public void Exception_regions_preserve_index_behavior_and_reject_invalid_filters(TestContext t)
         {
             var list = Parameter(typeof(List<int>));
             var indexer = typeof(List<int>).GetProperty("Item");
@@ -1530,12 +1530,12 @@ namespace FastExpressionCompiler.UnitTests
             foreach (var expression in expressions)
             {
                 var lambda = Lambda<Func<List<int>, int>>(expression, list);
-                if (expression.NodeType == ExpressionType.Index || expression.NodeType == ExpressionType.AddAssign) t.IsNotNull(lambda.CompileFast(true));
-                else t.IsTrue(lambda.CompileFast(true) == null);
+                var fast = lambda.CompileFast(true);
+                if (!t.IsNotNull(fast)) return;
                 var expectedList = new List<int> { 3 };
                 var actualList = new List<int> { 3 };
                 _sideEffectCalls = 0;
-                t.AreEqual(lambda.CompileSys()(expectedList), lambda.CompileFast()(actualList));
+                t.AreEqual(lambda.CompileSys()(expectedList), fast(actualList));
                 t.AreEqual(expectedList[0], actualList[0]);
                 t.AreEqual(2, _sideEffectCalls);
             }
@@ -1545,21 +1545,23 @@ namespace FastExpressionCompiler.UnitTests
             var array = Parameter(typeof(int[]));
             var arrayIndex = ArrayAccess(array, TryFinally(Constant(0), Empty()));
             var arrayAssign = Lambda<Func<int[], int>>(Assign(arrayIndex, Constant(9)), array);
-            t.IsTrue(arrayAssign.CompileFast(true) == null);
+            var fastArrayAssign = arrayAssign.CompileFast(true);
+            if (!t.IsNotNull(fastArrayAssign)) return;
             var values = new[] { 3 };
-            t.AreEqual(9, arrayAssign.CompileFast()(values));
+            t.AreEqual(9, fastArrayAssign(values));
             t.AreEqual(9, values[0]);
 
             var ex = Parameter(typeof(Exception));
             var filter = Equal(TryFinally(Constant(1), Empty()), Constant(1));
             var filtered = Lambda<Func<int>>(TryCatch(Throw(New(typeof(Exception)), typeof(int)),
                 MakeCatchBlock(typeof(Exception), ex, Constant(42), filter)));
-            t.IsTrue(filtered.CompileFast(true) == null);
+            // The collector validates this illegal tree before fallback, on all runtimes.
+            t.Throws<InvalidOperationException>(() => filtered.CompileFast(true));
             var sysThrows = false;
             var fallbackThrows = false;
 #if NETFRAMEWORK
             try { filtered.CompileSys(); } catch (NotSupportedException) { sysThrows = true; }
-            try { filtered.CompileFast(); } catch (NotSupportedException) { fallbackThrows = true; }
+            try { filtered.CompileFast(); } catch (InvalidOperationException) { fallbackThrows = true; }
 #else
             try { filtered.CompileSys(); } catch (InvalidOperationException) { sysThrows = true; }
             try { filtered.CompileFast(); } catch (InvalidOperationException) { fallbackThrows = true; }

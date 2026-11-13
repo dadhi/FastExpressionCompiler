@@ -643,7 +643,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ldloca_S,
                 OpCodes.Call, // int?.get_Value
                 OpCodes.Conv_R8,
-                OpCodes.Call, // ValueHolder<double>.set_Value
+                OpCodes.Callvirt, // ValueHolder<double>.set_Value
                 OpCodes.Ldloc_0,
                 OpCodes.Ret);
 
@@ -674,7 +674,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ldloca_S,
                 OpCodes.Call, // int?.get_Value
                 OpCodes.Conv_R8,
-                OpCodes.Call, // ValueHolder<double>.set_Value 
+                OpCodes.Call, // Newly constructed receiver is non-null
                 OpCodes.Ret);
 
             var result = adapt(new ValueHolder<int?> { Value = 321 });
@@ -713,7 +713,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ldloca_S,
                 OpCodes.Call, // decimal?.get_Value
                 OpCodes.Call, // double Decimal.op_Explicit() 
-                OpCodes.Call, // ValueHolder<double>.set_Value
+                OpCodes.Callvirt, // ValueHolder<double>.set_Value
                 OpCodes.Ldloc_0,
                 OpCodes.Ret);
 
@@ -751,7 +751,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Callvirt,    // ValueHolder<decimal>.get_Value
                 OpCodes.Call,    // double Decimal.op_Explicit() 
                 OpCodes.Newobj,  // new Nullable<double>()
-                OpCodes.Call,    // ValueHolder<double?>.set_Value
+                OpCodes.Callvirt,    // ValueHolder<double?>.set_Value
                 OpCodes.Ldloc_0,
                 OpCodes.Ret);
 
