@@ -34,7 +34,7 @@ namespace FastExpressionCompiler.UnitTests
                 var justLightTestsStopwatch = Stopwatch.StartNew();
 
                 var t = (LightExpression.TestRun)state;
-                t.Run(new LightExpression.UnitTests.InvokeRefArgumentRegressionTests());
+            t.Run(new LightExpression.UnitTests.InvokeRefArgumentRegressionTests());
                 t.Run(new LightExpression.UnitTests.StructInterfaceSettersTests());
                 t.Run(new LightExpression.UnitTests.NullableBoxingRegressionTests());
                 t.Run(new LightExpression.UnitTests.NullableRefAddressTests());
@@ -46,6 +46,7 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.DelegateExceptionArgumentsTests());
                 t.Run(new LightExpression.UnitTests.MultidimensionalGetStorageRegressionTests());
                 t.Run(new LightExpression.UnitTests.AbstractConstructorRegressionTests());
+                t.Run(new LightExpression.UnitTests.AssignmentNullCheckTests());
                 t.Run(new LightExpression.UnitTests.DirectLogicalFactoryRegressionTests());
                 t.Run(new LightExpression.UnitTests.IntrinsicConstructorSpillsTests());
                 t.Run(new LightExpression.UnitTests.ArrayBoundsExceptionRegressionTests());
@@ -129,6 +130,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new DelegateExceptionArgumentsTests());
             fecTests.Run(new MultidimensionalGetStorageRegressionTests());
             fecTests.Run(new AbstractConstructorRegressionTests());
+            fecTests.Run(new AssignmentNullCheckTests());
             fecTests.Run(new DirectLogicalFactoryRegressionTests());
             fecTests.Run(new IntrinsicConstructorSpillsTests());
             fecTests.Run(new ArrayBoundsExceptionRegressionTests());
