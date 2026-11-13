@@ -5154,7 +5154,7 @@ namespace FastExpressionCompiler
 
                             if (leftMemberExpr != null)
                             {
-                                if (!(objExpr?.Type.IsValueType == true && leftMemberExpr.Member is PropertyInfo property
+                                if (!(leftMemberExpr.Member is PropertyInfo property
                                     ? property.SetMethod != null && EmitInstanceMethodCall(il, property.SetMethod, objExpr?.Type)
                                     : EmitMemberSet(il, leftMemberExpr.Member)))
                                     return false;
@@ -5162,7 +5162,7 @@ namespace FastExpressionCompiler
                             else // if (leftIndexExpr != null)
                             {
                                 var ok = orLeftIndexExpr.Indexer != null
-                                    ? (objExpr?.Type.IsValueType == true ? orLeftIndexExpr.Indexer.SetMethod != null && EmitInstanceMethodCall(il, orLeftIndexExpr.Indexer.SetMethod, objExpr.Type) : EmitMethodCallOrVirtualCallCheckForNull(il, orLeftIndexExpr.Indexer.SetMethod))
+                                    ? orLeftIndexExpr.Indexer.SetMethod != null && EmitInstanceMethodCall(il, orLeftIndexExpr.Indexer.SetMethod, objExpr?.Type)
                                     : IsVectorArray(objExpr.Type)
                                         ? TryEmitArrayIndexSet(il, orLeftIndexExpr.Type) // one-dimensional array
                                         : EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod("Set")); // multi-dimensional array
@@ -5262,7 +5262,7 @@ namespace FastExpressionCompiler
                             var ok = !isIndexerAMethodCall
                                 ? TryEmitArrayIndexGet(il, orLeftIndexExpr.Type, ref context, baseFlags) // one-dimensional array
                                 : orLeftIndexExpr.Indexer != null
-                                    ? (objExpr?.Type.IsValueType == true ? orLeftIndexExpr.Indexer.GetMethod != null && EmitInstanceMethodCall(il, orLeftIndexExpr.Indexer.GetMethod, objExpr.Type) : EmitMethodCallOrVirtualCallCheckForNull(il, orLeftIndexExpr.Indexer.GetMethod))
+                                    ? orLeftIndexExpr.Indexer.GetMethod != null && EmitInstanceMethodCall(il, orLeftIndexExpr.Indexer.GetMethod, objExpr?.Type)
                                     : EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod("Get")); // multi-dimensional array
                             if (!ok)
                                 return false;
@@ -5387,15 +5387,15 @@ namespace FastExpressionCompiler
                             EmitStoreIndirectlyByRef(il, leftType);
                         else if (leftMemberExpr != null)
                         {
-                            if (!(objExpr?.Type.IsValueType == true && leftMemberExpr.Member is PropertyInfo property
-                                    ? property.SetMethod != null && EmitInstanceMethodCall(il, property.SetMethod, objExpr?.Type)
-                                    : EmitMemberSet(il, leftMemberExpr.Member)))
+                            if (!(leftMemberExpr.Member is PropertyInfo property
+                                ? property.SetMethod != null && EmitInstanceMethodCall(il, property.SetMethod, objExpr?.Type)
+                                : EmitMemberSet(il, leftMemberExpr.Member)))
                                 return false;
                         }
                         else // if (leftIndexExpr != null)
                         {
                             var ok = orLeftIndexExpr.Indexer != null
-                                ? (objExpr?.Type.IsValueType == true ? orLeftIndexExpr.Indexer.SetMethod != null && EmitInstanceMethodCall(il, orLeftIndexExpr.Indexer.SetMethod, objExpr.Type) : EmitMethodCallOrVirtualCallCheckForNull(il, orLeftIndexExpr.Indexer.SetMethod))
+                                ? orLeftIndexExpr.Indexer.SetMethod != null && EmitInstanceMethodCall(il, orLeftIndexExpr.Indexer.SetMethod, objExpr?.Type)
                                 : IsVectorArray(objExpr.Type)
                                     ? TryEmitArrayIndexSet(il, orLeftIndexExpr.Type) // one-dimensional array
                                     : EmitMethodCallOrVirtualCallCheckForNull(il, objExpr?.Type.FindMethod("Set")); // multi-dimensional array
@@ -7864,6 +7864,7 @@ namespace FastExpressionCompiler
                 // So for now the varargs methods are not supported yet.
                 return (method.CallingConvention & CallingConventions.VarArgs) == 0;
             }
+
 
             [MethodImpl((MethodImplOptions)256)]
             public static bool EmitVirtualMethodCall(ILGenerator il, MethodInfo method)
