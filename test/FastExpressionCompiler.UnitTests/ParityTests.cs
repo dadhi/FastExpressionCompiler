@@ -1554,12 +1554,12 @@ namespace FastExpressionCompiler.UnitTests
             var filter = Equal(TryFinally(Constant(1), Empty()), Constant(1));
             var filtered = Lambda<Func<int>>(TryCatch(Throw(New(typeof(Exception)), typeof(int)),
                 MakeCatchBlock(typeof(Exception), ex, Constant(42), filter)));
-            t.IsTrue(filtered.CompileFast(true) == null);
+            t.Throws<InvalidOperationException>(() => filtered.CompileFast(true));
             var sysThrows = false;
             var fallbackThrows = false;
 #if NETFRAMEWORK
             try { filtered.CompileSys(); } catch (NotSupportedException) { sysThrows = true; }
-            try { filtered.CompileFast(); } catch (NotSupportedException) { fallbackThrows = true; }
+            try { filtered.CompileFast(); } catch (InvalidOperationException) { fallbackThrows = true; }
 #else
             try { filtered.CompileSys(); } catch (InvalidOperationException) { sysThrows = true; }
             try { filtered.CompileFast(); } catch (InvalidOperationException) { fallbackThrows = true; }

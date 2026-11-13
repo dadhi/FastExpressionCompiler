@@ -63,7 +63,7 @@ namespace FastExpressionCompiler.UnitTests
             var ltTask = Task.Run(() =>
             {
                 var ltStopwatch = Stopwatch.StartNew();
-                lt.Run(new LightExpression.UnitTests.InvokeRefArgumentRegressionTests());
+            lt.Run(new LightExpression.UnitTests.InvokeRefArgumentRegressionTests());
                 lt.Run(new LightExpression.UnitTests.StructInterfaceSettersTests());
                 lt.Run(new LightExpression.UnitTests.NullableBoxingRegressionTests());
                 lt.Run(new LightExpression.UnitTests.NullableRefAddressTests());
@@ -81,6 +81,7 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.UnitTests.BackwardTypedLabelTests());
                 lt.Run(new LightExpression.UnitTests.TryResultValueRegressionTests());
                 lt.Run(new LightExpression.UnitTests.FrameworkFilterRejectionTests());
+                lt.Run(new LightExpression.UnitTests.ExceptionRegionValidationRegressionTests());
                 lt.Run(new LightExpression.UnitTests.NonVectorArrayRegressionTests());
                 lt.Run(new LightExpression.UnitTests.UnboxStorageRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ArrayInitializerExceptionRegressionTests());
@@ -160,6 +161,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new BackwardTypedLabelTests());
             st.Run(new TryResultValueRegressionTests());
             st.Run(new FrameworkFilterRejectionTests());
+            st.Run(new ExceptionRegionValidationRegressionTests());
             st.Run(new NonVectorArrayRegressionTests());
             st.Run(new RefConversionStorageTests());
             st.Run(new UnboxStorageRegressionTests());
