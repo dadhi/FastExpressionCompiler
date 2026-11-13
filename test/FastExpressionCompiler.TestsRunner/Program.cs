@@ -63,7 +63,7 @@ namespace FastExpressionCompiler.UnitTests
             var ltTask = Task.Run(() =>
             {
                 var ltStopwatch = Stopwatch.StartNew();
-                lt.Run(new LightExpression.UnitTests.InvokeRefArgumentRegressionTests());
+            lt.Run(new LightExpression.UnitTests.InvokeRefArgumentRegressionTests());
                 lt.Run(new LightExpression.UnitTests.StructInterfaceSettersTests());
                 lt.Run(new LightExpression.UnitTests.NullableBoxingRegressionTests());
                 lt.Run(new LightExpression.UnitTests.NullableRefAddressTests());
@@ -97,6 +97,7 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.UnitTests.ReadonlyNestedBindingTests());
                 lt.Run(new LightExpression.UnitTests.MultiRankArrayReceiverRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ArrayIndexExceptionRegressionTests());
+                lt.Run(new LightExpression.UnitTests.IndexerExceptionSpillRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ValuePropertyBindingValidationTests());
                 lt.Run(new LightExpression.UnitTests.ReadonlyValueReceiverRegressionTests());
                 lt.Run(new LightExpression.UnitTests.DirectQuotedInvocationTests());
@@ -176,6 +177,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new ReadonlyNestedBindingTests());
             st.Run(new MultiRankArrayReceiverRegressionTests());
             st.Run(new ArrayIndexExceptionRegressionTests());
+            st.Run(new IndexerExceptionSpillRegressionTests());
             st.Run(new ValuePropertyBindingValidationTests());
             st.Run(new ReadonlyValueReceiverRegressionTests());
             st.Run(new DirectQuotedInvocationTests());

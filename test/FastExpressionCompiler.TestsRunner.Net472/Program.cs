@@ -34,7 +34,7 @@ namespace FastExpressionCompiler.UnitTests
                 var justLightTestsStopwatch = Stopwatch.StartNew();
 
                 var t = (LightExpression.TestRun)state;
-                t.Run(new LightExpression.UnitTests.InvokeRefArgumentRegressionTests());
+            t.Run(new LightExpression.UnitTests.InvokeRefArgumentRegressionTests());
                 t.Run(new LightExpression.UnitTests.StructInterfaceSettersTests());
                 t.Run(new LightExpression.UnitTests.NullableBoxingRegressionTests());
                 t.Run(new LightExpression.UnitTests.NullableRefAddressTests());
@@ -68,6 +68,7 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.ReadonlyNestedBindingTests());
                 t.Run(new LightExpression.UnitTests.MultiRankArrayReceiverRegressionTests());
                 t.Run(new LightExpression.UnitTests.ArrayIndexExceptionRegressionTests());
+                t.Run(new LightExpression.UnitTests.IndexerExceptionSpillRegressionTests());
                 t.Run(new LightExpression.UnitTests.ValuePropertyBindingValidationTests());
                 t.Run(new LightExpression.UnitTests.ReadonlyValueReceiverRegressionTests());
                 t.Run(new LightExpression.UnitTests.DirectQuotedInvocationTests());
@@ -150,6 +151,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new ReadonlyNestedBindingTests());
             fecTests.Run(new MultiRankArrayReceiverRegressionTests());
             fecTests.Run(new ArrayIndexExceptionRegressionTests());
+            fecTests.Run(new IndexerExceptionSpillRegressionTests());
             fecTests.Run(new ValuePropertyBindingValidationTests());
             fecTests.Run(new ReadonlyValueReceiverRegressionTests());
             fecTests.Run(new DirectQuotedInvocationTests());
