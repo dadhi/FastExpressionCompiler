@@ -5577,7 +5577,9 @@ namespace FastExpressionCompiler
                         ++paramIndex; // shift parameter index by one, because the first one will be closure
 
                     var isLeftByRef = left.IsByRef;
-                    if (isLeftByRef)
+                    // A protected RHS must start with an empty evaluation stack.
+                    var deferAddress = isLeftByRef && context.TryExpressionCount != 0;
+                    if (isLeftByRef && !deferAddress)
                         EmitLoadArg(il, paramIndex);
 
                     if (resultVar != -1 & isPost)
@@ -5591,7 +5593,15 @@ namespace FastExpressionCompiler
                         EmitStoreAndLoadLocalVariable(il, resultVar);
 
                     if (isLeftByRef)
+                    {
+                        if (deferAddress)
+                        {
+                            var value = EmitStoreLocalVariable(il, left.Type);
+                            EmitLoadArg(il, paramIndex);
+                            EmitLoadLocalVariable(il, value);
+                        }
                         EmitStoreIndirectlyByRef(il, left.Type);
+                    }
                     else
                         il.Demit(OpCodes.Starg_S, paramIndex);
 

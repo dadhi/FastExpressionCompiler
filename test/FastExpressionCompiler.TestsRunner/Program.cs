@@ -63,7 +63,7 @@ namespace FastExpressionCompiler.UnitTests
             var ltTask = Task.Run(() =>
             {
                 var ltStopwatch = Stopwatch.StartNew();
-                lt.Run(new LightExpression.UnitTests.InvokeRefArgumentRegressionTests());
+            lt.Run(new LightExpression.UnitTests.InvokeRefArgumentRegressionTests());
                 lt.Run(new LightExpression.UnitTests.StructInterfaceSettersTests());
                 lt.Run(new LightExpression.UnitTests.NullableBoxingRegressionTests());
                 lt.Run(new LightExpression.UnitTests.NullableRefAddressTests());
@@ -128,6 +128,7 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.IssueTests.Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
                 lt.Run(new LightExpression.IssueTests.Issue561_NonBooleanEqualityOperator());
                 lt.Run(new LightExpression.UnitTests.ByRefConversionRegressionTests());
+                lt.Run(new LightExpression.UnitTests.RefAssignmentExceptionTests());
                 lt.Run(new LightExpression.UnitTests.PropertyGetterReceiverRegressionTests());
                 lt.Run(new LightExpression.UnitTests.RuntimeTypeConstantRegressionTests());
                 lt.Run(new LightExpression.UnitTests.MemberConstructorExceptionTests());
@@ -198,6 +199,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new Issue561_NonBooleanEqualityOperator());
             st.Run(new ReductionProgressRegressionTests());
             st.Run(new ByRefConversionRegressionTests());
+            st.Run(new RefAssignmentExceptionTests());
             st.Run(new PropertyGetterReceiverRegressionTests());
             st.Run(new RuntimeTypeConstantRegressionTests());
             st.Run(new MemberConstructorExceptionTests());
