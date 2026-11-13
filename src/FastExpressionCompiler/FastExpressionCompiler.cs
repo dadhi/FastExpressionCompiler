@@ -7130,6 +7130,25 @@ namespace FastExpressionCompiler
                 return il.EmitPopIfIgnoreResult(parent);
             }
 
+            [MethodImpl((MethodImplOptions)256)]
+            private static bool IsAtomicArithmeticOperand(Expression operand)
+            {
+                if (!operand.IsParamOrConstantOrDefault())
+                    return false;
+#if LIGHT_EXPRESSION
+                // Intrinsic conversions may emit exception regions despite a simple operand.
+                while (true)
+                {
+                    if (operand.IsIntrinsic)
+                        return false;
+                    if (operand is not UnaryExpression convert || convert.NodeType != ExpressionType.Convert)
+                        break;
+                    operand = convert.Operand;
+                }
+#endif
+                return true;
+            }
+
             private static bool TryEmitArithmetic(Expression left, Expression right, ExpressionType nodeType, Type exprType,
                 ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
@@ -7185,7 +7204,7 @@ namespace FastExpressionCompiler
                     // it prevents the problems in cases of right being a block, try-catch, etc.
                     // see `Using_try_finally_as_arithmetic_operand_use_void_block_in_finally`
                     var rightType = right.Type;
-                    if (leftValueVar == -1 && (context.TryExpressionCount != 0 || right.IsComplexExpression()))
+                    if (leftValueVar == -1 && (context.TryExpressionCount != 0 && !IsAtomicArithmeticOperand(right) || right.IsComplexExpression()))
                         leftValueVar = EmitStoreLocalVariable(il, leftType);
 
                     var rightVar = -1;
