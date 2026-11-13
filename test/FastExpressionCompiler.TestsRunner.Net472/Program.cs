@@ -100,6 +100,7 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.IssueTests.Issue498_InvalidProgramException_when_using_loop());
                 t.Run(new LightExpression.IssueTests.Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
                 t.Run(new LightExpression.UnitTests.ByRefConversionRegressionTests());
+                t.Run(new LightExpression.UnitTests.RefAssignmentExceptionTests());
                 t.Run(new LightExpression.UnitTests.PropertyGetterReceiverRegressionTests());
                 t.Run(new LightExpression.UnitTests.RuntimeTypeConstantRegressionTests());
                 t.Run(new LightExpression.UnitTests.MemberConstructorExceptionTests());
@@ -187,6 +188,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
             fecTests.Run(new ReductionProgressRegressionTests());
             fecTests.Run(new ByRefConversionRegressionTests());
+            fecTests.Run(new RefAssignmentExceptionTests());
             fecTests.Run(new PropertyGetterReceiverRegressionTests());
             fecTests.Run(new RuntimeTypeConstantRegressionTests());
             fecTests.Run(new MemberConstructorExceptionTests());
