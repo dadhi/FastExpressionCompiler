@@ -1198,7 +1198,8 @@ namespace FastExpressionCompiler
             None = 0,
             Catch = 1,
             FinallyOrFault = 2,
-            Lambda = 3
+            Lambda = 3,
+            Filter = 4
         }
 
         /// <summary>The scope index (-1 for the root) with the `Enterable` flag: can the jump from the outside get into the thing,
@@ -1296,7 +1297,9 @@ namespace FastExpressionCompiler
                     // check if the goto jump passes through any finally or fault blocks when moving from the goto scope to the common ancestor scope,
                     // excluding the ancestor itself (because it is fine to jump inside the same scope)
                     for (int s = gotoScopeIdx; s != commonAncestorScopeIdx; s = scopes.GetSurePresentRef(s).Parent.Index)
-                        if (scopes.GetSurePresentRef(s).ExceptionRegion == ExceptionRegion.FinallyOrFault)
+                        if (scopes.GetSurePresentRef(s).ExceptionRegion == ExceptionRegion.Filter)
+                            throw new InvalidOperationException("Control cannot leave an exception filter.");
+                        else if (scopes.GetSurePresentRef(s).ExceptionRegion == ExceptionRegion.FinallyOrFault)
                             throw new InvalidOperationException($"Control cannot leave the finally or fault block by the jump to the label '{gotoTarget.Name}'");
 
                     // if the label scope is the jump scope or its ancestor
@@ -2168,7 +2171,7 @@ namespace FastExpressionCompiler
             NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
         {
             if (context.InExceptionFilter)
-                return Result.NotSupported_ExceptionCatchFilter;
+                throw new InvalidOperationException("Exception blocks are not allowed inside an exception filter.");
 
             var r = Result.OK;
             if ((r = TryCollectInfo(ref context, tryExpr.Body, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
@@ -2188,9 +2191,15 @@ namespace FastExpressionCompiler
 
                 if (catchBlock.Filter != null)
                 {
+                    var filterScopeIdx = (short)context.Scopes.Add(new LabelScope
+                    {
+                        Parent = new ScopeIdx(scopeIdx, false), ExceptionRegion = ExceptionRegion.Filter
+                    });
                     context.InExceptionFilter = true;
-                    r = TryCollectInfo(ref context, catchBlock.Filter, nestedLambda, ref rootNestedLambdas, scopeIdx);
+                    r = TryCollectInfo(ref context, catchBlock.Filter, nestedLambda, ref rootNestedLambdas, filterScopeIdx);
                     context.InExceptionFilter = false;
+                    if (r == Result.ParameterIsNotVariableNorInPassedParameters)
+                        throw new InvalidOperationException("An exception filter references an undefined variable.");
                     if (r != Result.OK)
                         return r;
                 }
