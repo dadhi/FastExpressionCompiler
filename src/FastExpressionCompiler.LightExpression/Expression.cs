@@ -1359,7 +1359,7 @@ public abstract class Expression
             ? lambda.ReturnType
             : expression is UnaryExpression unExpr && unExpr.NodeType == ExpressionType.Quote && unExpr.Operand is LambdaExpression quotedLambda
                 ? quotedLambda.ReturnType
-                : expression.Type.FindDelegateInvokeMethod().ReturnType;
+                : (expression.Type.FindDelegateInvokeMethod() ?? expression.Type.FindExpressionCompileMethod()?.ReturnType.FindDelegateInvokeMethod()).ReturnType;
 
     [RequiresUnreferencedCode(Trimming.Message)]
     public static InvocationExpression Invoke(Expression expression, Expression a0) =>
