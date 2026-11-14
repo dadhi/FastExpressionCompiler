@@ -1697,16 +1697,27 @@ namespace FastExpressionCompiler
                     case ExpressionType.Index:
                         var indexExpr = (IndexExpression)expr;
                         var precedingTryCount = context.TryExpressionCount;
+                        var precedingIndexJumps = context.GotoTargets.Count;
                         foreach (var indexArg in indexExpr.GetArgs())
                             if ((r = TryCollectInfo(ref context, indexArg, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                                 return r;
-                        if (context.TryExpressionCount != precedingTryCount)
+                        if (context.TryExpressionCount != precedingTryCount || context.GotoTargets.Count != precedingIndexJumps)
                             context.MarkComplexArguments(indexExpr);
                         if (indexExpr.Object == null)
                             return r;
                         expr = indexExpr.Object;
                         enterable = false;
                         continue;
+
+                    case ExpressionType.ArrayIndex:
+                        var arrayIndex = (BinaryExpression)expr;
+                        if ((r = TryCollectInfo(ref context, arrayIndex.Left, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
+                            return r;
+                        var precedingArrayJumps = context.GotoTargets.Count;
+                        r = TryCollectInfo(ref context, arrayIndex.Right, nestedLambda, ref rootNestedLambdas, scopeIdx);
+                        if (context.GotoTargets.Count != precedingArrayJumps)
+                            context.MarkComplexArguments(arrayIndex);
+                        return r;
 
                     case ExpressionType.Try:
                         {
@@ -2504,7 +2515,8 @@ namespace FastExpressionCompiler
                             var arrayFlags = ParentFlags.IndexAccess | ParentFlags.AssignmentRightValue;
                             if (!TryEmit(arrIndexExpr.Left, il, ref context, arrayFlags))
                                 return false;
-                            var arrayVar = (context.TryExpressionCount != 0) ? EmitStoreLocalVariable(il, arrIndexExpr.Left.Type) : -1;
+                            var arrayVar = context.TryExpressionCount != 0 || context.HasComplexArguments(arrIndexExpr)
+                                ? EmitStoreLocalVariable(il, arrIndexExpr.Left.Type) : -1;
                             if (!TryEmit(arrIndexExpr.Right, il, ref context, arrayFlags))
                                 return false;
                             if (arrayVar != -1)

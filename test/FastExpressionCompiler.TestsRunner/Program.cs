@@ -125,6 +125,7 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.UnitTests.QuoteIdentityRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ArrayBoundConversionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.EmptyRuntimeVariablesTests());
+                lt.Run(new LightExpression.UnitTests.IndexJumpOperandTests());
                 lt.Run(new LightExpression.UnitTests.CheckedFloatingArithmeticRegressionTests());
                 lt.Run(new LightExpression.UnitTests.CollectionInitializerExceptionTests());
                 lt.Run(new LightExpression.UnitTests.NestedLambdaValidationTests());
@@ -224,6 +225,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new QuoteIdentityRegressionTests());
             st.Run(new ArrayBoundConversionRegressionTests());
             st.Run(new EmptyRuntimeVariablesTests());
+            st.Run(new IndexJumpOperandTests());
             st.Run(new CheckedFloatingArithmeticRegressionTests());
             st.Run(new CollectionInitializerExceptionTests());
             st.Run(new NestedLambdaValidationTests());
