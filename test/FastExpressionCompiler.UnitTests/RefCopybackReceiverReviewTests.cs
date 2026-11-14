@@ -7,7 +7,7 @@ namespace FastExpressionCompiler.UnitTests;
 #endif
 public struct RefCopybackReceiverReviewTests : ITestX
 {
- public void Run(TestRun t) { Incoming_ref_delegate_with_property_arguments_is_a_value(t); Struct_method_results_as_owners(t); Struct_constructor_results_as_owners(t); Reference_return_method_preserves_address(t); Boxed_struct_reference_property_keeps_declared_object_storage(t); }
+ public void Run(TestRun t) { Wider_formal_reference_with_property_copyback(t); Incoming_ref_delegate_with_property_arguments_is_a_value(t); Struct_method_results_as_owners(t); Struct_constructor_results_as_owners(t); Reference_return_method_preserves_address(t); Boxed_struct_reference_property_keeps_declared_object_storage(t); }
  public delegate int RefCall(ref int value);
  public delegate int RefInvoke(ref RefCall call, RefHolder holder);
  public sealed class RefHolder
@@ -27,6 +27,34 @@ public struct RefCopybackReceiverReviewTests : ITestX
    t.AreEqual(6,compiled(ref call,data));t.AreEqual(6,data.Stored);t.AreEqual(1,data.Gets);t.AreEqual(1,data.Sets);
    data=new RefHolder();call=null;t.Throws<NullReferenceException>(()=>compiled(ref call,data));
    t.AreEqual(5,data.Stored);t.AreEqual(1,data.Gets);t.AreEqual(0,data.Sets);
+  }
+ }
+ public class ReferenceBase { }
+ public sealed class ReferenceDerived : ReferenceBase { }
+ public sealed class MixedHolder
+ {
+  public ReferenceDerived Reference = new ReferenceDerived();
+  public int Value { get; set; }
+ }
+ public static void ReplaceAndIncrement(ref ReferenceBase reference, ref int value)
+ {
+  reference = new ReferenceBase();
+  ++value;
+ }
+ public void Wider_formal_reference_with_property_copyback(TestContext t)
+ {
+  var holder = E.Parameter(typeof(MixedHolder));
+  var call = E.Call(M(nameof(ReplaceAndIncrement)), E.Field(holder, nameof(MixedHolder.Reference)), E.Property(holder, nameof(MixedHolder.Value)));
+  var tree = E.Lambda<Action<MixedHolder>>(call, holder);
+  var fast = tree.FromSysExpression().CompileFast(true);
+  if (!t.IsNotNull(fast)) return;
+  foreach (var compiled in new[] { tree.Compile(), fast })
+  {
+   var data = new MixedHolder { Value = 5 };
+   var original = data.Reference;
+   compiled(data);
+   t.AreEqual(6, data.Value);
+   t.IsTrue(ReferenceEquals(original, data.Reference));
   }
  }
  public struct Inner { public int Value; public int Mutate() => ++Value; }
