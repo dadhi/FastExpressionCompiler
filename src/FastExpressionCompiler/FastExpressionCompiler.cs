@@ -1834,15 +1834,12 @@ namespace FastExpressionCompiler
         {
             if (bodyOnly || ReferenceEquals(inlined, body))
             {
-                var lambdaScope = (short)context.Scopes.Add(new LabelScope
-                {
-                    Parent = new ScopeIdx(scopeIdx, false), ExceptionRegion = ExceptionRegion.Lambda
-                });
-                return TryCollectInfo(ref context, inlined, nestedLambda, ref rootNestedLambdas, lambdaScope);
+                var labelScope = new LabelScope { Parent = new ScopeIdx(scopeIdx, false), ExceptionRegion = ExceptionRegion.Lambda };
+                var lambdaScopeIdx = (short)context.Scopes.Add(labelScope);
+                return TryCollectInfo(ref context, inlined, nestedLambda, ref rootNestedLambdas, lambdaScopeIdx);
             }
             var wrapper = (BlockExpression)inlined;
-            var variables = wrapper.Variables;
-            context.PushBlockWithVars(variables);
+            context.PushBlockWithVars(wrapper.Variables);
             var statements = wrapper.Expressions;
             var result = Result.OK;
             for (var i = 0; i < statements.Count - 1; ++i)
