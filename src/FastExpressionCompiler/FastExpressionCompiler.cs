@@ -6229,18 +6229,22 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitCallWithWritebacks(Expression receiver, Args expressions, MethodInfo method,
-                ConstructorInfo constructor, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex)
+                ConstructorInfo constructor, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex,
+                MethodInfo receiverCompileMethod = null, bool deferReceiverCompile = false)
             {
                 var receiverVar = -1;
-                var receiverType = receiver?.Type;
+                var receiverType = receiverCompileMethod?.ReturnType ?? receiver?.Type;
                 if (receiver != null)
                 {
                     if (!TryEmit(receiver, il, ref context, ParentFlags.Call |
                         (receiverType.IsValueType ? ParentFlags.InstanceAccess : ParentFlags.AssignmentRightValue)))
                         return false;
+                    if (receiverCompileMethod != null && !deferReceiverCompile &&
+                        !EmitInstanceMethodCall(il, receiverCompileMethod, receiver.Type)) return false;
                     if (receiverType.IsValueType && !context.LastEmitIsAddress && !(receiver is PE pe && pe.IsByRef))
                         EmitStoreAndLoadLocalVariableAddress(il, receiverType);
-                    receiverVar = EmitStoreLocalVariable(il, receiverType.IsValueType ? receiverType.MakeByRefType() : receiverType);
+                    var storedType = deferReceiverCompile ? receiver.Type : receiverType;
+                    receiverVar = EmitStoreLocalVariable(il, storedType.IsValueType ? storedType.MakeByRefType() : storedType);
                 }
                 SmallList<ByRefWriteback, Stack2<ByRefWriteback>, NoArrayPool<ByRefWriteback>> writebacks = default;
                 SmallList<int, Stack8<int>, NoArrayPool<int>> arguments = default;
@@ -6263,7 +6267,10 @@ namespace FastExpressionCompiler
                 }
 
                 if (receiverVar != -1)
+                {
                     EmitLoadLocalVariable(il, receiverVar);
+                    if (deferReceiverCompile && !EmitInstanceMethodCall(il, receiverCompileMethod, receiver.Type)) return false;
+                }
                 for (var i = 0; i < arguments.Count; ++i)
                     EmitLoadLocalVariable(il, arguments.GetSurePresentRef(i));
                 if (constructor != null)
@@ -6716,17 +6723,14 @@ namespace FastExpressionCompiler
                     delegateInvokeMethod = delegateType.FindDelegateInvokeMethod();
                     if (delegateInvokeMethod == null) return false;
                 }
+                var deferCompile = compileMethod != null && context.HasComplexArguments(expr);
                 var invokeParameters = delegateInvokeMethod.GetParameters();
                 for (var i = 0; i < invokeParameters.Length; ++i)
                     if (invokeParameters[i].ParameterType.IsByRef)
                     {
-                        // Runtime expression compilation does not yet support ref arguments.
-                        if (compileMethod != null)
-                            return false;
                         if (NeedsByRefWriteback(expr.GetArgument(i)))
-                            return TryEmitCallWithWritebacks(invokedExpr, expr.GetArgs(), delegateInvokeMethod, null, il, ref context, parent, byRefIndex);
+                            return TryEmitCallWithWritebacks(invokedExpr, expr.GetArgs(), delegateInvokeMethod, null, il, ref context, parent, byRefIndex, compileMethod, deferCompile);
                     }
-                var deferCompile = compileMethod != null && context.HasComplexArguments(expr);
 
                 // The invocation receiver is a value, including incoming ref delegates.
                 var receiverFlags = (parent & ~InvocationReceiverFlagsToClear) |
