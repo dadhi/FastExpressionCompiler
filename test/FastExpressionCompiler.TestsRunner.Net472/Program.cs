@@ -55,6 +55,7 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.FrameworkFilterRejectionTests());
                 t.Run(new LightExpression.UnitTests.NonVectorArrayRegressionTests());
                 t.Run(new LightExpression.UnitTests.UnboxStorageRegressionTests());
+                t.Run(new LightExpression.UnitTests.AtomicArithmeticSpillTests());
                 t.Run(new LightExpression.UnitTests.ArrayInitializerExceptionRegressionTests());
                 t.Run(new LightExpression.UnitTests.VoidSwitchConversionRegressionTests());
                 t.Run(new LightExpression.UnitTests.ReadonlyRefFieldRegressionTests());
@@ -145,6 +146,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new NonVectorArrayRegressionTests());
             fecTests.Run(new RefConversionStorageTests());
             fecTests.Run(new UnboxStorageRegressionTests());
+            fecTests.Run(new AtomicArithmeticSpillTests());
             fecTests.Run(new ArrayInitializerExceptionRegressionTests());
             fecTests.Run(new ReadonlyRefFieldRegressionTests());
             fecTests.Run(new NullableCompoundWritebackTests());
