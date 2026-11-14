@@ -142,6 +142,7 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.UnitTests.StringReferenceIdentityTests());
                 lt.Run(new LightExpression.UnitTests.IntegerSwitchDispatchRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ParityTests());
+                lt.Run(new LightExpression.UnitTests.CatchEntryStackTests());
                 ltTime = ltStopwatch.ElapsedMilliseconds;
             });
 
@@ -218,6 +219,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new StringReferenceIdentityTests());
             st.Run(new IntegerSwitchDispatchRegressionTests());
             st.Run(new ParityTests());
+            st.Run(new CatchEntryStackTests());
             st.Run(new Issue498_InvalidProgramException_when_using_loop());
             st.Run(new Issue495_Incomplete_pattern_detection_for_NotSupported_1007_Return_goto_from_TryCatch_with_Assign_generates_invalid_IL());
             st.Run(new Issue480_CLR_detected_an_invalid_program_exception());

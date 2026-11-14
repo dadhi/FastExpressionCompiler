@@ -3395,6 +3395,8 @@ namespace FastExpressionCompiler
                         // at the beginning of catch the Exception value is on the stack, so store it into the variable
                         if (exVarIndex != -1)
                             EmitStoreLocalVariable(il, exVarIndex);
+                        else
+                            il.Demit(OpCodes.Pop); // An unbound catch still receives the exception on its entry stack.
                     }
 #if DEMIT
                     Debug.WriteLine($"}} catch {{");
