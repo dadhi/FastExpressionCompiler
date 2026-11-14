@@ -1759,8 +1759,8 @@ namespace FastExpressionCompiler
                             if (binaryExpr.Conversion != null &&
                                 (r = TryCollectInfo(ref context, Expression.Invoke(binaryExpr.Conversion, Expression.Default(binaryExpr.Conversion.Parameters[0].Type)), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                                 return r;
-                            if (IsCompoundArithmeticAssignment(binaryExpr.NodeType) &&
-                                (binaryExpr.Left is MemberExpression || binaryExpr.Left is IndexExpression))
+                            if (binaryExpr.NodeType != ExpressionType.Assign &&
+                                binaryExpr.Left is MemberExpression or IndexExpression && binaryExpr.NodeType.IsAssignNodeType())
                             {
                                 var compoundRightTryCount = context.TryExpressionCount;
                                 r = TryCollectInfo(ref context, binaryExpr.Right, nestedLambda, ref rootNestedLambdas, scopeIdx);
@@ -1830,15 +1830,6 @@ namespace FastExpressionCompiler
             cache.Reductions.Map.AddOrGetValueRef(expression, out _) = reduced;
             return reduced;
         }
-
-        [MethodImpl((MethodImplOptions)256)]
-        private static bool IsCompoundArithmeticAssignment(ExpressionType nodeType) => nodeType is
-            ExpressionType.AddAssign or ExpressionType.AddAssignChecked or
-            ExpressionType.SubtractAssign or ExpressionType.SubtractAssignChecked or
-            ExpressionType.MultiplyAssign or ExpressionType.MultiplyAssignChecked or
-            ExpressionType.DivideAssign or ExpressionType.ModuloAssign or ExpressionType.PowerAssign or
-            ExpressionType.AndAssign or ExpressionType.OrAssign or ExpressionType.ExclusiveOrAssign or
-            ExpressionType.LeftShiftAssign or ExpressionType.RightShiftAssign;
 
         private static Expression CreateInlinedLambdaInvocationExpression(Args invokeArgs, LambdaExpression lambdaExpr)
         {
@@ -5466,8 +5457,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            // Lowers `left op= right` (or `left++` / `left--` when the right is null) with the explicit or user-defined method into
-            // `left = [conversion](method(left, right))` the same way as System reduces it, with the temps for the target instance and indexes to evaluate them once.
+            [MethodImpl((MethodImplOptions)256)]
             private static bool TryEmitCachedCompoundRight(Expression right, int cachedRight,
                 ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
@@ -5478,6 +5468,8 @@ namespace FastExpressionCompiler
                 return true;
             }
 
+            // Lowers `left op= right` (or `left++` / `left--` when the right is null) with the explicit or user-defined method into
+            // `left = [conversion](method(left, right))` the same way as System reduces it, with the temps for the target instance and indexes to evaluate them once.
             private static bool TryEmitOpAssignWithMethod(Expression left, Expression right, MethodInfo method, ExpressionType arithType,
                 bool isPost, ILGenerator il, ref CompilerContext context, ParentFlags parent, LambdaExpression conversion = null)
             {
