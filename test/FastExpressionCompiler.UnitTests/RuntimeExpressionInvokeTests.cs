@@ -9,7 +9,7 @@ namespace FastExpressionCompiler.UnitTests;
 public struct RuntimeExpressionInvokeTests : ITestX
 {
     public delegate int RefTree(ref System.Linq.Expressions.Expression<Func<int>> tree);
-    public void Run(TestRun t) { Computed_and_parameter_receivers(t); Compilation_and_argument_order(t); Ref_expression_receivers_are_values(t); Unsupported_byref_arguments_are_rejected(t); Ordinary_ref_delegate_property_arguments_keep_copyback(t); }
+    public void Run(TestRun t) { Computed_and_parameter_receivers(t); Compilation_and_argument_order(t); Ref_expression_receivers_are_values(t); Runtime_byref_arguments_use_writable_storage(t); Ordinary_ref_delegate_property_arguments_keep_copyback(t); }
     public void Computed_and_parameter_receivers(TestContext t)
     {
         var tree=S.Parameter(typeof(System.Linq.Expressions.Expression<Func<int,int>>));
@@ -55,12 +55,18 @@ public struct RuntimeExpressionInvokeTests : ITestX
         }
     }
     public delegate int Update(ref int value);
-    public void Unsupported_byref_arguments_are_rejected(TestContext t)
+    public void Runtime_byref_arguments_use_writable_storage(TestContext t)
     {
         var receiver=S.Parameter(typeof(System.Linq.Expressions.Expression<Update>));
         var value=S.Parameter(typeof(int));
         var tree=S.Lambda<Func<System.Linq.Expressions.Expression<Update>,int,int>>(S.Invoke(receiver,value),receiver,value);
-        t.AreEqual(null,tree.FromSysExpression().CompileFast(true));
+        var fast = tree.FromSysExpression().CompileFast(true);
+        if (!t.IsNotNull(fast)) return;
+        var parameter = S.Parameter(typeof(int).MakeByRefType());
+        var update = S.Lambda<Update>(S.Call(typeof(RuntimeExpressionInvokeTests).GetMethod(nameof(Increment)), parameter), parameter);
+        foreach (var compiled in new[] { tree.Compile(), fast })
+            foreach (var initial in new[] { -1, 0, 5 })
+                t.AreEqual(initial + 1, compiled(update, initial));
     }
     public sealed class Cell
     {
@@ -84,11 +90,22 @@ public struct RuntimeExpressionInvokeTests : ITestX
             t.AreEqual(1, data.Gets);
             t.AreEqual(1, data.Sets);
         }
-        // A runtime Expression<Update> still rejects ref arguments, including properties.
+        // Runtime expression receivers also preserve getter/setter copyback.
         var expression = S.Parameter(typeof(System.Linq.Expressions.Expression<Update>));
-        var unsupported = S.Lambda<Func<System.Linq.Expressions.Expression<Update>, Cell, int>>(
+        var runtimeTree = S.Lambda<Func<System.Linq.Expressions.Expression<Update>, Cell, int>>(
             S.Invoke(expression, value), expression, cell);
-        t.AreEqual(null, unsupported.FromSysExpression().CompileFast(true));
+        var runtimeFast = runtimeTree.FromSysExpression().CompileFast(true);
+        if (!t.IsNotNull(runtimeFast)) return;
+        var parameter = S.Parameter(typeof(int).MakeByRefType());
+        var update = S.Lambda<Update>(S.Call(typeof(RuntimeExpressionInvokeTests).GetMethod(nameof(Increment)), parameter), parameter);
+        foreach (var compiled in new[] { runtimeTree.Compile(), runtimeFast })
+        {
+            var data = new Cell();
+            t.AreEqual(6, compiled(update, data));
+            t.AreEqual(6, data.Stored);
+            t.AreEqual(1, data.Gets);
+            t.AreEqual(1, data.Sets);
+        }
     }
     public void Ref_expression_receivers_are_values(TestContext t)
     {

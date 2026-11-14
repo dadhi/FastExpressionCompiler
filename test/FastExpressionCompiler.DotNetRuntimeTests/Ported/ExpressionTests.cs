@@ -374,14 +374,36 @@ namespace System.Linq.Expressions.Tests
         public void CompileIrreduciebleExtension(bool useInterpreter)
         {
             Expression<Action> exp = Expression.Lambda<Action>(new IrreducibleWithTypeAndNodeType());
-            AssertExtensions.Throws<ArgumentException>(null, () => exp.CompileForFec(useInterpreter));
+            if (Environment.GetEnvironmentVariable("FEC_TEST_COMPILER") == "system")
+                AssertExtensions.Throws<ArgumentException>(null, () => exp.CompileForFec(useInterpreter));
+            else
+                AssertFecIrreducibleNodeContract(exp);
         }
 
         [Theory, ClassData(typeof(CompilationTypes))]
         public void CompileIrreduciebleStrangeNodeTypeExtension(bool useInterpreter)
         {
             Expression<Action> exp = Expression.Lambda<Action>(new IrreduceibleWithTypeAndStrangeNodeType());
-            AssertExtensions.Throws<ArgumentException>(null, () => exp.CompileForFec(useInterpreter));
+            if (Environment.GetEnvironmentVariable("FEC_TEST_COMPILER") == "system")
+                AssertExtensions.Throws<ArgumentException>(null, () => exp.CompileForFec(useInterpreter));
+            else
+                AssertFecIrreducibleNodeContract(exp);
+        }
+
+        private static void AssertFecIrreducibleNodeContract(Expression<Action> expression)
+        {
+            foreach (var flags in new[] { FastExpressionCompiler.CompilerFlags.Default,
+                FastExpressionCompiler.CompilerFlags.NoInvocationLambdaInlining,
+                FastExpressionCompiler.CompilerFlags.EnableDelegateDebugInfo })
+            {
+                CompilationObservationAttribute.Record();
+                Assert.Null(FastExpressionCompiler.ExpressionCompiler.CompileFast<Action>(expression, true, flags));
+                CompilationObservationAttribute.Record();
+                var error = Assert.Throws<FastExpressionCompiler.NotSupportedExpressionException>(() =>
+                    FastExpressionCompiler.ExpressionCompiler.CompileFast<Action>(expression, true,
+                        flags | FastExpressionCompiler.CompilerFlags.ThrowOnNotSupportedExpression));
+                Assert.Equal(FastExpressionCompiler.ExpressionCompiler.Result.NotSupported_UnknownExpression, error.Reason);
+            }
         }
 
         [Theory, ClassData(typeof(CompilationTypes))]

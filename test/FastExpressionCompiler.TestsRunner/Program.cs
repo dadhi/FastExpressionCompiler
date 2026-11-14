@@ -86,6 +86,7 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.UnitTests.ArrayBoundsExceptionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.BackwardTypedLabelTests());
                 lt.Run(new LightExpression.UnitTests.TryResultValueRegressionTests());
+                lt.Run(new LightExpression.UnitTests.ArrayIndexExceptionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.FrameworkFilterRejectionTests());
                 lt.Run(new LightExpression.UnitTests.ExceptionRegionValidationRegressionTests());
                 lt.Run(new LightExpression.UnitTests.NonVectorArrayRegressionTests());
@@ -107,7 +108,6 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.UnitTests.ReadonlyNestedBindingTests());
                 lt.Run(new LightExpression.UnitTests.MultiRankArrayReceiverRegressionTests());
                 lt.Run(new LightExpression.UnitTests.FormalReferenceTemporariesTests());
-                lt.Run(new LightExpression.UnitTests.ArrayIndexExceptionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.IndexerExceptionSpillRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ValuePropertyBindingValidationTests());
                 lt.Run(new LightExpression.UnitTests.ReadonlyValueReceiverRegressionTests());
@@ -134,6 +134,27 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.UnitTests.ExcessiveArityRegressionTests());
 #if NET8_0_OR_GREATER
                 lt.Run(new LightExpression.UnitTests.NestedStructFieldAddressRegressionTests());
+                lt.Run(new LightExpression.UnitTests.NonExceptionThrowPolicyRegressionTests());
+                lt.Run(new LightExpression.UnitTests.CapturedStructArithmeticRegressionTests());
+                lt.Run(new LightExpression.UnitTests.CapturedQuoteRegressionTests());
+                lt.Run(new LightExpression.UnitTests.ScopedVariableBindingRegressionTests());
+                lt.Run(new LightExpression.UnitTests.MethodTailReturnRegressionTests());
+                lt.Run(new LightExpression.UnitTests.RuntimeExpressionSpillOrderRegressionTests());
+                lt.Run(new LightExpression.UnitTests.NestedJumpArgumentRegressionTests());
+                lt.Run(new LightExpression.UnitTests.DynamicCallSiteRegressionTests());
+                lt.Run(new LightExpression.UnitTests.ScopedLabelBindingRegressionTests());
+                lt.Run(new LightExpression.UnitTests.LexicalJumpScopeRegressionTests());
+                lt.Run(new LightExpression.UnitTests.InvocationJumpArgumentRegressionTests());
+                lt.Run(new LightExpression.UnitTests.RuntimeExpressionInvocationRegressionTests());
+                lt.Run(new LightExpression.UnitTests.NestedMemberBindingLayoutBehaviorRegressionTests());
+                lt.Run(new LightExpression.UnitTests.CoalesceValueConversionRegressionTests());
+                lt.Run(new LightExpression.UnitTests.NegationBehaviorRegressionTests());
+                lt.Run(new LightExpression.UnitTests.RuntimeCompilerLayoutBehaviorRegressionTests());
+                lt.Run(new LightExpression.UnitTests.AdditionalCompilerLayoutBehaviorRegressionTests());
+                lt.Run(new LightExpression.UnitTests.CompilerLayoutBehaviorRegressionTests());
+                lt.Run(new LightExpression.UnitTests.InvocationArgumentContextRegressionTests());
+                lt.Run(new LightExpression.UnitTests.InvalidFilterControlFlowRegressionTests());
+                lt.Run(new LightExpression.UnitTests.CatchFilterSafetyRegressionTests());
                 lt.Run(new LightExpression.IssueTests.Issue490_Regression_in_compiling_lambdas_with_ref_struct_parameters());
 #endif
 
@@ -185,6 +206,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new ArrayBoundsExceptionRegressionTests());
             st.Run(new BackwardTypedLabelTests());
             st.Run(new TryResultValueRegressionTests());
+            st.Run(new ArrayIndexExceptionRegressionTests());
             st.Run(new FrameworkFilterRejectionTests());
             st.Run(new ExceptionRegionValidationRegressionTests());
             st.Run(new NonVectorArrayRegressionTests());
@@ -206,7 +228,6 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new ReadonlyNestedBindingTests());
             st.Run(new MultiRankArrayReceiverRegressionTests());
             st.Run(new FormalReferenceTemporariesTests());
-            st.Run(new ArrayIndexExceptionRegressionTests());
             st.Run(new IndexerExceptionSpillRegressionTests());
             st.Run(new ValuePropertyBindingValidationTests());
             st.Run(new ReadonlyValueReceiverRegressionTests());
@@ -232,6 +253,27 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new CompoundIndexExceptionRegressionTests());
             st.Run(new ExcessiveArityRegressionTests());
             st.Run(new NestedStructFieldAddressRegressionTests());
+            st.Run(new NonExceptionThrowPolicyRegressionTests());
+            st.Run(new CapturedStructArithmeticRegressionTests());
+            st.Run(new CapturedQuoteRegressionTests());
+            st.Run(new ScopedVariableBindingRegressionTests());
+            st.Run(new MethodTailReturnRegressionTests());
+            st.Run(new RuntimeExpressionSpillOrderRegressionTests());
+            st.Run(new NestedJumpArgumentRegressionTests());
+            st.Run(new DynamicCallSiteRegressionTests());
+            st.Run(new ScopedLabelBindingRegressionTests());
+            st.Run(new LexicalJumpScopeRegressionTests());
+            st.Run(new InvocationJumpArgumentRegressionTests());
+            st.Run(new RuntimeExpressionInvocationRegressionTests());
+            st.Run(new NestedMemberBindingLayoutBehaviorRegressionTests());
+            st.Run(new CoalesceValueConversionRegressionTests());
+            st.Run(new NegationBehaviorRegressionTests());
+            st.Run(new RuntimeCompilerLayoutBehaviorRegressionTests());
+            st.Run(new AdditionalCompilerLayoutBehaviorRegressionTests());
+            st.Run(new CompilerLayoutBehaviorRegressionTests());
+            st.Run(new InvocationArgumentContextRegressionTests());
+            st.Run(new InvalidFilterControlFlowRegressionTests());
+            st.Run(new CatchFilterSafetyRegressionTests());
             st.Run(new Issue499_InvalidProgramException_for_Sorting_and_comparison_function());
             st.Run(new Issue561_NonBooleanEqualityOperator());
             st.Run(new ReductionProgressRegressionTests());
@@ -242,6 +284,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new MemberConstructorExceptionTests());
             st.Run(new MethodBasedNotRegressionTests());
             st.Run(new CustomReducibleNodeRegressionTests());
+            st.Run(new DynamicQuotedReductionRegressionTests());
             st.Run(new ExtensionReductionIdentityRegressionTests());
             st.Run(new LiftedOperandEvaluationRegressionTests());
             st.Run(new StringReferenceIdentityTests());

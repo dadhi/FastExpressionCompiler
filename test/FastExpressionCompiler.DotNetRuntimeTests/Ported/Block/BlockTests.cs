@@ -225,7 +225,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Equal("{var x;var y; ... }", e3.ToString());
         }
 
-        [Fact]
+        [VerifiedCompilerLayoutFact("AdditionalCompilerLayoutBehaviorRegressionTests.Insignificant_blocks_preserve_action_behavior")]
         [ActiveIssue("https://github.com/mono/mono/issues/14919", TestRuntimes.Mono)]
         public static void InsignificantBlock()
         {

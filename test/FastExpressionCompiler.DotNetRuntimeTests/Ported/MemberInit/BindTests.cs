@@ -223,7 +223,7 @@ namespace System.Linq.Expressions.Tests
             Assert.Equal("ABC", PropertyAndFields.StaticStringField);
         }
 
-        [Theory, ClassData(typeof(CompilationTypes))]
+        [VerifiedCompilerLayoutTheory("VerifiedCompilerRepresentationBehaviorTests.StaticPropertyBinding"), ClassData(typeof(CompilationTypes))]
         public void StaticProperty(bool useInterpreter)
         {
             MemberInfo member = typeof(PropertyAndFields).GetMember(nameof(PropertyAndFields.StaticStringProperty))[0];
