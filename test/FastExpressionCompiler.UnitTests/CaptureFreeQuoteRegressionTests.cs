@@ -1,0 +1,79 @@
+using System;
+using System.Runtime.CompilerServices;
+using S=System.Linq.Expressions.Expression;
+#if LIGHT_EXPRESSION
+using E=FastExpressionCompiler.LightExpression.Expression;
+namespace FastExpressionCompiler.LightExpression.UnitTests;
+#else
+using E=System.Linq.Expressions.Expression;
+namespace FastExpressionCompiler.UnitTests;
+#endif
+public struct CaptureFreeQuoteRegressionTests : ITestX
+{
+ public void Run(TestRun t)
+ {
+  Quote_preserves_tree_and_delegate_type(t);
+  Quote_preserves_locally_bound_variables(t);
+  Free_quotes_preserve_identity_and_reject_captures(t);
+  Quoted_data_is_not_compiled_or_pruned(t);
+
+ }
+ public void Quote_preserves_tree_and_delegate_type(TestContext t)
+ {
+  var x=E.Parameter(typeof(int),"x");
+  var quote=E.Quote(E.Lambda<Func<int,int>>(x,x));
+  t.AreEqual(typeof(System.Linq.Expressions.Expression<Func<int,int>>),quote.Type);
+  var compiled=E.Lambda<Func<System.Linq.Expressions.Expression<Func<int,int>>>>(quote).CompileFast(true);
+  if(!t.IsNotNull(compiled))return;
+  var tree=compiled();t.IsTrue(ReferenceEquals(tree.Body,tree.Parameters[0]));
+  var inner=tree.FromSysExpression().CompileFast(true);if(t.IsNotNull(inner))t.AreEqual(42,inner(42));
+  var ignored=E.Lambda<Action>(E.Block(quote,E.Empty())).CompileFast(true);if(t.IsNotNull(ignored))ignored();
+ }
+ public void Quote_preserves_locally_bound_variables(TestContext t)
+ {
+  var x=E.Variable(typeof(int));
+  var lambda=E.Lambda<Func<int>>(E.Block(new[]{x},E.Assign(x,E.Constant(7)),x));
+  var compiled=E.Lambda<Func<System.Linq.Expressions.Expression<Func<int>>>>(E.Quote(lambda)).CompileFast(true);
+  if(!t.IsNotNull(compiled))return;
+  var inner=compiled().FromSysExpression().CompileFast(true);if(t.IsNotNull(inner))t.AreEqual(7,inner());
+  var exception=E.Parameter(typeof(Exception));
+  var caught=E.Lambda<Func<Exception>>(E.TryCatch(E.Throw(E.New(typeof(Exception)),typeof(Exception)),E.Catch(exception,exception)));
+  var catchQuote=E.Lambda<Func<System.Linq.Expressions.Expression<Func<Exception>>>>(E.Quote(caught)).CompileFast(true);
+  if(t.IsNotNull(catchQuote))t.AreEqual(System.Linq.Expressions.ExpressionType.Try,catchQuote().Body.NodeType);
+ }
+ public void Quoted_data_is_not_compiled_or_pruned(TestContext t)
+ {
+  var local = S.Variable(typeof(int));
+  // RuntimeVariables with nonempty storage is unsupported as compiled FEC code, but valid as quoted data.
+  var operand = S.Lambda<Func<IRuntimeVariables>>(S.Block(new[] { local }, S.RuntimeVariables(local)));
+  var compiled = S.Lambda<Func<System.Linq.Expressions.Expression<Func<IRuntimeVariables>>>>(S.Quote(operand)).FromSysExpression().CompileFast(true);
+  if (!t.IsNotNull(compiled)) return;
+  t.AreEqual(System.Linq.Expressions.ExpressionType.RuntimeVariables,
+   ((System.Linq.Expressions.BlockExpression)compiled().Body).Expressions[0].NodeType);
+  var free = E.Parameter(typeof(int));
+  // Binding validation must also inspect branches the executable-code collector could eliminate.
+  var body = E.Switch(E.Constant(0), E.Constant(7), E.SwitchCase(free, E.Constant(1)));
+  var capture = E.Lambda<Func<int, System.Linq.Expressions.Expression<Func<int>>>>(
+   E.Quote(E.Lambda<Func<int>>(body)), free);
+  t.AreEqual(null, capture.CompileFast(true));
+  var conditional = E.Condition(E.Constant(true), E.Constant(7), free);
+  var conditionalCapture = E.Lambda<Func<int, System.Linq.Expressions.Expression<Func<int>>>>(
+   E.Quote(E.Lambda<Func<int>>(conditional)), free);
+  t.AreEqual(null, conditionalCapture.CompileFast(true));
+ }
+ public void Free_quotes_preserve_identity_and_reject_captures(TestContext t)
+ {
+  var parameter=E.Parameter(typeof(int));
+  var inner=E.Lambda<Func<int,int>>(parameter,parameter);
+  var quote=E.Quote(inner);
+  var pair=E.Lambda<Func<System.Linq.Expressions.Expression<Func<int,int>>[]>>(
+   E.NewArrayInit(typeof(System.Linq.Expressions.Expression<Func<int,int>>),quote,E.Quote(inner))).CompileFast(true);
+  if(!t.IsNotNull(pair))return;
+  var first=pair();var second=pair();
+  t.IsTrue(ReferenceEquals(first[0],first[1]));
+  t.IsTrue(ReferenceEquals(first[0],second[0]));
+  var capture=E.Lambda<Func<int,System.Linq.Expressions.Expression<Func<int>>>>(
+   E.Quote(E.Lambda<Func<int>>(parameter)),parameter);
+  t.AreEqual(null,capture.CompileFast(true));
+ }
+}
