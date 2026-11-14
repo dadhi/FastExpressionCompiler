@@ -2594,7 +2594,7 @@ namespace FastExpressionCompiler
                                 var incExpr = (UnaryExpression)expr;
                                 var incMethod = incExpr.Method;
                                 return incMethod != null
-                                    ? TryEmitUnaryAssignWithMethod(incExpr.Operand, null, incMethod, ExpressionType.Add,
+                                    ? TryEmitUnaryAssignWithMethod(incExpr.Operand, incMethod, ExpressionType.Add,
                                         nodeType == ExpressionType.PostIncrementAssign, il, ref context, parent)
                                     : TryEmitArithmeticAndOrAssign(incExpr.Operand, null, exprType, ExpressionType.Add,
                                         nodeType == ExpressionType.PostIncrementAssign, il, ref context, parent);
@@ -2606,7 +2606,7 @@ namespace FastExpressionCompiler
                                 var decExpr = (UnaryExpression)expr;
                                 var decMethod = decExpr.Method;
                                 return decMethod != null
-                                    ? TryEmitUnaryAssignWithMethod(decExpr.Operand, null, decMethod, ExpressionType.Subtract,
+                                    ? TryEmitUnaryAssignWithMethod(decExpr.Operand, decMethod, ExpressionType.Subtract,
                                         nodeType == ExpressionType.PostDecrementAssign, il, ref context, parent)
                                     : TryEmitArithmeticAndOrAssign(decExpr.Operand, null, exprType, ExpressionType.Subtract,
                                         nodeType == ExpressionType.PostDecrementAssign, il, ref context, parent);
@@ -2631,6 +2631,8 @@ namespace FastExpressionCompiler
                             if (nodeType == ExpressionType.Assign)
                                 return TryEmitArithmeticAndOrAssign(ba.Left, ba.Right, exprType, nodeType, false, il, ref context, parent);
 
+                            // Binary compound assignments retain RHS evaluation and the optional conversion lambda.
+                            // The direct unary path has a one-argument method, no RHS and no conversion lambda.
                             var baMethod = ba.Method;
                             var baConversion = ba.Conversion;
                             return baMethod != null | baConversion != null
@@ -5417,7 +5419,7 @@ namespace FastExpressionCompiler
                 return true;
             }
 
-            private static bool TryEmitUnaryAssignWithMethod(Expression left, Expression right, MethodInfo method,
+            private static bool TryEmitUnaryAssignWithMethod(Expression left, MethodInfo method,
                 ExpressionType arithmeticType, bool isPost, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 // Captured and ref storage retains the existing lowering/writeback path.
@@ -5458,7 +5460,7 @@ namespace FastExpressionCompiler
                         return true;
                     }
                 }
-                return TryEmitOpAssignWithMethod(left, right, method, arithmeticType, isPost, il, ref context, parent);
+                return TryEmitOpAssignWithMethod(left, null, method, arithmeticType, isPost, il, ref context, parent);
             }
 
             // Lowers `left op= right` (or `left++` / `left--` when the right is null) with the explicit or user-defined method into

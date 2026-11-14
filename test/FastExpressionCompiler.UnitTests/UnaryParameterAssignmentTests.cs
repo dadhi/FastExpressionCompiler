@@ -15,9 +15,10 @@ public struct UnaryParameterAssignmentTests : ITestX
         public static Number operator --(Number n)=>new Number{Value=n.Value-1};
     }
     public static Number Step(Number n)=>new Number{Value=n.Value+10};
+    public static long AddWide(int left, int right) => left + right;
     public static int? NullableStep(int? n)=>(n??7)+10;
     public delegate Number RefUpdate(ref Number value);
-    public void Run(TestRun t) { Parameter_and_local_results_match_system(t); Lifted_and_nonlifted_nullable_methods(t); Ref_and_captured_parameters_keep_existing_storage(t); }
+    public void Run(TestRun t) { Parameter_and_local_results_match_system(t); Lifted_and_nonlifted_nullable_methods(t); Ref_and_captured_parameters_keep_existing_storage(t); Binary_compound_assignment_retains_rhs_and_conversion(t); }
     public void Parameter_and_local_results_match_system(TestContext t)
     {
         foreach(var local in new[]{false,true})
@@ -47,6 +48,39 @@ public struct UnaryParameterAssignmentTests : ITestX
         var explicitMethod=S.Lambda<Func<int?,int?>>(S.PreIncrementAssign(value,typeof(UnaryParameterAssignmentTests).GetMethod(nameof(NullableStep))),value);
         var direct=explicitMethod.FromSysExpression().CompileFast(true);if(!t.IsNotNull(direct))return;
         t.AreEqual(explicitMethod.Compile()(null),direct(null));t.AreEqual((int?)17,direct(null));
+    }
+    public void Binary_compound_assignment_retains_rhs_and_conversion(TestContext t)
+    {
+        foreach (var local in new[] { false, true })
+        foreach (var discard in new[] { false, true })
+        {
+            var parameter = S.Parameter(typeof(int));
+            var target = local ? S.Variable(typeof(int)) : parameter;
+            var trace = "";
+            Func<int> right = () => { trace += "rhs;"; return 3; };
+            Func<long, int> convert = value => { trace += "convert;"; return (int)value * 2; };
+            var converted = S.Parameter(typeof(long));
+            var conversion = S.Lambda(S.Invoke(S.Constant(convert), converted), converted);
+            // Capture the old LHS before this RHS mutates its storage; then apply the conversion once.
+            var rhs = S.Block(S.Assign(target, S.Constant(100)), S.Invoke(S.Constant(right)));
+            var assignment = S.AddAssign(target, rhs, typeof(UnaryParameterAssignmentTests).GetMethod(nameof(AddWide)), conversion);
+            var body = discard
+                ? (System.Linq.Expressions.Expression)S.Block(assignment, target)
+                : assignment;
+            if (local) body = S.Block(new[] { target }, S.Assign(target, parameter), body);
+            var tree = S.Lambda<Func<int, int>>(body, parameter);
+            var fast = tree.FromSysExpression().CompileFast(true);
+            if (!t.IsNotNull(fast)) return;
+            var input = 5;
+            trace = "";
+            var expected = tree.Compile()(input);
+            var expectedTrace = trace;
+            trace = "";
+            t.AreEqual(expected, fast(input));
+            t.AreEqual(16, expected);
+            t.AreEqual(expectedTrace, trace);
+            t.AreEqual("rhs;convert;", trace);
+        }
     }
     public void Ref_and_captured_parameters_keep_existing_storage(TestContext t)
     {
