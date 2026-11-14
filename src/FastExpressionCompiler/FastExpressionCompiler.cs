@@ -947,6 +947,38 @@ namespace FastExpressionCompiler
             return label.Label;
         }
 
+        private sealed class ArgumentSpillScope : ExpressionVisitor
+        {
+            [RequiresUnreferencedCode(Trimming.Message)]
+            internal ArgumentSpillScope() { }
+
+            internal bool RequiresSpill;
+            public override Expression Visit(Expression node)
+            {
+                if (node == null || RequiresSpill) return node;
+                switch (node.NodeType)
+                {
+                    case ExpressionType.Try:
+                    case ExpressionType.Goto:
+                        RequiresSpill = true;
+                return node;
+                    case ExpressionType.Lambda:
+                    case ExpressionType.Quote:
+                return node;
+                    case ExpressionType.Dynamic:
+                        foreach (var argument in ((DynamicExpression)node).Arguments) Visit(argument);
+                        return node;
+                    default:
+                        return base.Visit(node);
+            }
+            }
+#if LIGHT_EXPRESSION
+            protected internal override Expression VisitExtension(Expression node) => node;
+#else
+            protected override Expression VisitExtension(Expression node) => node;
+#endif
+        }
+
         internal sealed class CaptureFreeQuoteCache
         {
             internal SmallMap4<Expression, System.Linq.Expressions.Expression, RefEq<Expression>> Expressions;
@@ -1597,8 +1629,21 @@ namespace FastExpressionCompiler
                                 var tries = context.TryExpressionCount;
                                 var jumps = context.GotoTargets.Count;
                                 r = TryCollectArgsAsComplexOwner(ref context, invokeArgs, invokeExpr, nestedLambda, ref rootNestedLambdas, scopeIdx);
-                                if (tries != context.TryExpressionCount || jumps != context.GotoTargets.Count)
-                                    context.MarkComplexArguments(invokeExpr);
+                                if (!context.HasComplexArguments(invokeExpr))
+                                {
+                                    ArgumentSpillScope spillScope = null;
+                                    for (var i = 0; i < invokeArgCount; ++i)
+                                    {
+                                        var argument = invokeArgs.GetArgument(i);
+                                        if (argument.IsParamOrConstantOrDefault()) continue;
+                                        spillScope ??= new ArgumentSpillScope();
+                                        spillScope.Visit(argument);
+                                        if (spillScope.RequiresSpill) break;
+                                    }
+                                    if (tries != context.TryExpressionCount || jumps != context.GotoTargets.Count ||
+                                        spillScope != null && spillScope.RequiresSpill)
+                                        context.MarkComplexArguments(invokeExpr);
+                                }
                                 return r;
                             }
 
