@@ -7656,6 +7656,27 @@ namespace FastExpressionCompiler
             private static bool TryEmitArithmetic(Expression left, Expression right, ExpressionType nodeType, Type exprType,
                 ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
+                // Keep ordinary primitive arithmetic out of the lifted/spill emission frame.
+                if (right != null)
+                {
+                    var leftType = left.Type;
+                    var rightType = right.Type;
+                    if (leftType.IsPrimitive && rightType.IsPrimitive &&
+                        (context.TryExpressionCount == 0 || IsAtomicArithmeticOperand(right)) && !right.IsComplexExpression())
+                    {
+                        var flags = (parent & ~OperandParentFlagsToClear) | ParentFlags.Arithmetic;
+                        if (!TryEmit(left, il, ref context, flags) || !TryEmit(right, il, ref context, flags) ||
+                            !TryEmitArithmeticOperation(leftType, rightType, nodeType, exprType, il)) return false;
+                        context.LastEmitIsAddress = false;
+                        return il.EmitPopIfIgnoreResult(parent);
+                    }
+                }
+                return TryEmitLiftedOrComplexArithmetic(left, right, nodeType, exprType, il, ref context, parent);
+            }
+
+            private static bool TryEmitLiftedOrComplexArithmetic(Expression left, Expression right, ExpressionType nodeType, Type exprType,
+                ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            {
                 var flags = (parent
                     & ~OperandParentFlagsToClear)
                     | ParentFlags.Arithmetic;
