@@ -74,6 +74,7 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.IndexerExceptionSpillRegressionTests());
                 t.Run(new LightExpression.UnitTests.ValuePropertyBindingValidationTests());
                 t.Run(new LightExpression.UnitTests.ReadonlyValueReceiverRegressionTests());
+                t.Run(new LightExpression.UnitTests.ReturnPatternScopeTests());
                 t.Run(new LightExpression.UnitTests.DirectQuotedInvocationTests());
                 t.Run(new LightExpression.UnitTests.BlockVariableBindingRegressionTests());
                 t.Run(new LightExpression.UnitTests.ComparisonReductionRegressionTests());
@@ -162,6 +163,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new IndexerExceptionSpillRegressionTests());
             fecTests.Run(new ValuePropertyBindingValidationTests());
             fecTests.Run(new ReadonlyValueReceiverRegressionTests());
+            fecTests.Run(new ReturnPatternScopeTests());
             fecTests.Run(new DirectQuotedInvocationTests());
             fecTests.Run(new BlockVariableBindingRegressionTests());
             fecTests.Run(new ComparisonReductionRegressionTests());
