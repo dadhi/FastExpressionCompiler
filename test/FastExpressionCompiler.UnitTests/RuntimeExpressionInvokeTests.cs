@@ -9,7 +9,7 @@ namespace FastExpressionCompiler.UnitTests;
 public struct RuntimeExpressionInvokeTests : ITestX
 {
     public delegate int RefTree(ref System.Linq.Expressions.Expression<Func<int>> tree);
-    public void Run(TestRun t) { Computed_and_parameter_receivers(t); Compilation_and_argument_order(t); Ref_expression_receivers_are_values(t); Unsupported_byref_arguments_are_rejected(t); }
+    public void Run(TestRun t) { Computed_and_parameter_receivers(t); Compilation_and_argument_order(t); Ref_expression_receivers_are_values(t); Unsupported_byref_arguments_are_rejected(t); Ordinary_ref_delegate_property_arguments_keep_copyback(t); }
     public void Computed_and_parameter_receivers(TestContext t)
     {
         var tree=S.Parameter(typeof(System.Linq.Expressions.Expression<Func<int,int>>));
@@ -61,6 +61,34 @@ public struct RuntimeExpressionInvokeTests : ITestX
         var value=S.Parameter(typeof(int));
         var tree=S.Lambda<Func<System.Linq.Expressions.Expression<Update>,int,int>>(S.Invoke(receiver,value),receiver,value);
         t.AreEqual(null,tree.FromSysExpression().CompileFast(true));
+    }
+    public sealed class Cell
+    {
+        public int Stored = 5, Gets, Sets;
+        public int Value { get { ++Gets; return Stored; } set { ++Sets; Stored = value; } }
+    }
+    public static int Increment(ref int value) => ++value;
+    public void Ordinary_ref_delegate_property_arguments_keep_copyback(TestContext t)
+    {
+        var receiver = S.Parameter(typeof(Update));
+        var cell = S.Parameter(typeof(Cell));
+        var value = S.Property(cell, nameof(Cell.Value));
+        var tree = S.Lambda<Func<Update, Cell, int>>(S.Invoke(receiver, value), receiver, cell);
+        var fast = tree.FromSysExpression().CompileFast(true);
+        if (!t.IsNotNull(fast)) return;
+        foreach (var compiled in new[] { tree.Compile(), fast })
+        {
+            var data = new Cell();
+            t.AreEqual(6, compiled(Increment, data));
+            t.AreEqual(6, data.Stored);
+            t.AreEqual(1, data.Gets);
+            t.AreEqual(1, data.Sets);
+        }
+        // A runtime Expression<Update> still rejects ref arguments, including properties.
+        var expression = S.Parameter(typeof(System.Linq.Expressions.Expression<Update>));
+        var unsupported = S.Lambda<Func<System.Linq.Expressions.Expression<Update>, Cell, int>>(
+            S.Invoke(expression, value), expression, cell);
+        t.AreEqual(null, unsupported.FromSysExpression().CompileFast(true));
     }
     public void Ref_expression_receivers_are_values(TestContext t)
     {
