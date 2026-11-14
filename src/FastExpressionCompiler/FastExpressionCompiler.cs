@@ -3183,15 +3183,6 @@ namespace FastExpressionCompiler
                 }
             }
 
-            [MethodImpl((MethodImplOptions)256)]
-            private static int EmitNullableVarAddressAndHasValue(ILGenerator il, Type type)
-            {
-                Debug.Assert(type.IsNullable(), "Expecting a nullable type");
-                var varIndex = EmitStoreAndLoadLocalVariableAddress(il, type);
-                EmitMethodCall(il, type.GetNullableHasValueGetterMethod());
-                return varIndex;
-            }
-
             private static bool TryEmitCoalesceOperator(BinaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var left = expr.Left;
@@ -3242,8 +3233,7 @@ namespace FastExpressionCompiler
                     {
                         // the target expression type is the underlying type or a wider one (e.g. `int? ?? long`),
                         // then extract the underlying value and convert it if needed
-                        EmitLoadLocalVariableAddress(il, varIndex);
-                        il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                        EmitLoadNullableVarAddressAndValueOrDefault(il, varIndex, leftType);
                         if (underlyingLeftType != underlyingExprType &&
                             !TryEmitPrimitiveValueConvert(underlyingLeftType, underlyingExprType, il, isChecked: false))
                             return false;
@@ -3844,9 +3834,7 @@ namespace FastExpressionCompiler
                 var doneLabel = il.DefineLabel();
                 var opVar = EmitNullableVarAddressAndHasValue(il, operType);
                 il.Demit(OpCodes.Brfalse, nullLabel);
-
-                EmitLoadLocalVariableAddress(il, opVar);
-                il.Demit(OpCodes.Ldfld, operType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                EmitLoadNullableVarAddressAndValueOrDefault(il, opVar, operType);
                 if (!EmitUnaryOperation(il, nodeType, Nullable.GetUnderlyingType(operType), method))
                     return false;
                 il.Demit(OpCodes.Newobj, exprType.GetNullableConstructor());
@@ -4146,8 +4134,7 @@ namespace FastExpressionCompiler
 
                         // If the nullable source has the value, do the conversion
                         il.DmarkLabel(labelSourceHasValue);
-                        EmitLoadLocalVariableAddress(il, sourceVarIndex);
-                        il.Demit(OpCodes.Ldfld, sourceType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                        EmitLoadNullableVarAddressAndValueOrDefault(il, sourceVarIndex, sourceType);
 
                         if (methodParameterIsByRef)
                             EmitStoreAndLoadLocalVariableAddress(il, methodParamType);
@@ -4212,8 +4199,7 @@ namespace FastExpressionCompiler
 
                     // If the nullable source has the value, do the conversion
                     il.DmarkLabel(labelSourceHasValue);
-                    EmitLoadLocalVariableAddress(il, sourceVarIndex);
-                    il.Demit(OpCodes.Ldfld, sourceType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                    EmitLoadNullableVarAddressAndValueOrDefault(il, sourceVarIndex, sourceType);
 
                     if (!TryEmitPrimitiveValueConvert(underlyingNullableSourceType, underlyingNullableTargetType, il, expr.NodeType == ExpressionType.ConvertChecked))
                         return false;
@@ -5332,9 +5318,7 @@ namespace FastExpressionCompiler
                                 {
                                     var rightVar = EmitNullableVarAddressAndHasValue(il, rightType);
                                     il.Demit(OpCodes.Brfalse, leftOrRightNullableAreNullLabel = il.DefineLabel());
-
-                                    EmitLoadLocalVariableAddress(il, rightVar);
-                                    il.Demit(OpCodes.Ldfld, rightType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod()); // unwrap right operand
+                                    EmitLoadNullableVarAddressAndValueOrDefault(il, rightVar, rightType); // unwrap right operand
                                 }
 
                                 if (!TryEmitArithmeticOperation(leftType, rightType, nodeType, exprType, il))
@@ -5352,14 +5336,9 @@ namespace FastExpressionCompiler
 
                             if (right == null)
                             {
-                                EmitLoadLocalVariableAddress(il, leftNullableVar);
-                                il.Demit(OpCodes.Call, leftType.GetNullableHasValueGetterMethod());
-
+                                EmitLoadNullableVarAddressAndHasValue(il, leftNullableVar, leftType);
                                 il.Demit(OpCodes.Brfalse, leftOrRightNullableAreNullLabel = il.DefineLabel());
-
-                                EmitLoadLocalVariableAddress(il, leftNullableVar);
-                                il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
-
+                                EmitLoadNullableVarAddressAndValueOrDefault(il, leftNullableVar, leftType);
                                 if (!EmitIncOrDec(il, leftType.GetNonNullableOrSelf(), nodeType == ExpressionType.Add))
                                     return false;
                             }
@@ -5377,31 +5356,19 @@ namespace FastExpressionCompiler
                                 var rightIsNullable = rightType.IsNullable();
                                 if (!rightIsNullable) // todo: @perf @clarify if it is possible to have left nullable and right non-nullable
                                 {
-                                    EmitLoadLocalVariableAddress(il, leftNullableVar);
-                                    il.Demit(OpCodes.Call, leftType.GetNullableHasValueGetterMethod());
-
+                                    EmitLoadNullableVarAddressAndHasValue(il, leftNullableVar, leftType);
                                     il.Demit(OpCodes.Brfalse, leftOrRightNullableAreNullLabel = il.DefineLabel());
-
-                                    EmitLoadLocalVariableAddress(il, leftNullableVar);
-                                    il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
-
+                                    EmitLoadNullableVarAddressAndValueOrDefault(il, leftNullableVar, leftType);
                                     EmitLoadLocalVariable(il, rightVar);
                                 }
                                 else
                                 {
-                                    EmitLoadLocalVariableAddress(il, leftNullableVar);
-                                    il.Demit(OpCodes.Call, leftType.GetNullableHasValueGetterMethod());
-
-                                    EmitLoadLocalVariableAddress(il, rightVar);
-                                    il.Demit(OpCodes.Call, rightType.GetNullableHasValueGetterMethod());
+                                    EmitLoadNullableVarAddressAndHasValue(il, leftNullableVar, leftType);
+                                    EmitLoadNullableVarAddressAndHasValue(il, rightVar, rightType);
                                     il.Demit(OpCodes.And);
                                     il.Demit(OpCodes.Brfalse, leftOrRightNullableAreNullLabel = il.DefineLabel());
-
-                                    EmitLoadLocalVariableAddress(il, leftNullableVar);
-                                    il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());  // unwrap left operand
-
-                                    EmitLoadLocalVariableAddress(il, rightVar);
-                                    il.Demit(OpCodes.Ldfld, rightType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod()); // unwrap right operand
+                                    EmitLoadNullableVarAddressAndValueOrDefault(il, leftNullableVar, leftType);
+                                    EmitLoadNullableVarAddressAndValueOrDefault(il, rightVar, rightType);
                                 }
 
                                 if (!TryEmitArithmeticOperation(leftType, rightType, nodeType, exprType, il))
@@ -6959,7 +6926,6 @@ namespace FastExpressionCompiler
                         // See #341 `Nullable_decimal_parameter_with_decimal_constant_comparison_cases`
                         if (!context.LastEmitIsAddress && !(left is ParameterExpression p && p.IsByRef)) // Nullable type does not track IsByRef for some reason, so we check the param explicitly, see #461 `Case_equal_nullable_and_object_null`
                             EmitStoreAndLoadLocalVariableAddress(il, leftType);
-
                         EmitMethodCall(il, leftType.GetNullableHasValueGetterMethod());
                         context.LastEmitIsAddress = false;
                         if (nodeType == ExpressionType.Equal)
@@ -6977,7 +6943,6 @@ namespace FastExpressionCompiler
 
                         if (!context.LastEmitIsAddress && !(right is ParameterExpression p && p.IsByRef))
                             EmitStoreAndLoadLocalVariableAddress(il, rightType);
-
                         EmitMethodCall(il, rightType.GetNullableHasValueGetterMethod());
                         context.LastEmitIsAddress = false;
                         if (nodeType == ExpressionType.Equal)
@@ -7000,8 +6965,7 @@ namespace FastExpressionCompiler
                         lVarIndex = EmitStoreLocalVariable(il, leftType);
                     else if (leftIsNullable)
                     {
-                        lVarIndex = EmitStoreAndLoadLocalVariableAddress(il, leftType);
-                        il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                        lVarIndex = EmitNullableVarAddressAndValueOrDefault(il, leftType);
                         leftType = Nullable.GetUnderlyingType(leftType);
                     }
                 }
@@ -7039,8 +7003,7 @@ namespace FastExpressionCompiler
                         EmitLoadLocalVariable(il, lVarIndex);
                     else
                     {
-                        EmitLoadLocalVariableAddress(il, lVarIndex);
-                        il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                        EmitLoadNullableVarAddressAndValueOrDefault(il, lVarIndex, leftType);
                         leftType = Nullable.GetUnderlyingType(leftType);
                     }
 
@@ -7048,8 +7011,7 @@ namespace FastExpressionCompiler
                         EmitLoadLocalVariable(il, rVarIndex);
                     else
                     {
-                        EmitLoadLocalVariableAddress(il, rVarIndex);
-                        il.Demit(OpCodes.Ldfld, rightType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                        EmitLoadNullableVarAddressAndValueOrDefault(il, rVarIndex, rightType);
                         rightType = Nullable.GetUnderlyingType(rightType);
                     }
                 }
@@ -7062,8 +7024,7 @@ namespace FastExpressionCompiler
                 }
                 else if (rightType.IsNullable())
                 {
-                    rVarIndex = EmitStoreAndLoadLocalVariableAddress(il, rightType);
-                    il.Demit(OpCodes.Ldfld, rightType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                    rVarIndex = EmitNullableVarAddressAndValueOrDefault(il, rightType);
                     rightType = Nullable.GetUnderlyingType(rightType);
                 }
 
@@ -7266,11 +7227,9 @@ namespace FastExpressionCompiler
                             EmitLoadIndirectlyByRef(il, right.Type);
                         cachedRight = EmitStoreLocalVariable(il, right.Type);
                     }
-                    EmitLoadLocalVariableAddress(il, leftVar);
-                    EmitMethodCall(il, leftType.GetNullableHasValueGetterMethod());
+                    EmitLoadNullableVarAddressAndHasValue(il, leftVar, leftType);
                     il.Demit(OpCodes.Brfalse, noNullableValueLabel);
-                    EmitLoadLocalVariableAddress(il, leftVar);
-                    il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                    EmitLoadNullableVarAddressAndValueOrDefault(il, leftVar, leftType);
                     leftValueVar = EmitStoreLocalVariable(il, Nullable.GetUnderlyingType(leftType));
                 }
                 else if (!TryEmit(left, il, ref context, flags))
@@ -7308,8 +7267,7 @@ namespace FastExpressionCompiler
                         if (cachedRight != -1)
                         {
                             rightVar = cachedRight;
-                            EmitLoadLocalVariableAddress(il, rightVar);
-                            EmitMethodCall(il, rightType.GetNullableHasValueGetterMethod());
+                            EmitLoadNullableVarAddressAndHasValue(il, rightVar, rightType);
                         }
                         else
                         {
@@ -7320,8 +7278,7 @@ namespace FastExpressionCompiler
                             rightVar = EmitNullableVarAddressAndHasValue(il, rightType);
                         }
                         il.Demit(OpCodes.Brfalse, noNullableValueLabel);
-                        EmitLoadLocalVariableAddress(il, rightVar);
-                        il.Demit(OpCodes.Ldfld, rightType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                        EmitLoadNullableVarAddressAndValueOrDefault(il, rightVar, rightType);
                         rightValueVar = EmitStoreLocalVariable(il, Nullable.GetUnderlyingType(rightType));
                     }
                     else if (cachedRight != -1)
@@ -7366,28 +7323,46 @@ namespace FastExpressionCompiler
                 return true;
             }
 
+            [MethodImpl((MethodImplOptions)256)]
+            private static int EmitNullableVarAddressAndHasValue(ILGenerator il, Type varType)
+            {
+                Debug.Assert(varType.IsNullable(), "Expecting a nullable type");
+                var varIndex = EmitStoreAndLoadLocalVariableAddress(il, varType);
+                EmitMethodCall(il, varType.GetNullableHasValueGetterMethod());
+                return varIndex;
+            }
 
+            [MethodImpl((MethodImplOptions)256)]
+            private static int EmitNullableVarAddressAndValueOrDefault(ILGenerator il, Type varType)
+            {
+                Debug.Assert(varType.IsNullable(), "Expecting a nullable type");
+                var varIndex = EmitStoreAndLoadLocalVariableAddress(il, varType);
+                il.Demit(OpCodes.Ldfld, varType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                return varIndex;
+            }
 
             // The variant for the already stored nullable variable
             [MethodImpl((MethodImplOptions)256)]
-            private static void EmitLoadNullableVarAddressAndHasValue(ILGenerator il, int varIndex, Type nullableType)
+            private static bool EmitLoadNullableVarAddressAndHasValue(ILGenerator il, int varIndex, Type varType)
+            {
+                Debug.Assert(varType.IsNullable(), "Expecting a nullable type");
+                EmitLoadLocalVariableAddress(il, varIndex);
+                EmitMethodCall(il, varType.GetNullableHasValueGetterMethod());
+                return true;
+            }
+
+            [MethodImpl((MethodImplOptions)256)]
+            private static bool EmitLoadNullableVarAddressAndValueOrDefault(ILGenerator il, int varIndex, Type varType)
             {
                 EmitLoadLocalVariableAddress(il, varIndex);
-                EmitMethodCall(il, nullableType.GetNullableHasValueGetterMethod());
+                il.Demit(OpCodes.Ldfld, varType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                return true;
             }
 
             // Loads the variable value, or the value of the nullable variable (unsafe, without the `HasValue` check)
             [MethodImpl((MethodImplOptions)256)]
-            private static void EmitLoadVarOrNullableValue(ILGenerator il, int varIndex, Type varType, bool loadNullableValue)
-            {
-                if (!loadNullableValue)
-                    EmitLoadLocalVariable(il, varIndex);
-                else
-                {
-                    EmitLoadLocalVariableAddress(il, varIndex);
-                    il.Demit(OpCodes.Ldfld, varType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
-                }
-            }
+            private static bool EmitLoadVarOrByAddressNullableValue(ILGenerator il, int varIndex, Type varType, bool loadNullableValue) => 
+                loadNullableValue ? EmitLoadNullableVarAddressAndValueOrDefault(il, varIndex, varType) : EmitLoadLocalVariable(il, varIndex);
 
             [MethodImpl((MethodImplOptions)256)]
             private static bool IsOperandOfOperatorMethod(Type operandType, Type paramType) =>
@@ -7459,8 +7434,8 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Brfalse, nullLabel);
                 }
 
-                EmitLoadVarOrNullableValue(il, leftVar, leftType, liftLeft);
-                EmitLoadVarOrNullableValue(il, rightVar, rightType, liftRight);
+                EmitLoadVarOrByAddressNullableValue(il, leftVar, leftType, liftLeft);
+                EmitLoadVarOrByAddressNullableValue(il, rightVar, rightType, liftRight);
 
                 if (!EmitMethodCall(il, method))
                     return false;
@@ -7745,11 +7720,9 @@ namespace FastExpressionCompiler
                 var skipRight = il.DefineLabel();
                 if (isLifted)
                 {
-                    EmitLoadLocalVariableAddress(il, left);
-                    EmitMethodCall(il, type.GetNullableHasValueGetterMethod());
+                    EmitLoadNullableVarAddressAndHasValue(il, left, type);
                     il.Demit(OpCodes.Brfalse, skipRight);
-                    EmitLoadLocalVariableAddress(il, left);
-                    il.Demit(OpCodes.Ldfld, type.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                    EmitLoadNullableVarAddressAndValueOrDefault(il, left, type);
                 }
                 else
                     EmitLoadLocalVariable(il, left);
@@ -7764,13 +7737,10 @@ namespace FastExpressionCompiler
                 if (isLifted)
                 {
                     rightIsNull = il.DefineLabel();
-                    EmitLoadLocalVariableAddress(il, right);
-                    EmitMethodCall(il, type.GetNullableHasValueGetterMethod());
+                    EmitLoadNullableVarAddressAndHasValue(il, right, type);
                     il.Demit(OpCodes.Brfalse, rightIsNull);
-                    EmitLoadLocalVariableAddress(il, left);
-                    il.Demit(OpCodes.Ldfld, type.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
-                    EmitLoadLocalVariableAddress(il, right);
-                    il.Demit(OpCodes.Ldfld, type.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                    EmitLoadNullableVarAddressAndValueOrDefault(il, left, type);
+                    EmitLoadNullableVarAddressAndValueOrDefault(il, right, type);
                 }
                 else
                 {
