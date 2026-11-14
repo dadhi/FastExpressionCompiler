@@ -2250,14 +2250,6 @@ namespace FastExpressionCompiler
             return true;
         }
 
-        [MethodImpl((MethodImplOptions)256)]
-        internal static bool TryEmitUnboxOf(this ILGenerator il, Type sourceType)
-        {
-            if (sourceType.IsValueType)
-                il.Demit(OpCodes.Unbox_Any, sourceType);
-            return true;
-        }
-
         /// <summary>Supports emitting of selected expressions, e.g. lambdaExpr are not supported yet.
         /// When emitter find not supported expression it will return false from <see cref="TryEmit"/>, so I could fallback
         /// to normal and slow Expression.Compile.</summary>
@@ -3644,7 +3636,9 @@ namespace FastExpressionCompiler
                     context.LastEmitIsAddress = true;
                     return true;
                 }
-                return il.TryEmitUnboxOf(type);
+                if (type.IsValueType)
+                    il.Demit(OpCodes.Unbox_Any, type);
+                return true;
             }
 
 #if LIGHT_EXPRESSION
