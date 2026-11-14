@@ -7309,9 +7309,10 @@ namespace FastExpressionCompiler
                 return il.EmitPopIfIgnoreResult(parent);
             }
 
-            private static bool TryEmitComparisonMethod(Expression left, Expression right, MethodInfo method, ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            private static bool TryEmitComparisonMethod(Expression left, Expression right, MethodInfo method, ILGenerator il, ref CompilerContext context, ParentFlags parent,
+                ParameterInfo[] pars = null)
             {
-                var pars = method.GetParameters();
+                pars ??= method.GetParameters();
                 var leftParamType = pars[0].ParameterType;
                 if (!TryEmit(left, il, ref context, ParentFlags.Call, leftParamType.IsByRef ? 0 : -1))
                     return false;
@@ -7862,7 +7863,7 @@ namespace FastExpressionCompiler
                 var wrapResult = exprType != returnType;
 
                 if (!liftLeft & !liftRight & !wrapResult)
-                    return TryEmitComparisonMethod(left, right, method, il, ref context, parent);
+                    return TryEmitComparisonMethod(left, right, method, il, ref context, parent, pars);
 
                 var flags = (parent
                     & ~OperandParentFlagsToClear)
