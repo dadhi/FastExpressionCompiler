@@ -1592,6 +1592,16 @@ namespace FastExpressionCompiler
                             if ((r = TryCollectInfo(ref context, invokedExpr, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                                 return r;
 
+                            if (invokedExpr.Type.FindExpressionCompileMethod() != null)
+                            {
+                                var tries = context.TryExpressionCount;
+                                var jumps = context.GotoTargets.Count;
+                                r = TryCollectArgsAsComplexOwner(ref context, invokeArgs, invokeExpr, nestedLambda, ref rootNestedLambdas, scopeIdx);
+                                if (tries != context.TryExpressionCount || jumps != context.GotoTargets.Count)
+                                    context.MarkComplexArguments(invokeExpr);
+                                return r;
+                            }
+
                             var lastArgIndex = invokeArgCount - 1;
                             for (var i = 0; i < lastArgIndex; i++)
                                 if ((r = TryCollectInfo(ref context, invokeArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
@@ -6649,16 +6659,36 @@ namespace FastExpressionCompiler
                     }
                 }
 
-                var delegateInvokeMethod = invokedExpr.Type.FindDelegateInvokeMethod(); // todo: @perf slow thingy
+                var delegateInvokeMethod = invokedExpr.Type.FindDelegateInvokeMethod();
+                // Invoke on a runtime System Expression<TDelegate> has an implicit Compile() call.
+                // The receiver may change on every invocation; do not cache it or substitute CompileFast.
+                // A LightExpression object is not a System Expression<TDelegate> receiver.
+                var compileMethod = delegateInvokeMethod == null ? invokedExpr.Type.FindExpressionCompileMethod() : null;
+                var delegateType = compileMethod?.ReturnType ?? invokedExpr.Type;
+                if (delegateInvokeMethod == null)
+                {
+                    delegateInvokeMethod = delegateType.FindDelegateInvokeMethod();
+                    if (delegateInvokeMethod == null) return false;
+                }
                 var invokeParameters = delegateInvokeMethod.GetParameters();
                 for (var i = 0; i < invokeParameters.Length; ++i)
-                    if (invokeParameters[i].ParameterType.IsByRef && NeedsByRefWriteback(expr.GetArgument(i)))
-                        return TryEmitCallWithWritebacks(invokedExpr, expr.GetArgs(), delegateInvokeMethod, null, il, ref context, parent, byRefIndex);
+                    if (invokeParameters[i].ParameterType.IsByRef)
+                    {
+                        // Runtime expression compilation does not yet support ref arguments.
+                        if (compileMethod != null)
+                            return false;
+                        if (NeedsByRefWriteback(expr.GetArgument(i)))
+                            return TryEmitCallWithWritebacks(invokedExpr, expr.GetArgs(), delegateInvokeMethod, null, il, ref context, parent, byRefIndex);
+                    }
+                var deferCompile = compileMethod != null && context.HasComplexArguments(expr);
 
                 // The invocation receiver is a value, including incoming ref delegates.
                 var receiverFlags = (parent & ~InvocationReceiverFlagsToClear) |
                     ParentFlags.Call | ParentFlags.AssignmentRightValue;
                 if (!TryEmit(invokedExpr, il, ref context, receiverFlags)) // removing the IgnoreResult temporary because we need "full" lambda emit and we will re-apply the IgnoreResult later at the end of the method
+                    return false;
+
+                if (compileMethod != null && !deferCompile && !EmitInstanceMethodCall(il, compileMethod, invokedExpr.Type))
                     return false;
 
 #if NETFRAMEWORK
@@ -6673,14 +6703,16 @@ namespace FastExpressionCompiler
 
                 if (expr.GetArgCount() != 0)
                 {
-                    var useResult = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
-                    var spillArguments = context.TryExpressionCount != 0;
-                    var receiver = spillArguments ? EmitStoreLocalVariable(il, invokedExpr.Type) : -1;
+                    var useResult = parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.InlinedLambdaInvoke);
+                    var spillArguments = context.TryExpressionCount != 0 || deferCompile;
+                    var receiver = spillArguments ? EmitStoreLocalVariable(il, deferCompile ? invokedExpr.Type : delegateType) : -1;
                     if (spillArguments)
                     {
                         if (!TryEmitArguments(expr.GetArgs(), invokeParameters, il, ref context, useResult,
                             out var argumentVariables)) return false;
                         EmitLoadLocalVariable(il, receiver);
+                        if (deferCompile && !EmitInstanceMethodCall(il, compileMethod, invokedExpr.Type))
+                            return false;
                         EmitLoadArguments(il, ref argumentVariables);
                     }
                     else
@@ -10283,6 +10315,17 @@ namespace FastExpressionCompiler
         internal static MethodInfo FindDelegateInvokeMethod(
             [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicMethods | DynamicallyAccessedMemberTypes.NonPublicMethods)] this Type type) =>
             type.GetMethod("Invoke", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+
+        [RequiresUnreferencedCode(Trimming.Message)]
+        internal static MethodInfo FindExpressionCompileMethod(this Type type)
+        {
+            if (!typeof(System.Linq.Expressions.LambdaExpression).IsAssignableFrom(type))
+                return null;
+            for (; type != null; type = type.BaseType)
+                if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(System.Linq.Expressions.Expression<>))
+                    return type.GetMethod("Compile", Tools.Empty<Type>());
+            return null;
+        }
 
         [RequiresUnreferencedCode(Trimming.Message)]
         internal static class NullableReflected<T> where T : struct
