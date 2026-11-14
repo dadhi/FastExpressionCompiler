@@ -153,7 +153,7 @@ namespace FastExpressionCompiler
 
             var returnType = lambdaExpr.ReturnType;
             var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
-            if (!EmittingVisitor.TryEmitMethodBody(bodyExpr, returnType, il, ref context, parent))
+            if (!EmittingVisitor.TryFindLastInBlockReturnTargetAndEmitBody(bodyExpr, returnType, il, ref context, parent))
                 return false;
 
             if (bodyExpr.Type.IsByRef && !returnType.IsByRef) // don't forget to de-ref the reference if the lambda should return de-ref value of the body and not itself by-ref return, see #414
@@ -331,7 +331,7 @@ namespace FastExpressionCompiler
             var bodyExpr = lambdaExpr.Body;
             var returnType = lambdaExpr.ReturnType;
             var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
-            if (!EmittingVisitor.TryEmitMethodBody(bodyExpr, returnType, il, ref context, parent))
+            if (!EmittingVisitor.TryFindLastInBlockReturnTargetAndEmitBody(bodyExpr, returnType, il, ref context, parent))
                 return null;
 
             if (bodyExpr.Type.IsByRef && !returnType.IsByRef) // don't forget to de-ref the reference if the lambda should return de-ref value of the body and not itself by-ref return, see #414
@@ -360,7 +360,7 @@ namespace FastExpressionCompiler
             var bodyExpr = lambdaExpr.Body;
             var returnType = lambdaExpr.ReturnType;
             var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.Empty;
-            if (!EmittingVisitor.TryEmitMethodBody(bodyExpr, returnType, il, ref context, parent))
+            if (!EmittingVisitor.TryFindLastInBlockReturnTargetAndEmitBody(bodyExpr, returnType, il, ref context, parent))
                 return null;
 
             if (bodyExpr.Type.IsByRef && !returnType.IsByRef) // don't forget to de-ref the reference if the lambda should return de-ref value of the body and not itself by-ref return, see #414
@@ -450,7 +450,7 @@ namespace FastExpressionCompiler
                 if (returnType.IsByRef)
                     parent |= ParentFlags.ReturnByRef;
 
-                if (EmittingVisitor.TryEmitMethodBody(bodyExpr, returnType, il, ref context, parent))
+                if (EmittingVisitor.TryFindLastInBlockReturnTargetAndEmitBody(bodyExpr, returnType, il, ref context, parent))
                 {
                     if (bodyExpr.Type.IsByRef && !returnType.IsByRef) // don't forget to de-ref the reference if the lambda should return de-ref value of the body and not itself by-ref return, see #414
                         EmittingVisitor.EmitLoadIndirectlyByRef(il, bodyExpr.Type);
@@ -681,7 +681,7 @@ namespace FastExpressionCompiler
             /// This is required because we have the return from the nested lambda expression,
             /// and when inlined in the parent lambda it is no longer the return but just a jump to the label.
             internal short CurrentInlinedLambdaInvokeIndex;
-            internal object MethodReturnTarget;
+            internal LabelTarget MethodReturnTarget;
 
             public ClosureStatus Status;
 
@@ -811,6 +811,36 @@ namespace FastExpressionCompiler
                     constItems[constCount + i] = NestedLambdas.Items[i].Lambda;
 
                 return constItems;
+            }
+
+            internal LabelTarget FindLastInBlockReturnTarget(Expression expression, Type returnType)
+            {
+                if (TargetToGotosAndLabels.Map.Count == 0)
+                    return null;
+                while (true)
+                {
+                    if (expression is LabelExpression label)
+                    {
+                        var type = label.Target.Type;
+                        return returnType == type || !returnType.IsValueType && !type.IsValueType && returnType.IsAssignableFrom(type)
+                            ? label.Target : null;
+                    }
+                    if (expression is not BlockExpression block)
+                        return null;
+                    var statements = block.Expressions;
+                    var i = statements.Count - 1;
+                    for (; i >= 0; --i)
+                    {
+                        expression = statements[i];
+                        if (expression.NodeType == ExpressionType.DebugInfo)
+                            continue;
+                        if (expression.NodeType == ExpressionType.Default && expression.Type == typeof(void))
+                            continue;
+                        break;
+                    }
+                    if (i < 0)
+                        return null;
+                }
             }
 
             /// Local variable index is not known in the collecting phase when we only need to decide if ParameterExpression is an actual parameter or variable
@@ -1994,7 +2024,7 @@ namespace FastExpressionCompiler
             if (nestedReturnType.IsByRef)
                 parent |= ParentFlags.ReturnByRef;
 
-            var emitOk = EmittingVisitor.TryEmitMethodBody(nestedLambdaBody, nestedReturnType, il, ref nestedLambdaContext, parent);
+            var emitOk = EmittingVisitor.TryFindLastInBlockReturnTargetAndEmitBody(nestedLambdaBody, nestedReturnType, il, ref nestedLambdaContext, parent);
             if (emitOk)
             {
                 il.Demit(OpCodes.Ret);
@@ -2303,38 +2333,12 @@ namespace FastExpressionCompiler
             private static readonly MethodInfo _objectEqualsMethod =
                 ((Func<object, object, bool>)object.Equals).Method;
 
-            internal static bool TryEmitMethodBody(Expression body, Type returnType, ILGenerator il,
+            [MethodImpl((MethodImplOptions)256)]
+            internal static bool TryFindLastInBlockReturnTargetAndEmitBody(Expression body, Type returnType, ILGenerator il,
                 ref CompilerContext context, ParentFlags parent)
             {
-                if (context.TargetToGotosAndLabels.Map.Count != 0)
-                    context.MethodReturnTarget = GetMethodReturnTarget(body, returnType);
+                context.MethodReturnTarget = context.FindLastInBlockReturnTarget(body, returnType);
                 return TryEmit(body, il, ref context, parent);
-            }
-
-            private static object GetMethodReturnTarget(Expression expression, Type returnType)
-            {
-                while (true)
-                {
-                    if (expression is LabelExpression label)
-                    {
-                        var type = label.Target.Type;
-                        return returnType == type || !returnType.IsValueType && !type.IsValueType && returnType.IsAssignableFrom(type)
-                            ? label.Target : null;
-                    }
-                    if (expression is not BlockExpression block)
-                        return null;
-                    var statements = block.Expressions;
-                    var i = statements.Count - 1;
-                    for (; i >= 0; --i)
-                    {
-                        expression = statements[i];
-                        if (expression.NodeType != ExpressionType.DebugInfo &&
-                            (expression.NodeType != ExpressionType.Default || expression.Type != typeof(void)))
-                            break;
-                    }
-                    if (i < 0)
-                        return null;
-                }
             }
 
             public static bool TryEmit(Expression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex = -1)
