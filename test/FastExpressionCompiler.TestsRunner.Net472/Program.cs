@@ -49,6 +49,8 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.AssignmentNullCheckTests());
                 t.Run(new LightExpression.UnitTests.DirectLogicalFactoryRegressionTests());
                 t.Run(new LightExpression.UnitTests.IntrinsicConstructorSpillsTests());
+                t.Run(new LightExpression.UnitTests.RefCopybackReceiverReviewTests());
+                t.Run(new LightExpression.UnitTests.RefCopybackRegressionTests());
                 t.Run(new LightExpression.UnitTests.ArrayBoundsExceptionRegressionTests());
                 t.Run(new LightExpression.UnitTests.BackwardTypedLabelTests());
                 t.Run(new LightExpression.UnitTests.TryResultValueRegressionTests());
@@ -139,6 +141,8 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new AssignmentNullCheckTests());
             fecTests.Run(new DirectLogicalFactoryRegressionTests());
             fecTests.Run(new IntrinsicConstructorSpillsTests());
+            fecTests.Run(new RefCopybackReceiverReviewTests());
+            fecTests.Run(new RefCopybackRegressionTests());
             fecTests.Run(new ArrayBoundsExceptionRegressionTests());
             fecTests.Run(new BackwardTypedLabelTests());
             fecTests.Run(new TryResultValueRegressionTests());
