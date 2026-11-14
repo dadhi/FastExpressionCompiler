@@ -2393,14 +2393,6 @@ namespace FastExpressionCompiler
             return true;
         }
 
-        [MethodImpl((MethodImplOptions)256)]
-        internal static bool TryEmitUnboxOf(this ILGenerator il, Type sourceType)
-        {
-            if (sourceType.IsValueType)
-                il.Demit(OpCodes.Unbox_Any, sourceType);
-            return true;
-        }
-
         /// <summary>Supports emitting of selected expressions, e.g. lambdaExpr are not supported yet.
         /// When emitter find not supported expression it will return false from <see cref="TryEmit"/>, so I could fallback
         /// to normal and slow Expression.Compile.</summary>
@@ -3637,8 +3629,7 @@ namespace FastExpressionCompiler
                                     // Load the variable from the NonPassedParams array
                                     EmitLoadConstantInt(il, varIndexInNonPassedParams);
                                     il.Demit(OpCodes.Ldelem_Ref);
-                                    il.TryEmitUnboxOf(paramType);
-                                    return true;
+                                    return TryEmitCapturedParameterValue(il, paramType, isPassedRef, ref context);
                                 }
                             }
                         }
@@ -3776,7 +3767,23 @@ namespace FastExpressionCompiler
                 il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
                 EmitLoadConstantInt(il, nonPassedParamIndex);
                 il.Demit(OpCodes.Ldelem_Ref);
-                return il.TryEmitUnboxOf(paramType);
+                return TryEmitCapturedParameterValue(il, paramType, isPassedRef, ref context);
+            }
+
+            private static bool TryEmitCapturedParameterValue(ILGenerator il, Type type, bool byRef, ref CompilerContext context)
+            {
+                if (byRef)
+                {
+                    // Nullable boxes and reference slots do not expose writable storage of this type.
+                    if (!type.IsValueType || type.IsNullable())
+                        return false;
+                    il.Demit(OpCodes.Unbox, type);
+                    context.LastEmitIsAddress = true;
+                    return true;
+                }
+                if (type.IsValueType)
+                    il.Demit(OpCodes.Unbox_Any, type);
+                return true;
             }
 
 #if LIGHT_EXPRESSION

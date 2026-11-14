@@ -72,6 +72,7 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.UnitTests.RefDelegateReceiversTests());
                 lt.Run(new LightExpression.UnitTests.StaticFieldAddressRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ReferenceUnboxingRegressionTests());
+                lt.Run(new LightExpression.UnitTests.BoxedCaptureRefTests());
                 lt.Run(new LightExpression.UnitTests.ReferenceComparisonExceptionTests());
                 lt.Run(new LightExpression.UnitTests.DelegateExceptionArgumentsTests());
                 lt.Run(new LightExpression.UnitTests.MultidimensionalGetStorageRegressionTests());
@@ -168,6 +169,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new RefDelegateReceiversTests());
             st.Run(new StaticFieldAddressRegressionTests());
             st.Run(new ReferenceUnboxingRegressionTests());
+            st.Run(new BoxedCaptureRefTests());
             st.Run(new ReferenceComparisonExceptionTests());
             st.Run(new DelegateExceptionArgumentsTests());
             st.Run(new MultidimensionalGetStorageRegressionTests());
