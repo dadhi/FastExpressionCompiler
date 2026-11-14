@@ -1602,12 +1602,8 @@ namespace FastExpressionCompiler
                                 return r;
                             }
 
-                            var lastArgIndex = invokeArgCount - 1;
-                            for (var i = 0; i < lastArgIndex; i++)
-                                if ((r = TryCollectInfo(ref context, invokeArgs.GetArgument(i), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
-                                    return r;
-                            expr = invokeArgs.GetArgument(lastArgIndex);
-                            continue;
+                            return TryCollectArgsAsComplexOwner(ref context, invokeArgs, invokeExpr,
+                                nestedLambda, ref rootNestedLambdas, scopeIdx);
                         }
                     case ExpressionType.Conditional:
                         var condExpr = (ConditionalExpression)expr;
@@ -2232,6 +2228,7 @@ namespace FastExpressionCompiler
             NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
         {
             var hasComplexExpression = false;
+            var precedingJumpCount = context.GotoTargets.Count;
             var r = Result.OK;
             foreach (var arg in args)
             {
@@ -2240,7 +2237,7 @@ namespace FastExpressionCompiler
                     return r;
                 hasComplexExpression |= context.HasComplexExpression;
             }
-            if (hasComplexExpression)
+            if (hasComplexExpression || context.GotoTargets.Count != precedingJumpCount)
             {
                 context.HasComplexExpression = true;
                 context.MarkComplexArguments(owner);
@@ -6750,7 +6747,7 @@ namespace FastExpressionCompiler
                 if (expr.GetArgCount() != 0)
                 {
                     var useResult = parent & ~(ParentFlags.IgnoreResult | ParentFlags.InstanceAccess | ParentFlags.InlinedLambdaInvoke);
-                    var spillArguments = context.TryExpressionCount != 0 || deferCompile;
+                    var spillArguments = context.TryExpressionCount != 0 || context.HasComplexArguments(expr) || deferCompile;
                     var receiver = spillArguments ? EmitStoreLocalVariable(il, deferCompile ? invokedExpr.Type : delegateType) : -1;
                     if (spillArguments)
                     {
