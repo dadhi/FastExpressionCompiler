@@ -1378,9 +1378,15 @@ namespace FastExpressionCompiler
 
         /// <summary>Collects the information about closure constants, nested lambdas, non-passed parameters, goto labels and variables in blocks.
         /// Returns `OK` result if everything is fine and other result for error.</summary>
+        [MethodImpl((MethodImplOptions)256)]
         public static Result TryCollectInfo(ref CompilerContext context, Expression expr,
             NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas,
-            short scopeIdx, bool enterable = false)
+            short scopeIdx, bool enterable = false) =>
+            TryCollectInfo(ref context, expr, nestedLambda, ref rootNestedLambdas, scopeIdx, enterable, false);
+
+        private static Result TryCollectInfo(ref CompilerContext context, Expression expr,
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas,
+            short scopeIdx, bool enterable, bool switchBody)
         {
             var r = Result.OK;
             var quotedData = (context.Status & ClosureStatus.QuotedData) != 0;
@@ -1635,11 +1641,12 @@ namespace FastExpressionCompiler
                             return r; // yeah, this is the real case - the block may not contain any expressions
 
                         // The enterable block without the direct labels is transparent for the validation, so it does not need its own scope
-                        var needsScope = !enterable;
-                        for (var i = 0; !needsScope & i < blockExprCount; ++i)
+                        var needsScope = !switchBody && !enterable;
+                        for (var i = 0; !switchBody && !needsScope && i < blockExprCount; ++i)
                             needsScope = blockExprs[i].NodeType == ExpressionType.Label;
                         if (needsScope)
                             scopeIdx = (short)context.Scopes.Add(new LabelScope { Parent = new ScopeIdx(scopeIdx, enterable) });
+                        switchBody = false;
 
                         var varExprs = blockExpr.Variables;
                         var varExprCount = varExprs?.Count ?? 0; // todo: @perf optimize for an empty and a single variable
@@ -1755,9 +1762,13 @@ namespace FastExpressionCompiler
                             }
                             return r; // no matched body and no default -> nothing to collect
                         }
-                        if ((r = TryCollectInfo(ref context, switchExpr.SwitchValue, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK ||
+                        if ((r = TryCollectInfo(ref context, switchExpr.SwitchValue, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
+                            return r;
+                        // Case bodies share statement-label visibility within one switch boundary.
+                        scopeIdx = (short)context.Scopes.Add(new LabelScope { Parent = new ScopeIdx(scopeIdx, false) });
+                        if (
                             switchExpr.DefaultBody != null && // todo: @check is the order of collection affects the result?
-                            (r = TryCollectInfo(ref context, switchExpr.DefaultBody, nestedLambda, ref rootNestedLambdas, scopeIdx, enterable)) != Result.OK)
+                            (r = TryCollectInfo(ref context, switchExpr.DefaultBody, nestedLambda, ref rootNestedLambdas, scopeIdx, true, switchBody: true)) != Result.OK)
                             return r;
 
                         var switchCases = switchExpr.Cases;
@@ -1772,9 +1783,10 @@ namespace FastExpressionCompiler
                                         return r;
                             }
                             for (var i = 0; i < switchCases.Count - 1; i++)
-                                if ((r = TryCollectInfo(ref context, switchCases[i].Body, nestedLambda, ref rootNestedLambdas, scopeIdx, enterable)) != Result.OK)
+                                if ((r = TryCollectInfo(ref context, switchCases[i].Body, nestedLambda, ref rootNestedLambdas, scopeIdx, true, switchBody: true)) != Result.OK)
                                     return r;
                             expr = switchCases[switchCases.Count - 1].Body;
+                            enterable = switchBody = true;
                             continue;
                         }
                         return r;
