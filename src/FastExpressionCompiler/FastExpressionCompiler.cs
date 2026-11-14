@@ -6285,6 +6285,9 @@ namespace FastExpressionCompiler
                 }
 
                 var delegateInvokeMethod = invokedExpr.Type.FindDelegateInvokeMethod();
+                // Invoke on a runtime System Expression<TDelegate> has an implicit Compile() call.
+                // The receiver may change on every invocation; do not cache it or substitute CompileFast.
+                // A LightExpression object is not a System Expression<TDelegate> receiver.
                 var compileMethod = delegateInvokeMethod == null ? invokedExpr.Type.FindExpressionCompileMethod() : null;
                 var delegateType = compileMethod?.ReturnType ?? invokedExpr.Type;
                 if (delegateInvokeMethod == null)
