@@ -1208,7 +1208,9 @@ namespace FastExpressionCompiler
         {
             None = 0,
             Catch = 1,
-            FinallyOrFault = 2
+            FinallyOrFault = 2,
+            Lambda = 3,
+            Filter = 4
         }
 
         /// <summary>The scope index (-1 for the root) with the `Enterable` flag: can the jump from the outside get into the thing,
@@ -1306,7 +1308,9 @@ namespace FastExpressionCompiler
                     // check if the goto jump passes through any finally or fault blocks when moving from the goto scope to the common ancestor scope,
                     // excluding the ancestor itself (because it is fine to jump inside the same scope)
                     for (int s = gotoScopeIdx; s != commonAncestorScopeIdx; s = scopes.GetSurePresentRef(s).Parent.Index)
-                        if (scopes.GetSurePresentRef(s).ExceptionRegion == ExceptionRegion.FinallyOrFault)
+                        if (scopes.GetSurePresentRef(s).ExceptionRegion == ExceptionRegion.Filter)
+                            throw new InvalidOperationException("Control cannot leave an exception filter.");
+                        else if (scopes.GetSurePresentRef(s).ExceptionRegion == ExceptionRegion.FinallyOrFault)
                             throw new InvalidOperationException($"Control cannot leave the finally or fault block by the jump to the label '{gotoTarget.Name}'");
 
                     // if the label scope is the jump scope or its ancestor
@@ -1538,7 +1542,7 @@ namespace FastExpressionCompiler
                                     var oldIndex = context.CurrentInlinedLambdaInvokeIndex;
                                     context.CurrentInlinedLambdaInvokeIndex = context.AddInlinedLambdaInvoke(invokeExpr);
                                     context.HasComplexExpression = false;
-                                    if ((r = TryCollectInfo(ref context, inlinedExpr, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
+                                    if ((r = TryCollectInlinedLambdaInfo(ref context, inlinedExpr, lambdaExpr.Body, invokeArgCount == 0, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                                         return r;
                                     context.HasComplexExpression = true;
                                     context.CurrentInlinedLambdaInvokeIndex = oldIndex;
@@ -1826,6 +1830,15 @@ namespace FastExpressionCompiler
                             if (binaryExpr.Conversion != null &&
                                 (r = TryCollectInfo(ref context, Expression.Invoke(binaryExpr.Conversion, Expression.Default(binaryExpr.Conversion.Parameters[0].Type)), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                                 return r;
+                            if (binaryExpr.NodeType != ExpressionType.Assign &&
+                                binaryExpr.Left is MemberExpression or IndexExpression && binaryExpr.NodeType.IsAssignNodeType())
+                            {
+                                var compoundRightTryCount = context.TryExpressionCount;
+                                r = TryCollectInfo(ref context, binaryExpr.Right, nestedLambda, ref rootNestedLambdas, scopeIdx);
+                                if (compoundRightTryCount != context.TryExpressionCount)
+                                    context.MarkComplexArguments(binaryExpr.Right);
+                                return r;
+                            }
                             expr = binaryExpr.Right;
                             enterable = false;
                             continue;
@@ -1888,6 +1901,34 @@ namespace FastExpressionCompiler
             cache.Reductions.Map.AddOrGetValueRef(expression, out _) = reduced;
             return reduced;
         }
+
+        // Caller arguments retain the caller's catch scope. Only the callee body starts
+        // a new lambda scope, even when emitted inline into the same physical method.
+        private static Result TryCollectInlinedLambdaInfo(ref CompilerContext context, Expression inlined,
+            Expression body, bool bodyOnly, NestedLambdaInfo nestedLambda,
+            ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
+        {
+            if (bodyOnly || ReferenceEquals(inlined, body))
+            {
+                var labelScope = new LabelScope { Parent = new ScopeIdx(scopeIdx, false), ExceptionRegion = ExceptionRegion.Lambda };
+                var lambdaScopeIdx = (short)context.Scopes.Add(labelScope);
+                return TryCollectInfo(ref context, inlined, nestedLambda, ref rootNestedLambdas, lambdaScopeIdx);
+            }
+            var wrapper = (BlockExpression)inlined;
+            context.PushBlockWithVars(wrapper.Variables);
+            var statements = wrapper.Expressions;
+            var result = Result.OK;
+            for (var i = 0; i < statements.Count - 1; ++i)
+                if ((result = TryCollectInfo(ref context, statements[i], nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
+                    break;
+            if (result == Result.OK)
+                result = TryCollectInlinedLambdaInfo(ref context, statements[statements.Count - 1], body,
+                    false, nestedLambda, ref rootNestedLambdas, scopeIdx);
+            context.PopBlock();
+            return result;
+        }
+
+
 
         private static Expression CreateInlinedLambdaInvocationExpression(Args invokeArgs, LambdaExpression lambdaExpr)
         {
@@ -2205,7 +2246,7 @@ namespace FastExpressionCompiler
             NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
         {
             if (context.InExceptionFilter && (context.Status & ClosureStatus.QuotedData) == 0)
-                return Result.NotSupported_ExceptionCatchFilter;
+                throw new InvalidOperationException("Exception blocks are not allowed inside an exception filter.");
 
             var r = Result.OK;
             if ((r = TryCollectInfo(ref context, tryExpr.Body, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
@@ -2225,9 +2266,13 @@ namespace FastExpressionCompiler
 
                 if (catchBlock.Filter != null)
                 {
+                    var labelScope = new LabelScope { Parent = new ScopeIdx(scopeIdx, false), ExceptionRegion = ExceptionRegion.Filter };
+                    var filterScopeIdx = (short)context.Scopes.Add(in labelScope);
                     context.InExceptionFilter = true;
-                    r = TryCollectInfo(ref context, catchBlock.Filter, nestedLambda, ref rootNestedLambdas, scopeIdx);
+                    r = TryCollectInfo(ref context, catchBlock.Filter, nestedLambda, ref rootNestedLambdas, filterScopeIdx);
                     context.InExceptionFilter = false;
+                    if (r == Result.ParameterIsNotVariableNorInPassedParameters)
+                        throw new InvalidOperationException("An exception filter references an undefined variable.");
                     if (r != Result.OK)
                         return r;
                 }
@@ -2913,6 +2958,9 @@ namespace FastExpressionCompiler
                 if (argCount != 0)
                 {
                     var pars = ctor.GetParameters();
+                    for (var i = 0; i < argCount; ++i)
+                        if (pars[i].ParameterType.IsByRef && NeedsByRefWriteback(newExpr.GetArgument(i)))
+                            return TryEmitCallWithWritebacks(null, newExpr.GetArgs(), null, ctor, il, ref context, parent, -1);
 
                     // If we have complex arguments then it is better to store them in the variables, then load them before calling ctor.
                     // Otherwise the stack may be broken by the long emit chain, and the previous argument result on stack
@@ -3221,15 +3269,6 @@ namespace FastExpressionCompiler
                 }
             }
 
-            [MethodImpl((MethodImplOptions)256)]
-            private static int EmitNullableVarAddressAndHasValue(ILGenerator il, Type type)
-            {
-                Debug.Assert(type.IsNullable(), "Expecting a nullable type");
-                var varIndex = EmitStoreAndLoadLocalVariableAddress(il, type);
-                EmitMethodCall(il, type.GetNullableHasValueGetterMethod());
-                return varIndex;
-            }
-
             private static bool TryEmitCoalesceOperator(BinaryExpression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var left = expr.Left;
@@ -3280,8 +3319,7 @@ namespace FastExpressionCompiler
                     {
                         // the target expression type is the underlying type or a wider one (e.g. `int? ?? long`),
                         // then extract the underlying value and convert it if needed
-                        EmitLoadLocalVariableAddress(il, varIndex);
-                        il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                        EmitLoadNullableVarAddressAndValueOrDefault(il, varIndex, leftType);
                         if (underlyingLeftType != underlyingExprType &&
                             !TryEmitPrimitiveValueConvert(underlyingLeftType, underlyingExprType, il, isChecked: false))
                             return false;
@@ -3882,9 +3920,7 @@ namespace FastExpressionCompiler
                 var doneLabel = il.DefineLabel();
                 var opVar = EmitNullableVarAddressAndHasValue(il, operType);
                 il.Demit(OpCodes.Brfalse, nullLabel);
-
-                EmitLoadLocalVariableAddress(il, opVar);
-                il.Demit(OpCodes.Ldfld, operType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                EmitLoadNullableVarAddressAndValueOrDefault(il, opVar, operType);
                 if (!EmitUnaryOperation(il, nodeType, Nullable.GetUnderlyingType(operType), method))
                     return false;
                 il.Demit(OpCodes.Newobj, exprType.GetNullableConstructor());
@@ -4184,8 +4220,7 @@ namespace FastExpressionCompiler
 
                         // If the nullable source has the value, do the conversion
                         il.DmarkLabel(labelSourceHasValue);
-                        EmitLoadLocalVariableAddress(il, sourceVarIndex);
-                        il.Demit(OpCodes.Ldfld, sourceType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                        EmitLoadNullableVarAddressAndValueOrDefault(il, sourceVarIndex, sourceType);
 
                         if (methodParameterIsByRef)
                             EmitStoreAndLoadLocalVariableAddress(il, methodParamType);
@@ -4250,8 +4285,7 @@ namespace FastExpressionCompiler
 
                     // If the nullable source has the value, do the conversion
                     il.DmarkLabel(labelSourceHasValue);
-                    EmitLoadLocalVariableAddress(il, sourceVarIndex);
-                    il.Demit(OpCodes.Ldfld, sourceType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                    EmitLoadNullableVarAddressAndValueOrDefault(il, sourceVarIndex, sourceType);
 
                     if (!TryEmitPrimitiveValueConvert(underlyingNullableSourceType, underlyingNullableTargetType, il, expr.NodeType == ExpressionType.ConvertChecked))
                         return false;
@@ -5347,6 +5381,39 @@ namespace FastExpressionCompiler
                         if (leftIsByAddress = context.LastEmitIsAddress)
                             EmitLoadIndirectlyByRef(il, leftType); // if the field is loaded by ref, it need to be loaded from the ref in order to do arithmetic operation on it
 
+                        var cachedRight = -1;
+                        if (right != null && (context.HasComplexArguments(right) || right.IsComplexExpression()))
+                        {
+                            // Keep the evaluation stack empty across a possible exception block in the RHS.
+                            // The target/getter has already run; save its operands rather than evaluating it again.
+                            var readValue = EmitStoreLocalVariable(il, leftType);
+                            SmallList<int, Stack4<int>, NoArrayPool<int>> indexes = default;
+                            if (orLeftIndexExpr != null)
+                            {
+                                indexes.InitCount(indexArgCount);
+                                for (var i = indexArgCount - 1; i >= 0; --i)
+                                    indexes.GetSurePresentRef(i) = EmitStoreLocalVariable(il, orLeftIndexExpr.GetArgument(i).Type);
+                            }
+                            var target = -1;
+                            if (leftIsByAddress || objExpr != null)
+                            {
+                                var targetType = leftIsByAddress ? leftType.MakeByRefType()
+                                    : objExpr.Type.IsValueType ? objExpr.Type.MakeByRefType() : objExpr.Type;
+                                target = EmitStoreLocalVariable(il, targetType);
+                            }
+                            if (!TryEmit(right, il, ref context, rightOnlyFlags))
+                                return false;
+                            if (context.LastEmitIsAddress)
+                                EmitLoadIndirectlyByRef(il, right.Type);
+                            cachedRight = EmitStoreLocalVariable(il, right.Type);
+                            if (target != -1)
+                                EmitLoadLocalVariable(il, target);
+                            for (var i = 0; i < indexes.Count; ++i)
+                                EmitLoadLocalVariable(il, indexes.GetSurePresentRef(i));
+                            EmitLoadLocalVariable(il, readValue);
+                            context.LastEmitIsAddress = false;
+                        }
+
                         var leftIsNullable = leftType.IsNullable();
                         if (!leftIsNullable)
                         {
@@ -5362,7 +5429,7 @@ namespace FastExpressionCompiler
                             else
                             {
                                 var rightType = right.Type;
-                                if (!TryEmit(right, il, ref context, rightOnlyFlags))
+                                if (!TryEmitCachedCompoundRight(right, cachedRight, il, ref context, rightOnlyFlags))
                                     return false;
 
                                 var rightIsNullable = rightType.IsNullable();
@@ -5370,9 +5437,7 @@ namespace FastExpressionCompiler
                                 {
                                     var rightVar = EmitNullableVarAddressAndHasValue(il, rightType);
                                     il.Demit(OpCodes.Brfalse, leftOrRightNullableAreNullLabel = il.DefineLabel());
-
-                                    EmitLoadLocalVariableAddress(il, rightVar);
-                                    il.Demit(OpCodes.Ldfld, rightType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod()); // unwrap right operand
+                                    EmitLoadNullableVarAddressAndValueOrDefault(il, rightVar, rightType); // unwrap right operand
                                 }
 
                                 if (!TryEmitArithmeticOperation(leftType, rightType, nodeType, exprType, il))
@@ -5390,14 +5455,9 @@ namespace FastExpressionCompiler
 
                             if (right == null)
                             {
-                                EmitLoadLocalVariableAddress(il, leftNullableVar);
-                                il.Demit(OpCodes.Call, leftType.GetNullableHasValueGetterMethod());
-
+                                EmitLoadNullableVarAddressAndHasValue(il, leftNullableVar, leftType);
                                 il.Demit(OpCodes.Brfalse, leftOrRightNullableAreNullLabel = il.DefineLabel());
-
-                                EmitLoadLocalVariableAddress(il, leftNullableVar);
-                                il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
-
+                                EmitLoadNullableVarAddressAndValueOrDefault(il, leftNullableVar, leftType);
                                 if (!EmitIncOrDec(il, leftType.GetNonNullableOrSelf(), nodeType == ExpressionType.Add))
                                     return false;
                             }
@@ -5405,7 +5465,7 @@ namespace FastExpressionCompiler
                             {
                                 // emit the right expression immediately after the left and then just process their results
                                 var rightType = right.Type;
-                                if (!TryEmit(right, il, ref context, rightOnlyFlags))
+                                if (!TryEmitCachedCompoundRight(right, cachedRight, il, ref context, rightOnlyFlags))
                                     return false;
                                 if (context.LastEmitIsAddress)
                                     EmitLoadIndirectlyByRef(il, rightType);
@@ -5415,31 +5475,19 @@ namespace FastExpressionCompiler
                                 var rightIsNullable = rightType.IsNullable();
                                 if (!rightIsNullable) // todo: @perf @clarify if it is possible to have left nullable and right non-nullable
                                 {
-                                    EmitLoadLocalVariableAddress(il, leftNullableVar);
-                                    il.Demit(OpCodes.Call, leftType.GetNullableHasValueGetterMethod());
-
+                                    EmitLoadNullableVarAddressAndHasValue(il, leftNullableVar, leftType);
                                     il.Demit(OpCodes.Brfalse, leftOrRightNullableAreNullLabel = il.DefineLabel());
-
-                                    EmitLoadLocalVariableAddress(il, leftNullableVar);
-                                    il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
-
+                                    EmitLoadNullableVarAddressAndValueOrDefault(il, leftNullableVar, leftType);
                                     EmitLoadLocalVariable(il, rightVar);
                                 }
                                 else
                                 {
-                                    EmitLoadLocalVariableAddress(il, leftNullableVar);
-                                    il.Demit(OpCodes.Call, leftType.GetNullableHasValueGetterMethod());
-
-                                    EmitLoadLocalVariableAddress(il, rightVar);
-                                    il.Demit(OpCodes.Call, rightType.GetNullableHasValueGetterMethod());
+                                    EmitLoadNullableVarAddressAndHasValue(il, leftNullableVar, leftType);
+                                    EmitLoadNullableVarAddressAndHasValue(il, rightVar, rightType);
                                     il.Demit(OpCodes.And);
                                     il.Demit(OpCodes.Brfalse, leftOrRightNullableAreNullLabel = il.DefineLabel());
-
-                                    EmitLoadLocalVariableAddress(il, leftNullableVar);
-                                    il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());  // unwrap left operand
-
-                                    EmitLoadLocalVariableAddress(il, rightVar);
-                                    il.Demit(OpCodes.Ldfld, rightType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod()); // unwrap right operand
+                                    EmitLoadNullableVarAddressAndValueOrDefault(il, leftNullableVar, leftType);
+                                    EmitLoadNullableVarAddressAndValueOrDefault(il, rightVar, rightType);
                                 }
 
                                 if (!TryEmitArithmeticOperation(leftType, rightType, nodeType, exprType, il))
@@ -5486,6 +5534,17 @@ namespace FastExpressionCompiler
 
                 if (resultVar != -1)
                     EmitLoadLocalVariable(il, resultVar);
+                return true;
+            }
+
+            [MethodImpl((MethodImplOptions)256)]
+            private static bool TryEmitCachedCompoundRight(Expression right, int cachedRight,
+                ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            {
+                if (cachedRight == -1)
+                    return TryEmit(right, il, ref context, parent);
+                EmitLoadLocalVariable(il, cachedRight);
+                context.LastEmitIsAddress = false;
                 return true;
             }
 
@@ -5949,6 +6008,201 @@ namespace FastExpressionCompiler
                 return true;
             }
 
+            private struct ByRefWriteback
+            {
+                public PropertyInfo Property;
+                public Type ReceiverType;
+                public int Receiver;
+                public int Value;
+                public SmallList<int, Stack8<int>, NoArrayPool<int>> Indexes;
+            }
+
+            [MethodImpl((MethodImplOptions)256)]
+            private static bool NeedsByRefWriteback(Expression expression)
+            {
+                if (expression is MemberExpression member)
+                    return member.Member is PropertyInfo property && !property.GetMethod.ReturnType.IsByRef ||
+                        member.Expression != null && member.Expression.Type.IsValueType && NeedsByRefWriteback(member.Expression);
+                return expression is IndexExpression index && index.Indexer != null && !index.Indexer.GetMethod.ReturnType.IsByRef;
+            }
+
+            private static bool TryEmitByRefArgument(Expression expression, int argument, ILGenerator il,
+                ref CompilerContext context, ref SmallList<ByRefWriteback, Stack2<ByRefWriteback>, NoArrayPool<ByRefWriteback>> writebacks, bool copyback = true)
+            {
+                PropertyInfo property = null;
+                Expression receiver = null;
+                Args indexes = default;
+                var indexCount = 0;
+                if (expression is MemberExpression member)
+                {
+                    var memberReceiver = member.Expression;
+                    if (memberReceiver != null && member.Member is FieldInfo field &&
+                        memberReceiver.Type.IsValueType && NeedsByRefWriteback(memberReceiver))
+                    {
+                        if (!TryEmitByRefArgument(memberReceiver, argument, il, ref context, ref writebacks, false))
+                            return false;
+                        il.Demit(OpCodes.Ldflda, field);
+                        return true;
+                    }
+                    property = member.Member as PropertyInfo;
+                    receiver = memberReceiver;
+                }
+                else if (expression is IndexExpression index && index.Indexer != null)
+                {
+                    property = index.Indexer;
+                    receiver = index.Object;
+                    indexes = index.GetArgs();
+                    indexCount = indexes.Count;
+                }
+                if (property == null || property.GetMethod.ReturnType.IsByRef)
+                {
+                    if (expression is MemberExpression fieldExpression && fieldExpression.Member is FieldInfo field)
+                    {
+                        if (field.IsStatic && !field.IsInitOnly && !field.IsLiteral)
+                        {
+                            il.Demit(OpCodes.Ldsflda, field);
+                            return true;
+                        }
+                        if (field.IsInitOnly || field.IsLiteral)
+                        {
+                            if (!TryEmit(expression, il, ref context, ParentFlags.Call))
+                                return false;
+                            EmitStoreAndLoadLocalVariableAddress(il, expression.Type);
+                            return true;
+                        }
+                    }
+                    switch (expression.NodeType)
+                    {
+                        case ExpressionType.Parameter:
+                        case ExpressionType.MemberAccess:
+                        case ExpressionType.Index:
+                        case ExpressionType.ArrayIndex:
+                        case ExpressionType.Unbox:
+                        case ExpressionType.Call:
+                        case ExpressionType.Invoke:
+                        case ExpressionType.Constant:
+                            return TryEmit(expression, il, ref context, ParentFlags.Call | ParentFlags.AssignmentByRef, argument);
+                        default:
+                            if (!TryEmit(expression, il, ref context, ParentFlags.Call))
+                                return false;
+                            EmitStoreAndLoadLocalVariableAddress(il, expression.Type);
+                            return true;
+                    }
+                }
+
+                var record = new ByRefWriteback { Property = property, Receiver = -1 };
+                if (receiver != null)
+                {
+                    var receiverType = receiver.Type;
+                    record.ReceiverType = receiverType;
+                    if (receiverType.IsValueType)
+                    {
+                        if (!TryEmitByRefArgument(receiver, argument, il, ref context, ref writebacks, false))
+                            return false;
+                        record.Receiver = EmitStoreLocalVariable(il, receiverType.MakeByRefType());
+                    }
+                    else
+                    {
+                        if (!TryEmit(receiver, il, ref context, ParentFlags.Call))
+                            return false;
+                        record.Receiver = EmitStoreLocalVariable(il, receiverType);
+                    }
+                }
+                var getterParameters = property.GetMethod.GetParameters();
+                for (var i = 0; i < indexCount; ++i)
+                {
+                    var parameterType = getterParameters[i].ParameterType;
+                    if (!TryEmit(indexes.GetArgument(i), il, ref context, ParentFlags.Call, parameterType.IsByRef ? i : -1))
+                        return false;
+                    record.Indexes.Add(EmitStoreLocalVariable(il, parameterType));
+                }
+                if (record.Receiver != -1)
+                    EmitLoadLocalVariable(il, record.Receiver);
+                for (var i = 0; i < indexCount; ++i)
+                    EmitLoadLocalVariable(il, record.Indexes.GetSurePresentRef(i));
+                if (!EmitInstanceMethodCall(il, property.GetMethod, record.ReceiverType))
+                    return false;
+                record.Value = EmitStoreLocalVariable(il, expression.Type);
+                // A getter-only property supplies a temporary without a setter copyback.
+                if (copyback && property.SetMethod != null)
+                    writebacks.Add(in record);
+                EmitLoadLocalVariableAddress(il, record.Value);
+                return true;
+            }
+
+            private static bool TryEmitCallWithWritebacks(Expression receiver, Args expressions, MethodInfo method,
+                ConstructorInfo constructor, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex)
+            {
+                var receiverVar = -1;
+                var receiverType = receiver?.Type;
+                if (receiver != null)
+                {
+                    if (!TryEmit(receiver, il, ref context, ParentFlags.Call |
+                        (receiverType.IsValueType ? ParentFlags.InstanceAccess : ParentFlags.AssignmentRightValue)))
+                        return false;
+                    if (receiverType.IsValueType && !context.LastEmitIsAddress && !(receiver is PE pe && pe.IsByRef))
+                        EmitStoreAndLoadLocalVariableAddress(il, receiverType);
+                    receiverVar = EmitStoreLocalVariable(il, receiverType.IsValueType ? receiverType.MakeByRefType() : receiverType);
+                }
+                SmallList<ByRefWriteback, Stack2<ByRefWriteback>, NoArrayPool<ByRefWriteback>> writebacks = default;
+                SmallList<int, Stack8<int>, NoArrayPool<int>> arguments = default;
+                var parameters = (method != null ? (MethodBase)method : constructor).GetParameters();
+                for (var i = 0; i < parameters.Length; ++i)
+                {
+                    var argument = expressions.GetArgument(i);
+                    var parameterType = parameters[i].ParameterType;
+                    if (parameterType.IsByRef)
+                    {
+                        // Exact types keep writable storage; wider formal references use a temporary without copyback.
+                        if (!(parameterType.GetElementType() == argument.Type
+                            ? TryEmitByRefArgument(argument, i, il, ref context, ref writebacks)
+                            : TryEmitCallArgument(argument, parameterType, i, il, ref context, ParentFlags.Call)))
+                            return false;
+                    }
+                    else if (!TryEmit(argument, il, ref context, ParentFlags.Call))
+                        return false;
+                    arguments.Add(EmitStoreLocalVariable(il, parameterType));
+                }
+
+                if (receiverVar != -1)
+                    EmitLoadLocalVariable(il, receiverVar);
+                for (var i = 0; i < arguments.Count; ++i)
+                    EmitLoadLocalVariable(il, arguments.GetSurePresentRef(i));
+                if (constructor != null)
+                    il.Demit(OpCodes.Newobj, constructor);
+                else if (!EmitInstanceMethodCall(il, method, receiverType))
+                    return false;
+                var returnType = constructor != null ? constructor.DeclaringType : method.ReturnType;
+                var result = returnType == typeof(void) ? -1 : EmitStoreLocalVariable(il, returnType);
+
+                // Copy back direct properties in argument order after normal completion.
+                // A throwing call skips copyback; a throwing setter prevents subsequent setters.
+                // Property-valued struct receivers remain defensive copies, as with ordinary member calls.
+                for (var i = 0; i < writebacks.Count; ++i)
+                {
+                    ref var record = ref writebacks.GetSurePresentRef(i);
+                    if (record.Receiver != -1)
+                        EmitLoadLocalVariable(il, record.Receiver);
+                    for (var index = 0; index < record.Indexes.Count; ++index)
+                        EmitLoadLocalVariable(il, record.Indexes.GetSurePresentRef(index));
+                    EmitLoadLocalVariable(il, record.Value);
+                    if (!EmitInstanceMethodCall(il, record.Property.SetMethod, record.ReceiverType))
+                        return false;
+                }
+                var useResult = result != -1 && !parent.IgnoresResult();
+                var loadAddress = useResult && !returnType.IsByRef &&
+                    (byRefIndex != -1 || returnType.IsValueType && (parent & ParentFlags.InstanceAccess) != 0);
+                if (useResult)
+                {
+                    if (loadAddress)
+                        EmitLoadLocalVariableAddress(il, result);
+                    else
+                        EmitLoadLocalVariable(il, result);
+                }
+                context.LastEmitIsAddress = useResult && (loadAddress || returnType.IsByRef);
+                return true;
+            }
+
             private static bool TryEmitMethodCall(Expression expr, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex = -1)
             {
                 var flags = ParentFlags.Call;
@@ -5966,6 +6220,9 @@ namespace FastExpressionCompiler
                         return false;
                 }
                 var methodParams = method.GetParameters(); // todo: @perf @mem find how to avoid the call, look at `NewNoByRefArgs` expressions as example
+                for (var i = 0; i < methodParams.Length; ++i)
+                    if (methodParams[i].ParameterType.IsByRef && NeedsByRefWriteback(callExpr.GetArgument(i)))
+                        return TryEmitCallWithWritebacks(objExpr, callExpr.GetArgs(), method, null, il, ref context, parent, byRefIndex);
 
                 var objIsValueType = false;
                 var loadObjByAddress = false;
@@ -6346,6 +6603,12 @@ namespace FastExpressionCompiler
                     }
                 }
 
+                var delegateInvokeMethod = invokedExpr.Type.FindDelegateInvokeMethod(); // todo: @perf slow thingy
+                var invokeParameters = delegateInvokeMethod.GetParameters();
+                for (var i = 0; i < invokeParameters.Length; ++i)
+                    if (invokeParameters[i].ParameterType.IsByRef && NeedsByRefWriteback(expr.GetArgument(i)))
+                        return TryEmitCallWithWritebacks(invokedExpr, expr.GetArgs(), delegateInvokeMethod, null, il, ref context, parent, byRefIndex);
+
                 // The invocation receiver is a value, including incoming ref delegates.
                 var receiverFlags = (parent & ~InvocationReceiverFlagsToClear) |
                     ParentFlags.Call | ParentFlags.AssignmentRightValue;
@@ -6361,23 +6624,22 @@ namespace FastExpressionCompiler
                 //if (lambda is ConstantExpression lambdaConst) // todo: @perf opportunity to optimize
                 //    delegateInvokeMethod = ((Delegate)lambdaConst.Value).GetMethodInfo();
                 //else
-                var delegateInvokeMethod = invokedExpr.Type.FindDelegateInvokeMethod(); // todo: @perf slow thingy
+
                 if (expr.GetArgCount() != 0)
                 {
                     var useResult = parent & ~ParentFlags.IgnoreResult & ~ParentFlags.InstanceAccess;
-                    var args = delegateInvokeMethod.GetParameters(); // todo: @perf avoid this if possible
                     var spillArguments = context.TryExpressionCount != 0;
                     var receiver = spillArguments ? EmitStoreLocalVariable(il, invokedExpr.Type) : -1;
                     if (spillArguments)
                     {
-                        if (!TryEmitArguments(expr.GetArgs(), args, il, ref context, useResult,
+                        if (!TryEmitArguments(expr.GetArgs(), invokeParameters, il, ref context, useResult,
                             out var argumentVariables)) return false;
                         EmitLoadLocalVariable(il, receiver);
                         EmitLoadArguments(il, ref argumentVariables);
                     }
                     else
-                        for (var i = 0; i < args.Length; ++i)
-                            if (!TryEmitCallArgument(expr.GetArgument(i), args[i].ParameterType, i, il, ref context, useResult))
+                        for (var i = 0; i < invokeParameters.Length; ++i)
+                            if (!TryEmitCallArgument(expr.GetArgument(i), invokeParameters[i].ParameterType, i, il, ref context, useResult))
                                 return false;
                 }
 
@@ -6997,7 +7259,6 @@ namespace FastExpressionCompiler
                         // See #341 `Nullable_decimal_parameter_with_decimal_constant_comparison_cases`
                         if (!context.LastEmitIsAddress && !(left is ParameterExpression p && p.IsByRef)) // Nullable type does not track IsByRef for some reason, so we check the param explicitly, see #461 `Case_equal_nullable_and_object_null`
                             EmitStoreAndLoadLocalVariableAddress(il, leftType);
-
                         EmitMethodCall(il, leftType.GetNullableHasValueGetterMethod());
                         context.LastEmitIsAddress = false;
                         if (nodeType == ExpressionType.Equal)
@@ -7015,7 +7276,6 @@ namespace FastExpressionCompiler
 
                         if (!context.LastEmitIsAddress && !(right is ParameterExpression p && p.IsByRef))
                             EmitStoreAndLoadLocalVariableAddress(il, rightType);
-
                         EmitMethodCall(il, rightType.GetNullableHasValueGetterMethod());
                         context.LastEmitIsAddress = false;
                         if (nodeType == ExpressionType.Equal)
@@ -7038,8 +7298,7 @@ namespace FastExpressionCompiler
                         lVarIndex = EmitStoreLocalVariable(il, leftType);
                     else if (leftIsNullable)
                     {
-                        lVarIndex = EmitStoreAndLoadLocalVariableAddress(il, leftType);
-                        il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                        lVarIndex = EmitNullableVarAddressAndValueOrDefault(il, leftType);
                         leftType = Nullable.GetUnderlyingType(leftType);
                     }
                 }
@@ -7077,8 +7336,7 @@ namespace FastExpressionCompiler
                         EmitLoadLocalVariable(il, lVarIndex);
                     else
                     {
-                        EmitLoadLocalVariableAddress(il, lVarIndex);
-                        il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                        EmitLoadNullableVarAddressAndValueOrDefault(il, lVarIndex, leftType);
                         leftType = Nullable.GetUnderlyingType(leftType);
                     }
 
@@ -7086,8 +7344,7 @@ namespace FastExpressionCompiler
                         EmitLoadLocalVariable(il, rVarIndex);
                     else
                     {
-                        EmitLoadLocalVariableAddress(il, rVarIndex);
-                        il.Demit(OpCodes.Ldfld, rightType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                        EmitLoadNullableVarAddressAndValueOrDefault(il, rVarIndex, rightType);
                         rightType = Nullable.GetUnderlyingType(rightType);
                     }
                 }
@@ -7100,8 +7357,7 @@ namespace FastExpressionCompiler
                 }
                 else if (rightType.IsNullable())
                 {
-                    rVarIndex = EmitStoreAndLoadLocalVariableAddress(il, rightType);
-                    il.Demit(OpCodes.Ldfld, rightType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                    rVarIndex = EmitNullableVarAddressAndValueOrDefault(il, rightType);
                     rightType = Nullable.GetUnderlyingType(rightType);
                 }
 
@@ -7304,11 +7560,9 @@ namespace FastExpressionCompiler
                             EmitLoadIndirectlyByRef(il, right.Type);
                         cachedRight = EmitStoreLocalVariable(il, right.Type);
                     }
-                    EmitLoadLocalVariableAddress(il, leftVar);
-                    EmitMethodCall(il, leftType.GetNullableHasValueGetterMethod());
+                    EmitLoadNullableVarAddressAndHasValue(il, leftVar, leftType);
                     il.Demit(OpCodes.Brfalse, noNullableValueLabel);
-                    EmitLoadLocalVariableAddress(il, leftVar);
-                    il.Demit(OpCodes.Ldfld, leftType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                    EmitLoadNullableVarAddressAndValueOrDefault(il, leftVar, leftType);
                     leftValueVar = EmitStoreLocalVariable(il, Nullable.GetUnderlyingType(leftType));
                 }
                 else if (!TryEmit(left, il, ref context, flags))
@@ -7346,8 +7600,7 @@ namespace FastExpressionCompiler
                         if (cachedRight != -1)
                         {
                             rightVar = cachedRight;
-                            EmitLoadLocalVariableAddress(il, rightVar);
-                            EmitMethodCall(il, rightType.GetNullableHasValueGetterMethod());
+                            EmitLoadNullableVarAddressAndHasValue(il, rightVar, rightType);
                         }
                         else
                         {
@@ -7358,8 +7611,7 @@ namespace FastExpressionCompiler
                             rightVar = EmitNullableVarAddressAndHasValue(il, rightType);
                         }
                         il.Demit(OpCodes.Brfalse, noNullableValueLabel);
-                        EmitLoadLocalVariableAddress(il, rightVar);
-                        il.Demit(OpCodes.Ldfld, rightType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                        EmitLoadNullableVarAddressAndValueOrDefault(il, rightVar, rightType);
                         rightValueVar = EmitStoreLocalVariable(il, Nullable.GetUnderlyingType(rightType));
                     }
                     else if (cachedRight != -1)
@@ -7404,28 +7656,46 @@ namespace FastExpressionCompiler
                 return true;
             }
 
+            [MethodImpl((MethodImplOptions)256)]
+            private static int EmitNullableVarAddressAndHasValue(ILGenerator il, Type varType)
+            {
+                Debug.Assert(varType.IsNullable(), "Expecting a nullable type");
+                var varIndex = EmitStoreAndLoadLocalVariableAddress(il, varType);
+                EmitMethodCall(il, varType.GetNullableHasValueGetterMethod());
+                return varIndex;
+            }
 
+            [MethodImpl((MethodImplOptions)256)]
+            private static int EmitNullableVarAddressAndValueOrDefault(ILGenerator il, Type varType)
+            {
+                Debug.Assert(varType.IsNullable(), "Expecting a nullable type");
+                var varIndex = EmitStoreAndLoadLocalVariableAddress(il, varType);
+                il.Demit(OpCodes.Ldfld, varType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                return varIndex;
+            }
 
             // The variant for the already stored nullable variable
             [MethodImpl((MethodImplOptions)256)]
-            private static void EmitLoadNullableVarAddressAndHasValue(ILGenerator il, int varIndex, Type nullableType)
+            private static bool EmitLoadNullableVarAddressAndHasValue(ILGenerator il, int varIndex, Type varType)
+            {
+                Debug.Assert(varType.IsNullable(), "Expecting a nullable type");
+                EmitLoadLocalVariableAddress(il, varIndex);
+                EmitMethodCall(il, varType.GetNullableHasValueGetterMethod());
+                return true;
+            }
+
+            [MethodImpl((MethodImplOptions)256)]
+            private static bool EmitLoadNullableVarAddressAndValueOrDefault(ILGenerator il, int varIndex, Type varType)
             {
                 EmitLoadLocalVariableAddress(il, varIndex);
-                EmitMethodCall(il, nullableType.GetNullableHasValueGetterMethod());
+                il.Demit(OpCodes.Ldfld, varType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                return true;
             }
 
             // Loads the variable value, or the value of the nullable variable (unsafe, without the `HasValue` check)
             [MethodImpl((MethodImplOptions)256)]
-            private static void EmitLoadVarOrNullableValue(ILGenerator il, int varIndex, Type varType, bool loadNullableValue)
-            {
-                if (!loadNullableValue)
-                    EmitLoadLocalVariable(il, varIndex);
-                else
-                {
-                    EmitLoadLocalVariableAddress(il, varIndex);
-                    il.Demit(OpCodes.Ldfld, varType.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
-                }
-            }
+            private static bool EmitLoadVarOrByAddressNullableValue(ILGenerator il, int varIndex, Type varType, bool loadNullableValue) => 
+                loadNullableValue ? EmitLoadNullableVarAddressAndValueOrDefault(il, varIndex, varType) : EmitLoadLocalVariable(il, varIndex);
 
             [MethodImpl((MethodImplOptions)256)]
             private static bool IsOperandOfOperatorMethod(Type operandType, Type paramType) =>
@@ -7497,8 +7767,8 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Brfalse, nullLabel);
                 }
 
-                EmitLoadVarOrNullableValue(il, leftVar, leftType, liftLeft);
-                EmitLoadVarOrNullableValue(il, rightVar, rightType, liftRight);
+                EmitLoadVarOrByAddressNullableValue(il, leftVar, leftType, liftLeft);
+                EmitLoadVarOrByAddressNullableValue(il, rightVar, rightType, liftRight);
 
                 if (!EmitMethodCall(il, method))
                     return false;
@@ -7783,11 +8053,9 @@ namespace FastExpressionCompiler
                 var skipRight = il.DefineLabel();
                 if (isLifted)
                 {
-                    EmitLoadLocalVariableAddress(il, left);
-                    EmitMethodCall(il, type.GetNullableHasValueGetterMethod());
+                    EmitLoadNullableVarAddressAndHasValue(il, left, type);
                     il.Demit(OpCodes.Brfalse, skipRight);
-                    EmitLoadLocalVariableAddress(il, left);
-                    il.Demit(OpCodes.Ldfld, type.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                    EmitLoadNullableVarAddressAndValueOrDefault(il, left, type);
                 }
                 else
                     EmitLoadLocalVariable(il, left);
@@ -7802,13 +8070,10 @@ namespace FastExpressionCompiler
                 if (isLifted)
                 {
                     rightIsNull = il.DefineLabel();
-                    EmitLoadLocalVariableAddress(il, right);
-                    EmitMethodCall(il, type.GetNullableHasValueGetterMethod());
+                    EmitLoadNullableVarAddressAndHasValue(il, right, type);
                     il.Demit(OpCodes.Brfalse, rightIsNull);
-                    EmitLoadLocalVariableAddress(il, left);
-                    il.Demit(OpCodes.Ldfld, type.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
-                    EmitLoadLocalVariableAddress(il, right);
-                    il.Demit(OpCodes.Ldfld, type.GetNullableValueUnsafeAkaGetValueOrDefaultMethod());
+                    EmitLoadNullableVarAddressAndValueOrDefault(il, left, type);
+                    EmitLoadNullableVarAddressAndValueOrDefault(il, right, type);
                 }
                 else
                 {
