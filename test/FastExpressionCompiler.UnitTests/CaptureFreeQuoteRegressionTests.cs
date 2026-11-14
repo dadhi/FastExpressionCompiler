@@ -15,6 +15,7 @@ public struct CaptureFreeQuoteRegressionTests : ITestX
   Quote_preserves_tree_and_delegate_type(t);
   Quote_preserves_locally_bound_variables(t);
   Free_quotes_preserve_identity_and_reject_captures(t);
+  Quoted_data_is_not_compiled_or_pruned(t);
 
  }
  public void Quote_preserves_tree_and_delegate_type(TestContext t)
@@ -39,6 +40,26 @@ public struct CaptureFreeQuoteRegressionTests : ITestX
   var caught=E.Lambda<Func<Exception>>(E.TryCatch(E.Throw(E.New(typeof(Exception)),typeof(Exception)),E.Catch(exception,exception)));
   var catchQuote=E.Lambda<Func<System.Linq.Expressions.Expression<Func<Exception>>>>(E.Quote(caught)).CompileFast(true);
   if(t.IsNotNull(catchQuote))t.AreEqual(System.Linq.Expressions.ExpressionType.Try,catchQuote().Body.NodeType);
+ }
+ public void Quoted_data_is_not_compiled_or_pruned(TestContext t)
+ {
+  var local = S.Variable(typeof(int));
+  // RuntimeVariables with nonempty storage is unsupported as compiled FEC code, but valid as quoted data.
+  var operand = S.Lambda<Func<IRuntimeVariables>>(S.Block(new[] { local }, S.RuntimeVariables(local)));
+  var compiled = S.Lambda<Func<System.Linq.Expressions.Expression<Func<IRuntimeVariables>>>>(S.Quote(operand)).FromSysExpression().CompileFast(true);
+  if (!t.IsNotNull(compiled)) return;
+  t.AreEqual(System.Linq.Expressions.ExpressionType.RuntimeVariables,
+   ((System.Linq.Expressions.BlockExpression)compiled().Body).Expressions[0].NodeType);
+  var free = E.Parameter(typeof(int));
+  // Binding validation must also inspect branches the executable-code collector could eliminate.
+  var body = E.Switch(E.Constant(0), E.Constant(7), E.SwitchCase(free, E.Constant(1)));
+  var capture = E.Lambda<Func<int, System.Linq.Expressions.Expression<Func<int>>>>(
+   E.Quote(E.Lambda<Func<int>>(body)), free);
+  t.AreEqual(null, capture.CompileFast(true));
+  var conditional = E.Condition(E.Constant(true), E.Constant(7), free);
+  var conditionalCapture = E.Lambda<Func<int, System.Linq.Expressions.Expression<Func<int>>>>(
+   E.Quote(E.Lambda<Func<int>>(conditional)), free);
+  t.AreEqual(null, conditionalCapture.CompileFast(true));
  }
  public void Free_quotes_preserve_identity_and_reject_captures(TestContext t)
  {

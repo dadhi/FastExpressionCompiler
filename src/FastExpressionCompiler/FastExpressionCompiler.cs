@@ -614,7 +614,8 @@ namespace FastExpressionCompiler
             ToBeCollected = 1,
             UserProvided = 1 << 1,
             HasClosure = 1 << 2,
-            ShouldBeStaticMethod = 1 << 3
+            ShouldBeStaticMethod = 1 << 3,
+            QuotedData = 1 << 4
         }
 
         [DebuggerDisplay("Target:{Target}, InlinedLambdaInvokeIndex:{InlinedLambdaInvokeIndex}, ReturnVariableIndexPlusOneAndIsDefined:{ReturnVariableIndexPlusOneAndIsDefined}")]
@@ -921,49 +922,6 @@ namespace FastExpressionCompiler
 #if LIGHT_EXPRESSION
             internal SmallList<LightAndSysExpr> Converted;
 #endif
-        }
-
-        // A quote is executable data. Its locally bound variables must not be confused with
-        // variables captured from the surrounding compiled lambda.
-        private sealed class QuoteVariableScope : System.Linq.Expressions.ExpressionVisitor
-        {
-            private readonly System.Collections.Generic.List<System.Linq.Expressions.ParameterExpression> _bound = new();
-            public bool HasFreeVariables;
-            protected override System.Linq.Expressions.Expression VisitExtension(System.Linq.Expressions.Expression node)
-            {
-                // An opaque extension may refer to variables that cannot be inspected safely.
-                HasFreeVariables = true;
-                return node;
-            }
-            protected override System.Linq.Expressions.Expression VisitParameter(System.Linq.Expressions.ParameterExpression node)
-            {
-                if (!_bound.Contains(node)) HasFreeVariables = true;
-                return node;
-            }
-            protected override System.Linq.Expressions.Expression VisitLambda<T>(System.Linq.Expressions.Expression<T> node)
-            {
-                var count = _bound.Count;
-                _bound.AddRange(node.Parameters);
-                Visit(node.Body);
-                _bound.RemoveRange(count, _bound.Count - count);
-                return node;
-            }
-            protected override System.Linq.Expressions.Expression VisitBlock(System.Linq.Expressions.BlockExpression node)
-            {
-                var count = _bound.Count;
-                _bound.AddRange(node.Variables);
-                foreach (var expression in node.Expressions) Visit(expression);
-                _bound.RemoveRange(count, _bound.Count - count);
-                return node;
-            }
-            protected override System.Linq.Expressions.CatchBlock VisitCatchBlock(System.Linq.Expressions.CatchBlock node)
-            {
-                if (node.Variable != null) _bound.Add(node.Variable);
-                Visit(node.Filter);
-                Visit(node.Body);
-                if (node.Variable != null) _bound.RemoveAt(_bound.Count - 1);
-                return node;
-            }
         }
 
         private sealed class EmptyRuntimeVariables : System.Runtime.CompilerServices.IRuntimeVariables
@@ -1390,17 +1348,19 @@ namespace FastExpressionCompiler
             short scopeIdx, bool enterable = false)
         {
             var r = Result.OK;
+            var quotedData = (context.Status & ClosureStatus.QuotedData) != 0;
             while (true)
             {
                 if (expr == null)
                     return Result.ExpressionIsNull;
 #if LIGHT_EXPRESSION
-                if (expr.IsIntrinsic)
+                if (!quotedData && expr.IsIntrinsic)
                     return expr.TryCollectInfo(ref context, nestedLambda, ref rootNestedLambdas, scopeIdx);
 #endif
                 switch (expr.NodeType)
                 {
                     case ExpressionType.Constant:
+                        if (quotedData) return Result.OK;
 #if LIGHT_EXPRESSION
                         if (expr == NullConstant | expr == FalseConstant | expr == TrueConstant || expr is IntConstantExpression)
                             return r;
@@ -1414,6 +1374,8 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.Parameter:
                         {
+                            if (quotedData)
+                                return context.IsLocalVar((PE)expr) ? Result.OK : Result.NotSupported_Quote;
                             var paramExprs = context.ParamExprs;
                             var paramCount = paramExprs.GetParamCount();
 
@@ -1476,7 +1438,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.NewArrayBounds:
                     case ExpressionType.NewArrayInit:
                         // todo: @feature multi-dimensional array initializers are not supported yet, they also are not supported by the hoisted expression
-                        if (expr.NodeType == ExpressionType.NewArrayInit && expr.Type.GetArrayRank() > 1)
+                        if (!quotedData && expr.NodeType == ExpressionType.NewArrayInit && expr.Type.GetArrayRank() > 1)
                             return Result.NotSupported_NewArrayInit_MultidimensionalArray;
                         var arrExpr = (NewArrayExpression)expr;
                         var elemCount = arrExpr.GetArgCount();
@@ -1505,6 +1467,14 @@ namespace FastExpressionCompiler
                         // Here we look if the lambda is already stored in the nested lambdas tree (Collected+Compiled),
                         // or if not found it Collects+Compiles the nested lambda here and adds to the nested lambda tree.
                         var nestedLambdaExpr = (LambdaExpression)expr;
+                        if (quotedData)
+                        {
+                            // Quoted lambdas bind variables but do not compile or create closures here.
+                            context.PushBlockWithVars(nestedLambdaExpr.Parameters);
+                            r = TryCollectInfo(ref context, nestedLambdaExpr.Body, nestedLambda, ref rootNestedLambdas, scopeIdx);
+                            context.PopBlock();
+                            return r;
+                        }
                         var nestedParamExprs = nestedLambdaExpr.GetParamExprs();
                         context.Status |= ClosureStatus.HasClosure;
 
@@ -1557,7 +1527,7 @@ namespace FastExpressionCompiler
                             var invokedExpr = invokeExpr.Expression;
                             if (invokedExpr is UnaryExpression quote && quote.NodeType == ExpressionType.Quote)
                                 invokedExpr = quote.Operand;
-                            if ((context.CompilerFlags & CompilerFlags.NoInvocationLambdaInlining) == 0 && invokedExpr is LambdaExpression lambdaExpr)
+                            if (!quotedData && (context.CompilerFlags & CompilerFlags.NoInvocationLambdaInlining) == 0 && invokedExpr is LambdaExpression lambdaExpr)
                             {
                                 ref var inlinedExpr = ref context.InlinedLambdaInvocation.Map.AddOrGetValueRef(invokeExpr, out var found);
                                 if (!found)
@@ -1596,7 +1566,8 @@ namespace FastExpressionCompiler
                         }
                     case ExpressionType.Conditional:
                         var condExpr = (ConditionalExpression)expr;
-                        // Try structural branch elimination - skip collecting dead branch info
+                        // Quoted data must also validate bindings in branches that code collection can eliminate.
+                        if (!quotedData)
                         {
                             var reducedCond = Tools.TryReduceConditional(condExpr);
                             if (!ReferenceEquals(reducedCond, condExpr))
@@ -1628,7 +1599,7 @@ namespace FastExpressionCompiler
                         var varExprs = blockExpr.Variables;
                         var varExprCount = varExprs?.Count ?? 0; // todo: @perf optimize for an empty and a single variable
 
-                        if (varExprCount == 1 & blockExprCount == 2 &&
+                        if (!quotedData && (varExprCount == 1 & blockExprCount == 2) &&
                             blockExprs[0] is BinaryExpression st0 && st0.NodeType == ExpressionType.Assign &&
                             blockExprs[1] is BinaryExpression st1 && st1.NodeType == ExpressionType.Assign &&
                             st0.Left == blockExprs[0] && st1.Right == blockExprs[0])
@@ -1730,7 +1701,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.Switch:
                         var switchExpr = ((SwitchExpression)expr);
                         // Compile-time switch branch elimination (#489): if switch value is interpretable, collect only the matching branch
-                        if (Interpreter.TryFindSwitchBranch(switchExpr, context.CompilerFlags, out var switchMatchedBody))
+                        if (!quotedData && Interpreter.TryFindSwitchBranch(switchExpr, context.CompilerFlags, out var switchMatchedBody))
                         {
                             if (switchMatchedBody != null)
                             {
@@ -1764,6 +1735,7 @@ namespace FastExpressionCompiler
                         return r;
 
                     case ExpressionType.Extension:
+                        if (quotedData) return Result.NotSupported_Quote;
                         var reduced = TryReduceNode(expr, ref context);
                         if (reduced == null)
                             return Result.NotSupported_UnknownExpression;
@@ -1781,28 +1753,49 @@ namespace FastExpressionCompiler
                         continue;
 
                     case ExpressionType.Quote:
+                        if (quotedData)
+                        {
+                            expr = ((UnaryExpression)expr).Operand;
+                            continue;
+                        }
                         var operand = ((UnaryExpression)expr).Operand;
                         context.Quotes ??= new CaptureFreeQuoteCache();
                         ref var quoteEntry = ref context.Quotes.Expressions.Map.TryGetValueRef(operand, out var foundQuote);
                         var quoted = foundQuote ? quoteEntry : null;
                         if (!foundQuote)
                         {
+                            // Inspect the operand as data with isolated bindings: outer parameters are captures.
+                            // Reuse collection without compiling lambdas, reducing extensions or pruning branches.
+                            var quoteContext = new CompilerContext(ClosureStatus.QuotedData, context.ParamExprs, context.CompilerFlags);
+                            if ((r = TryCollectInfo(ref quoteContext, operand, null, ref rootNestedLambdas, 0)) != Result.OK)
+                                return r;
 #if LIGHT_EXPRESSION
                             quoted = operand.ToExpression(ref context.Quotes.Converted);
 #else
                             quoted = operand;
 #endif
-                            var variables = new QuoteVariableScope();
-                            variables.Visit(quoted);
-                            if (variables.HasFreeVariables)
-                                return Result.NotSupported_Quote;
                             context.Quotes.Expressions.Map.AddOrGetValueRef(operand, out _) = quoted;
                         }
                         context.AddConstantOrIncrementUsageCount(quoted);
                         return Result.OK;
                     case ExpressionType.Dynamic:          // todo: @feature - is not supported yet
+#if !LIGHT_EXPRESSION
+                        if (quotedData)
+                        {
+                            foreach (var argument in ((DynamicExpression)expr).Arguments)
+                                if ((r = TryCollectInfo(ref context, argument, nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
+                                    return r;
+                            return r;
+                        }
+#endif
                         return Result.NotSupported_Dynamic;
                     case ExpressionType.RuntimeVariables:
+                        if (quotedData)
+                        {
+                            foreach (var variable in ((RuntimeVariablesExpression)expr).Variables)
+                                if (!context.IsLocalVar(variable)) return Result.NotSupported_Quote;
+                            return Result.OK;
+                        }
                         if (((RuntimeVariablesExpression)expr).Variables.Count != 0)
                             return NotSupported_RuntimeVariables;
                         context.AddConstantOrIncrementUsageCount(EmptyRuntimeVariables.Instance);
@@ -2211,7 +2204,7 @@ namespace FastExpressionCompiler
         private static Result TryCollectTryExprInfo(ref CompilerContext context, TryExpression tryExpr,
             NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas, short scopeIdx)
         {
-            if (context.InExceptionFilter)
+            if (context.InExceptionFilter && (context.Status & ClosureStatus.QuotedData) == 0)
                 return Result.NotSupported_ExceptionCatchFilter;
 
             var r = Result.OK;
