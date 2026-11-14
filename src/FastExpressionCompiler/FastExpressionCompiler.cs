@@ -1382,6 +1382,38 @@ namespace FastExpressionCompiler
             NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas,
             short scopeIdx, bool enterable = false)
         {
+            if (expr is BinaryExpression binary &&
+#if LIGHT_EXPRESSION
+                !expr.IsIntrinsic && !binary.Left.IsIntrinsic && !binary.Right.IsIntrinsic &&
+#endif
+                IsTerminalCollectionNode(binary.Left.NodeType) && IsTerminalCollectionNode(binary.Right.NodeType))
+            {
+                switch (binary.NodeType)
+                {
+                    case ExpressionType.Add: case ExpressionType.AddChecked:
+                    case ExpressionType.Subtract: case ExpressionType.SubtractChecked:
+                    case ExpressionType.Multiply: case ExpressionType.MultiplyChecked:
+                    case ExpressionType.Divide: case ExpressionType.Modulo:
+                    case ExpressionType.And: case ExpressionType.Or: case ExpressionType.ExclusiveOr:
+                    case ExpressionType.LeftShift: case ExpressionType.RightShift:
+                    case ExpressionType.Equal: case ExpressionType.NotEqual:
+                    case ExpressionType.LessThan: case ExpressionType.LessThanOrEqual:
+                    case ExpressionType.GreaterThan: case ExpressionType.GreaterThanOrEqual:
+                        var result = TryCollectInfo(ref context, binary.Left, nestedLambda, ref rootNestedLambdas, scopeIdx);
+                        return result != Result.OK ? result : TryCollectInfo(ref context, binary.Right, nestedLambda, ref rootNestedLambdas, scopeIdx);
+                }
+            }
+            return TryCollectGeneralInfo(ref context, expr, nestedLambda, ref rootNestedLambdas, scopeIdx, enterable);
+        }
+
+        [MethodImpl((MethodImplOptions)256)]
+        private static bool IsTerminalCollectionNode(ExpressionType nodeType) =>
+            nodeType == ExpressionType.Parameter || nodeType == ExpressionType.Constant || nodeType == ExpressionType.Default;
+
+        private static Result TryCollectGeneralInfo(ref CompilerContext context, Expression expr,
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas,
+            short scopeIdx, bool enterable = false)
+        {
             var r = Result.OK;
             var quotedData = (context.Status & ClosureStatus.QuotedData) != 0;
             while (true)
