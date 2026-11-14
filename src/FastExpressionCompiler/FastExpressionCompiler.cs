@@ -1378,22 +1378,13 @@ namespace FastExpressionCompiler
 
         /// <summary>Collects the information about closure constants, nested lambdas, non-passed parameters, goto labels and variables in blocks.
         /// Returns `OK` result if everything is fine and other result for error.</summary>
-        public static Result TryCollectInfo(ref CompilerContext context, Expression expr,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas,
-            short scopeIdx, bool enterable = false)
+        private static Result TryCollectTerminalInfo(ref CompilerContext context, Expression expr,
+            ExpressionType nodeType, NestedLambdaInfo nestedLambda)
         {
             var r = Result.OK;
             var quotedData = (context.Status & ClosureStatus.QuotedData) != 0;
-            while (true)
+            switch (nodeType)
             {
-                if (expr == null)
-                    return Result.ExpressionIsNull;
-#if LIGHT_EXPRESSION
-                if (!quotedData && expr.IsIntrinsic)
-                    return expr.TryCollectInfo(ref context, nestedLambda, ref rootNestedLambdas, scopeIdx);
-#endif
-                switch (expr.NodeType)
-                {
                     case ExpressionType.Constant:
                         if (quotedData) return Result.OK;
 #if LIGHT_EXPRESSION
@@ -1428,6 +1419,47 @@ namespace FastExpressionCompiler
                             }
                             return Result.OK;
                         }
+                default:
+                    return r;
+            }
+        }
+
+        public static Result TryCollectInfo(ref CompilerContext context, Expression expr,
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas,
+            short scopeIdx, bool enterable = false)
+        {
+            if (expr != null
+#if LIGHT_EXPRESSION
+                && (!expr.IsIntrinsic || (context.Status & ClosureStatus.QuotedData) != 0)
+#endif
+                )
+            {
+                var nodeType = expr.NodeType;
+                if (nodeType == ExpressionType.Constant || nodeType == ExpressionType.Parameter || nodeType == ExpressionType.Default)
+                    return TryCollectTerminalInfo(ref context, expr, nodeType, nestedLambda);
+            }
+            return TryCollectNonterminalInfo(ref context, expr, nestedLambda, ref rootNestedLambdas, scopeIdx, enterable);
+        }
+
+        private static Result TryCollectNonterminalInfo(ref CompilerContext context, Expression expr,
+            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas,
+            short scopeIdx, bool enterable = false)
+        {
+            var r = Result.OK;
+            var quotedData = (context.Status & ClosureStatus.QuotedData) != 0;
+            while (true)
+            {
+                if (expr == null)
+                    return Result.ExpressionIsNull;
+#if LIGHT_EXPRESSION
+                if (!quotedData && expr.IsIntrinsic)
+                    return expr.TryCollectInfo(ref context, nestedLambda, ref rootNestedLambdas, scopeIdx);
+#endif
+                switch (expr.NodeType)
+                {
+                    case ExpressionType.Constant:
+                    case ExpressionType.Parameter:
+                        return TryCollectTerminalInfo(ref context, expr, expr.NodeType, nestedLambda);
                     case ExpressionType.Call:
                         {
                             var callExpr = (MethodCallExpression)expr;
