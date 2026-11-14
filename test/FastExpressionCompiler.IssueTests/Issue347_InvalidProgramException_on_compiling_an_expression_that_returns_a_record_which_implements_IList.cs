@@ -106,9 +106,7 @@ namespace FastExpressionCompiler.IssueTests
                 OpCodes.Ldfld,      // ArrayClosureWithNonPassedParams.NonPassedParams
                 OpCodes.Ldc_I4_0,
                 OpCodes.Ldelem_Ref,
-                OpCodes.Unbox_Any,  // NotifyModel
-                OpCodes.Stloc_0,
-                OpCodes.Ldloca_S,   // 0
+                OpCodes.Unbox,      // address of the captured NotifyModel
                 OpCodes.Call,       // NotifyModel.get_Number1
                 OpCodes.Ret
             );
