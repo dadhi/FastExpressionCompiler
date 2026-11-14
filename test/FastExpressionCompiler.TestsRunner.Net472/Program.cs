@@ -53,6 +53,7 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.BackwardTypedLabelTests());
                 t.Run(new LightExpression.UnitTests.TryResultValueRegressionTests());
                 t.Run(new LightExpression.UnitTests.FrameworkFilterRejectionTests());
+                t.Run(new LightExpression.UnitTests.ExceptionRegionValidationRegressionTests());
                 t.Run(new LightExpression.UnitTests.NonVectorArrayRegressionTests());
                 t.Run(new LightExpression.UnitTests.UnboxStorageRegressionTests());
                 t.Run(new LightExpression.UnitTests.AtomicArithmeticSpillTests());
@@ -77,6 +78,7 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.ReadonlyValueReceiverRegressionTests());
                 t.Run(new LightExpression.UnitTests.ReturnPatternScopeTests());
                 t.Run(new LightExpression.UnitTests.DirectQuotedInvocationTests());
+                t.Run(new LightExpression.UnitTests.InlinedRethrowBoundaryRegressionTests());
                 t.Run(new LightExpression.UnitTests.BlockVariableBindingRegressionTests());
                 t.Run(new LightExpression.UnitTests.ComparisonReductionRegressionTests());
                 t.Run(new LightExpression.UnitTests.ArithmeticExceptionOperandsTests());
@@ -143,6 +145,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new BackwardTypedLabelTests());
             fecTests.Run(new TryResultValueRegressionTests());
             fecTests.Run(new FrameworkFilterRejectionTests());
+            fecTests.Run(new ExceptionRegionValidationRegressionTests());
             fecTests.Run(new NonVectorArrayRegressionTests());
             fecTests.Run(new RefConversionStorageTests());
             fecTests.Run(new UnboxStorageRegressionTests());
@@ -167,6 +170,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new ReadonlyValueReceiverRegressionTests());
             fecTests.Run(new ReturnPatternScopeTests());
             fecTests.Run(new DirectQuotedInvocationTests());
+            fecTests.Run(new InlinedRethrowBoundaryRegressionTests());
             fecTests.Run(new BlockVariableBindingRegressionTests());
             fecTests.Run(new ComparisonReductionRegressionTests());
             fecTests.Run(new ArithmeticExceptionOperandsTests());
