@@ -1392,7 +1392,8 @@ namespace FastExpressionCompiler
                 if (!quotedData && expr.IsIntrinsic)
                     return expr.TryCollectInfo(ref context, nestedLambda, ref rootNestedLambdas, scopeIdx);
 #endif
-                switch (expr.NodeType)
+                var nodeType = expr.NodeType;
+                switch (nodeType)
                 {
                     case ExpressionType.Constant:
                         if (quotedData) return Result.OK;
@@ -1871,8 +1872,8 @@ namespace FastExpressionCompiler
                             if (binaryExpr.Conversion != null &&
                                 (r = TryCollectInfo(ref context, Expression.Invoke(binaryExpr.Conversion, Expression.Default(binaryExpr.Conversion.Parameters[0].Type)), nestedLambda, ref rootNestedLambdas, scopeIdx)) != Result.OK)
                                 return r;
-                            if (binaryExpr.NodeType != ExpressionType.Assign &&
-                                binaryExpr.Left is MemberExpression or IndexExpression && binaryExpr.NodeType.IsAssignNodeType())
+                            if (nodeType != ExpressionType.Assign &&
+                                binaryExpr.Left is MemberExpression or IndexExpression && nodeType.IsAssignNodeType())
                             {
                                 var compoundRightTryCount = context.TryExpressionCount;
                                 r = TryCollectInfo(ref context, binaryExpr.Right, nestedLambda, ref rootNestedLambdas, scopeIdx);
