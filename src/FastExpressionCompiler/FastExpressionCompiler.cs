@@ -3641,7 +3641,7 @@ namespace FastExpressionCompiler
                                     // Load the variable from the NonPassedParams array
                                     EmitLoadConstantInt(il, varIndexInNonPassedParams);
                                     il.Demit(OpCodes.Ldelem_Ref);
-                                    return TryEmitCapturedParameterValue(il, paramType, isPassedRef, ref context);
+                                    return TryEmitCapturedParameterValue(il, paramType, isPassedRef, parent, ref context);
                                 }
                             }
                         }
@@ -3779,11 +3779,17 @@ namespace FastExpressionCompiler
                 il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
                 EmitLoadConstantInt(il, nonPassedParamIndex);
                 il.Demit(OpCodes.Ldelem_Ref);
-                return TryEmitCapturedParameterValue(il, paramType, isPassedRef, ref context);
+                return TryEmitCapturedParameterValue(il, paramType, isPassedRef, parent, ref context);
             }
 
-            private static bool TryEmitCapturedParameterValue(ILGenerator il, Type type, bool byRef, ref CompilerContext context)
+            private static bool TryEmitCapturedParameterValue(ILGenerator il, Type type, bool byRef, ParentFlags parent, ref CompilerContext context)
             {
+                // Captured nonnullable structs already live in a writable box. Member and
+                // instance access must use that storage rather than a temporary copy.
+                byRef |= type.IsValueType && !type.IsNullable() &&
+                    (parent & (ParentFlags.MemberAccess | ParentFlags.InstanceAccess)) != 0 &&
+                    ((parent & ParentFlags.IndexAccess) == 0 ||
+                     (parent & (ParentFlags.Call | ParentFlags.MemberAccess)) == 0);
                 if (byRef)
                 {
                     // Nullable boxes and reference slots do not expose writable storage of this type.

@@ -49,6 +49,7 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.DelegateExceptionArgumentsTests());
                 t.Run(new LightExpression.UnitTests.MultidimensionalGetStorageRegressionTests());
                 t.Run(new LightExpression.UnitTests.AbstractConstructorRegressionTests());
+                t.Run(new LightExpression.UnitTests.ArithmeticValueOperandTests());
                 t.Run(new LightExpression.UnitTests.AssignmentNullCheckTests());
                 t.Run(new LightExpression.UnitTests.DirectLogicalFactoryRegressionTests());
                 t.Run(new LightExpression.UnitTests.IntrinsicConstructorSpillsTests());
@@ -151,6 +152,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new DelegateExceptionArgumentsTests());
             fecTests.Run(new MultidimensionalGetStorageRegressionTests());
             fecTests.Run(new AbstractConstructorRegressionTests());
+            fecTests.Run(new ArithmeticValueOperandTests());
             fecTests.Run(new AssignmentNullCheckTests());
             fecTests.Run(new DirectLogicalFactoryRegressionTests());
             fecTests.Run(new IntrinsicConstructorSpillsTests());
