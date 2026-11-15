@@ -175,28 +175,26 @@ namespace FastExpressionCompiler
             ?? (ifFastFailedReturnNull ? null : lambdaExpr.CompileSys());
 
 #if FLAT_EXPRESSION
-        /// <summary>How many times flat emit missed and compiled through Light. Tests assert this stays put.</summary>
-        public static int FlatEmitFallbackCount;
-
-        /// <summary>Compiles a flat tree. Unhandled node kinds still go through <see cref="ExprTree.ToLightExpression"/>.</summary>
+        /// <summary>Compiles a flat tree by walking node indexes. An unhandled node returns null, or throws when <see cref="CompilerFlags.ThrowOnNotSupportedExpression"/> is set.</summary>
         public static TDelegate CompileFast<TDelegate>(ref this ExprTree tree,
             bool ifFastFailedReturnNull = false, CompilerFlags flags = CompilerFlags.Default) where TDelegate : class
         {
-            if ((flags & CompilerFlags.EnableDelegateDebugInfo) != 0)
-                return CompileFlatViaLight<TDelegate>(ref tree, ifFastFailedReturnNull, flags);
+            _ = ifFastFailedReturnNull;
+            TDelegate Fail(Result why) =>
+                (flags & CompilerFlags.ThrowOnNotSupportedExpression) == 0 ? null : NotSupportedCase<TDelegate>(why);
 
             var root = (ushort)tree.RootIdx;
             if (root == 0)
                 return null;
 
             ref var rootNode = ref tree.Nodes.GetSurePresentRef(root);
-            if (rootNode.NodeType != ExpressionType.Lambda)
-                return CompileFlatViaLight<TDelegate>(ref tree, ifFastFailedReturnNull, flags);
+            if (rootNode.NodeType != ExpressionType.Lambda || (flags & CompilerFlags.EnableDelegateDebugInfo) != 0)
+                return Fail(Result.NotSupported_UnknownExpression);
 
             var context = new CompilerContext(ClosureStatus.ToBeCollected, null, flags);
             var collectResult = TryCollectInfo(ref context, ref tree);
             if (collectResult != Result.OK)
-                return (flags & CompilerFlags.ThrowOnNotSupportedExpression) == 0 ? null : NotSupportedCase<TDelegate>(collectResult);
+                return Fail(collectResult);
 
             var delegateType = typeof(TDelegate) == typeof(Delegate) ? rootNode.Type : typeof(TDelegate);
             var returnType = delegateType.GetMethod("Invoke").ReturnType;
@@ -223,16 +221,7 @@ namespace FastExpressionCompiler
                 compiled = dynMethod.CreateDelegate(delegateType, closure);
             }
             DynamicMethodHacks.FreePooledILGenerator(dynMethod, il);
-            if (compiled != null)
-                return (TDelegate)(object)compiled;
-            ++FlatEmitFallbackCount; // shortcut: delete with the Light fallback
-            return CompileFlatViaLight<TDelegate>(ref tree, ifFastFailedReturnNull, flags);
-        }
-
-        static TDelegate CompileFlatViaLight<TDelegate>(ref ExprTree tree, bool ifFastFailedReturnNull, CompilerFlags flags) where TDelegate : class
-        {
-            var light = tree.ToLightExpression();
-            return light is LambdaExpression lambda ? lambda.CompileFast<TDelegate>(ifFastFailedReturnNull, flags) : null;
+            return compiled != null ? (TDelegate)(object)compiled : Fail(Result.NotSupported_UnknownExpression);
         }
 #endif
 
