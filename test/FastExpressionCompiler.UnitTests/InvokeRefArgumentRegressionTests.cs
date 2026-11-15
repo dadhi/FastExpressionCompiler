@@ -27,6 +27,7 @@ public struct InvokeRefArgumentRegressionTests : ITestX
 
 #if FLAT_EXPRESSION
     FastExpressionCompiler.FlatExpression.ExprTree Expr;
+    FastExpressionCompiler.FlatExpression.ExprTree ExprTree => Expr; // todo: @wip fine to copy for now, we may come up with by-ref solution later
     void ResetExpr() => Expr = default;
 #else
     void ResetExpr() {}
@@ -37,7 +38,7 @@ public struct InvokeRefArgumentRegressionTests : ITestX
         ResetExpr();
         var get = Expr.Parameter(typeof(Func<int>));
         var expression = Expr.Lambda<Func<Func<int>, int>>(Expr.Call(typeof(InvokeRefArgumentRegressionTests).GetMethod(nameof(Mutate)), Expr.Invoke(get)), get);
-        var fast = expression.CompileFast(true);
+        var fast = expression.CompileFast(true, in this);
         var calls = 0;
         t.AreEqual(5, fast(() => { ++calls; return 5; }));
         t.AreEqual(1, calls);

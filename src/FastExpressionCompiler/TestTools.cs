@@ -46,6 +46,23 @@ public static class TestTools
 #endif
     }
 
+#if FLAT_EXPRESSION
+    public static TDelegate CompileFast<TDelegate, T>(
+        this ushort lambdaExprIdx, bool ifFastFailedReturnNull, in T test)
+        where TDelegate : System.Delegate
+        where T : struct, ITestX
+    {
+        test.Expr.Root = lambdaExprIdx;
+        return test.Expr.CompileFast(ifFastFailedReturnNull);
+    }
+#else
+    public static TDelegate CompileFast<TDelegate, T>(
+        this Expression<TDelegate> lambdaExpr, bool ifFastFailedReturnNull, in T test)
+        where TDelegate : System.Delegate
+        where T : struct, ITestX => 
+        lambdaExpr.CompileFast(ifFastFailedReturnNull);
+#endif
+
     public static void AssertOpCodes(this Delegate dlg, params OpCode[] expectedCodes)
     {
         var diagInfo = dlg.TryGetDebugInfo();
@@ -620,6 +637,9 @@ public interface ITest
 public interface ITestX
 {
     void Run(TestRun tr);
+#if FLAT_EXPRESSION
+    ExprTree ExprTree { get; }
+#endif
 }
 
 public enum AssertKind
