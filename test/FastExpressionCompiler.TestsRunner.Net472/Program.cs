@@ -125,6 +125,7 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.IntegerSwitchDispatchRegressionTests());
                 t.Run(new LightExpression.UnitTests.ParityTests());
                 t.Run(new LightExpression.UnitTests.CatchEntryStackTests());
+                t.Run(new LightExpression.UnitTests.UnrepresentableCaptureTests());
 
                 Console.WriteLine($"Just LightExpression tests are passing in {justLightTestsStopwatch.ElapsedMilliseconds} ms.");
             }
@@ -229,6 +230,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new IntegerSwitchDispatchRegressionTests());
             fecTests.Run(new ParityTests());
             fecTests.Run(new CatchEntryStackTests());
+            fecTests.Run(new UnrepresentableCaptureTests());
 
 
             Console.WriteLine($"FEC tests are passing in {fecTestsStopwatch.ElapsedMilliseconds} ms.");

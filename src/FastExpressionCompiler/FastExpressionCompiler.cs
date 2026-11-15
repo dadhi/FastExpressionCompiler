@@ -1219,7 +1219,9 @@ namespace FastExpressionCompiler
             /// <summary>TypeEqual is not supported </summary>
             NotSupported_TypeEqual = 1009,
             /// <summary>`when` in catch is not supported yet</summary>
-            NotSupported_ExceptionCatchFilter = 1010
+            NotSupported_ExceptionCatchFilter = 1010,
+            /// <summary>A managed reference or byref-like value cannot escape into closure storage.</summary>
+            NotSupported_HoistedVariable = 1012
         }
 
         /// <summary>Return value is ignored</summary>
@@ -1423,6 +1425,13 @@ namespace FastExpressionCompiler
                             {
                                 if (nestedLambda == null) // means that we are in the root lambda
                                     return Result.ParameterIsNotVariableNorInPassedParameters;
+                                var parameterType = parExpr.Type;
+                                if (parExpr.IsByRef || parameterType.IsByRef || parameterType.IsPointer
+#if !NETFRAMEWORK
+                                    || parameterType.IsByRefLike
+#endif
+                                    )
+                                    return Result.NotSupported_HoistedVariable;
                                 context.Status |= ClosureStatus.HasClosure;
                                 _ = nestedLambda.NonPassedParameters.GetIndexOrAdd(parExpr, default(RefEq<ParameterExpression>));
                             }
