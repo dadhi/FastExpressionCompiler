@@ -165,6 +165,26 @@ public struct ExprNode
         _child == other._child;
 }
 
+/// <summary>Lambda index carrying the runtime delegate type.</summary>
+public struct LambdaIdx
+{
+    /// <summary>Gets the delegate type for this lambda index.</summary>
+    public Type TDelegateType;
+    /// <summary>The underlying lambda index.</summary>
+    public ushort Idx;
+    /// <summary>Convert back to the underlying ushort index.</summary>
+    public static implicit operator ushort(LambdaIdx idx) => idx.Idx;
+}
+
+/// <summary>Typed lambda index for a specific delegate type.</summary>
+public struct LambdaIdx<TDelegate>
+{
+    /// <summary>The underlying lambda index.</summary>
+    public ushort Idx;
+    /// <summary>Convert back to the underlying ushort index.</summary>
+    public static implicit operator ushort(LambdaIdx<TDelegate> idx) => idx.Idx;
+}
+
 /// <summary>Stores an expression tree as flat nodes plus separate closure constants.</summary>
 public partial struct ExprTree : IEquatable<ExprTree>
 {
@@ -634,10 +654,10 @@ public partial struct ExprTree : IEquatable<ExprTree>
     /// <summary>Adds a lambda node. Layout: body then parameters.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #if NET10_0_OR_GREATER
-    public ushort Lambda(Type delegateType, ushort bodyIdx, params ReadOnlySpan<ushort> pars)
+    public LambdaIdx Lambda(Type delegateType, ushort bodyIdx, params ReadOnlySpan<ushort> pars)
     {
 #else
-    public ushort Lambda(Type delegateType, ushort bodyIdx, params ushort[] pars)
+    public LambdaIdx Lambda(Type delegateType, ushort bodyIdx, params ushort[] pars)
     {
         pars ??= Array.Empty<ushort>();
 #endif
@@ -682,17 +702,20 @@ public partial struct ExprTree : IEquatable<ExprTree>
 
         prevRef.NextIdx = lambdaIdx; // close the child chain with a link back to the lambda node
 
-        return lambdaIdx;
+        return new LambdaIdx { TDelegateType = delegateType, Idx = lambdaIdx };
     }
 
     /// <summary>Adds a typed lambda node.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #if NET10_0_OR_GREATER
-    public ushort Lambda<TDelegate>(ushort bodyIdx, params ReadOnlySpan<ushort> parameters) where TDelegate : Delegate =>
+    public LambdaIdx<TDelegate> Lambda<TDelegate>(ushort bodyIdx, params ReadOnlySpan<ushort> parameters) where TDelegate : Delegate
 #else
-    public ushort Lambda<TDelegate>(ushort bodyIdx, params ushort[] parameters) where TDelegate : Delegate =>
+    public LambdaIdx<TDelegate> Lambda<TDelegate>(ushort bodyIdx, params ushort[] parameters) where TDelegate : Delegate
 #endif
-        Lambda(typeof(TDelegate), bodyIdx, parameters);
+    {
+        var lambdaIdx = Lambda(typeof(TDelegate), bodyIdx, parameters);
+        return new LambdaIdx<TDelegate> { Idx = lambdaIdx.Idx };
+    }
 
     /// <summary>Adds a member-assignment binding node.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
