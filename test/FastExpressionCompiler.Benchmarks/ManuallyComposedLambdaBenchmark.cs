@@ -28,14 +28,13 @@ namespace FastExpressionCompiler.Benchmarks
                 typeof(X));
         }
 
-        private static ExprTree CreateManualFlatExpr()
+        private static void CreateManualFlatExpr(ref ExprTree fe)
         {
-            var fe = default(ExprTree);
+            fe = default;
             var bParamExpr = fe.ParameterOf<B>("b");
             fe.RootIdx = fe.Lambda<Func<B, X>>(
                 fe.New(_ctorX, fe.Constant(_a), bParamExpr),
                 bParamExpr);
-            return fe;
         }
 
         public class A { }
@@ -57,7 +56,9 @@ namespace FastExpressionCompiler.Benchmarks
 
         private static readonly Expression<Func<B, X>> _expr = CreateManualExprWithParams();
         private static readonly LightExpression.Expression<Func<B, X>> _leExpr = CreateManualLightExprWithParams();
-        private static ExprTree _flatExpr = CreateManualFlatExpr();
+        private static ExprTree _flatExpr;
+
+        static ManuallyComposedLambdaBenchmark() => CreateManualFlatExpr(ref _flatExpr);
 
         [MemoryDiagnoser]
         public class Create
@@ -103,7 +104,7 @@ namespace FastExpressionCompiler.Benchmarks
 
             [Benchmark]
             public void Create_FlatExpression() =>
-                _createdFlat = CreateManualFlatExpr();
+                CreateManualFlatExpr(ref _createdFlat);
         }
 
         [MemoryDiagnoser]
@@ -173,7 +174,8 @@ namespace FastExpressionCompiler.Benchmarks
             [Benchmark]
             public Func<B, X> Create_FlatExpression_Then_CompileFast()
             {
-                var fe = CreateManualFlatExpr();
+                var fe = default(ExprTree);
+                CreateManualFlatExpr(ref fe);
                 return LightExpression.ExpressionCompiler.CompileFast<Func<B, X>>(ref fe, true);
             }
         }
@@ -365,11 +367,8 @@ namespace FastExpressionCompiler.Benchmarks
             private static readonly Func<B, X> _lambdaCompiledFast_LightExpession = LightExpression.ExpressionCompiler.CompileFast(_leExpr, true);
             private static readonly Func<B, X> _lambdaCompiledFast_Flat = CompileFlat();
 
-            private static Func<B, X> CompileFlat()
-            {
-                var fe = _flatExpr;
-                return LightExpression.ExpressionCompiler.CompileFast<Func<B, X>>(ref fe, true);
-            }
+            private static Func<B, X> CompileFlat() =>
+                LightExpression.ExpressionCompiler.CompileFast<Func<B, X>>(ref _flatExpr, true);
 
             private static readonly A _aa = new A();
             private static readonly B _bb = new B();

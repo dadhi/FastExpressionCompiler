@@ -636,9 +636,9 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
         }
 
 #if NET8_0_OR_GREATER
-        public static ExprTree CreateComplexFlatExpression(string parameterName = null)
+        public static void CreateComplexFlatExpression(ref ExprTree fe, string parameterName = null)
         {
-            var fe = default(ExprTree);
+            fe = default;
             var stateParamExpr = fe.ParameterOf<object[]>(parameterName);
             var body = fe.MemberInit(
                 fe.New(_ctorOfA,
@@ -655,7 +655,6 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                 fe.Bind(_fieldABop,
                     fe.New(_ctorOfB)));
             fe.RootIdx = fe.Lambda<Func<object[], object>>(body, stateParamExpr);
-            return fe;
         }
 #endif
 
@@ -845,7 +844,8 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
         public void Can_build_flat_expression_directly_with_light_expression_like_api()
         {
-            var fe = CreateComplexFlatExpression("state");
+            var fe = default(ExprTree);
+            CreateComplexFlatExpression(ref fe, "state");
             var lambda = (LambdaExpression)fe.ToLightExpression();
             var func = lambda.CompileFast<Func<object[], object>>(true);
             var runtimeState = new object[12];
@@ -925,7 +925,8 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Asserts.AreEqual(1, nestedCtx.NestedLambdas.Count);
             Asserts.IsTrue((nestedCtx.Status & ExpressionCompiler.ClosureStatus.HasClosure) != 0);
 
-            var complex = CreateComplexFlatExpression("state");
+            var complex = default(ExprTree);
+            CreateComplexFlatExpression(ref complex, "state");
             var complexCtx = Ctx();
             Asserts.AreEqual(ExpressionCompiler.Result.OK, ExpressionCompiler.TryCollectInfo(ref complexCtx, ref complex));
 

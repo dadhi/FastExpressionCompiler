@@ -172,7 +172,8 @@ namespace FastExpressionCompiler.Benchmarks
         [Benchmark]
         public object Create_FlatExpression_and_CompileFast()
         {
-            var fe = LightExpressionTests.CreateComplexFlatExpression();
+            var fe = default(FlatExpression.ExprTree);
+            LightExpressionTests.CreateComplexFlatExpression(ref fe);
             return LE.CompileFast<Func<object[], object>>(ref fe, true);
         }
 
@@ -292,7 +293,7 @@ namespace FastExpressionCompiler.Benchmarks
 
         [Benchmark]
         public void Create_FlatExpression() =>
-            _createdFlat = LightExpressionTests.CreateComplexFlatExpression();
+            LightExpressionTests.CreateComplexFlatExpression(ref _createdFlat);
 
         // [Benchmark]
         public object Create_LightExpression_with_intrinsics() =>
