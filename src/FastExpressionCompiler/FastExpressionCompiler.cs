@@ -3157,7 +3157,7 @@ namespace FastExpressionCompiler
                     if (objVar != -1)
                         EmitLoadLocalVariable(il, objVar);
                     for (var i = 0; i < count; ++i)
-                        EmitLoadLocalVariable(il, argVars[i]);
+                        EmitLoadLocalVariable(il, argVars.GetSurePresentRef(i));
                 }
                 return true;
             }
@@ -4826,7 +4826,7 @@ namespace FastExpressionCompiler
                 }
                 if (spillBounds)
                     for (var i = 0; i < boundCount; ++i)
-                        EmitLoadLocalVariable(il, boundVars[i]);
+                        EmitLoadLocalVariable(il, boundVars.GetSurePresentRef(i));
                 if (boundCount == 1)
                 {
                     var elemType = expr.Type.GetElementType();
