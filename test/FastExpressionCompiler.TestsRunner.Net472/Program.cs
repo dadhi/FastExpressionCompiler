@@ -46,6 +46,7 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.ReferenceUnboxingRegressionTests());
                 t.Run(new LightExpression.UnitTests.BoxedCaptureRefTests());
                 t.Run(new LightExpression.UnitTests.ReferenceComparisonExceptionTests());
+                t.Run(new LightExpression.UnitTests.TerminalBinaryCollectionTests());
                 t.Run(new LightExpression.UnitTests.DelegateExceptionArgumentsTests());
                 t.Run(new LightExpression.UnitTests.MultidimensionalGetStorageRegressionTests());
                 t.Run(new LightExpression.UnitTests.AbstractConstructorRegressionTests());
@@ -148,6 +149,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new ReferenceUnboxingRegressionTests());
             fecTests.Run(new BoxedCaptureRefTests());
             fecTests.Run(new ReferenceComparisonExceptionTests());
+            fecTests.Run(new TerminalBinaryCollectionTests());
             fecTests.Run(new DelegateExceptionArgumentsTests());
             fecTests.Run(new MultidimensionalGetStorageRegressionTests());
             fecTests.Run(new AbstractConstructorRegressionTests());
