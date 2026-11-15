@@ -5,6 +5,11 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Compile Include="..\FastExpressionCompiler.FlatExpression.UnitTests\TestCompile.cs" />
+        <Compile Include="..\FastExpressionCompiler.FlatExpression.UnitTests\IntAddCompileTests.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="..\..\src\FastExpressionCompiler\FastExpressionCompiler.csproj" />
     </ItemGroup>
 </Project>

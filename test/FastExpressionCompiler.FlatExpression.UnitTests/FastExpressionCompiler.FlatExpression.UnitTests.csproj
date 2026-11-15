@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFrameworks Condition="'$(DevMode)' != 'true'">net8.0;net10.0</TargetFrameworks>
+        <TargetFrameworks Condition="'$(DevMode)' == 'true'">net10.0</TargetFrameworks>
+
+        <DefineConstants>$(DefineConstants);FLAT_EXPRESSION</DefineConstants>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="..\FastExpressionCompiler.UnitTests\CallTests.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\FastExpressionCompiler.LightExpression\FastExpressionCompiler.LightExpression.csproj" />
+    </ItemGroup>
+</Project>

@@ -9,6 +9,8 @@
     <ItemGroup>
         <None Remove="*.ncrunchproject" />
         <Compile Include="..\FastExpressionCompiler.UnitTests\**\*.cs" Exclude="..\FastExpressionCompiler.UnitTests\obj\**\*.*" />
+        <Compile Include="..\FastExpressionCompiler.FlatExpression.UnitTests\TestCompile.cs" />
+        <Compile Include="..\FastExpressionCompiler.FlatExpression.UnitTests\IntAddCompileTests.cs" />
     </ItemGroup>
 
     <ItemGroup>

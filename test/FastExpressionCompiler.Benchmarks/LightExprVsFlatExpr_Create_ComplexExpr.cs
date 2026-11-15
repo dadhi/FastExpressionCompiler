@@ -28,6 +28,6 @@ namespace FastExpressionCompiler.Benchmarks
 
         [Benchmark]
         public void Create_FlatExpression() =>
-            _flatExpr = LightExpressionTests.CreateComplexFlatExpression();
+            LightExpressionTests.CreateComplexFlatExpression(ref _flatExpr);
     }
 }

@@ -1,4 +1,5 @@
-﻿using BenchmarkDotNet.Attributes;
+﻿using System;
+using BenchmarkDotNet.Attributes;
 using FastExpressionCompiler.LightExpression.UnitTests;
 using LE = FastExpressionCompiler.LightExpression.ExpressionCompiler;
 
@@ -168,6 +169,14 @@ namespace FastExpressionCompiler.Benchmarks
         public object Create_LightExpression_and_CompileFast() =>
             LE.CompileFast(LightExpressionTests.CreateComplexLightExpression());
 
+        [Benchmark]
+        public object Create_FlatExpression_and_CompileFast()
+        {
+            var fe = default(FlatExpression.ExprTree);
+            LightExpressionTests.CreateComplexFlatExpression(ref fe);
+            return LE.CompileFast<Func<object[], object>>(ref fe, true);
+        }
+
         // [Benchmark]
         public object CreateLightExpression_and_CompileFast_with_intrinsic() =>
             LE.CompileFast(LightExpressionTests.CreateComplexLightExpression_with_intrinsics());
@@ -279,6 +288,12 @@ namespace FastExpressionCompiler.Benchmarks
         [Benchmark(Baseline = true)]
         public object Create_LightExpression() =>
             LightExpressionTests.CreateComplexLightExpression();
+
+        private FlatExpression.ExprTree _createdFlat;
+
+        [Benchmark]
+        public void Create_FlatExpression() =>
+            LightExpressionTests.CreateComplexFlatExpression(ref _createdFlat);
 
         // [Benchmark]
         public object Create_LightExpression_with_intrinsics() =>

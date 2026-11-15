@@ -39,7 +39,12 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_build_flat_expression_directly_with_light_expression_like_api();
             Can_build_flat_expression_control_flow_directly();
             Can_property_test_generated_flat_expression_roundtrip_structurally();
+            Can_property_test_flat_try_collect_matches_light();
+            Can_property_test_flat_try_emit_matches_light();
             Can_fuzz_optional_children_presence_in_flat_expression();
+            Can_compile_complex_flat_expression_like_light();
+            Can_check_flat_compile_is_faster_than_light();
+            Flat_compile_allocates_no_more_than_light();
 
             Flat_lambda_parameter_ref_before_decl_preserves_identity();
             Flat_lambda_multiple_parameter_refs_all_yield_same_identity();
@@ -52,6 +57,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Flat_equal_nested_lambdas_with_captures_are_structurally_equal_and_hash_equal();
             Flat_standalone_parameters_use_name_in_structural_equality();
             Flat_structural_hash_supports_dictionary_lookup();
+            Flat_TryCollect_walks_constants_params_nested_and_unsupported();
 #endif
             Can_round_trip_more_expression_kinds_through_system_expressions();
             Can_make_goto_of_all_kinds_with_value_and_type();
@@ -60,7 +66,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_print_reference_comparison();
             Can_round_trip_new_expression_kinds_through_system_expressions();
 #if NET8_0_OR_GREATER
-            return 39;
+            return 45;
 #else
             return 21;
 #endif
@@ -630,9 +636,9 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
         }
 
 #if NET8_0_OR_GREATER
-        public static ExprTree CreateComplexFlatExpression(string parameterName = null)
+        public static void CreateComplexFlatExpression(ref ExprTree fe, string parameterName = null)
         {
-            var fe = default(ExprTree);
+            fe = default;
             var stateParamExpr = fe.ParameterOf<object[]>(parameterName);
             var body = fe.MemberInit(
                 fe.New(_ctorOfA,
@@ -649,7 +655,6 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
                 fe.Bind(_fieldABop,
                     fe.New(_ctorOfB)));
             fe.RootIdx = fe.Lambda<Func<object[], object>>(body, stateParamExpr);
-            return fe;
         }
 #endif
 
@@ -839,7 +844,8 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
         public void Can_build_flat_expression_directly_with_light_expression_like_api()
         {
-            var fe = CreateComplexFlatExpression("state");
+            var fe = default(ExprTree);
+            CreateComplexFlatExpression(ref fe, "state");
             var lambda = (LambdaExpression)fe.ToLightExpression();
             var func = lambda.CompileFast<Func<object[], object>>(true);
             var runtimeState = new object[12];
@@ -870,6 +876,71 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
 
             Asserts.AreSame(sysLambda.Parameters[0], gotoExpr.Value);
             Asserts.AreSame(gotoExpr.Target, label.Target);
+        }
+
+        public void Flat_TryCollect_walks_constants_params_nested_and_unsupported()
+        {
+            ExpressionCompiler.CompilerContext Ctx() =>
+                new(ExpressionCompiler.ClosureStatus.ToBeCollected, null, FastExpressionCompiler.LightExpression.CompilerFlags.Default);
+
+            var fe = default(ExprTree);
+            var p = fe.ParameterOf<int>("p");
+            fe.RootIdx = fe.Lambda<Func<int, int>>(fe.Add(p, fe.ConstantInt(1)), p);
+            var ctx = Ctx();
+            Asserts.AreEqual(ExpressionCompiler.Result.OK, ExpressionCompiler.TryCollectInfo(ref ctx, ref fe));
+            Asserts.AreEqual(0, ctx.Constants.Count);
+            Asserts.AreEqual(0, ctx.NestedLambdas.Count);
+
+            var holder = new S();
+            var constFe = default(ExprTree);
+            constFe.RootIdx = constFe.Lambda<Func<string>>(constFe.Field(constFe.Constant(holder), typeof(S).GetField(nameof(S.Value))));
+            var constCtx = Ctx();
+            Asserts.AreEqual(ExpressionCompiler.Result.OK, ExpressionCompiler.TryCollectInfo(ref constCtx, ref constFe));
+            Asserts.AreEqual(1, constCtx.Constants.Count);
+            Asserts.AreSame(holder, constCtx.Constants[0]);
+            Asserts.AreEqual(1, constFe.ClosureConstants.Count);
+
+            var interned = string.Intern("flat-collect-interned");
+            var internedFe = default(ExprTree);
+            internedFe.RootIdx = internedFe.Lambda<Func<string>>(internedFe.Constant(interned));
+            var internedCtx = Ctx();
+            Asserts.AreEqual(ExpressionCompiler.Result.OK, ExpressionCompiler.TryCollectInfo(ref internedCtx, ref internedFe));
+            Asserts.AreEqual(0, internedCtx.Constants.Count);
+            Asserts.AreEqual(0, internedFe.ClosureConstants.Count);
+
+            var unique = new string('x', 3);
+            var uniqueFe = default(ExprTree);
+            uniqueFe.RootIdx = uniqueFe.Lambda<Func<string>>(uniqueFe.Constant(unique));
+            var uniqueCtx = Ctx();
+            Asserts.AreEqual(ExpressionCompiler.Result.OK, ExpressionCompiler.TryCollectInfo(ref uniqueCtx, ref uniqueFe));
+            Asserts.AreEqual(1, uniqueCtx.Constants.Count);
+            Asserts.AreSame(unique, uniqueCtx.Constants[0]);
+            Asserts.AreEqual(1, uniqueFe.ClosureConstants.Count);
+
+            var nestedFe = default(ExprTree);
+            var x = nestedFe.ParameterOf<int>("x");
+            nestedFe.RootIdx = nestedFe.Lambda<Func<int, Func<int>>>(nestedFe.Lambda<Func<int>>(x), x);
+            var nestedCtx = Ctx();
+            Asserts.AreEqual(ExpressionCompiler.Result.OK, ExpressionCompiler.TryCollectInfo(ref nestedCtx, ref nestedFe));
+            Asserts.AreEqual(1, nestedCtx.NestedLambdas.Count);
+            Asserts.IsTrue((nestedCtx.Status & ExpressionCompiler.ClosureStatus.HasClosure) != 0);
+
+            var complex = default(ExprTree);
+            CreateComplexFlatExpression(ref complex, "state");
+            var complexCtx = Ctx();
+            Asserts.AreEqual(ExpressionCompiler.Result.OK, ExpressionCompiler.TryCollectInfo(ref complexCtx, ref complex));
+
+            var rv = default(ExprTree);
+            rv.RootIdx = rv.Lambda(typeof(Func<IRuntimeVariables>), rv.RuntimeVariables(rv.ParameterOf<int>("z")));
+            var rvCtx = Ctx();
+            Asserts.AreEqual(ExpressionCompiler.Result.NotSupported_RuntimeVariables, ExpressionCompiler.TryCollectInfo(ref rvCtx, ref rv));
+
+            var unbound = default(ExprTree);
+            var a = unbound.ParameterOf<int>("a");
+            var b = unbound.ParameterOf<int>("b");
+            unbound.RootIdx = unbound.Lambda<Func<int, int>>(unbound.Add(a, b), a);
+            var unboundCtx = Ctx();
+            Asserts.AreEqual(ExpressionCompiler.Result.ParameterIsNotVariableNorInPassedParameters, ExpressionCompiler.TryCollectInfo(ref unboundCtx, ref unbound));
         }
 #endif
 
