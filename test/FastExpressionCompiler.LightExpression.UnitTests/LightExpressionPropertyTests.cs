@@ -291,6 +291,91 @@ public partial class LightExpressionTests
         return true;
     }
 
+    public void Can_compile_complex_flat_expression_like_light()
+    {
+        var fe = CreateComplexFlatExpression("state");
+        var fast = ExpressionCompiler.CompileFast<Func<object[], object>>(ref fe, true);
+        Asserts.IsNotNull(fast);
+        var light = CreateComplexLightExpression("state").CompileFast(true);
+        var input = new object[12];
+        input[11] = "direct";
+        var flatA = (A)fast(input);
+        var lightA = (A)light(input);
+        Asserts.AreEqual(lightA.Sop, flatA.Sop);
+        var flatCount = 0;
+        var lightCount = 0;
+        foreach (var _ in flatA.Dop) ++flatCount;
+        foreach (var _ in lightA.Dop) ++lightCount;
+        Asserts.AreEqual(lightCount, flatCount);
+        Asserts.IsInstanceOf<P>(flatA.Prop);
+        Asserts.IsNotNull(flatA.Bop);
+    }
+
+    /// <summary>Flat compile of a generated int tree and of the README complex expression stays ahead of Light.</summary>
+    public void Can_check_flat_compile_is_faster_than_light()
+    {
+        var spec = GeneratedIntSpecFactory.Create(1, maxDepth: 3, maxBreadth: 3);
+        var lightExpr = CreateGeneratedLightExpression(spec);
+        var flatExpr = CreateGeneratedFlatExpression(spec);
+        var expected = lightExpr.CompileFast(true)(3);
+        var flatOnce = ExpressionCompiler.CompileFast<Func<int, int>>(ref flatExpr, true);
+        Asserts.IsNotNull(flatOnce);
+        Asserts.AreEqual(expected, flatOnce(3));
+
+        for (var i = 0; i < 16; ++i)
+        {
+            var warm = flatExpr;
+            ExpressionCompiler.CompileFast<Func<int, int>>(ref warm, true);
+            lightExpr.CompileFast(true);
+        }
+        Check.Faster(
+            () => { var fe = flatExpr; ExpressionCompiler.CompileFast<Func<int, int>>(ref fe, true); },
+            () => lightExpr.CompileFast(true),
+            threads: 1, repeat: 8, timeout: 15);
+
+        var complexFlat = CreateComplexFlatExpression();
+        var complexLight = CreateComplexLightExpression();
+        for (var i = 0; i < 16; ++i)
+        {
+            var warm = complexFlat;
+            ExpressionCompiler.CompileFast<Func<object[], object>>(ref warm, true);
+            complexLight.CompileFast(true);
+        }
+        Check.Faster(
+            () => { var fe = complexFlat; ExpressionCompiler.CompileFast<Func<object[], object>>(ref fe, true); },
+            () => complexLight.CompileFast(true),
+            threads: 1, repeat: 4, timeout: 15);
+    }
+
+    public void Flat_compile_allocates_no_more_than_light()
+    {
+        var flat = CreateComplexFlatExpression();
+        var light = CreateComplexLightExpression();
+        for (var i = 0; i < 64; ++i)
+        {
+            var warm = flat;
+            ExpressionCompiler.CompileFast<Func<object[], object>>(ref warm, true);
+            light.CompileFast(true);
+        }
+
+        long Measure(Action compile)
+        {
+            var before = GC.GetAllocatedBytesForCurrentThread();
+            for (var i = 0; i < 64; ++i)
+                compile();
+            return GC.GetAllocatedBytesForCurrentThread() - before;
+        }
+
+        var flatBytes = Measure(() =>
+        {
+            var fe = flat;
+            ExpressionCompiler.CompileFast<Func<object[], object>>(ref fe, true);
+        });
+        var lightBytes = Measure(() => light.CompileFast(true));
+        // A leaked Type[2] is 40 bytes a compile. A few bytes of pool noise is not.
+        Ensure(flatBytes <= lightBytes + 64 * 16, $"flat {flatBytes} light {lightBytes}");
+    }
+
     private static void Ensure(bool ok, string what)
     {
         if (!ok) throw new InvalidOperationException("Property failed: " + what);

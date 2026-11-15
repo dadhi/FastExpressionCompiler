@@ -199,8 +199,7 @@ namespace FastExpressionCompiler
             var delegateType = typeof(TDelegate) == typeof(Delegate) ? rootNode.Type : typeof(TDelegate);
             var returnType = delegateType.GetMethod("Invoke").ReturnType;
             var argCount = context.FlatArgIds.Count;
-            var paramTypes = new Type[argCount + 1];
-            paramTypes[0] = typeof(ArrayClosure);
+            var paramTypes = RentFlatClosureParamTypes(argCount);
             for (var i = 0; i < argCount; ++i)
                 paramTypes[i + 1] = tree.Nodes.GetSurePresentRef(context.FlatArgIds.GetSurePresentRef(i)).Type;
 
@@ -221,7 +220,19 @@ namespace FastExpressionCompiler
                 compiled = dynMethod.CreateDelegate(delegateType, closure);
             }
             DynamicMethodHacks.FreePooledILGenerator(dynMethod, il);
+            FreePooledClosureTypeAndParamTypes(paramTypes);
             return compiled != null ? (TDelegate)(object)compiled : Fail(Result.NotSupported_UnknownExpression);
+        }
+
+        private static Type[] RentFlatClosureParamTypes(int count)
+        {
+            if (count == 0)
+                return _closureAsASingleParamType;
+            var pooledOrNew = count < 8
+                ? Interlocked.Exchange(ref _paramTypesPoolWithElem0OfLength1[count], null) ?? new Type[count + 1]
+                : new Type[count + 1];
+            pooledOrNew[0] = typeof(ArrayClosure);
+            return pooledOrNew;
         }
 #endif
 
@@ -9390,6 +9401,8 @@ namespace FastExpressionCompiler
                     case ExpressionType.NewArrayInit:
                     case ExpressionType.NewArrayBounds:
                         return EmitFlatNewArray(ref tree, ref n, idx, nodeType, exprType, il, ref context, parent);
+                    case ExpressionType.MemberInit:
+                        return EmitFlatMemberInit(ref tree, ref n, idx, exprType, il, ref context, parent);
                     case ExpressionType.ArrayIndex:
                         return EmitFlatArrayIndex(ref tree, ref n, idx, exprType, il, ref context, parent);
                     case ExpressionType.Block:
@@ -9610,7 +9623,7 @@ namespace FastExpressionCompiler
                     il.Demit(OpCodes.Neg);
                 }
                 else if (operand.Type != exprType &&
-                    !TryEmitPrimitiveValueConvert(operand.Type, exprType, il, nodeType == ExpressionType.ConvertChecked))
+                    !EmitFlatConvert(il, operand.Type, exprType, nodeType == ExpressionType.ConvertChecked))
                     return false;
                 context.LastEmitIsAddress = false;
                 return il.EmitPopIfIgnoreResult(parent);
@@ -9808,6 +9821,54 @@ namespace FastExpressionCompiler
                 return il.EmitPopIfIgnoreResult(parent);
             }
 
+            // shortcut: a value-type owner, or an init that contains a try, still returns false. Dup is only valid for a class left on the stack.
+            static bool EmitFlatMemberInit(ref ExprTree tree, ref ExprNode n, ushort idx, Type exprType,
+                ILGenerator il, ref CompilerContext context, ParentFlags parent)
+            {
+                if (exprType.IsValueType || context.FlatComplexArgNodes.Set.ContainsKey(idx))
+                    return false;
+                var child = n.ChildIdx;
+                var valueFlags = (parent & ~CallArgumentFlagsToClear) | ParentFlags.AssignmentRightValue;
+                if (child == 0 || !TryEmitFlat(ref tree, child, il, ref context, valueFlags))
+                    return false;
+                for (var binding = FlatNext(ref tree, child, idx); binding != 0; binding = FlatNext(ref tree, binding, idx))
+                {
+                    ref var b = ref tree.Nodes.GetSurePresentRef(binding);
+                    if (!b.Is(ExprNodeKind.MemberAssignment) || b.ChildCount != 1 || b.Obj is not MemberInfo member)
+                        return false;
+                    if (member is PropertyInfo property)
+                    {
+                        if (property.SetMethod == null || property.SetMethod.IsStatic)
+                            return false;
+                    }
+                    else if (member is not FieldInfo field || field.IsStatic || field.IsInitOnly)
+                        return false;
+                    il.Demit(OpCodes.Dup);
+                    if (!TryEmitFlat(ref tree, b.ChildIdx, il, ref context, valueFlags))
+                        return false;
+                    var got = tree.Nodes.GetSurePresentRef(b.ChildIdx).Type;
+                    if (got != b.Type && !EmitFlatConvert(il, got, b.Type, false))
+                        return false;
+                    if (!EmitMemberSet(il, member))
+                        return false;
+                }
+                context.LastEmitIsAddress = false;
+                return il.EmitPopIfIgnoreResult(parent);
+            }
+
+            static bool EmitFlatConvert(ILGenerator il, Type from, Type to, bool isChecked)
+            {
+                if (from == to)
+                    return true;
+                if (!from.IsValueType && !to.IsValueType)
+                {
+                    if (!to.IsAssignableFrom(from))
+                        il.Demit(OpCodes.Castclass, to);
+                    return true;
+                }
+                return TryEmitPrimitiveValueConvert(from, to, il, isChecked);
+            }
+
             static bool EmitFlatNewArray(ref ExprTree tree, ref ExprNode n, ushort idx, ExpressionType nodeType, Type exprType,
                 ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
@@ -9839,7 +9900,7 @@ namespace FastExpressionCompiler
                     if (!TryEmitFlat(ref tree, elem, il, ref context, ParentFlags.AssignmentRightValue))
                         return false;
                     var got = tree.Nodes.GetSurePresentRef(elem).Type;
-                    if (got != elemType && !TryEmitPrimitiveValueConvert(got, elemType, il, false))
+                    if (got != elemType && !EmitFlatConvert(il, got, elemType, false))
                         return false;
                     var value = EmitStoreLocalVariable(il, elemType);
                     EmitLoadLocalVariable(il, array);
@@ -10291,8 +10352,7 @@ namespace FastExpressionCompiler
                 var delegateType = lam.Type;
                 var returnType = delegateType.GetMethod("Invoke").ReturnType;
                 var argCount = nestedCtx.FlatArgIds.Count;
-                var paramTypes = new Type[argCount + 1];
-                paramTypes[0] = typeof(ArrayClosure);
+                var paramTypes = RentFlatClosureParamTypes(argCount);
                 for (var i = 0; i < argCount; ++i)
                     paramTypes[i + 1] = tree.Nodes.GetSurePresentRef(nestedCtx.FlatArgIds.GetSurePresentRef(i)).Type;
 
@@ -10320,6 +10380,7 @@ namespace FastExpressionCompiler
                     }
                 }
                 DynamicMethodHacks.FreePooledILGenerator(method, il);
+                FreePooledClosureTypeAndParamTypes(paramTypes);
                 return ok;
             }
 

@@ -42,6 +42,9 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_property_test_flat_try_collect_matches_light();
             Can_property_test_flat_try_emit_matches_light();
             Can_fuzz_optional_children_presence_in_flat_expression();
+            Can_compile_complex_flat_expression_like_light();
+            Can_check_flat_compile_is_faster_than_light();
+            Flat_compile_allocates_no_more_than_light();
 
             Flat_lambda_parameter_ref_before_decl_preserves_identity();
             Flat_lambda_multiple_parameter_refs_all_yield_same_identity();
@@ -63,7 +66,7 @@ namespace FastExpressionCompiler.LightExpression.UnitTests
             Can_print_reference_comparison();
             Can_round_trip_new_expression_kinds_through_system_expressions();
 #if NET8_0_OR_GREATER
-            return 42;
+            return 45;
 #else
             return 21;
 #endif
