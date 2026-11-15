@@ -69,7 +69,7 @@ public partial struct ExprTree
                     {
                         // Layout: children[0] = body, children[1..n] = parameter decl nodes.
                         var children = GetChildren(idx);
-                        var body = ReadExpression(children.GetSurePresentRef(0));
+                        var body = ReadExpression(children.GetSurePresentRef0());
                         var parameters = new LParameter[children.Count - 1];
                         for (var i = 1; i < children.Count; ++i)
                             parameters[i - 1] = (LParameter)ReadExpression(children.GetSurePresentRef(i));
@@ -82,7 +82,7 @@ public partial struct ExprTree
                         var variables = new LParameter[children.Count - 1];
                         for (var i = 1; i < children.Count; ++i)
                             variables[i - 1] = (LParameter)ReadExpression(children.GetSurePresentRef(i));
-                        var expressionIdxs = GetChildren(children.GetSurePresentRef(0));
+                        var expressionIdxs = GetChildren(children.GetSurePresentRef0());
                         var expressions = new LExpr[expressionIdxs.Count];
                         for (var i = 0; i < expressions.Length; ++i)
                             expressions[i] = ReadExpression(expressionIdxs.GetSurePresentRef(i));
@@ -91,14 +91,14 @@ public partial struct ExprTree
                 case ExpressionType.MemberAccess:
                     {
                         var children = GetChildren(idx);
-                        return LExpr.MakeMemberAccess(children.Count != 0 ? ReadExpression(children.GetSurePresentRef(0)) : null, (MemberInfo)node.Obj);
+                        return LExpr.MakeMemberAccess(children.Count != 0 ? ReadExpression(children.GetSurePresentRef0()) : null, (MemberInfo)node.Obj);
                     }
                 case ExpressionType.Call:
                     {
                         var method = (MethodInfo)node.Obj;
                         var children = GetChildren(idx);
                         var hasInstance = !method.IsStatic;
-                        var instance = hasInstance ? ReadExpression(children.GetSurePresentRef(0)) : null;
+                        var instance = hasInstance ? ReadExpression(children.GetSurePresentRef0()) : null;
                         var arguments = new LExpr[children.Count - (hasInstance ? 1 : 0)];
                         for (var i = hasInstance ? 1 : 0; i < children.Count; ++i)
                             arguments[i - (hasInstance ? 1 : 0)] = ReadExpression(children.GetSurePresentRef(i));
@@ -119,14 +119,14 @@ public partial struct ExprTree
                         var arguments = new LExpr[children.Count - 1];
                         for (var i = 1; i < children.Count; ++i)
                             arguments[i - 1] = ReadExpression(children.GetSurePresentRef(i));
-                        return LExpr.Invoke(ReadExpression(children.GetSurePresentRef(0)), arguments);
+                        return LExpr.Invoke(ReadExpression(children.GetSurePresentRef0()), arguments);
                     }
                 case ExpressionType.Index:
                     {
                         var children = GetChildren(idx);
                         var property = (PropertyInfo)node.Obj;
                         var hasInstance = property != null || children.Count > 1;
-                        var instance = hasInstance ? ReadExpression(children.GetSurePresentRef(0)) : null;
+                        var instance = hasInstance ? ReadExpression(children.GetSurePresentRef0()) : null;
                         var arguments = new LExpr[children.Count - (hasInstance ? 1 : 0)];
                         for (var i = hasInstance ? 1 : 0; i < children.Count; ++i)
                             arguments[i - (hasInstance ? 1 : 0)] = ReadExpression(children.GetSurePresentRef(i));
@@ -137,7 +137,7 @@ public partial struct ExprTree
                 case ExpressionType.Conditional:
                     {
                         var children = GetChildren(idx);
-                        return LExpr.Condition(ReadExpression(children.GetSurePresentRef(0)), ReadExpression(children.GetSurePresentRef(1)), ReadExpression(children.GetSurePresentRef(2)), node.Type);
+                        return LExpr.Condition(ReadExpression(children.GetSurePresentRef0()), ReadExpression(children.GetSurePresentRef1()), ReadExpression(children.GetSurePresentRef(2)), node.Type);
                     }
                 case ExpressionType.Loop:
                     {
@@ -145,26 +145,26 @@ public partial struct ExprTree
                         var childIdx = 1;
                         var breakLabel = node.HasFlag(LoopHasBreakFlag) ? ReadLabelTarget(children.GetSurePresentRef(childIdx++)) : null;
                         var continueLabel = node.HasFlag(LoopHasContinueFlag) ? ReadLabelTarget(children.GetSurePresentRef(childIdx)) : null;
-                        return LExpr.Loop(ReadExpression(children.GetSurePresentRef(0)), breakLabel, continueLabel);
+                        return LExpr.Loop(ReadExpression(children.GetSurePresentRef0()), breakLabel, continueLabel);
                     }
                 case ExpressionType.Goto:
                     {
                         var children = GetChildren(idx);
-                        var value = children.Count > 1 ? ReadExpression(children.GetSurePresentRef(1)) : null;
-                        return LExpr.MakeGoto((GotoExpressionKind)node.Flags, ReadLabelTarget(children.GetSurePresentRef(0)), value, node.Type);
+                        var value = children.Count > 1 ? ReadExpression(children.GetSurePresentRef1()) : null;
+                        return LExpr.MakeGoto((GotoExpressionKind)node.Flags, ReadLabelTarget(children.GetSurePresentRef0()), value, node.Type);
                     }
                 case ExpressionType.Label:
                     {
                         var children = GetChildren(idx);
-                        var defaultValue = children.Count > 1 ? ReadExpression(children.GetSurePresentRef(1)) : null;
-                        return LExpr.Label(ReadLabelTarget(children.GetSurePresentRef(0)), defaultValue);
+                        var defaultValue = children.Count > 1 ? ReadExpression(children.GetSurePresentRef1()) : null;
+                        return LExpr.Label(ReadLabelTarget(children.GetSurePresentRef0()), defaultValue);
                     }
                 case ExpressionType.Switch:
                     {
                         // Layout: switchValue, optional defaultBody, optional SwitchCases group.
                         var children = GetChildren(idx);
                         var hasDefault = node.HasFlag(SwitchHasDefaultFlag);
-                        var defaultBody = hasDefault ? ReadExpression(children.GetSurePresentRef(1)) : null;
+                        var defaultBody = hasDefault ? ReadExpression(children.GetSurePresentRef1()) : null;
                         var casesIdx = hasDefault ? 2 : 1;
                         var caseIdxs = children.Count > casesIdx ? GetChildren(children.GetSurePresentRef(casesIdx)) : default;
                         var cases = new LSwitchCase[caseIdxs.Count];
@@ -177,14 +177,14 @@ public partial struct ExprTree
                                 testValues[t] = ReadExpression(caseChildren.GetSurePresentRef(t));
                             cases[i] = LExpr.SwitchCase(ReadExpression(caseChildren.GetSurePresentRef(caseChildren.Count - 1)), testValues);
                         }
-                        return LExpr.Switch(node.Type, ReadExpression(children.GetSurePresentRef(0)), defaultBody, (MethodInfo)node.Obj, cases);
+                        return LExpr.Switch(node.Type, ReadExpression(children.GetSurePresentRef0()), defaultBody, (MethodInfo)node.Obj, cases);
                     }
                 case ExpressionType.Try:
                     {
                         // Layout: body, optional finally/fault, then CatchBlock handlers as direct children.
                         var children = GetChildren(idx);
                         if (node.HasFlag(TryFaultFlag))
-                            return LExpr.TryFault(ReadExpression(children.GetSurePresentRef(0)), ReadExpression(children.GetSurePresentRef(1)));
+                            return LExpr.TryFault(ReadExpression(children.GetSurePresentRef0()), ReadExpression(children.GetSurePresentRef1()));
 
                         var hasFinally = node.HasFlag(TryHasFinallyFlag);
                         var handlerStart = hasFinally ? 2 : 1;
@@ -200,9 +200,9 @@ public partial struct ExprTree
                             var filter = handler.HasFlag(CatchHasFilterFlag) ? ReadExpression(handlerChildren.GetSurePresentRef(handlerChild)) : null;
                             handlers[i] = LExpr.MakeCatchBlock(handler.Type, variable, handlerBody, filter);
                         }
-                        var body = ReadExpression(children.GetSurePresentRef(0));
+                        var body = ReadExpression(children.GetSurePresentRef0());
                         return hasFinally
-                            ? LExpr.TryCatchFinally(body, ReadExpression(children.GetSurePresentRef(1)), handlers)
+                            ? LExpr.TryCatchFinally(body, ReadExpression(children.GetSurePresentRef1()), handlers)
                             : LExpr.TryCatch(body, handlers);
                     }
                 case ExpressionType.MemberInit:
@@ -211,7 +211,7 @@ public partial struct ExprTree
                         var bindings = new LMemberBinding[children.Count - 1];
                         for (var i = 1; i < children.Count; ++i)
                             bindings[i - 1] = ReadMemberBinding(children.GetSurePresentRef(i));
-                        return LExpr.MemberInit((LightExpression.NewExpression)ReadExpression(children.GetSurePresentRef(0)), bindings);
+                        return LExpr.MemberInit((LightExpression.NewExpression)ReadExpression(children.GetSurePresentRef0()), bindings);
                     }
                 case ExpressionType.ListInit:
                     {
@@ -219,16 +219,16 @@ public partial struct ExprTree
                         var initializers = new LElementInit[children.Count - 1];
                         for (var i = 1; i < children.Count; ++i)
                             initializers[i - 1] = ReadElementInit(children.GetSurePresentRef(i));
-                        return LExpr.ListInit((LightExpression.NewExpression)ReadExpression(children.GetSurePresentRef(0)), initializers);
+                        return LExpr.ListInit((LightExpression.NewExpression)ReadExpression(children.GetSurePresentRef0()), initializers);
                     }
                 case ExpressionType.TypeIs:
-                    return LExpr.TypeIs(ReadExpression(GetChildren(idx).GetSurePresentRef(0)), (Type)node.Obj);
+                    return LExpr.TypeIs(ReadExpression(GetChildren(idx).GetSurePresentRef0()), (Type)node.Obj);
                 case ExpressionType.TypeEqual:
-                    return LExpr.TypeEqual(ReadExpression(GetChildren(idx).GetSurePresentRef(0)), (Type)node.Obj);
+                    return LExpr.TypeEqual(ReadExpression(GetChildren(idx).GetSurePresentRef0()), (Type)node.Obj);
                 case ExpressionType.Dynamic:
                     {
                         var children = GetChildren(idx);
-                        ref var delegateNode = ref _tree.Nodes.GetSurePresentRef(children.GetSurePresentRef(0));
+                        ref var delegateNode = ref _tree.Nodes.GetSurePresentRef(children.GetSurePresentRef0());
                         Debug.Assert(delegateNode.Is(ExprNodeKind.ObjectReference));
                         var delegateType = (Type)delegateNode.Obj;
                         var arguments = new LExpr[children.Count - 1];
@@ -247,19 +247,19 @@ public partial struct ExprTree
                 case ExpressionType.DebugInfo:
                     {
                         var children = GetChildren(idx);
-                        ReadUInt16Pair(children.GetSurePresentRef(0), out var startLine, out var startColumn);
-                        ReadUInt16Pair(children.GetSurePresentRef(1), out var endLine, out var endColumn);
+                        ReadUInt16Pair(children.GetSurePresentRef0(), out var startLine, out var startColumn);
+                        ReadUInt16Pair(children.GetSurePresentRef1(), out var endLine, out var endColumn);
                         return LExpr.DebugInfo(LExpr.SymbolDocument((string)node.Obj), startLine, startColumn, endLine, endColumn);
                     }
                 default:
                     if (node.ChildCount == 1)
-                        return LExpr.MakeUnary(node.NodeType, ReadExpression(GetChildren(idx).GetSurePresentRef(0)), node.Type, node.Obj as MethodInfo);
+                        return LExpr.MakeUnary(node.NodeType, ReadExpression(GetChildren(idx).GetSurePresentRef0()), node.Type, node.Obj as MethodInfo);
 
                     if (node.ChildCount >= 2)
                     {
                         var children = GetChildren(idx);
                         var conversion = children.Count > 2 ? (LightExpression.LambdaExpression)ReadExpression(children.GetSurePresentRef(2)) : null;
-                        return LExpr.MakeBinary(node.NodeType, ReadExpression(children.GetSurePresentRef(0)), ReadExpression(children.GetSurePresentRef(1)),
+                        return LExpr.MakeBinary(node.NodeType, ReadExpression(children.GetSurePresentRef0()), ReadExpression(children.GetSurePresentRef1()),
                             node.HasFlag(BinaryLiftedToNullFlag), (MethodInfo)node.Obj, conversion);
                     }
 
@@ -291,7 +291,7 @@ public partial struct ExprTree
             switch (node.Kind)
             {
                 case ExprNodeKind.MemberAssignment:
-                    return LExpr.Bind(member, ReadExpression(GetChildren(idx).GetSurePresentRef(0)));
+                    return LExpr.Bind(member, ReadExpression(GetChildren(idx).GetSurePresentRef0()));
                 case ExprNodeKind.MemberMemberBinding:
                     {
                         var childIdxs = GetChildren(idx);

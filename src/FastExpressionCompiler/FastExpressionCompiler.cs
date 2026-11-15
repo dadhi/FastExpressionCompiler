@@ -7501,7 +7501,7 @@ namespace FastExpressionCompiler
                     // Check for the 1 or 2 outliers with the big gap only if there are 1/2 + minSwitchTableSize, otherwise the table is too small and just count the outlier toward the nonContValueCountMax gaps.
                     if (switchValuesCount >= 1 + minSwitchTableSize)
                     {
-                        if (switchValues.GetSurePresentRef(1).Value - switchValues.GetSurePresentRef(0).Value > valueGapMin)
+                        if (switchValues.GetSurePresentRef1().Value - switchValues.GetSurePresentRef0().Value > valueGapMin)
                             firstTestValueIdx = 1;
 
                         if (firstTestValueIdx == 0 || switchValuesCount >= 2 + minSwitchTableSize)
@@ -7559,7 +7559,7 @@ namespace FastExpressionCompiler
                         int minOutlierCaseBodyIdx = -1, maxOutlierCaseBodyIdx = -1;
                         if (firstTestValueIdx == 1)
                         {
-                            ref var minOutlier = ref switchValues.GetSurePresentRef(0);
+                            ref var minOutlier = ref switchValues.GetSurePresentRef0();
                             minOutlierCaseBodyIdx = minOutlier.CaseBodyIdx;
                             minOutlierMultiTestCaseBodyIdx = minOutlier.MultiTestValCaseBodyIdxPlusOne - 1;
                             minOutlierLabel = il.DefineLabel(); // define the label that later can be shared with others in switch table or with max outlier
@@ -7626,7 +7626,7 @@ namespace FastExpressionCompiler
                         {
                             // store and use the switch value over in case of the outlier, otherwise just use whatever is on stack from the prev TryEmit
                             EmitStoreAndLoadLocalVariable(il, switchValVar = il.GetNextLocalVarIndex(switchValueType));
-                            EmitLoadConstantInt(il, unchecked((int)switchValues.GetSurePresentRef(0).Value)); // Load the min outlier
+                            EmitLoadConstantInt(il, unchecked((int)switchValues.GetSurePresentRef0().Value)); // Load the min outlier
                             il.Demit(OpCodes.Beq, minOutlierLabel);
                             EmitLoadLocalVariable(il, switchValVar); // Load the switch var on stack for the next operation
                         }
