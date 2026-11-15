@@ -3,9 +3,11 @@ using System.Reflection;
 #if LIGHT_EXPRESSION
 using Expr = FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.UnitTests;
-#else
+#elif !FLAT_EXPRESSION
 using Expr = System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests;
+#else
+namespace FastExpressionCompiler.FlatExpression.UnitTests;
 #endif
 public struct InvokeRefArgumentRegressionTests : ITestX
 {
@@ -22,16 +24,25 @@ public struct InvokeRefArgumentRegressionTests : ITestX
         // Ref-conversion operands are covered separately from invocation argument storage.
 #endif
     }
+
+#if FLAT_EXPRESSION
+    FastExpressionCompiler.FlatExpression.ExprTree Expr;
+    void ResetExpr() => Expr = default;
+#else
+    void ResetExpr() {}
+#endif
+
     public void Delegate_invoke_value_can_be_ref_call_argument(TestContext t)
     {
+        ResetExpr();
         var get = Expr.Parameter(typeof(Func<int>));
         var expression = Expr.Lambda<Func<Func<int>, int>>(Expr.Call(typeof(InvokeRefArgumentRegressionTests).GetMethod(nameof(Mutate)), Expr.Invoke(get)), get);
         var fast = expression.CompileFast(true);
-        if (!t.IsNotNull(fast)) return;
         var calls = 0;
         t.AreEqual(5, fast(() => { ++calls; return 5; }));
         t.AreEqual(1, calls);
     }
+
     public void Inlined_lambda_invoke_value_can_be_ref_call_argument(TestContext t)
     {
         foreach (var flags in new[] { CompilerFlags.Default, CompilerFlags.NoInvocationLambdaInlining })
