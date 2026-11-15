@@ -662,6 +662,11 @@ namespace FastExpressionCompiler
             internal bool InExceptionFilter;
             internal int TryExpressionCount;
 
+            // Scoped to runtime Expression<TDelegate> arguments. Discarded syntax affects
+            // implicit Compile ordering but must not create emitted exception regions or labels.
+            internal bool TrackPrunedArgumentSpills;
+            internal int PrunedArgumentSpillCount;
+
             /// Set if the same label target is defined by the several Label expressions, so each definition needs its own IL label
             internal bool HasLabelDefinedTwice;
             internal SmallList<LabelScope, Stack8<LabelScope>, NoArrayPool<LabelScope>> Scopes;
@@ -945,6 +950,236 @@ namespace FastExpressionCompiler
                 label.ReturnVariableIndexPlusOneAndIsDefined |= 1;
             }
             return label.Label;
+        }
+
+        private struct ArgumentSpillSyntax
+        {
+            internal object Node;
+            internal Args Args;
+            // -1 is a node; otherwise this is a cursor into a child collection or Args.
+            internal int NextChild;
+        }
+
+        // Only discarded syntax is inspected here. Do not collect bindings, reduce extensions,
+        // or enter nested lambdas/quotes. Cursors bound pending storage by depth, not width;
+        // single-child chains reuse the same inline slot instead of the CLR call stack.
+        [MethodImpl((MethodImplOptions)256)]
+        private static bool HasStructuralArgumentSpill(Expression expression)
+        {
+            if (expression == null) return false;
+            switch (expression.NodeType)
+            {
+                case ExpressionType.Try:
+                case ExpressionType.Goto: return true;
+                case ExpressionType.Constant:
+                case ExpressionType.Parameter:
+                case ExpressionType.Default:
+                case ExpressionType.Lambda:
+                case ExpressionType.Quote:
+                case ExpressionType.Extension: return false;
+                default: return HasStructuralArgumentSpillCore(expression);
+            }
+        }
+
+        private static bool HasStructuralArgumentSpillCore(Expression expression)
+        {
+            SmallList<ArgumentSpillSyntax, Stack8<ArgumentSpillSyntax>, NoArrayPool<ArgumentSpillSyntax>> pending = default;
+            PushArgumentSpillNode(ref pending, expression);
+            while (pending.Count != 0)
+            {
+                ref var work = ref pending.GetLastSurePresentRef();
+                object item;
+                IReadOnlyList<object> caseTests = null;
+                if (work.NextChild < 0)
+                {
+                    item = work.Node;
+                    pending.RemoveLastSurePresent();
+                }
+                else
+                {
+                    var index = work.NextChild++;
+                    int count;
+                    if (work.Node is IReadOnlyList<object> children)
+                    {
+                        item = children[index];
+                        count = children.Count;
+                    }
+                    else if (work.Node is BlockExpression block)
+                    {
+                        item = block.Expressions[index];
+                        count = block.Expressions.Count;
+                    }
+                    else if (work.Node is SwitchExpression choice)
+                    {
+                        var @case = choice.Cases[index];
+                        item = @case.Body;
+                        count = choice.Cases.Count;
+                        caseTests = @case.TestValues;
+                    }
+                    else if (work.Node is MemberInitExpression initializer)
+                    {
+                        var bindings = initializer.GetBindings();
+                        item = bindings.GetArgument(index);
+                        count = bindings.GetBindingCount();
+                    }
+                    else if (work.Node is NewArrayExpression array)
+                    {
+                        item = array.GetArgument(index);
+                        count = array.GetArgCount();
+                    }
+                    else
+                    {
+                        item = work.Args.GetArgument(index);
+                        count = work.Args.Count;
+                    }
+                    if (index + 1 == count) pending.RemoveLastSurePresent();
+                }
+                if (caseTests != null) PushArgumentSpillChildren(ref pending, caseTests);
+                // Unary chains are common in discarded syntax. Advance in place instead of
+                // pushing and popping a cursor for every node (and without recursive Visit).
+                while (item is UnaryExpression chain)
+                {
+                    var type = chain.NodeType;
+                    if (type == ExpressionType.Quote || type == ExpressionType.Extension) break;
+                    item = chain.Operand;
+                }
+                if (item is MemberBinding binding)
+                {
+                    if (binding is MemberAssignment assignment)
+                        PushArgumentSpillNode(ref pending, assignment.Expression);
+                    else if (binding is MemberMemberBinding members)
+                        PushArgumentSpillChildren(ref pending, members.Bindings);
+                    else if (binding is MemberListBinding list)
+                        PushArgumentSpillChildren(ref pending, list.Initializers);
+                    continue;
+                }
+                if (item is ElementInit element)
+                {
+                    PushArgumentSpillArgs(ref pending, element.GetArgs());
+                    continue;
+                }
+                if (item is not Expression node) continue;
+                switch (node.NodeType)
+                {
+                    case ExpressionType.Try:
+                    case ExpressionType.Goto:
+                        return true;
+                    case ExpressionType.Lambda:
+                    case ExpressionType.Quote:
+                    case ExpressionType.Extension:
+                        continue;
+                    case ExpressionType.Conditional:
+                        var conditional = (ConditionalExpression)node;
+                        PushArgumentSpillNode(ref pending, conditional.IfFalse);
+                        PushArgumentSpillNode(ref pending, conditional.IfTrue);
+                        PushArgumentSpillNode(ref pending, conditional.Test);
+                        continue;
+                    case ExpressionType.Block:
+                        if (((BlockExpression)node).Expressions.Count != 0)
+                            pending.Add(new ArgumentSpillSyntax { Node = node });
+                        continue;
+                    case ExpressionType.Loop:
+                        PushArgumentSpillNode(ref pending, ((LoopExpression)node).Body);
+                        continue;
+                    case ExpressionType.Switch:
+                        var choice = (SwitchExpression)node;
+                        if (choice.Cases.Count != 0) pending.Add(new ArgumentSpillSyntax { Node = choice });
+                        PushArgumentSpillNode(ref pending, choice.DefaultBody);
+                        PushArgumentSpillNode(ref pending, choice.SwitchValue);
+                        continue;
+                    case ExpressionType.Call:
+                        var call = (MethodCallExpression)node;
+                        PushArgumentSpillArgs(ref pending, call.GetArgs());
+                        PushArgumentSpillNode(ref pending, call.Object);
+                        continue;
+                    case ExpressionType.Invoke:
+                        var invocation = (InvocationExpression)node;
+                        PushArgumentSpillArgs(ref pending, invocation.GetArgs());
+                        PushArgumentSpillNode(ref pending, invocation.Expression);
+                        continue;
+                    case ExpressionType.New:
+                        PushArgumentSpillArgs(ref pending, ((NewExpression)node).GetArgs());
+                        continue;
+                    case ExpressionType.Index:
+                        var index = (IndexExpression)node;
+                        PushArgumentSpillArgs(ref pending, index.GetArgs());
+                        PushArgumentSpillNode(ref pending, index.Object);
+                        continue;
+                    case ExpressionType.NewArrayInit:
+                    case ExpressionType.NewArrayBounds:
+                        if (((NewArrayExpression)node).GetArgCount() != 0)
+                            pending.Add(new ArgumentSpillSyntax { Node = node });
+                        continue;
+                    case ExpressionType.MemberAccess:
+                        PushArgumentSpillNode(ref pending, ((MemberExpression)node).Expression);
+                        continue;
+                    case ExpressionType.MemberInit:
+                        var init = (MemberInitExpression)node;
+                        if (init.GetBindings().GetBindingCount() != 0)
+                            pending.Add(new ArgumentSpillSyntax { Node = init });
+                        PushArgumentSpillNode(ref pending, init.NewExpression);
+                        continue;
+                    case ExpressionType.ListInit:
+                        var listInit = (ListInitExpression)node;
+                        PushArgumentSpillChildren(ref pending, listInit.Initializers);
+                        PushArgumentSpillNode(ref pending, listInit.NewExpression);
+                        continue;
+                    case ExpressionType.Dynamic:
+                        PushArgumentSpillChildren(ref pending, ((DynamicExpression)node).Arguments);
+                        continue;
+                    case ExpressionType.Label:
+                        PushArgumentSpillNode(ref pending, ((LabelExpression)node).DefaultValue);
+                        continue;
+                    case ExpressionType.TypeIs:
+                    case ExpressionType.TypeEqual:
+                        PushArgumentSpillNode(ref pending, ((TypeBinaryExpression)node).Expression);
+                        continue;
+                    default:
+                        if (node is UnaryExpression unary) PushArgumentSpillNode(ref pending, unary.Operand);
+                        else if (node is BinaryExpression binary)
+                        {
+                            PushArgumentSpillNode(ref pending, binary.Right);
+                            PushArgumentSpillNode(ref pending, binary.Left);
+                        }
+                        continue;
+                }
+            }
+            return false;
+        }
+
+        private static void PushArgumentSpillNode(
+            ref SmallList<ArgumentSpillSyntax, Stack8<ArgumentSpillSyntax>, NoArrayPool<ArgumentSpillSyntax>> pending, object node)
+        {
+            if (node != null && !(node is Expression expression && expression.IsParamOrConstantOrDefault()))
+                pending.Add(new ArgumentSpillSyntax { Node = node, NextChild = -1 });
+        }
+
+        private static void PushArgumentSpillChildren(
+            ref SmallList<ArgumentSpillSyntax, Stack8<ArgumentSpillSyntax>, NoArrayPool<ArgumentSpillSyntax>> pending,
+            IReadOnlyList<object> children)
+        {
+            if (children.Count != 0) pending.Add(new ArgumentSpillSyntax { Node = children });
+        }
+
+        private static void PushArgumentSpillArgs(
+            ref SmallList<ArgumentSpillSyntax, Stack8<ArgumentSpillSyntax>, NoArrayPool<ArgumentSpillSyntax>> pending, Args args)
+        {
+            if (args.Count != 0) pending.Add(new ArgumentSpillSyntax { Args = args });
+        }
+
+        private static bool HasDiscardedSwitchArgumentSpill(SwitchExpression expression, Expression matchedBody)
+        {
+            if (HasStructuralArgumentSpill(expression.SwitchValue) ||
+                !ReferenceEquals(expression.DefaultBody, matchedBody) && HasStructuralArgumentSpill(expression.DefaultBody))
+                return true;
+            for (var i = 0; i < expression.Cases.Count; ++i)
+            {
+                var @case = expression.Cases[i];
+                if (!ReferenceEquals(@case.Body, matchedBody) && HasStructuralArgumentSpill(@case.Body)) return true;
+                for (var j = 0; j < @case.TestValues.Count; ++j)
+                    if (HasStructuralArgumentSpill(@case.TestValues[j])) return true;
+            }
+            return false;
         }
 
         internal sealed class CaptureFreeQuoteCache
@@ -1596,8 +1831,14 @@ namespace FastExpressionCompiler
                             {
                                 var tries = context.TryExpressionCount;
                                 var jumps = context.GotoTargets.Count;
+                                var wasTrackingPrunedSpills = context.TrackPrunedArgumentSpills;
+                                var prunedSpills = context.PrunedArgumentSpillCount;
+                                context.TrackPrunedArgumentSpills = true;
                                 r = TryCollectArgsAsComplexOwner(ref context, invokeArgs, invokeExpr, nestedLambda, ref rootNestedLambdas, scopeIdx);
-                                if (tries != context.TryExpressionCount || jumps != context.GotoTargets.Count)
+                                context.TrackPrunedArgumentSpills = wasTrackingPrunedSpills;
+                                var hasPrunedSpill = context.PrunedArgumentSpillCount != prunedSpills;
+                                if (!wasTrackingPrunedSpills) context.PrunedArgumentSpillCount = prunedSpills;
+                                if (tries != context.TryExpressionCount || jumps != context.GotoTargets.Count || hasPrunedSpill)
                                     context.MarkComplexArguments(invokeExpr);
                                 return r;
                             }
@@ -1617,6 +1858,10 @@ namespace FastExpressionCompiler
                             var reducedCond = Tools.TryReduceConditional(condExpr);
                             if (!ReferenceEquals(reducedCond, condExpr))
                             {
+                                if (context.TrackPrunedArgumentSpills &&
+                                    (HasStructuralArgumentSpill(condExpr.Test) || HasStructuralArgumentSpill(
+                                        ReferenceEquals(reducedCond, condExpr.IfTrue) ? condExpr.IfFalse : condExpr.IfTrue)))
+                                    ++context.PrunedArgumentSpillCount;
                                 expr = reducedCond;
                                 continue;
                             }
@@ -1748,6 +1993,8 @@ namespace FastExpressionCompiler
                         // Compile-time switch branch elimination (#489): if switch value is interpretable, collect only the matching branch
                         if (!quotedData && Interpreter.TryFindSwitchBranch(switchExpr, context.CompilerFlags, out var switchMatchedBody))
                         {
+                            if (context.TrackPrunedArgumentSpills && HasDiscardedSwitchArgumentSpill(switchExpr, switchMatchedBody))
+                                ++context.PrunedArgumentSpillCount;
                             if (switchMatchedBody != null)
                             {
                                 expr = switchMatchedBody;
@@ -1953,7 +2200,15 @@ namespace FastExpressionCompiler
             {
                 var labelScope = new LabelScope { Parent = new ScopeIdx(scopeIdx, false), ExceptionRegion = ExceptionRegion.Lambda };
                 var lambdaScopeIdx = (short)context.Scopes.Add(labelScope);
-                return TryCollectInfo(ref context, inlined, nestedLambda, ref rootNestedLambdas, lambdaScopeIdx);
+                // The caller's arguments are syntax in the enclosing invocation; the callee
+                // body is not. Nested runtime invocations in that body track their own syntax.
+                var wasTrackingPrunedSpills = context.TrackPrunedArgumentSpills;
+                var prunedSpills = context.PrunedArgumentSpillCount;
+                context.TrackPrunedArgumentSpills = false;
+                var bodyResult = TryCollectInfo(ref context, inlined, nestedLambda, ref rootNestedLambdas, lambdaScopeIdx);
+                context.TrackPrunedArgumentSpills = wasTrackingPrunedSpills;
+                context.PrunedArgumentSpillCount = prunedSpills;
+                return bodyResult;
             }
             var wrapper = (BlockExpression)inlined;
             context.PushBlockWithVars(wrapper.Variables);

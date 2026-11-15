@@ -87,6 +87,7 @@ namespace FastExpressionCompiler.UnitTests
                 t.Run(new LightExpression.UnitTests.InlinedRethrowBoundaryRegressionTests());
                 t.Run(new LightExpression.UnitTests.BlockVariableBindingRegressionTests());
                 t.Run(new LightExpression.UnitTests.ComparisonReductionRegressionTests());
+                t.Run(new LightExpression.UnitTests.RuntimeExpressionSpillOrderRegressionTests());
                 t.Run(new LightExpression.UnitTests.CompoundAssignmentExceptionRegressionTests());
                 t.Run(new LightExpression.UnitTests.NestedCompoundExceptionRegressionTests());
                 t.Run(new LightExpression.UnitTests.ArithmeticExceptionOperandsTests());
@@ -189,6 +190,7 @@ namespace FastExpressionCompiler.UnitTests
             fecTests.Run(new InlinedRethrowBoundaryRegressionTests());
             fecTests.Run(new BlockVariableBindingRegressionTests());
             fecTests.Run(new ComparisonReductionRegressionTests());
+            fecTests.Run(new RuntimeExpressionSpillOrderRegressionTests());
             fecTests.Run(new CompoundAssignmentExceptionRegressionTests());
             fecTests.Run(new NestedCompoundExceptionRegressionTests());
             fecTests.Run(new ArithmeticExceptionOperandsTests());
