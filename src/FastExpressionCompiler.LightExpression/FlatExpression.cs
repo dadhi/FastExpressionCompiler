@@ -46,7 +46,9 @@ public enum ExprNodeKind : byte
     UInt16Pair,
 }
 
-/// <summary>Stores one flat expression node and its child-link metadata in 24 bytes on 64-bit runtimes.</summary>
+/// <summary>Stores one flat expression node and its child-link metadata in 24 bytes on 64-bit runtimes.
+/// Size stays 24: two more bytes would pad the array stride to 32 and slow every collect/emit walk.
+/// Arg identity is a stack list of declaration ids on CompilerContext, not a field here.</summary>
 [StructLayout(LayoutKind.Explicit, Size = 24)]
 public struct ExprNode
 {
@@ -169,15 +171,15 @@ public struct ExprNode
 public partial struct ExprTree : IEquatable<ExprTree>
 {
     internal static readonly object ClosureConstantMarker = new();
-    private const byte ParameterByRefFlag = 1;
-    private const byte BinaryLiftedToNullFlag = 1;
-    private const byte LoopHasBreakFlag = 1;
-    private const byte LoopHasContinueFlag = 2;
-    private const byte CatchHasVariableFlag = 1;
-    private const byte CatchHasFilterFlag = 2;
-    private const byte TryFaultFlag = 1;
-    private const byte TryHasFinallyFlag = 2;
-    private const byte SwitchHasDefaultFlag = 1;
+    internal const byte ParameterByRefFlag = 1;
+    internal const byte BinaryLiftedToNullFlag = 1;
+    internal const byte LoopHasBreakFlag = 1;
+    internal const byte LoopHasContinueFlag = 2;
+    internal const byte CatchHasVariableFlag = 1;
+    internal const byte CatchHasFilterFlag = 2;
+    internal const byte TryFaultFlag = 1;
+    internal const byte TryHasFinallyFlag = 2;
+    internal const byte SwitchHasDefaultFlag = 1;
 
     /// <summary>Gets or sets the root node idx.</summary>
     public int RootIdx;
@@ -185,7 +187,8 @@ public partial struct ExprTree : IEquatable<ExprTree>
     /// <summary>Gets or sets the flat node storage.</summary>
     public SmallList<ExprNode, Stack32<ExprNode>, NoArrayPool<ExprNode>> Nodes;
 
-    /// <summary>Gets or sets closure constants that are referenced from constant nodes.</summary>
+    /// <summary>Unique closure-bound constants, classified at Constant() (deduped by ref).
+    /// Collect copies hits into the current lambda; do not dump this list into the root (nested would over-close).</summary>
     public SmallList<object, Stack16<object>, NoArrayPool<object>> ClosureConstants;
 
     // Import-only identity maps (valid during FromSysExpr / FromLightExpr).
@@ -250,7 +253,7 @@ public partial struct ExprTree : IEquatable<ExprTree>
     /// <summary>Adds a constant node with an explicit constant type.</summary>
     public ushort Constant(object value, Type type)
     {
-        if (value == null || value is string || value is Type || value is decimal)
+        if (value == null)
             return AddNode(ExpressionType.Constant, type, value);
 
         if (type.IsEnum)
@@ -274,7 +277,22 @@ public partial struct ExprTree : IEquatable<ExprTree>
             return (ushort)idx;
         }
 
-        return AddNode(ExpressionType.Constant, type, ClosureConstantMarker, childIdx: checked((ushort)ClosureConstants.Add(value)));
+        // ldstr / ldtoken / decimal — not closure. Non-interned strings, TypeDelegator, boxed identity go to ClosureConstants.
+        if (value is decimal ||
+            value is string text && ReferenceEquals(string.IsInterned(text), text) ||
+            value is Type && value.GetType() == typeof(object).GetType())
+            return AddNode(ExpressionType.Constant, type, value);
+
+        return AddClosureConstant(value, type);
+    }
+
+    ushort AddClosureConstant(object value, Type type)
+    {
+        var i = ClosureConstants.Count - 1;
+        while (i != -1 && !ReferenceEquals(ClosureConstants.GetSurePresentRef(i), value))
+            --i;
+        var cidx = i == -1 ? ClosureConstants.Add(value) : i;
+        return AddNode(ExpressionType.Constant, type, ClosureConstantMarker, childIdx: checked((ushort)cidx));
     }
 
     /// <summary>Adds a constant node using the runtime type of the supplied value.</summary>
