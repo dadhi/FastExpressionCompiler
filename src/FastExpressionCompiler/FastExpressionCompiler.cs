@@ -3005,7 +3005,7 @@ namespace FastExpressionCompiler
                     var pars = ctor.GetParameters();
                     for (var i = 0; i < argCount; ++i)
                         if (pars[i].ParameterType.IsByRef && NeedsByRefWriteback(newExpr.GetArgument(i)))
-                            return TryEmitCallWithWritebacks(null, newExpr.GetArgs(), null, ctor, il, ref context, parent, -1);
+                            return TryEmitCallWithWritebacks(null, newExpr.GetArgs(), null, ctor, il, ref context, parent, -1, pars);
 
                     // If we have complex arguments then it is better to store them in the variables, then load them before calling ctor.
                     // Otherwise the stack may be broken by the long emit chain, and the previous argument result on stack
@@ -6229,7 +6229,7 @@ namespace FastExpressionCompiler
             }
 
             private static bool TryEmitCallWithWritebacks(Expression receiver, Args expressions, MethodInfo method,
-                ConstructorInfo constructor, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex)
+                ConstructorInfo constructor, ILGenerator il, ref CompilerContext context, ParentFlags parent, int byRefIndex, ParameterInfo[] parameters)
             {
                 var receiverVar = -1;
                 var receiverType = receiver?.Type;
@@ -6244,7 +6244,6 @@ namespace FastExpressionCompiler
                 }
                 SmallList<ByRefWriteback, Stack2<ByRefWriteback>, NoArrayPool<ByRefWriteback>> writebacks = default;
                 SmallList<int, Stack8<int>, NoArrayPool<int>> arguments = default;
-                var parameters = (method != null ? (MethodBase)method : constructor).GetParameters();
                 for (var i = 0; i < parameters.Length; ++i)
                 {
                     var argument = expressions.GetArgument(i);
@@ -6320,7 +6319,7 @@ namespace FastExpressionCompiler
                 var methodParams = method.GetParameters(); // todo: @perf @mem find how to avoid the call, look at `NewNoByRefArgs` expressions as example
                 for (var i = 0; i < methodParams.Length; ++i)
                     if (methodParams[i].ParameterType.IsByRef && NeedsByRefWriteback(callExpr.GetArgument(i)))
-                        return TryEmitCallWithWritebacks(objExpr, callExpr.GetArgs(), method, null, il, ref context, parent, byRefIndex);
+                        return TryEmitCallWithWritebacks(objExpr, callExpr.GetArgs(), method, null, il, ref context, parent, byRefIndex, methodParams);
 
                 var objIsValueType = false;
                 var loadObjByAddress = false;
@@ -6724,7 +6723,7 @@ namespace FastExpressionCompiler
                         if (compileMethod != null)
                             return false;
                         if (NeedsByRefWriteback(expr.GetArgument(i)))
-                            return TryEmitCallWithWritebacks(invokedExpr, expr.GetArgs(), delegateInvokeMethod, null, il, ref context, parent, byRefIndex);
+                            return TryEmitCallWithWritebacks(invokedExpr, expr.GetArgs(), delegateInvokeMethod, null, il, ref context, parent, byRefIndex, invokeParameters);
                     }
                 var deferCompile = compileMethod != null && context.HasComplexArguments(expr);
 
