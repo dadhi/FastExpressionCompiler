@@ -167,6 +167,17 @@ public struct ExprNode
         _child == other._child;
 }
 
+/// <summary>Lambda index that still knows <typeparamref name="TDelegate"/>.</summary>
+public readonly struct LambdaIdx<TDelegate> where TDelegate : Delegate
+{
+    /// <summary>The lambda node index.</summary>
+    public readonly ushort Idx;
+    /// <summary>Creates the index.</summary>
+    public LambdaIdx(ushort idx) => Idx = idx;
+    /// <summary>The index, for a factory that takes <see cref="ushort"/>.</summary>
+    public static implicit operator ushort(LambdaIdx<TDelegate> idx) => idx.Idx;
+}
+
 /// <summary>Stores an expression tree as flat nodes plus separate closure constants.</summary>
 public partial struct ExprTree : IEquatable<ExprTree>
 {
@@ -218,14 +229,6 @@ public partial struct ExprTree : IEquatable<ExprTree>
         EnsureIndexZeroSentinel();
         ExprNode.Set(ref Nodes.AddDefaultAndGetRef(out var idx), nodeType, type, obj, flags, kind, childIdx, childCount);
         return (ushort)idx;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void AddNode(ref ExprNode n, ExpressionType nodeType, Type type, object obj, byte flags = 0, ExprNodeKind kind = default,
-        ushort childIdx = 0, ushort childCount = 0)
-    {
-        EnsureIndexZeroSentinel();
-        ExprNode.Set(ref n, nodeType, type, obj, flags, kind, childIdx, childCount);
     }
 
     /// <summary>Adds a parameter node and returns its idx.</summary>
@@ -706,11 +709,11 @@ public partial struct ExprTree : IEquatable<ExprTree>
     /// <summary>Adds a typed lambda node.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
 #if NET10_0_OR_GREATER
-    public ushort Lambda<TDelegate>(ushort bodyIdx, params ReadOnlySpan<ushort> parameters) where TDelegate : Delegate =>
+    public LambdaIdx<TDelegate> Lambda<TDelegate>(ushort bodyIdx, params ReadOnlySpan<ushort> parameters) where TDelegate : Delegate =>
 #else
-    public ushort Lambda<TDelegate>(ushort bodyIdx, params ushort[] parameters) where TDelegate : Delegate =>
+    public LambdaIdx<TDelegate> Lambda<TDelegate>(ushort bodyIdx, params ushort[] parameters) where TDelegate : Delegate =>
 #endif
-        Lambda(typeof(TDelegate), bodyIdx, parameters);
+        new(Lambda(typeof(TDelegate), bodyIdx, parameters));
 
     /// <summary>Adds a member-assignment binding node.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

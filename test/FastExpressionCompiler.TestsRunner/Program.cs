@@ -57,13 +57,16 @@ namespace FastExpressionCompiler.UnitTests
             var testXStopwatch = Stopwatch.StartNew();
             var st = new TestRun(TestFlags.RethrowException);
             var lt = new LightExpression.TestRun(LightExpression.TestFlags.RethrowException);
+            var ft = new LightExpression.TestRun(LightExpression.TestFlags.RethrowException);
+            ft.Run(new FlatExpression.UnitTests.IntAddCompileTests());
 
             // the Light tests run on the thread pool in parallel with the System ones
             var ltTime = 0L;
             var ltTask = Task.Run(() =>
             {
                 var ltStopwatch = Stopwatch.StartNew();
-            lt.Run(new LightExpression.UnitTests.InvokeRefArgumentRegressionTests());
+                lt.Run(new LightExpression.UnitTests.IntAddCompileTests());
+                lt.Run(new LightExpression.UnitTests.InvokeRefArgumentRegressionTests());
                 lt.Run(new LightExpression.UnitTests.StructInterfaceSettersTests());
                 lt.Run(new LightExpression.UnitTests.NullableBoxingRegressionTests());
                 lt.Run(new LightExpression.UnitTests.LocalReturnTargetTests());
@@ -161,6 +164,7 @@ namespace FastExpressionCompiler.UnitTests
             });
 
             var stStopwatch = Stopwatch.StartNew();
+            st.Run(new IntAddCompileTests());
             st.Run(new InvokeRefArgumentRegressionTests());
             st.Run(new StructInterfaceSettersTests());
             st.Run(new NullableBoxingRegressionTests());
@@ -261,12 +265,12 @@ namespace FastExpressionCompiler.UnitTests
             var stTime = stStopwatch.ElapsedMilliseconds;
             ltTask.Wait();
 
-            if (st.FailedTestCount > 0 || lt.FailedTestCount > 0)
+            if (st.FailedTestCount > 0 || lt.FailedTestCount > 0 || ft.FailedTestCount > 0)
             {
                 Console.WriteLine("ERROR: Some TestX tests are FAILED!");
                 Environment.Exit(1);
             }
-            Console.WriteLine($"//TestX: {st.TotalTestCount + lt.TotalTestCount} tests are passing in {testXStopwatch.ElapsedMilliseconds} ms (System: {st.TotalTestCount} in {stTime} ms, Light: {lt.TotalTestCount} in {ltTime} ms, in parallel).");
+            Console.WriteLine($"//TestX: {st.TotalTestCount + lt.TotalTestCount + ft.TotalTestCount} tests are passing in {testXStopwatch.ElapsedMilliseconds} ms (System: {st.TotalTestCount} in {stTime} ms, Light: {lt.TotalTestCount} in {ltTime} ms, in parallel, Flat: {ft.TotalTestCount}).");
 
             RunAllTests();
         }

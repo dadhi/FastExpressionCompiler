@@ -620,6 +620,10 @@ public interface ITest
 public interface ITestX
 {
     void Run(TestRun tr);
+#if LIGHT_EXPRESSION && NET8_0_OR_GREATER
+    // shortcut: empty unless a flat test returns its tree. CompileFast copies it; fine for tests.
+    FastExpressionCompiler.FlatExpression.ExprTree ExprTree => default;
+#endif
 }
 
 public enum AssertKind

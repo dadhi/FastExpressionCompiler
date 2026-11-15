@@ -34,6 +34,7 @@ namespace FastExpressionCompiler.UnitTests
                 var justLightTestsStopwatch = Stopwatch.StartNew();
 
                 var t = (LightExpression.TestRun)state;
+            t.Run(new LightExpression.UnitTests.IntAddCompileTests());
             t.Run(new LightExpression.UnitTests.InvokeRefArgumentRegressionTests());
                 t.Run(new LightExpression.UnitTests.StructInterfaceSettersTests());
                 t.Run(new LightExpression.UnitTests.NullableBoxingRegressionTests());
@@ -135,6 +136,7 @@ namespace FastExpressionCompiler.UnitTests
             var fecTestsStopwatch = Stopwatch.StartNew();
 
             var fecTests = new TestRun();
+            fecTests.Run(new IntAddCompileTests());
             fecTests.Run(new InvokeRefArgumentRegressionTests());
             fecTests.Run(new StructInterfaceSettersTests());
             fecTests.Run(new NullableBoxingRegressionTests());
