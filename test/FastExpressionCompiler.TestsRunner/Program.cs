@@ -101,6 +101,7 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.UnitTests.NestedBindingSpillsTests());
                 lt.Run(new LightExpression.UnitTests.RuntimeExpressionInvokeTests());
                 lt.Run(new LightExpression.UnitTests.IgnoredMemberInitializerTests());
+                lt.Run(new LightExpression.UnitTests.SwitchCaseLabelTests());
                 lt.Run(new LightExpression.UnitTests.VoidLabelValueRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ReferenceInstanceCallRegressionTests());
                 lt.Run(new LightExpression.UnitTests.NestedBindingNullReceiversTests());
@@ -200,6 +201,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new NestedBindingSpillsTests());
             st.Run(new RuntimeExpressionInvokeTests());
             st.Run(new IgnoredMemberInitializerTests());
+            st.Run(new SwitchCaseLabelTests());
             st.Run(new VoidLabelValueRegressionTests());
             st.Run(new ReferenceInstanceCallRegressionTests());
             st.Run(new NestedBindingNullReceiversTests());
