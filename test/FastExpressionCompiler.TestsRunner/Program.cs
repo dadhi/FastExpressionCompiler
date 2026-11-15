@@ -72,6 +72,7 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.UnitTests.RefDelegateReceiversTests());
                 lt.Run(new LightExpression.UnitTests.StaticFieldAddressRegressionTests());
                 lt.Run(new LightExpression.UnitTests.UnaryParameterAssignmentTests());
+                lt.Run(new LightExpression.UnitTests.DynamicCallSiteRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ReferenceUnboxingRegressionTests());
                 lt.Run(new LightExpression.UnitTests.BoxedCaptureRefTests());
                 lt.Run(new LightExpression.UnitTests.ReferenceComparisonExceptionTests());
@@ -116,6 +117,7 @@ namespace FastExpressionCompiler.UnitTests
                 lt.Run(new LightExpression.UnitTests.InlinedRethrowBoundaryRegressionTests());
                 lt.Run(new LightExpression.UnitTests.BlockVariableBindingRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ComparisonReductionRegressionTests());
+                lt.Run(new LightExpression.UnitTests.RuntimeExpressionSpillOrderRegressionTests());
                 lt.Run(new LightExpression.UnitTests.CompoundAssignmentExceptionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.NestedCompoundExceptionRegressionTests());
                 lt.Run(new LightExpression.UnitTests.ArithmeticExceptionOperandsTests());
@@ -171,6 +173,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new RefDelegateReceiversTests());
             st.Run(new StaticFieldAddressRegressionTests());
             st.Run(new UnaryParameterAssignmentTests());
+            st.Run(new DynamicCallSiteRegressionTests());
             st.Run(new ReferenceUnboxingRegressionTests());
             st.Run(new BoxedCaptureRefTests());
             st.Run(new ReferenceComparisonExceptionTests());
@@ -215,6 +218,7 @@ namespace FastExpressionCompiler.UnitTests
             st.Run(new InlinedRethrowBoundaryRegressionTests());
             st.Run(new BlockVariableBindingRegressionTests());
             st.Run(new ComparisonReductionRegressionTests());
+            st.Run(new RuntimeExpressionSpillOrderRegressionTests());
             st.Run(new CompoundAssignmentExceptionRegressionTests());
             st.Run(new NestedCompoundExceptionRegressionTests());
             st.Run(new ArithmeticExceptionOperandsTests());
