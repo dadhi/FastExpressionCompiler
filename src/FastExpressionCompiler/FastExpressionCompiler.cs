@@ -636,7 +636,11 @@ namespace FastExpressionCompiler
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
         /// <summary>Collects the lambda info for the compilation</summary>
+#if FLAT_EXPRESSION
+        public class NestedLambdaInfo
+#else
         public sealed class NestedLambdaInfo
+#endif
         {
             /// <summary>Compiled lambda</summary>
             public object Lambda; // todo: @perf can we use the NestedLambdaInfo itself instead of NestedLambdaWithConstantsAndNestedLambdas and avoid duplication in memory?
@@ -662,13 +666,6 @@ namespace FastExpressionCompiler
             /// It used to assign the closed variables from the outside of the nested lambda</summary>
             public short NonPassedParamsVarIndex;
 
-#if FLAT_EXPRESSION
-            /// <summary>Flat lambda node index. Zero on the Light path.</summary>
-            public ushort FlatLambdaIdx;
-            /// <summary>Captured parameter declaration ids. Parallel to the closure's non-passed array.</summary>
-            public SmallList<ushort, Stack8<ushort>, NoArrayPool<ushort>> FlatCapturedIds;
-#endif
-
             public NestedLambdaInfo(LambdaExpression lambdaExpression) => LambdaExpression = lambdaExpression;
 
             /// <summary>Compares 2 lambda expressions for equality</summary>
@@ -683,6 +680,16 @@ namespace FastExpressionCompiler
             public override string ToString() =>
                 $"Lambda: {(Lambda is NestedLambdaForNonPassedParams n ? "compiled+closure" : Lambda != null ? "compiled" : "null")}, Expr: {LambdaExpression?.ToString() ?? "flat"}";
         }
+
+#if FLAT_EXPRESSION
+        /// <summary>Flat-only subclass so a Light compile does not carry the capture list on every nested lambda.</summary>
+        internal sealed class FlatNestedLambdaInfo : NestedLambdaInfo
+        {
+            public ushort LambdaIdx;
+            public SmallList<ushort, Stack8<ushort>, NoArrayPool<ushort>> CapturedIds;
+            public FlatNestedLambdaInfo() : base(null) { }
+        }
+#endif
 
         [Flags]
         public enum ClosureStatus : byte
@@ -2481,7 +2488,7 @@ namespace FastExpressionCompiler
 
         static Result TryCollectFlat(ref CompilerContext context, ref ExprTree tree, ushort idx, ushort lambdaIdx,
             ref SmallList<ushort, Stack8<ushort>, NoArrayPool<ushort>> locals,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+            FlatNestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
         {
             var r = Result.OK;
             while (true)
@@ -2504,10 +2511,10 @@ namespace FastExpressionCompiler
                                 return Result.ParameterIsNotVariableNorInPassedParameters;
                             var captured = n.ChildIdx;
                             var seen = false;
-                            for (var i = 0; !seen && i < nestedLambda.FlatCapturedIds.Count; ++i)
-                                seen = nestedLambda.FlatCapturedIds.GetSurePresentRef(i) == captured;
+                            for (var i = 0; !seen && i < nestedLambda.CapturedIds.Count; ++i)
+                                seen = nestedLambda.CapturedIds.GetSurePresentRef(i) == captured;
                             if (!seen)
-                                nestedLambda.FlatCapturedIds.Add(captured);
+                                nestedLambda.CapturedIds.Add(captured);
                             context.Status |= ClosureStatus.HasClosure;
                         }
                         return Result.OK;
@@ -2603,7 +2610,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.Lambda:
                         {
                             context.Status |= ClosureStatus.HasClosure;
-                            var nestedInfo = new NestedLambdaInfo(null) { FlatLambdaIdx = idx };
+                            var nestedInfo = new FlatNestedLambdaInfo { LambdaIdx = idx };
                             if (nestedLambda != null)
                                 nestedLambda.NestedLambdas.Add(nestedInfo);
                             else
@@ -2834,7 +2841,7 @@ namespace FastExpressionCompiler
 
         static Result TryCollectFlatComplexArgs(ref CompilerContext context, ref ExprTree tree, ushort child, ushort owner,
             ushort lambdaIdx, ref SmallList<ushort, Stack8<ushort>, NoArrayPool<ushort>> locals,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+            FlatNestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
         {
             var hasComplex = false;
             var r = Result.OK;
@@ -2867,7 +2874,7 @@ namespace FastExpressionCompiler
 
         static Result TryCollectFlatBinding(ref CompilerContext context, ref ExprTree tree, ushort idx, ushort lambdaIdx,
             ref SmallList<ushort, Stack8<ushort>, NoArrayPool<ushort>> locals,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+            FlatNestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
         {
             ref var n = ref tree.Nodes.GetSurePresentRef(idx);
             if (n.Kind == ExprNodeKind.ElementInit || n.Kind == ExprNodeKind.MemberAssignment)
@@ -2893,7 +2900,7 @@ namespace FastExpressionCompiler
 
         static Result TryCollectFlatCatch(ref CompilerContext context, ref ExprTree tree, ushort idx, ushort lambdaIdx,
             ref SmallList<ushort, Stack8<ushort>, NoArrayPool<ushort>> locals,
-            NestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
+            FlatNestedLambdaInfo nestedLambda, ref SmallList<NestedLambdaInfo> rootNestedLambdas)
         {
             ref var n = ref tree.Nodes.GetSurePresentRef(idx);
             var child = n.ChildIdx;
@@ -10346,7 +10353,7 @@ namespace FastExpressionCompiler
                 return ok;
             }
 
-            internal static bool TryCompileFlatNested(ref ExprTree tree, ushort lambdaIdx, ref CompilerContext nestedCtx, NestedLambdaInfo info)
+            internal static bool TryCompileFlatNested(ref ExprTree tree, ushort lambdaIdx, ref CompilerContext nestedCtx, FlatNestedLambdaInfo info)
             {
                 ref var lam = ref tree.Nodes.GetSurePresentRef(lambdaIdx);
                 var delegateType = lam.Type;
@@ -10356,14 +10363,14 @@ namespace FastExpressionCompiler
                 for (var i = 0; i < argCount; ++i)
                     paramTypes[i + 1] = tree.Nodes.GetSurePresentRef(nestedCtx.FlatArgIds.GetSurePresentRef(i)).Type;
 
-                var hasCapture = info.FlatCapturedIds.Count != 0;
+                var hasCapture = info.CapturedIds.Count != 0;
                 var constants = nestedCtx.Constants.Count != 0 || nestedCtx.NestedLambdas.Count != 0
                     ? nestedCtx.GetArrayOfConstantsAndNestedLambdas() : null;
                 var method = new DynamicMethod(string.Empty, returnType, paramTypes, typeof(ArrayClosure), true);
                 var il = DynamicMethodHacks.RentPooledOrNewILGenerator(method, returnType, paramTypes);
                 if (constants != null)
                     EmitLoadConstantsAndNestedLambdasIntoVars(il, ref nestedCtx);
-                nestedCtx.FlatCapturedIds = info.FlatCapturedIds;
+                nestedCtx.FlatCapturedIds = info.CapturedIds;
                 var parent = returnType == typeof(void) ? ParentFlags.IgnoreResult : ParentFlags.LambdaCall;
                 var ok = TryEmitFlat(ref tree, lam.ChildIdx, il, ref nestedCtx, parent);
                 if (ok)
@@ -10387,18 +10394,20 @@ namespace FastExpressionCompiler
             static bool EmitFlatLambda(ref ExprTree tree, ushort idx, ILGenerator il, ref CompilerContext context)
             {
                 var nested = context.NestedLambdas;
-                var found = -1;
+                FlatNestedLambdaInfo info = null;
                 for (var i = nested.Count - 1; i >= 0; --i)
-                    if (nested.GetSurePresentRef(i).FlatLambdaIdx == idx)
+                {
+                    var item = (FlatNestedLambdaInfo)nested.GetSurePresentRef(i);
+                    if (item.LambdaIdx == idx)
                     {
-                        found = i;
+                        info = item;
                         break;
                     }
-                if (found < 0)
+                }
+                if (info == null)
                     return false;
-                var info = nested.GetSurePresentRef(found);
                 EmitLoadLocalVariable(il, info.LambdaVarIndex);
-                var captured = info.FlatCapturedIds;
+                var captured = info.CapturedIds;
                 if (captured.Count == 0)
                 {
                     context.LastEmitIsAddress = false;
