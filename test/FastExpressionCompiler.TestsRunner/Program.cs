@@ -59,6 +59,7 @@ namespace FastExpressionCompiler.UnitTests
             var lt = new LightExpression.TestRun(LightExpression.TestFlags.RethrowException);
             var ft = new LightExpression.TestRun(LightExpression.TestFlags.RethrowException);
             ft.Run(new FlatExpression.UnitTests.IntAddCompileTests());
+            ft.Run(new FlatExpression.UnitTests.CallTests());
 
             // the Light tests run on the thread pool in parallel with the System ones
             var ltTime = 0L;
@@ -66,6 +67,7 @@ namespace FastExpressionCompiler.UnitTests
             {
                 var ltStopwatch = Stopwatch.StartNew();
                 lt.Run(new LightExpression.UnitTests.IntAddCompileTests());
+                lt.Run(new LightExpression.UnitTests.CallTests());
                 lt.Run(new LightExpression.UnitTests.InvokeRefArgumentRegressionTests());
                 lt.Run(new LightExpression.UnitTests.StructInterfaceSettersTests());
                 lt.Run(new LightExpression.UnitTests.NullableBoxingRegressionTests());
@@ -165,6 +167,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var stStopwatch = Stopwatch.StartNew();
             st.Run(new IntAddCompileTests());
+            st.Run(new CallTests());
             st.Run(new InvokeRefArgumentRegressionTests());
             st.Run(new StructInterfaceSettersTests());
             st.Run(new NullableBoxingRegressionTests());
@@ -332,8 +335,6 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new LightExpression.UnitTests.BinaryExpressionTests().Run);
                 Run(new BlockTests().Run);
                 Run(new LightExpression.UnitTests.BlockTests().Run);
-                Run(new CallTests().Run);
-                Run(new LightExpression.UnitTests.CallTests().Run);
                 Run(new ClosureConstantTests().Run);
                 Run(new LightExpression.UnitTests.ClosureConstantTests().Run);
                 Run(new CoalesceTests().Run);

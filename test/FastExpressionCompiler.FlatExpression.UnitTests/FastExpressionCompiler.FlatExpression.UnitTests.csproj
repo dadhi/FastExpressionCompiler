@@ -7,6 +7,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Compile Include="..\FastExpressionCompiler.UnitTests\CallTests.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="..\..\src\FastExpressionCompiler.LightExpression\FastExpressionCompiler.LightExpression.csproj" />
     </ItemGroup>
 </Project>

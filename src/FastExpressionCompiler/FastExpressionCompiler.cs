@@ -9533,12 +9533,18 @@ namespace FastExpressionCompiler
                     (parent & (ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef | ParentFlags.ReturnByRef)) != 0)
                     return false;
                 var local = FlatLocalSlot(ref context, n.ChildIdx);
+                // A value-type instance call or member read must use the variable itself, not a copy.
+                var wantAddress = n.Type.IsValueType &&
+                    (parent & (ParentFlags.InstanceAccess | ParentFlags.MemberAccess)) != 0;
                 if (local >= 0)
                 {
-                    context.LastEmitIsAddress = false;
-                    if ((parent & ParentFlags.IgnoreResult) != 0)
+                    context.LastEmitIsAddress = wantAddress;
+                    if ((parent & ParentFlags.IgnoreResult) != 0 && !wantAddress)
                         return true;
-                    EmitLoadLocalVariable(il, local);
+                    if (wantAddress)
+                        EmitLoadLocalVariableAddress(il, local);
+                    else
+                        EmitLoadLocalVariable(il, local);
                     return true;
                 }
                 var id = n.ChildIdx;
@@ -9547,10 +9553,13 @@ namespace FastExpressionCompiler
                 {
                     if (context.FlatArgIds.GetSurePresentRef(i) != id)
                         continue;
-                    context.LastEmitIsAddress = false;
-                    if ((parent & ParentFlags.IgnoreResult) != 0)
+                    context.LastEmitIsAddress = wantAddress;
+                    if ((parent & ParentFlags.IgnoreResult) != 0 && !wantAddress)
                         return true;
-                    EmitLoadArg(il, i + 1);
+                    if (wantAddress)
+                        EmitLoadArgAddress(il, i + 1);
+                    else
+                        EmitLoadArg(il, i + 1);
                     return true;
                 }
                 var capturedCount = context.FlatCapturedIds.Count;

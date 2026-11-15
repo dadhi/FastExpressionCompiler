@@ -642,10 +642,16 @@ public partial struct ExprTree : IEquatable<ExprTree>
         return WithOneOrMoreChildren(ExpressionType.Block, type, null, default, default, exprsSubNode, vars);
     }
 
+    // todo: @perf for params use Span on the supported targets here and in other places
     /// <summary>Adds a block node without explicit variables.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ushort Block(params ushort[] exprs) =>
         Block(null, null, exprs);
+
+    /// <summary>Adds a block whose variables are the first argument, matching <c>Expression.Block(variables, expressions)</c>.</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ushort Block(ushort[] vars, params ushort[] exprs) =>
+        Block(null, vars, exprs);
 
     /// <summary>Adds a lambda node. Layout: body then parameters.</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

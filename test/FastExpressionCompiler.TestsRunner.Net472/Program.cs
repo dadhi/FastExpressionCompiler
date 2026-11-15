@@ -34,8 +34,9 @@ namespace FastExpressionCompiler.UnitTests
                 var justLightTestsStopwatch = Stopwatch.StartNew();
 
                 var t = (LightExpression.TestRun)state;
-            t.Run(new LightExpression.UnitTests.IntAddCompileTests());
-            t.Run(new LightExpression.UnitTests.InvokeRefArgumentRegressionTests());
+                t.Run(new LightExpression.UnitTests.IntAddCompileTests());
+                t.Run(new LightExpression.UnitTests.CallTests());
+                t.Run(new LightExpression.UnitTests.InvokeRefArgumentRegressionTests());
                 t.Run(new LightExpression.UnitTests.StructInterfaceSettersTests());
                 t.Run(new LightExpression.UnitTests.NullableBoxingRegressionTests());
                 t.Run(new LightExpression.UnitTests.LocalReturnTargetTests());
@@ -137,6 +138,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var fecTests = new TestRun();
             fecTests.Run(new IntAddCompileTests());
+            fecTests.Run(new CallTests());
             fecTests.Run(new InvokeRefArgumentRegressionTests());
             fecTests.Run(new StructInterfaceSettersTests());
             fecTests.Run(new NullableBoxingRegressionTests());
@@ -300,8 +302,6 @@ namespace FastExpressionCompiler.UnitTests
                 Run(new LightExpression.UnitTests.BinaryExpressionTests().Run);
                 Run(new BlockTests().Run);
                 Run(new LightExpression.UnitTests.BlockTests().Run);
-                Run(new CallTests().Run);
-                Run(new LightExpression.UnitTests.CallTests().Run);
                 Run(new ClosureConstantTests().Run);
                 Run(new LightExpression.UnitTests.ClosureConstantTests().Run);
                 Run(new CoalesceTests().Run);

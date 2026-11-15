@@ -20,6 +20,15 @@ static class TestCompile
         expr.RootIdx = expression.Idx;
         return expr.CompileFast<TDelegate>(ifFastFailedReturnNull, flags);
     }
+
+    public static TDelegate CompileSys<TDelegate, TTest>(this LambdaIdx<TDelegate> expression, in TTest test)
+        where TDelegate : Delegate
+        where TTest : struct, ITestX
+    {
+        var expr = test.ExprTree;
+        expr.RootIdx = expression.Idx;
+        return (TDelegate)((LightExpression.LambdaExpression)expr.ToLightExpression()).CompileSys();
+    }
 #elif LIGHT_EXPRESSION
     public static TDelegate CompileFast<TDelegate, TTest>(this Expression<TDelegate> expression, bool ifFastFailedReturnNull, in TTest test,
         CompilerFlags flags = CompilerFlags.Default)
@@ -27,11 +36,21 @@ static class TestCompile
         where TTest : struct =>
         // An optional CompilerFlags here binds as TTest and this method calls itself.
         ExpressionCompiler.CompileFast(expression, ifFastFailedReturnNull, flags);
+
+    public static TDelegate CompileSys<TDelegate, TTest>(this Expression<TDelegate> expression, in TTest test)
+        where TDelegate : Delegate
+        where TTest : struct =>
+        expression.CompileSys();
 #else
     public static TDelegate CompileFast<TDelegate, TTest>(this System.Linq.Expressions.Expression<TDelegate> expression, bool ifFastFailedReturnNull, in TTest test,
         CompilerFlags flags = CompilerFlags.Default)
         where TDelegate : Delegate
         where TTest : struct =>
         ExpressionCompiler.CompileFast(expression, ifFastFailedReturnNull, flags);
+
+    public static TDelegate CompileSys<TDelegate, TTest>(this System.Linq.Expressions.Expression<TDelegate> expression, in TTest test)
+        where TDelegate : Delegate
+        where TTest : struct =>
+        expression.CompileSys();
 #endif
 }
