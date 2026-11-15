@@ -2494,7 +2494,7 @@ namespace FastExpressionCompiler
                     case ExpressionType.Constant:
                         // construction already classified; only ClosureConstantMarker is per-lambda
                         if (ReferenceEquals(n.Obj, ExprTree.ClosureConstantMarker))
-                            context.AddConstantOrIncrementUsageCount(tree.ClosureConstants[n.ChildIdx]);
+                            context.AddConstantOrIncrementUsageCount(tree.ClosureConstants.GetSurePresentRef(n.ChildIdx));
                         return Result.OK;
 
                     case ExpressionType.Parameter:
@@ -9474,7 +9474,7 @@ namespace FastExpressionCompiler
                 }
                 else if (ReferenceEquals(n.Obj, ExprTree.ClosureConstantMarker))
                 {
-                    var value = tree.ClosureConstants[n.ChildIdx];
+                    var value = tree.ClosureConstants.GetSurePresentRef(n.ChildIdx);
                     ok = TryEmitConstant(true, exprType, value.GetType(), value, il, ref context, byRefIndex);
                 }
                 else
@@ -10389,14 +10389,14 @@ namespace FastExpressionCompiler
                 var nested = context.NestedLambdas;
                 var found = -1;
                 for (var i = nested.Count - 1; i >= 0; --i)
-                    if (nested.Items[i].FlatLambdaIdx == idx)
+                    if (nested.GetSurePresentRef(i).FlatLambdaIdx == idx)
                     {
                         found = i;
                         break;
                     }
                 if (found < 0)
                     return false;
-                var info = nested.Items[found];
+                var info = nested.GetSurePresentRef(found);
                 EmitLoadLocalVariable(il, info.LambdaVarIndex);
                 var captured = info.FlatCapturedIds;
                 if (captured.Count == 0)
