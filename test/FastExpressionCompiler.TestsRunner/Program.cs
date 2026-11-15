@@ -64,6 +64,7 @@ namespace FastExpressionCompiler.UnitTests
             {
                 var ltStopwatch = Stopwatch.StartNew();
             lt.Run(new LightExpression.UnitTests.InvokeRefArgumentRegressionTests());
+            lt.Run(new LightExpression.UnitTests.ScalarArithmeticFrameTests());
                 lt.Run(new LightExpression.UnitTests.StructInterfaceSettersTests());
                 lt.Run(new LightExpression.UnitTests.NullableBoxingRegressionTests());
                 lt.Run(new LightExpression.UnitTests.LocalReturnTargetTests());
@@ -162,6 +163,7 @@ namespace FastExpressionCompiler.UnitTests
 
             var stStopwatch = Stopwatch.StartNew();
             st.Run(new InvokeRefArgumentRegressionTests());
+            st.Run(new ScalarArithmeticFrameTests());
             st.Run(new StructInterfaceSettersTests());
             st.Run(new NullableBoxingRegressionTests());
             st.Run(new LocalReturnTargetTests());
