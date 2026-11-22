@@ -15,5 +15,6 @@
         <ProjectReference Include="..\FastExpressionCompiler.LightExpression.UnitTests\FastExpressionCompiler.LightExpression.UnitTests.csproj" />
         <ProjectReference Include="..\FastExpressionCompiler.IssueTests\FastExpressionCompiler.IssueTests.csproj" />
         <ProjectReference Include="..\FastExpressionCompiler.LightExpression.IssueTests\FastExpressionCompiler.LightExpression.IssueTests.csproj" />
+        <ProjectReference Include="..\FastExpressionCompiler.FlatExpression.UnitTests\FastExpressionCompiler.FlatExpression.UnitTests.csproj" />
     </ItemGroup>
 </Project>

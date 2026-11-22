@@ -1,208 +1,262 @@
 using System;
-
 #if LIGHT_EXPRESSION
-using static FastExpressionCompiler.LightExpression.Expression;
+using Expr = FastExpressionCompiler.LightExpression.Expression;
 namespace FastExpressionCompiler.LightExpression.UnitTests;
-#else
-using static System.Linq.Expressions.Expression;
+#elif !FLAT_EXPRESSION
+using Expr = System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests;
+#else
+namespace FastExpressionCompiler.FlatExpression.UnitTests;
 #endif
 
-public class CallTests : ITest
+public struct CallTests : ITestX
 {
-    public int Run()
+    public void Run(TestRun t)
     {
-        GetType_on_int_parameter();
-        GetType_on_local_int();
-        GetType_on_nullable();
-        GetType_on_enum();
-        Nonvirtual_struct_method();
-        Virtual_struct_method();
-        Inherited_virtual_struct_method();
-        Inherited_ValueType_method();
-        Enum_HasFlag();
-        Enum_ToString();
-        Interface_method_on_struct();
-        Virtual_class_method();
-        Ignored_call_result();
-        Call_result_as_argument();
-        Call_result_field_access();
-        Void_call();
-        return 16;
+        GetType_on_int_parameter(t);
+        GetType_on_local_int(t);
+        GetType_on_nullable(t);
+        GetType_on_enum(t);
+        Nonvirtual_struct_method(t);
+        Virtual_struct_method(t);
+        Inherited_virtual_struct_method(t);
+        Inherited_ValueType_method(t);
+        Enum_HasFlag(t);
+        Enum_ToString(t);
+        Interface_method_on_struct(t);
+        Virtual_class_method(t);
+        Ignored_call_result(t);
+        Call_result_as_argument(t);
+        Call_result_field_access(t);
+        Void_call(t);
     }
 
-    public void GetType_on_int_parameter()
-    {
-        var value = Parameter(typeof(int), "value");
-        var expression = Lambda<Func<int, Type>>(
-            Call(value, typeof(object).GetMethod(nameof(GetType))), value);
+#if FLAT_EXPRESSION
+    ExprTree Expr;
+    public ExprTree ExprTree => Expr;
+    public void ResetExpr() => Expr = default;
+#else
+    public void ResetExpr() { }
+#endif
 
-        Asserts.AreEqual(typeof(int), expression.CompileSys()(42));
-        Asserts.AreEqual(typeof(int), expression.CompileFast(true)(42));
+    public void GetType_on_int_parameter(TestContext t)
+    {
+        ResetExpr();
+        var value = Expr.Parameter(typeof(int), "value");
+        var expression = Expr.Lambda<Func<int, Type>>(
+            Expr.Call(value, typeof(object).GetMethod(nameof(GetType))), value);
+
+        t.AreEqual(typeof(int), expression.CompileSys(in this)(42));
+        var fast = expression.CompileFast(true, in this);
+        if (!t.IsNotNull(fast)) return;
+        t.AreEqual(typeof(int), fast(42));
     }
 
-    public void GetType_on_local_int()
+    public void GetType_on_local_int(TestContext t)
     {
-        var value = Variable(typeof(int), "a");
-        var expression = Lambda<Func<Type>>(Block(new[] { value },
-            Assign(value, Constant(1)), Call(value, typeof(object).GetMethod(nameof(GetType)))));
+        ResetExpr();
+        var value = Expr.Variable(typeof(int), "a");
+        var expression = Expr.Lambda<Func<Type>>(Expr.Block(new[] { value },
+            Expr.Assign(value, Expr.Constant(1)), Expr.Call(value, typeof(object).GetMethod(nameof(GetType)))));
 
-        Asserts.AreEqual(typeof(int), expression.CompileSys()());
-        Asserts.AreEqual(typeof(int), expression.CompileFast(true)());
+        t.AreEqual(typeof(int), expression.CompileSys(in this)());
+        var fast = expression.CompileFast(true, in this);
+        if (!t.IsNotNull(fast)) return;
+        t.AreEqual(typeof(int), fast());
     }
 
-    public void GetType_on_nullable()
+    public void GetType_on_nullable(TestContext t)
     {
-        var value = Parameter(typeof(int?), "value");
-        var expression = Lambda<Func<int?, Type>>(
-            Call(value, typeof(object).GetMethod(nameof(GetType))), value);
+        ResetExpr();
+        var value = Expr.Parameter(typeof(int?), "value");
+        var expression = Expr.Lambda<Func<int?, Type>>(
+            Expr.Call(value, typeof(object).GetMethod(nameof(GetType))), value);
 
-        var system = expression.CompileSys();
-        var fast = expression.CompileFast(true);
-        Asserts.AreEqual(typeof(int), system(42));
-        Asserts.AreEqual(typeof(int), fast(42));
-        Asserts.Throws<NullReferenceException>(() => system(null));
-        Asserts.Throws<NullReferenceException>(() => fast(null));
+        var system = expression.CompileSys(in this);
+        var fast = expression.CompileFast(true, in this);
+        if (!t.IsNotNull(fast)) return;
+        t.AreEqual(typeof(int), system(42));
+        t.AreEqual(typeof(int), fast(42));
+        t.Throws<NullReferenceException>(() => system(null));
+        t.Throws<NullReferenceException>(() => fast(null));
     }
 
-    public void GetType_on_enum()
+    public void GetType_on_enum(TestContext t)
     {
-        var value = Parameter(typeof(Bits), "value");
-        var expression = Lambda<Func<Bits, Type>>(
-            Call(value, typeof(object).GetMethod(nameof(GetType))), value);
+        ResetExpr();
+        var value = Expr.Parameter(typeof(Bits), "value");
+        var expression = Expr.Lambda<Func<Bits, Type>>(
+            Expr.Call(value, typeof(object).GetMethod(nameof(GetType))), value);
 
-        Asserts.AreEqual(typeof(Bits), expression.CompileSys()(Bits.A));
-        Asserts.AreEqual(typeof(Bits), expression.CompileFast(true)(Bits.A));
+        t.AreEqual(typeof(Bits), expression.CompileSys(in this)(Bits.A));
+        var fast = expression.CompileFast(true, in this);
+        if (!t.IsNotNull(fast)) return;
+        t.AreEqual(typeof(Bits), fast(Bits.A));
     }
 
-    public void Nonvirtual_struct_method()
+    public void Nonvirtual_struct_method(TestContext t)
     {
-        var counter = Parameter(typeof(Counter), "counter");
-        var expression = Lambda<Func<Counter, Result>>(
-            Call(counter, typeof(Counter).GetMethod(nameof(Counter.Add)), Constant(1)), counter);
+        ResetExpr();
+        var counter = Expr.Parameter(typeof(Counter), "counter");
+        var expression = Expr.Lambda<Func<Counter, Result>>(
+            Expr.Call(counter, typeof(Counter).GetMethod(nameof(Counter.Add)), Expr.Constant(1)), counter);
 
-        Asserts.AreEqual(43, expression.CompileSys()(new Counter { Value = 42 }).Value);
-        Asserts.AreEqual(43, expression.CompileFast(true)(new Counter { Value = 42 }).Value);
+        t.AreEqual(43, expression.CompileSys(in this)(new Counter { Value = 42 }).Value);
+        var fast = expression.CompileFast(true, in this);
+        if (!t.IsNotNull(fast)) return;
+        t.AreEqual(43, fast(new Counter { Value = 42 }).Value);
     }
 
-    public void Virtual_struct_method()
+    public void Virtual_struct_method(TestContext t)
     {
-        var counter = Parameter(typeof(Counter), "counter");
-        var expression = Lambda<Func<Counter, string>>(
-            Call(counter, typeof(Counter).GetMethod(nameof(ToString))), counter);
+        ResetExpr();
+        var counter = Expr.Parameter(typeof(Counter), "counter");
+        var expression = Expr.Lambda<Func<Counter, string>>(
+            Expr.Call(counter, typeof(Counter).GetMethod(nameof(ToString))), counter);
 
-        Asserts.AreEqual("counter", expression.CompileSys()(new Counter()));
-        Asserts.AreEqual("counter", expression.CompileFast(true)(new Counter()));
+        t.AreEqual("counter", expression.CompileSys(in this)(new Counter()));
+        var fast = expression.CompileFast(true, in this);
+        if (!t.IsNotNull(fast)) return;
+        t.AreEqual("counter", fast(new Counter()));
     }
 
-    public void Inherited_virtual_struct_method()
+    public void Inherited_virtual_struct_method(TestContext t)
     {
-        var counter = Parameter(typeof(Counter), "counter");
-        var expression = Lambda<Func<Counter, string>>(
-            Call(counter, typeof(object).GetMethod(nameof(ToString))), counter);
+        ResetExpr();
+        var counter = Expr.Parameter(typeof(Counter), "counter");
+        var expression = Expr.Lambda<Func<Counter, string>>(
+            Expr.Call(counter, typeof(object).GetMethod(nameof(ToString))), counter);
 
-        Asserts.AreEqual("counter", expression.CompileSys()(new Counter()));
-        Asserts.AreEqual("counter", expression.CompileFast(true)(new Counter()));
+        t.AreEqual("counter", expression.CompileSys(in this)(new Counter()));
+        var fast = expression.CompileFast(true, in this);
+        if (!t.IsNotNull(fast)) return;
+        t.AreEqual("counter", fast(new Counter()));
     }
 
-    public void Inherited_ValueType_method()
+    public void Inherited_ValueType_method(TestContext t)
     {
-        var value = Parameter(typeof(PlainValue), "value");
-        var expression = Lambda<Func<PlainValue, string>>(
-            Call(value, typeof(ValueType).GetMethod(nameof(ToString))), value);
+        ResetExpr();
+        var value = Expr.Parameter(typeof(PlainValue), "value");
+        var expression = Expr.Lambda<Func<PlainValue, string>>(
+            Expr.Call(value, typeof(ValueType).GetMethod(nameof(ToString))), value);
 
-        Asserts.AreEqual(typeof(PlainValue).FullName, expression.CompileSys()(new PlainValue()));
-        Asserts.AreEqual(typeof(PlainValue).FullName, expression.CompileFast(true)(new PlainValue()));
+        t.AreEqual(typeof(PlainValue).FullName, expression.CompileSys(in this)(new PlainValue()));
+        var fast = expression.CompileFast(true, in this);
+        if (!t.IsNotNull(fast)) return;
+        t.AreEqual(typeof(PlainValue).FullName, fast(new PlainValue()));
     }
 
-    public void Enum_HasFlag()
+    public void Enum_HasFlag(TestContext t)
     {
-        var value = Parameter(typeof(Bits), "value");
-        var expression = Lambda<Func<Bits, bool>>(Call(value,
-            typeof(Enum).GetMethod(nameof(Enum.HasFlag)), Constant(Bits.B, typeof(Enum))), value);
+        ResetExpr();
+        var value = Expr.Parameter(typeof(Bits), "value");
+        var expression = Expr.Lambda<Func<Bits, bool>>(Expr.Call(value,
+            typeof(Enum).GetMethod(nameof(Enum.HasFlag)), Expr.Constant(Bits.B, typeof(Enum))), value);
 
-        var system = expression.CompileSys();
-        var fast = expression.CompileFast(true);
-        Asserts.IsTrue(system(Bits.A | Bits.B));
-        Asserts.IsTrue(fast(Bits.A | Bits.B));
-        Asserts.IsFalse(system(Bits.A));
-        Asserts.IsFalse(fast(Bits.A));
+        var system = expression.CompileSys(in this);
+        var fast = expression.CompileFast(true, in this);
+        if (!t.IsNotNull(fast)) return;
+        t.IsTrue(system(Bits.A | Bits.B));
+        t.IsTrue(fast(Bits.A | Bits.B));
+        t.IsFalse(system(Bits.A));
+        t.IsFalse(fast(Bits.A));
     }
 
-    public void Enum_ToString()
+    public void Enum_ToString(TestContext t)
     {
-        var value = Parameter(typeof(Bits), "value");
-        var expression = Lambda<Func<Bits, string>>(
-            Call(value, typeof(Enum).GetMethod(nameof(ToString), Type.EmptyTypes)), value);
+        ResetExpr();
+        var value = Expr.Parameter(typeof(Bits), "value");
+        var expression = Expr.Lambda<Func<Bits, string>>(
+            Expr.Call(value, typeof(Enum).GetMethod(nameof(ToString), Type.EmptyTypes)), value);
 
-        Asserts.AreEqual("A, B", expression.CompileSys()(Bits.A | Bits.B));
-        Asserts.AreEqual("A, B", expression.CompileFast(true)(Bits.A | Bits.B));
+        t.AreEqual("A, B", expression.CompileSys(in this)(Bits.A | Bits.B));
+        var fast = expression.CompileFast(true, in this);
+        if (!t.IsNotNull(fast)) return;
+        t.AreEqual("A, B", fast(Bits.A | Bits.B));
     }
 
-    public void Interface_method_on_struct()
+    public void Interface_method_on_struct(TestContext t)
     {
-        var counter = Parameter(typeof(Counter), "counter");
-        var expression = Lambda<Func<Counter, Result>>(
-            Call(counter, typeof(IAdder).GetMethod(nameof(IAdder.Add)), Constant(1)), counter);
+        ResetExpr();
+        var counter = Expr.Parameter(typeof(Counter), "counter");
+        var expression = Expr.Lambda<Func<Counter, Result>>(
+            Expr.Call(counter, typeof(IAdder).GetMethod(nameof(IAdder.Add)), Expr.Constant(1)), counter);
 
-        Asserts.AreEqual(143, expression.CompileSys()(new Counter { Value = 42 }).Value);
-        Asserts.AreEqual(143, expression.CompileFast(true)(new Counter { Value = 42 }).Value);
+        t.AreEqual(143, expression.CompileSys(in this)(new Counter { Value = 42 }).Value);
+        var fast = expression.CompileFast(true, in this);
+        if (!t.IsNotNull(fast)) return;
+        t.AreEqual(143, fast(new Counter { Value = 42 }).Value);
     }
 
-    public void Virtual_class_method()
+    public void Virtual_class_method(TestContext t)
     {
-        var target = Parameter(typeof(Target), "target");
-        var expression = Lambda<Func<Target, int>>(
-            Call(target, typeof(Target).GetMethod(nameof(Target.GetValue))), target);
+        ResetExpr();
+        var target = Expr.Parameter(typeof(Target), "target");
+        var expression = Expr.Lambda<Func<Target, int>>(
+            Expr.Call(target, typeof(Target).GetMethod(nameof(Target.GetValue))), target);
 
-        Asserts.AreEqual(2, expression.CompileSys()(new DerivedTarget()));
-        Asserts.AreEqual(2, expression.CompileFast(true)(new DerivedTarget()));
+        t.AreEqual(2, expression.CompileSys(in this)(new DerivedTarget()));
+        var fast = expression.CompileFast(true, in this);
+        if (!t.IsNotNull(fast)) return;
+        t.AreEqual(2, fast(new DerivedTarget()));
     }
 
-    public void Ignored_call_result()
+    public void Ignored_call_result(TestContext t)
     {
-        var counter = Variable(typeof(Counter), "counter");
-        var expression = Lambda<Func<int>>(Block(new[] { counter },
-            Assign(counter, Default(typeof(Counter))),
-            Call(counter, typeof(Counter).GetMethod(nameof(Counter.Add)), Constant(1)),
-            Field(counter, nameof(Counter.Value))));
+        ResetExpr();
+        var counter = Expr.Variable(typeof(Counter), "counter");
+        var expression = Expr.Lambda<Func<int>>(Expr.Block(new[] { counter },
+            Expr.Assign(counter, Expr.Default(typeof(Counter))),
+            Expr.Call(counter, typeof(Counter).GetMethod(nameof(Counter.Add)), Expr.Constant(1)),
+            Expr.Field(counter, typeof(Counter).GetField(nameof(Counter.Value)))));
 
-        Asserts.AreEqual(1, expression.CompileSys()());
-        Asserts.AreEqual(1, expression.CompileFast(true)());
+        t.AreEqual(1, expression.CompileSys(in this)());
+        var fast = expression.CompileFast(true, in this);
+        if (!t.IsNotNull(fast)) return;
+        t.AreEqual(1, fast());
     }
 
-    public void Call_result_as_argument()
+    public void Call_result_as_argument(TestContext t)
     {
-        var counter = Parameter(typeof(Counter), "counter");
-        var expression = Lambda<Func<Counter, int>>(
-            Call(typeof(CallTests).GetMethod(nameof(ReadResult)),
-                Call(counter, typeof(Counter).GetMethod(nameof(Counter.Add)), Constant(1))), counter);
+        ResetExpr();
+        var counter = Expr.Parameter(typeof(Counter), "counter");
+        var expression = Expr.Lambda<Func<Counter, int>>(
+            Expr.Call(typeof(CallTests).GetMethod(nameof(ReadResult)),
+                Expr.Call(counter, typeof(Counter).GetMethod(nameof(Counter.Add)), Expr.Constant(1))), counter);
 
-        Asserts.AreEqual(43, expression.CompileSys()(new Counter { Value = 42 }));
-        Asserts.AreEqual(43, expression.CompileFast(true)(new Counter { Value = 42 }));
+        t.AreEqual(43, expression.CompileSys(in this)(new Counter { Value = 42 }));
+        var fast = expression.CompileFast(true, in this);
+        if (!t.IsNotNull(fast)) return;
+        t.AreEqual(43, fast(new Counter { Value = 42 }));
     }
 
-    public void Call_result_field_access()
+    public void Call_result_field_access(TestContext t)
     {
-        var counter = Parameter(typeof(Counter), "counter");
-        var expression = Lambda<Func<Counter, int>>(
-            Field(Call(counter, typeof(Counter).GetMethod(nameof(Counter.Add)), Constant(1)),
-                nameof(Result.Value)), counter);
+        ResetExpr();
+        var counter = Expr.Parameter(typeof(Counter), "counter");
+        var expression = Expr.Lambda<Func<Counter, int>>(
+            Expr.Field(Expr.Call(counter, typeof(Counter).GetMethod(nameof(Counter.Add)), Expr.Constant(1)),
+                typeof(Result).GetField(nameof(Result.Value))), counter);
 
-        Asserts.AreEqual(43, expression.CompileSys()(new Counter { Value = 42 }));
-        Asserts.AreEqual(43, expression.CompileFast(true)(new Counter { Value = 42 }));
+        t.AreEqual(43, expression.CompileSys(in this)(new Counter { Value = 42 }));
+        var fast = expression.CompileFast(true, in this);
+        if (!t.IsNotNull(fast)) return;
+        t.AreEqual(43, fast(new Counter { Value = 42 }));
     }
 
-    public void Void_call()
+    public void Void_call(TestContext t)
     {
-        var counter = Variable(typeof(Counter), "counter");
-        var expression = Lambda<Func<int>>(Block(new[] { counter },
-            Assign(counter, Default(typeof(Counter))),
-            Call(counter, typeof(Counter).GetMethod(nameof(Counter.Increment))),
-            Field(counter, nameof(Counter.Value))));
+        ResetExpr();
+        var counter = Expr.Variable(typeof(Counter), "counter");
+        var expression = Expr.Lambda<Func<int>>(Expr.Block(new[] { counter },
+            Expr.Assign(counter, Expr.Default(typeof(Counter))),
+            Expr.Call(counter, typeof(Counter).GetMethod(nameof(Counter.Increment))),
+            Expr.Field(counter, typeof(Counter).GetField(nameof(Counter.Value)))));
 
-        Asserts.AreEqual(1, expression.CompileSys()());
-        Asserts.AreEqual(1, expression.CompileFast(true)());
+        t.AreEqual(1, expression.CompileSys(in this)());
+        var fast = expression.CompileFast(true, in this);
+        if (!t.IsNotNull(fast)) return;
+        t.AreEqual(1, fast());
     }
 
     [Flags]

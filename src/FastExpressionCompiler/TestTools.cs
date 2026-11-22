@@ -16,6 +16,12 @@ using static System.Environment;
 namespace FastExpressionCompiler.LightExpression;
 using FastExpressionCompiler.LightExpression.ILDecoder;
 using FastExpressionCompiler.LightExpression.ImTools;
+#elif FLAT_EXPRESSION
+namespace FastExpressionCompiler.FlatExpression;
+using FastExpressionCompiler.FlatExpression.ILDecoder;
+using FastExpressionCompiler.FlatExpression.ImTools;
+using System.Globalization;
+using System.Linq.Expressions;
 #else
 namespace FastExpressionCompiler;
 
@@ -620,6 +626,10 @@ public interface ITest
 public interface ITestX
 {
     void Run(TestRun tr);
+#if FLAT_EXPRESSION
+    // shortcut: empty unless a flat test returns its tree. CompileFast copies it; fine for tests.
+    ExprTree ExprTree => default;
+#endif
 }
 
 public enum AssertKind

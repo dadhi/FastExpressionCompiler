@@ -9,10 +9,13 @@
     <ItemGroup>
         <None Remove="*.ncrunchproject" />
         <Compile Include="..\FastExpressionCompiler.UnitTests\**\*.cs" Exclude="..\FastExpressionCompiler.UnitTests\obj\**\*.*" />
+        <Compile Include="..\FastExpressionCompiler.FlatExpression.UnitTests\TestCompile.cs" />
+        <Compile Include="..\FastExpressionCompiler.FlatExpression.UnitTests\IntAddCompileTests.cs" />
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\..\src\FastExpressionCompiler.LightExpression\FastExpressionCompiler.LightExpression.csproj" />
+        <ProjectReference Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net8.0'))" Include="..\..\src\FastExpressionCompiler.FlatExpression\FastExpressionCompiler.FlatExpression.csproj" />
     </ItemGroup>
 
     <ItemGroup Condition="'$(TargetFramework)' == 'net472'">

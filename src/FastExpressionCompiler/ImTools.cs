@@ -33,6 +33,8 @@ THE SOFTWARE.
 
 #if LIGHT_EXPRESSION
 namespace FastExpressionCompiler.LightExpression.ImTools;
+#elif FLAT_EXPRESSION
+namespace FastExpressionCompiler.FlatExpression.ImTools;
 #else
 namespace FastExpressionCompiler.ImTools;
 #endif
@@ -906,6 +908,24 @@ public struct SmallList<T, TStack, TPool> : ISmallList<T>
 
         Debug.Assert(Rest != null);
         return ref Rest.GetSurePresentRef(index - Stack.Capacity);
+    }
+
+    /// <summary>Index 0 lives in the stack head. No stack-or-heap branch.</summary>
+    [UnscopedRef]
+    [MethodImpl((MethodImplOptions)256)]
+    public ref T GetSurePresentRef0()
+    {
+        Debug.Assert(_count > 0);
+        return ref Stack.GetSurePresentRef(0);
+    }
+
+    /// <summary>Index 1 lives in the stack head. No stack-or-heap branch.</summary>
+    [UnscopedRef]
+    [MethodImpl((MethodImplOptions)256)]
+    public ref T GetSurePresentRef1()
+    {
+        Debug.Assert(_count > 1);
+        return ref Stack.GetSurePresentRef(1);
     }
 
     /// <summary>Returns surely present item by ref</summary>

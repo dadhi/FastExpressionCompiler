@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFrameworks Condition="'$(DevMode)' != 'true'">net8.0;net10.0</TargetFrameworks>
+        <TargetFrameworks Condition="'$(DevMode)' == 'true'">net10.0</TargetFrameworks>
+
+        <VersionPrefix>6.0.0</VersionPrefix>
+        <VersionSuffix></VersionSuffix>
+
+        <Product>FastExpressionCompiler.FlatExpression</Product>
+
+        <PackageId>$(Product)</PackageId>
+        <Title>$(Product)</Title>
+        <Description>FastExpressionCompiler for FlatExpression. A faster alternative to LightExpression: the tree is indexes, not objects.</Description>
+        <PackageTags>Performance;Expression;ExpressionTree;Compile;DynamicMethod;IL;ILEmit</PackageTags>
+
+        <AssemblyName>$(Product)</AssemblyName>
+        <AssemblyTitle>$(Product) $(TargetFramework)</AssemblyTitle>
+        <AssemblyVersion>$(VersionPrefix)</AssemblyVersion>
+        <IsTrimmable>true</IsTrimmable>
+
+        <DefineConstants>FLAT_EXPRESSION</DefineConstants>
+    </PropertyGroup>
+    <ItemGroup>
+        <Compile Include="..\FastExpressionCompiler\FastExpressionCompiler.cs"/>
+        <Compile Include="..\FastExpressionCompiler\ImTools.cs"/>
+        <Compile Include="..\FastExpressionCompiler\ILReader.cs"/>
+        <Compile Include="..\FastExpressionCompiler\TestTools.cs"/>
+    </ItemGroup>
+</Project>

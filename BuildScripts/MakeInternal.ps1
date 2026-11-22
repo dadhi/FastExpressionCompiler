@@ -4,8 +4,7 @@ $inputFiles = @(
     ".\src\FastExpressionCompiler\ILReader.cs",
     ".\src\FastExpressionCompiler\TestTools.cs",
     ".\src\FastExpressionCompiler.LightExpression\Expression.cs",
-    ".\src\FastExpressionCompiler.LightExpression\ExpressionVisitor.cs",
-    ".\src\FastExpressionCompiler.LightExpression\FlatExpression.cs"
+    ".\src\FastExpressionCompiler.LightExpression\ExpressionVisitor.cs"
 )
 $outputFolder = ".\src\FastExpressionCompiler.Internal"
 

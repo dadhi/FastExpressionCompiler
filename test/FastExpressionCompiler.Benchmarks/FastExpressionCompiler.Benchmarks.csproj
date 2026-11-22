@@ -24,6 +24,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\src\FastExpressionCompiler.LightExpression\FastExpressionCompiler.LightExpression.csproj"/>
+        <ProjectReference Include="..\..\src\FastExpressionCompiler.FlatExpression\FastExpressionCompiler.FlatExpression.csproj"/>
         <ProjectReference Include="..\..\src\FastExpressionCompiler\FastExpressionCompiler.csproj"/>
         <ProjectReference Include="..\FastExpressionCompiler.IssueTests\FastExpressionCompiler.IssueTests.csproj"/>
         <ProjectReference Include="..\FastExpressionCompiler.LightExpression.IssueTests\FastExpressionCompiler.LightExpression.IssueTests.csproj"/>
