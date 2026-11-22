@@ -11,6 +11,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\src\FastExpressionCompiler.LightExpression\FastExpressionCompiler.LightExpression.csproj" />
+        <ProjectReference Include="..\..\src\FastExpressionCompiler.FlatExpression\FastExpressionCompiler.FlatExpression.csproj" />
     </ItemGroup>
 </Project>

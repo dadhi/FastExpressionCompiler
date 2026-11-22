@@ -6,7 +6,6 @@ namespace FastExpressionCompiler.LightExpression.UnitTests;
 using Expr = System.Linq.Expressions.Expression;
 namespace FastExpressionCompiler.UnitTests;
 #else
-using FastExpressionCompiler.LightExpression;
 namespace FastExpressionCompiler.FlatExpression.UnitTests;
 #endif
 

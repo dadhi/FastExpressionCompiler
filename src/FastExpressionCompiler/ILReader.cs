@@ -20,6 +20,9 @@ using System.Linq;
 #if LIGHT_EXPRESSION
 using FastExpressionCompiler.LightExpression.ImTools;
 namespace FastExpressionCompiler.LightExpression.ILDecoder;
+#elif FLAT_EXPRESSION
+using FastExpressionCompiler.FlatExpression.ImTools;
+namespace FastExpressionCompiler.FlatExpression.ILDecoder;
 #else
 using FastExpressionCompiler.ImTools;
 namespace FastExpressionCompiler.ILDecoder;

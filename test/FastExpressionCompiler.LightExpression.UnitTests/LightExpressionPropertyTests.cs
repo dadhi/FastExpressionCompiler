@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using FastExpressionCompiler.FlatExpression;
+using FlatCompiler = FastExpressionCompiler.FlatExpression.ExpressionCompiler;
 using SysExpr = System.Linq.Expressions.Expression;
 using SysSwitchCase = System.Linq.Expressions.SwitchCase;
 using SysCatchBlock = System.Linq.Expressions.CatchBlock;
@@ -22,7 +23,7 @@ public partial class LightExpressionTests
                 FillFlat(ref built, testCase.Spec);
                 GeneratedExpressionComparer.AreEqual(
                     CreateGeneratedLightExpression(testCase.Spec),
-                    built.ToLightExpression());
+                    built.ToExpression().ToLightExpression());
             },
                 iter: 100,
                 threads: 1,
@@ -51,7 +52,7 @@ public partial class LightExpressionTests
                 FillFlat(ref native, testCase.Spec);
                 AssertCollectMatch(lightExpr, ref native, testCase.Seed.ToString());
                 var roundtrip = default(ExprTree);
-                lightExpr.ToFlatExpression(ref roundtrip);
+                lightExpr.ToExpression().ToFlatExpression(ref roundtrip);
                 AssertCollectMatch(lightExpr, ref roundtrip, testCase.Seed + " roundtrip");
             },
             iter: 100,
@@ -70,8 +71,8 @@ public partial class LightExpressionTests
                 pFe.MakeBinary(ExpressionType.GreaterThan, p, pFe.ConstantInt(0)),
                 pFe.Not(pFe.Equal(p, pFe.ConstantInt(2)))),
             p);
-        var pred = ExpressionCompiler.CompileFast<Func<int, bool>>(ref pFe, ifFastFailedReturnNull: true);
-        var expectedPred = ((LambdaExpression)pFe.ToLightExpression()).CompileFast<Func<int, bool>>(true);
+        var pred = FlatCompiler.CompileFast<Func<int, bool>>(ref pFe, ifFastFailedReturnNull: true);
+        var expectedPred = ((LambdaExpression)pFe.ToExpression().ToLightExpression()).CompileFast<Func<int, bool>>(true);
         Ensure(pred != null && expectedPred != null, "bool emit");
         foreach (var arg in new[] { -2, 0, 1, 2, 5 })
             Ensure(pred(arg) == expectedPred(arg), $"bool {arg}");
@@ -79,28 +80,28 @@ public partial class LightExpressionTests
         var box = new string('q', 3);
         var constFe = default(ExprTree);
         constFe.RootIdx = constFe.Lambda<Func<string>>(constFe.Constant(box));
-        var got = ExpressionCompiler.CompileFast<Func<string>>(ref constFe, true);
+        var got = FlatCompiler.CompileFast<Func<string>>(ref constFe, true);
         Ensure(got != null && ReferenceEquals(got(), box), "closure constant");
 
         var callFe = default(ExprTree);
         var cp = callFe.ParameterOf<int>("p");
         var abs = typeof(Math).GetMethod(nameof(Math.Abs), new[] { typeof(int) });
         callFe.RootIdx = callFe.Lambda<Func<int, int>>(callFe.Call(abs, cp), cp);
-        var callFast = ExpressionCompiler.CompileFast<Func<int, int>>(ref callFe, true);
-        var callSlow = ((LambdaExpression)callFe.ToLightExpression()).CompileFast<Func<int, int>>(true);
+        var callFast = FlatCompiler.CompileFast<Func<int, int>>(ref callFe, true);
+        var callSlow = ((LambdaExpression)callFe.ToExpression().ToLightExpression()).CompileFast<Func<int, int>>(true);
         Ensure(callFast != null && callFast(-4) == callSlow(-4), "call");
 
         var arrFe = default(ExprTree);
         var ap = arrFe.ParameterOf<int>("p");
         arrFe.RootIdx = arrFe.Lambda<Func<int, int>>(
             arrFe.ArrayIndex(arrFe.NewArrayInit(typeof(int), ap, arrFe.ConstantInt(3)), arrFe.ConstantInt(1)), ap);
-        var arrFast = ExpressionCompiler.CompileFast<Func<int, int>>(ref arrFe, true);
+        var arrFast = FlatCompiler.CompileFast<Func<int, int>>(ref arrFe, true);
         Ensure(arrFast != null && arrFast(9) == 3, "array");
 
         var lenFe = default(ExprTree);
         var sp = lenFe.ParameterOf<string>("s");
         lenFe.RootIdx = lenFe.Lambda<Func<string, int>>(lenFe.Property(sp, typeof(string).GetProperty(nameof(string.Length))), sp);
-        var lenFast = ExpressionCompiler.CompileFast<Func<string, int>>(ref lenFe, true);
+        var lenFast = FlatCompiler.CompileFast<Func<string, int>>(ref lenFe, true);
         Ensure(lenFast != null && lenFast("abcd") == 4, "member");
 
         var blockFe = default(ExprTree);
@@ -108,20 +109,20 @@ public partial class LightExpressionTests
         var bv = blockFe.Variable(typeof(int), "v");
         blockFe.RootIdx = blockFe.Lambda<Func<int, int>>(
             blockFe.Block(typeof(int), new[] { bv }, blockFe.Assign(bv, blockFe.Add(bp, blockFe.ConstantInt(1))), bv), bp);
-        var blockFast = ExpressionCompiler.CompileFast<Func<int, int>>(ref blockFe, true);
-        var blockSlow = ((LambdaExpression)blockFe.ToLightExpression()).CompileFast<Func<int, int>>(true);
+        var blockFast = FlatCompiler.CompileFast<Func<int, int>>(ref blockFe, true);
+        var blockSlow = ((LambdaExpression)blockFe.ToExpression().ToLightExpression()).CompileFast<Func<int, int>>(true);
         Ensure(blockFast != null && blockFast(10) == blockSlow(10), "block");
 
         var capFe = default(ExprTree);
         var capP = capFe.ParameterOf<int>("p");
         capFe.RootIdx = capFe.Lambda<Func<int, Func<int>>>(capFe.Lambda<Func<int>>(capFe.Add(capP, capFe.ConstantInt(1))), capP);
-        var capFast = ExpressionCompiler.CompileFast<Func<int, Func<int>>>(ref capFe, true);
+        var capFast = FlatCompiler.CompileFast<Func<int, Func<int>>>(ref capFe, true);
         Ensure(capFast != null && capFast(3)() == 4, "capture");
 
         var plainFe = default(ExprTree);
         var plainP = plainFe.ParameterOf<int>("p");
         plainFe.RootIdx = plainFe.Lambda<Func<int, Func<int>>>(plainFe.Lambda<Func<int>>(plainFe.ConstantInt(7)), plainP);
-        var plainFast = ExpressionCompiler.CompileFast<Func<int, Func<int>>>(ref plainFe, true);
+        var plainFast = FlatCompiler.CompileFast<Func<int, Func<int>>>(ref plainFe, true);
         Ensure(plainFast != null && plainFast(0)() == 7, "nested constant");
 
         var invFe = default(ExprTree);
@@ -129,7 +130,7 @@ public partial class LightExpressionTests
         var invQ = invFe.ParameterOf<int>("q");
         invFe.RootIdx = invFe.Lambda<Func<int, int>>(
             invFe.Invoke(invFe.Lambda<Func<int, int>>(invFe.Add(invQ, invFe.ConstantInt(1)), invQ), invP), invP);
-        var invFast = ExpressionCompiler.CompileFast<Func<int, int>>(ref invFe, true);
+        var invFast = FlatCompiler.CompileFast<Func<int, int>>(ref invFe, true);
         Ensure(invFast != null && invFast(10) == 11, "inline invoke");
 
         var niFe = default(ExprTree);
@@ -137,8 +138,8 @@ public partial class LightExpressionTests
         var niQ = niFe.ParameterOf<int>("q");
         niFe.RootIdx = niFe.Lambda<Func<int, int>>(
             niFe.Invoke(niFe.Lambda<Func<int, int>>(niFe.Add(niQ, niP), niQ), niFe.ConstantInt(10)), niP);
-        var niFast = ExpressionCompiler.CompileFast<Func<int, int>>(ref niFe, true,
-            FastExpressionCompiler.LightExpression.CompilerFlags.NoInvocationLambdaInlining);
+        var niFast = FlatCompiler.CompileFast<Func<int, int>>(ref niFe, true,
+            FastExpressionCompiler.FlatExpression.CompilerFlags.NoInvocationLambdaInlining);
         Ensure(niFast != null && niFast(3) == 13, "invoke delegate");
 
         var text = new string('z', 4);
@@ -148,7 +149,7 @@ public partial class LightExpressionTests
         var toString = typeof(int).GetMethod(nameof(int.ToString), Type.EmptyTypes);
         bothFe.RootIdx = bothFe.Lambda<Func<int, Func<string>>>(
             bothFe.Lambda<Func<string>>(bothFe.Call(concat, bothFe.Constant(text), bothFe.Call(bothP, toString))), bothP);
-        var bothFast = ExpressionCompiler.CompileFast<Func<int, Func<string>>>(ref bothFe, true);
+        var bothFast = FlatCompiler.CompileFast<Func<int, Func<string>>>(ref bothFe, true);
         Ensure(bothFast != null && bothFast(7)() == text + "7", "capture and closure constant");
 
         Gen.Int[0, int.MaxValue / 2]
@@ -158,7 +159,7 @@ public partial class LightExpressionTests
                 var light = CreateGeneratedLightNested(testCase.Spec);
                 var fe = default(ExprTree);
                 FillFlatNested(ref fe, testCase.Spec);
-                var fast = ExpressionCompiler.CompileFast<Func<int, Func<int>>>(ref fe, true);
+                var fast = FlatCompiler.CompileFast<Func<int, Func<int>>>(ref fe, true);
                 var slow = light.CompileFast<Func<int, Func<int>>>(true);
                 Ensure(fast != null && slow != null, testCase.Seed + " nested compile");
                 foreach (var arg in new[] { -2, 0, 1, 5 })
@@ -176,7 +177,7 @@ public partial class LightExpressionTests
                 var lightExpr = CreateGeneratedLightExpression(testCase.Spec);
                 var fe = default(ExprTree);
                 FillFlat(ref fe, testCase.Spec);
-                var fast = ExpressionCompiler.CompileFast<Func<int, int>>(ref fe, true);
+                var fast = FlatCompiler.CompileFast<Func<int, int>>(ref fe, true);
                 var slow = lightExpr.CompileFast<Func<int, int>>(true);
                 Ensure(fast != null && slow != null, testCase.Seed + " compile");
                 foreach (var arg in new[] { -2, 0, 1, 5 })
@@ -260,8 +261,8 @@ public partial class LightExpressionTests
         var back2 = ((System.Linq.Expressions.Expression<Func<int, int>>)fe.ToExpression()).ToFlatExpression();
         Ensure(fe.Equals(back2), "structural roundtrip: Equals");
         Ensure(fe.GetHashCode() == back2.GetHashCode(), "structural roundtrip: GetHashCode");
-        var light = fe.ToLightExpression();
-        Ensure(fe.Equals(light.ToFlatExpression()), "flat->light->flat roundtrip");
+        var light = fe.ToExpression().ToLightExpression();
+        Ensure(fe.Equals(light.ToExpression().ToFlatExpression()), "flat->sys->flat roundtrip");
 
         int Count(Func<ExprNode, bool> match)
         {
@@ -285,7 +286,7 @@ public partial class LightExpressionTests
 
         if (catchFilter) return true; // FEC does not support catch filters, the structure is checked above
 
-        var fast = fe.ToLightExpression() is FastExpressionCompiler.LightExpression.LambdaExpression fl
+        var fast = fe.ToExpression().ToLightExpression() is FastExpressionCompiler.LightExpression.LambdaExpression fl
             ? fl.CompileFast<Func<int, int>>(ifFastFailedReturnNull: true) : null;
         Ensure(fast != null, "CompileFast failed");
         var expected = lambda.Compile();
@@ -293,7 +294,7 @@ public partial class LightExpressionTests
         static int Run(Func<int, int> f, int arg) { try { return f(arg); } catch (Exception) { return int.MinValue; } }
         foreach (var arg in new[] { -1, 0, 1, 2, 5 })
             Ensure(Run(fast, arg) == Run(expected, arg), $"result for {arg}");
-        var flatFast = ExpressionCompiler.CompileFast<Func<int, int>>(ref fe, true);
+        var flatFast = FlatCompiler.CompileFast<Func<int, int>>(ref fe, true);
         Ensure(flatFast != null, "flat emit failed");
         foreach (var arg in new[] { -1, 0, 1, 2, 5 })
             Ensure(Run(flatFast, arg) == Run(expected, arg), $"flat result for {arg}");
@@ -304,7 +305,7 @@ public partial class LightExpressionTests
     {
         var fe = default(ExprTree);
         CreateComplexFlatExpression(ref fe, "state");
-        var fast = ExpressionCompiler.CompileFast<Func<object[], object>>(ref fe, true);
+        var fast = FlatCompiler.CompileFast<Func<object[], object>>(ref fe, true);
         Asserts.IsNotNull(fast);
         var light = CreateComplexLightExpression("state").CompileFast(true);
         var input = new object[12];
@@ -329,17 +330,17 @@ public partial class LightExpressionTests
         var flatExpr = default(ExprTree);
         FillFlat(ref flatExpr, spec);
         var expected = lightExpr.CompileFast(true)(3);
-        var flatOnce = ExpressionCompiler.CompileFast<Func<int, int>>(ref flatExpr, true);
+        var flatOnce = FlatCompiler.CompileFast<Func<int, int>>(ref flatExpr, true);
         Asserts.IsNotNull(flatOnce);
         Asserts.AreEqual(expected, flatOnce(3));
 
         for (var i = 0; i < 16; ++i)
         {
-            ExpressionCompiler.CompileFast<Func<int, int>>(ref flatExpr, true);
+            FlatCompiler.CompileFast<Func<int, int>>(ref flatExpr, true);
             lightExpr.CompileFast(true);
         }
         Check.Faster(
-            () => { ExpressionCompiler.CompileFast<Func<int, int>>(ref flatExpr, true); },
+            () => { FlatCompiler.CompileFast<Func<int, int>>(ref flatExpr, true); },
             () => { lightExpr.CompileFast(true); },
             threads: 1, repeat: 8, timeout: 15);
 
@@ -348,11 +349,11 @@ public partial class LightExpressionTests
         var complexLight = CreateComplexLightExpression();
         for (var i = 0; i < 16; ++i)
         {
-            ExpressionCompiler.CompileFast<Func<object[], object>>(ref complexFlat, true);
+            FlatCompiler.CompileFast<Func<object[], object>>(ref complexFlat, true);
             complexLight.CompileFast(true);
         }
         Check.Faster(
-            () => { ExpressionCompiler.CompileFast<Func<object[], object>>(ref complexFlat, true); },
+            () => { FlatCompiler.CompileFast<Func<object[], object>>(ref complexFlat, true); },
             () => { complexLight.CompileFast(true); },
             threads: 1, repeat: 4, timeout: 15);
     }
@@ -364,7 +365,7 @@ public partial class LightExpressionTests
         var light = CreateComplexLightExpression();
         for (var i = 0; i < 64; ++i)
         {
-            ExpressionCompiler.CompileFast<Func<object[], object>>(ref flat, true);
+            FlatCompiler.CompileFast<Func<object[], object>>(ref flat, true);
             light.CompileFast(true);
         }
 
@@ -376,7 +377,7 @@ public partial class LightExpressionTests
             return GC.GetAllocatedBytesForCurrentThread() - before;
         }
 
-        var flatBytes = Measure(() => ExpressionCompiler.CompileFast<Func<object[], object>>(ref flat, true));
+        var flatBytes = Measure(() => FlatCompiler.CompileFast<Func<object[], object>>(ref flat, true));
         var lightBytes = Measure(() => light.CompileFast(true));
         // A leaked Type[2] is 40 bytes a compile. A few bytes of pool noise is not.
         Ensure(flatBytes <= lightBytes + 64 * 16, $"flat {flatBytes} light {lightBytes}");
@@ -394,11 +395,11 @@ public partial class LightExpressionTests
         var lightR = ExpressionCompiler.TryCollectInfo(
             ref lightCtx, light.Body, null, ref lightCtx.NestedLambdas, 0, true);
 
-        var flatCtx = new ExpressionCompiler.CompilerContext(
-            ExpressionCompiler.ClosureStatus.ToBeCollected, null, FastExpressionCompiler.LightExpression.CompilerFlags.Default);
-        var flatR = ExpressionCompiler.TryCollectInfo(ref flatCtx, ref fe);
+        var flatCtx = new FlatCompiler.CompilerContext(
+            FlatCompiler.ClosureStatus.ToBeCollected, null, FastExpressionCompiler.FlatExpression.CompilerFlags.Default);
+        var flatR = FlatCompiler.TryCollectInfo(ref flatCtx, ref fe);
 
-        Ensure(flatR == lightR, $"{tag}: result flat={flatR} light={lightR}");
+        Ensure((int)flatR == (int)lightR, $"{tag}: result flat={flatR} light={lightR}");
         if (lightR != ExpressionCompiler.Result.OK)
             return;
 
@@ -409,8 +410,8 @@ public partial class LightExpressionTests
         for (var i = 0; i < lightCtx.Constants.Count; ++i)
             Ensure(ReferenceEquals(flatCtx.Constants[i], lightCtx.Constants[i]), $"{tag}: constant {i}");
 
-        var closure = ExpressionCompiler.ClosureStatus.HasClosure;
-        Ensure((flatCtx.Status & closure) == (lightCtx.Status & closure), $"{tag}: HasClosure");
+        Ensure(((int)flatCtx.Status & (int)FlatCompiler.ClosureStatus.HasClosure) ==
+            ((int)lightCtx.Status & (int)ExpressionCompiler.ClosureStatus.HasClosure), $"{tag}: HasClosure");
     }
 
     private static FastExpressionCompiler.LightExpression.LambdaExpression CreateGeneratedLightNested(IntSpec spec)

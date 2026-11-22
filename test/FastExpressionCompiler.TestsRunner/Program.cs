@@ -57,7 +57,7 @@ namespace FastExpressionCompiler.UnitTests
             var testXStopwatch = Stopwatch.StartNew();
             var st = new TestRun(TestFlags.RethrowException);
             var lt = new LightExpression.TestRun(LightExpression.TestFlags.RethrowException);
-            var ft = new LightExpression.TestRun(LightExpression.TestFlags.RethrowException);
+            var ft = new FlatExpression.TestRun(FlatExpression.TestFlags.RethrowException);
             ft.Run(new FlatExpression.UnitTests.IntAddCompileTests());
             ft.Run(new FlatExpression.UnitTests.CallTests());
 

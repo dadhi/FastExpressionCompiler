@@ -63,7 +63,6 @@
         <file src="..\src\FastExpressionCompiler\TestTools.cs" target="contentFiles\cs\net472\FastExpressionCompiler.LightExpression" />
         <file src="..\src\FastExpressionCompiler.LightExpression\Expression.cs" target="contentFiles\cs\net472\FastExpressionCompiler.LightExpression" />
         <file src="..\src\FastExpressionCompiler.LightExpression\ExpressionVisitor.cs" target="contentFiles\cs\net472\FastExpressionCompiler.LightExpression" />
-        <file src="..\src\FastExpressionCompiler.LightExpression\FlatExpression.cs" target="contentFiles\cs\net472\FastExpressionCompiler.LightExpression" />
 
         <file src="..\src\FastExpressionCompiler\FastExpressionCompiler.cs" target="contentFiles\cs\netstandard2.1\FastExpressionCompiler.LightExpression" />
         <file src="..\src\FastExpressionCompiler\ImTools.cs" target="contentFiles\cs\netstandard2.1\FastExpressionCompiler.LightExpression" />
@@ -71,7 +70,6 @@
         <file src="..\src\FastExpressionCompiler\TestTools.cs" target="contentFiles\cs\netstandard2.1\FastExpressionCompiler.LightExpression" />
         <file src="..\src\FastExpressionCompiler.LightExpression\Expression.cs" target="contentFiles\cs\netstandard2.1\FastExpressionCompiler.LightExpression" />
         <file src="..\src\FastExpressionCompiler.LightExpression\ExpressionVisitor.cs" target="contentFiles\cs\netstandard2.1\FastExpressionCompiler.LightExpression" />
-        <file src="..\src\FastExpressionCompiler.LightExpression\FlatExpression.cs" target="contentFiles\cs\netstandard2.1\FastExpressionCompiler.LightExpression" />
 
         <file src="..\src\FastExpressionCompiler\FastExpressionCompiler.cs" target="contentFiles\cs\net8.0\FastExpressionCompiler.LightExpression" />
         <file src="..\src\FastExpressionCompiler\ImTools.cs" target="contentFiles\cs\net8.0\FastExpressionCompiler.LightExpression" />
@@ -79,7 +77,6 @@
         <file src="..\src\FastExpressionCompiler\TestTools.cs" target="contentFiles\cs\net8.0\FastExpressionCompiler.LightExpression" />
         <file src="..\src\FastExpressionCompiler.LightExpression\Expression.cs" target="contentFiles\cs\net8.0\FastExpressionCompiler.LightExpression" />
         <file src="..\src\FastExpressionCompiler.LightExpression\ExpressionVisitor.cs" target="contentFiles\cs\net8.0\FastExpressionCompiler.LightExpression" />
-        <file src="..\src\FastExpressionCompiler.LightExpression\FlatExpression.cs" target="contentFiles\cs\net8.0\FastExpressionCompiler.LightExpression" />
 
     </files>
 </package>

@@ -176,7 +176,7 @@ namespace FastExpressionCompiler.Benchmarks
             {
                 var fe = default(ExprTree);
                 CreateManualFlatExpr(ref fe);
-                return LightExpression.ExpressionCompiler.CompileFast<Func<B, X>>(ref fe, true);
+                return FlatExpression.ExpressionCompiler.CompileFast<Func<B, X>>(ref fe, true);
             }
         }
 
@@ -292,7 +292,7 @@ namespace FastExpressionCompiler.Benchmarks
 
             [Benchmark]
             public Func<B, X> CompileFast_FlatExpression() =>
-                LightExpression.ExpressionCompiler.CompileFast<Func<B, X>>(ref _flatExpr, true);
+                FlatExpression.ExpressionCompiler.CompileFast<Func<B, X>>(ref _flatExpr, true);
         }
 
         [MemoryDiagnoser, RankColumn, Orderer(BenchmarkDotNet.Order.SummaryOrderPolicy.FastestToSlowest)]
@@ -368,7 +368,7 @@ namespace FastExpressionCompiler.Benchmarks
             private static readonly Func<B, X> _lambdaCompiledFast_Flat = CompileFlat();
 
             private static Func<B, X> CompileFlat() =>
-                LightExpression.ExpressionCompiler.CompileFast<Func<B, X>>(ref _flatExpr, true);
+                FlatExpression.ExpressionCompiler.CompileFast<Func<B, X>>(ref _flatExpr, true);
 
             private static readonly A _aa = new A();
             private static readonly B _bb = new B();

@@ -1,9 +1,8 @@
 using System;
-#if FLAT_EXPRESSION || LIGHT_EXPRESSION
-using FastExpressionCompiler.LightExpression;
-#endif
 #if FLAT_EXPRESSION
 using FastExpressionCompiler.FlatExpression;
+#elif LIGHT_EXPRESSION
+using FastExpressionCompiler.LightExpression;
 #endif
 
 namespace FastExpressionCompiler;
@@ -27,7 +26,7 @@ static class TestCompile
     {
         var expr = test.ExprTree;
         expr.RootIdx = expression.Idx;
-        return (TDelegate)((LightExpression.LambdaExpression)expr.ToLightExpression()).CompileSys();
+        return (TDelegate)((System.Linq.Expressions.LambdaExpression)expr.ToExpression()).Compile();
     }
 #elif LIGHT_EXPRESSION
     public static TDelegate CompileFast<TDelegate, TTest>(this Expression<TDelegate> expression, bool ifFastFailedReturnNull, in TTest test,

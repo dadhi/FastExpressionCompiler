@@ -7,7 +7,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using FastExpressionCompiler.LightExpression.ImTools;
+using FastExpressionCompiler.FlatExpression.ImTools;
 using SysCatchBlock = System.Linq.Expressions.CatchBlock;
 using SysElementInit = System.Linq.Expressions.ElementInit;
 using SysExpr = System.Linq.Expressions.Expression;
@@ -15,7 +15,7 @@ using SysLabelTarget = System.Linq.Expressions.LabelTarget;
 using SysMemberBinding = System.Linq.Expressions.MemberBinding;
 using SysParameterExpression = System.Linq.Expressions.ParameterExpression;
 using SysSwitchCase = System.Linq.Expressions.SwitchCase;
-using ChildIdxs = LightExpression.ImTools.SmallList<ushort, LightExpression.ImTools.Stack8<ushort>, LightExpression.ImTools.NoArrayPool<ushort>>;
+using ChildIdxs = FastExpressionCompiler.FlatExpression.ImTools.SmallList<ushort, FastExpressionCompiler.FlatExpression.ImTools.Stack8<ushort>, FastExpressionCompiler.FlatExpression.ImTools.NoArrayPool<ushort>>;
 
 /// <summary>Kind if the node payload.</summary>
 public enum ExprNodeKind : byte
@@ -197,7 +197,7 @@ public partial struct ExprTree : IEquatable<ExprTree>
     /// Collect copies hits into the current lambda; do not dump this list into the root (nested would over-close).</summary>
     public SmallList<object, Stack16<object>, NoArrayPool<object>> ClosureConstants;
 
-    // Import-only identity maps (valid during FromSysExpr / FromLightExpr).
+    // Import-only identity maps (valid during FromSysExpr).
     private SmallMap16<object, int, RefEq<object>> _parameterIds;
     private SmallMap16<object, int, RefEq<object>> _labelIds;
 
@@ -335,7 +335,7 @@ public partial struct ExprTree : IEquatable<ExprTree>
     public ushort New(ConstructorInfo ctor) => AddNode(ExpressionType.New, ctor.DeclaringType, ctor);
 
     /// <summary>Adds a parameterless <c>new</c> node for the specified type.</summary>
-    [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
+    [RequiresUnreferencedCode(Trimming.Message)]
     public ushort New(Type type)
     {
         if (type.IsValueType)
@@ -909,7 +909,7 @@ public partial struct ExprTree : IEquatable<ExprTree>
     }
 
     /// <summary>Flattens a System.Linq expression into this tree and sets <see cref="RootIdx"/>.</summary>
-    [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
+    [RequiresUnreferencedCode(Trimming.Message)]
     public ushort FromSysExpr(SysExpr expr)
     {
         _parameterIds = default;
@@ -918,18 +918,7 @@ public partial struct ExprTree : IEquatable<ExprTree>
         return (ushort)RootIdx;
     }
 
-    /// <summary>Flattens a LightExpression into this tree directly, without the System.Linq expressions in between,
-    /// and sets <see cref="RootIdx"/>. Mirrors <c>AddSysExpression</c>: keep the two in sync.</summary>
-    [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
-    public ushort FromLightExpr(LightExpression.Expression expr)
-    {
-        _parameterIds = default;
-        _labelIds = default;
-        RootIdx = AddLightExpression(expr);
-        return (ushort)RootIdx;
-    }
-
-    [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
+    [RequiresUnreferencedCode(Trimming.Message)]
     private ushort AddSysExpression(SysExpr expr)
     {
         switch (expr.NodeType)
@@ -1174,7 +1163,7 @@ public partial struct ExprTree : IEquatable<ExprTree>
         return LabelTargetWithId(type, name, id);
     }
 
-    [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
+    [RequiresUnreferencedCode(Trimming.Message)]
     private ushort AddSysMemberBinding(SysMemberBinding binding)
     {
         switch (binding.BindingType)
@@ -1202,7 +1191,7 @@ public partial struct ExprTree : IEquatable<ExprTree>
         }
     }
 
-    [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
+    [RequiresUnreferencedCode(Trimming.Message)]
     private ushort AddSysElementInit(SysElementInit init)
     {
         var args = new ushort[init.Arguments.Count];
@@ -1220,7 +1209,7 @@ public partial struct ExprTree : IEquatable<ExprTree>
     }
 
     /// <summary>Reconstructs the flat tree as a System.Linq expression tree.</summary>
-    [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
+    [RequiresUnreferencedCode(Trimming.Message)]
     [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2077",
         Justification = "Flat expression round-trip stores the runtime type metadata explicitly for reconstruction.")]
     public SysExpr ToExpression() =>
@@ -1665,7 +1654,7 @@ public partial struct ExprTree : IEquatable<ExprTree>
             _labelsById = default;
         }
 
-        [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
+        [RequiresUnreferencedCode(Trimming.Message)]
         [UnconditionalSuppressMessage("ReflectionAnalysis", "IL2077",
             Justification = "Flat expression round-trip stores the runtime type metadata explicitly for reconstruction.")]
         public SysExpr ReadExpression(int idx)
@@ -1925,7 +1914,7 @@ public partial struct ExprTree : IEquatable<ExprTree>
             second = node.ChildCount;
         }
 
-        [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
+        [RequiresUnreferencedCode(Trimming.Message)]
         private SysMemberBinding ReadMemberBinding(int idx)
         {
             ref var node = ref _tree.Nodes.GetSurePresentRef(idx);
@@ -1955,7 +1944,7 @@ public partial struct ExprTree : IEquatable<ExprTree>
             }
         }
 
-        [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
+        [RequiresUnreferencedCode(Trimming.Message)]
         private SysElementInit ReadElementInit(int idx)
         {
             ref var node = ref _tree.Nodes.GetSurePresentRef(idx);
@@ -1965,7 +1954,7 @@ public partial struct ExprTree : IEquatable<ExprTree>
 
         private ChildIdxs GetChildren(int idx) => ExprTree.GetChildren(_tree, idx);
 
-        [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
+        [RequiresUnreferencedCode(Trimming.Message)]
         private SysExpr[] ReadExpressions(in ChildIdxs childIdxs)
         {
             var expressions = new SysExpr[childIdxs.Count];
@@ -2056,11 +2045,11 @@ internal static class FlatExpressionThrow
         throw new NotSupportedException($"Cannot convert value '{value}' of TypeCode {tc} to an inline constant");
 }
 
-/// <summary>Provides conversions from System and LightExpression trees to <see cref="ExprTree"/>.</summary>
+/// <summary>Provides conversions from System expression trees to <see cref="ExprTree"/>.</summary>
 public static class FlatExpressionExtensions
 {
     /// <summary>Flattens a System.Linq expression tree into a new <see cref="ExprTree"/>.</summary>
-    [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static ExprTree ToFlatExpression(this SysExpr expression)
     {
         ExprTree tree = default;
@@ -2069,27 +2058,10 @@ public static class FlatExpressionExtensions
     }
 
     /// <summary>Flattens a System.Linq expression tree into the supplied <see cref="ExprTree"/>.</summary>
-    [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
+    [RequiresUnreferencedCode(Trimming.Message)]
     public static ref ExprTree ToFlatExpression(this SysExpr expression, ref ExprTree exprTree)
     {
         exprTree.FromSysExpr(expression);
-        return ref exprTree;
-    }
-
-    /// <summary>Flattens a LightExpression tree into a new <see cref="ExprTree"/>.</summary>
-    [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
-    public static ExprTree ToFlatExpression(this LightExpression.Expression expression)
-    {
-        ExprTree tree = default;
-        tree.FromLightExpr(expression);
-        return tree;
-    }
-
-    /// <summary>Flattens a LightExpression tree into the supplied <see cref="ExprTree"/>.</summary>
-    [RequiresUnreferencedCode(LightExpression.Trimming.Message)]
-    public static ref ExprTree ToFlatExpression(this LightExpression.Expression expression, ref ExprTree exprTree)
-    {
-        exprTree.FromLightExpr(expression);
         return ref exprTree;
     }
 }

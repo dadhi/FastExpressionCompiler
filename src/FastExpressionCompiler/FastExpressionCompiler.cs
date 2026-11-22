@@ -41,10 +41,6 @@ THE SOFTWARE.
 #define SUPPORTS_IL_GENERATOR_REUSE
 #endif
 
-#if LIGHT_EXPRESSION && NET8_0_OR_GREATER
-#define FLAT_EXPRESSION
-#endif
-
 #if LIGHT_EXPRESSION
 namespace FastExpressionCompiler.LightExpression
 {
@@ -55,9 +51,16 @@ namespace FastExpressionCompiler.LightExpression
     using FastExpressionCompiler.LightExpression.ImTools;
     using FastExpressionCompiler.LightExpression.ILDecoder;
     using static FastExpressionCompiler.LightExpression.ImTools.SmallMap;
-#if FLAT_EXPRESSION
-    using FastExpressionCompiler.FlatExpression;
-#endif
+#elif FLAT_EXPRESSION
+namespace FastExpressionCompiler.FlatExpression
+{
+    using static System.Linq.Expressions.Expression;
+    using PE = System.Linq.Expressions.ParameterExpression;
+    using ParamExprs = System.Collections.Generic.IReadOnlyList<System.Linq.Expressions.ParameterExpression>;
+    using Bindings = System.Collections.Generic.IReadOnlyList<System.Linq.Expressions.MemberBinding>;
+    using FastExpressionCompiler.FlatExpression.ImTools;
+    using FastExpressionCompiler.FlatExpression.ILDecoder;
+    using static FastExpressionCompiler.FlatExpression.ImTools.SmallMap;
 #else
 namespace FastExpressionCompiler
 {
@@ -198,10 +201,11 @@ namespace FastExpressionCompiler
 
             var delegateType = typeof(TDelegate) == typeof(Delegate) ? rootNode.Type : typeof(TDelegate);
             var returnType = delegateType.GetMethod("Invoke").ReturnType;
-            var argCount = context.FlatArgIds.Count;
+            ref var argIds = ref context.FlatArgIds;
+            var argCount = argIds.Count;
             var paramTypes = RentFlatClosureParamTypes(argCount);
             for (var i = 0; i < argCount; ++i)
-                paramTypes[i + 1] = tree.Nodes.GetSurePresentRef(context.FlatArgIds.GetSurePresentRef(i)).Type;
+                paramTypes[i + 1] = tree.Nodes.GetSurePresentRef(argIds.GetSurePresentRef(i)).Type;
 
             var constants = (context.Status & ClosureStatus.HasClosure) != 0
                 ? context.GetArrayOfConstantsAndNestedLambdas()
@@ -2473,15 +2477,17 @@ namespace FastExpressionCompiler
             return next == 0 | next == owner ? (ushort)0 : next;
         }
 
+        [MethodImpl((MethodImplOptions)256)]
         static bool FlatIsDeclared(ref CompilerContext context, ushort id,
             ref SmallList<ushort, Stack8<ushort>, NoArrayPool<ushort>> locals)
         {
             for (var i = locals.Count - 1; i >= 0; --i)
                 if (locals.GetSurePresentRef(i) == id)
                     return true;
-            var argCount = context.FlatArgIds.Count;
+            ref var argIds = ref context.FlatArgIds;
+            var argCount = argIds.Count;
             for (var i = 0; i < argCount; ++i)
-                if (context.FlatArgIds.GetSurePresentRef(i) == id)
+                if (argIds.GetSurePresentRef(i) == id)
                     return true;
             return false;
         }
@@ -2505,16 +2511,18 @@ namespace FastExpressionCompiler
                         return Result.OK;
 
                     case ExpressionType.Parameter:
-                        if (!FlatIsDeclared(ref context, n.ChildIdx, ref locals))
+                        var parameterId = n.ChildIdx;
+                        if (!FlatIsDeclared(ref context, parameterId, ref locals))
                         {
                             if (nestedLambda == null)
                                 return Result.ParameterIsNotVariableNorInPassedParameters;
-                            var captured = n.ChildIdx;
+                            ref var capturedIds = ref nestedLambda.CapturedIds;
                             var seen = false;
-                            for (var i = 0; !seen && i < nestedLambda.CapturedIds.Count; ++i)
-                                seen = nestedLambda.CapturedIds.GetSurePresentRef(i) == captured;
+                            var capturedCount = capturedIds.Count;
+                            for (var i = 0; !seen && i < capturedCount; ++i)
+                                seen = capturedIds.GetSurePresentRef(i) == parameterId;
                             if (!seen)
-                                nestedLambda.CapturedIds.Add(captured);
+                                capturedIds.Add(parameterId);
                             context.Status |= ClosureStatus.HasClosure;
                         }
                         return Result.OK;
@@ -2546,9 +2554,10 @@ namespace FastExpressionCompiler
                         {
                             var method = (MethodInfo)n.Obj;
                             var child = n.ChildIdx;
+                            var callChildCount = n.ChildCount;
                             if (!method.IsStatic)
                             {
-                                if (n.ChildCount == 1)
+                                if (callChildCount == 1)
                                 {
                                     idx = child;
                                     continue;
@@ -2557,7 +2566,7 @@ namespace FastExpressionCompiler
                                     return r;
                                 child = FlatNext(ref tree, child, idx);
                             }
-                            else if (n.ChildCount == 0)
+                            else if (callChildCount == 0)
                                 return r;
                             return TryCollectFlatComplexArgs(ref context, ref tree, child, idx, lambdaIdx, ref locals, nestedLambda, ref rootNestedLambdas);
                         }
@@ -2569,14 +2578,16 @@ namespace FastExpressionCompiler
 
                     case ExpressionType.NewArrayBounds:
                     case ExpressionType.NewArrayInit:
-                        if (n.NodeType == ExpressionType.NewArrayInit && n.Type.GetArrayRank() > 1)
+                        var arrayNodeType = n.NodeType;
+                        if (arrayNodeType == ExpressionType.NewArrayInit && n.Type.GetArrayRank() > 1)
                             return Result.NotSupported_NewArrayInit_MultidimensionalArray;
-                        if (n.ChildCount == 0)
+                        var arrayChildCount = n.ChildCount;
+                        if (arrayChildCount == 0)
                             return r;
                         {
-                            var isInit = n.NodeType == ExpressionType.NewArrayInit;
+                            var isInit = arrayNodeType == ExpressionType.NewArrayInit;
                             var elem = n.ChildIdx;
-                            for (var i = 0; i < n.ChildCount && elem != 0; ++i)
+                            for (var i = 0; i < arrayChildCount && elem != 0; ++i)
                             {
                                 var preceding = context.TryExpressionCount;
                                 if ((r = TryCollectFlat(ref context, ref tree, elem, lambdaIdx, ref locals, nestedLambda, ref rootNestedLambdas)) != Result.OK)
@@ -2678,20 +2689,22 @@ namespace FastExpressionCompiler
                         {
                             var exprsIdx = n.ChildIdx;
                             var saved = locals.Count;
+                            var blockChildCount = n.ChildCount;
                             var varNode = FlatNext(ref tree, exprsIdx, idx);
-                            for (var i = 1; i < n.ChildCount && varNode != 0; ++i)
+                            for (var i = 1; i < blockChildCount && varNode != 0; ++i)
                             {
                                 locals.Add(tree.Nodes.GetSurePresentRef(varNode).ChildIdx);
                                 varNode = FlatNext(ref tree, varNode, idx);
                             }
                             ref var exprs = ref tree.Nodes.GetSurePresentRef(exprsIdx);
-                            if (exprs.ChildCount == 0)
+                            var exprCount = exprs.ChildCount;
+                            if (exprCount == 0)
                             {
                                 locals.Count = saved;
                                 return r;
                             }
                             var e = exprs.ChildIdx;
-                            for (var i = 0; i < exprs.ChildCount - 1 && e != 0; ++i)
+                            for (var i = 0; i < exprCount - 1 && e != 0; ++i)
                             {
                                 if ((r = TryCollectFlat(ref context, ref tree, e, lambdaIdx, ref locals, nestedLambda, ref rootNestedLambdas)) != Result.OK)
                                     return r;
@@ -2858,6 +2871,7 @@ namespace FastExpressionCompiler
             return r;
         }
 
+        [MethodImpl((MethodImplOptions)256)]
         static void FlatMarkComplex(ref CompilerContext context, int idx)
         {
             context.HasComplexExpression = true;
@@ -9466,10 +9480,11 @@ namespace FastExpressionCompiler
             {
                 if ((parent & ParentFlags.IgnoreResult) != 0)
                     return true;
+                var obj = n.Obj;
                 bool ok;
-                if (ReferenceEquals(n.Obj, ExprNode.InlineValueMarker))
+                if (ReferenceEquals(obj, ExprNode.InlineValueMarker))
                     ok = EmitFlatInline(il, exprType, n.InlineValue);
-                else if (n.Obj == null)
+                else if (obj == null)
                 {
                     if (exprType.IsValueType)
                         ok = EmitLoadLocalVariable(il, InitValueTypeVariable(il, exprType));
@@ -9479,19 +9494,20 @@ namespace FastExpressionCompiler
                         ok = true;
                     }
                 }
-                else if (ReferenceEquals(n.Obj, ExprTree.ClosureConstantMarker))
+                else if (ReferenceEquals(obj, ExprTree.ClosureConstantMarker))
                 {
                     var value = tree.ClosureConstants.GetSurePresentRef(n.ChildIdx);
                     ok = TryEmitConstant(true, exprType, value.GetType(), value, il, ref context, byRefIndex);
                 }
                 else
-                    ok = TryEmitConstant(false, exprType, n.Obj.GetType(), n.Obj, il, ref context, byRefIndex);
+                    ok = TryEmitConstant(false, exprType, obj.GetType(), obj, il, ref context, byRefIndex);
                 if (ok & byRefIndex != -1)
                     EmitStoreAndLoadLocalVariableAddress(il, exprType);
                 context.LastEmitIsAddress = false;
                 return ok;
             }
 
+            [MethodImpl((MethodImplOptions)256)]
             static bool EmitFlatInline(ILGenerator il, Type type, uint data)
             {
                 var tc = type.IsEnum ? Type.GetTypeCode(Enum.GetUnderlyingType(type)) : Type.GetTypeCode(type);
@@ -9519,11 +9535,14 @@ namespace FastExpressionCompiler
                 }
             }
 
+            [MethodImpl((MethodImplOptions)256)]
             static int FlatLocalSlot(ref CompilerContext context, ushort id)
             {
-                for (var i = context.FlatLocalIds.Count - 1; i >= 0; --i)
-                    if (context.FlatLocalIds.GetSurePresentRef(i) == id)
-                        return context.FlatLocalSlots.GetSurePresentRef(i);
+                ref var ids = ref context.FlatLocalIds;
+                ref var slots = ref context.FlatLocalSlots;
+                for (var i = ids.Count - 1; i >= 0; --i)
+                    if (ids.GetSurePresentRef(i) == id)
+                        return slots.GetSurePresentRef(i);
                 return -1;
             }
 
@@ -9532,14 +9551,17 @@ namespace FastExpressionCompiler
                 if (byRefIndex != -1 || n.HasFlag(ExprTree.ParameterByRefFlag) ||
                     (parent & (ParentFlags.AssignmentLeftValue | ParentFlags.AssignmentByRef | ParentFlags.ReturnByRef)) != 0)
                     return false;
-                var local = FlatLocalSlot(ref context, n.ChildIdx);
+                var id = n.ChildIdx;
+                var type = n.Type;
+                var ignore = (parent & ParentFlags.IgnoreResult) != 0;
+                var local = FlatLocalSlot(ref context, id);
                 // A value-type instance call or member read must use the variable itself, not a copy.
-                var wantAddress = n.Type.IsValueType &&
+                var wantAddress = type.IsValueType &&
                     (parent & (ParentFlags.InstanceAccess | ParentFlags.MemberAccess)) != 0;
                 if (local >= 0)
                 {
                     context.LastEmitIsAddress = wantAddress;
-                    if ((parent & ParentFlags.IgnoreResult) != 0 && !wantAddress)
+                    if (ignore && !wantAddress)
                         return true;
                     if (wantAddress)
                         EmitLoadLocalVariableAddress(il, local);
@@ -9547,14 +9569,14 @@ namespace FastExpressionCompiler
                         EmitLoadLocalVariable(il, local);
                     return true;
                 }
-                var id = n.ChildIdx;
-                var argCount = context.FlatArgIds.Count;
+                ref var argIds = ref context.FlatArgIds;
+                var argCount = argIds.Count;
                 for (var i = 0; i < argCount; ++i)
                 {
-                    if (context.FlatArgIds.GetSurePresentRef(i) != id)
+                    if (argIds.GetSurePresentRef(i) != id)
                         continue;
                     context.LastEmitIsAddress = wantAddress;
-                    if ((parent & ParentFlags.IgnoreResult) != 0 && !wantAddress)
+                    if (ignore && !wantAddress)
                         return true;
                     if (wantAddress)
                         EmitLoadArgAddress(il, i + 1);
@@ -9562,19 +9584,20 @@ namespace FastExpressionCompiler
                         EmitLoadArg(il, i + 1);
                     return true;
                 }
-                var capturedCount = context.FlatCapturedIds.Count;
+                ref var capturedIds = ref context.FlatCapturedIds;
+                var capturedCount = capturedIds.Count;
                 for (var i = 0; i < capturedCount; ++i)
                 {
-                    if (context.FlatCapturedIds.GetSurePresentRef(i) != id)
+                    if (capturedIds.GetSurePresentRef(i) != id)
                         continue;
                     context.LastEmitIsAddress = false;
-                    if ((parent & ParentFlags.IgnoreResult) != 0)
+                    if (ignore)
                         return true;
                     il.Demit(OpCodes.Ldarg_0);
                     il.Demit(OpCodes.Ldfld, ArrayClosureWithNonPassedParamsField);
                     EmitLoadConstantInt(il, i);
                     il.Demit(OpCodes.Ldelem_Ref);
-                    return TryEmitCapturedParameterValue(il, n.Type, false, ref context);
+                    return TryEmitCapturedParameterValue(il, type, false, ref context);
                 }
                 return false;
             }
@@ -9619,10 +9642,11 @@ namespace FastExpressionCompiler
             {
                 if (n.Obj != null || n.ChildCount != 1)
                     return false;
+                var operandIdx = n.ChildIdx;
                 var operandFlags = (parent & ~ValueOperandFlagsToClear) | ParentFlags.AssignmentRightValue;
-                if (!TryEmitFlat(ref tree, n.ChildIdx, il, ref context, operandFlags))
+                if (!TryEmitFlat(ref tree, operandIdx, il, ref context, operandFlags))
                     return false;
-                ref var operand = ref tree.Nodes.GetSurePresentRef(n.ChildIdx);
+                ref var operand = ref tree.Nodes.GetSurePresentRef(operandIdx);
                 if (nodeType == ExpressionType.Not)
                 {
                     if (exprType == typeof(bool))
@@ -9679,15 +9703,17 @@ namespace FastExpressionCompiler
                     return false;
                 ref var leftNode = ref tree.Nodes.GetSurePresentRef(left);
                 ref var rightNode = ref tree.Nodes.GetSurePresentRef(right);
+                var leftType = leftNode.Type;
+                var rightType = rightNode.Type;
                 if (nodeType is ExpressionType.Equal or ExpressionType.NotEqual or ExpressionType.LessThan
                     or ExpressionType.LessThanOrEqual or ExpressionType.GreaterThan or ExpressionType.GreaterThanOrEqual)
                 {
-                    if (leftNode.Type != rightNode.Type || !leftNode.Type.IsPrimitive)
+                    if (leftType != rightType || !leftType.IsPrimitive)
                         return false;
-                    if (leftNode.Type.IsFloatingPoint() &&
+                    if (leftType.IsFloatingPoint() &&
                         nodeType is ExpressionType.LessThanOrEqual or ExpressionType.GreaterThanOrEqual)
                         return false; // shortcut: NaN, upgrade when the float compare matches Light
-                    var unsigned = leftNode.Type.IsUnsigned();
+                    var unsigned = leftType.IsUnsigned();
                     switch (nodeType)
                     {
                         case ExpressionType.Equal: il.Demit(OpCodes.Ceq); break;
@@ -9700,7 +9726,7 @@ namespace FastExpressionCompiler
                             il.Demit(unsigned ? OpCodes.Clt_Un : OpCodes.Clt); EmitEqualToZeroOrNull(il); break;
                     }
                 }
-                else if (!TryEmitArithmeticOperation(leftNode.Type, rightNode.Type, nodeType, exprType, il))
+                else if (!TryEmitArithmeticOperation(leftType, rightType, nodeType, exprType, il))
                     return false;
                 context.LastEmitIsAddress = false;
                 return il.EmitPopIfIgnoreResult(parent);
@@ -9724,10 +9750,12 @@ namespace FastExpressionCompiler
                     if (!TryEmitFlat(ref tree, child, il, ref context, ParentFlags.Call | ParentFlags.InstanceAccess))
                         return false;
                     instanceType = tree.Nodes.GetSurePresentRef(child).Type;
-                    if (instanceType.IsValueType && !context.LastEmitIsAddress)
+                    var valueInstance = instanceType.IsValueType;
+                    var address = context.LastEmitIsAddress;
+                    if (valueInstance && !address)
                         EmitStoreAndLoadLocalVariableAddress(il, instanceType);
                     if (spill)
-                        instanceVar = EmitStoreLocalVariable(il, instanceType.IsValueType && context.LastEmitIsAddress ? instanceType.MakeByRefType() : instanceType);
+                        instanceVar = EmitStoreLocalVariable(il, valueInstance && address ? instanceType.MakeByRefType() : instanceType);
                     child = FlatNext(ref tree, child, idx);
                 }
                 if (!EmitFlatPreparedArgs(ref tree, child, idx, pars, spill, il, ref context, out var argVars))
@@ -9769,9 +9797,12 @@ namespace FastExpressionCompiler
 
             static bool EmitFlatMember(ref ExprTree tree, ref ExprNode n, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
-                if (n.Obj is PropertyInfo length && length.DeclaringType == typeof(string) && length.Name == nameof(string.Length) && n.ChildCount == 1)
+                var obj = n.Obj;
+                var childCount = n.ChildCount;
+                var childIdx = n.ChildIdx;
+                if (obj is PropertyInfo length && length.DeclaringType == typeof(string) && length.Name == nameof(string.Length) && childCount == 1)
                 {
-                    ref var inst = ref tree.Nodes.GetSurePresentRef(n.ChildIdx);
+                    ref var inst = ref tree.Nodes.GetSurePresentRef(childIdx);
                     if (inst.NodeType == ExpressionType.Constant && inst.Obj is string text)
                     {
                         context.LastEmitIsAddress = false;
@@ -9780,27 +9811,27 @@ namespace FastExpressionCompiler
                         return true;
                     }
                 }
-                if (n.ChildCount > 1)
+                if (childCount > 1)
                     return false;
                 Type instanceType = null;
-                if (n.ChildCount == 1)
+                if (childCount == 1)
                 {
-                    if (!TryEmitFlat(ref tree, n.ChildIdx, il, ref context, ParentFlags.InstanceCall))
+                    if (!TryEmitFlat(ref tree, childIdx, il, ref context, ParentFlags.InstanceCall))
                         return false;
-                    instanceType = tree.Nodes.GetSurePresentRef(n.ChildIdx).Type;
+                    instanceType = tree.Nodes.GetSurePresentRef(childIdx).Type;
                     if (instanceType.IsValueType && !context.LastEmitIsAddress)
                         EmitStoreAndLoadLocalVariableAddress(il, instanceType);
                 }
-                if (parent.IgnoresResult() && n.Obj is FieldInfo)
+                if (parent.IgnoresResult() && obj is FieldInfo)
                 {
-                    if (n.ChildCount == 1)
+                    if (childCount == 1)
                         il.Demit(OpCodes.Pop);
                     return true;
                 }
                 context.LastEmitIsAddress = false;
-                if (n.Obj is PropertyInfo prop)
+                if (obj is PropertyInfo prop)
                     return EmitInstanceMethodCall(il, prop.GetMethod, instanceType) && il.EmitPopIfIgnoreResult(parent);
-                if (n.Obj is FieldInfo field)
+                if (obj is FieldInfo field)
                 {
                     il.Demit(field.IsStatic ? OpCodes.Ldsfld : OpCodes.Ldfld, field);
                     return il.EmitPopIfIgnoreResult(parent);
@@ -9825,14 +9856,16 @@ namespace FastExpressionCompiler
                         for (var i = 0; i < argVars.Count; ++i)
                             EmitLoadLocalVariable(il, argVars.GetSurePresentRef(i));
                 }
+                var valueType = exprType.IsValueType;
                 if (ctor != null)
                     il.Demit(OpCodes.Newobj, ctor);
-                else if (exprType.IsValueType)
+                else if (valueType)
                     EmitLoadLocalVariable(il, InitValueTypeVariable(il, exprType));
                 else
                     return false;
-                context.LastEmitIsAddress = (parent & ParentFlags.InstanceAccess) != 0 && !parent.IgnoresResult() && exprType.IsValueType;
-                if (context.LastEmitIsAddress)
+                var address = (parent & ParentFlags.InstanceAccess) != 0 && !parent.IgnoresResult() && valueType;
+                context.LastEmitIsAddress = address;
+                if (address)
                     EmitStoreAndLoadLocalVariableAddress(il, exprType);
                 return il.EmitPopIfIgnoreResult(parent);
             }
@@ -9850,7 +9883,10 @@ namespace FastExpressionCompiler
                 for (var binding = FlatNext(ref tree, child, idx); binding != 0; binding = FlatNext(ref tree, binding, idx))
                 {
                     ref var b = ref tree.Nodes.GetSurePresentRef(binding);
-                    if (!b.Is(ExprNodeKind.MemberAssignment) || b.ChildCount != 1 || b.Obj is not MemberInfo member)
+                    var member = b.Obj as MemberInfo;
+                    var valueIdx = b.ChildIdx;
+                    var memberType = b.Type;
+                    if (!b.Is(ExprNodeKind.MemberAssignment) || b.ChildCount != 1 || member == null)
                         return false;
                     if (member is PropertyInfo property)
                     {
@@ -9860,10 +9896,10 @@ namespace FastExpressionCompiler
                     else if (member is not FieldInfo field || field.IsStatic || field.IsInitOnly)
                         return false;
                     il.Demit(OpCodes.Dup);
-                    if (!TryEmitFlat(ref tree, b.ChildIdx, il, ref context, valueFlags))
+                    if (!TryEmitFlat(ref tree, valueIdx, il, ref context, valueFlags))
                         return false;
-                    var got = tree.Nodes.GetSurePresentRef(b.ChildIdx).Type;
-                    if (got != b.Type && !EmitFlatConvert(il, got, b.Type, false))
+                    var got = tree.Nodes.GetSurePresentRef(valueIdx).Type;
+                    if (got != memberType && !EmitFlatConvert(il, got, memberType, false))
                         return false;
                     if (!EmitMemberSet(il, member))
                         return false;
@@ -9872,6 +9908,7 @@ namespace FastExpressionCompiler
                 return il.EmitPopIfIgnoreResult(parent);
             }
 
+            [MethodImpl((MethodImplOptions)256)]
             static bool EmitFlatConvert(ILGenerator il, Type from, Type to, bool isChecked)
             {
                 if (from == to)
@@ -9891,27 +9928,29 @@ namespace FastExpressionCompiler
                 var elemType = exprType.GetElementType();
                 if (elemType == null || exprType.GetArrayRank() > 1)
                     return false;
+                var childCount = n.ChildCount;
+                var childIdx = n.ChildIdx;
                 if (nodeType == ExpressionType.NewArrayBounds)
                 {
-                    if (n.ChildCount != 1 || !TryEmitFlat(ref tree, n.ChildIdx, il, ref context, ParentFlags.Empty))
+                    if (childCount != 1 || !TryEmitFlat(ref tree, childIdx, il, ref context, ParentFlags.Empty))
                         return false;
-                    var boundType = tree.Nodes.GetSurePresentRef(n.ChildIdx).Type;
+                    var boundType = tree.Nodes.GetSurePresentRef(childIdx).Type;
                     if (boundType != typeof(int) && !TryEmitPrimitiveValueConvert(boundType, typeof(int), il, true))
                         return false;
                     il.Demit(OpCodes.Newarr, elemType);
                     context.LastEmitIsAddress = false;
                     return il.EmitPopIfIgnoreResult(parent);
                 }
-                EmitLoadConstantInt(il, n.ChildCount);
+                EmitLoadConstantInt(il, childCount);
                 il.Demit(OpCodes.Newarr, elemType);
-                if (n.ChildCount == 0)
+                if (childCount == 0)
                 {
                     context.LastEmitIsAddress = false;
                     return il.EmitPopIfIgnoreResult(parent);
                 }
                 var array = EmitStoreLocalVariable(il, exprType);
-                var elem = n.ChildIdx;
-                for (var i = 0; i < n.ChildCount && elem != 0; ++i)
+                var elem = childIdx;
+                for (var i = 0; i < childCount && elem != 0; ++i)
                 {
                     if (!TryEmitFlat(ref tree, elem, il, ref context, ParentFlags.AssignmentRightValue))
                         return false;
@@ -9937,7 +9976,8 @@ namespace FastExpressionCompiler
                 var index = FlatNext(ref tree, array, idx);
                 if (index == 0 || !TryEmitFlat(ref tree, array, il, ref context, ParentFlags.IndexAccess))
                     return false;
-                var arrayVar = EmitStoreLocalVariable(il, tree.Nodes.GetSurePresentRef(array).Type);
+                var arrayType = tree.Nodes.GetSurePresentRef(array).Type;
+                var arrayVar = EmitStoreLocalVariable(il, arrayType);
                 if (!TryEmitFlat(ref tree, index, il, ref context, ParentFlags.IndexAccess))
                     return false;
                 var indexType = tree.Nodes.GetSurePresentRef(index).Type;
@@ -9946,39 +9986,44 @@ namespace FastExpressionCompiler
                 var indexVar = EmitStoreLocalVariable(il, typeof(int));
                 EmitLoadLocalVariable(il, arrayVar);
                 EmitLoadLocalVariable(il, indexVar);
-                return TryEmitArrayElementGet(il, tree.Nodes.GetSurePresentRef(array).Type, exprType, ref context, parent);
+                return TryEmitArrayElementGet(il, arrayType, exprType, ref context, parent);
             }
 
             static bool EmitFlatBlock(ref ExprTree tree, ref ExprNode n, ushort idx, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var exprsIdx = n.ChildIdx;
-                var saved = context.FlatLocalIds.Count;
+                var blockType = n.Type;
+                var childCount = n.ChildCount;
+                ref var localIds = ref context.FlatLocalIds;
+                ref var localSlots = ref context.FlatLocalSlots;
+                var saved = localIds.Count;
                 var varNode = FlatNext(ref tree, exprsIdx, idx);
-                for (var i = 1; i < n.ChildCount && varNode != 0; ++i)
+                for (var i = 1; i < childCount && varNode != 0; ++i)
                 {
                     ref var variable = ref tree.Nodes.GetSurePresentRef(varNode);
-                    context.FlatLocalIds.Add(variable.ChildIdx);
-                    context.FlatLocalSlots.Add(il.GetNextLocalVarIndex(variable.Type));
+                    localIds.Add(variable.ChildIdx);
+                    localSlots.Add(il.GetNextLocalVarIndex(variable.Type));
                     varNode = FlatNext(ref tree, varNode, idx);
                 }
                 ref var exprs = ref tree.Nodes.GetSurePresentRef(exprsIdx);
-                var e = exprs.ChildCount == 0 ? (ushort)0 : exprs.ChildIdx;
+                var exprCount = exprs.ChildCount;
+                var e = exprCount == 0 ? (ushort)0 : exprs.ChildIdx;
                 var ok = true;
-                for (var i = 0; ok && i < exprs.ChildCount && e != 0; ++i)
+                for (var i = 0; ok && i < exprCount && e != 0; ++i)
                 {
-                    var last = i == exprs.ChildCount - 1;
+                    var last = i == exprCount - 1;
                     var flags = last ? parent : parent | ParentFlags.IgnoreResult;
                     ok = TryEmitFlat(ref tree, e, il, ref context, flags);
                     if (ok && last && !parent.IgnoresResult())
                     {
                         var got = tree.Nodes.GetSurePresentRef(e).Type;
-                        if (got != n.Type && !TryEmitPrimitiveValueConvert(got, n.Type, il, false))
+                        if (got != blockType && !TryEmitPrimitiveValueConvert(got, blockType, il, false))
                             ok = false;
                     }
                     e = FlatNext(ref tree, e, exprsIdx);
                 }
-                context.FlatLocalIds.Count = saved;
-                context.FlatLocalSlots.Count = saved;
+                localIds.Count = saved;
+                localSlots.Count = saved;
                 return ok;
             }
 
@@ -10007,9 +10052,10 @@ namespace FastExpressionCompiler
 
             static FlatLabelSlot FlatEnsureLabel(ref CompilerContext context, ILGenerator il, ushort id, Type valueType, bool needsSlot)
             {
-                for (var i = 0; i < context.FlatLabels.Count; ++i)
+                ref var labels = ref context.FlatLabels;
+                for (var i = 0; i < labels.Count; ++i)
                 {
-                    ref var slot = ref context.FlatLabels.GetSurePresentRef(i);
+                    ref var slot = ref labels.GetSurePresentRef(i);
                     if (slot.Id != id)
                         continue;
                     if (needsSlot && slot.SlotPlusOne == 0)
@@ -10025,7 +10071,7 @@ namespace FastExpressionCompiler
                     created.SlotPlusOne = il.GetNextLocalVarIndex(valueType) + 1;
                     created.AfterDefault = il.DefineLabel();
                 }
-                context.FlatLabels.Add(created);
+                labels.Add(created);
                 return created;
             }
 
@@ -10063,17 +10109,20 @@ namespace FastExpressionCompiler
                     return true;
                 }
                 ref var b = ref tree.Nodes.GetSurePresentRef(branch);
-                var terminal = b.NodeType is ExpressionType.Throw or ExpressionType.Goto;
+                var branchType = b.NodeType;
+                var terminal = branchType is ExpressionType.Throw or ExpressionType.Goto;
                 if (!TryEmitFlat(ref tree, branch, il, ref context, voided ? parent | ParentFlags.IgnoreResult : parent))
                     return false;
                 if (terminal)
                     return true;
-                if (!voided && b.Type != exprType && !TryEmitPrimitiveValueConvert(b.Type, exprType, il, false))
+                var got = b.Type;
+                if (!voided && got != exprType && !TryEmitPrimitiveValueConvert(got, exprType, il, false))
                     return false;
                 il.Demit(OpCodes.Br, end);
                 return true;
             }
 
+            [MethodImpl((MethodImplOptions)256)]
             static bool EmitFlatThrow(ref ExprTree tree, ref ExprNode n, ILGenerator il, ref CompilerContext context)
             {
                 if (n.ChildCount == 0)
@@ -10088,11 +10137,12 @@ namespace FastExpressionCompiler
                 ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var typeOperand = n.Obj as Type;
-                if (typeOperand == null || n.ChildCount != 1 || tree.Nodes.GetSurePresentRef(n.ChildIdx).Type.IsValueType)
+                var operandIdx = n.ChildIdx;
+                if (typeOperand == null || n.ChildCount != 1 || tree.Nodes.GetSurePresentRef(operandIdx).Type.IsValueType)
                     return false;
                 if (nodeType == ExpressionType.TypeEqual && typeOperand.IsValueType)
                     return false;
-                if (!TryEmitFlat(ref tree, n.ChildIdx, il, ref context, ParentFlags.AssignmentRightValue))
+                if (!TryEmitFlat(ref tree, operandIdx, il, ref context, ParentFlags.AssignmentRightValue))
                     return false;
                 if (nodeType == ExpressionType.TypeIs || typeOperand.IsSealed && !typeOperand.IsArray && !typeOperand.IsGenericType)
                 {
@@ -10148,26 +10198,28 @@ namespace FastExpressionCompiler
             static bool EmitFlatLabel(ref ExprTree tree, ref ExprNode n, ushort idx, ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var target = n.ChildIdx;
+                var labelType = n.Type;
                 var id = tree.Nodes.GetSurePresentRef(target).ChildIdx;
-                var valued = n.Type != typeof(void);
-                var info = FlatEnsureLabel(ref context, il, id, n.Type, valued);
+                var valued = labelType != typeof(void);
+                var info = FlatEnsureLabel(ref context, il, id, labelType, valued);
+                var slotPlusOne = info.SlotPlusOne;
                 il.DmarkLabel(info.Mark);
                 var def = n.ChildCount > 1 ? FlatNext(ref tree, target, idx) : (ushort)0;
-                var wantValue = info.SlotPlusOne != 0 && !parent.IgnoresResult();
+                var wantValue = slotPlusOne != 0 && !parent.IgnoresResult();
                 if (def != 0 && !TryEmitFlat(ref tree, def, il, ref context, wantValue ? parent & ~ParentFlags.IgnoreResult : parent | ParentFlags.IgnoreResult))
                     return false;
-                if (info.SlotPlusOne != 0)
+                if (slotPlusOne != 0)
                 {
                     if (wantValue && def != 0)
                     {
                         var defType = tree.Nodes.GetSurePresentRef(def).Type;
-                        if (defType != n.Type && !TryEmitPrimitiveValueConvert(defType, n.Type, il, false))
+                        if (defType != labelType && !TryEmitPrimitiveValueConvert(defType, labelType, il, false))
                             return false;
-                        EmitStoreLocalVariable(il, info.SlotPlusOne - 1);
+                        EmitStoreLocalVariable(il, slotPlusOne - 1);
                     }
                     il.DmarkLabel(info.AfterDefault);
                     if (wantValue)
-                        EmitLoadLocalVariable(il, info.SlotPlusOne - 1);
+                        EmitLoadLocalVariable(il, slotPlusOne - 1);
                 }
                 context.LastEmitIsAddress = false;
                 return true;
@@ -10179,13 +10231,15 @@ namespace FastExpressionCompiler
                     return false;
                 var target = n.ChildIdx;
                 ref var targetNode = ref tree.Nodes.GetSurePresentRef(target);
+                var targetId = targetNode.ChildIdx;
+                var targetType = targetNode.Type;
                 var value = n.ChildCount > 1 ? FlatNext(ref tree, target, idx) : (ushort)0;
                 var op = (parent & ParentFlags.TryCatch) != 0 ? OpCodes.Leave : OpCodes.Br;
-                if (targetNode.Type == typeof(void))
+                if (targetType == typeof(void))
                 {
                     if (value != 0 && !TryEmitFlat(ref tree, value, il, ref context, parent | ParentFlags.IgnoreResult))
                         return false;
-                    il.Demit(op, FlatEnsureLabel(ref context, il, targetNode.ChildIdx, typeof(void), false).Mark);
+                    il.Demit(op, FlatEnsureLabel(ref context, il, targetId, typeof(void), false).Mark);
                     return true;
                 }
                 if (value != 0)
@@ -10193,14 +10247,14 @@ namespace FastExpressionCompiler
                     if (!TryEmitFlat(ref tree, value, il, ref context, parent & ~ParentFlags.IgnoreResult))
                         return false;
                     var valueType = tree.Nodes.GetSurePresentRef(value).Type;
-                    if (valueType != targetNode.Type && !TryEmitPrimitiveValueConvert(valueType, targetNode.Type, il, false))
+                    if (valueType != targetType && !TryEmitPrimitiveValueConvert(valueType, targetType, il, false))
                         return false;
-                    var info = FlatEnsureLabel(ref context, il, targetNode.ChildIdx, targetNode.Type, true);
+                    var info = FlatEnsureLabel(ref context, il, targetId, targetType, true);
                     EmitStoreLocalVariable(il, info.SlotPlusOne - 1);
                     il.Demit(op, info.AfterDefault);
                     return true;
                 }
-                il.Demit(op, FlatEnsureLabel(ref context, il, targetNode.ChildIdx, targetNode.Type, false).Mark);
+                il.Demit(op, FlatEnsureLabel(ref context, il, targetId, targetType, false).Mark);
                 return true;
             }
 
@@ -10261,12 +10315,13 @@ namespace FastExpressionCompiler
                 ParentFlags parent, ILGenerator il, ref CompilerContext context)
             {
                 ref var sc = ref tree.Nodes.GetSurePresentRef(caseIdx);
-                if (sc.ChildCount < 2)
+                var testCount = sc.ChildCount;
+                if (testCount < 2)
                     return false;
                 var match = il.DefineLabel();
                 var next = il.DefineLabel();
                 var t = sc.ChildIdx;
-                for (var i = 0; i < sc.ChildCount - 1; ++i)
+                for (var i = 0; i < testCount - 1; ++i)
                 {
                     EmitLoadLocalVariable(il, valueVar);
                     if (!TryEmitFlat(ref tree, t, il, ref context, ParentFlags.Arithmetic))
@@ -10292,9 +10347,12 @@ namespace FastExpressionCompiler
                 ILGenerator il, ref CompilerContext context, ParentFlags parent)
             {
                 var body = n.ChildIdx;
+                var tryFlags = n.Flags;
+                var fault = (tryFlags & ExprTree.TryFaultFlag) != 0;
+                var hasFinally = (tryFlags & ExprTree.TryHasFinallyFlag) != 0;
                 var child = FlatNext(ref tree, body, idx);
                 ushort finallyOrFault = 0;
-                if (n.HasFlag(ExprTree.TryFaultFlag) || n.HasFlag(ExprTree.TryHasFinallyFlag))
+                if (fault || hasFinally)
                 {
                     finallyOrFault = child;
                     child = FlatNext(ref tree, child, idx);
@@ -10311,13 +10369,13 @@ namespace FastExpressionCompiler
                         return false;
                     child = FlatNext(ref tree, child, idx);
                 }
-                if (n.HasFlag(ExprTree.TryFaultFlag))
+                if (fault)
                 {
                     il.BeginFaultBlock();
                     if (!TryEmitFlat(ref tree, finallyOrFault, il, ref context, parent | ParentFlags.IgnoreResult | ParentFlags.TryCatch))
                         return false;
                 }
-                else if (n.HasFlag(ExprTree.TryHasFinallyFlag))
+                else if (hasFinally)
                 {
                     il.BeginFinallyBlock();
                     if (!TryEmitFlat(ref tree, finallyOrFault, il, ref context, parent | ParentFlags.IgnoreResult | ParentFlags.TryCatch))
@@ -10334,31 +10392,36 @@ namespace FastExpressionCompiler
                 ILGenerator il, ref CompilerContext context)
             {
                 ref var c = ref tree.Nodes.GetSurePresentRef(catchIdx);
-                if (c.HasFlag(ExprTree.CatchHasFilterFlag))
+                var catchFlags = c.Flags;
+                if ((catchFlags & ExprTree.CatchHasFilterFlag) != 0)
                     return false;
-                var saved = context.FlatLocalIds.Count;
+                ref var localIds = ref context.FlatLocalIds;
+                ref var localSlots = ref context.FlatLocalSlots;
+                var saved = localIds.Count;
+                var catchType = c.Type;
                 ushort body;
-                if (c.HasFlag(ExprTree.CatchHasVariableFlag))
+                if ((catchFlags & ExprTree.CatchHasVariableFlag) != 0)
                 {
                     var variable = c.ChildIdx;
                     body = FlatNext(ref tree, variable, catchIdx);
                     ref var v = ref tree.Nodes.GetSurePresentRef(variable);
-                    context.FlatLocalIds.Add(v.ChildIdx);
-                    context.FlatLocalSlots.Add(il.GetNextLocalVarIndex(v.Type));
-                    il.BeginCatchBlock(c.Type);
-                    EmitStoreLocalVariable(il, context.FlatLocalSlots.GetSurePresentRef(context.FlatLocalSlots.Count - 1));
+                    var slot = il.GetNextLocalVarIndex(v.Type);
+                    localIds.Add(v.ChildIdx);
+                    localSlots.Add(slot);
+                    il.BeginCatchBlock(catchType);
+                    EmitStoreLocalVariable(il, slot);
                 }
                 else
                 {
                     body = c.ChildIdx;
-                    il.BeginCatchBlock(c.Type);
+                    il.BeginCatchBlock(catchType);
                     il.Demit(OpCodes.Pop);
                 }
                 var ok = body != 0 && TryEmitFlat(ref tree, body, il, ref context, parent);
                 if (ok && resultVar >= 0)
                     EmitStoreLocalVariable(il, resultVar);
-                context.FlatLocalIds.Count = saved;
-                context.FlatLocalSlots.Count = saved;
+                localIds.Count = saved;
+                localSlots.Count = saved;
                 return ok;
             }
 
@@ -10367,10 +10430,11 @@ namespace FastExpressionCompiler
                 ref var lam = ref tree.Nodes.GetSurePresentRef(lambdaIdx);
                 var delegateType = lam.Type;
                 var returnType = delegateType.GetMethod("Invoke").ReturnType;
-                var argCount = nestedCtx.FlatArgIds.Count;
+                ref var argIds = ref nestedCtx.FlatArgIds;
+                var argCount = argIds.Count;
                 var paramTypes = RentFlatClosureParamTypes(argCount);
                 for (var i = 0; i < argCount; ++i)
-                    paramTypes[i + 1] = tree.Nodes.GetSurePresentRef(nestedCtx.FlatArgIds.GetSurePresentRef(i)).Type;
+                    paramTypes[i + 1] = tree.Nodes.GetSurePresentRef(argIds.GetSurePresentRef(i)).Type;
 
                 var hasCapture = info.CapturedIds.Count != 0;
                 var constants = nestedCtx.Constants.Count != 0 || nestedCtx.NestedLambdas.Count != 0
@@ -10402,7 +10466,7 @@ namespace FastExpressionCompiler
 
             static bool EmitFlatLambda(ref ExprTree tree, ushort idx, ILGenerator il, ref CompilerContext context)
             {
-                var nested = context.NestedLambdas;
+                ref var nested = ref context.NestedLambdas;
                 FlatNestedLambdaInfo info = null;
                 for (var i = nested.Count - 1; i >= 0; --i)
                 {
@@ -10415,20 +10479,24 @@ namespace FastExpressionCompiler
                 }
                 if (info == null)
                     return false;
-                EmitLoadLocalVariable(il, info.LambdaVarIndex);
-                var captured = info.CapturedIds;
-                if (captured.Count == 0)
+                var lambdaVar = info.LambdaVarIndex;
+                var lambda = info.Lambda;
+                EmitLoadLocalVariable(il, lambdaVar);
+                ref var captured = ref info.CapturedIds;
+                var capturedCount = captured.Count;
+                if (capturedCount == 0)
                 {
                     context.LastEmitIsAddress = false;
                     return true;
                 }
                 // shortcut: closed-over locals are snapshotted here, upgrade when a later assign must be visible inside the lambda
-                EmitLoadConstantInt(il, captured.Count);
+                EmitLoadConstantInt(il, capturedCount);
                 il.Demit(OpCodes.Newarr, typeof(object));
                 var arraySlot = EmitStoreAndLoadLocalVariable(il, typeof(object[]));
                 info.NonPassedParamsVarIndex = (short)arraySlot;
                 il.Demit(OpCodes.Stfld, NestedLambdaForNonPassedParams.NonPassedParamsField);
-                for (var i = 0; i < captured.Count; ++i)
+                ref var argIds = ref context.FlatArgIds;
+                for (var i = 0; i < capturedCount; ++i)
                 {
                     var id = captured.GetSurePresentRef(i);
                     var type = tree.Nodes.GetSurePresentRef(id).Type;
@@ -10440,8 +10508,9 @@ namespace FastExpressionCompiler
                     else
                     {
                         var arg = -1;
-                        for (var a = 0; a < context.FlatArgIds.Count; ++a)
-                            if (context.FlatArgIds.GetSurePresentRef(a) == id)
+                        var argCount = argIds.Count;
+                        for (var a = 0; a < argCount; ++a)
+                            if (argIds.GetSurePresentRef(a) == id)
                             {
                                 arg = a;
                                 break;
@@ -10453,18 +10522,18 @@ namespace FastExpressionCompiler
                     il.TryEmitBoxOf(type);
                     il.Demit(OpCodes.Stelem_Ref);
                 }
-                EmitLoadLocalVariable(il, info.LambdaVarIndex);
+                EmitLoadLocalVariable(il, lambdaVar);
                 il.Demit(OpCodes.Ldfld, NestedLambdaForNonPassedParams.NestedLambdaField);
                 EmitLoadLocalVariable(il, arraySlot);
-                if (info.Lambda is NestedLambdaForNonPassedParamsWithConstants)
+                if (lambda is NestedLambdaForNonPassedParamsWithConstants)
                 {
-                    EmitLoadLocalVariable(il, info.LambdaVarIndex);
+                    EmitLoadLocalVariable(il, lambdaVar);
                     il.Demit(OpCodes.Ldfld, NestedLambdaForNonPassedParamsWithConstants.ConstantsAndNestedLambdasField);
                     il.Demit(OpCodes.Newobj, ArrayClosureWithNonPassedParamsAndConstantsCtor);
                 }
                 else
                     il.Demit(OpCodes.Newobj, ArrayClosureWithNonPassedParamsCtor);
-                var open = (info.Lambda is NestedLambdaForNonPassedParams wrapped ? wrapped.NestedLambda : info.Lambda).GetType();
+                var open = (lambda is NestedLambdaForNonPassedParams wrapped ? wrapped.NestedLambda : lambda).GetType();
                 var openArgs = open.GetGenericArguments();
                 var delegateType = tree.Nodes.GetSurePresentRef(idx).Type;
                 var returnType = delegateType.GetMethod("Invoke").ReturnType;
@@ -10486,18 +10555,21 @@ namespace FastExpressionCompiler
             {
                 var invoked = n.ChildIdx;
                 ref var target = ref tree.Nodes.GetSurePresentRef(invoked);
-                if ((context.CompilerFlags & CompilerFlags.NoInvocationLambdaInlining) == 0 && target.NodeType == ExpressionType.Lambda)
+                var targetType = target.NodeType;
+                if ((context.CompilerFlags & CompilerFlags.NoInvocationLambdaInlining) == 0 && targetType == ExpressionType.Lambda)
                     return EmitFlatInlinedLambda(ref tree, invoked, idx, il, ref context, parent);
-                if (target.NodeType != ExpressionType.Lambda || !EmitFlatLambda(ref tree, invoked, il, ref context))
+                if (targetType != ExpressionType.Lambda || !EmitFlatLambda(ref tree, invoked, il, ref context))
                     return false;
-                var invoke = target.Type.GetMethod("Invoke");
+                var delegateType = target.Type;
+                var invoke = delegateType.GetMethod("Invoke");
                 if (invoke == null)
                     return false;
-                var delegateSlot = EmitStoreLocalVariable(il, target.Type);
+                var delegateSlot = EmitStoreLocalVariable(il, delegateType);
                 if (!EmitFlatPreparedArgs(ref tree, FlatNext(ref tree, invoked, idx), idx, invoke.GetParameters(), true, il, ref context, out var argVars))
                     return false;
                 EmitLoadLocalVariable(il, delegateSlot);
-                for (var i = 0; i < argVars.Count; ++i)
+                var argCount = argVars.Count;
+                for (var i = 0; i < argCount; ++i)
                     EmitLoadLocalVariable(il, argVars.GetSurePresentRef(i));
                 il.Demit(OpCodes.Callvirt, invoke);
                 if (parent.IgnoresResult() && invoke.ReturnType != typeof(void))
@@ -10532,6 +10604,7 @@ namespace FastExpressionCompiler
                     for (var i = 0; ok && i < paramCount && par != 0; ++i)
                     {
                         ref var parameter = ref tree.Nodes.GetSurePresentRef(par);
+                        var parameterType = parameter.Type;
                         if (parameter.HasFlag(ExprTree.ParameterByRefFlag))
                         {
                             ok = false;
@@ -10539,12 +10612,12 @@ namespace FastExpressionCompiler
                         }
                         EmitLoadLocalVariable(il, temps.GetSurePresentRef(i));
                         var argType = tree.Nodes.GetSurePresentRef(argIdxs.GetSurePresentRef(i)).Type;
-                        if (argType != parameter.Type && !TryEmitPrimitiveValueConvert(argType, parameter.Type, il, false))
+                        if (argType != parameterType && !TryEmitPrimitiveValueConvert(argType, parameterType, il, false))
                         {
                             ok = false;
                             break;
                         }
-                        var slot = il.GetNextLocalVarIndex(parameter.Type);
+                        var slot = il.GetNextLocalVarIndex(parameterType);
                         context.FlatLocalIds.Add(parameter.ChildIdx);
                         context.FlatLocalSlots.Add(slot);
                         EmitStoreLocalVariable(il, slot);

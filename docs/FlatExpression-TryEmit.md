@@ -18,11 +18,11 @@ Do not commit or push unless the user asks. Do not force-push.
 
 ## What is already true
 
-- Flat exists only when `FLAT_EXPRESSION` is set. That symbol is defined once at the top of `src/FastExpressionCompiler/FastExpressionCompiler.cs` as `LIGHT_EXPRESSION && NET8_0_OR_GREATER`. Use `#if FLAT_EXPRESSION`. Do not write `LIGHT_EXPRESSION && NET8_0_OR_GREATER` again.
+- Flat exists only when `FLAT_EXPRESSION` is set. The Flat project defines it. Light defines `LIGHT_EXPRESSION` only. The two are never both on. Use `#if FLAT_EXPRESSION`. Do not define Flat from Light.
 - `ExprNode` is 24 bytes. `ChildIdx` / `NextIdx` is the walk. Parameter identity is the declaration node's `ChildIdx` (a `ushort`), not object identity.
 - `ExprTree.Constant` already classifies values. Inline primitives and `ldstr` / `ldtoken` / `decimal` stay on the node. Closure values are unique in `ExprTree.ClosureConstants` and the node `Obj` is `ExprTree.ClosureConstantMarker`.
 - `ExpressionCompiler.TryCollectInfo(ref CompilerContext, ref ExprTree)` walks the flat tree. It copies closure constants into the current lambda, records nested `NestedLambdaInfo(null)`, and rejects unbound parameters. It does not compile nested lambdas, does not fill label/scope maps, and does not record which nodes have complex arguments.
-- `CompileFast` on a `LambdaExpression` still does `TryCollectInfo` on an `Expression`, then `EmittingVisitor.TryEmit(Expression, ...)`. Flat users reach that only through `ToLightExpression()`.
+- `CompileFast(ref ExprTree)` walks node indexes in the Flat assembly. `ToExpression` / `FromSysExpr` are the System round-trip. Flat has no Light conversion.
 - `EmittingVisitor` is `public static class` in `ExpressionCompiler` (search `class EmittingVisitor`). `TryEmit(Expression, ...)` is public. Do not change that signature.
 
 ## Do not do
@@ -51,7 +51,7 @@ Place it next to the other `CompileFast` methods in `ExpressionCompiler`, inside
 
 `flags` is the existing `CompilerFlags` (Light namespace when `LIGHT_EXPRESSION` is on).
 
-Leave `ToLightExpression`, `ToExpression`, `FromSysExpr`, and `FromLightExpr` in place. They stay the interop path. The compile path stops calling them when step 7 deletes the fallback.
+Leave `ToExpression` and `FromSysExpr`. They are the System interop path. `ToLightExpression` and `FromLightExpr` are gone: Flat does not reference Light.
 
 ## Emitter shape
 
@@ -79,9 +79,7 @@ Rules for this method:
 1. Collect with `TryCollectInfo(ref context, ref tree)`.
 2. If collect is not `Result.OK`, return null or throw the same way `TryCompileBoundToFirstClosureParam` does for Light (`ThrowOnNotSupportedExpression`).
 3. Emit with `TryEmitFlat`. If it returns true, finish the delegate the same way Light does (`DynamicMethod`, pooled `ILGenerator`, `ArrayClosure` from `GetArrayOfConstantsAndNestedLambdas`).
-4. If emit returns false, call `tree.ToLightExpression()` and the existing `CompileFast`. This keeps tests green while node kinds are missing.
-
-Delete step 4 in step 7. After that, an unsupported node returns null / throws. It does not allocate a Light tree.
+4. An unsupported node returns null or throws. It does not build a Light or System tree.
 
 ## Optimizations (do them inside the step that needs them)
 

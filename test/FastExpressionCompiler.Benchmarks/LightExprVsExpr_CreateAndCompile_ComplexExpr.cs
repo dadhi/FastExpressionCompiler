@@ -174,7 +174,7 @@ namespace FastExpressionCompiler.Benchmarks
         {
             var fe = default(FlatExpression.ExprTree);
             LightExpressionTests.CreateComplexFlatExpression(ref fe);
-            return LE.CompileFast<Func<object[], object>>(ref fe, true);
+            return FastExpressionCompiler.FlatExpression.ExpressionCompiler.CompileFast<Func<object[], object>>(ref fe, true);
         }
 
         // [Benchmark]

@@ -33,6 +33,8 @@ THE SOFTWARE.
 
 #if LIGHT_EXPRESSION
 namespace FastExpressionCompiler.LightExpression.ImTools;
+#elif FLAT_EXPRESSION
+namespace FastExpressionCompiler.FlatExpression.ImTools;
 #else
 namespace FastExpressionCompiler.ImTools;
 #endif
